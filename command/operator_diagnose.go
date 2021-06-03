@@ -177,7 +177,6 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	} else {
 		c.UI.Output("\nResults:")
 		w, _, err := term.GetSize(0)
-		fmt.Printf("%v %v", w, err)
 		if err == nil {
 			results.Write(os.Stdout, w)
 		} else {
