@@ -1461,6 +1461,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSealWrap = base.DisableSealWrap
 		coreConfig.DisableCache = base.DisableCache
 		coreConfig.LicensingConfig = base.LicensingConfig
+		coreConfig.License = base.License
+		coreConfig.LicensePath = base.LicensePath
 		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
 		coreConfig.MetricsHelper = base.MetricsHelper
 		coreConfig.MetricSink = base.MetricSink
@@ -1566,7 +1568,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if testCluster.LicensePublicKey == nil {
-		pubKey, priKey, err := testGenerateCoreKeys()
+		pubKey, priKey, err := GenerateTestLicenseKeys()
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}

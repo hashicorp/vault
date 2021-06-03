@@ -357,6 +357,10 @@
         "path": "system/config-cors"
       },
       {
+        "title": "<code>/sys/config/reload</code>",
+        "path": "system/config-reload"
+      },
+      {
         "title": "<code>/sys/config/state</code>",
         "path": "system/config-state"
       },
