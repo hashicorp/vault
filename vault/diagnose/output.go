@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	wordwrap "github.com/mitchellh/go-wordwrap"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -54,6 +55,7 @@ type Result struct {
 	Status   status    `json:"status"`
 	Warnings []string  `json:"warnings,omitempty"`
 	Message  string    `json:"message,omitempty"`
+	Advice   string
 	Children []*Result `json:"children,omitempty"`
 }
 
@@ -316,23 +318,22 @@ func (r *Result) Write(writer io.Writer) error {
 	return err
 }
 
-func (r *Result) write(sb *strings.Builder, depth int) {
-	indent(sb, depth)
-	r.write(sb)
-	sb.WriteRune('\n')
-	for _, c := range r.Children {
-		c.write(sb, depth+1)
-	}
-}
+const indentString = "  "
 
 func indent(sb *strings.Builder, depth int) {
 	for i := 0; i < depth; i++ {
-		sb.WriteString("  ")
+		sb.WriteString(indentString)
 	}
 }
 
 func (r *Result) String() string {
 	var sb strings.Builder
+	r.write(&sb, 0)
+	return sb.String()
+}
+
+func (r *Result) write(sb *strings.Builder, depth int) {
+	indent(sb, depth)
 	if len(r.Warnings) == 0 {
 		switch r.Status {
 		case OkStatus:
@@ -349,30 +350,42 @@ func (r *Result) String() string {
 		if r.Message != "" || len(r.Warnings) > 0 {
 			sb.WriteString(": ")
 		}
-		sb.WriteString(r.Message)
+		writeWrapped(sb, r.Message, depth+1)
 	}
 	warnings := r.Warnings
 	if r.Message == "" && len(warnings) > 0 {
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
-		sb.WriteString(warnings[0])
+		writeWrapped(sb, warnings[0], depth+1)
 
 		warnings = warnings[1:]
 	}
 	for _, w := range warnings {
 		sb.WriteRune('\n')
-		//TODO: Indentation
+		indent(sb, depth)
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
-		sb.WriteString(w)
+		writeWrapped(sb, w, depth+1)
 	}
 
-	if r.Advice != nil {
+	if r.Advice != "" {
 		sb.WriteString("\n\n")
-		sb.Write
+		indent(sb, depth)
+		writeWrapped(sb, r.Advice, depth)
 	}
-	return sb.String()
+	sb.WriteRune('\n')
+	for _, c := range r.Children {
+		c.write(sb, depth+1)
+	}
+}
 
+func writeWrapped(sb *strings.Builder, msg string, depth int) {
+	parts := strings.Split(wordwrap.WrapString(msg, uint(76-depth*len(indentString))), "\n")
+	sb.WriteString(parts[0])
+	for _, p := range parts[1:] {
+		indent(sb, depth)
+		sb.WriteString(p)
+	}
 }
