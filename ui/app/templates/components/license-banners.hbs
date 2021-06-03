@@ -1,5 +1,5 @@
 {{#if this.licenseExpired}}
-  <div class="container is-widescreen has-top-margin-l" data-test-license-banner data-test-license-banner-expired>
+  <div class="section has-top-margin-l" data-test-license-banner data-test-license-banner-expired>
     <AlertBanner
       @type="danger"
       @title="License expired"
@@ -10,7 +10,7 @@
     </AlertBanner>
   </div>
 {{else if (lte this.licenseExpiringInDays 30)}}
-  <div class="container is-widescreen has-top-margin-l" data-test-license-banner data-test-license-banner-warning>
+  <div class="section has-top-margin-l" data-test-license-banner data-test-license-banner-warning>
     <AlertBanner
       @type="warning"
       @title="Vault license expiring"
