@@ -30,8 +30,9 @@ func RaftFilePermsChecks(ctx context.Context, path string) {
 	canWrite := false
 	for i := 1; i < 4; i++ {
 		perm := string(mode.String()[i])
+		fmt.Println("hi")
 		fmt.Printf("%s", perm)
-		if perm != "w" || perm != "r" || perm != "-" {
+		if perm != "w" && perm != "r" && perm != "-" {
 			overPermissions = append(overPermissions, owner+":"+perm)
 		} else if perm == "w" {
 			canWrite = true
@@ -75,18 +76,27 @@ func RaftFilePermsChecks(ctx context.Context, path string) {
 }
 
 // RaftStorageQuorum checks that there is an odd number of voters present
-func RaftStorageQuorum(ctx context.Context, b *raft.RaftBackend) {
-	voterCount := 0
-	conf, err := b.GetConfiguration(context.Background())
+// It returns the status message for testing purposes
+func RaftStorageQuorum(ctx context.Context, b *raft.RaftBackend) string {
+	var conf *raft.RaftConfigurationResponse
+	var err error
+	conf, err = b.GetConfiguration(ctx)
 	if err != nil {
 		SpotError(ctx, "raft quorum", fmt.Errorf("error retrieving server configuration: %w", err))
+		return "error retrieving server configuration"
 	}
+	voterCount := 0
 	for _, s := range conf.Servers {
 		if s.Voter {
 			voterCount++
 		}
 	}
 	if voterCount == 1 || voterCount == 3 || voterCount == 5 || voterCount == 7 {
-		SpotOk(ctx, "raft quorum", fmt.Sprintf("voter quorum exists: %d voters", voterCount))
+		okMsg := fmt.Sprintf("voter quorum exists: %d voters", voterCount)
+		SpotOk(ctx, "raft quorum", okMsg)
+		return okMsg
 	}
+	warnMsg := fmt.Sprintf("even number of voters found: %d", voterCount)
+	SpotWarn(ctx, "raft quorum", warnMsg)
+	return warnMsg
 }

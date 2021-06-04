@@ -229,6 +229,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+
+		// Ensure that there is a storage stanza
+		if config.Storage == nil {
+			return fmt.Errorf("no storage stanza found in config")
+		}
+
 		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 			b, err := server.setupStorage(config)
 			if err != nil {
@@ -241,10 +247,21 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			return nil
 		})
 
-		if config.Storage == nil {
-			return fmt.Errorf("no storage stanza found in config")
+		// Check for raft quorum status
+		if config.Storage.Type == storageTypeRaft {
+			path, ok := config.Storage.Config["path"]
+			if !ok {
+				diagnose.SpotError(ctx, "raft file permission checks", fmt.Errorf("storage file path is required"))
+			}
+			diagnose.RaftFilePermsChecks(ctx, path)
+			if backend != nil {
+				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
+			} else {
+				diagnose.SpotError(ctx, "raft quorum", fmt.Errorf("could not determine quorum status without initialized backend"))
+			}
 		}
 
+		// Consul storage checks
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
@@ -261,17 +278,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				}
 				return nil
 			})
-
-			if config.Storage.Type == storageTypeRaft {
-				path, ok := config.Storage.Config["path"]
-				if !ok {
-					diagnose.SpotError(ctx, "raft file permission checks", fmt.Errorf("storage file path is required"))
-				}
-				diagnose.RaftFilePermsChecks(ctx, path)
-
-				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
-
-			}
 		}
 
 		// Attempt to use storage backend
@@ -446,7 +452,10 @@ SEALFAIL:
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		disableClustering := config.HAStorage.DisableClustering
+		disableClustering := false
+		if config.HAStorage != nil {
+			disableClustering = config.HAStorage.DisableClustering
+		}
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener
