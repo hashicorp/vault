@@ -94,7 +94,7 @@ satisfied.
 path "secret/foo" {
     capabilities = ["write","read"]
     control_group = {
-        factor "testing" {
+        factor "admin" {
             controlled_capabilities = ["write"]
             identity {
                 group_names = ["admin"]
@@ -113,7 +113,7 @@ admin group authorizes the request.
 path "kv/*" {
     capabilities = ["create", "update","delete","list","sudo"]
     control_group = {
-        factor "testing" {
+        factor "admin" {
             controlled_capabilities = ["delete","list","sudo"]
             identity {
                 group_names = ["admin"]
@@ -125,7 +125,7 @@ path "kv/*" {
 path "kv/*" {
     capabilities = ["create"]
     control_group = {
-        factor "testing" {
+        factor "superuser" {
             identity {
                 group_names = ["superuser"]
                 approvals = 2
@@ -141,16 +141,18 @@ any token with this policy will be required to get 2 approvals from the `superus
 any operation against `kv/*`. In addition, by virtue of the `controlled_capablities` field in the first
 path stanza, `delete`,`list`, and `sudo` operations will require an additional approval from the `admin` group.
 
-```path "kv/*" {
+```
+path "kv/*" {
     capabilities = ["read", "list", "create"]
     control_group = {
-        factor "testing" {
+        controlled_capabilities = ["read"]
+        factor "admin" {
             identity {
                 group_names = ["admin"]
                 approvals = 1
             }
         }
-        factor "testing" {
+        factor "superuser" {
             controlled_capabilities = ["create"]
             identity {
                 group_names = ["superuser"]
@@ -160,8 +162,9 @@ path stanza, `delete`,`list`, and `sudo` operations will require an additional a
     }
 }
 ```
-In this case, `list` will require one admin approval and `create` will require 
-one superuser approval and one admin approval. `Read` will require no extra approvals
+
+In this case, `read` will require one admin approval and `create` will require 
+one superuser approval and one admin approval. `List` will require no extra approvals
 from any of the control group factors, and a token with this policy will not be required 
 to go through the control group workflow in order to execute a read operation against `kv/*`.  
 
