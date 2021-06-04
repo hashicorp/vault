@@ -58,5 +58,25 @@ export default function() {
     };
   });
 
+  this.get('/sys/health', function() {
+    return {
+      initialized: true,
+      sealed: false,
+      standby: false,
+      license: {
+        expiry: '2021-05-12T23:20:50.52Z',
+        state: 'stored',
+      },
+      performance_standby: false,
+      replication_performance_mode: 'disabled',
+      replication_dr_mode: 'disabled',
+      server_time_utc: 1622562585,
+      version: '1.9.0+ent',
+      cluster_name: 'vault-cluster-e779cd7c',
+      cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
+      last_wal: 121,
+    };
+  });
+
   this.passthrough();
 }

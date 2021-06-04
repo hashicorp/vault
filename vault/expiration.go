@@ -2427,6 +2427,10 @@ func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID
 		}
 	}
 
+	if leaseNS == nil {
+		return nil, namespace.ErrNoNamespace
+	}
+
 	return leaseNS, nil
 }
 

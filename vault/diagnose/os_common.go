@@ -1,4 +1,4 @@
-// +build !openbsd,!arm
+// +build !openbsd !arm
 
 package diagnose
 

@@ -127,9 +127,10 @@ func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 }
 
 // Skipped marks the current span skipped
-func Skipped(ctx context.Context) {
+func Skipped(ctx context.Context, message string) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(skippedEventName)
+	span.SetStatus(codes.Error, message)
 }
 
 // Warn records a warning on the current span
@@ -227,7 +228,7 @@ func Skippable(skipName string, f testFunction) testFunction {
 			if !session.IsSkipped(skipName) {
 				return f(ctx)
 			} else {
-				Skipped(ctx)
+				Skipped(ctx, "skipped as requested")
 			}
 		}
 		return nil
