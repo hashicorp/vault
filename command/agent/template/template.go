@@ -265,6 +265,13 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// that need to be fixed for 1.7x/1.8
 	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
 		attempts = 0
+
+		// If unlimited template retries is specified, let consul-template
+		// handle retry and backoff logic
+		if sc.AgentConfig.Vault.Retry.TemplateUnlimitedRetries {
+			attempts = ctconfig.DefaultRetryAttempts
+		}
+
 		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"
