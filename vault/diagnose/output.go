@@ -331,7 +331,7 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 		}
 		prelude = prelude + r.Name
 
-		if r.Message != "" || len(r.Warnings) > 0 {
+		if r.Message != "" {
 			prelude = prelude + ": " + r.Message
 		}
 	}
