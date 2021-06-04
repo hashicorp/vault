@@ -90,10 +90,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     .on('didInsertElement')
     .cancelOn('willDestroyElement'),
 
-  partialName: computed('mode', function() {
-    return `partials/secret-form-${this.mode}`;
-  }),
-
   updatePath: maybeQueryRecord(
     'capabilities',
     context => {
