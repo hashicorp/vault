@@ -12,7 +12,7 @@ WORKDIR /go/src/github.com/hashicorp/vault
 COPY . .
 
 RUN make bootstrap \
-  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS='$BUILD_TAGS' VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
+  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS="${BUILD_TAGS}" VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
 
 # Docker Image
 
