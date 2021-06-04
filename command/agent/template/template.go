@@ -173,7 +173,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 		case err := <-ts.runner.ErrCh:
 			ts.runner.StopImmediately()
-			return fmt.Errorf("template server: %w", err)
+
+			// If unlimited retry was not specified, then we return after
+			// stopping the runner
+			if !ts.config.AgentConfig.Vault.Retry.TemplateUnlimitedRetries {
+				return fmt.Errorf("template server: %w", err)
+			}
+
+			ts.logger.Error("template server error", "error", err.Error())
+
+			ts.runner, err = manager.NewRunner(runnerConfig, false)
+			if err != nil {
+				return fmt.Errorf("template server failed to create: %w", err)
+			}
+			go ts.runner.Start()
 
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do

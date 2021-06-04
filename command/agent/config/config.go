@@ -44,7 +44,8 @@ func (c *Config) Prune() {
 }
 
 type Retry struct {
-	NumRetries int `hcl:"num_retries"`
+	NumRetries               int  `hcl:"num_retries"`
+	TemplateUnlimitedRetries bool `hcl:"template_unlimited_retries"`
 }
 
 // Vault contains configuration for connecting to Vault servers
