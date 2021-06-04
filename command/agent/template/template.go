@@ -172,6 +172,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 		case err := <-ts.runner.ErrCh:
+			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
 
 			// If unlimited retry was not specified, then we return after
@@ -179,8 +180,6 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			if !ts.config.AgentConfig.Vault.Retry.TemplateUnlimitedRetries {
 				return fmt.Errorf("template server: %w", err)
 			}
-
-			ts.logger.Error("template server error", "error", err.Error())
 
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
