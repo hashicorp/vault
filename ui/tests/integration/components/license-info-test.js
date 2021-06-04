@@ -23,9 +23,10 @@ module('Integration | Component | license info', function(hooks) {
     await render(
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
     );
+    assert.equal(component.detailRows.length, 3, 'Shows License ID, Valid from, and License State rows');
     assert.equal(component.featureRows.length, FEATURES.length, 'it renders all of the features');
     let activeFeatures = component.featureRows.filter(f => f.featureStatus === 'Active');
-    assert.equal(activeFeatures.length, 2);
+    assert.equal(activeFeatures.length, 2, 'Has two features listed as active');
   });
 
   test('it renders properly for autoloaded license', async function(assert) {

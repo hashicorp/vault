@@ -1,7 +1,7 @@
 import { text, collection } from 'ember-cli-page-object';
 
 export default {
-  detailRows: collection('[data-test-component="info-table-row"]', {
+  detailRows: collection('[data-test-detail-row]', {
     rowName: text('[data-test-row-label]'),
     rowValue: text('.column.is-flex'),
   }),
