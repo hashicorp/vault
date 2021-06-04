@@ -25,6 +25,20 @@ Control Groups can verify the following factors:
 - `Identity Groups` - Require an authorizer to be in a specific set of identity
   groups.
 
+### Controlled capabilities
+Control group factors can be configured to trigger the control group workflow
+on specific capabilities. This is done with the `controlled_capabilities` field. 
+Not specifying the `controlled_capabilities` field will necessitate the factor to be 
+checked for all operations to the specified policy path. The `controlled_capabilities` 
+field can differ per factor, so that different factors can be required for different
+operations. 
+
+Finally, the capabilities in the `controlled_capabilities` stanza must be a subset of the 
+`capabilities` specifed in the policy itself. For example, a policy giving only `read` access to 
+the path `secret/foo` cannot specify a control group factor with `list` as a controlled capability.
+
+Please see the following section for example ACL Policies.
+
 ## Control Groups In ACL Policies
 
 Control Group requirements on paths are specified as `control_group` along
@@ -75,6 +89,81 @@ two member of the "managers" or "leads" group and one member of the "superusers"
 group authorizes the request. If an authorizer is a member of both the
 "managers" and "superusers" group, one authorization for both factors will be
 satisfied.
+
+```
+path "secret/foo" {
+    capabilities = ["write",“read”]
+    control_group = {
+        factor "testing" {
+            controlled_capabilities = ["write"]
+            identity {
+                group_names = ["admin"]
+                approvals = 1
+            }
+        }
+    }
+}
+```
+
+The above policy grants `read` access to `secret/foo` for anyone that has a vault token
+with this policy. It grants `write` access to `secret/foo` only after one member from the
+admin group authorizes the request. 
+
+```
+path "kv/*" {
+    capabilities = ["create", "update","delete","list","sudo"]
+    control_group = {
+        factor "testing" {
+            controlled_capabilities = ["delete","list","sudo"]
+            identity {
+                group_names = ["admin"]
+                approvals = 1
+            }
+        }
+    }
+}
+path "kv/*" {
+    capabilities = ["create"]
+    control_group = {
+        factor "testing" {
+            identity {
+                group_names = ["superuser"]
+                approvals = 2
+            }
+        }
+    }
+}
+
+```
+
+Because the second path stanza has a control group factor with no `controlled_capabilities` field,
+any token with this policy will be required to get 2 approvals from the `superuser` group before executing
+any operation against `kv/*`. In addition, by virtue of the `controlled_capablities` field in the first
+path stanza, `delete`,`list`, and `sudo` operations will require an additional approval from the `admin` group.
+
+```path "kv/*" {
+    capabilities = ["read", "list", "create"]
+    control_group = {
+        factor "testing" {
+            identity {
+                group_names = ["admin"]
+                approvals = 1
+            }
+        }
+        factor "testing" {
+            controlled_capabilities = ["create"]
+            identity {
+                group_names = ["superuser"]
+                approvals = 1
+            }
+        }
+    }
+}
+```
+In this case, `list` will require one admin approval and `create` will require 
+one superuser approval and one admin approval. `Read` will require no extra approvals
+from any of the control group factors, and a token with this policy will not be required 
+to go through the control group workflow in order to execute a read operation against `kv/*`.  
 
 ## Control Groups in Sentinel
 
