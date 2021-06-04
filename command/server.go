@@ -1562,6 +1562,11 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
+			// Reload license file
+			if err := vault.LicenseReload(core); err != nil {
+				c.UI.Error(fmt.Sprintf("Error reloading license: %v", err))
+			}
+
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)

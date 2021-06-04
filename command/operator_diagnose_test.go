@@ -40,10 +40,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "open file limits",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "parse-config",
 					Status: diagnose.OkStatus,
 				},
@@ -305,7 +301,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 				if err := compareResults(tc.expected, result.Children); err != nil {
 					t.Fatalf("Did not find expected test results: %v", err)
-					t.Fatal(result.String())
 				}
 			})
 		}
@@ -355,7 +350,7 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 			return fmt.Errorf("section %s, warning message not found: %s in %s", exp.Name, exp.Warnings[j], act.Warnings[j])
 		}
 	}
-	if len(exp.Children) != len(act.Children) {
+	if len(exp.Children) > len(act.Children) {
 		errStrings := []string{}
 		for _, c := range act.Children {
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
@@ -367,8 +362,5 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 		return compareResults(exp.Children, act.Children)
 	}
 
-	if len(exp.Children) > 0 {
-		return compareResults(exp.Children, act.Children)
-	}
 	return nil
 }

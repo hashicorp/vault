@@ -142,7 +142,7 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 	f := c.Flags()
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
-		return 1
+		return 3
 	}
 	return c.RunWithParsedFlags()
 }
@@ -151,7 +151,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
-		return 1
+		return 3
 	}
 
 	if c.diagnose == nil {
@@ -172,7 +172,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		resultsJS, err := json.MarshalIndent(results, "", "  ")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
-			return 2
+			return 4
 		}
 		c.UI.Output(string(resultsJS))
 	} else {
@@ -181,6 +181,13 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	}
 
 	if err != nil {
+		return 4
+	}
+	// Use a different return code
+	switch results.Status {
+	case diagnose.WarningStatus:
+		return 2
+	case diagnose.ErrorStatus:
 		return 1
 	}
 	return 0
@@ -212,9 +219,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	defer span.End()
 
 	// OS Specific checks
-	// Check open file count
 	diagnose.OSChecks(ctx)
-	diagnose.Test(ctx, "disk-usage", diagnose.DiskUsageCheck)
 
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
@@ -324,7 +329,8 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var configSR sr.ServiceRegistration
 	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
-			return fmt.Errorf("No service registration config")
+			diagnose.Skipped(ctx, "no service registration configured")
+			return nil
 		}
 		srConfig := config.ServiceRegistration.Config
 
@@ -419,9 +425,13 @@ SEALFAIL:
 			return nil
 		})
 		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
-			dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
-			if dirAccess != "" {
-				diagnose.Warn(ctx, dirAccess)
+			if config.HAStorage == nil {
+				diagnose.Skipped(ctx, "no HA storage configured")
+			} else {
+				dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
+				if dirAccess != "" {
+					diagnose.Warn(ctx, dirAccess)
+				}
 			}
 			return nil
 		})
@@ -452,10 +462,7 @@ SEALFAIL:
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
-		disableClustering := false
-		if config.HAStorage != nil {
-			disableClustering = config.HAStorage.DisableClustering
-		}
+		disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener

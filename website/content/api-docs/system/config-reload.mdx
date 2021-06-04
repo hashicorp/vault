@@ -1,0 +1,33 @@
+---
+layout: api
+page_title: /sys/config/reload - HTTP API
+description: The '/sys/config/reload' endpoint is used to reload specific parts of Vault's configuration.
+---
+
+# `/sys/config/reload`
+
+The `sys/config/reload` endpoint allows reloading specific parts of Vault's configuration.
+Currently, it only supports reloading license information from files on disk.
+
+| Method | Path                          |
+| :----- | :---------------------------- |
+| `PUT`  | `/sys/config/reload/:subsystem` |
+
+### Parameters
+
+- `subsystem` `(string: <required>)` - Specifies the subsystem for Vault to reload. This is part of the request URL.
+
+## Reload License File
+
+When the `:subsystem` URL parameter is specified as `license`, Vault re-reads the license file pointed to by the `license_path` configuration option and applies the license
+to Vault. Vault may enable or disable various features when this happens, depending on if the features of the given
+license have changed from the license Vault is currently using.
+
+### Sample Request
+
+```shell-session
+$ curl \
+  -X PUT \
+  --header "X-Vault-Token: ..." \
+    'http://127.0.0.1:8200/v1/sys/config/reload/license'
+```
