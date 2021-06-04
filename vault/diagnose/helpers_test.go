@@ -57,7 +57,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
 	}
-	results.Write(os.Stdout)
+	results.Write(os.Stdout, 0)
 }
 
 const coffeeLeft = 3
