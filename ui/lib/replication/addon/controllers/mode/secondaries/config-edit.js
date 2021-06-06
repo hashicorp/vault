@@ -2,11 +2,6 @@ import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 
-const CONFIG_DEFAULTS = {
-  mode: 'whitelist',
-  paths: [],
-};
-
 export default Controller.extend({
   flashMessages: service(),
   rm: service('replication-mode'),
@@ -14,17 +9,22 @@ export default Controller.extend({
   actions: {
     resetConfig(config) {
       if (config.get('isNew')) {
-        config.setProperties(CONFIG_DEFAULTS);
+        config.setProperties({
+          mode: null,
+          paths: [],
+        });
       } else {
         config.rollbackAttributes();
       }
     },
 
-    saveConfig(config, isDelete) {
-      const flash = this.get('flashMessages');
+    saveConfig(config) {
+      // if the mode is null, we want no filtering, so we should delete any existing config
+      let isDelete = config.mode === null;
+      const flash = this.flashMessages;
       const id = config.id;
       const redirectArgs = isDelete
-        ? ['mode.secondaries', this.get('replicationMode')]
+        ? ['mode.secondaries', this.replicationMode]
         : ['mode.secondaries.config-show', id];
       const modelMethod = isDelete ? config.destroyRecord : config.save;
 

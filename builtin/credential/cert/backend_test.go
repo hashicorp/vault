@@ -5,29 +5,29 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"encoding/pem"
-	mathrand "math/rand"
-	"net/http"
-	"net/url"
-	"path/filepath"
-
-	"github.com/hashicorp/go-sockaddr"
-
-	"golang.org/x/net/http2"
-
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
+	mathrand "math/rand"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-sockaddr"
+
+	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -39,6 +39,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -96,7 +97,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +109,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledCAKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +126,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +138,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1578,7 +1579,7 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 func testAccStepListCerts(
 	t *testing.T, certs []string) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.ListOperation,
 			Path:      "certs",
 			Check: func(resp *logical.Response) error {
@@ -1597,7 +1598,7 @@ func testAccStepListCerts(
 				}
 				return nil
 			},
-		}, logicaltest.TestStep{
+		}, {
 			Operation: logical.ListOperation,
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {
@@ -1947,5 +1948,62 @@ func Test_Renew(t *testing.T) {
 	}
 	if !resp.IsError() {
 		t.Fatal("expected error")
+	}
+}
+
+func TestBackend_CertUpgrade(t *testing.T) {
+	s := &logical.InmemStorage{}
+
+	config := logical.TestBackendConfig()
+	config.StorageView = s
+
+	ctx := context.Background()
+
+	b := Backend()
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	if err := b.Setup(ctx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	foo := &CertEntry{
+		Policies:   []string{"foo"},
+		Period:     time.Second,
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+	}
+
+	entry, err := logical.StorageEntryJSON("cert/foo", foo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certEntry, err := b.Cert(ctx, s, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exp := &CertEntry{
+		Policies:   []string{"foo"},
+		Period:     time.Second,
+		TTL:        time.Second,
+		MaxTTL:     time.Second,
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		TokenParams: tokenutil.TokenParams{
+			TokenPolicies:   []string{"foo"},
+			TokenPeriod:     time.Second,
+			TokenTTL:        time.Second,
+			TokenMaxTTL:     time.Second,
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		},
+	}
+	if diff := deep.Equal(certEntry, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }

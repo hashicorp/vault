@@ -7,23 +7,29 @@ export default Route.extend({
   pathHelp: service('path-help'),
 
   beforeModel() {
-    const { item_type: itemType } = this.paramsFor(this.routeName);
-    const { path: method } = this.paramsFor('vault.cluster.access.method');
-    let methodModel = this.modelFor('vault.cluster.access.method');
-    let { apiPath, type } = methodModel;
+    const { apiPath, type, authMethodPath, itemType } = this.getMethodAndModelInfo();
     let modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.pathHelp.getNewModel(modelType, method, apiPath, itemType);
+    return this.pathHelp.getNewModel(modelType, authMethodPath, apiPath, itemType);
+  },
+
+  getMethodAndModelInfo() {
+    const { item_type: itemType } = this.paramsFor(this.routeName);
+    const { path: authMethodPath } = this.paramsFor('vault.cluster.access.method');
+    const methodModel = this.modelFor('vault.cluster.access.method');
+    const { apiPath, type } = methodModel;
+    return { apiPath, type, authMethodPath, itemType };
   },
 
   setupController(controller) {
     this._super(...arguments);
-    const { item_type: itemType } = this.paramsFor(this.routeName);
-    const { path } = this.paramsFor('vault.cluster.access.method');
-    const { apiPath } = this.modelFor('vault.cluster.access.method');
+    const { apiPath, authMethodPath, itemType } = this.getMethodAndModelInfo();
     controller.set('itemType', itemType);
-    controller.set('method', path);
-    this.pathHelp.getPaths(apiPath, path, itemType).then(paths => {
-      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then(paths => {
+      let navigationPaths = paths.paths.filter(path => path.navigation);
+      controller.set(
+        'paths',
+        navigationPaths.filter(path => path.itemType.includes(itemType)).map(path => path.path)
+      );
     });
   },
 });

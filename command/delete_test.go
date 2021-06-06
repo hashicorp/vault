@@ -28,15 +28,21 @@ func TestDeleteCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
+			"default",
+			[]string{"secret/foo"},
+			"",
+			0,
+		},
+		{
+			"optional_args",
+			[]string{"secret/foo", "bar=baz"},
+			"",
+			0,
+		},
+		{
 			"not_enough_args",
 			[]string{},
 			"Not enough arguments",
-			1,
-		},
-		{
-			"too_many_args",
-			[]string{"foo", "bar"},
-			"Too many arguments",
 			1,
 		},
 	}

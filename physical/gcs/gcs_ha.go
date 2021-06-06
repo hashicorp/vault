@@ -9,7 +9,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/pkg/errors"
@@ -17,8 +16,10 @@ import (
 )
 
 // Verify Backend satisfies the correct interfaces
-var _ physical.HABackend = (*Backend)(nil)
-var _ physical.Lock = (*Lock)(nil)
+var (
+	_ physical.HABackend = (*Backend)(nil)
+	_ physical.Lock      = (*Lock)(nil)
+)
 
 const (
 	// LockRenewInterval is the time to wait between lock renewals.
@@ -44,7 +45,7 @@ var (
 	// metricLockUnlock is the metric to register for a lock delete.
 	metricLockUnlock = []string{"gcs", "lock", "unlock"}
 
-	// metricLockGet is the metric to register for a lock get.
+	// metricLockLock is the metric to register for a lock get.
 	metricLockLock = []string{"gcs", "lock", "lock"}
 
 	// metricLockValue is the metric to register for a lock create/update.
@@ -107,7 +108,7 @@ func (b *Backend) HAEnabled() bool {
 func (b *Backend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errwrap.Wrapf("lock with: {{err}}", err)
+		return nil, fmt.Errorf("lock with: %w", err)
 	}
 	return &Lock{
 		backend:  b,
@@ -140,7 +141,7 @@ func (l *Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// occurs.
 	acquired, err := l.attemptLock(stopCh)
 	if err != nil {
-		return nil, errwrap.Wrapf("lock: {{err}}", err)
+		return nil, fmt.Errorf("lock: %w", err)
 	}
 	if !acquired {
 		return nil, nil
@@ -185,7 +186,7 @@ func (l *Lock) Unlock() error {
 	ctx := context.Background()
 	r, err := l.get(ctx)
 	if err != nil {
-		return errwrap.Wrapf("failed to read lock for deletion: {{err}}", err)
+		return fmt.Errorf("failed to read lock for deletion: %w", err)
 	}
 	if r != nil && r.Identity == l.identity {
 		ctx := context.Background()
@@ -194,14 +195,14 @@ func (l *Lock) Unlock() error {
 			MetagenerationMatch: r.attrs.Metageneration,
 		}
 
-		obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+		obj := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key)
 		if err := obj.If(conds).Delete(ctx); err != nil {
 			// If the pre-condition failed, it means that someone else has already
 			// acquired the lock and we don't want to delete it.
 			if terr, ok := err.(*googleapi.Error); ok && terr.Code == 412 {
 				l.backend.logger.Debug("unlock: preconditions failed (lock already taken by someone else?)")
 			} else {
-				return errwrap.Wrapf("failed to delete lock: {{err}}", err)
+				return fmt.Errorf("failed to delete lock: %w", err)
 			}
 		}
 	}
@@ -238,7 +239,7 @@ func (l *Lock) attemptLock(stopCh <-chan struct{}) (bool, error) {
 		case <-ticker.C:
 			acquired, err := l.writeLock()
 			if err != nil {
-				return false, errwrap.Wrapf("attempt lock: {{err}}", err)
+				return false, fmt.Errorf("attempt lock: %w", err)
 			}
 			if !acquired {
 				continue
@@ -324,10 +325,6 @@ OUTER:
 //   - if key is empty or identity is the same or timestamp exceeds TTL
 //     - update the lock to self
 func (l *Lock) writeLock() (bool, error) {
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Create a transaction to read and the update (maybe)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -347,7 +344,7 @@ func (l *Lock) writeLock() (bool, error) {
 	// Read the record
 	r, err := l.get(ctx)
 	if err != nil {
-		return false, errwrap.Wrapf("write lock: {{err}}", err)
+		return false, fmt.Errorf("write lock: %w", err)
 	}
 	if r != nil {
 		// If the key is empty or the identity is ours or the ttl expired, we can
@@ -372,11 +369,11 @@ func (l *Lock) writeLock() (bool, error) {
 		Timestamp: time.Now().UTC(),
 	})
 	if err != nil {
-		return false, errwrap.Wrapf("write lock: failed to encode JSON: {{err}}", err)
+		return false, fmt.Errorf("write lock: failed to encode JSON: %w", err)
 	}
 
 	// Write the object
-	obj := l.backend.client.Bucket(l.backend.bucket).Object(l.key)
+	obj := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key)
 	w := obj.If(conds).NewWriter(ctx)
 	w.ObjectAttrs.CacheControl = "no-cache; no-store; max-age=0"
 	w.ObjectAttrs.Metadata = map[string]string{
@@ -395,17 +392,13 @@ func (l *Lock) writeLock() (bool, error) {
 
 // get retrieves the value for the lock.
 func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Read
-	attrs, err := l.backend.client.Bucket(l.backend.bucket).Object(l.key).Attrs(ctx)
+	attrs, err := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key).Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read attrs for %q: {{err}}", l.key), err)
+		return nil, fmt.Errorf("failed to read attrs for %q: %w", l.key, err)
 	}
 
 	// If we got this far, we have attributes, meaning the lockfile exists.
@@ -413,7 +406,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 	r.attrs = attrs
 	lockData := []byte(attrs.Metadata["lock"])
 	if err := json.Unmarshal(lockData, &r); err != nil {
-		return nil, errwrap.Wrapf("failed to decode lock: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode lock: %w", err)
 	}
 	return &r, nil
 }

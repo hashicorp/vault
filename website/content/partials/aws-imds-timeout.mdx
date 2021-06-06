@@ -1,0 +1,24 @@
+~> Affects Vault 1.4 and later
+
+Anytime Vault uses the [instance metadata service][aws-ec2-mds] on an EC2
+instance, such as for getting credentials from the instance profile, there may
+be a delay with the introduction of [v2 of the instance metadata service
+(IMDSv2)][aws-ec2-imdsv2]. The AWS SDK used by Vault first attempts to connect
+to IMDSv2, and if that times out, it falls back to v1. In Vault 1.4, this
+timeout can take up to 2 minutes. In Vault 1.5.5 and later, it can take up to 2
+seconds with this fix: [#10133](https://github.com/hashicorp/vault/pull/10133).
+
+The timeout occurs in situations where there is a proxy between Vault and
+IMDSv2, and the instance hop limit is set to less than the number of "hops"
+between Vault and IMDSv2. For example, if Vault is running in docker on an EC2
+instance with the instance hop limit set to 1, the AWS SDK client will attempt
+to connect to IMDSv2, timeout, and fall back to IMDSv1 because of the extra
+network hop between docker and IMDS.
+
+To avoid the timeout behavior, the hop limit may be [adjusted on the underlying
+EC2 instances][aws-ec2-imdsv2-config]. With the docker example, setting the hop
+limit to 2 will allow the AWS SDK in Vault to connect to IMDSv2 without delay.
+
+[aws-ec2-mds]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+[aws-ec2-imdsv2]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html
+[aws-ec2-imdsv2-config]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html#configuring-instance-metadata-options

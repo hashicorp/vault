@@ -14,10 +14,11 @@ import (
 // TestRequest is a helper to create a purely in-memory Request struct.
 func TestRequest(t testing.T, op Operation, path string) *Request {
 	return &Request{
-		Operation: op,
-		Path:      path,
-		Data:      make(map[string]interface{}),
-		Storage:   new(InmemStorage),
+		Operation:  op,
+		Path:       path,
+		Data:       make(map[string]interface{}),
+		Storage:    new(InmemStorage),
+		Connection: &Connection{},
 	}
 }
 
@@ -79,6 +80,7 @@ func TestBackendConfig() *BackendConfig {
 	bc := &BackendConfig{
 		Logger: logging.NewVaultLogger(log.Trace),
 		System: TestSystemView(),
+		Config: make(map[string]string),
 	}
 
 	return bc

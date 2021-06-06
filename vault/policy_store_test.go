@@ -5,33 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 )
-
-func mockPolicyStore(t *testing.T) *PolicyStore {
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	p, err := NewPolicyStore(context.Background(), nil, view, logical.TestSystemView(), logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
-
-func mockPolicyStoreNoCache(t *testing.T) *PolicyStore {
-	sysView := logical.TestSystemView()
-	sysView.CachingDisabledVal = true
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "foo/")
-	p, err := NewPolicyStore(context.Background(), nil, view, sysView, logging.NewVaultLogger(log.Trace))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return p
-}
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
@@ -293,7 +268,7 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 	}
 
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
-	acl, err := ps.ACL(ctx, nil, map[string][]string{ns.ID: []string{"dev", "ops"}})
+	acl, err := ps.ACL(ctx, nil, map[string][]string{ns.ID: {"dev", "ops"}})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

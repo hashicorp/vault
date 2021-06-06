@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -65,7 +66,7 @@ func TestBackendHandleRequest(t *testing.T) {
 			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -74,7 +75,7 @@ func TestBackendHandleRequest(t *testing.T) {
 			{
 				Pattern: "foo/baz/handler",
 				Fields: map[string]*FieldSchema{
-					"amount": &FieldSchema{Type: TypeInt},
+					"amount": {Type: TypeInt},
 				},
 				Operations: map[logical.Operation]OperationHandler{
 					logical.ReadOperation: &PathOperation{Callback: handler},
@@ -83,7 +84,7 @@ func TestBackendHandleRequest(t *testing.T) {
 			{
 				Pattern: "foo/both/handler",
 				Fields: map[string]*FieldSchema{
-					"amount": &FieldSchema{Type: TypeInt},
+					"amount": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -93,6 +94,7 @@ func TestBackendHandleRequest(t *testing.T) {
 				},
 			},
 		},
+		system: &logical.StaticSystemView{},
 	}
 
 	for _, path := range []string{"foo/bar", "foo/baz/handler", "foo/both/handler"} {
@@ -114,6 +116,107 @@ func TestBackendHandleRequest(t *testing.T) {
 	}
 }
 
+func TestBackendHandleRequest_Forwarding(t *testing.T) {
+	tests := map[string]struct {
+		fwdStandby   bool
+		fwdSecondary bool
+		isLocal      bool
+		isStandby    bool
+		isSecondary  bool
+		expectFwd    bool
+		nilSysView   bool
+	}{
+		"no forward": {
+			expectFwd: false,
+		},
+		"no forward, local restricted": {
+			isSecondary:  true,
+			fwdSecondary: true,
+			isLocal:      true,
+			expectFwd:    false,
+		},
+		"no forward, forwarding not requested": {
+			isSecondary: true,
+			isStandby:   true,
+			expectFwd:   false,
+		},
+		"forward, secondary": {
+			fwdSecondary: true,
+			isSecondary:  true,
+			expectFwd:    true,
+		},
+		"forward, standby": {
+			fwdStandby: true,
+			isStandby:  true,
+			expectFwd:  true,
+		},
+		"no forward, only secondary": {
+			fwdSecondary: true,
+			isStandby:    true,
+			expectFwd:    false,
+		},
+		"no forward, only standby": {
+			fwdStandby:  true,
+			isSecondary: true,
+			expectFwd:   false,
+		},
+		"nil system view": {
+			nilSysView: true,
+			expectFwd:  false,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var replState consts.ReplicationState
+			if test.isStandby {
+				replState.AddState(consts.ReplicationPerformanceStandby)
+			}
+			if test.isSecondary {
+				replState.AddState(consts.ReplicationPerformanceSecondary)
+			}
+
+			b := &Backend{
+				Paths: []*Path{
+					{
+						Pattern: "foo",
+						Operations: map[logical.Operation]OperationHandler{
+							logical.ReadOperation: &PathOperation{
+								Callback: func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+									return nil, nil
+								},
+								ForwardPerformanceSecondary: test.fwdSecondary,
+								ForwardPerformanceStandby:   test.fwdStandby,
+							},
+						},
+					},
+				},
+
+				system: &logical.StaticSystemView{
+					LocalMountVal:       test.isLocal,
+					ReplicationStateVal: replState,
+				},
+			}
+
+			if test.nilSysView {
+				b.system = nil
+			}
+
+			_, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "foo",
+			})
+
+			if !test.expectFwd && err != nil {
+				t.Fatalf("unexpected err: %v", err)
+			}
+			if test.expectFwd && err != logical.ErrReadOnly {
+				t.Fatalf("expected ErrReadOnly, got: %v", err)
+			}
+		})
+	}
+}
+
 func TestBackendHandleRequest_badwrite(t *testing.T) {
 	callback := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{
@@ -125,10 +228,10 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeBool},
+					"value": {Type: TypeBool},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.UpdateOperation: callback,
@@ -146,7 +249,6 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 	if err == nil {
 		t.Fatalf("should have thrown a conversion error")
 	}
-
 }
 
 func TestBackendHandleRequest_404(t *testing.T) {
@@ -160,10 +262,10 @@ func TestBackendHandleRequest_404(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: `foo/bar`,
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -185,10 +287,10 @@ func TestBackendHandleRequest_404(t *testing.T) {
 func TestBackendHandleRequest_help(t *testing.T) {
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				HelpSynopsis:    "foo",
 				HelpDescription: "bar",
@@ -257,6 +359,7 @@ func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
 		t.Fatalf("bad: %#v", v)
 	}
 }
+
 func TestBackendHandleRequest_renew(t *testing.T) {
 	called := new(uint32)
 	callback := func(context.Context, *logical.Request, *FieldData) (*logical.Response, error) {
@@ -382,10 +485,10 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: `foo/bar`,
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -415,10 +518,10 @@ func TestBackendHandleRequest_urlPriority(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: `foo/(?P<value>\d+)`,
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -510,13 +613,13 @@ func TestBackendSecret(t *testing.T) {
 		Match   bool
 	}{
 		"no match": {
-			[]*Secret{&Secret{Type: "foo"}},
+			[]*Secret{{Type: "foo"}},
 			"bar",
 			false,
 		},
 
 		"match": {
-			[]*Secret{&Secret{Type: "foo"}},
+			[]*Secret{{Type: "foo"}},
 			"foo",
 			true,
 		},
@@ -564,6 +667,11 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 			60,
 		},
 
+		"illegal default duration string": {
+			&FieldSchema{Type: TypeDurationSecond, Default: "h1"},
+			0,
+		},
+
 		"default duration time.Duration": {
 			&FieldSchema{Type: TypeDurationSecond, Default: 60 * time.Second},
 			60,
@@ -574,6 +682,55 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 			0,
 		},
 
+		"default signed positive duration set": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: 60},
+			60,
+		},
+
+		"default signed positive duration int64": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: int64(60)},
+			60,
+		},
+
+		"default signed positive duration string": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: "60s"},
+			60,
+		},
+
+		"illegal default signed duration string": {
+			&FieldSchema{Type: TypeDurationSecond, Default: "-h1"},
+			0,
+		},
+
+		"default signed positive duration time.Duration": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: 60 * time.Second},
+			60,
+		},
+
+		"default signed negative duration set": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: -60},
+			-60,
+		},
+
+		"default signed negative duration int64": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: int64(-60)},
+			-60,
+		},
+
+		"default signed negative duration string": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: "-60s"},
+			-60,
+		},
+
+		"default signed negative duration time.Duration": {
+			&FieldSchema{Type: TypeSignedDurationSecond, Default: -60 * time.Second},
+			-60,
+		},
+
+		"default signed negative duration not set": {
+			&FieldSchema{Type: TypeSignedDurationSecond},
+			0,
+		},
 		"default header not set": {
 			&FieldSchema{Type: TypeHeader},
 			http.Header{},
@@ -583,8 +740,22 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 	for name, tc := range cases {
 		actual := tc.Schema.DefaultOrZero()
 		if !reflect.DeepEqual(actual, tc.Value) {
-			t.Fatalf("bad: %s\n\nExpected: %#v\nGot: %#v",
+			t.Errorf("bad: %s\n\nExpected: %#v\nGot: %#v",
 				name, tc.Value, actual)
 		}
+	}
+}
+
+func TestInitializeBackend(t *testing.T) {
+	var inited bool
+	backend := &Backend{InitializeFunc: func(context.Context, *logical.InitializationRequest) error {
+		inited = true
+		return nil
+	}}
+
+	backend.Initialize(nil, &logical.InitializationRequest{Storage: nil})
+
+	if !inited {
+		t.Fatal("backend should be open")
 	}
 }

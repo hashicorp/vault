@@ -3,7 +3,9 @@ package gcpauth
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
@@ -15,6 +17,7 @@ var _ client = (*gcpClient)(nil)
 // abstracted as an interface for stubbing during testing. See stubbedClient for
 // more details.
 type gcpClient struct {
+	logger     log.Logger
 	computeSvc *compute.Service
 	iamSvc     *iam.Service
 }
@@ -28,6 +31,13 @@ func (c *gcpClient) InstanceGroups(ctx context.Context, project string, boundIns
 		Fields("items/*/instanceGroups/name").
 		Pages(ctx, func(l *compute.InstanceGroupAggregatedList) error {
 			for k, v := range l.Items {
+				// Some groups returned are regional
+				// TODO(emilymye, #73): Support regions?
+				if strings.Contains(k, "/regions/") {
+					c.logger.Debug("ignoring instance groups under region in instance group aggregated list", "key", k)
+					continue
+				}
+
 				zone, err := zoneFromSelfLink(k)
 				if err != nil {
 					return err

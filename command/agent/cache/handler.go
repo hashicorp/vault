@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/sink"
@@ -20,11 +19,16 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
+		if !proxyVaultToken {
+			r.Header.Del(consts.AuthHeaderName)
+		}
+
 		token := r.Header.Get(consts.AuthHeaderName)
+
 		if token == "" && inmemSink != nil {
 			logger.Debug("using auto auth token", "method", r.Method, "path", r.URL.Path)
 			token = inmemSink.(sink.SinkReader).Token()
@@ -35,6 +39,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		if err != nil {
 			logger.Error("failed to read request body")
 			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			return
 		}
 		if r.Body != nil {
 			r.Body.Close()
@@ -54,14 +59,14 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 				w.WriteHeader(resp.Response.StatusCode)
 				io.Copy(w, resp.Response.Body)
 			} else {
-				logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
 			return
 		}
 
 		err = processTokenLookupResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
-			logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to process token lookup response: {{err}}", err))
+			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to process token lookup response: %w", err))
 			return
 		}
 
@@ -173,7 +178,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemS
 	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
-	// Serialize and re-read the reponse
+	// Serialize and re-read the response
 	var respBytes bytes.Buffer
 	err = resp.Response.Write(&respBytes)
 	if err != nil {

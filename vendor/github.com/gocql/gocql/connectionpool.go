@@ -28,14 +28,31 @@ type SetPartitioner interface {
 }
 
 func setupTLSConfig(sslOpts *SslOptions) (*tls.Config, error) {
+	//  Config.InsecureSkipVerify | EnableHostVerification | Result
+	//  Config is nil             | true                   | verify host
+	//  Config is nil             | false                  | do not verify host
+	//  false                     | false                  | verify host
+	//  true                      | false                  | do not verify host
+	//  false                     | true                   | verify host
+	//  true                      | true                   | verify host
+	var tlsConfig *tls.Config
 	if sslOpts.Config == nil {
-		sslOpts.Config = &tls.Config{}
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: !sslOpts.EnableHostVerification,
+		}
+	} else {
+		// use clone to avoid race.
+		tlsConfig = sslOpts.Config.Clone()
+	}
+
+	if tlsConfig.InsecureSkipVerify && sslOpts.EnableHostVerification {
+		tlsConfig.InsecureSkipVerify = false
 	}
 
 	// ca cert is optional
 	if sslOpts.CaPath != "" {
-		if sslOpts.RootCAs == nil {
-			sslOpts.RootCAs = x509.NewCertPool()
+		if tlsConfig.RootCAs == nil {
+			tlsConfig.RootCAs = x509.NewCertPool()
 		}
 
 		pem, err := ioutil.ReadFile(sslOpts.CaPath)
@@ -43,7 +60,7 @@ func setupTLSConfig(sslOpts *SslOptions) (*tls.Config, error) {
 			return nil, fmt.Errorf("connectionpool: unable to open CA certs: %v", err)
 		}
 
-		if !sslOpts.RootCAs.AppendCertsFromPEM(pem) {
+		if !tlsConfig.RootCAs.AppendCertsFromPEM(pem) {
 			return nil, errors.New("connectionpool: failed parsing or CA certs")
 		}
 	}
@@ -53,13 +70,10 @@ func setupTLSConfig(sslOpts *SslOptions) (*tls.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("connectionpool: unable to load X509 key pair: %v", err)
 		}
-		sslOpts.Certificates = append(sslOpts.Certificates, mycert)
+		tlsConfig.Certificates = append(tlsConfig.Certificates, mycert)
 	}
 
-	sslOpts.InsecureSkipVerify = !sslOpts.EnableHostVerification
-
-	// return clone to avoid race
-	return sslOpts.Config.Clone(), nil
+	return tlsConfig, nil
 }
 
 type policyConnPool struct {
@@ -94,6 +108,7 @@ func connConfig(cfg *ClusterConfig) (*ConnConfig, error) {
 		CQLVersion:      cfg.CQLVersion,
 		Timeout:         cfg.Timeout,
 		ConnectTimeout:  cfg.ConnectTimeout,
+		Dialer:          cfg.Dialer,
 		Compressor:      cfg.Compressor,
 		Authenticator:   cfg.Authenticator,
 		AuthProvider:    cfg.AuthProvider,
@@ -235,12 +250,6 @@ func (p *policyConnPool) removeHost(ip net.IP) {
 	p.mu.Unlock()
 
 	go pool.Close()
-}
-
-func (p *policyConnPool) hostUp(host *HostInfo) {
-	// TODO(zariel): have a set of up hosts and down hosts, we can internally
-	// detect down hosts, then try to reconnect to them.
-	p.addHost(host)
 }
 
 func (p *policyConnPool) hostDown(ip net.IP) {
@@ -428,6 +437,8 @@ func (pool *hostConnPool) fill() {
 			}
 			return
 		}
+		// notify the session that this node is connected
+		go pool.session.handleNodeUp(pool.host.ConnectAddress(), pool.port)
 
 		// filled one
 		fillCount--
@@ -439,6 +450,11 @@ func (pool *hostConnPool) fill() {
 
 		// mark the end of filling
 		pool.fillingStopped(err != nil)
+
+		if err == nil && startCount > 0 {
+			// notify the session that this node is connected again
+			go pool.session.handleNodeUp(pool.host.ConnectAddress(), pool.port)
+		}
 	}()
 }
 
@@ -506,7 +522,7 @@ func (pool *hostConnPool) connect() (err error) {
 	var conn *Conn
 	reconnectionPolicy := pool.session.cfg.ReconnectionPolicy
 	for i := 0; i < reconnectionPolicy.GetMaxRetries(); i++ {
-		conn, err = pool.session.connect(pool.host, pool)
+		conn, err = pool.session.connect(pool.session.ctx, pool.host, pool)
 		if err == nil {
 			break
 		}

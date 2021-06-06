@@ -1,12 +1,18 @@
-{{#basic-dropdown-hover horizontalPosition="auto-left" verticalPosition="below" renderInPlace=media.isMobile as |d|}}
-  {{#d.trigger tagName=(if (eq type "replication") "span" "button") class=(if (eq type "replication") "" "button is-transparent")}}
+<BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" @renderInPlace={{media.isMobile}} as |d|>
+  <d.trigger @tagName={{if (eq type "replication") "span" "button"}} @class={{if (eq type "replication") "" "button is-transparent"}}>
     <Icon @glyph={{glyphName}} @size="l" aria-label={{ariaLabel}} />
     <div class="status-menu-label">
       {{label}}
     </div>
     <Chevron @direction="down" class="has-text-white is-status-chevron"/>
-  {{/d.trigger}}
-  {{#d.content class=(concat "status-menu-content status-menu-content-" type)}}
-    {{partial partialName}}
-  {{/d.content}}
-{{/basic-dropdown-hover}}
+  </d.trigger>
+  <d.content @class={{concat "status-menu-content status-menu-content-" type}}>
+    {{#if (eq type "user")}}
+      {{#if (and cluster.name auth.currentToken)}}
+        <AuthInfo @activeClusterName={{cluster.name}} @onLinkClick={{action onLinkClick}} />
+      {{/if}}
+    {{else}}
+        <ClusterInfo @cluster={{cluster}}  @onLinkClick={{action (queue (action onLinkClick) (action d.actions.close))}} />
+    {{/if}}
+  </d.content>
+</BasicDropdown>

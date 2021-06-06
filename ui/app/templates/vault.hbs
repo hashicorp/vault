@@ -7,10 +7,13 @@
         @size="l"
         aria-hidden="true"
         class="has-text-grey-light" />
-      &copy; {{date-format (now) "YYYY"}} HashiCorp
+      &copy; {{date-format (now) "yyyy"}} HashiCorp
     </span>
     <span>
-      Vault {{activeCluster.leaderNode.version}}
+      <a href={{changelog-url-for activeCluster.leaderNode.version}}
+      class="link has-text-grey">
+        Vault {{activeCluster.leaderNode.version}}
+      </a>
     </span>
     {{#if (is-version "OSS")}}
       <span>

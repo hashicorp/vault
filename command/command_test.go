@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -84,11 +85,16 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 // API client, list of unseal keys (as strings), and a closer function.
 func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	tb.Helper()
+	logger := log.NewInterceptLogger(&log.LoggerOptions{
+		Output:     log.DefaultOutput,
+		Level:      log.Debug,
+		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
+	})
 
 	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
-		Logger:             defaultVaultLogger,
+		Logger:             logger,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
@@ -175,7 +181,12 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 		tb.Fatal(err)
 	}
 
-	return client, func() { ln.Close() }
+	closer := func() {
+		core.Shutdown()
+		ln.Close()
+	}
+
+	return client, closer
 }
 
 // testVaultServerBad creates an http server that returns a 500 on each request

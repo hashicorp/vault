@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -41,6 +41,15 @@ func testCore_NewTestCoreLicensing(t *testing.T, seal Seal, licensingConfig *Lic
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		c.Shutdown()
+	})
 	return c, conf
 }
 
@@ -80,7 +89,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		t.Fatalf("err: %v", err)
 	}
 
-	if len(res.SecretShares) != (barrierConf.SecretShares - barrierConf.StoredShares) {
+	if c.seal.BarrierType() == wrapping.Shamir && len(res.SecretShares) != barrierConf.SecretShares {
 		t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *barrierConf)
 	}
 	if recoveryConf != nil {

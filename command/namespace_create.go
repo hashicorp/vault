@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceCreateCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceCreateCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceCreateCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceCreateCommand)(nil)
+)
 
 type NamespaceCreateCommand struct {
 	*BaseCommand
@@ -45,7 +47,7 @@ func (c *NamespaceCreateCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceCreateCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return complete.PredictNothing
 }
 
 func (c *NamespaceCreateCommand) AutocompleteFlags() complete.Flags {

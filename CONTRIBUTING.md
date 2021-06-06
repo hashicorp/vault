@@ -13,14 +13,14 @@ rules to get in the way of that.
 That said, if you want to ensure that a pull request is likely to be merged,
 talk to us! You can find out our thoughts and ensure that your contribution
 won't clash or be obviated by Vault's normal direction. A great way to do this
-is via the [Vault Google Group][2]. Sometimes Vault devs are in `#vault-tool`
-on Freenode, too.
-
-This document will cover what we're looking for in terms of reporting issues.
-By addressing all the points we're looking for, it raises the chances we can
-quickly merge or address your contributions.
+is via the [Vault Discussion Forum][2].
 
 ## Issues
+
+This section will cover what we're looking for in terms of reporting issues.
+
+By addressing all the points we're looking for, it raises the chances we can
+quickly merge or address your contributions.
 
 ### Reporting an Issue
 
@@ -62,6 +62,71 @@ quickly merge or address your contributions.
    the issue tracker clean. The issue is still indexed and available for
    future viewers, or can be re-opened if necessary.
 
+## Pull requests
+
+When submitting a PR you should reference an existing issue. If no issue already exists, 
+please create one. This can be skipped for trivial PRs like fixing typos.
+
+Creating an issue in advance of working on the PR can help to avoid duplication of effort, 
+e.g. maybe we know of existing related work. Or it may be that we can provide guidance 
+that will help with your approach.
+
+Your pull request should have a description of what it accomplishes, how it does so,
+and why you chose the approach you did.  PRs should include unit tests that validate
+correctness and the existing tests must pass.  Follow-up work to fix tests
+does not need a fresh issue filed.
+
+Someone will do a first pass review on your PR making sure it follows the guidelines 
+in this document.  If it doesn't we'll mark the PR incomplete and ask you to follow
+up on the missing requirements.
+
+### Changelog Entries
+Please include a file within your PR named `changelog/#.txt`, where `#` is your
+pull request ID.  There are many examples under [changelog](changelog/), but
+the general format is
+
+````
+```release-note:CATEGORY
+COMPONENT: summary of change
+```
+````
+
+CATEGORY is one of `security`, `change`, `feature`, `improvement`, or `bug`.
+Your PR is almost certain to be one of `bug` or `improvement`, but don't
+worry too much about getting it exactly right, we'll tell you if a change is 
+needed.
+
+To determine the relevant component, consult [CHANGELOG](CHANGELOG.md) and pick
+whichever one you see that seems the closest match.
+
+You do not need to include the link at the end of the summary that appears in
+CHANGELOG.md, those are generated automatically by the changelog-building 
+process.
+
+### Vault UI
+
+How you contribute to the UI depends on what you want to contribute. If that is 
+a new feature, please submit an informational issue first.  That issue 
+should include a short description of the proposed feature, the use case,
+the approach you're taking, and the tests that would be written.  A mockup
+is optional but encouraged.  
+
+Bug fixes are welcome in PRs but existing tests must pass and updated logic 
+should be handled in new tests.  You needn't submit an issue first to fix bugs.
+
+Keep in mind that the UI should be consistent with other areas of Vault. Our 
+[README](ui/README.md) [has instructions for launching Storybook](ui/README.md#vault-storybook),
+which showcases how we use components. Beyond that, the UI should be user-centered, 
+informative, and include edge cases and errors— including accommodations for 
+users who may not have permissions to view or interact with your feature. 
+If you are not comfortable with UI design, a Vault designer can take a look at 
+your work— just be aware that this might mean it will add some time to the 
+PR process. 
+
+Finally, in your code, try to avoid logic-heavy templates (when possible, 
+calculate values in the .js file instead of .hbs) and Ember anti-patterns. 
+And most of all, if you have any questions, please ask!
+
 ## Setting up Go to work on Vault
 
 If you have never worked with Go before, you will have to complete the
@@ -69,4 +134,10 @@ following steps listed in the README, under the section [Developing Vault][1].
 
 
 [1]: https://github.com/hashicorp/vault#developing-vault
-[2]: https://groups.google.com/group/vault-tool
+[2]: https://discuss.hashicorp.com/c/vault
+
+## Contributor License Agreement
+
+We require that all contributors sign our Contributor License Agreement ("CLA") before we can accept the contribution. 
+
+[Learn more about why HashiCorp requires a CLA and what the CLA includes](https://www.hashicorp.com/cla)

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault-plugin-secrets-alicloud/clients"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -202,9 +203,15 @@ func getRemotePolicies(internalData map[string]interface{}, key string) ([]*remo
 	if !ok {
 		return nil, fmt.Errorf("secret is missing %s internal data", key)
 	}
-	policies, ok := valuesRaw.([]*remotePolicy)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing %s internal data", key)
+
+	valuesJSON, err := jsonutil.EncodeJSON(valuesRaw)
+	if err != nil {
+		return nil, fmt.Errorf("malformed %s internal data", key)
+	}
+
+	policies := []*remotePolicy{}
+	if err := jsonutil.DecodeJSON(valuesJSON, &policies); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %s internal data as remotePolicy", key)
 	}
 	return policies, nil
 }

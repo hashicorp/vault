@@ -2,12 +2,14 @@ package azuresecrets
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // AzureProvider is an interface to access underlying Azure client objects and supporting services.
@@ -16,6 +18,7 @@ import (
 type AzureProvider interface {
 	ApplicationsClient
 	ServicePrincipalsClient
+	ADGroupsClient
 	RoleAssignmentsClient
 	RoleDefinitionsClient
 }
@@ -33,6 +36,13 @@ type ApplicationsClient interface {
 
 type ServicePrincipalsClient interface {
 	CreateServicePrincipal(ctx context.Context, parameters graphrbac.ServicePrincipalCreateParameters) (graphrbac.ServicePrincipal, error)
+}
+
+type ADGroupsClient interface {
+	AddGroupMember(ctx context.Context, groupObjectID string, parameters graphrbac.GroupAddMemberParameters) (result autorest.Response, err error)
+	RemoveGroupMember(ctx context.Context, groupObjectID, memberObjectID string) (result autorest.Response, err error)
+	GetGroup(ctx context.Context, objectID string) (result graphrbac.ADGroup, err error)
+	ListGroups(ctx context.Context, filter string) (result []graphrbac.ADGroup, err error)
 }
 
 type RoleAssignmentsClient interface {
@@ -55,10 +65,11 @@ type RoleDefinitionsClient interface {
 type provider struct {
 	settings *clientSettings
 
-	appClient *graphrbac.ApplicationsClient
-	spClient  *graphrbac.ServicePrincipalsClient
-	raClient  *authorization.RoleAssignmentsClient
-	rdClient  *authorization.RoleDefinitionsClient
+	appClient    *graphrbac.ApplicationsClient
+	spClient     *graphrbac.ServicePrincipalsClient
+	groupsClient *graphrbac.GroupsClient
+	raClient     *authorization.RoleAssignmentsClient
+	rdClient     *authorization.RoleDefinitionsClient
 }
 
 // newAzureProvider creates an azureProvider, backed by Azure client objects for underlying services.
@@ -76,6 +87,24 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 		userAgent = useragent.String()
 	}
 
+	// Sets a unique ID in the user-agent
+	// Normal user-agent looks like this:
+	//
+	// Vault/1.6.0 (+https://www.vaultproject.io/; azure-secrets; go1.15.7)
+	//
+	// Here we append a unique code if it's an enterprise version, where
+	// VersionMetadata will contain a non-empty string like "ent" or "prem".
+	// Otherwise use the default identifier for OSS Vault. The end result looks
+	// like so:
+	//
+	// Vault/1.6.0 (+https://www.vaultproject.io/; azure-secrets; go1.15.7; b2c13ec1-60e8-4733-9a76-88dbb2ce2471)
+	vaultIDString := "; 15cd22ce-24af-43a4-aa83-4c1a36a4b177)"
+	ver := version.GetVersion()
+	if ver.VersionMetadata != "" {
+		vaultIDString = "; b2c13ec1-60e8-4733-9a76-88dbb2ce2471)"
+	}
+	userAgent = strings.Replace(userAgent, ")", vaultIDString, 1)
+
 	appClient := graphrbac.NewApplicationsClient(settings.TenantID)
 	appClient.Authorizer = authorizer
 	appClient.AddToUserAgent(userAgent)
@@ -84,27 +113,32 @@ func newAzureProvider(settings *clientSettings) (AzureProvider, error) {
 	spClient.Authorizer = authorizer
 	spClient.AddToUserAgent(userAgent)
 
+	groupsClient := graphrbac.NewGroupsClient(settings.TenantID)
+	groupsClient.Authorizer = authorizer
+	groupsClient.AddToUserAgent(userAgent)
+
 	// build clients that use the Resource Manager endpoint
 	authorizer, err = getAuthorizer(settings, settings.Environment.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	raClient := authorization.NewRoleAssignmentsClient(settings.SubscriptionID)
+	raClient := authorization.NewRoleAssignmentsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, settings.SubscriptionID)
 	raClient.Authorizer = authorizer
 	raClient.AddToUserAgent(userAgent)
 
-	rdClient := authorization.NewRoleDefinitionsClient(settings.SubscriptionID)
+	rdClient := authorization.NewRoleDefinitionsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, settings.SubscriptionID)
 	rdClient.Authorizer = authorizer
 	rdClient.AddToUserAgent(userAgent)
 
 	p := &provider{
 		settings: settings,
 
-		appClient: &appClient,
-		spClient:  &spClient,
-		raClient:  &raClient,
-		rdClient:  &rdClient,
+		appClient:    &appClient,
+		spClient:     &spClient,
+		groupsClient: &groupsClient,
+		raClient:     &raClient,
+		rdClient:     &rdClient,
 	}
 
 	return p, nil
@@ -200,6 +234,31 @@ func (p *provider) DeleteRoleAssignmentByID(ctx context.Context, roleAssignmentI
 func (p *provider) ListRoleAssignments(ctx context.Context, filter string) ([]authorization.RoleAssignment, error) {
 	page, err := p.raClient.List(ctx, filter)
 
+	if err != nil {
+		return nil, err
+	}
+
+	return page.Values(), nil
+}
+
+// AddGroupMember adds a member to a AAD Group.
+func (p *provider) AddGroupMember(ctx context.Context, groupObjectID string, parameters graphrbac.GroupAddMemberParameters) (result autorest.Response, err error) {
+	return p.groupsClient.AddMember(ctx, groupObjectID, parameters)
+}
+
+// RemoveGroupMember removes a member from a AAD Group.
+func (p *provider) RemoveGroupMember(ctx context.Context, groupObjectID, memberObjectID string) (result autorest.Response, err error) {
+	return p.groupsClient.RemoveMember(ctx, groupObjectID, memberObjectID)
+}
+
+// GetGroup gets group information from the directory.
+func (p *provider) GetGroup(ctx context.Context, objectID string) (result graphrbac.ADGroup, err error) {
+	return p.groupsClient.Get(ctx, objectID)
+}
+
+// ListGroups gets list of groups for the current tenant.
+func (p *provider) ListGroups(ctx context.Context, filter string) (result []graphrbac.ADGroup, err error) {
+	page, err := p.groupsClient.List(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

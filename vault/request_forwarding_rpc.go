@@ -7,11 +7,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
-	cache "github.com/patrickmn/go-cache"
 )
 
 type forwardedRequestRPCServer struct {
@@ -19,7 +19,7 @@ type forwardedRequestRPCServer struct {
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
-	perfStandbyCache      *cache.Cache
+	raftFollowerStates    *raft.FollowerStates
 }
 
 func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
@@ -63,7 +63,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	}
 
 	// Performance standby nodes will use this value to do wait for WALs to ship
-	// in order to do a best-effort read after write gurantee
+	// in order to do a best-effort read after write guarantee
 	resp.LastRemoteWal = LastWAL(s.core)
 
 	return resp, nil
@@ -74,8 +74,8 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
 	}
 
-	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.core.raftFollowerStates != nil {
-		s.core.raftFollowerStates.update(in.RaftNodeID, in.RaftAppliedIndex)
+	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
+		s.raftFollowerStates.Update(in.RaftNodeID, in.RaftAppliedIndex, in.RaftTerm, in.RaftDesiredSuffrage)
 	}
 
 	reply := &EchoReply{
@@ -83,9 +83,9 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		ReplicationState: uint32(s.core.ReplicationState()),
 	}
 
-	if raftStorage, ok := s.core.underlyingPhysical.(*raft.RaftBackend); ok {
-		reply.RaftAppliedIndex = raftStorage.AppliedIndex()
-		reply.RaftNodeID = raftStorage.NodeID()
+	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
+		reply.RaftAppliedIndex = raftBackend.AppliedIndex()
+		reply.RaftNodeID = raftBackend.NodeID()
 	}
 
 	return reply, nil
@@ -105,18 +105,18 @@ type forwardingClient struct {
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		tick := func() {
-			c.core.stateLock.RLock()
-			clusterAddr := c.core.clusterAddr
-			c.core.stateLock.RUnlock()
+			clusterAddr := c.core.ClusterAddr()
 
 			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
 			}
 
-			if raftStorage, ok := c.core.underlyingPhysical.(*raft.RaftBackend); ok {
-				req.RaftAppliedIndex = raftStorage.AppliedIndex()
-				req.RaftNodeID = raftStorage.NodeID()
+			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
+				req.RaftAppliedIndex = raftBackend.AppliedIndex()
+				req.RaftNodeID = raftBackend.NodeID()
+				req.RaftTerm = raftBackend.Term()
+				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)

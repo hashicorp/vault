@@ -1,12 +1,11 @@
 import { run } from '@ember/runloop';
 import Helper from '@ember/component/helper';
-import { get } from '@ember/object';
 
 export default Helper.extend({
   disableInterval: false,
 
   compute(value, { interval }) {
-    if (get(this, 'disableInterval')) {
+    if (this.disableInterval) {
       return;
     }
 
@@ -14,10 +13,10 @@ export default Helper.extend({
 
     if (interval) {
       /*
-             * NOTE: intentionally a setTimeout so tests do not block on it
-             * as the run loop queue is never clear so tests will stay locked waiting
-             * for queue to clear.
-             */
+       * NOTE: intentionally a setTimeout so tests do not block on it
+       * as the run loop queue is never clear so tests will stay locked waiting
+       * for queue to clear.
+       */
       this.intervalTimer = setTimeout(() => {
         run(() => this.recompute());
       }, parseInt(interval, 10));

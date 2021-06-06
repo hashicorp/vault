@@ -46,7 +46,7 @@ func (c *base1DCodeIntCS) CheckSum() int {
 	return c.checksum
 }
 
-// New1DCode creates a new 1D barcode where the bars are represented by the bits in the bars BitList
+// New1DCodeIntCheckSum creates a new 1D barcode where the bars are represented by the bits in the bars BitList
 func New1DCodeIntCheckSum(codeKind, content string, bars *BitList, checksum int) barcode.BarcodeIntCS {
 	return &base1DCodeIntCS{base1DCode{bars, codeKind, content}, checksum}
 }

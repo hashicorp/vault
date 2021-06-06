@@ -3,107 +3,77 @@ package azure
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 
-	storage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
-func environmentForCleanupClient(name string) (azure.Environment, error) {
-	if name == "" {
-		return azure.EnvironmentFromName("AzurePublicCloud")
-	}
-	return azure.EnvironmentFromName(name)
-}
+/// These tests run against an actual azure storage account
+/// Authentication options:
+/// - Use a static access key via AZURE_ACCOUNT_KEY
+/// - Use managed identities (leave AZURE_ACCOUNT_KEY empty)
+///
+/// To run the tests using managed identities, the following pre-requisites have to be met:
+/// 1. Access to the Azure Instance Metadata Service (IMDS) is required (e.g. run it on a Azure VM)
+/// 2. A system-assigned oder user-assigned identity attached to the host running the test
+/// 3. A role assignment for a storage account with "Storage Blob Data Contributor" permissions
 
-func TestAzureBackend(t *testing.T) {
-	if os.Getenv("AZURE_ACCOUNT_NAME") == "" ||
-		os.Getenv("AZURE_ACCOUNT_KEY") == "" {
-		t.SkipNow()
-	}
-
-	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
-	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
-	environmentName := os.Getenv("AZURE_ENVIRONMENT")
+func testFixture(t *testing.T) (*AzureBackend, func()) {
+	t.Helper()
 
 	ts := time.Now().UnixNano()
 	name := fmt.Sprintf("vault-test-%d", ts)
-
-	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupEnvironment)
-	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
+	_ = os.Setenv("AZURE_BLOB_CONTAINER", name)
 
 	logger := logging.NewVaultLogger(log.Debug)
 
 	backend, err := NewAzureBackend(map[string]string{
-		"container":   name,
-		"accountName": accountName,
-		"accountKey":  accountKey,
-		"environment": environmentName,
+		"container": name,
 	}, logger)
-
-	defer func() {
-		blobService := cleanupClient.GetBlobService()
-		container := blobService.GetContainerReference(name)
-		container.DeleteIfExists(nil)
-	}()
-
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	azBackend := backend.(*AzureBackend)
+
+	return azBackend, func() {
+		blobService, err := azBackend.container.GetProperties(context.Background(), azblob.LeaseAccessConditions{})
+		if err != nil {
+			t.Logf("failed to retrieve blob container info: %v", err)
+			return
+		}
+
+		if blobService.StatusCode() == 200 {
+			_, err := azBackend.container.Delete(context.Background(), azblob.ContainerAccessConditions{})
+			if err != nil {
+				t.Logf("clean up failed: %v", err)
+			}
+		}
+	}
+}
+
+func TestAzureBackend(t *testing.T) {
+	checkTestPreReqs(t)
+
+	backend, cleanup := testFixture(t)
+	defer cleanup()
 
 	physical.ExerciseBackend(t, backend)
 	physical.ExerciseBackend_ListPrefix(t, backend)
 }
 
 func TestAzureBackend_ListPaging(t *testing.T) {
-	if os.Getenv("AZURE_ACCOUNT_NAME") == "" ||
-		os.Getenv("AZURE_ACCOUNT_KEY") == "" {
-		t.SkipNow()
-	}
+	checkTestPreReqs(t)
 
-	accountName := os.Getenv("AZURE_ACCOUNT_NAME")
-	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
-	environmentName := os.Getenv("AZURE_ENVIRONMENT")
-
-	ts := time.Now().UnixNano()
-	name := fmt.Sprintf("vault-test-%d", ts)
-
-	cleanupEnvironment, err := environmentForCleanupClient(environmentName)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	cleanupClient, _ := storage.NewBasicClientOnSovereignCloud(accountName, accountKey, cleanupEnvironment)
-	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
-
-	logger := logging.NewVaultLogger(log.Debug)
-
-	backend, err := NewAzureBackend(map[string]string{
-		"container":   name,
-		"accountName": accountName,
-		"accountKey":  accountKey,
-		"environment": environmentName,
-	}, logger)
-
-	defer func() {
-		blobService := cleanupClient.GetBlobService()
-		container := blobService.GetContainerReference(name)
-		container.DeleteIfExists(nil)
-	}()
-
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	backend, cleanup := testFixture(t)
+	defer cleanup()
 
 	// by default, azure returns 5000 results in a page, load up more than that
 	for i := 0; i < MaxListResults+100; i++ {
@@ -119,7 +89,38 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
 	if len(results) != MaxListResults+100 {
 		t.Fatalf("expected %d, got %d", MaxListResults+100, len(results))
 	}
+}
+
+func checkTestPreReqs(t *testing.T) {
+	t.Helper()
+
+	if os.Getenv("AZURE_ACCOUNT_NAME") == "" {
+		t.SkipNow()
+	}
+
+	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
+	if accountKey != "" {
+		t.Log("using account key provided to authenticate against storage account")
+	} else {
+		t.Log("using managed identity to authenticate against storage account")
+		if !isIMDSReachable(t) {
+			t.Log("running managed identity test requires access to the Azure IMDS with a valid identity for a storage account attached to it, skipping")
+			t.SkipNow()
+		}
+	}
+}
+
+func isIMDSReachable(t *testing.T) bool {
+	t.Helper()
+
+	_, err := net.DialTimeout("tcp", "169.254.169.254:80", time.Second*3)
+	if err != nil {
+		return false
+	}
+
+	return true
 }

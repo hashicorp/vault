@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -17,12 +16,12 @@ func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password",
 			},
@@ -77,14 +76,13 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// sessions.  There cannot be any active sessions before we drop the logins
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	sessionStmt, err := db.Prepare(fmt.Sprintf(
-		"SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = '%s';", username))
+	sessionStmt, err := db.Prepare("SELECT session_id FROM sys.dm_exec_sessions WHERE login_name = @p1;")
 	if err != nil {
 		return nil, err
 	}
 	defer sessionStmt.Close()
 
-	sessionRows, err := sessionStmt.Query()
+	sessionRows, err := sessionStmt.Query(username)
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +103,13 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// we need to drop the database users before we can drop the login and the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.Prepare(fmt.Sprintf("EXEC master.dbo.sp_msloginmappings '%s';", username))
+	stmt, err := db.Prepare("EXEC master.dbo.sp_msloginmappings @p1;")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(username)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +131,6 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-
 		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 			continue
@@ -142,10 +139,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return nil, errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
+		return nil, fmt.Errorf("could not generate sql statements for all rows: %w", rows.Err())
 	}
 	if lastStmtError != nil {
-		return nil, errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
+		return nil, fmt.Errorf("could not perform all sql statements: %w", lastStmtError)
 	}
 
 	// Drop this login

@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
 
 const METHODS = methods();
 const ENGINES = engines();
@@ -12,6 +12,7 @@ export default Component.extend({
   store: service(),
   wizard: service(),
   flashMessages: service(),
+  version: service(),
 
   /*
    * @param Function
@@ -50,13 +51,20 @@ export default Component.extend({
     this.set('mountModel', model);
   },
 
-  mountTypes: computed('mountType', function() {
-    return this.mountType === 'secret' ? ENGINES : METHODS;
+  mountTypes: computed('engines', 'mountType', function() {
+    return this.mountType === 'secret' ? this.engines : METHODS;
+  }),
+
+  engines: computed('version.{features[],isEnterprise}', function() {
+    if (this.version.isEnterprise) {
+      return ENGINES.concat([KMIP, TRANSFORM]);
+    }
+    return ENGINES;
   }),
 
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
-    this.get('mountModel').rollbackAttributes();
+    this.mountModel.rollbackAttributes();
   },
 
   checkPathChange(type) {
@@ -73,7 +81,7 @@ export default Component.extend({
 
   mountBackend: task(function*() {
     const mountModel = this.mountModel;
-    const { type, path } = mountModel.getProperties('type', 'path');
+    const { type, path } = mountModel;
     try {
       yield mountModel.save();
     } catch (err) {

@@ -17,6 +17,10 @@ func pathUsersList(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+			ItemType:   "User",
+		},
 	}
 }
 
@@ -24,17 +28,17 @@ func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the user.",
 			},
 
-			"groups": &framework.FieldSchema{
+			"groups": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "List of groups associated with the user.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "List of policies associated with the user.",
 			},
@@ -48,6 +52,10 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action:   "Create",
+			ItemType: "User",
+		},
 	}
 }
 

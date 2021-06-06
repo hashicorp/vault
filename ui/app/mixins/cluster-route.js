@@ -1,31 +1,48 @@
 import { inject as service } from '@ember/service';
-import { get } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import RSVP from 'rsvp';
 const INIT = 'vault.cluster.init';
 const UNSEAL = 'vault.cluster.unseal';
 const AUTH = 'vault.cluster.auth';
 const CLUSTER = 'vault.cluster';
+const CLUSTER_INDEX = 'vault.cluster.index';
 const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
 const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
+const DR_REPLICATION_SECONDARY_DETAILS = 'vault.cluster.replication-dr-promote.details';
+const EXCLUDED_REDIRECT_URLS = ['/vault/logout'];
 
-export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
+export { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY };
 
 export default Mixin.create({
   auth: service(),
   store: service(),
+  router: service(),
 
-  transitionToTargetRoute(transition) {
+  transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
-    if (targetRoute && targetRoute !== this.routeName) {
+
+    if (
+      targetRoute &&
+      targetRoute !== this.routeName &&
+      targetRoute !== transition.targetName &&
+      targetRoute !== this.router.currentRouteName
+    ) {
+      if (
+        // only want to redirect if we're going to authenticate
+        targetRoute === AUTH &&
+        transition.targetName !== CLUSTER_INDEX &&
+        !EXCLUDED_REDIRECT_URLS.includes(this.router.currentURL)
+      ) {
+        return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
+      }
       return this.transitionTo(targetRoute);
     }
 
     return RSVP.resolve();
   },
 
-  beforeModel() {
-    return this.transitionToTargetRoute();
+  beforeModel(transition) {
+    return this.transitionToTargetRoute(transition);
   },
 
   clusterModel() {
@@ -33,26 +50,34 @@ export default Mixin.create({
   },
 
   authToken() {
-    return get(this, 'auth.currentToken');
+    return this.auth.currentToken;
   },
 
   hasKeyData() {
-    return !!get(this.controllerFor(INIT), 'keyData');
+    /* eslint-disable-next-line ember/no-controller-access-in-routes */
+    return !!this.controllerFor(INIT).keyData;
   },
 
   targetRouteName(transition) {
     const cluster = this.clusterModel();
     const isAuthed = this.authToken();
-    if (get(cluster, 'needsInit')) {
+    if (cluster.needsInit) {
       return INIT;
     }
     if (this.hasKeyData() && this.routeName !== UNSEAL && this.routeName !== AUTH) {
       return INIT;
     }
-    if (get(cluster, 'sealed')) {
+    if (cluster.sealed) {
       return UNSEAL;
     }
-    if (get(cluster, 'dr.isSecondary')) {
+    if (cluster?.dr?.isSecondary) {
+      if (transition && transition.targetName === DR_REPLICATION_SECONDARY_DETAILS) {
+        return DR_REPLICATION_SECONDARY_DETAILS;
+      }
+      if (this.router.currentRouteName === DR_REPLICATION_SECONDARY_DETAILS) {
+        return DR_REPLICATION_SECONDARY_DETAILS;
+      }
+
       return DR_REPLICATION_SECONDARY;
     }
     if (!isAuthed) {
@@ -62,9 +87,9 @@ export default Mixin.create({
       return AUTH;
     }
     if (
-      (!get(cluster, 'needsInit') && this.routeName === INIT) ||
-      (!get(cluster, 'sealed') && this.routeName === UNSEAL) ||
-      (!get(cluster, 'dr.isSecondary') && this.routeName === DR_REPLICATION_SECONDARY) ||
+      (!cluster.needsInit && this.routeName === INIT) ||
+      (!cluster.sealed && this.routeName === UNSEAL) ||
+      (!cluster?.dr?.isSecondary && this.routeName === DR_REPLICATION_SECONDARY) ||
       (isAuthed && this.routeName === AUTH)
     ) {
       return CLUSTER;

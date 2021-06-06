@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -188,7 +189,18 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			case "file":
 				args = append(args, "file_path=discard")
 			case "socket":
-				args = append(args, "address=127.0.0.1:8888")
+				args = append(args, "address=127.0.0.1:8888",
+					"skip_test=true")
+			case "syslog":
+				if _, exists := os.LookupEnv("WSLENV"); exists {
+					t.Log("skipping syslog test on WSL")
+					continue
+				}
+				if os.Getenv("CIRCLECI") == "true" {
+					// TODO install syslog in docker image we run our tests in
+					t.Log("skipping syslog test on CircleCI")
+					continue
+				}
 			}
 			code := cmd.Run(args)
 			if exp := 0; code != exp {

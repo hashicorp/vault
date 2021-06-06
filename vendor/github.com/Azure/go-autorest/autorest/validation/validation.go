@@ -24,6 +24,9 @@ import (
 	"strings"
 )
 
+// Disabled controls if parameter validation should be globally disabled.  The default is false.
+var Disabled bool
+
 // Constraint stores constraint name, target field name
 // Rule and chain validations.
 type Constraint struct {
@@ -68,6 +71,9 @@ const (
 // Validate method validates constraints on parameter
 // passed in validation array.
 func Validate(m []Validation) error {
+	if Disabled {
+		return nil
+	}
 	for _, item := range m {
 		v := reflect.ValueOf(item.TargetValue)
 		for _, constraint := range item.Constraints {
@@ -397,12 +403,4 @@ func toInt64(v interface{}) (int64, bool) {
 		return int64(i32), true
 	}
 	return 0, false
-}
-
-// NewErrorWithValidationError appends package type and method name in
-// validation error.
-//
-// Deprecated: Please use validation.NewError() instead.
-func NewErrorWithValidationError(err error, packageType, method string) error {
-	return NewError(packageType, method, err.Error())
 }

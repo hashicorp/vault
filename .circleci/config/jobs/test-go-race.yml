@@ -1,17 +1,14 @@
-executor: go-machine
+executor: docker-env-go-test-race
+parallelism: 8
 steps:
+  - check-branch-name
   - checkout
-  - run:
-      name: Allow circleci user to restore Go modules cache
-      command: |
-        set -eux -o pipefail
-
-        sudo mkdir /go
-        sudo chown -R circleci:circleci /go
-  - restore_go_cache
   - go_test:
       extra_flags: "-race"
+      log_dir: "/tmp/testlogs"
   - store_artifacts:
       path: test-results
   - store_test_results:
       path: test-results
+  - store_artifacts:
+      path: "/tmp/testlogs"

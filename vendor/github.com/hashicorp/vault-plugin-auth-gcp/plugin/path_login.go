@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -22,6 +24,7 @@ import (
 
 const (
 	expectedJwtAudTemplate string = "vault/%s"
+	jwtExpToleranceSec            = 60
 )
 
 func pathLogin(b *GcpAuthBackend) *framework.Path {
@@ -40,9 +43,13 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLogin,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -53,12 +60,22 @@ GCE identity metadata token ('iam', 'gce' roles).`,
 func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Validate we didn't get extraneous fields
 	if err := validateFields(req, data); err != nil {
-		return nil, logical.CodedError(422, err.Error())
+		return nil, logical.CodedError(http.StatusUnprocessableEntity, err.Error())
 	}
 
 	loginInfo, err := b.parseAndValidateJwt(ctx, req, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if len(loginInfo.Role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, loginInfo.Role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	roleType := loginInfo.Role.RoleType
@@ -68,7 +85,7 @@ func (b *GcpAuthBackend) pathLogin(ctx context.Context, req *logical.Request, da
 	case gceRoleType:
 		return b.pathGceLogin(ctx, req, loginInfo)
 	default:
-		return logical.ErrorResponse(fmt.Sprintf("login against role type '%s' is unsupported", roleType)), nil
+		return logical.ErrorResponse("login against role type '%s' is unsupported", roleType), nil
 	}
 }
 
@@ -101,9 +118,9 @@ func (b *GcpAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.Period = role.Period
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
+	resp.Auth.Period = role.TokenPeriod
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
 	return resp, nil
 }
 
@@ -151,12 +168,12 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	// Parse 'kid' key id from headers.
 	jwtVal, err := jwt.ParseSigned(signedJwt.(string))
 	if err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("unable to parse signed JWT: {{err}}", err)
 	}
 
 	key, err := b.getSigningKey(ctx, jwtVal, signedJwt.(string), loginInfo.Role, req.Storage)
 	if err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("unable to get public key for signed JWT: {{err}}", err)
 	}
 
 	// Parse claims and verify signature.
@@ -177,62 +194,52 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	}
 	loginInfo.EmailOrId = baseClaims.Subject
 
-	if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
-		loginInfo.GceMetadata = customClaims.Google.Compute
+	if loginInfo.Role.RoleType == gceRoleType {
+		if customClaims.Google != nil && customClaims.Google.Compute != nil && len(customClaims.Google.Compute.InstanceId) > 0 {
+			loginInfo.GceMetadata = customClaims.Google.Compute
+		}
+		if loginInfo.GceMetadata == nil {
+			return nil, errors.New("expected JWT to have claims with GCE metadata")
+		}
 	}
-
-	if loginInfo.Role.RoleType == gceRoleType && loginInfo.GceMetadata == nil {
-		return nil, errors.New("expected JWT to have claims with GCE metadata")
-	}
-
 	return loginInfo, nil
 }
 
 func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebToken, rawToken string, role *gcpRole, s logical.Storage) (interface{}, error) {
+	b.Logger().Debug("Getting signing Key for JWT")
+
 	if len(token.Headers) != 1 {
 		return nil, errors.New("expected token to have exactly one header")
 	}
+	kid := token.Headers[0].KeyID
+	b.Logger().Debug("kid found for JWT", "kid", kid)
 
-	keyId := token.Headers[0].KeyID
-
-	switch role.RoleType {
-	case iamRoleType:
-		iamClient, err := b.IAMClient(s)
-		if err != nil {
-			return nil, err
-		}
-
-		serviceAccountId, err := parseServiceAccountFromIAMJWT(rawToken)
-		if err != nil {
-			return nil, err
-		}
-
-		accountKey, err := gcputil.ServiceAccountKey(iamClient, &gcputil.ServiceAccountKeyId{
-			Project:   "-",
-			EmailOrId: serviceAccountId,
-			Key:       keyId,
-		})
-		if err != nil {
-			saErr := err
-			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
-			key, err := gcputil.OAuth2RSAPublicKey(keyId, "")
-			if err != nil {
-				return nil, errwrap.Wrapf(
-					fmt.Sprintf("%s or could not find Google Oauth cert with given 'kid' id %s: {{err}}", saErr.Error(), keyId),
-					err)
-			}
-			return key, nil
-		}
-		return gcputil.PublicKey(accountKey.PublicKeyData)
-	case gceRoleType:
-		return gcputil.OAuth2RSAPublicKey(keyId, "")
-	default:
-		return nil, fmt.Errorf("unexpected role type %s", role.RoleType)
+	// Try getting Google-wide key
+	k, gErr := gcputil.OAuth2RSAPublicKey(ctx, kid)
+	if gErr == nil {
+		b.Logger().Debug("Found Google OAuth2 provider key", "kid", kid)
+		return k, nil
 	}
+
+	saId, err := getJWTSubject(rawToken)
+	if err != nil {
+		return nil, err
+	}
+
+	if role.RoleType == iamRoleType {
+		// If that failed, and the authentication type is IAM, try to get account-specific key
+		b.Logger().Debug("Unable to get Google-wide OAuth2 Key, trying service-account public key")
+		k, saErr := gcputil.ServiceAccountPublicKey(saId, kid)
+		if saErr == nil {
+			return k, nil
+		}
+		return nil, errwrap.Wrapf(fmt.Sprintf("unable to get public key %q for JWT subject %q: {{err}}", kid, saId), saErr)
+	}
+	return nil, fmt.Errorf("unable to get public key %q for JWT subject %q: no Google OAuth2 provider key found for GCE role", kid, saId)
 }
 
-// ParseServiceAccountFromIAMJWT parses the service account from the 'sub' claim given a serialized signed JWT.
-func parseServiceAccountFromIAMJWT(signedJwt string) (string, error) {
+// getJWTSubject grabs 'sub' claim given an unverified signed JWT.
+func getJWTSubject(signedJwt string) (string, error) {
 	jwtVal, err := jwt.ParseSigned(signedJwt)
 	if err != nil {
 		return "", fmt.Errorf("could not parse JWT: %v", err)
@@ -243,25 +250,24 @@ func parseServiceAccountFromIAMJWT(signedJwt string) (string, error) {
 	}
 	accountID := claims.Subject
 	if accountID == "" {
-		return "", errors.New("expected 'sub' claim with service account ID or name")
+		return "", errors.New("expected 'sub' claim from JWT")
 	}
 	return accountID, nil
 }
 
-func (b *GcpAuthBackend) getGoogleOauthCert(ctx context.Context, keyId string) (interface{}, error) {
-	key, err := gcputil.OAuth2RSAPublicKey(keyId, "")
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
 func validateBaseJWTClaims(c *jwt.Claims, roleName string) error {
 	exp := c.Expiry.Time()
-	if exp.IsZero() || exp.Before(time.Now()) {
+	tolDelt := time.Second * jwtExpToleranceSec
+	// Compare expiration to current time with tolerance
+	if exp.IsZero() || exp.Before(time.Now().Add(-tolDelt)) {
 		return errors.New("JWT is expired or does not have proper 'exp' claim")
-	} else if exp.After(time.Now().Add(time.Minute * time.Duration(maxJwtExpMaxMinutes))) {
-		return fmt.Errorf("JWT must expire in %d minutes", maxJwtExpMaxMinutes)
+	}
+
+	// Compare expiration to max expiration with tolerance
+	allowedDelta := time.Minute*time.Duration(maxJwtExpMaxMinutes) + tolDelt
+	expIn := exp.Sub(time.Now())
+	if expIn > allowedDelta {
+		return fmt.Errorf("JWT must expire in %d minutes, expires in %v", maxJwtExpMaxMinutes, expIn)
 	}
 
 	sub := c.Subject
@@ -294,8 +300,10 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 	}
 
 	// TODO(emilymye): move to general JWT validation once custom expiry is supported for other JWT types.
-	if loginInfo.JWTClaims.Expiry.Time().After(time.Now().Add(role.MaxJwtExp)) {
-		return logical.ErrorResponse(fmt.Sprintf("role requires that JWTs must expire within %d seconds", int(role.MaxJwtExp/time.Second))), nil
+	if loginInfo.GceMetadata != nil {
+		b.Logger().Info("GCE Metadata found in JWT, skipping custom expiry check")
+	} else if loginInfo.JWTClaims.Expiry.Time().After(time.Now().Add(role.MaxJwtExp)) {
+		return logical.ErrorResponse("role requires that service account JWTs expire within %d seconds", int(role.MaxJwtExp/time.Second)), nil
 	}
 
 	// Get service account and make sure it still exists.
@@ -311,14 +319,25 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 		return nil, errors.New("service account is empty")
 	}
 
+	conf, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("unable to retrieve GCP configuration"), nil
+	}
+
+	alias, err := conf.getIAMAlias(role, serviceAccount)
+	if err != nil {
+		return logical.ErrorResponse("unable to create alias: %s", err), nil
+	}
+
 	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
+		resp := &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: serviceAccount.UniqueId,
+					Name: alias,
 				},
 			},
-		}, nil
+		}
+		return resp, nil
 	}
 
 	// Validate service account can login against role.
@@ -326,22 +345,21 @@ func (b *GcpAuthBackend) pathIamLogin(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Period: role.Period,
-			Alias: &logical.Alias{
-				Name: serviceAccount.UniqueId,
-			},
-			Policies:    role.Policies,
-			Metadata:    authMetadata(loginInfo, serviceAccount),
-			DisplayName: serviceAccount.Email,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
+	auth := &logical.Auth{
+		Alias: &logical.Alias{
+			Name: alias,
 		},
+		DisplayName: serviceAccount.Email,
 	}
+	role.PopulateTokenAuth(auth)
+	if err := conf.IAMAuthMetadata.PopulateDesiredMetadata(auth, authMetadata(loginInfo, serviceAccount)); err != nil {
+		b.Logger().Warn("unable to populate iam metadata", "err", err.Error())
+	}
+
+	resp := &logical.Response{
+		Auth: auth,
+	}
+
 	if role.AddGroupAliases {
 		crmClient, err := b.CRMClient(req.Storage)
 		if err != nil {
@@ -428,8 +446,7 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 	}
 
 	if len(role.BoundProjects) > 0 && !strutil.StrListContains(role.BoundProjects, metadata.ProjectId) {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"instance %q (project %q) not in bound projects %+v", metadata.InstanceId, metadata.ProjectId, role.BoundProjects)), nil
+		return logical.ErrorResponse("instance %q (project %q) not in bound projects %+v", metadata.InstanceId, metadata.ProjectId, role.BoundProjects), nil
 	}
 
 	// Verify instance exists.
@@ -440,20 +457,29 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 
 	instance, err := metadata.GetVerifiedInstance(computeClient)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"error when attempting to find instance (project %s, zone: %s, instance: %s) :%v",
-			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err)), nil
+		return logical.ErrorResponse("error when attempting to find instance (project %s, zone: %s, instance: %s) :%v",
+			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err), nil
 	}
 
 	if err := b.authorizeGCEInstance(ctx, metadata.ProjectId, instance, req.Storage, role, loginInfo.EmailOrId); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	conf, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("unable to retrieve GCP configuration"), nil
+	}
+
+	alias, err := conf.getGCEAlias(role, instance)
+	if err != nil {
+		return logical.ErrorResponse("unable to create alias: %s", err), nil
+	}
+
 	if req.Operation == logical.AliasLookaheadOperation {
 		return &logical.Response{
 			Auth: &logical.Auth{
 				Alias: &logical.Alias{
-					Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
+					Name: alias,
 				},
 			},
 		}, nil
@@ -469,27 +495,23 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 		EmailOrId: loginInfo.EmailOrId,
 	})
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Could not find service account '%s' used for GCE metadata token: %s",
-			loginInfo.EmailOrId, err)), nil
+		return logical.ErrorResponse("Could not find service account '%s' used for GCE metadata token: %s", loginInfo.EmailOrId, err), nil
+	}
+
+	auth := &logical.Auth{
+		InternalData: map[string]interface{}{},
+		Alias: &logical.Alias{
+			Name: alias,
+		},
+		DisplayName: instance.Name,
+	}
+	role.PopulateTokenAuth(auth)
+	if err := conf.GCEAuthMetadata.PopulateDesiredMetadata(auth, authMetadata(loginInfo, serviceAccount)); err != nil {
+		b.Logger().Warn("unable to populate gce metadata", "err", err.Error())
 	}
 
 	resp := &logical.Response{
-		Auth: &logical.Auth{
-			InternalData: map[string]interface{}{},
-			Period:       role.Period,
-			Alias: &logical.Alias{
-				Name: fmt.Sprintf("gce-%s", strconv.FormatUint(instance.Id, 10)),
-			},
-			Policies:    role.Policies,
-			Metadata:    authMetadata(loginInfo, serviceAccount),
-			DisplayName: instance.Name,
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
-			},
-		},
+		Auth: auth,
 	}
 
 	if role.AddGroupAliases {
@@ -649,6 +671,7 @@ func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, project strin
 
 	return AuthorizeGCE(ctx, &AuthorizeGCEInput{
 		client: &gcpClient{
+			logger:     b.Logger(),
 			computeSvc: computeClient,
 			iamSvc:     iamClient,
 		},

@@ -2,12 +2,19 @@ package api
 
 import (
 	"bytes"
-	"github.com/hashicorp/vault/sdk/helper/consts"
+	"context"
+	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -96,6 +103,37 @@ func TestClientToken(t *testing.T) {
 	}
 }
 
+func TestClientHostHeader(t *testing.T) {
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte(req.Host))
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	config.Address = strings.ReplaceAll(config.Address, "127.0.0.1", "localhost")
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Set the token manually
+	client.SetToken("foo")
+
+	resp, err := client.RawRequest(client.NewRequest("PUT", "/"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Copy the response
+	var buf bytes.Buffer
+	io.Copy(&buf, resp.Body)
+
+	// Verify we got the response from the primary
+	if buf.String() != strings.ReplaceAll(config.Address, "http://", "") {
+		t.Fatalf("Bad address: %s", buf.String())
+	}
+}
+
 func TestClientBadToken(t *testing.T) {
 	handler := func(w http.ResponseWriter, req *http.Request) {}
 
@@ -158,6 +196,64 @@ func TestClientRedirect(t *testing.T) {
 	}
 }
 
+func TestDefaulRetryPolicy(t *testing.T) {
+	cases := map[string]struct {
+		resp      *http.Response
+		err       error
+		expect    bool
+		expectErr error
+	}{
+		"retry on error": {
+			err:    fmt.Errorf("error"),
+			expect: true,
+		},
+		"don't retry connection failures": {
+			err: &url.Error{
+				Err: x509.UnknownAuthorityError{},
+			},
+		},
+		"don't retry on 200": {
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"don't retry on 4xx": {
+			resp: &http.Response{
+				StatusCode: http.StatusBadRequest,
+			},
+		},
+		"don't retry on 501": {
+			resp: &http.Response{
+				StatusCode: http.StatusNotImplemented,
+			},
+		},
+		"retry on 500": {
+			resp: &http.Response{
+				StatusCode: http.StatusInternalServerError,
+			},
+			expect: true,
+		},
+		"retry on 5xx": {
+			resp: &http.Response{
+				StatusCode: http.StatusGatewayTimeout,
+			},
+			expect: true,
+		},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			retry, err := DefaultRetryPolicy(context.Background(), test.resp, test.err)
+			if retry != test.expect {
+				t.Fatalf("expected to retry request: '%t', but actual result was: '%t'", test.expect, retry)
+			}
+			if err != test.expectErr {
+				t.Fatalf("expected error from retry policy: '%s', but actual result was: '%s'", err, test.expectErr)
+			}
+		})
+	}
+}
+
 func TestClientEnvSettings(t *testing.T) {
 	cwd, _ := os.Getwd()
 	oldCACert := os.Getenv(EnvVaultCACert)
@@ -191,6 +287,22 @@ func TestClientEnvSettings(t *testing.T) {
 	if tlsConfig.GetClientCertificate == nil {
 		t.Fatalf("bad: expected client tls config to have a certificate getter")
 	}
+	if tlsConfig.InsecureSkipVerify != true {
+		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+}
+
+func TestClientDeprecatedEnvSettings(t *testing.T) {
+	oldInsecure := os.Getenv(EnvVaultInsecure)
+	os.Setenv(EnvVaultInsecure, "true")
+	defer os.Setenv(EnvVaultInsecure, oldInsecure)
+
+	config := DefaultConfig()
+	if err := config.ReadEnvironment(); err != nil {
+		t.Fatalf("error reading environment: %v", err)
+	}
+
+	tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
 	}
@@ -258,8 +370,8 @@ func TestParsingRateOnly(t *testing.T) {
 }
 
 func TestParsingErrorCase(t *testing.T) {
-	var incorrectFormat = "foobar"
-	var _, _, err = parseRateLimit(incorrectFormat)
+	incorrectFormat := "foobar"
+	_, _, err := parseRateLimit(incorrectFormat)
 	if err == nil {
 		t.Error("Expected error, found no error")
 	}
@@ -297,14 +409,111 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	client1, err1 := NewClient(nil)
+	client1, err := NewClient(DefaultConfig())
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+
+	// Set all of the things that we provide setter methods for, which modify config values
+	err = client1.SetAddress("http://example.com:8080")
+	if err != nil {
+		t.Fatalf("SetAddress failed: %v", err)
+	}
+
+	clientTimeout := time.Until(time.Now().AddDate(0, 0, 1))
+	client1.SetClientTimeout(clientTimeout)
+
+	checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+		return true, nil
+	}
+	client1.SetCheckRetry(checkRetry)
+
+	client1.SetLogger(hclog.NewNullLogger())
+
+	client1.SetLimiter(5.0, 10)
+	client1.SetMaxRetries(5)
+	client1.SetOutputCurlString(true)
+	client1.SetSRVLookup(true)
+
+	client2, err := client1.Clone()
+	if err != nil {
+		t.Fatalf("Clone failed: %v", err)
+	}
+
+	if client1.Address() != client2.Address() {
+		t.Fatalf("addresses don't match: %v vs %v", client1.Address(), client2.Address())
+	}
+	if client1.ClientTimeout() != client2.ClientTimeout() {
+		t.Fatalf("timeouts don't match: %v vs %v", client1.ClientTimeout(), client2.ClientTimeout())
+	}
+	if client1.CheckRetry() != nil && client2.CheckRetry() == nil {
+		t.Fatal("checkRetry functions don't match. client2 is nil.")
+	}
+	if (client1.Limiter() != nil && client2.Limiter() == nil) || (client1.Limiter() == nil && client2.Limiter() != nil) {
+		t.Fatalf("limiters don't match: %v vs %v", client1.Limiter(), client2.Limiter())
+	}
+	if client1.Limiter().Limit() != client2.Limiter().Limit() {
+		t.Fatalf("limiter limits don't match: %v vs %v", client1.Limiter().Limit(), client2.Limiter().Limit())
+	}
+	if client1.Limiter().Burst() != client2.Limiter().Burst() {
+		t.Fatalf("limiter bursts don't match: %v vs %v", client1.Limiter().Burst(), client2.Limiter().Burst())
+	}
+	if client1.MaxRetries() != client2.MaxRetries() {
+		t.Fatalf("maxRetries don't match: %v vs %v", client1.MaxRetries(), client2.MaxRetries())
+	}
+	if client1.OutputCurlString() != client2.OutputCurlString() {
+		t.Fatalf("outputCurlString doesn't match: %v vs %v", client1.OutputCurlString(), client2.OutputCurlString())
+	}
+	if client1.SRVLookup() != client2.SRVLookup() {
+		t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
+	}
+}
+
+func TestSetHeadersRaceSafe(t *testing.T) {
+	client, err1 := NewClient(nil)
 	if err1 != nil {
 		t.Fatalf("NewClient failed: %v", err1)
 	}
-	client2, err2 := client1.Clone()
-	if err2 != nil {
-		t.Fatalf("Clone failed: %v", err2)
+
+	start := make(chan interface{})
+	done := make(chan interface{})
+
+	testPairs := map[string]string{
+		"soda":    "rootbeer",
+		"veggie":  "carrots",
+		"fruit":   "apples",
+		"color":   "red",
+		"protein": "egg",
 	}
 
-	_ = client2
+	for key, value := range testPairs {
+		tmpKey := key
+		tmpValue := value
+		go func() {
+			<-start
+			// This test fails if here, you replace client.AddHeader(tmpKey, tmpValue) with:
+			// 	headerCopy := client.Header()
+			// 	headerCopy.AddHeader(tmpKey, tmpValue)
+			// 	client.SetHeader(headerCopy)
+			client.AddHeader(tmpKey, tmpValue)
+			done <- true
+		}()
+	}
+
+	// Start everyone at once.
+	close(start)
+
+	// Wait until everyone is done.
+	for i := 0; i < len(testPairs); i++ {
+		<-done
+	}
+
+	// Check that all the test pairs are in the resulting
+	// headers.
+	resultingHeaders := client.Headers()
+	for key, value := range testPairs {
+		if resultingHeaders.Get(key) != value {
+			t.Fatal("expected " + value + " for " + key)
+		}
+	}
 }

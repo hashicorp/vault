@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -13,15 +14,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
-	log "github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+
+	"github.com/go-test/deep"
+	log "github.com/hashicorp/go-hclog"
+
+	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -104,6 +108,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core1.Shutdown()
 	keys, root := vault.TestCoreInit(t, core1)
 	for _, key := range keys {
 		if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
@@ -126,6 +131,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -265,11 +271,37 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Write a very large object, should fail
+	// Write a very large object, should fail. This test works because Go will
+	// convert the byte slice to base64, which makes it significantly larger
+	// than the default max request size.
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
-	testResponseStatus(t, resp, 413)
+	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
+}
+
+func TestLogical_RequestSizeDisableLimit(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestListener(t)
+	props := &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			MaxRequestSize: -1,
+			Address:        "127.0.0.1",
+			TLSDisable:     true,
+		},
+	}
+	TestServerWithListenerAndProperties(t, ln, addr, core, props)
+
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// Write a very large object, should pass as MaxRequestSize set to -1/Negative value
+
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": make([]byte, DefaultMaxRequestSize),
+	})
+	testResponseStatus(t, resp, http.StatusNoContent)
 }
 
 func TestLogical_ListSuffix(t *testing.T) {
@@ -277,6 +309,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err := buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -291,6 +324,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo?list=true", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -305,6 +339,12 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("LIST", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
+	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), nil, req)
+	if err != nil || status != 0 {
+		t.Fatal(err)
+	}
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -330,7 +370,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	respondLogical(w, nil, nil, resp404, false)
+	respondLogical(nil, w, nil, nil, resp404, false)
 
 	if w.Code != 404 {
 		t.Fatalf("Bad Status code: %d", w.Code)
@@ -345,5 +385,117 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 
 	if string(bodyRaw[:]) != strings.Trim(expected, "\n") {
 		t.Fatalf("bad response: %s", string(bodyRaw[:]))
+	}
+}
+
+func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
+	// Create a noop audit backend
+	var noop *vault.NoopAudit
+	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
+		AuditBackends: map[string]audit.Factory{
+			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+				noop = &vault.NoopAudit{
+					Config: config,
+				}
+				return noop, nil
+			},
+		},
+	})
+	ln, addr := TestServer(t, c)
+	defer ln.Close()
+
+	// Enable the audit backend
+
+	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
+		"type": "noop",
+	})
+	testResponseStatus(t, resp, 204)
+
+	{
+		// Make a wrapping/unwrap request with an invalid token
+		resp := testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+			"token": "foo",
+		})
+		testResponseStatus(t, resp, 400)
+		body := map[string][]string{}
+		testResponseBody(t, resp, &body)
+		if body["errors"][0] != "wrapping token is not valid or does not exist" {
+			t.Fatal(body)
+		}
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 1 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[0]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 1 || noop.Req[0].Path != "sys/wrapping/unwrap" {
+			t.Fatalf("bad:\ngot:\n%#v", noop.Req[0])
+		}
+
+		if len(noop.ReqErrs) != 1 {
+			t.Fatalf("bad: %#v", noop.RespErrs)
+		}
+		if noop.ReqErrs[0] != consts.ErrInvalidWrappingToken {
+			t.Fatalf("bad: %#v", noop.ReqErrs)
+		}
+	}
+
+	{
+		resp := testHttpPostWrapped(t, root, addr+"/v1/auth/token/create", nil, 10*time.Second)
+		testResponseStatus(t, resp, 200)
+		body := map[string]interface{}{}
+		testResponseBody(t, resp, &body)
+
+		wrapToken := body["wrap_info"].(map[string]interface{})["token"].(string)
+
+		// Make a wrapping/unwrap request with an invalid token
+		resp = testHttpPost(t, root, addr+"/v1/sys/wrapping/unwrap", map[string]interface{}{
+			"token": wrapToken,
+		})
+		testResponseStatus(t, resp, 200)
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 3 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[2]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 3 || noop.Req[2].Path != "sys/wrapping/unwrap" {
+			t.Fatalf("bad:\ngot:\n%#v", noop.Req[2])
+		}
+
+		// Make sure there is only one error in the logs
+		if noop.ReqErrs[1] != nil || noop.ReqErrs[2] != nil {
+			t.Fatalf("bad: %#v", noop.RespErrs)
+		}
+	}
+}
+
+func TestLogical_ShouldParseForm(t *testing.T) {
+	const formCT = "application/x-www-form-urlencoded"
+
+	tests := map[string]struct {
+		prefix      string
+		contentType string
+		isForm      bool
+	}{
+		"JSON":                 {`{"a":42}`, formCT, false},
+		"JSON 2":               {`[42]`, formCT, false},
+		"JSON w/leading space": {"   \n\n\r\t  [42]  ", formCT, false},
+		"Form":                 {"a=42&b=dog", formCT, true},
+		"Form w/wrong CT":      {"a=42&b=dog", "application/json", false},
+	}
+
+	for name, test := range tests {
+		isForm := isForm([]byte(test.prefix), test.contentType)
+
+		if isForm != test.isForm {
+			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
+		}
 	}
 }

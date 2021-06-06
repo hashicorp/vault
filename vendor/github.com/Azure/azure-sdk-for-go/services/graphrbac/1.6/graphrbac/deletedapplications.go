@@ -36,7 +36,9 @@ func NewDeletedApplicationsClient(tenantID string) DeletedApplicationsClient {
 	return NewDeletedApplicationsClientWithBaseURI(DefaultBaseURI, tenantID)
 }
 
-// NewDeletedApplicationsClientWithBaseURI creates an instance of the DeletedApplicationsClient client.
+// NewDeletedApplicationsClientWithBaseURI creates an instance of the DeletedApplicationsClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
 func NewDeletedApplicationsClientWithBaseURI(baseURI string, tenantID string) DeletedApplicationsClient {
 	return DeletedApplicationsClient{NewWithBaseURI(baseURI, tenantID)}
 }
@@ -71,6 +73,7 @@ func (client DeletedApplicationsClient) HardDelete(ctx context.Context, applicat
 	result, err = client.HardDeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "HardDelete", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -99,8 +102,7 @@ func (client DeletedApplicationsClient) HardDeletePreparer(ctx context.Context, 
 // HardDeleteSender sends the HardDelete request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) HardDeleteSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // HardDeleteResponder handles the response to the HardDelete request. The method always
@@ -108,7 +110,6 @@ func (client DeletedApplicationsClient) HardDeleteSender(req *http.Request) (*ht
 func (client DeletedApplicationsClient) HardDeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -151,6 +152,11 @@ func (client DeletedApplicationsClient) List(ctx context.Context, filter string)
 	result.alr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.alr.hasNextLink() && result.alr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -181,8 +187,7 @@ func (client DeletedApplicationsClient) ListPreparer(ctx context.Context, filter
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -190,7 +195,6 @@ func (client DeletedApplicationsClient) ListSender(req *http.Request) (*http.Res
 func (client DeletedApplicationsClient) ListResponder(resp *http.Response) (result ApplicationListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -244,6 +248,7 @@ func (client DeletedApplicationsClient) ListNext(ctx context.Context, nextLink s
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "ListNext", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -272,8 +277,7 @@ func (client DeletedApplicationsClient) ListNextPreparer(ctx context.Context, ne
 // ListNextSender sends the ListNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) ListNextSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListNextResponder handles the response to the ListNext request. The method always
@@ -281,7 +285,6 @@ func (client DeletedApplicationsClient) ListNextSender(req *http.Request) (*http
 func (client DeletedApplicationsClient) ListNextResponder(resp *http.Response) (result ApplicationListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -319,6 +322,7 @@ func (client DeletedApplicationsClient) Restore(ctx context.Context, objectID st
 	result, err = client.RestoreResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.DeletedApplicationsClient", "Restore", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -347,8 +351,7 @@ func (client DeletedApplicationsClient) RestorePreparer(ctx context.Context, obj
 // RestoreSender sends the Restore request. The method will close the
 // http.Response Body if it receives an error.
 func (client DeletedApplicationsClient) RestoreSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // RestoreResponder handles the response to the Restore request. The method always
@@ -356,7 +359,6 @@ func (client DeletedApplicationsClient) RestoreSender(req *http.Request) (*http.
 func (client DeletedApplicationsClient) RestoreResponder(resp *http.Response) (result Application, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

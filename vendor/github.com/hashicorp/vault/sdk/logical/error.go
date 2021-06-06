@@ -28,6 +28,20 @@ var (
 	// ErrPerfStandbyForward is returned when Vault is in a state such that a
 	// perf standby cannot satisfy a request
 	ErrPerfStandbyPleaseForward = errors.New("please forward to the active node")
+
+	// ErrLeaseCountQuotaExceeded is returned when a request is rejected due to a lease
+	// count quota being exceeded.
+	ErrLeaseCountQuotaExceeded = errors.New("lease count quota exceeded")
+
+	// ErrRateLimitQuotaExceeded is returned when a request is rejected due to a
+	// rate limit quota being exceeded.
+	ErrRateLimitQuotaExceeded = errors.New("rate limit quota exceeded")
+
+	// ErrUnrecoverable is returned when a request fails due to something that
+	// is likely to require manual intervention. This is a generic form of an
+	// unrecoverable error.
+	// e.g.: misconfigured or disconnected storage backend.
+	ErrUnrecoverable = errors.New("unrecoverable error")
 )
 
 type HTTPCodedError interface {

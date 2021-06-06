@@ -1,7 +1,14 @@
 {{#if (or alwaysRender value)}}
-  <div class="column is-one-quarter">
-    <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
-  </div>
+  {{#if label}}
+    <div class="column is-one-quarter">
+      <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
+      {{#if helperText}}
+        <div>
+          <span class="is-label helper-text has-text-grey">{{helperText}}</span>
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
   <div class="column is-flex">
     {{#if (has-block)}}
       {{yield}}
@@ -18,11 +25,42 @@
           aria-hidden="true"
           class="icon-false"
           @size="l"
-          @glyph="cancel-circle-outline"
+          @glyph="cancel-square-outline"
         /> No
       {{/if}}
+    {{else if (and (not value) (and alwaysRender defaultShown))}}
+      <span data-test-row-value="{{label}}">{{defaultShown}}</span>
     {{else}}
-      <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+      {{#if (eq type 'array')}}
+        <InfoTableItemArray
+          @backend={{backend}}
+          @displayArray={{value}}
+          @isLink={{isLink}}
+          @label={{label}}
+          @modelType={{modelType}}
+          @queryParam={{queryParam}}
+          @viewAll={{viewAll}}
+          @wildcardLabel={{wildcardLabel}}
+        />
+      {{else}}
+        {{#if tooltipText}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="left"
+            as |T|>
+            <T.trigger @tabindex=false>
+              <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>  
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{tooltipText}}
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+          <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{/if}}
+      {{/if}}
     {{/if}}
   </div>
 {{/if}}

@@ -3,13 +3,11 @@ package audit
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
-
-	"errors"
-
-	"fmt"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -26,6 +24,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 	}
 
 	fooSalted := salter.GetIdentifiedHMAC("foo")
+	issueTime, _ := time.Parse(time.RFC3339, "2020-05-28T13:40:18-05:00")
 
 	cases := map[string]struct {
 		Auth        *logical.Auth
@@ -44,6 +43,10 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 				NoDefaultPolicy: true,
 				Policies:        []string{"root"},
 				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
 			},
 			&logical.Request{
 				ID:                  "request",
@@ -58,14 +61,14 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 					TTL: 60 * time.Second,
 				},
 				Headers: map[string][]string{
-					"foo": []string{"bar"},
+					"foo": {"bar"},
 				},
 				PolicyOverride: true,
 			},
 			errors.New("this is an error"),
 			"",
 			"",
-			fmt.Sprintf(`<json:object name="auth"><json:string name="accessor">bar</json:string><json:string name="client_token">%s</json:string><json:string name="display_name">testtoken</json:string><json:string name="entity_id">foobarentity</json:string><json:boolean name="no_default_policy">true</json:boolean><json:array name="policies"><json:string>root</json:string></json:array><json:string name="token_type">service</json:string></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token">%s</json:string><json:string name="client_token_accessor">bar</json:string><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id">request</json:string><json:object name="namespace"><json:string name="id">root</json:string></json:object><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:boolean name="policy_override">true</json:boolean><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
+			fmt.Sprintf(`<json:object name="auth"><json:string name="accessor">bar</json:string><json:string name="client_token">%s</json:string><json:string name="display_name">testtoken</json:string><json:string name="entity_id">foobarentity</json:string><json:boolean name="no_default_policy">true</json:boolean><json:array name="policies"><json:string>root</json:string></json:array><json:string name="token_issue_time">2020-05-28T13:40:18-05:00</json:string><json:number name="token_ttl">14400</json:number><json:string name="token_type">service</json:string></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token">%s</json:string><json:string name="client_token_accessor">bar</json:string><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id">request</json:string><json:object name="namespace"><json:string name="id">root</json:string></json:object><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:boolean name="policy_override">true</json:boolean><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
 				fooSalted, fooSalted),
 		},
 		"auth, request with prefix": {
@@ -77,6 +80,10 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 				EntityID:        "foobarentity",
 				Policies:        []string{"root"},
 				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
 			},
 			&logical.Request{
 				ID:                  "request",
@@ -91,14 +98,14 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 					TTL: 60 * time.Second,
 				},
 				Headers: map[string][]string{
-					"foo": []string{"bar"},
+					"foo": {"bar"},
 				},
 				PolicyOverride: true,
 			},
 			errors.New("this is an error"),
 			"",
 			"@cee: ",
-			fmt.Sprintf(`<json:object name="auth"><json:string name="accessor">bar</json:string><json:string name="client_token">%s</json:string><json:string name="display_name">testtoken</json:string><json:string name="entity_id">foobarentity</json:string><json:boolean name="no_default_policy">true</json:boolean><json:array name="policies"><json:string>root</json:string></json:array><json:string name="token_type">service</json:string></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token">%s</json:string><json:string name="client_token_accessor">bar</json:string><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id">request</json:string><json:object name="namespace"><json:string name="id">root</json:string></json:object><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:boolean name="policy_override">true</json:boolean><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
+			fmt.Sprintf(`<json:object name="auth"><json:string name="accessor">bar</json:string><json:string name="client_token">%s</json:string><json:string name="display_name">testtoken</json:string><json:string name="entity_id">foobarentity</json:string><json:boolean name="no_default_policy">true</json:boolean><json:array name="policies"><json:string>root</json:string></json:array><json:string name="token_issue_time">2020-05-28T13:40:18-05:00</json:string><json:number name="token_ttl">14400</json:number><json:string name="token_type">service</json:string></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token">%s</json:string><json:string name="client_token_accessor">bar</json:string><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id">request</json:string><json:object name="namespace"><json:string name="id">root</json:string></json:object><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:boolean name="policy_override">true</json:boolean><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
 				fooSalted, fooSalted),
 		},
 	}

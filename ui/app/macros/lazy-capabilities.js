@@ -4,7 +4,7 @@
 //
 // export default DS.Model.extend({
 //   //pass the template string as the first arg, and be sure to use '' around the
-//   //paramerters that get interpolated in the string - that's how the template function
+//   //parameters that get interpolated in the string - that's how the template function
 //   //knows where to put each value
 //   zeroAddressPath: lazyCapabilities(apiPath`${'id'}/config/zeroaddress`, 'id'),
 //

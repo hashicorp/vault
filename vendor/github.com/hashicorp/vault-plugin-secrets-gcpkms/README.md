@@ -87,7 +87,7 @@ instructions are only useful if you want to develop against the plugin.**
 ### Documentation
 
 The documentation for the plugin lives in the [main Vault
-repository](/hashicorp/vault) in the `website/` folder. Please make any
+repository](//github.com/hashicorp/vault) in the `website/` folder. Please make any
 documentation updates as separate Pull Requests against that repo.
 
 ### Tests

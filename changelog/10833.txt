@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Set TokenParent correctly in the Index to be cached.
+```

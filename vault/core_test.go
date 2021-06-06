@@ -3,13 +3,14 @@ package vault
 import (
 	"context"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -19,10 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
-var (
-	// invalidKey is used to test Unseal
-	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
-)
+// invalidKey is used to test Unseal
+var invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
 	logger = logging.NewVaultLogger(log.Trace)
@@ -243,6 +242,25 @@ func TestCore_Shutdown(t *testing.T) {
 	}
 	if !c.Sealed() {
 		t.Fatal("wasn't sealed")
+	}
+}
+
+// verify the channel returned by ShutdownDone is closed after Finalize
+func TestCore_ShutdownDone(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	doneCh := c.ShutdownDone()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		c.Shutdown()
+	}()
+
+	select {
+	case <-doneCh:
+		if !c.Sealed() {
+			t.Fatalf("shutdown done called prematurely!")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("shutdown notification not received")
 	}
 }
 
@@ -904,7 +922,6 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	}
 }
 
-// Ensure we get a client token
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
 	noop := &NoopAudit{}
@@ -1142,6 +1159,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1180,6 +1198,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -1231,7 +1250,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1248,10 +1267,12 @@ func TestCore_StepDown(t *testing.T) {
 		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirectOriginal,
 		DisableMlock: true,
+		Logger:       logger.Named("core1"),
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1286,7 +1307,9 @@ func TestCore_StepDown(t *testing.T) {
 		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirectOriginal2,
 		DisableMlock: true,
+		Logger:       logger.Named("core2"),
 	})
+	defer core2.Shutdown()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1442,6 +1465,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1507,6 +1531,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -1619,6 +1644,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -1673,6 +1699,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -2037,7 +2064,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		return noopBack, nil
 	}
 
-	var secretWritingPolicy = `
+	secretWritingPolicy := `
 name = "admins"
 path "secret/*" {
 	capabilities = ["update", "create", "read"]
@@ -2193,6 +2220,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -2214,6 +2242,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -2293,10 +2322,10 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			"Should-Passthrough":                  []string{"foo"},
-			"Should-Passthrough-Case-Insensitive": []string{"baz"},
-			"Should-Not-Passthrough":              []string{"bar"},
-			consts.AuthHeaderName:                 []string{"nope"},
+			"Should-Passthrough":                  {"foo"},
+			"Should-Passthrough-Case-Insensitive": {"baz"},
+			"Should-Not-Passthrough":              {"bar"},
+			consts.AuthHeaderName:                 {"nope"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2371,7 +2400,7 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			consts.AuthHeaderName: []string{"foo"},
+			consts.AuthHeaderName: {"foo"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2385,5 +2414,164 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 	// Test passthrough values, they should not be present in the backend
 	if _, ok := headers[consts.AuthHeaderName]; ok {
 		t.Fatalf("did not expect %q to be in the headers map", consts.AuthHeaderName)
+	}
+}
+
+func TestCore_HandleRequest_TokenCreate_RegisterAuthFailure(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+
+	// Create a root token and use that for subsequent requests
+	req := logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.Data = map[string]interface{}{
+		"policies": []string{"root"},
+	}
+	req.ClientToken = root
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.Auth.ClientToken == "" {
+		t.Fatalf("expected a response from token creation, got: %#v", resp)
+	}
+	tokenWithRootPolicy := resp.Auth.ClientToken
+
+	// Use new token to create yet a new token, this should succeed
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.ClientToken = tokenWithRootPolicy
+	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Try again but force failure on RegisterAuth to simulate a network failure
+	// when registering the lease (e.g. a storage failure). This should trigger
+	// an expiration manager cleanup on the newly created token
+	core.expiration.testRegisterAuthFailure.Store(true)
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.ClientToken = tokenWithRootPolicy
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error, got a response: %#v", resp)
+	}
+	core.expiration.testRegisterAuthFailure.Store(false)
+
+	// Do a lookup against the client token that we used for the failed request.
+	// It should still be present
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/lookup")
+	req.Data = map[string]interface{}{
+		"token": tokenWithRootPolicy,
+	}
+	req.ClientToken = root
+	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Do a token creation request with the token to ensure that it's still
+	// valid, should succeed.
+	req = logical.TestRequest(t, logical.CreateOperation, "auth/token/create")
+	req.ClientToken = tokenWithRootPolicy
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// mockServiceRegistration helps test whether standalone ServiceRegistration works
+type mockServiceRegistration struct {
+	notifyActiveCount int
+	notifySealedCount int
+	notifyPerfCount   int
+	notifyInitCount   int
+	runDiscoveryCount int
+}
+
+func (m *mockServiceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
+	m.runDiscoveryCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyActiveStateChange(isActive bool) error {
+	m.notifyActiveCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifySealedStateChange(isSealed bool) error {
+	m.notifySealedCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
+	m.notifyPerfCount++
+	return nil
+}
+
+func (m *mockServiceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
+	m.notifyInitCount++
+	return nil
+}
+
+// TestCore_ServiceRegistration tests whether standalone ServiceRegistration works
+func TestCore_ServiceRegistration(t *testing.T) {
+	// Make a mock service discovery
+	sr := &mockServiceRegistration{}
+
+	// Create the core
+	logger = logging.NewVaultLogger(log.Trace)
+	inm, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const redirectAddr = "http://127.0.0.1:8200"
+	core, err := NewCore(&CoreConfig{
+		ServiceRegistration: sr,
+		Physical:            inm,
+		HAPhysical:          inmha.(physical.HABackend),
+		RedirectAddr:        redirectAddr,
+		DisableMlock:        true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer core.Shutdown()
+
+	// Vault should not yet be registered
+	if diff := deep.Equal(sr, &mockServiceRegistration{}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Vault should be registered
+	if diff := deep.Equal(sr, &mockServiceRegistration{
+		runDiscoveryCount: 1,
+	}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Initialize and unseal the core
+	keys, _ := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+	if core.Sealed() {
+		t.Fatal("should not be sealed")
+	}
+
+	// Wait for core to become active
+	TestWaitActive(t, core)
+
+	// Vault should be registered, unsealed, and active
+	if diff := deep.Equal(sr, &mockServiceRegistration{
+		runDiscoveryCount: 1,
+		notifyActiveCount: 1,
+		notifySealedCount: 1,
+		notifyInitCount:   1,
+	}); diff != nil {
+		t.Fatal(diff)
 	}
 }

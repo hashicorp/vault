@@ -2,12 +2,16 @@ package awsauth
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
+	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -524,7 +528,6 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("allowed changing resolve_aws_unique_ids from true to false")
 	}
-
 }
 
 func TestAwsEc2_RoleCrud(t *testing.T) {
@@ -613,11 +616,20 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"resolve_aws_unique_ids":         false,
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
-		"ttl":                            time.Duration(600),
-		"max_ttl":                        time.Duration(1200),
+		"ttl":                            int64(600),
+		"token_ttl":                      int64(600),
+		"max_ttl":                        int64(1200),
+		"token_max_ttl":                  int64(1200),
+		"token_explicit_max_ttl":         int64(0),
 		"policies":                       []string{"testpolicy1", "testpolicy2"},
+		"token_policies":                 []string{"testpolicy1", "testpolicy2"},
 		"disallow_reauthentication":      false,
-		"period":                         time.Duration(60),
+		"period":                         int64(60),
+		"token_period":                   int64(60),
+		"token_bound_cidrs":              []string{},
+		"token_no_default_policy":        false,
+		"token_num_uses":                 0,
+		"token_type":                     "default",
 	}
 
 	if resp.Data["role_id"] == nil {
@@ -749,13 +761,13 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	if int64(resp.Data["ttl"].(time.Duration)) != 10 {
+	if resp.Data["ttl"].(int64) != 10 {
 		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
 	}
-	if int64(resp.Data["max_ttl"].(time.Duration)) != 20 {
+	if resp.Data["max_ttl"].(int64) != 20 {
 		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
-	if int64(resp.Data["period"].(time.Duration)) != 30 {
+	if resp.Data["period"].(int64) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
 }
@@ -801,6 +813,266 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 	}
 }
 
-func resolveArnToFakeUniqueId(ctx context.Context, s logical.Storage, arn string) (string, error) {
+func TestRoleInitialize(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	err = b.Setup(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create some role entries, some of which will need to be upgraded
+	type testData struct {
+		name  string
+		entry *awsRoleEntry
+	}
+
+	before := []testData{
+		{
+			name: "role1",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000001:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000001:instance-profile/my_profile-prefix"},
+				Version:                     1,
+			},
+		},
+		{
+			name: "role2",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000002:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000002:instance-profile/my_profile-prefix"},
+				Version:                     2,
+			},
+		},
+		{
+			name: "role3",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000003:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000003:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+	}
+
+	// put the entries in storage
+	for _, role := range before {
+		err = b.setRole(ctx, storage, role.name, role.entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// upgrade all the entries
+	upgraded, err := b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !upgraded {
+		t.Fatalf("expected upgrade")
+	}
+
+	// read the entries from storage
+	after := make([]testData, 0)
+	names, err := storage.List(ctx, "role/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range names {
+		entry, err := b.role(ctx, storage, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		after = append(after, testData{name: name, entry: entry})
+	}
+
+	// make sure each entry is at the current version
+	expected := []testData{
+		{
+			name: "role1",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000001:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000001:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+		{
+			name: "role2",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000002:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000002:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+		{
+			name: "role3",
+			entry: &awsRoleEntry{
+				BoundIamRoleARNs:            []string{"arn:aws:iam::000000000003:role/my_role_prefix"},
+				BoundIamInstanceProfileARNs: []string{"arn:aws:iam::000000000003:instance-profile/my_profile-prefix"},
+				Version:                     currentRoleStorageVersion,
+			},
+		},
+	}
+	if diff := deep.Equal(expected, after); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// run it again -- nothing will happen
+	upgraded, err = b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if upgraded {
+		t.Fatalf("expected no upgrade")
+	}
+
+	// make sure saved role version is correct
+	entry, err := storage.Get(ctx, "config/version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var version awsVersion
+	err = entry.DecodeJSON(&version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version.Version != currentAwsVersion {
+		t.Fatalf("expected version %d, got  %d", currentAwsVersion, version.Version)
+	}
+
+	// stomp on the saved version
+	version.Version = 0
+	e2, err := logical.StorageEntryJSON("config/version", version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = storage.Put(ctx, e2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// run it again -- now an upgrade will happen
+	upgraded, err = b.upgrade(ctx, storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !upgraded {
+		t.Fatalf("expected upgrade")
+	}
+}
+
+func TestAwsVersion(t *testing.T) {
+	before := awsVersion{
+		Version: 42,
+	}
+
+	entry, err := logical.StorageEntryJSON("config/version", &before)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var after awsVersion
+	err = entry.DecodeJSON(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := deep.Equal(before, after); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// This test was used to reproduce https://github.com/hashicorp/vault/issues/7418
+// and verify its fix.
+// Please run it at least 3 times to ensure that passing tests are due to actually
+// passing, rather than the region being randomly chosen tying to the one in the
+// test through luck.
+func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
+	if enabled := os.Getenv(vlttesting.TestEnvVar); enabled == "" {
+		t.Skip()
+	}
+
+	/* ARN of an AWS role that Vault can query during testing.
+	   This role should exist in your current AWS account and your credentials
+	   should have iam:GetRole permissions to query it.
+	*/
+	assumableRoleArn := os.Getenv("AWS_ASSUMABLE_ROLE_ARN")
+	if assumableRoleArn == "" {
+		t.Skip("skipping because AWS_ASSUMABLE_ROLE_ARN is unset")
+	}
+
+	// Ensure aws credentials are available locally for testing.
+	logger := logging.NewVaultLogger(hclog.Debug)
+	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
+	credsChain, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = credsChain.Get()
+	if err != nil {
+		t.SkipNow()
+	}
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// configure the client with an sts endpoint that should be used in creating the role
+	data := map[string]interface{}{
+		"sts_endpoint": "https://sts.eu-west-1.amazonaws.com",
+		// Note - if you comment this out, you can reproduce the error shown
+		// in the linked GH issue above. This essentially reproduces the problem
+		// we had when we didn't have an sts_region field.
+		"sts_region": "eu-west-1",
+	}
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "config/client",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
+	}
+
+	data = map[string]interface{}{
+		"auth_type":               iamAuthType,
+		"bound_iam_principal_arn": assumableRoleArn,
+		"resolve_aws_unique_ids":  true,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/MyRoleName",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
+	}
+}
+
+func resolveArnToFakeUniqueId(_ context.Context, _ logical.Storage, _ string) (string, error) {
 	return "FakeUniqueId1", nil
 }

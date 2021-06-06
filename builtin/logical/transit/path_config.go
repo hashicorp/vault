@@ -13,19 +13,19 @@ func (b *backend) pathConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/config",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
 
-			"min_decryption_version": &framework.FieldSchema{
+			"min_decryption_version": {
 				Type: framework.TypeInt,
 				Description: `If set, the minimum version of the key allowed
 to be decrypted. For signing keys, the minimum
 version allowed to be used for verification.`,
 			},
 
-			"min_encryption_version": &framework.FieldSchema{
+			"min_encryption_version": {
 				Type: framework.TypeInt,
 				Description: `If set, the minimum version of the key allowed
 to be used for encryption; or for signing keys,
@@ -33,17 +33,17 @@ to be used for signing. If set to zero, only
 the latest version of the key is allowed.`,
 			},
 
-			"deletion_allowed": &framework.FieldSchema{
+			"deletion_allowed": {
 				Type:        framework.TypeBool,
 				Description: "Whether to allow deletion of the key",
 			},
 
-			"exportable": &framework.FieldSchema{
+			"exportable": {
 				Type:        framework.TypeBool,
 				Description: `Enables export of the key. Once set, this cannot be disabled.`,
 			},
 
-			"allow_plaintext_backup": &framework.FieldSchema{
+			"allow_plaintext_backup": {
 				Type:        framework.TypeBool,
 				Description: `Enables taking a backup of the named key in plaintext format. Once set, this cannot be disabled.`,
 			},
@@ -65,7 +65,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

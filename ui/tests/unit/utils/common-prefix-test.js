@@ -1,4 +1,4 @@
-import commonPrefix from 'vault/utils/common-prefix';
+import commonPrefix from 'core/utils/common-prefix';
 import { module, test } from 'qunit';
 
 module('Unit | Util | common prefix', function() {

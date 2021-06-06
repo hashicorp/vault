@@ -25,6 +25,10 @@
     font-size: 16px;
     font-weight: $font-weight-bold;
     line-height: 1.25;
+
+    .progress {
+      margin-left: $spacing-xs;
+    }
   }
 
   .close-button + .message-title {
@@ -34,6 +38,9 @@
   .message-body {
     border: 0;
     margin-top: $spacing-xxs;
+  }
+  .message-body.pre {
+    white-space: pre-wrap;
   }
 
   p {
@@ -112,8 +119,20 @@
   &.has-top {
     margin-top: 1rem;
   }
+
+  &.size-small {
+    font-size: $size-7;
+  }
+
+  &.padding-top {
+    padding-top: $size-8;
+  }
 }
 
 .has-text-highlight {
   color: $yellow-500;
+}
+
+.message.message-marginless {
+  margin: 0;
 }

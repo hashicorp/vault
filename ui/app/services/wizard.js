@@ -144,7 +144,7 @@ export default Service.extend(DEFAULTS, {
       this.saveExtState(COMPONENT_STATE, extendedState);
     }
 
-    let { actions, value } = FeatureMachine.transition(currentState, event, this.get('componentState'));
+    let { actions, value } = FeatureMachine.transition(currentState, event, this.componentState);
     this.saveState('featureState', value);
     this.saveExtState(FEATURE_STATE, value);
     this.executeActions(actions, event, 'feature');
@@ -254,7 +254,7 @@ export default Service.extend(DEFAULTS, {
     if (!resumeURL) {
       return;
     }
-    this.get('router')
+    this.router
       .transitionTo(resumeURL)
       .followRedirects()
       .then(() => {

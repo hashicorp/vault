@@ -3,6 +3,8 @@ package logical
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -21,10 +23,6 @@ type SystemView interface {
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
 	MaxLeaseTTL() time.Duration
-
-	// SudoPrivilege returns true if given path has sudo privileges
-	// for the given client token
-	SudoPrivilege(ctx context.Context, path string, token string) bool
 
 	// Returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special
@@ -66,14 +64,29 @@ type SystemView interface {
 	// for the given entity id
 	EntityInfo(entityID string) (*Entity, error)
 
+	// GroupsForEntity returns the group membership information for the provided
+	// entity id
+	GroupsForEntity(entityID string) ([]*Group, error)
+
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context) (*PluginEnvironment, error)
+
+	// GeneratePasswordFromPolicy generates a password from the policy referenced.
+	// If the policy does not exist, this will return an error.
+	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
+}
+
+type PasswordPolicy interface {
+	// Generate a random password
+	Generate(context.Context, io.Reader) (string, error)
 }
 
 type ExtendedSystemView interface {
 	Auditor() Auditor
 	ForwardGenericRequest(context.Context, *Request) (*Response, error)
 }
+
+type PasswordGenerator func() (password string, err error)
 
 type StaticSystemView struct {
 	DefaultLeaseTTLVal  time.Duration
@@ -86,9 +99,11 @@ type StaticSystemView struct {
 	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 	EntityVal           *Entity
+	GroupsVal           []*Group
 	Features            license.Features
 	VaultVersion        string
 	PluginEnvironment   *PluginEnvironment
+	PasswordPolicies    map[string]PasswordGenerator
 }
 
 type noopAuditor struct{}
@@ -153,10 +168,44 @@ func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {
 	return d.EntityVal, nil
 }
 
+func (d StaticSystemView) GroupsForEntity(entityID string) ([]*Group, error) {
+	return d.GroupsVal, nil
+}
+
 func (d StaticSystemView) HasFeature(feature license.Features) bool {
 	return d.Features.HasFeature(feature)
 }
 
 func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
 	return d.PluginEnvironment, nil
+}
+
+func (d StaticSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
+	select {
+	case <-ctx.Done():
+		return "", fmt.Errorf("context timed out")
+	default:
+	}
+
+	if d.PasswordPolicies == nil {
+		return "", fmt.Errorf("password policy not found")
+	}
+	policy, exists := d.PasswordPolicies[policyName]
+	if !exists {
+		return "", fmt.Errorf("password policy not found")
+	}
+	return policy()
+}
+
+func (d *StaticSystemView) SetPasswordPolicy(name string, generator PasswordGenerator) {
+	if d.PasswordPolicies == nil {
+		d.PasswordPolicies = map[string]PasswordGenerator{}
+	}
+	d.PasswordPolicies[name] = generator
+}
+
+func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
+	_, existed = d.PasswordPolicies[name]
+	delete(d.PasswordPolicies, name)
+	return existed
 }

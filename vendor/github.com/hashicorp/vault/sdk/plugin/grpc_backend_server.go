@@ -84,6 +84,22 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 	}, nil
 }
 
+func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.InitializeArgs) (*pb.InitializeReply, error) {
+	if pluginutil.InMetadataMode() {
+		return &pb.InitializeReply{}, ErrServerInMetadataMode
+	}
+
+	req := &logical.InitializationRequest{
+		Storage: newGRPCStorageClient(b.brokeredClient),
+	}
+
+	respErr := b.backend.Initialize(ctx, req)
+
+	return &pb.InitializeReply{
+		Err: pb.ErrToProtoErr(respErr),
+	}, nil
+}
+
 func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Empty) (*pb.SpecialPathsReply, error) {
 	paths := b.backend.SpecialPaths()
 	if paths == nil {

@@ -12,9 +12,8 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -64,44 +63,68 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+	merr := &multierror.Error{}
+	err := isDatabasePlugin(ctx, plugin)
+	if err == nil {
+		return consts.PluginTypeDatabase, nil
+	}
+	merr = multierror.Append(merr, err)
 
-	{
-		// Attempt to run as database plugin
-		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			// Close the client and cleanup the plugin process
-			client.Close()
-			return consts.PluginTypeDatabase, nil
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
+	// Attempt to run as backend plugin
+	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		err := client.Setup(ctx, &logical.BackendConfig{})
+		if err != nil {
+			return consts.PluginTypeUnknown, err
 		}
+
+		backendType := client.Type()
+		client.Cleanup(ctx)
+
+		switch backendType {
+		case logical.TypeCredential:
+			return consts.PluginTypeCredential, nil
+		case logical.TypeLogical:
+			return consts.PluginTypeSecrets, nil
+		}
+	} else {
+		merr = multierror.Append(merr, err)
 	}
 
-	{
-		// Attempt to run as backend plugin
-		client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-		if err == nil {
-			err := client.Setup(ctx, &logical.BackendConfig{})
-			if err != nil {
-				return consts.PluginTypeUnknown, err
-			}
-
-			backendType := client.Type()
-			client.Cleanup(ctx)
-
-			switch backendType {
-			case logical.TypeCredential:
-				return consts.PluginTypeCredential, nil
-			case logical.TypeLogical:
-				return consts.PluginTypeSecrets, nil
-			}
-			logger.Warn(fmt.Sprintf("unknown backendType of %s", backendType))
-		} else {
-			logger.Warn(fmt.Sprintf("received %s attempting as an auth/secret plugin, continuing", err))
-		}
+	if client == nil || client.Type() == logical.TypeUnknown {
+		logger.Warn("unknown plugin type",
+			"plugin name", plugin.Name,
+			"error", merr.Error())
+	} else {
+		logger.Warn("unsupported plugin type",
+			"plugin name", plugin.Name,
+			"plugin type", client.Type().String(),
+			"error", merr.Error())
 	}
 
 	return consts.PluginTypeUnknown, nil
+}
+
+func isDatabasePlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error {
+	merr := &multierror.Error{}
+	// Attempt to run as database V5 plugin
+	v5Client, err := v5.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		v5Client.Close()
+		return nil
+	}
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
+
+	v4Client, err := v4.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		v4Client.Close()
+		return nil
+	}
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
+
+	return merr.ErrorOrNil()
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
@@ -133,13 +156,13 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 	for _, pluginName := range plugins {
 		pluginRaw, err := c.catalogView.Get(ctx, pluginName)
 		if err != nil {
-			retErr = multierror.Append(errwrap.Wrapf("failed to load plugin entry: {{err}}", err))
+			retErr = multierror.Append(fmt.Errorf("failed to load plugin entry: %w", err))
 			continue
 		}
 
 		plugin := new(pluginutil.PluginRunner)
 		if err := jsonutil.DecodeJSON(pluginRaw.Value, plugin); err != nil {
-			retErr = multierror.Append(errwrap.Wrapf("failed to decode plugin entry: {{err}}", err))
+			retErr = multierror.Append(fmt.Errorf("failed to decode plugin entry: %w", err))
 			continue
 		}
 
@@ -191,20 +214,20 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 		// Look for external plugins in the barrier
 		out, err := c.catalogView.Get(ctx, pluginType.String()+"/"+name)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
+			return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 		}
 		if out == nil {
 			// Also look for external plugins under what their name would have been if they
 			// were registered before plugin types existed.
 			out, err = c.catalogView.Get(ctx, name)
 			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
+				return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 			}
 		}
 		if out != nil {
 			entry := new(pluginutil.PluginRunner)
 			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-				return nil, errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
+				return nil, fmt.Errorf("failed to decode plugin entry: %w", err)
 			}
 			if entry.Type != pluginType && entry.Type != consts.PluginTypeUnknown {
 				return nil, nil
@@ -255,15 +278,15 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
-		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
+		return fmt.Errorf("error while validating the command path: %w", err)
 	}
 	symAbs, err := filepath.Abs(filepath.Dir(sym))
 	if err != nil {
-		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
+		return fmt.Errorf("error while validating the command path: %w", err)
 	}
 
 	if symAbs != c.directory {
-		return errors.New("can not execute files outside of configured plugin directory")
+		return errors.New("cannot execute files outside of configured plugin directory")
 	}
 
 	// If the plugin type is unknown, we want to attempt to determine the type
@@ -300,7 +323,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode plugin entry: {{err}}", err)
+		return fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
 	logicalEntry := logical.StorageEntry{
@@ -308,7 +331,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
-		return errwrap.Wrapf("failed to persist plugin entry: {{err}}", err)
+		return fmt.Errorf("failed to persist plugin entry: %w", err)
 	}
 	return nil
 }
@@ -350,7 +373,6 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	pluginTypePrefix := pluginType.String() + "/"
 
 	for _, plugin := range keys {
-
 		// Only list user-added plugins if they're of the given type.
 		if entry, err := c.get(ctx, plugin, pluginType); err == nil && entry != nil {
 

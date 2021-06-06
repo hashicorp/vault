@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -65,7 +65,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(entityHelp["entity"][1]),
 		},
 		{
-			Pattern: "entity/name/" + framework.GenericNameRegex("name"),
+			Pattern: "entity/name/(?P<name>.+)",
 			Fields:  entityPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleEntityUpdateCommon(),
@@ -87,6 +87,21 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id"][0]),
 			HelpDescription: strings.TrimSpace(entityHelp["entity-id"][1]),
+		},
+		{
+			Pattern: "entity/batch-delete",
+			Fields: map[string]*framework.FieldSchema{
+				"entity_ids": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Entity IDs to delete",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: i.handleEntityBatchDelete(),
+			},
+
+			HelpSynopsis:    strings.TrimSpace(entityHelp["batch-delete"][0]),
+			HelpDescription: strings.TrimSpace(entityHelp["batch-delete"][1]),
 		},
 		{
 			Pattern: "entity/name/?$",
@@ -148,6 +163,9 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		force := d.Get("force").(bool)
 
 		// Create a MemDB transaction to merge entities
+		i.lock.Lock()
+		defer i.lock.Unlock()
+
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
@@ -156,7 +174,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false, true)
+		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, false, false, true)
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), nil
 		}
@@ -419,7 +437,7 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 			return nil, nil
 		}
 
-		err = i.handleEntityDeleteCommon(ctx, txn, entity)
+		err = i.handleEntityDeleteCommon(ctx, txn, entity, true)
 		if err != nil {
 			return nil, err
 		}
@@ -463,7 +481,7 @@ func (i *IdentityStore) pathEntityNameDelete() framework.OperationFunc {
 			return nil, nil
 		}
 
-		err = i.handleEntityDeleteCommon(ctx, txn, entity)
+		err = i.handleEntityDeleteCommon(ctx, txn, entity, true)
 		if err != nil {
 			return nil, err
 		}
@@ -474,7 +492,85 @@ func (i *IdentityStore) pathEntityNameDelete() framework.OperationFunc {
 	}
 }
 
-func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb.Txn, entity *identity.Entity) error {
+// pathEntityIDDelete deletes the entity for a given entity ID
+func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		entityIDs := d.Get("entity_ids").([]string)
+		if len(entityIDs) == 0 {
+			return logical.ErrorResponse("missing entity ids to delete"), nil
+		}
+
+		// Sort the ids by the bucket they will be deleted from
+		byBucket := make(map[string]map[string]struct{})
+		for _, id := range entityIDs {
+			bucketKey := i.entityPacker.BucketKey(id)
+
+			bucket, ok := byBucket[bucketKey]
+			if !ok {
+				bucket = make(map[string]struct{})
+				byBucket[bucketKey] = bucket
+			}
+
+			bucket[id] = struct{}{}
+		}
+
+		deleteIdsForBucket := func(entityIDs []string) error {
+			i.lock.Lock()
+			defer i.lock.Unlock()
+
+			// Create a MemDB transaction to delete entities from the inmem database
+			// without altering storage. Batch deletion on storage bucket items is
+			// performed directly through entityPacker.
+			txn := i.db.Txn(true)
+			defer txn.Abort()
+
+			for _, entityID := range entityIDs {
+				// Fetch the entity using its ID
+				entity, err := i.MemDBEntityByIDInTxn(txn, entityID, true)
+				if err != nil {
+					return err
+				}
+				if entity == nil {
+					continue
+				}
+
+				err = i.handleEntityDeleteCommon(ctx, txn, entity, false)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Write all updates for this bucket.
+			err := i.entityPacker.DeleteMultipleItems(ctx, i.logger, entityIDs)
+			if err != nil {
+				return err
+			}
+
+			txn.Commit()
+			return nil
+		}
+
+		for _, bucket := range byBucket {
+			ids := make([]string, len(bucket))
+			i := 0
+			for id := range bucket {
+				ids[i] = id
+				i++
+			}
+
+			err := deleteIdsForBucket(ids)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return nil, nil
+	}
+}
+
+// handleEntityDeleteCommon deletes an entity by removing it from groups of
+// which it's a member and then, if update is true, deleting the entity itself.
+func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, update bool) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
@@ -510,10 +606,12 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 		return err
 	}
 
-	// Delete the entity from storage
-	err = i.entityPacker.DeleteItem(ctx, entity.ID)
-	if err != nil {
-		return err
+	if update {
+		// Delete the entity from storage
+		err = i.entityPacker.DeleteItem(ctx, entity.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -545,7 +643,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 
 	iter, err := txn.Get(entitiesTable, "namespace_id", ns.ID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch iterator for entities in memdb: {{err}}", err)
+		return nil, fmt.Errorf("failed to fetch iterator for entities in memdb: %w", err)
 	}
 
 	ws.Add(iter.WatchCh())
@@ -560,6 +658,16 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	mountAccessorMap := map[string]mountInfo{}
 
 	for {
+		// Check for timeouts
+		select {
+		case <-ctx.Done():
+			resp := logical.ListResponseWithInfo(keys, entityInfo)
+			resp.AddWarning("partial response due to timeout")
+			return resp, nil
+		default:
+			break
+		}
+
 		raw := iter.Next()
 		if raw == nil {
 			break
@@ -649,6 +757,9 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if ok && !force {
 				return nil, fmt.Errorf("conflicting MFA config ID %q in entity ID %q", configID, fromEntity.ID)
 			} else {
+				if toEntity.MFASecrets == nil {
+					toEntity.MFASecrets = make(map[string]*mfa.Secret)
+				}
 				toEntity.MFASecrets[configID] = configSecret
 			}
 		}
@@ -681,7 +792,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 			err = i.MemDBUpsertAliasInTxn(txn, alias, false)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to update alias during merge: {{err}}", err)
+				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
 			// Add the alias to the desired entity
@@ -766,6 +877,10 @@ var entityHelp = map[string][2]string{
 	},
 	"entity-merge-id": {
 		"Merge two or more entities together",
+		"",
+	},
+	"batch-delete": {
+		"Delete all of the entities provided",
 		"",
 	},
 }

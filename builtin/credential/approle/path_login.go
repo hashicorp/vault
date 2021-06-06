@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -17,11 +16,11 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role_id": &framework.FieldSchema{
+			"role_id": {
 				Type:        framework.TypeString,
 				Description: "Unique identifier of the Role. Required to be supplied when the 'bind_secret_id' constraint is set.",
 			},
-			"secret_id": &framework.FieldSchema{
+			"secret_id": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "SecretID belong to the App role",
@@ -54,7 +53,6 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	// RoleID must be supplied during every login
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
 	if roleID == "" {
@@ -94,12 +92,12 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 		secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create HMAC of secret_id: {{err}}", err)
+			return nil, fmt.Errorf("failed to create HMAC of secret_id: %w", err)
 		}
 
 		roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+			return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 		}
 
 		entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
@@ -124,7 +122,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		// entry, revoke the secret ID immediately
 		accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, entry.SecretIDAccessor, role.SecretIDPrefix)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+			return nil, fmt.Errorf("failed to read secret ID accessor entry: %w", err)
 		}
 		if accessorEntry == nil {
 			// Switch the locks and recheck the conditions
@@ -142,12 +140,12 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 			accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, entry.SecretIDAccessor, role.SecretIDPrefix)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+				return nil, fmt.Errorf("failed to read secret ID accessor entry: %w", err)
 			}
 
 			if accessorEntry == nil {
 				if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
+					return nil, fmt.Errorf("error deleting secret ID %q from storage: %w", secretIDHMAC, err)
 				}
 			}
 			return logical.ErrorResponse("invalid secret id"), nil
@@ -177,7 +175,11 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
 				if !belongs || err != nil {
-					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized through CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
+					return logical.ErrorResponse(fmt.Errorf(
+						"source address %q unauthorized through CIDR restrictions on the secret ID: %w",
+						req.Connection.RemoteAddr,
+						err,
+					).Error()), nil
 				}
 			}
 		default:
@@ -211,7 +213,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 				}
 				err = req.Storage.Delete(ctx, entryIndex)
 				if err != nil {
-					return nil, errwrap.Wrapf("failed to delete secret ID: {{err}}", err)
+					return nil, fmt.Errorf("failed to delete secret ID: %w", err)
 				}
 			} else {
 				// If the use count is greater than one, decrement it and update the last updated time.
@@ -245,7 +247,12 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
 				if err != nil || !belongs {
-					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the secret ID: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
+					return logical.ErrorResponse(
+						fmt.Errorf(
+							"source address %q unauthorized by CIDR restrictions on the secret ID: %w",
+							req.Connection.RemoteAddr,
+							err,
+						).Error()), nil
 				}
 			}
 		}
@@ -259,21 +266,22 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		}
 		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.SecretIDBoundCIDRs)
 		if err != nil || !belongs {
-			return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("source address %q unauthorized by CIDR restrictions on the role: {{err}}", req.Connection.RemoteAddr), err).Error()), nil
+			return logical.ErrorResponse(
+				fmt.Errorf(
+					"source address %q unauthorized by CIDR restrictions on the role: %w",
+					req.Connection.RemoteAddr,
+					err,
+				).Error()), nil
 		}
 	}
 
 	// Parse the CIDRs we should be binding the token to.
-	var tokenBoundCIDRStrings []string
-	if entry != nil {
-		tokenBoundCIDRStrings = entry.TokenBoundCIDRs
-	}
-	if len(tokenBoundCIDRStrings) == 0 {
-		tokenBoundCIDRStrings = role.TokenBoundCIDRs
-	}
-	tokenBoundCIDRs, err := parseutil.ParseAddrs(tokenBoundCIDRStrings)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	tokenBoundCIDRs := role.TokenBoundCIDRs
+	if entry != nil && len(entry.TokenBoundCIDRs) > 0 {
+		tokenBoundCIDRs, err = parseutil.ParseAddrs(entry.TokenBoundCIDRs)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
 	// For some reason, if metadata was set to nil while processing secret ID
@@ -286,32 +294,19 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	metadata["role_name"] = role.name
 
 	auth := &logical.Auth{
-		NumUses: role.TokenNumUses,
-		Period:  role.Period,
 		InternalData: map[string]interface{}{
 			"role_name": role.name,
 		},
 		Metadata: metadata,
-		Policies: role.Policies,
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-			TTL:       role.TokenTTL,
-			MaxTTL:    role.TokenMaxTTL,
-		},
 		Alias: &logical.Alias{
-			Name: role.RoleID,
+			Name:     role.RoleID,
+			Metadata: metadata,
 		},
-		BoundCIDRs: tokenBoundCIDRs,
 	}
+	role.PopulateTokenAuth(auth)
 
-	switch role.TokenType {
-	case "default":
-		auth.TokenType = logical.TokenTypeDefault
-	case "batch":
-		auth.TokenType = logical.TokenTypeBatch
-	case "service":
-		auth.TokenType = logical.TokenTypeService
-	}
+	// Allow for overridden token bound CIDRs
+	auth.BoundCIDRs = tokenBoundCIDRs
 
 	return &logical.Response{
 		Auth: auth,
@@ -332,7 +327,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	// Ensure that the Role still exists.
 	role, err := b.roleEntry(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to validate role %q during renewal: {{err}}", roleName), err)
+		return nil, fmt.Errorf("failed to validate role %q during renewal: %w", roleName, err)
 	}
 	if role == nil {
 		return nil, fmt.Errorf("role %q does not exist during renewal", roleName)
@@ -341,7 +336,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data
 	resp := &logical.Response{Auth: req.Auth}
 	resp.Auth.TTL = role.TokenTTL
 	resp.Auth.MaxTTL = role.TokenMaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 

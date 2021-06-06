@@ -22,6 +22,25 @@ export default Route.extend({
     },
   },
 
+  modelTypeForTransform(tab) {
+    let modelType;
+    switch (tab) {
+      case 'role':
+        modelType = 'transform/role';
+        break;
+      case 'template':
+        modelType = 'transform/template';
+        break;
+      case 'alphabet':
+        modelType = 'transform/alphabet';
+        break;
+      default:
+        modelType = 'transform'; // CBS TODO: transform/transformation
+        break;
+    }
+    return modelType;
+  },
+
   secretParam() {
     let { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
@@ -35,7 +54,7 @@ export default Route.extend({
   beforeModel() {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
-    let { tab } = this.paramsFor('vault.cluster.secrets.backend');
+    let { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine && secretEngine.get('engineType');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
@@ -54,8 +73,10 @@ export default Route.extend({
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine.get('engineType');
     let types = {
+      database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
+      transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
@@ -66,18 +87,20 @@ export default Route.extend({
     return types[type];
   },
 
-  model(params) {
+  async model(params) {
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
+    const modelType = this.getModelType(backend, params.tab);
+
     return hash({
       secret,
       secrets: this.store
-        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+        .lazyPaginatedQuery(modelType, {
           id: secret,
           backend,
           responsePath: 'data.keys',
-          page: params.page,
+          page: params.page || 1,
           pageFilter: params.pageFilter,
         })
         .then(model => {
@@ -125,12 +148,11 @@ export default Route.extend({
     let model = resolvedModel.secrets;
     let backend = this.enginePathParam();
     let backendModel = this.store.peekRecord('secret-engine', backend);
-    let has404 = this.get('has404');
+    let has404 = this.has404;
     // only clear store cache if this is a new model
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
     }
-
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -150,7 +172,7 @@ export default Route.extend({
       }
       controller.setProperties({
         filter: filter || '',
-        page: model.get('meta.currentPage') || 1,
+        page: model.meta?.currentPage || 1,
       });
     }
   },
@@ -168,6 +190,7 @@ export default Route.extend({
       let secret = this.secretParam();
       let backend = this.enginePathParam();
       let is404 = error.httpStatus === 404;
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let hasModel = this.controllerFor(this.routeName).get('hasModel');
 
       // this will occur if we've deleted something,

@@ -3,38 +3,47 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
+
+type DecryptBatchResponseItem struct {
+	// Plaintext for the ciphertext present in the corresponding batch
+	// request item
+	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
+
+	// Error, if set represents a failure encountered while encrypting a
+	// corresponding batch request item
+	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+}
 
 func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"ciphertext": &framework.FieldSchema{
+			"ciphertext": {
 				Type: framework.TypeString,
 				Description: `
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded context for key derivation. Required if key derivation is
 enabled.`,
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value used during encryption. Must be provided if
@@ -57,9 +66,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	var batchInputItems []BatchRequestItem
 	var err error
 	if batchInputRaw != nil {
-		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
+		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -79,7 +88,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	for i, item := range batchInputItems {
@@ -115,7 +124,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    d.Get("name").(string),
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -54,6 +55,12 @@ func backend() *azureSecretBackend {
 		},
 		BackendType: logical.TypeLogical,
 		Invalidate:  b.invalidate,
+
+		WALRollback: b.walRollback,
+
+		// Role assignment can take up to a few minutes, so ensure we don't try
+		// to roll back during creation.
+		WALRollbackMinAge: 10 * time.Minute,
 	}
 
 	b.getProvider = newAzureProvider
@@ -78,6 +85,61 @@ func (b *azureSecretBackend) invalidate(ctx context.Context, key string) {
 	case "config":
 		b.reset()
 	}
+}
+
+func (b *azureSecretBackend) getClient(ctx context.Context, s logical.Storage) (*client, error) {
+	b.lock.RLock()
+	unlockFunc := b.lock.RUnlock
+	defer func() { unlockFunc() }()
+
+	if b.client.Valid() {
+		return b.client, nil
+	}
+
+	b.lock.RUnlock()
+	b.lock.Lock()
+	unlockFunc = b.lock.Unlock
+
+	if b.client.Valid() {
+		return b.client, nil
+	}
+
+	config, err := b.getConfig(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.settings == nil {
+		if config == nil {
+			config = new(azureConfig)
+		}
+
+		settings, err := b.getClientSettings(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		b.settings = settings
+	}
+
+	p, err := b.getProvider(b.settings)
+	if err != nil {
+		return nil, err
+	}
+
+	passwords := passwords{
+		policyGenerator: b.System(),
+		policyName:      config.PasswordPolicy,
+	}
+
+	c := &client{
+		provider:   p,
+		settings:   b.settings,
+		expiration: time.Now().Add(clientLifetime),
+		passwords:  passwords,
+	}
+	b.client = c
+
+	return c, nil
 }
 
 const backendHelp = `

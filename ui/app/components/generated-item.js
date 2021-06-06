@@ -1,12 +1,12 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
-import DS from 'ember-data';
 
 /**
  * @module GeneratedItem
- * The `GeneratedItem` is the form to configure generated items related to mounts (e.g. groups, roles, users)
+ * The `GeneratedItem` component is the form to configure generated items related to mounts (e.g. groups, roles, users)
  *
  * @example
  * ```js
@@ -24,7 +24,7 @@ export default Component.extend({
   itemType: null,
   flashMessages: service(),
   router: service(),
-  props: computed(function() {
+  props: computed('model', function() {
     return this.model.serialize();
   }),
   saveModel: task(function*() {
@@ -33,19 +33,19 @@ export default Component.extend({
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
-      if (err instanceof DS.AdapterError === false) {
+      if (err instanceof AdapterError === false) {
         throw err;
       }
       return;
     }
     this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-    this.flashMessages.success(`The ${this.itemType} configuration was saved successfully.`);
+    this.flashMessages.success(`Successfully saved ${this.itemType} ${this.model.id}.`);
   }).withTestWaiter(),
   actions: {
     deleteItem() {
       this.model.destroyRecord().then(() => {
         this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-        this.flashMessages.success(`${this.model.id} ${this.itemType} was deleted successfully.`);
+        this.flashMessages.success(`Successfully deleted ${this.itemType} ${this.model.id}.`);
       });
     },
   },

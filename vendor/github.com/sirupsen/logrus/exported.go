@@ -1,6 +1,7 @@
 package logrus
 
 import (
+	"context"
 	"io"
 	"time"
 )
@@ -55,6 +56,11 @@ func WithError(err error) *Entry {
 	return std.WithField(ErrorKey, err)
 }
 
+// WithContext creates an entry from the standard logger and adds a context to it.
+func WithContext(ctx context.Context) *Entry {
+	return std.WithContext(ctx)
+}
+
 // WithField creates an entry from the standard logger and adds a field to
 // it. If you want multiple fields, use `WithFields`.
 //
@@ -74,7 +80,7 @@ func WithFields(fields Fields) *Entry {
 	return std.WithFields(fields)
 }
 
-// WithTime creats an entry from the standard logger and overrides the time of
+// WithTime creates an entry from the standard logger and overrides the time of
 // logs generated with it.
 //
 // Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal

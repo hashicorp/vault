@@ -1,0 +1,609 @@
+[
+  {
+    "title": "Overview",
+    "path": "index"
+  },
+  {
+    "title": "Client Libraries",
+    "path": "libraries"
+  },
+  {
+    "title": "Related Tools",
+    "path": "relatedtools"
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Secrets Engines",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "secret"
+      },
+      {
+        "title": "Active Directory",
+        "path": "secret/ad"
+      },
+      {
+        "title": "AliCloud",
+        "path": "secret/alicloud"
+      },
+      {
+        "title": "AWS",
+        "path": "secret/aws"
+      },
+      {
+        "title": "Azure",
+        "path": "secret/azure"
+      },
+      {
+        "title": "Cassandra",
+        "path": "secret/cassandra",
+        "hidden": true
+      },
+      {
+        "title": "Consul",
+        "path": "secret/consul"
+      },
+      {
+        "title": "Cubbyhole",
+        "path": "secret/cubbyhole"
+      },
+      {
+        "title": "Databases",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/databases"
+          },
+          {
+            "title": "Cassandra",
+            "path": "secret/databases/cassandra"
+          },
+          {
+            "title": "Couchbase",
+            "path": "secret/databases/couchbase"
+          },
+          {
+            "title": "Elasticsearch",
+            "path": "secret/databases/elasticdb"
+          },
+          {
+            "title": "Influxdb",
+            "path": "secret/databases/influxdb"
+          },
+          {
+            "title": "HanaDB",
+            "path": "secret/databases/hanadb"
+          },
+          {
+            "title": "MongoDB",
+            "path": "secret/databases/mongodb"
+          },
+          {
+            "title": "MongoDB Atlas",
+            "path": "secret/databases/mongodbatlas"
+          },
+          {
+            "title": "MSSQL",
+            "path": "secret/databases/mssql"
+          },
+          {
+            "title": "MySQL/MariaDB",
+            "path": "secret/databases/mysql-maria"
+          },
+          {
+            "title": "Oracle",
+            "path": "secret/databases/oracle"
+          },
+          {
+            "title": "PostgreSQL",
+            "path": "secret/databases/postgresql"
+          },
+          {
+            "title": "Redshift",
+            "path": "secret/databases/redshift"
+          },
+          {
+            "title": "Snowflake",
+            "path": "secret/databases/snowflake"
+          }
+        ]
+      },
+      {
+        "title": "Google Cloud",
+        "path": "secret/gcp"
+      },
+      {
+        "title": "Google Cloud KMS",
+        "path": "secret/gcpkms"
+      },
+      {
+        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/key-management"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "secret/key-management/azurekeyvault"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "secret/key-management/awskms"
+          }
+        ]
+      },
+      {
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secret/kmip"
+      },
+      {
+        "title": "Key/Value",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/kv"
+          },
+          {
+            "title": "K/V Version 1",
+            "path": "secret/kv/kv-v1"
+          },
+          {
+            "title": "K/V Version 2",
+            "path": "secret/kv/kv-v2"
+          }
+        ]
+      },
+      {
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/identity"
+          },
+          {
+            "title": "Entity",
+            "path": "secret/identity/entity"
+          },
+          {
+            "title": "Entity Alias",
+            "path": "secret/identity/entity-alias"
+          },
+          {
+            "title": "Group",
+            "path": "secret/identity/group"
+          },
+          {
+            "title": "Group Alias",
+            "path": "secret/identity/group-alias"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secret/identity/tokens"
+          },
+          {
+            "title": "Lookup",
+            "path": "secret/identity/lookup"
+          }
+        ]
+      },
+      {
+        "title": "MongoDB Atlas",
+        "path": "secret/mongodbatlas"
+      },
+      {
+        "title": "Nomad",
+        "path": "secret/nomad"
+      },
+      {
+        "title": "OpenLDAP",
+        "path": "secret/openldap"
+      },
+      {
+        "title": "PKI",
+        "path": "secret/pki"
+      },
+      {
+        "title": "RabbitMQ",
+        "path": "secret/rabbitmq"
+      },
+      {
+        "title": "SSH",
+        "path": "secret/ssh"
+      },
+      {
+        "title": "Terraform Cloud",
+        "path": "secret/terraform"
+      },
+      {
+        "title": "TOTP",
+        "path": "secret/totp"
+      },
+      {
+        "title": "Transform <sup>ENTERPRISE</sup>",
+        "path": "secret/transform"
+      },
+      {
+        "title": "Transit",
+        "path": "secret/transit"
+      }
+    ]
+  },
+  {
+    "title": "Auth Methods",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "auth"
+      },
+      {
+        "title": "AliCloud",
+        "path": "auth/alicloud"
+      },
+      {
+        "title": "AppRole",
+        "path": "auth/approle"
+      },
+      {
+        "title": "AWS",
+        "path": "auth/aws"
+      },
+      {
+        "title": "Azure",
+        "path": "auth/azure"
+      },
+      {
+        "title": "Cloud Foundry",
+        "path": "auth/cf"
+      },
+      {
+        "title": "GitHub",
+        "path": "auth/github"
+      },
+      {
+        "title": "Google Cloud",
+        "path": "auth/gcp"
+      },
+      {
+        "title": "JWT/OIDC",
+        "path": "auth/jwt"
+      },
+      {
+        "title": "Kerberos",
+        "path": "auth/kerberos"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "auth/kubernetes"
+      },
+      {
+        "title": "LDAP",
+        "path": "auth/ldap"
+      },
+      {
+        "title": "OCI",
+        "path": "auth/oci"
+      },
+      {
+        "title": "Okta",
+        "path": "auth/okta"
+      },
+      {
+        "title": "RADIUS",
+        "path": "auth/radius"
+      },
+      {
+        "title": "TLS Certificates",
+        "path": "auth/cert"
+      },
+      {
+        "title": "Tokens",
+        "path": "auth/token"
+      },
+      {
+        "title": "Username & Password",
+        "path": "auth/userpass"
+      },
+      {
+        "title": "App ID <sup>DEPRECATED</sup>",
+        "path": "auth/app-id"
+      }
+    ]
+  },
+  {
+    "title": "System Backend",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "system"
+      },
+      {
+        "title": "<code>/sys/audit</code>",
+        "path": "system/audit"
+      },
+      {
+        "title": "<code>/sys/audit-hash</code>",
+        "path": "system/audit-hash"
+      },
+      {
+        "title": "<code>/sys/auth</code>",
+        "path": "system/auth"
+      },
+      {
+        "title": "<code>/sys/capabilities</code>",
+        "path": "system/capabilities"
+      },
+      {
+        "title": "<code>/sys/capabilities-accessor</code>",
+        "path": "system/capabilities-accessor"
+      },
+      {
+        "title": "<code>/sys/capabilities-self</code>",
+        "path": "system/capabilities-self"
+      },
+      {
+        "title": "<code>/sys/config/auditing</code>",
+        "path": "system/config-auditing"
+      },
+      {
+        "title": "<code>/sys/config/control-group</code>",
+        "path": "system/config-control-group"
+      },
+      {
+        "title": "<code>/sys/config/cors</code>",
+        "path": "system/config-cors"
+      },
+      {
+        "title": "<code>/sys/config/reload</code>",
+        "path": "system/config-reload"
+      },
+      {
+        "title": "<code>/sys/config/state</code>",
+        "path": "system/config-state"
+      },
+      {
+        "title": "<code>/sys/config/ui</code>",
+        "path": "system/config-ui"
+      },
+      {
+        "title": "<code>/sys/control-group</code>",
+        "path": "system/control-group"
+      },
+      {
+        "title": "<code>/sys/generate-recovery-token</code>",
+        "path": "system/generate-recovery-token",
+        "hidden": true
+      },
+      {
+        "title": "<code>/sys/generate-root</code>",
+        "path": "system/generate-root"
+      },
+      {
+        "title": "<code>/sys/health</code>",
+        "path": "system/health"
+      },
+      {
+        "title": "<code>/sys/host-info</code>",
+        "path": "system/host-info"
+      },
+      {
+        "title": "<code>/sys/init</code>",
+        "path": "system/init"
+      },
+      {
+        "title": "<code>/sys/internal/counters</code>",
+        "path": "system/internal-counters"
+      },
+      {
+        "title": "<code>/sys/internal/specs/openapi</code>",
+        "path": "system/internal-specs-openapi"
+      },
+      {
+        "title": "<code>/sys/internal/ui/feature-flags</code>",
+        "path": "system/internal-ui-feature"
+      },
+      {
+        "title": "<code>/sys/internal/ui/mounts</code>",
+        "path": "system/internal-ui-mounts"
+      },
+      {
+        "title": "<code>/sys/key-status</code>",
+        "path": "system/key-status"
+      },
+      {
+        "title": "<code>/sys/leader</code>",
+        "path": "system/leader"
+      },
+      {
+        "title": "<code>/sys/leases</code>",
+        "path": "system/leases"
+      },
+      {
+        "title": "<code>/sys/license</code>",
+        "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/metrics</code>",
+        "path": "system/metrics"
+      },
+      {
+        "title": "<code>/sys/mfa</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/mfa"
+          },
+          {
+            "title": "<code>/sys/mfa/method/duo</code>",
+            "path": "system/mfa/duo"
+          },
+          {
+            "title": "<code>/sys/mfa/method/okta</code>",
+            "path": "system/mfa/okta"
+          },
+          {
+            "title": "<code>/sys/mfa/method/pingid</code>",
+            "path": "system/mfa/pingid"
+          },
+          {
+            "title": "<code>/sys/mfa/method/totp</code>",
+            "path": "system/mfa/totp"
+          }
+        ]
+      },
+      {
+        "title": "<code>/sys/monitor</code>",
+        "path": "system/monitor"
+      },
+      {
+        "title": "<code>/sys/mounts</code>",
+        "path": "system/mounts"
+      },
+      {
+        "title": "<code>/sys/namespaces</code>",
+        "path": "system/namespaces"
+      },
+      {
+        "title": "<code>/sys/plugins/reload/backend</code>",
+        "path": "system/plugins-reload-backend"
+      },
+      {
+        "title": "<code>/sys/plugins/catalog</code>",
+        "path": "system/plugins-catalog"
+      },
+      {
+        "title": "<code>/sys/policy</code>",
+        "path": "system/policy"
+      },
+      {
+        "title": "<code>/sys/policies</code>",
+        "path": "system/policies"
+      },
+      {
+        "title": "<code>/sys/policies/password</code>",
+        "path": "system/policies-password"
+      },
+      {
+        "title": "<code>/sys/pprof</code>",
+        "path": "system/pprof"
+      },
+      {
+        "title": "<code>/sys/quotas/config</code>",
+        "path": "system/quotas-config"
+      },
+      {
+        "title": "<code>/sys/quotas/rate-limit</code>",
+        "path": "system/rate-limit-quotas"
+      },
+      {
+        "title": "<code>/sys/quotas/lease-count</code>",
+        "path": "system/lease-count-quotas"
+      },
+      {
+        "title": "<code>/sys/raw</code>",
+        "path": "system/raw"
+      },
+      {
+        "title": "<code>/sys/rekey</code>",
+        "path": "system/rekey"
+      },
+      {
+        "title": "<code>/sys/rekey-recovery-key</code>",
+        "path": "system/rekey-recovery-key"
+      },
+      {
+        "title": "<code>/sys/remount</code>",
+        "path": "system/remount"
+      },
+      {
+        "title": "<code>/sys/replication</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/replication"
+          },
+          {
+            "title": "<code>/sys/replication/performance</code>",
+            "path": "system/replication/replication-performance"
+          },
+          {
+            "title": "<code>/sys/replication/dr</code>",
+            "path": "system/replication/replication-dr"
+          }
+        ]
+      },
+      {
+        "title": "<code>/sys/rotate</code>",
+        "path": "system/rotate"
+      },
+      {
+        "title": "<code>/sys/rotate/config</code>",
+        "path": "system/rotate-config"
+      },
+      {
+        "title": "<code>/sys/seal</code>",
+        "path": "system/seal"
+      },
+      {
+        "title": "<code>/sys/seal-status</code>",
+        "path": "system/seal-status"
+      },
+      {
+        "title": "<code>/sys/sealwrap/rewrap</code>",
+        "path": "system/sealwrap-rewrap"
+      },
+      {
+        "title": "<code>/sys/step-down</code>",
+        "path": "system/step-down"
+      },
+      {
+        "title": "<code>/sys/storage </code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/storage"
+          },
+          {
+            "title": "<code>/sys/storage/raft</code>",
+            "path": "system/storage/raft"
+          },
+          {
+            "title": "<code>/sys/storage/raft/autopilot</code>",
+            "path": "system/storage/raftautopilot"
+          },
+          {
+            "title": "<code>/sys/storage/raft/snapshot-auto</code>",
+            "path": "system/storage/raftautosnapshots"
+          }
+        ]
+      },
+      {
+        "title": "<code>/sys/tools</code>",
+        "path": "system/tools"
+      },
+      {
+        "title": "<code>/sys/unseal</code>",
+        "path": "system/unseal"
+      },
+      {
+        "title": "<code>/sys/wrapping/lookup</code>",
+        "path": "system/wrapping-lookup"
+      },
+      {
+        "title": "<code>/sys/wrapping/rewrap</code>",
+        "path": "system/wrapping-rewrap"
+      },
+      {
+        "title": "<code>/sys/wrapping/unwrap</code>",
+        "path": "system/wrapping-unwrap"
+      },
+      {
+        "title": "<code>/sys/wrapping/wrap</code>",
+        "path": "system/wrapping-wrap"
+      }
+    ]
+  }
+]

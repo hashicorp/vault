@@ -8,11 +8,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/cockroachdb/cockroach-go/crdb"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -21,8 +22,14 @@ import (
 )
 
 // Verify CockroachDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*CockroachDBBackend)(nil)
-var _ physical.Transactional = (*CockroachDBBackend)(nil)
+var (
+	_ physical.Backend       = (*CockroachDBBackend)(nil)
+	_ physical.Transactional = (*CockroachDBBackend)(nil)
+)
+
+const (
+	defaultTableName = "vault_kv_store"
+)
 
 // CockroachDBBackend Backend is a physical backend that stores data
 // within a CockroachDB database.
@@ -44,18 +51,22 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
-	dbTable, ok := conf["table"]
-	if !ok {
-		dbTable = "vault_kv_store"
+	dbTable := conf["table"]
+	if dbTable == "" {
+		dbTable = defaultTableName
+	}
+
+	err := validateDBTable(dbTable)
+	if err != nil {
+		return nil, fmt.Errorf("invalid table: %w", err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
-	var err error
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -65,14 +76,14 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	// Create CockroachDB handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to connect to cockroachdb: {{err}}", err)
+		return nil, fmt.Errorf("failed to connect to cockroachdb: %w", err)
 	}
 
 	// Create the required table if it doesn't exists.
 	createQuery := "CREATE TABLE IF NOT EXISTS " + dbTable +
 		" (path STRING, value BYTES, PRIMARY KEY (path))"
 	if _, err := db.Exec(createQuery); err != nil {
-		return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+		return nil, fmt.Errorf("failed to create mysql table: %w", err)
 	}
 
 	// Setup the backend
@@ -105,7 +116,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 func (c *CockroachDBBackend) prepare(name, query string) error {
 	stmt, err := c.client.Prepare(query)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
 	c.statements[name] = stmt
 	return nil
@@ -182,7 +193,7 @@ func (c *CockroachDBBackend) List(ctx context.Context, prefix string) ([]string,
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
 		key = strings.TrimPrefix(key, prefix)
@@ -238,4 +249,56 @@ func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []*physical.TxnEntry) 
 		}
 	}
 	return nil
+}
+
+// validateDBTable against the CockroachDB rules for table names:
+// https://www.cockroachlabs.com/docs/stable/keywords-and-identifiers.html#identifiers
+//
+//   - All values that accept an identifier must:
+//     - Begin with a Unicode letter or an underscore (_). Subsequent characters can be letters,
+//     - underscores, digits (0-9), or dollar signs ($).
+//   - Not equal any SQL keyword unless the keyword is accepted by the element's syntax. For example,
+//     name accepts Unreserved or Column Name keywords.
+//
+// The docs do state that we can bypass these rules with double quotes, however I think it
+// is safer to just require these rules across the board.
+func validateDBTable(dbTable string) (err error) {
+	// Check if this is 'database.table' formatted. If so, split them apart and check the two
+	// parts from each other
+	split := strings.SplitN(dbTable, ".", 2)
+	if len(split) == 2 {
+		merr := &multierror.Error{}
+		merr = multierror.Append(merr, wrapErr("invalid database: %w", validateDBTable(split[0])))
+		merr = multierror.Append(merr, wrapErr("invalid table name: %w", validateDBTable(split[1])))
+		return merr.ErrorOrNil()
+	}
+
+	// Disallow SQL keywords as the table name
+	if sqlKeywords[strings.ToUpper(dbTable)] {
+		return fmt.Errorf("name must not be a SQL keyword")
+	}
+
+	runes := []rune(dbTable)
+	for i, r := range runes {
+		if i == 0 && !unicode.IsLetter(r) && r != '_' {
+			return fmt.Errorf("must use a letter or an underscore as the first character")
+		}
+
+		if !unicode.IsLetter(r) && r != '_' && !unicode.IsDigit(r) && r != '$' {
+			return fmt.Errorf("must only contain letters, underscores, digits, and dollar signs")
+		}
+
+		if r == '`' || r == '\'' || r == '"' {
+			return fmt.Errorf("cannot contain backticks, single quotes, or double quotes")
+		}
+	}
+
+	return nil
+}
+
+func wrapErr(message string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf(message, err)
 }

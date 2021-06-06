@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -103,7 +104,7 @@ func (n *NoopBackend) Logger() log.Logger {
 	return log.NewNullLogger()
 }
 
-func (n *NoopBackend) Initialize(ctx context.Context) error {
+func (n *NoopBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	return nil
 }
 
@@ -112,4 +113,30 @@ func (n *NoopBackend) Type() logical.BackendType {
 		return logical.TypeLogical
 	}
 	return n.BackendType
+}
+
+// InitializableBackend is a backend that knows whether it has been initialized
+// properly.
+type InitializableBackend struct {
+	*NoopBackend
+	isInitialized bool
+}
+
+func (b *InitializableBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	if b.isInitialized {
+		return errors.New("already initialized")
+	}
+
+	// do a dummy write, to prove that the storage is not readonly
+	entry := &logical.StorageEntry{
+		Key:   "initialize/zork",
+		Value: []byte("quux"),
+	}
+	err := req.Storage.Put(ctx, entry)
+	if err != nil {
+		return err
+	}
+
+	b.isInitialized = true
+	return nil
 }

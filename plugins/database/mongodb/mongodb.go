@@ -2,29 +2,33 @@ package mongodb
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
-	"time"
 
-	"encoding/json"
-
-	"fmt"
-
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	log "github.com/hashicorp/go-hclog"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	mgo "gopkg.in/mgo.v2"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
-const mongoDBTypeName = "mongodb"
+const (
+	mongoDBTypeName = "mongodb"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 }}`
+)
 
 // MongoDB is an implementation of Database interface
 type MongoDB struct {
 	*mongoDBConnectionProducer
-	credsutil.CredentialsProducer
+
+	usernameProducer template.StringTemplate
 }
 
 var _ dbplugin.Database = &MongoDB{}
@@ -37,32 +41,13 @@ func New() (interface{}, error) {
 }
 
 func new() *MongoDB {
-	connProducer := &mongoDBConnectionProducer{}
-	connProducer.Type = mongoDBTypeName
-
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 15,
-		RoleNameLen:    15,
-		UsernameLen:    100,
-		Separator:      "-",
+	connProducer := &mongoDBConnectionProducer{
+		Type: mongoDBTypeName,
 	}
 
 	return &MongoDB{
 		mongoDBConnectionProducer: connProducer,
-		CredentialsProducer:       credsProducer,
 	}
-}
-
-// Run instantiates a MongoDB object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
-
-	return nil
 }
 
 // Type returns the TypeName for this backend
@@ -70,54 +55,75 @@ func (m *MongoDB) Type() (string, error) {
 	return mongoDBTypeName, nil
 }
 
-func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
-	session, err := m.Connection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return session.(*mgo.Session), nil
-}
-
-// CreateUser generates the username/password on the underlying secret backend as instructed by
-// the CreationStatement provided. The creation statement is a JSON blob that has a db value,
-// and an array of roles that accepts a role, and an optional db value pair. This array will
-// be normalized the format specified in the mongoDB docs:
-// https://docs.mongodb.com/manual/reference/command/createUser/#dbcmd.createUser
-//
-// JSON Example:
-//  { "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }
-func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
-	// Grab the lock
+func (m *MongoDB) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	m.Lock()
 	defer m.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
+	m.RawConfig = req.Config
 
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
 	}
 
-	session, err := m.getConnection(ctx)
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
 	if err != nil {
-		return "", "", err
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	m.usernameProducer = up
+
+	_, err = m.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
-	username, err = m.GenerateUsername(usernameConfig)
+	err = m.mongoDBConnectionProducer.loadConfig(req.Config)
 	if err != nil {
-		return "", "", err
+		return dbplugin.InitializeResponse{}, err
 	}
 
-	password, err = m.GeneratePassword()
+	// Set initialized to true at this point since all fields are set,
+	// and the connection can be established at a later time.
+	m.Initialized = true
+
+	if req.VerifyConnection {
+		client, err := m.mongoDBConnectionProducer.createClient(ctx)
+		if err != nil {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
+		}
+
+		err = client.Ping(ctx, readpref.Primary())
+		if err != nil {
+			_ = client.Disconnect(ctx) // Try to prevent any sort of resource leak
+			return dbplugin.InitializeResponse{}, fmt.Errorf("failed to verify connection: %w", err)
+		}
+		m.mongoDBConnectionProducer.client = client
+	}
+
+	resp := dbplugin.InitializeResponse{
+		Config: req.Config,
+	}
+	return resp, nil
+}
+
+func (m *MongoDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
+	if len(req.Statements.Commands) == 0 {
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
+	}
+
+	username, err := m.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
+	err = json.Unmarshal([]byte(req.Statements.Commands[0]), &mongoCS)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	// Default to "admin" if no db provided
@@ -126,70 +132,76 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	if len(mongoCS.Roles) == 0 {
-		return "", "", fmt.Errorf("roles array is required in creation statement")
+		return dbplugin.NewUserResponse{}, fmt.Errorf("roles array is required in creation statement")
 	}
 
 	createUserCmd := createUserCommand{
 		Username: username,
-		Password: password,
+		Password: req.Password,
 		Roles:    mongoCS.Roles.toStandardRolesArray(),
 	}
 
-	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-	switch {
-	case err == nil:
-	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
-		session, err := m.getConnection(ctx)
-		if err != nil {
-			return "", "", err
-		}
-		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-		if err != nil {
-			return "", "", err
-		}
-	default:
-		return "", "", err
+	if err := m.runCommandWithRetry(ctx, mongoCS.DB, createUserCmd); err != nil {
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	return username, password, nil
+	resp := dbplugin.NewUserResponse{
+		Username: username,
+	}
+	return resp, nil
 }
 
-// RenewUser is not supported on MongoDB, so this is a no-op.
-func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
-	// NOOP
-	return nil
+func (m *MongoDB) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
+	if req.Password != nil {
+		err := m.changeUserPassword(ctx, req.Username, req.Password.NewPassword)
+		return dbplugin.UpdateUserResponse{}, err
+	}
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-// RevokeUser drops the specified user from the authentication database. If none is provided
-// in the revocation statement, the default "admin" authentication database will be assumed.
-func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	m.Lock()
-	defer m.Unlock()
-
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	session, err := m.getConnection(ctx)
+func (m *MongoDB) changeUserPassword(ctx context.Context, username, password string) error {
+	connURL := m.getConnectionURL()
+	cs, err := connstring.Parse(connURL)
 	if err != nil {
 		return err
 	}
 
+	// Currently doesn't support custom statements for changing the user's password
+	changeUserCmd := &updateUserCommand{
+		Username: username,
+		Password: password,
+	}
+
+	database := cs.Database
+	if username == m.Username || database == "" {
+		database = "admin"
+	}
+
+	err = m.runCommandWithRetry(ctx, database, changeUserCmd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	// If no revocation statements provided, pass in empty JSON
 	var revocationStatement string
-	switch len(statements.Revocation) {
+	switch len(req.Statements.Commands) {
 	case 0:
 		revocationStatement = `{}`
 	case 1:
-		revocationStatement = statements.Revocation[0]
+		revocationStatement = req.Statements.Commands[0]
 	default:
-		return fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(statements.Revocation))
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("expected 0 or 1 revocation statements, got %d", len(req.Statements.Commands))
 	}
 
 	// Unmarshal revocation statements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(revocationStatement), &mongoCS)
+	err := json.Unmarshal([]byte(revocationStatement), &mongoCS)
 	if err != nil {
-		return err
+		return dbplugin.DeleteUserResponse{}, err
 	}
 
 	db := mongoCS.DB
@@ -198,19 +210,46 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 		db = "admin"
 	}
 
-	err = session.DB(db).RemoveUser(username)
+	dropUserCmd := &dropUserCommand{
+		Username:     req.Username,
+		WriteConcern: writeconcern.New(writeconcern.WMajority()),
+	}
+
+	err = m.runCommandWithRetry(ctx, db, dropUserCmd)
+	cErr, ok := err.(mongo.CommandError)
+	if ok && cErr.Name == "UserNotFound" { // User already removed, don't retry needlessly
+		log.Default().Warn("MongoDB user was deleted prior to lease revocation", "user", req.Username)
+		return dbplugin.DeleteUserResponse{}, nil
+	}
+
+	return dbplugin.DeleteUserResponse{}, err
+}
+
+// runCommandWithRetry runs a command and retries once more if there's a failure
+// on the first attempt. This should be called with the lock held
+func (m *MongoDB) runCommandWithRetry(ctx context.Context, db string, cmd interface{}) error {
+	// Get the client
+	client, err := m.Connection(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Run command
+	result := client.Database(db).RunCommand(ctx, cmd, nil)
+
+	// Error check on the first attempt
+	err = result.Err()
 	switch {
-	case err == nil, err == mgo.ErrNotFound:
+	case err == nil:
+		return nil
 	case err == io.EOF, strings.Contains(err.Error(), "EOF"):
-		if err := m.Close(); err != nil {
-			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
-		}
-		session, err := m.getConnection(ctx)
+		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
+		client, err = m.Connection(ctx)
 		if err != nil {
 			return err
 		}
-		err = session.DB(db).RemoveUser(username)
-		if err != nil {
+		result = client.Database(db).RunCommand(ctx, cmd, nil)
+		if err := result.Err(); err != nil {
 			return err
 		}
 	default:
@@ -218,18 +257,4 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	return nil
-}
-
-// RotateRootCredentials is not currently supported on MongoDB
-func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
-}
-
-// GenerateCredentials returns a generated password
-func (m *MongoDB) GenerateCredentials(ctx context.Context) (string, error) {
-	password, err := m.GeneratePassword()
-	if err != nil {
-		return "", err
-	}
-	return password, nil
 }

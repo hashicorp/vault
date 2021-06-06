@@ -1,4 +1,5 @@
 // +build !appengine
+// +build !s390x
 
 package murmur
 

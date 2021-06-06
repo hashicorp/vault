@@ -1,45 +1,54 @@
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { or } from '@ember/object/computed';
-import Component from '@ember/component';
 import { run } from '@ember/runloop';
-import { computed } from '@ember/object';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
-export default Component.extend({
-  auth: service(),
-  wizard: service(),
-  router: service(),
-  version: service(),
+/**
+ * @module AuthInfo
+ *
+ * @example
+ * ```js
+ * <AuthInfo @activeClusterName={{cluster.name}} @onLinkClick={{action "onLinkClick"}} />
+ * ```
+ *
+ * @param {string} activeClusterName - name of the current cluster, passed from the parent.
+ * @param {Function} onLinkClick - parent action which determines the behavior on link click
+ */
+export default class AuthInfoComponent extends Component {
+  @service auth;
+  @service wizard;
+  @service router;
 
-  transitionToRoute: function() {
-    this.get('router').transitionTo(...arguments);
-  },
+  @tracked
+  fakeRenew = false;
 
-  classNames: 'user-menu auth-info',
+  get isRenewing() {
+    return this.fakeRenew || this.auth.isRenewing;
+  }
 
-  isRenewing: or('fakeRenew', 'auth.isRenewing'),
+  transitionToRoute() {
+    this.router.transitionTo(...arguments);
+  }
 
-  canExpire: computed.alias('auth.allowExpiration'),
+  @action
+  restartGuide() {
+    this.wizard.restartGuide();
+  }
 
-  isOSS: computed.alias('version.isOSS'),
+  @action
+  renewToken() {
+    this.fakeRenew = true;
+    run.later(() => {
+      this.fakeRenew = false;
+      this.auth.renew();
+    }, 200);
+  }
 
-  actions: {
-    restartGuide() {
-      this.get('wizard').restartGuide();
-    },
-    renewToken() {
-      this.set('fakeRenew', true);
-      run.later(() => {
-        this.set('fakeRenew', false);
-        this.get('auth').renew();
-      }, 200);
-    },
-
-    revokeToken() {
-      this.get('auth')
-        .revokeCurrentToken()
-        .then(() => {
-          this.transitionToRoute('vault.cluster.logout');
-        });
-    },
-  },
-});
+  @action
+  revokeToken() {
+    this.auth.revokeCurrentToken().then(() => {
+      this.transitionToRoute('vault.cluster.logout');
+    });
+  }
+}

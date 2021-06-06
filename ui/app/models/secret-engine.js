@@ -1,15 +1,13 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-export default DS.Model.extend({
+export default Model.extend({
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
@@ -31,8 +29,8 @@ export default DS.Model.extend({
   }),
 
   modelTypeForKV: computed('engineType', 'options.version', function() {
-    let type = this.get('engineType');
-    let version = this.get('options.version');
+    let type = this.engineType;
+    let version = this.options?.version;
     let modelType = 'secret';
     if ((type === 'kv' || type === 'generic') && version === 2) {
       modelType = 'secret-v2';
@@ -40,12 +38,10 @@ export default DS.Model.extend({
     return modelType;
   }),
 
-  isV2KV: computed('modelTypeForKV', function() {
-    return this.modelTypeForKV === 'secret-v2';
-  }),
+  isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
 
   formFields: computed('engineType', function() {
-    let type = this.get('engineType');
+    let type = this.engineType;
     let fields = [
       'type',
       'path',
@@ -62,45 +58,59 @@ export default DS.Model.extend({
   }),
 
   formFieldGroups: computed('engineType', function() {
-    let type = this.get('engineType');
+    let type = this.engineType;
     let defaultGroup = { default: ['path'] };
+    let optionsGroup = {
+      'Method Options': [
+        'description',
+        'config.listingVisibility',
+        'local',
+        'sealWrap',
+        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ],
+    };
     if (type === 'kv' || type === 'generic') {
-      defaultGroup.default.push('options.{version}');
+      optionsGroup['Method Options'].unshift('options.{version}');
     }
-    return [
-      defaultGroup,
-      {
-        'Method Options': [
-          'description',
-          'config.listingVisibility',
-          'local',
-          'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-        ],
-      },
-    ];
+    if (type === 'database') {
+      // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
+      defaultGroup.default.push('config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}');
+      return [
+        defaultGroup,
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ];
+    }
+    return [defaultGroup, optionsGroup];
   }),
 
   attrs: computed('formFields', function() {
-    return expandAttributeMeta(this, this.get('formFields'));
+    return expandAttributeMeta(this, this.formFields);
   }),
 
   fieldGroups: computed('formFieldGroups', function() {
-    return fieldToAttrs(this, this.get('formFieldGroups'));
+    return fieldToAttrs(this, this.formFieldGroups);
   }),
 
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   engineType: computed('type', function() {
-    return (this.get('type') || '').replace(/^ns_/, '');
+    return (this.type || '').replace(/^ns_/, '');
   }),
 
   shouldIncludeInList: computed('engineType', function() {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.get('engineType'));
+    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
   }),
 
   localDisplay: computed('local', function() {
-    return this.get('local') ? 'local' : 'replicated';
+    return this.local ? 'local' : 'replicated';
   }),
 
   // ssh specific ones
@@ -111,7 +121,7 @@ export default DS.Model.extend({
   }),
 
   saveCA(options) {
-    if (this.get('type') !== 'ssh') {
+    if (this.type !== 'ssh') {
       return;
     }
     if (options.isDelete) {

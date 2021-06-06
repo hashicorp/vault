@@ -85,14 +85,20 @@ func getCassandraBaseType(name string) Type {
 		return TypeBoolean
 	case "counter":
 		return TypeCounter
+	case "date":
+		return TypeDate
 	case "decimal":
 		return TypeDecimal
 	case "double":
 		return TypeDouble
+	case "duration":
+		return TypeDuration
 	case "float":
 		return TypeFloat
 	case "int":
 		return TypeInt
+	case "smallint":
+		return TypeSmallInt
 	case "tinyint":
 		return TypeTinyInt
 	case "time":
@@ -264,15 +270,6 @@ func getApacheCassandraType(class string) Type {
 	}
 }
 
-func typeCanBeNull(typ TypeInfo) bool {
-	switch typ.(type) {
-	case CollectionType, UDTTypeInfo, TupleTypeInfo:
-		return false
-	}
-
-	return true
-}
-
 func (r *RowData) rowMap(m map[string]interface{}) {
 	for i, column := range r.Columns {
 		val := dereference(r.Values[i])
@@ -366,7 +363,7 @@ func (iter *Iter) SliceMap() ([]map[string]interface{}, error) {
 //	iter := session.Query(`SELECT * FROM mytable`).Iter()
 //	for {
 //		// New map each iteration
-//		row = make(map[string]interface{})
+//		row := make(map[string]interface{})
 //		if !iter.MapScan(row) {
 //			break
 //		}

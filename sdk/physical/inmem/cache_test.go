@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -16,7 +17,9 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
+	cache.SetEnabled(true)
 	physical.ExerciseBackend(t, cache)
 	physical.ExerciseBackend_ListPrefix(t, cache)
 }
@@ -28,7 +31,7 @@ func TestCache_Purge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
 	cache.SetEnabled(true)
 
 	ent := &physical.Entry{
@@ -75,7 +78,7 @@ func TestCache_Disable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := physical.NewCache(inm, 0, logger)
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
 
 	disabledTests := func() {
 		ent := &physical.Entry{
@@ -266,4 +269,62 @@ func TestCache_Disable(t *testing.T) {
 	enabledTests()
 	cache.SetEnabled(false)
 	disabledTests()
+}
+
+func TestCache_Refresh(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	inm, err := NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
+	cache.SetEnabled(true)
+
+	ent := &physical.Entry{
+		Key:   "foo",
+		Value: []byte("bar"),
+	}
+	err = cache.Put(context.Background(), ent)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ent2 := &physical.Entry{
+		Key:   "foo",
+		Value: []byte("baz"),
+	}
+	// Update below cache
+	err = inm.Put(context.Background(), ent2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	r, err := cache.Get(context.Background(), "foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if string(r.Value) != "bar" {
+		t.Fatalf("expected value bar, got %s", string(r.Value))
+	}
+
+	// Refresh the cache
+	r, err = cache.Get(physical.CacheRefreshContext(context.Background(), true), "foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if string(r.Value) != "baz" {
+		t.Fatalf("expected value baz, got %s", string(r.Value))
+	}
+
+	// Make sure new value is in cache
+	r, err = cache.Get(context.Background(), "foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if string(r.Value) != "baz" {
+		t.Fatalf("expected value baz, got %s", string(r.Value))
+	}
 }

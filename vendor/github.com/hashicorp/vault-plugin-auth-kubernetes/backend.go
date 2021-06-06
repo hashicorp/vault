@@ -110,6 +110,25 @@ func (b *kubeAuthBackend) role(ctx context.Context, s logical.Storage, name stri
 		return nil, err
 	}
 
+	if role.TokenTTL == 0 && role.TTL > 0 {
+		role.TokenTTL = role.TTL
+	}
+	if role.TokenMaxTTL == 0 && role.MaxTTL > 0 {
+		role.TokenMaxTTL = role.MaxTTL
+	}
+	if role.TokenPeriod == 0 && role.Period > 0 {
+		role.TokenPeriod = role.Period
+	}
+	if role.TokenNumUses == 0 && role.NumUses > 0 {
+		role.TokenNumUses = role.NumUses
+	}
+	if len(role.TokenPolicies) == 0 && len(role.Policies) > 0 {
+		role.TokenPolicies = role.Policies
+	}
+	if len(role.TokenBoundCIDRs) == 0 && len(role.BoundCIDRs) > 0 {
+		role.TokenBoundCIDRs = role.BoundCIDRs
+	}
+
 	return role, nil
 }
 

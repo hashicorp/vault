@@ -1,5 +1,16 @@
 ## Unreleased
 
+## 1.6.1 (June 26 2019)
+
+- compute/networks: support network objects for AddNIC [#169]
+
+## 1.6.0 (June 24 2019)
+
+- compute/networks: added support for network objects [#158]
+- compute/instances: added instances().get support for deleted instances [#167]
+- storage: added support for multipart upload [#160]
+- storage: fixed directory list marker filtering [#156]
+
 ## 1.3.1 (April 27 2018)
 
 - client: Fixing an issue where private Triton installations were marked as invalid DC [#152]

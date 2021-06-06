@@ -407,6 +407,58 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 	}
 }
 
+func TestIdentityStore_BatchDelete(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	ids := make([]string, 10000)
+	for i := 0; i < 10000; i++ {
+		entityData := map[string]interface{}{
+			"name": fmt.Sprintf("entity-%d", i),
+		}
+
+		entityReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "entity",
+			Data:      entityData,
+		}
+
+		// Create the entity
+		resp, err := is.HandleRequest(ctx, entityReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		ids[i] = resp.Data["id"].(string)
+	}
+
+	deleteReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity/batch-delete",
+		Data: map[string]interface{}{
+			"entity_ids": ids,
+		},
+	}
+
+	resp, err := is.HandleRequest(ctx, deleteReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	for _, entityID := range ids {
+		// Read the entity
+		resp, err := is.HandleRequest(ctx, &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "entity/id/" + entityID,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatal(resp)
+		}
+	}
+}
+
 func TestIdentityStore_CloneImmutability(t *testing.T) {
 	alias := &identity.Alias{
 		ID:                     "testaliasid",
@@ -506,6 +558,42 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 
 	if entityFetched.Aliases[0].ID == "invalidaliasid" {
 		t.Fatal("memdb item is mutable outside of transaction")
+	}
+}
+
+func TestIdentityStore_ContextCancel(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	ctx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	entityReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+
+	expected := []string{}
+	for i := 0; i < 10; i++ {
+		resp, err = is.HandleRequest(ctx, entityReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		expected = append(expected, resp.Data["id"].(string))
+	}
+
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "entity/id",
+	}
+
+	cancelFunc()
+	resp, err = is.HandleRequest(ctx, listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp.Warnings == nil || len(resp.Warnings) == 0 {
+		t.Fatalf("expected warning for cancelled context. resp:%#v", resp)
 	}
 }
 
@@ -795,7 +883,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	if entityFetched != nil {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
-
 }
 
 func TestIdentityStore_EntityCRUD(t *testing.T) {

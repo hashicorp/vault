@@ -1,10 +1,29 @@
-<div class="empty-state" ...attributes>
+<div data-test-component="empty-state" class="empty-state" ...attributes>
   <div class="empty-state-content">
+    {{#if icon}}
+      <div class="empty-state-icon">
+        <Icon @glyph={{icon}} @size="xxl" />
+        <h3 class="empty-state-title" data-test-empty-state-title>
+          {{title}}
+        </h3>
+      </div>
+      {{#if subTitle}}
+        <p class="empty-state-subTitle" data-test-empty-state-subText>
+          {{subTitle}}
+        </p>
+      {{/if}}
+    {{else}}
     <h3 class="empty-state-title" data-test-empty-state-title>
       {{title}}
     </h3>
+    {{#if subTitle}}
+      <p class="empty-state-subTitle" data-test-empty-state-subText>
+        {{subTitle}}
+      </p>
+    {{/if}}
+    {{/if}}
     {{#if message}}
-    <p class="empty-state-message" data-test-empty-state-message>
+    <p class={{concat "empty-state-message" (if bottomBorder " has-border-bottom-light")}} data-test-empty-state-message>
       {{message}}
     </p>
     {{/if}}

@@ -3,10 +3,10 @@ package plugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/client"
-	"github.com/hashicorp/vault-plugin-secrets-ad/plugin/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -24,7 +24,7 @@ const (
 	defaultTLSVersion = "tls12"
 )
 
-func (b *backend) readConfig(ctx context.Context, storage logical.Storage) (*configuration, error) {
+func readConfig(ctx context.Context, storage logical.Storage) (*configuration, error) {
 	entry, err := storage.Get(ctx, configStorageKey)
 	if err != nil {
 		return nil, err
@@ -32,11 +32,22 @@ func (b *backend) readConfig(ctx context.Context, storage logical.Storage) (*con
 	if entry == nil {
 		return nil, nil
 	}
-	config := &configuration{&passwordConf{}, &client.ADConf{}, 0}
+	config := &configuration{}
 	if err := entry.DecodeJSON(config); err != nil {
 		return nil, err
 	}
 	return config, nil
+}
+
+func writeConfig(ctx context.Context, storage logical.Storage, config *configuration) (err error) {
+	entry, err := logical.StorageEntryJSON(configStorageKey, config)
+	if err != nil {
+		return fmt.Errorf("unable to marshal config to JSON: %w", err)
+	}
+	if err := storage.Put(ctx, entry); err != nil {
+		return fmt.Errorf("unable to store config: %w", err)
+	}
+	return nil
 }
 
 func (b *backend) pathConfig() *framework.Path {
@@ -63,26 +74,34 @@ func (b *backend) configFields() map[string]*framework.FieldSchema {
 		Type:        framework.TypeDurationSecond,
 		Description: "In seconds, the maximum password time-to-live.",
 	}
-	fields["length"] = &framework.FieldSchema{
-		Type:        framework.TypeInt,
-		Default:     defaultPasswordLength,
-		Description: "The desired length of passwords that Vault generates.",
-	}
-	fields["formatter"] = &framework.FieldSchema{
-		Type:        framework.TypeString,
-		Description: `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
-	}
 	fields["last_rotation_tolerance"] = &framework.FieldSchema{
 		Type:        framework.TypeDurationSecond,
 		Description: "The number of seconds after a Vault rotation where, if Active Directory shows a later rotation, it should be considered out-of-band.",
 		Default:     5,
+	}
+	fields["password_policy"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "Name of the password policy to use to generate passwords.",
+	}
+
+	// Deprecated fields
+	fields["length"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Default:     defaultPasswordLength,
+		Description: "The desired length of passwords that Vault generates.",
+		Deprecated:  true,
+	}
+	fields["formatter"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `Text to insert the password into, ex. "customPrefix{{PASSWORD}}customSuffix".`,
+		Deprecated:  true,
 	}
 	return fields
 }
 
 func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Request, fieldData *framework.FieldData) (*logical.Response, error) {
 	// Build and validate the ldap conf.
-	activeDirectoryConf, err := ldaputil.NewConfigEntry(fieldData)
+	activeDirectoryConf, err := ldaputil.NewConfigEntry(nil, fieldData)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +112,19 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 	// Build the password conf.
 	ttl := fieldData.Get("ttl").(int)
 	maxTTL := fieldData.Get("max_ttl").(int)
+	lastRotationTolerance := fieldData.Get("last_rotation_tolerance").(int)
+
 	length := fieldData.Get("length").(int)
 	formatter := fieldData.Get("formatter").(string)
-	lastRotationTolerance := fieldData.Get("last_rotation_tolerance").(int)
+	passwordPolicy := fieldData.Get("password_policy").(string)
+
+	if pre111Val, ok := fieldData.GetOk("use_pre111_group_cn_behavior"); ok {
+		activeDirectoryConf.UsePre111GroupCNBehavior = new(bool)
+		*activeDirectoryConf.UsePre111GroupCNBehavior = pre111Val.(bool)
+	} else {
+		// Default to false
+		activeDirectoryConf.UsePre111GroupCNBehavior = new(bool)
+	}
 
 	if ttl == 0 {
 		ttl = int(b.System().DefaultLeaseTTL().Seconds())
@@ -112,23 +141,28 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 	if maxTTL < 1 {
 		return nil, errors.New("max_ttl must be positive")
 	}
-	if err := util.ValidatePwdSettings(formatter, length); err != nil {
-		return nil, err
-	}
 
-	passwordConf := &passwordConf{
-		TTL:       ttl,
-		MaxTTL:    maxTTL,
-		Length:    length,
-		Formatter: formatter,
+	passwordConf := passwordConf{
+		TTL:            ttl,
+		MaxTTL:         maxTTL,
+		Length:         length,
+		Formatter:      formatter,
+		PasswordPolicy: passwordPolicy,
 	}
-
-	config := &configuration{passwordConf, &client.ADConf{ConfigEntry: activeDirectoryConf}, lastRotationTolerance}
-	entry, err := logical.StorageEntryJSON(configStorageKey, config)
+	err = passwordConf.validate()
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
+
+	config := configuration{
+		PasswordConf: passwordConf,
+		ADConf: &client.ADConf{
+			ConfigEntry: activeDirectoryConf,
+		},
+		LastRotationTolerance: lastRotationTolerance,
+	}
+	err = writeConfig(ctx, req.Storage, &config)
+	if err != nil {
 		return nil, err
 	}
 
@@ -137,7 +171,7 @@ func (b *backend) configUpdateOperation(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) configReadOperation(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	config, err := b.readConfig(ctx, req.Storage)
+	config, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +197,9 @@ func (b *backend) configReadOperation(ctx context.Context, req *logical.Request,
 	}
 	if !config.ADConf.LastBindPasswordRotation.Equal(time.Time{}) {
 		configMap["last_bind_password_rotation"] = config.ADConf.LastBindPasswordRotation
+	}
+	if config.ADConf.UsePre111GroupCNBehavior != nil {
+		configMap["use_pre111_group_cn_behavior"] = *config.ADConf.UsePre111GroupCNBehavior
 	}
 	for k, v := range config.PasswordConf.Map() {
 		configMap[k] = v

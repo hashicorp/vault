@@ -1,6 +1,6 @@
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
-import ListController from 'vault/mixins/list-controller';
+import ListController from 'core/mixins/list-controller';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),
@@ -13,10 +13,10 @@ export default Controller.extend(ListController, {
         .destroyRecord()
         .then(() => {
           this.send('reload');
-          this.get('flashMessages').success(`Successfully deleted ${type}: ${id}`);
+          this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
         })
         .catch(e => {
-          this.get('flashMessages').success(
+          this.flashMessages.success(
             `There was a problem deleting ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         });
@@ -31,10 +31,10 @@ export default Controller.extend(ListController, {
       model
         .save()
         .then(() => {
-          this.get('flashMessages').success(`Successfully ${action[0]} ${type}: ${id}`);
+          this.flashMessages.success(`Successfully ${action[0]} ${type}: ${id}`);
         })
         .catch(e => {
-          this.get('flashMessages').success(
+          this.flashMessages.success(
             `There was a problem ${action[1]} ${type}: ${id} - ${e.errors.join(' ') || e.message}`
           );
         });

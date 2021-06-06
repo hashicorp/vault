@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	kvbuilder "github.com/hashicorp/vault/helper/kv-builder"
+	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
@@ -34,7 +35,7 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 
 // sanitizePath removes any leading or trailing things from a "path".
 func sanitizePath(s string) string {
-	return ensureNoTrailingSlash(ensureNoLeadingSlash(strings.TrimSpace(s)))
+	return ensureNoTrailingSlash(ensureNoLeadingSlash(s))
 }
 
 // ensureTrailingSlash ensures the given string has a trailing slash.
@@ -191,6 +192,7 @@ func printKeyStatus(ks *api.KeyStatus) string {
 	return columnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
+		fmt.Sprintf("Encryption Count | %d", ks.Encryptions),
 	}, nil)
 }
 
@@ -272,4 +274,21 @@ func humanDurationInt(i interface{}) interface{} {
 
 	// If we don't know what type it is, just return the original value
 	return i
+}
+
+// parseFlagFile accepts a flag value returns the contets of that value. If the
+// value starts with '@', that indicates the value is a file and its content
+// should be read and returned. Otherwise, the raw value is returned.
+func parseFlagFile(raw string) (string, error) {
+	// check if the provided argument should be read from file
+	if len(raw) > 0 && raw[0] == '@' {
+		contents, err := ioutil.ReadFile(raw[1:])
+		if err != nil {
+			return "", fmt.Errorf("error reading file: %w", err)
+		}
+
+		return string(contents), nil
+	}
+
+	return raw, nil
 }

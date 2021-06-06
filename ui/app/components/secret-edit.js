@@ -2,13 +2,14 @@ import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
-import { alias, or } from '@ember/object/computed';
+import { alias, or, not } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -16,6 +17,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   wizard: service(),
+  controlGroup: service(),
   router: service(),
   store: service(),
   flashMessages: service(),
@@ -35,7 +37,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   wrappedData: null,
   isWrapping: false,
-  showWrapButton: computed.not('wrappedData'),
+  showWrapButton: not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -88,10 +90,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     .on('didInsertElement')
     .cancelOn('willDestroyElement'),
 
-  partialName: computed('mode', function() {
-    return `partials/secret-form-${this.mode}`;
-  }),
-
   updatePath: maybeQueryRecord(
     'capabilities',
     context => {
@@ -110,7 +108,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('model.canDelete'),
+  canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   v2UpdatePath: maybeQueryRecord(
@@ -154,26 +152,20 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretData.isAdvanced();
   }),
 
-  showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
-    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
-  }),
+  showAdvancedMode: or('secretDataIsAdvanced', 'preferAdvancedEdit'),
 
-  isWriteWithoutRead: computed(
-    'model.{failedServerRead,selectedVersion.failedServerRead}',
-    'isV2',
-    function() {
-      if (!this.model) return;
-      // if the version couldn't be read from the server
-      if (this.isV2 && this.model.selectedVersion.failedServerRead) {
-        return true;
-      }
-      // if the model couldn't be read from the server
-      if (!this.isV2 && this.model.failedServerRead) {
-        return true;
-      }
-      return false;
+  isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
+    if (!this.model) return;
+    // if the version couldn't be read from the server
+    if (this.isV2 && this.modelForData.failedServerRead) {
+      return true;
     }
-  ),
+    // if the model couldn't be read from the server
+    if (!this.isV2 && this.model.failedServerRead) {
+      return true;
+    }
+    return false;
+  }),
 
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
@@ -203,26 +195,42 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       secretData.set(secretData.pathAttr, key);
     }
 
-    return secretData.save().then(() => {
-      if (!secretData.isError) {
-        if (isV2) {
-          secret.set('id', key);
+    if (this.mode === 'create') {
+      key = JSON.stringify({
+        backend: secret.backend,
+        id: key,
+      });
+    }
+
+    return secretData
+      .save()
+      .then(() => {
+        if (!secretData.isError) {
+          if (isV2) {
+            secret.set('id', key);
+          }
+          if (isV2 && Object.keys(secret.changedAttributes()).length) {
+            // save secret metadata
+            secret
+              .save()
+              .then(() => {
+                this.saveComplete(successCallback, key);
+              })
+              .catch(e => {
+                this.set(e, e.errors.join(' '));
+              });
+          } else {
+            this.saveComplete(successCallback, key);
+          }
         }
-        if (isV2 && Object.keys(secret.changedAttributes()).length) {
-          // save secret metadata
-          secret
-            .save()
-            .then(() => {
-              this.saveComplete(successCallback, key);
-            })
-            .catch(e => {
-              this.set(e, e.errors.join(' '));
-            });
-        } else {
-          this.saveComplete(successCallback, key);
+      })
+      .catch(error => {
+        if (error instanceof ControlGroupError) {
+          let errorMessage = this.controlGroup.logFromError(error);
+          this.set('error', errorMessage.content);
         }
-      }
-    });
+        throw error;
+      });
   },
   saveComplete(callback, key) {
     if (this.wizard.featureState === 'secret') {
@@ -266,7 +274,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             this.flashMessages.success('Secret Successfully Wrapped!');
           })
           .catch(() => {
-            this.flashMessages.error('Could Not Wrap Secret');
+            this.flashMessages.danger('Could Not Wrap Secret');
           })
           .finally(() => {
             this.set('isWrapping', false);
@@ -280,7 +288,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             this.flashMessages.success('Secret Successfully Wrapped!');
           })
           .catch(() => {
-            this.flashMessages.error('Could Not Wrap Secret');
+            this.flashMessages.danger('Could Not Wrap Secret');
           })
           .finally(() => {
             this.set('isWrapping', false);
@@ -298,21 +306,34 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     },
 
     handleCopyError() {
-      this.flashMessages.error('Could Not Copy Wrapped Data');
+      this.flashMessages.danger('Could Not Copy Wrapped Data');
       this.send('clearWrappedData');
     },
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
+      const MAXIMUM_VERSIONS = 9999999999999999;
       let model = this.modelForData;
+      let secret = this.model;
       // prevent from submitting if there's no key
-      // maybe do something fancier later
-      if (type === 'create' && isBlank(model.get('path') || model.id)) {
+      if (type === 'create' && isBlank(model.path || model.id)) {
+        this.flashMessages.danger('Please provide a path for the secret');
+        return;
+      }
+      const maxVersions = secret.get('maxVersions');
+      if (MAXIMUM_VERSIONS < maxVersions) {
+        this.flashMessages.danger('Max versions is too large');
         return;
       }
 
-      this.persistKey(() => {
-        this.transitionToRoute(SHOW_ROUTE, this.model.id);
+      this.persistKey(key => {
+        let secretKey;
+        try {
+          secretKey = JSON.parse(key).id;
+        } catch (error) {
+          secretKey = key;
+        }
+        this.transitionToRoute(SHOW_ROUTE, secretKey);
       });
     },
 

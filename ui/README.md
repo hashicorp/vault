@@ -1,5 +1,6 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Vault UI](#vault-ui)
@@ -15,6 +16,9 @@
     - [Storybook Commands at a Glance](#storybook-commands-at-a-glance)
     - [Writing Stories](#writing-stories)
       - [Adding a new story](#adding-a-new-story)
+    - [Code Generators](#code-generators-1)
+    - [Storybook Deployment](#storybook-deployment)
+  - [Further Reading / Useful Links](#further-reading--useful-links)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -30,14 +34,15 @@ You will need the following things properly installed on your computer.
 - [Yarn](https://yarnpkg.com/en/)
 - [Git](https://git-scm.com/)
 - [Ember CLI](https://ember-cli.com/)
-- [Husky\*](https://github.com/typicode/husky)
 - [lint-staged\*](https://www.npmjs.com/package/lint-staged)
 
-\* Husky and lint-staged are optional dependencies - running `yarn` will install them.
-If don't want them installed (husky adds files for every hooks in `.git/hooks/`),
-then you can run `yarn --ignore-optional`. If you've ignored the optional deps
+\* lint-staged is an optional dependency - running `yarn` will install it.
+If don't want optional dependencies installed you can run `yarn --ignore-optional`. If you've ignored the optional deps
 previously and want to install them, you have to tell yarn to refetch all deps by
 running `yarn --force`.
+
+In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo
+in the `.yarn/releases` folder. To update to a different version of `yarn`, use the `yarn policies set-version VERSION` command. For more information on this, see the [documentation](https://yarnpkg.com/en/docs/cli/policies).
 
 ## Running / Development
 
@@ -48,7 +53,7 @@ To get all of the JavaScript dependencies installed, run this in the `ui` direct
 If you want to run Vault UI and proxy back to a Vault server running
 on the default port, 8200, run the following in the `ui` directory:
 
-- `yarn run start`
+- `yarn start`
 
 This will start an Ember CLI server that proxies requests to port 8200,
 and enable live rebuilding of the application as you change the UI application code.
@@ -61,7 +66,12 @@ long-form version of the npm script:
 
 ### Code Generators
 
-Make use of the many generators for code, try `ember help generate` for more details
+Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
+
+eg. a reusable component named foo that you'd like in the core engine
+
+- `ember g component foo --in lib/core`
+- `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js`
 
 ### Running Tests
 
@@ -69,19 +79,19 @@ Running tests will spin up a Vault dev server on port 9200 via a
 pretest script that testem (the test runner) executes. All of the
 acceptance tests then run, proxing requests back to that server.
 
-- `yarn run test-oss`
-- `yarn run test-oss -s` to keep the test server running after the initial run.
+- `yarn run test:oss`
+- `yarn run test:oss -s` to keep the test server running after the initial run.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
 - `yarn run test:browserstack` to run the kv acceptance tests in Browserstack
 
 #### Automated Cross-Browser Testing
 
-Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`. 
+Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`.
 
 ##### Running Browserstack Locally
 
-To run the Browserstack tests locally you will need to add your `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` to your environment. Then run `yarn run test:browserstack`. You can view the currently running tests at `localhost:7357` or log in to [Browserstack Automate](https://automate.browserstack.com/) to view a previous build. 
+To run the Browserstack tests locally you will need to add your `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` to your environment. Then run `yarn run test:browserstack`. You can view the currently running tests at `localhost:7357` or log in to [Browserstack Automate](https://automate.browserstack.com/) to view a previous build.
 
 To run the tests locally in a browser other than IE11, swap out `launch_in_ci: ['BS_IE_11']` inside `testem.browserstack.js`.
 
@@ -110,15 +120,17 @@ The Vault UI uses Storybook to catalog all of its components. Below are details 
 
 ### Storybook Commands at a Glance
 
-| Command                                    | Description               |
-| ------------------------------------------ | ------------------------- |
-| `yarn storybook`                           | run storybook             |
-| `ember generate story [name-of-component]` | generate a new story      |
-| `yarn gen-story-md [name-of-component]`    | update a story notes file |
+| Command                                                                  | Description                                                |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `yarn storybook`                                                         | run storybook                                              |
+| `ember generate story [name-of-component]`                               | generate a new story                                       |
+| `ember generate story [name-of-component] -ir [name-of-engine-or-addon]` | generate a new story in the specified engine or addon      |
+| `yarn gen-story-md [name-of-component]`                                  | update a story notes file                                  |
+| `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]`        | update a story notes file in the specified engine or addon |
 
 ### Writing Stories
 
-Each component in `vault/ui/app/components` should have a corresponding `[component-name].stories.js` and `[component-name].md` files within `vault/ui/stories`.
+Each component in `vault/ui/app/components` should have a corresponding `[component-name].stories.js` and `[component-name].md` files within `vault/ui/stories`. Components in the `core` addon located at `vault/ui/lib/core/addon/components` have corresponding stories and markdown files in `vault/ui/lib/core/stories`.
 
 #### Adding a new story
 
@@ -141,17 +153,18 @@ Each component in `vault/ui/app/components` should have a corresponding `[compon
  *   {{/if}}
  * ```
  *
- * @param toggleAttr=null {String} - The attribute upon which to toggle.
- * @param attrTarget=null {Object} - The target upon which the event handler should be added.
- * @param [openLabel=Hide options] {String} - The message to display when the toggle is open. //optional params are denoted by square brackets
- * @param [closedLabel=More options] {String} - The message to display when the toggle is closed.
+ * @param {String} toggleAttr=null - The attribute upon which to toggle.
+ * @param {Object} attrTarget=null - The target upon which the event handler should be added.
+ * @param {String} [openLabel=Hide options] - The message to display when the toggle is open. //optional params are denoted by square brackets
+ * @param {String} [closedLabel=More options] - The message to display when the toggle is closed.
  */
 ````
+
 Note that placing a param inside brackets (e.g. `[closedLabel=More options]` indicates it is optional and has a default value of `'More options'`.)
 
 2. Generate a new story with `ember generate story [name-of-component]`
 3. Inside the newly generated `stories` file, add at least one example of the component. If the component should be interactive, enable the [Storybook Knobs addon](https://github.com/storybooks/storybook/tree/master/addons/knobs).
-4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component]` (e.g. `yarn gen-md alert-banner`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file.
+4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]` (e.g. `yarn gen-md alert-banner core`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file.
 
 See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for more information on writing stories.
 
@@ -159,6 +172,9 @@ See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for
 
 It is important to add all new components into Storybook and to keep the story and notes files up to date. To ease the process of creating and updating stories please use the code generators using the [commands listed above](#storybook-commands-at-a-glance).
 
+### Storybook Deployment
+
+A Vercel integration deploys a static Storybook build for any PR on the Vault GitHub repo. A preview link will show up in the PR checks. Once items are merged, the auto-deployed integration will publish that build making it available at [https://vault-storybook.vercel.app](https://vault-storybook.vercel.app). Currently the Vercel integration will cd into the `ui/` directory and then run `yarn deploy:storybook` so troubleshooting any issues can be done locally by running this same command. The logs for this build are public and will be linked from the PR checks.
 
 ## Further Reading / Useful Links
 
@@ -167,7 +183,7 @@ It is important to add all new components into Storybook and to keep the story a
 - Development Browser Extensions
   - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
   - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
-- [Storybook for Ember Live Example](https://storybooks-ember.netlify.com/?path=/story/addon-centered--button)
+- [Storybook for Ember Live Example](https://vault-storybook.vercel.app/?path=/story/addon-centered--button)
 - [Storybook Addons](https://github.com/storybooks/storybook/tree/master/addons/)
 - [Storybook Docs](https://storybook.js.org/docs/basics/introduction/)
 - [Browserstack Automate](https://automate.browserstack.com/)

@@ -15,8 +15,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRekeyCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRekeyCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRekeyCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRekeyCommand)(nil)
+)
 
 type OperatorRekeyCommand struct {
 	*BaseCommand

@@ -88,57 +88,31 @@ func div(a, b uint8) uint8 {
 		panic("divide by zero")
 	}
 
-	var goodVal, zero uint8
 	log_a := logTable[a]
 	log_b := logTable[b]
-	diff := (int(log_a) - int(log_b)) % 255
-	if diff < 0 {
-		diff += 255
-	}
+	diff := ((int(log_a) - int(log_b)) + 255) % 255
 
-	ret := expTable[diff]
+	ret := int(expTable[diff])
 
 	// Ensure we return zero if a is zero but aren't subject to timing attacks
-	goodVal = ret
-
-	if subtle.ConstantTimeByteEq(a, 0) == 1 {
-		ret = zero
-	} else {
-		ret = goodVal
-	}
-
-	return ret
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
+	return uint8(ret)
 }
 
 // mult multiplies two numbers in GF(2^8)
 func mult(a, b uint8) (out uint8) {
-	var goodVal, zero uint8
 	log_a := logTable[a]
 	log_b := logTable[b]
 	sum := (int(log_a) + int(log_b)) % 255
 
-	ret := expTable[sum]
+	ret := int(expTable[sum])
 
 	// Ensure we return zero if either a or b are zero but aren't subject to
 	// timing attacks
-	goodVal = ret
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(a, 0), 0, ret)
+	ret = subtle.ConstantTimeSelect(subtle.ConstantTimeByteEq(b, 0), 0, ret)
 
-	if subtle.ConstantTimeByteEq(a, 0) == 1 {
-		ret = zero
-	} else {
-		ret = goodVal
-	}
-
-	if subtle.ConstantTimeByteEq(b, 0) == 1 {
-		ret = zero
-	} else {
-		// This operation does not do anything logically useful. It
-		// only ensures a constant number of assignments to thwart
-		// timing attacks.
-		goodVal = zero
-	}
-
-	return ret
+	return uint8(ret)
 }
 
 // add combines two numbers in GF(2^8)

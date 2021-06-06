@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"io"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -23,6 +24,10 @@ var (
 
 	// ErrBarrierInvalidKey is returned if the Unseal key is invalid
 	ErrBarrierInvalidKey = errors.New("Unseal failed, invalid key")
+
+	// ErrPlaintextTooLarge is returned if a plaintext is offered for encryption
+	// that is too large to encrypt in memory
+	ErrPlaintextTooLarge = errors.New("plaintext value too large")
 )
 
 const (
@@ -54,6 +59,12 @@ const (
 	// keyring to discover the new master key. The new master key is then
 	// used to reload the keyring itself.
 	masterKeyPath = "core/master"
+
+	// shamirKekPath is used with Shamir in v1.3+ to store a copy of the
+	// unseal key behind the barrier.  As with masterKeyPath this is primarily
+	// used by standbys to handle rekeys.  It also comes into play when restoring
+	// raft snapshots.
+	shamirKekPath = "core/shamir-kek"
 )
 
 // SecurityBarrier is a critical component of Vault. It is used to wrap
@@ -68,11 +79,13 @@ type SecurityBarrier interface {
 	Initialized(ctx context.Context) (bool, error)
 
 	// Initialize works only if the barrier has not been initialized
-	// and makes use of the given master key.
-	Initialize(context.Context, []byte) error
+	// and makes use of the given master key.  When sealKey is provided
+	// it's because we're using a new-style Shamir seal, and masterKey
+	// is to be stored using sealKey to encrypt it.
+	Initialize(ctx context.Context, masterKey []byte, sealKey []byte, random io.Reader) error
 
 	// GenerateKey is used to generate a new key
-	GenerateKey() ([]byte, error)
+	GenerateKey(io.Reader) ([]byte, error)
 
 	// KeyLength is used to sanity check a key
 	KeyLength() (int, int)
@@ -109,7 +122,7 @@ type SecurityBarrier interface {
 
 	// Rotate is used to create a new encryption key. All future writes
 	// should use the new key, while old values should still be decryptable.
-	Rotate(ctx context.Context) (uint32, error)
+	Rotate(ctx context.Context, reader io.Reader) (uint32, error)
 
 	// CreateUpgrade creates an upgrade path key to the given term from the previous term
 	CreateUpgrade(ctx context.Context, term uint32) error
@@ -123,11 +136,27 @@ type SecurityBarrier interface {
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)
 
+	// RotationConfig returns the auto-rotation config for the barrier key
+	RotationConfig() (KeyRotationConfig, error)
+
+	// SetRotationConfig updates the auto-rotation config for the barrier key
+	SetRotationConfig(ctx context.Context, config KeyRotationConfig) error
+
 	// Rekey is used to change the master key used to protect the keyring
 	Rekey(context.Context, []byte) error
 
 	// For replication we must send over the keyring, so this must be available
 	Keyring() (*Keyring, error)
+
+	// For encryption count shipping, a function which handles updating local encryption counts if the consumer succeeds.
+	// This isolates the barrier code from the replication system
+	ConsumeEncryptionCount(consumer func(int64) error) error
+
+	// Add encryption counts from a remote source (downstream cluster node)
+	AddRemoteEncryptions(encryptions int64)
+
+	// Check whether an automatic rotation is due
+	CheckBarrierAutoRotate(ctx context.Context) (string, error)
 
 	// SecurityBarrier must provide the storage APIs
 	logical.Storage
@@ -164,4 +193,5 @@ type BarrierEncryptor interface {
 type KeyInfo struct {
 	Term        int
 	InstallTime time.Time
+	Encryptions int64
 }

@@ -178,6 +178,10 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 				backends = append(backends, strings.TrimPrefix(potPlug, "vault-plugin-auth-"))
 			}
 		}
+		// Since "pcf" plugin in the Vault registry is also pointed at the "vault-plugin-auth-cf"
+		// repository, we need to manually append it here so it'll tie out with our expected number
+		// of credential backends.
+		backends = append(backends, "pcf")
 
 		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
 		// is treated as special and excluded from the registry.

@@ -44,8 +44,7 @@ func TestServerWithListener(tb testing.TB, ln net.Listener, addr string, core *v
 	// Create a muxer to handle our requests so that we can authenticate
 	// for tests.
 	props := &vault.HandlerProperties{
-		Core:           core,
-		MaxRequestSize: DefaultMaxRequestSize,
+		Core: core,
 	}
 	TestServerWithListenerAndProperties(tb, ln, addr, core, props)
 }

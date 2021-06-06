@@ -1,8 +1,7 @@
+import Model, { attr } from '@ember-data/model';
 import { alias, and, equal } from '@ember/object/computed';
-import DS from 'ember-data';
-const { attr } = DS;
 
-export default DS.Model.extend({
+export default Model.extend({
   name: attr('string'),
   //https://www.vaultproject.io/docs/http/sys-health.html
   initialized: attr('boolean'),
@@ -24,6 +23,7 @@ export default DS.Model.extend({
   sealNumShares: alias('n'),
   version: attr('string'),
   type: attr('string'),
+  storageType: attr('string'),
 
   //https://www.vaultproject.io/docs/http/sys-leader.html
   haEnabled: attr('boolean'),

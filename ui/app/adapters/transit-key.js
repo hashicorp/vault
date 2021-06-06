@@ -8,14 +8,17 @@ export default ApplicationAdapter.extend({
   createOrUpdate(store, type, snapshot, requestType) {
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    const { id } = snapshot;
-    let url = this.urlForSecret(snapshot.record.get('backend'), id);
-
+    let name = snapshot.attr('name');
+    let url = this.urlForSecret(snapshot.record.get('backend'), name);
     if (requestType === 'update') {
       url = url + '/config';
     }
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then(resp => {
+      let response = resp || {};
+      response.id = name;
+      return response;
+    });
   },
 
   createRecord() {
@@ -85,6 +88,7 @@ export default ApplicationAdapter.extend({
     const { id, backend } = query;
     return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
       resp.id = id;
+      resp.backend = backend;
       return resp;
     });
   },

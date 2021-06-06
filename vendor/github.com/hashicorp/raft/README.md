@@ -1,12 +1,12 @@
-raft [![Build Status](https://travis-ci.org/hashicorp/raft.png)](https://travis-ci.org/hashicorp/raft) [![CircleCI](https://circleci.com/gh/hashicorp/raft.svg?style=svg)](https://circleci.com/gh/hashicorp/raft)
+raft [![CircleCI](https://circleci.com/gh/hashicorp/raft.svg?style=svg)](https://circleci.com/gh/hashicorp/raft)
 ====
 
 raft is a [Go](http://www.golang.org) library that manages a replicated
 log and can be used with an FSM to manage replicated state machines. It
 is a library for providing [consensus](http://en.wikipedia.org/wiki/Consensus_(computer_science)).
 
-The use cases for such a library are far-reaching as replicated state
-machines are a key component of many distributed systems. They enable
+The use cases for such a library are far-reaching, such as replicated state
+machines which are a key component of many distributed systems. They enable
 building Consistent, Partition Tolerant (CP) systems, with limited
 fault tolerance as well.
 
@@ -28,16 +28,21 @@ To prevent complications with cgo, the primary backend `MDBStore` is in a separa
 called [raft-mdb](http://github.com/hashicorp/raft-mdb). That is the recommended implementation
 for the `LogStore` and `StableStore`.
 
-A pure Go backend using [BoltDB](https://github.com/boltdb/bolt) is also available called
+A pure Go backend using [Bbolt](https://github.com/etcd-io/bbolt) is also available called
 [raft-boltdb](https://github.com/hashicorp/raft-boltdb). It can also be used as a `LogStore`
 and `StableStore`.
+
+
+## Community Contributed Examples 
+[Raft gRPC Example](https://github.com/Jille/raft-grpc-example) - Utilizing the Raft repository with gRPC
+
 
 ## Tagged Releases
 
 As of September 2017, HashiCorp will start using tags for this library to clearly indicate
 major version updates. We recommend you vendor your application's dependency on this library.
 
-* v0.1.0 is the original stable version of the library that was in master and has been maintained
+* v0.1.0 is the original stable version of the library that was in main and has been maintained
 with no breaking API changes. This was in use by Consul prior to version 0.7.0.
 
 * v1.0.0 takes the changes that were staged in the library-v2-stage-one branch. This version
@@ -52,10 +57,10 @@ to port Consul to these new interfaces.
 
 ## Protocol
 
-raft is based on ["Raft: In Search of an Understandable Consensus Algorithm"](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf)
+raft is based on ["Raft: In Search of an Understandable Consensus Algorithm"](https://raft.github.io/raft.pdf)
 
 A high level overview of the Raft protocol is described below, but for details please read the full
-[Raft paper](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf)
+[Raft paper](https://raft.github.io/raft.pdf)
 followed by the raft source. Any questions about the raft protocol should be sent to the
 [raft-dev mailing list](https://groups.google.com/forum/#!forum/raft-dev).
 
@@ -104,4 +109,3 @@ greatly sacrificing performance.
 In terms of performance, Raft is comparable to Paxos. Assuming stable leadership,
 committing a log entry requires a single round trip to half of the cluster.
 Thus performance is bound by disk I/O and network latency.
-

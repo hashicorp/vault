@@ -35,7 +35,8 @@ func NewPermissionsClient(subscriptionID string) PermissionsClient {
 	return NewPermissionsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewPermissionsClientWithBaseURI creates an instance of the PermissionsClient client.
+// NewPermissionsClientWithBaseURI creates an instance of the PermissionsClient client using a custom endpoint.  Use
+// this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewPermissionsClientWithBaseURI(baseURI string, subscriptionID string) PermissionsClient {
 	return PermissionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -75,6 +76,11 @@ func (client PermissionsClient) ListForResource(ctx context.Context, resourceGro
 	result.pgr, err = client.ListForResourceResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.PermissionsClient", "ListForResource", resp, "Failure responding to request")
+		return
+	}
+	if result.pgr.hasNextLink() && result.pgr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -107,8 +113,7 @@ func (client PermissionsClient) ListForResourcePreparer(ctx context.Context, res
 // ListForResourceSender sends the ListForResource request. The method will close the
 // http.Response Body if it receives an error.
 func (client PermissionsClient) ListForResourceSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListForResourceResponder handles the response to the ListForResource request. The method always
@@ -116,7 +121,6 @@ func (client PermissionsClient) ListForResourceSender(req *http.Request) (*http.
 func (client PermissionsClient) ListForResourceResponder(resp *http.Response) (result PermissionGetResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -192,6 +196,11 @@ func (client PermissionsClient) ListForResourceGroup(ctx context.Context, resour
 	result.pgr, err = client.ListForResourceGroupResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.PermissionsClient", "ListForResourceGroup", resp, "Failure responding to request")
+		return
+	}
+	if result.pgr.hasNextLink() && result.pgr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -220,8 +229,7 @@ func (client PermissionsClient) ListForResourceGroupPreparer(ctx context.Context
 // ListForResourceGroupSender sends the ListForResourceGroup request. The method will close the
 // http.Response Body if it receives an error.
 func (client PermissionsClient) ListForResourceGroupSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListForResourceGroupResponder handles the response to the ListForResourceGroup request. The method always
@@ -229,7 +237,6 @@ func (client PermissionsClient) ListForResourceGroupSender(req *http.Request) (*
 func (client PermissionsClient) ListForResourceGroupResponder(resp *http.Response) (result PermissionGetResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

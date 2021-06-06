@@ -153,6 +153,30 @@ type OperationProperties struct {
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 
+	// The ForwardPerformance* parameters tell the router to unconditionally forward requests
+	// to this path if the processing node is a performance secondary/standby. This is generally
+	// *not* needed as there is already handling in place to automatically forward requests
+	// that try to write to storage. But there are a few cases where explicit forwarding is needed,
+	// for example:
+	//
+	// * The handler makes requests to other systems (e.g. an external API, database, ...) that
+	//   change external state somehow, and subsequently writes to storage. In this case the
+	//   default forwarding logic could result in multiple mutative calls to the external system.
+	//
+	// * The operation spans multiple requests (e.g. an OIDC callback), in-memory caching used,
+	//   and the same node (and therefore cache) should process both steps.
+	//
+	// If explicit forwarding is needed, it is usually true that forwarding from both performance
+	// standbys and performance secondaries should be enabled.
+	//
+	// ForwardPerformanceStandby indicates that this path should not be processed
+	// on a performance standby node, and should be forwarded to the active node instead.
+	ForwardPerformanceStandby bool
+
+	// ForwardPerformanceSecondary indicates that this path should not be processed
+	// on a performance secondary node, and should be forwarded to the active node instead.
+	ForwardPerformanceSecondary bool
+
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
@@ -173,11 +197,18 @@ type DisplayAttributes struct {
 	// Navigation indicates that the path should be available as a navigation tab
 	Navigation bool `json:"navigation,omitempty"`
 
+	// ItemType is the type of item this path operates on
+	ItemType string `json:"itemType,omitempty"`
+
 	// Group is the suggested UI group to place this field in.
 	Group string `json:"group,omitempty"`
 
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
+
+	// EditType is the optional type of form field needed for a property
+	// This is only necessary for a "textarea" or "file"
+	EditType string `json:"editType,omitempty"`
 }
 
 // RequestExample is example of request data.
@@ -199,13 +230,15 @@ type Response struct {
 
 // PathOperation is a concrete implementation of OperationHandler.
 type PathOperation struct {
-	Callback    OperationFunc
-	Summary     string
-	Description string
-	Examples    []RequestExample
-	Responses   map[int][]Response
-	Unpublished bool
-	Deprecated  bool
+	Callback                    OperationFunc
+	Summary                     string
+	Description                 string
+	Examples                    []RequestExample
+	Responses                   map[int][]Response
+	Unpublished                 bool
+	Deprecated                  bool
+	ForwardPerformanceSecondary bool
+	ForwardPerformanceStandby   bool
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -214,12 +247,14 @@ func (p *PathOperation) Handler() OperationFunc {
 
 func (p *PathOperation) Properties() OperationProperties {
 	return OperationProperties{
-		Summary:     strings.TrimSpace(p.Summary),
-		Description: strings.TrimSpace(p.Description),
-		Responses:   p.Responses,
-		Examples:    p.Examples,
-		Unpublished: p.Unpublished,
-		Deprecated:  p.Deprecated,
+		Summary:                     strings.TrimSpace(p.Summary),
+		Description:                 strings.TrimSpace(p.Description),
+		Responses:                   p.Responses,
+		Examples:                    p.Examples,
+		Unpublished:                 p.Unpublished,
+		Deprecated:                  p.Deprecated,
+		ForwardPerformanceSecondary: p.ForwardPerformanceSecondary,
+		ForwardPerformanceStandby:   p.ForwardPerformanceStandby,
 	}
 }
 
@@ -239,7 +274,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 
 		// Alphabetize the fields
 		fieldKeys := make([]string, 0, len(p.Fields))
-		for k, _ := range p.Fields {
+		for k := range p.Fields {
 			fieldKeys = append(fieldKeys, k)
 		}
 		sort.Strings(fieldKeys)
@@ -257,6 +292,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 				Key:         k,
 				Type:        schema.Type.String(),
 				Description: description,
+				Deprecated:  schema.Deprecated,
 			}
 		}
 
@@ -286,6 +322,7 @@ type pathTemplateData struct {
 type pathTemplateFieldData struct {
 	Key         string
 	Type        string
+	Deprecated  bool
 	Description string
 	URL         bool
 }
@@ -300,8 +337,11 @@ Matching Route: {{.RoutePattern}}
 ## PARAMETERS
 {{range .Fields}}
 {{indent 4 .Key}} ({{.Type}})
+{{if .Deprecated}}
+{{printf "(DEPRECATED) %s" .Description | indent 8}}
+{{else}}
 {{indent 8 .Description}}
-{{end}}{{end}}
+{{end}}{{end}}{{end}}
 ## DESCRIPTION
 
 {{.Description}}

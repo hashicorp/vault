@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -9,22 +10,24 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftSnapshotSaveCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftSnapshotSaveCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftSnapshotSaveCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftSnapshotSaveCommand)(nil)
+)
 
 type OperatorRaftSnapshotSaveCommand struct {
 	*BaseCommand
 }
 
 func (c *OperatorRaftSnapshotSaveCommand) Synopsis() string {
-	return "Saves a snapshot of the current state of the raft cluster into a file."
+	return "Saves a snapshot of the current state of the Raft cluster into a file"
 }
 
 func (c *OperatorRaftSnapshotSaveCommand) Help() string {
 	helpText := `
 Usage: vault operator raft snapshot save <snapshot_file>
 
-  Saves a snapshot of the current state of the raft cluster into a file.
+  Saves a snapshot of the current state of the Raft cluster into a file.
 
 	  $ vault operator raft snapshot save raft.snap
 
@@ -71,24 +74,53 @@ func (c *OperatorRaftSnapshotSaveCommand) Run(args []string) int {
 		return 1
 	}
 
-	snapFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error opening output file: %s", err))
-		return 2
+	w := &lazyOpenWriter{
+		openFunc: func() (io.WriteCloser, error) {
+			return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+		},
 	}
-	defer snapFile.Close()
 
 	client, err := c.Client()
 	if err != nil {
+		w.Close()
 		c.UI.Error(err.Error())
 		return 2
 	}
 
-	err = client.Sys().RaftSnapshot(snapFile)
+	err = client.Sys().RaftSnapshot(w)
 	if err != nil {
+		w.Close()
 		c.UI.Error(fmt.Sprintf("Error taking the snapshot: %s", err))
 		return 2
 	}
 
+	err = w.Close()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error taking the snapshot: %s", err))
+		return 2
+	}
 	return 0
+}
+
+type lazyOpenWriter struct {
+	openFunc func() (io.WriteCloser, error)
+	writer   io.WriteCloser
+}
+
+func (l *lazyOpenWriter) Write(p []byte) (n int, err error) {
+	if l.writer == nil {
+		var err error
+		l.writer, err = l.openFunc()
+		if err != nil {
+			return 0, err
+		}
+	}
+	return l.writer.Write(p)
+}
+
+func (l *lazyOpenWriter) Close() error {
+	if l.writer != nil {
+		return l.writer.Close()
+	}
+	return nil
 }

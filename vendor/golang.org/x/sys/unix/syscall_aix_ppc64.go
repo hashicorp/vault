@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build aix
-// +build ppc64
+//go:build aix && ppc64
+// +build aix,ppc64
 
 package unix
 
@@ -27,6 +27,10 @@ func (iov *Iovec) SetLen(length int) {
 
 func (msghdr *Msghdr) SetControllen(length int) {
 	msghdr.Controllen = uint32(length)
+}
+
+func (msghdr *Msghdr) SetIovlen(length int) {
+	msghdr.Iovlen = int32(length)
 }
 
 func (cmsg *Cmsghdr) SetLen(length int) {

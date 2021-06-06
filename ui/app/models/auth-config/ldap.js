@@ -1,3 +1,4 @@
+import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 
 import AuthConfig from '../auth-config';
@@ -6,7 +7,11 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 
 export default AuthConfig.extend({
   useOpenAPI: true,
-  fieldGroups: computed(function() {
+  certificate: attr({
+    label: 'Certificate',
+    editType: 'file',
+  }),
+  fieldGroups: computed('newFields', function() {
     let groups = [
       {
         default: ['url'],
@@ -20,8 +25,11 @@ export default AuthConfig.extend({
           'tlsMinVersion',
           'tlsMaxVersion',
           'certificate',
+          'clientTlsCert',
+          'clientTlsKey',
           'userattr',
           'upndomain',
+          'anonymousGroupSearch',
         ],
       },
       {

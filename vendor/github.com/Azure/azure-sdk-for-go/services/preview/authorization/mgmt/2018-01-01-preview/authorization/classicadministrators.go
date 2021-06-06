@@ -35,7 +35,9 @@ func NewClassicAdministratorsClient(subscriptionID string) ClassicAdministrators
 	return NewClassicAdministratorsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewClassicAdministratorsClientWithBaseURI creates an instance of the ClassicAdministratorsClient client.
+// NewClassicAdministratorsClientWithBaseURI creates an instance of the ClassicAdministratorsClient client using a
+// custom endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds,
+// Azure stack).
 func NewClassicAdministratorsClientWithBaseURI(baseURI string, subscriptionID string) ClassicAdministratorsClient {
 	return ClassicAdministratorsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -69,6 +71,11 @@ func (client ClassicAdministratorsClient) List(ctx context.Context) (result Clas
 	result.calr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.ClassicAdministratorsClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.calr.hasNextLink() && result.calr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -96,8 +103,7 @@ func (client ClassicAdministratorsClient) ListPreparer(ctx context.Context) (*ht
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client ClassicAdministratorsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		azure.DoRetryWithRegistration(client.Client))
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -105,7 +111,6 @@ func (client ClassicAdministratorsClient) ListSender(req *http.Request) (*http.R
 func (client ClassicAdministratorsClient) ListResponder(resp *http.Response) (result ClassicAdministratorListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

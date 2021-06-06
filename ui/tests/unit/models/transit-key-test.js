@@ -19,7 +19,7 @@ module('Unit | Model | transit key', function(hooks) {
       })
     );
 
-    let supportedActions = model.get('supportedActions');
+    let supportedActions = model.get('supportedActions').map(k => k.name);
     assert.deepEqual(['encrypt', 'decrypt', 'datakey', 'rewrap', 'hmac', 'verify'], supportedActions);
   });
 

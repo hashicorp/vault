@@ -295,11 +295,9 @@ func Test(tt TestT, c TestCase) {
 				DisplayName: tokenInfo.Data["display_name"].(string),
 			})
 		}
-		if s.RemoteAddr != "" {
-			req.Connection = &logical.Connection{RemoteAddr: s.RemoteAddr}
-		}
+		req.Connection = &logical.Connection{RemoteAddr: s.RemoteAddr}
 		if s.ConnState != nil {
-			req.Connection = &logical.Connection{ConnState: s.ConnState}
+			req.Connection.ConnState = s.ConnState
 		}
 
 		if s.PreFlight != nil {

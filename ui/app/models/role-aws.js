@@ -1,10 +1,8 @@
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 const CREDENTIAL_TYPES = [
   {
@@ -20,7 +18,7 @@ const CREDENTIAL_TYPES = [
     displayName: 'Federation Token',
   },
 ];
-export default DS.Model.extend({
+export default Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
@@ -51,6 +49,8 @@ export default DS.Model.extend({
   }),
   policyDocument: attr('string', {
     editType: 'json',
+    helpText:
+      'A policy is an object in AWS that, when associated with an identity or resource, defines their permissions.',
   }),
   fields: computed('credentialType', function() {
     let credentialType = this.credentialType;

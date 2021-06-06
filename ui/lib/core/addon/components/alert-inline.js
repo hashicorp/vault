@@ -14,6 +14,8 @@ import layout from '../templates/components/alert-inline';
  *
  * @param type=null{String} - The alert type. This comes from the message-types helper.
  * @param [message=null]{String} - The message to display within the alert.
+ * @param [sizeSmall=false]{Boolean} - Whether or not to display a small font with padding below of alert message.
+ * @param [paddingTop=false]{Boolean} - Whether or not to add padding above component.
  *
  */
 
@@ -21,18 +23,20 @@ export default Component.extend({
   layout,
   type: null,
   message: null,
-
+  sizeSmall: false,
+  paddingTop: false,
   classNames: ['message-inline'],
+  classNameBindings: ['sizeSmall:size-small', 'paddingTop:padding-top'],
 
   textClass: computed('type', function() {
-    if (this.get('type') == 'danger') {
-      return messageTypes([this.get('type')]).glyphClass;
+    if (this.type == 'danger') {
+      return messageTypes([this.type]).glyphClass;
     }
 
     return;
   }),
 
   alertType: computed('type', function() {
-    return messageTypes([this.get('type')]);
+    return messageTypes([this.type]);
   }),
 });

@@ -39,7 +39,7 @@ func TestTransit_Trim(t *testing.T) {
 	p, _, err := b.lm.GetPolicy(namespace.RootContext(nil), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "aes",
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		t.Fatal(err)
 	}

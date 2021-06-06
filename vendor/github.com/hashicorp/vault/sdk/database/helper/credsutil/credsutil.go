@@ -1,9 +1,9 @@
 package credsutil
 
 import (
-	"time"
-
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/base62"
@@ -13,9 +13,10 @@ import (
 // definition. It implements the methods for generating user information for a
 // particular database type and is used in all the builtin database types.
 type CredentialsProducer interface {
-	GenerateUsername(usernameConfig dbplugin.UsernameConfig) (string, error)
+	GenerateCredentials(context.Context) (string, error)
+	GenerateUsername(dbplugin.UsernameConfig) (string, error)
 	GeneratePassword() (string, error)
-	GenerateExpiration(ttl time.Time) (string, error)
+	GenerateExpiration(time.Time) (string, error)
 }
 
 const (

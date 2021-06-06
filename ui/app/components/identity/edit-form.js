@@ -20,8 +20,7 @@ export default Component.extend({
   onSave: () => {},
 
   cancelLink: computed('mode', 'model.identityType', function() {
-    let { model, mode } = this.getProperties('model', 'mode');
-    let key = `${mode}-${model.get('identityType')}`;
+    let { model, mode } = this;
     let routes = {
       'create-entity': 'vault.cluster.access.identity',
       'edit-entity': 'vault.cluster.access.identity.show',
@@ -33,25 +32,25 @@ export default Component.extend({
       'create-group-alias': 'vault.cluster.access.identity.aliases',
       'edit-group-alias': 'vault.cluster.access.identity.aliases.show',
     };
-
+    let key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
     return routes[key];
   }),
 
   getMessage(model, isDelete = false) {
-    let mode = this.get('mode');
-    let typeDisplay = humanize([model.get('identityType')]);
+    let mode = this.mode;
+    let typeDisplay = humanize([model.identityType]);
     let action = isDelete ? 'deleted' : 'saved';
     if (mode === 'merge') {
       return 'Successfully merged entities';
     }
-    if (model.get('id')) {
+    if (model.id) {
       return `Successfully ${action} ${typeDisplay} ${model.id}.`;
     }
     return `Successfully ${action} ${typeDisplay}.`;
   },
 
   save: task(function*() {
-    let model = this.get('model');
+    let model = this.model;
     let message = this.getMessage(model);
 
     try {
@@ -60,14 +59,15 @@ export default Component.extend({
       // err will display via model state
       return;
     }
-    this.get('flashMessages').success(message);
-    yield this.get('onSave')({ saveType: 'save', model });
+    this.flashMessages.success(message);
+    yield this.onSave({ saveType: 'save', model });
   })
     .drop()
     .withTestWaiter(),
 
   willDestroy() {
-    let model = this.get('model');
+    let model = this.model;
+    if (!model) return;
     if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
       model.rollbackAttributes();
     }
@@ -76,10 +76,10 @@ export default Component.extend({
   actions: {
     deleteItem(model) {
       let message = this.getMessage(model, true);
-      let flash = this.get('flashMessages');
+      let flash = this.flashMessages;
       model.destroyRecord().then(() => {
         flash.success(message);
-        return this.get('onSave')({ saveType: 'delete', model });
+        return this.onSave({ saveType: 'delete', model });
       });
     },
   },

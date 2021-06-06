@@ -10,6 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// DEPRECATED: Don't use this. It's too inflexible, nearly impossible to use
+// with some modern Vault features, and imposes specific API designs.
+//
 // PathMap can be used to generate a path that stores mappings in the
 // storage. It is a structure that also exports functions for querying the
 // mappings.
@@ -34,7 +37,7 @@ func (p *PathMap) init() {
 
 	if p.Schema == nil {
 		p.Schema = map[string]*FieldSchema{
-			"value": &FieldSchema{
+			"value": {
 				Type:        TypeString,
 				Description: fmt.Sprintf("Value for %s mapping", p.Name),
 			},
@@ -204,7 +207,7 @@ func (p *PathMap) Paths() []*Path {
 	}
 
 	return []*Path{
-		&Path{
+		{
 			Pattern: fmt.Sprintf("%s/%s/?$", p.Prefix, p.Name),
 
 			Callbacks: map[logical.Operation]OperationFunc{
@@ -215,7 +218,7 @@ func (p *PathMap) Paths() []*Path {
 			HelpSynopsis: fmt.Sprintf("Read mappings for %s", p.Name),
 		},
 
-		&Path{
+		{
 			Pattern: fmt.Sprintf(`%s/%s/(?P<key>[-\w]+)`, p.Prefix, p.Name),
 
 			Fields: schema,

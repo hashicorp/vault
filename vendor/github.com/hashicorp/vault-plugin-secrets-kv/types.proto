@@ -2,11 +2,13 @@ syntax = "proto3";
 package kv;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 
 // If values are added to this, be sure to update the config() function
 message Configuration {
 	uint32 max_versions = 1;
 	bool cas_required = 2;
+	google.protobuf.Duration delete_version_after = 3;
 }
 
 message VersionMetadata {
@@ -52,6 +54,11 @@ message KeyMetadata {
 	// CasRequired specifies if the cas parameter is 
 	// required for this key
 	bool cas_required = 8;
+
+	// DeleteVersionAfter specifies how long to keep versions around. If
+	// empty value, defaults to the configured delete_version_after for the
+	// mount.
+	google.protobuf.Duration delete_version_after = 9;
 }
 
 

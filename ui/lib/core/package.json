@@ -4,20 +4,26 @@
     "ember-addon"
   ],
   "dependencies": {
-    "Duration.js": "*",
+    "autosize": "*",
+    "date-fns": "*",
+    "@icholy/duration": "*",
     "base64-js": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
+    "ember-basic-dropdown-hover": "*",
     "ember-cli-babel": "*",
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
-    "ember-cli-htmlbars-inline-precompile": "*",
     "ember-cli-string-helpers": "*",
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
+    "ember-power-select-with-create": "*",
     "ember-radio-button": "*",
+    "ember-router-helpers": "*",
     "ember-svg-jar": "*",
-    "ember-truth-helpers": "*"
+    "ember-truth-helpers": "*",
+    "ember-wormhole": "^0.5.5",
+    "escape-string-regexp": "*"
   }
 }

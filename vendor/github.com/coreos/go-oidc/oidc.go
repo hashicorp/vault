@@ -69,6 +69,7 @@ type Provider struct {
 	authURL     string
 	tokenURL    string
 	userInfoURL string
+	algorithms  []string
 
 	// Raw claims returned by the server.
 	rawClaims []byte
@@ -82,11 +83,27 @@ type cachedKeys struct {
 }
 
 type providerJSON struct {
-	Issuer      string `json:"issuer"`
-	AuthURL     string `json:"authorization_endpoint"`
-	TokenURL    string `json:"token_endpoint"`
-	JWKSURL     string `json:"jwks_uri"`
-	UserInfoURL string `json:"userinfo_endpoint"`
+	Issuer      string   `json:"issuer"`
+	AuthURL     string   `json:"authorization_endpoint"`
+	TokenURL    string   `json:"token_endpoint"`
+	JWKSURL     string   `json:"jwks_uri"`
+	UserInfoURL string   `json:"userinfo_endpoint"`
+	Algorithms  []string `json:"id_token_signing_alg_values_supported"`
+}
+
+// supportedAlgorithms is a list of algorithms explicitly supported by this
+// package. If a provider supports other algorithms, such as HS256 or none,
+// those values won't be passed to the IDTokenVerifier.
+var supportedAlgorithms = map[string]bool{
+	RS256: true,
+	RS384: true,
+	RS512: true,
+	ES256: true,
+	ES384: true,
+	ES512: true,
+	PS256: true,
+	PS384: true,
+	PS512: true,
 }
 
 // NewProvider uses the OpenID Connect discovery mechanism to construct a Provider.
@@ -123,11 +140,18 @@ func NewProvider(ctx context.Context, issuer string) (*Provider, error) {
 	if p.Issuer != issuer {
 		return nil, fmt.Errorf("oidc: issuer did not match the issuer returned by provider, expected %q got %q", issuer, p.Issuer)
 	}
+	var algs []string
+	for _, a := range p.Algorithms {
+		if supportedAlgorithms[a] {
+			algs = append(algs, a)
+		}
+	}
 	return &Provider{
 		issuer:       p.Issuer,
 		authURL:      p.AuthURL,
 		tokenURL:     p.TokenURL,
 		userInfoURL:  p.UserInfoURL,
+		algorithms:   algs,
 		rawClaims:    body,
 		remoteKeySet: NewRemoteKeySet(ctx, p.JWKSURL),
 	}, nil
@@ -261,6 +285,9 @@ type IDToken struct {
 
 	// Raw payload of the id_token.
 	claims []byte
+
+	// Map of distributed claim names to claim sources
+	distributedClaims map[string]claimSource
 }
 
 // Claims unmarshals the raw JSON payload of the ID Token into a provided struct.
@@ -313,13 +340,21 @@ func (i *IDToken) VerifyAccessToken(accessToken string) error {
 }
 
 type idToken struct {
-	Issuer   string   `json:"iss"`
-	Subject  string   `json:"sub"`
-	Audience audience `json:"aud"`
-	Expiry   jsonTime `json:"exp"`
-	IssuedAt jsonTime `json:"iat"`
-	Nonce    string   `json:"nonce"`
-	AtHash   string   `json:"at_hash"`
+	Issuer       string                 `json:"iss"`
+	Subject      string                 `json:"sub"`
+	Audience     audience               `json:"aud"`
+	Expiry       jsonTime               `json:"exp"`
+	IssuedAt     jsonTime               `json:"iat"`
+	NotBefore    *jsonTime              `json:"nbf"`
+	Nonce        string                 `json:"nonce"`
+	AtHash       string                 `json:"at_hash"`
+	ClaimNames   map[string]string      `json:"_claim_names"`
+	ClaimSources map[string]claimSource `json:"_claim_sources"`
+}
+
+type claimSource struct {
+	Endpoint    string `json:"endpoint"`
+	AccessToken string `json:"access_token"`
 }
 
 type audience []string

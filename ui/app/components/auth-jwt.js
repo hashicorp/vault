@@ -11,15 +11,17 @@ const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
-
-export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS };
+const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
+export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default Component.extend({
   store: service(),
+  featureFlagService: service('featureFlag'),
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
   role: null,
+  errorMessage: null,
   onRoleName() {},
   onLoading() {},
   onError() {},
@@ -36,13 +38,14 @@ export default Component.extend({
     } else if (shouldDebounce) {
       this.fetchRole.perform(this.roleName);
     }
+    this.set('errorMessage', null);
     this.set('oldSelectedAuthPath', selectedAuthPath);
   },
 
-  // OIDC roles in the JWT/OIDC backend are those with an authUrl,
-  // those that are JWT type will 400 when trying to fetch the role
-  isOIDC: computed('role', 'role.authUrl', function() {
-    return this.role && this.role.authUrl;
+  // Assumes authentication using OIDC until it's known that the mount is
+  // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
+  isOIDC: computed('errorMessage', function() {
+    return this.errorMessage !== ERROR_JWT_LOGIN;
   }),
 
   getWindow() {
@@ -63,6 +66,9 @@ export default Component.extend({
     } catch (e) {
       if (!e.httpStatus || e.httpStatus !== 400) {
         throw e;
+      }
+      if (e.errors && e.errors.length > 0) {
+        this.set('errorMessage', e.errors[0]);
       }
     }
     this.set('role', role);
@@ -109,14 +115,31 @@ export default Component.extend({
   },
 
   exchangeOIDC: task(function*(event, oidcWindow) {
-    if (event.key !== 'oidcState') {
+    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
+    let oidcState = Ember.testing
+      ? event.storageArea.getItem('oidcState')
+      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
+
+    if (oidcState === null || oidcState === undefined) {
       return;
     }
     this.onLoading(true);
     // get the info from the event fired by the other window and
     // then remove it from localStorage
-    let { namespace, path, state, code } = JSON.parse(event.newValue);
+    let { namespace, path, state, code } = JSON.parse(oidcState);
     this.getWindow().localStorage.removeItem('oidcState');
+
+    // The namespace can be either be passed as a query paramter, or be embedded
+    // in the state param in the format `<state_id>,ns=<namespace>`. So if
+    // `namespace` is empty, check for namespace in state as well.
+    if (namespace === '' || this.featureFlagService.managedNamespaceRoot) {
+      let i = state.indexOf(',ns=');
+      if (i >= 0) {
+        // ",ns=" is 4 characters
+        namespace = state.substring(i + 4);
+        state = state.substring(0, i);
+      }
+    }
 
     // defer closing of the window, but continue executing the task
     later(() => {
@@ -147,7 +170,7 @@ export default Component.extend({
       if (e && e.preventDefault) {
         e.preventDefault();
       }
-      if (!this.isOIDC) {
+      if (!this.isOIDC || !this.role || !this.role.authUrl) {
         return;
       }
 

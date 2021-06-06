@@ -37,6 +37,8 @@ block() {
 # They are executed in this order (see end of file).
 CHECKS="ui_lint circleci_verify"
 
+MIN_CIRCLECI_VERSION=0.1.5575
+
 # Run ui linter if changes in that dir detected.
 ui_lint() {
   local DIR=ui LINTER=node_modules/.bin/lint-staged
@@ -91,11 +93,49 @@ circleci_verify() {
 
   echo "--> OK: All .yml files in .circleci are staged."
 
+  if ! REASON=$(check_circleci_cli_version); then
+    echo "*** WARNING: Unable to verify changes in .circleci/:"
+    echo "--> $REASON"
+    # We let this pass if there is no valid circleci version installed.
+    return 0
+  fi
+
   if ! make -C .circleci ci-verify; then
     block "ERROR: make ci-verify failed"
   fi
 
   echo "--> OK: make ci-verify succeeded."
+}
+
+check_circleci_cli_version() {
+  if ! command -v circleci > /dev/null 2>&1; then
+    echo "circleci cli not installed." 
+    return 1
+  fi
+
+  CCI="circleci --skip-update-check"
+
+  if ! THIS_VERSION=$($CCI version) > /dev/null 2>&1; then
+    # Guards against very old versions that do not have --skip-update-check.
+    echo "The installed circleci cli is too old. Please upgrade to at least $MIN_CIRCLECI_VERSION." 
+    return 1
+  fi
+
+  # SORTED_MIN is the lower of the THIS_VERSION and MIN_CIRCLECI_VERSION.
+  if ! SORTED_MIN="$(printf "%s\n%s" "$MIN_CIRCLECI_VERSION" "$THIS_VERSION" | sort -V | head -n1)"; then
+    echo "Failed to sort versions. Please open an issue to report this."
+    return 1
+  fi
+
+  if [ "$THIS_VERSION" != "${THIS_VERSION#$MIN_CIRCLECI_VERSION}" ]; then
+    return 0 # OK - Versions have the same prefix, so we consider them equal.
+  elif [ "$SORTED_MIN" = "$MIN_CIRCLECI_VERSION" ]; then
+    return 0 # OK - MIN_CIRCLECI_VERSION is lower than THIS_VERSION.
+  fi
+
+  # Version too low.
+  echo "The installed circleci cli v$THIS_VERSION is too old. Please upgrade to at least $MIN_CIRCLECI_VERSION"
+  return 1
 }
 
 for CHECK in $CHECKS; do

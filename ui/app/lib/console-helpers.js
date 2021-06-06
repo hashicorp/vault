@@ -1,15 +1,17 @@
 import keys from 'vault/lib/keycodes';
 import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import { parse } from 'shell-quote';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
-const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
+const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
 export function extractDataAndFlags(data, flags) {
   return data.concat(flags).reduce(
     (accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
       // split on the first =
-      let [item, value] = val.split(/=(.+)/);
+      // default to value of empty string
+      let [item, value = ''] = val.split(/=(.+)?/);
       if (item.startsWith('-')) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
@@ -25,38 +27,26 @@ export function extractDataAndFlags(data, flags) {
         return accumulator;
       }
       accumulator.data[item] = value;
-
       return accumulator;
     },
     { data: {}, flags: {} }
   );
 }
 
-export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {
-  const isUICommand = uiCommands.includes(command);
+export function executeUICommand(command, logAndOutput, commandFns) {
+  let cmd = command.startsWith('api') ? 'api' : command;
+  let isUICommand = uiCommands.includes(cmd);
   if (isUICommand) {
     logAndOutput(command);
   }
-  switch (command) {
-    case 'clearall':
-      clearLog(true);
-      break;
-    case 'clear':
-      clearLog();
-      break;
-    case 'fullscreen':
-      toggleFullscreen();
-      break;
-    case 'refresh':
-      refreshFn();
-      break;
+  if (typeof commandFns[cmd] === 'function') {
+    commandFns[cmd]();
   }
-
   return isUICommand;
 }
 
 export function parseCommand(command, shouldThrow) {
-  let args = argTokenizer(command);
+  let args = argTokenizer(parse(command));
   if (args[0] === 'vault') {
     args.shift();
   }
@@ -74,8 +64,6 @@ export function parseCommand(command, shouldThrow) {
         let strippedArg = arg
           // we'll have arg=something or arg="lol I need spaces", so need to split on the first =
           .split(/=(.+)/)
-          // remove matched wrapping " or ' from each item
-          .map(item => item.replace(/^("|')(.+)(\1)$/, '$2'))
           // if there were quotes, there's an empty string as the last member in the array that we don't want,
           // so filter it out
           .filter(str => str !== '')

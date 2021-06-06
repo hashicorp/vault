@@ -1,3 +1,4 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
 import { hash, resolve } from 'rsvp';
@@ -5,9 +6,6 @@ import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
 
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
-
-const { AdapterError } = DS;
 
 const ENDPOINTS = [
   'health',
@@ -44,7 +42,7 @@ export default ApplicationAdapter.extend({
       health: this.health(),
       sealStatus: this.sealStatus().catch(e => e),
     };
-    if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
+    if (this.version.isEnterprise && this.namespaceService.inRootNamespace) {
       fetches.replicationStatus = this.replicationStatus().catch(e => e);
     }
     return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
@@ -183,7 +181,10 @@ export default ApplicationAdapter.extend({
   },
 
   generateDrOperationToken(data, options) {
-    const verb = options && options.checkStatus ? 'GET' : 'PUT';
+    let verb = options && options.checkStatus ? 'GET' : 'PUT';
+    if (options.cancel) {
+      verb = 'DELETE';
+    }
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
     if (!data || data.pgp_key || data.attempt) {
       // start the generation

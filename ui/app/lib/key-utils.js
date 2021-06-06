@@ -35,7 +35,7 @@ function ancestorKeysForKey(key) {
     parentKey = parentKeyForKey(parentKey);
   }
 
-  return ancestors.length ? ancestors : null;
+  return ancestors;
 }
 
 export default {

@@ -15,20 +15,23 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 
 	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify MySQLBackend satisfies the correct interfaces
-var _ physical.Backend = (*MySQLBackend)(nil)
-var _ physical.HABackend = (*MySQLBackend)(nil)
-var _ physical.Lock = (*MySQLHALock)(nil)
+var (
+	_ physical.Backend   = (*MySQLBackend)(nil)
+	_ physical.HABackend = (*MySQLBackend)(nil)
+	_ physical.Lock      = (*MySQLHALock)(nil)
+)
 
 // Unreserved tls key
 // Reserved values are "true", "false", "skip-verify"
@@ -59,22 +62,28 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		return nil, err
 	}
 
-	database, ok := conf["database"]
-	if !ok {
+	database := conf["database"]
+	if database == "" {
 		database = "vault"
 	}
-	table, ok := conf["table"]
-	if !ok {
+	table := conf["table"]
+	if table == "" {
 		table = "vault"
 	}
-	dbTable := "`" + database + "`.`" + table + "`"
+
+	err = validateDBTable(database, table)
+	if err != nil {
+		return nil, err
+	}
+
+	dbTable := fmt.Sprintf("`%s`.`%s`", database, table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -87,7 +96,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	var schemaExist bool
 	schemaRows, err := db.Query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?", database)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql schema exist: {{err}}", err)
+		return nil, fmt.Errorf("failed to check mysql schema exist: %w", err)
 	}
 	defer schemaRows.Close()
 	schemaExist = schemaRows.Next()
@@ -95,9 +104,8 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Check table exists
 	var tableExist bool
 	tableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", table, database)
-
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+		return nil, fmt.Errorf("failed to check mysql table exist: %w", err)
 	}
 	defer tableRows.Close()
 	tableExist = tableRows.Next()
@@ -105,7 +113,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Create the required database if it doesn't exists.
 	if !schemaExist {
 		if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS `" + database + "`"); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql database: {{err}}", err)
+			return nil, fmt.Errorf("failed to create mysql database: %w", err)
 		}
 	}
 
@@ -114,7 +122,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		create_query := "CREATE TABLE IF NOT EXISTS " + dbTable +
 			" (vault_key varbinary(512), vault_value mediumblob, PRIMARY KEY (vault_key))"
 		if _, err := db.Exec(create_query); err != nil {
-			return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+			return nil, fmt.Errorf("failed to create mysql table: %w", err)
 		}
 	}
 
@@ -140,9 +148,8 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		// Check table exists
 		var lockTableExist bool
 		lockTableRows, err := db.Query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?", locktable, database)
-
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to check mysql table exist: {{err}}", err)
+			return nil, fmt.Errorf("failed to check mysql table exist: %w", err)
 		}
 		defer lockTableRows.Close()
 		lockTableExist = lockTableRows.Next()
@@ -152,7 +159,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
 				" (node_job varbinary(512), current_leader varbinary(512), PRIMARY KEY (node_job))"
 			if _, err := db.Exec(create_query); err != nil {
-				return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
+				return nil, fmt.Errorf("failed to create mysql table: %w", err)
 			}
 		}
 	}
@@ -193,6 +200,67 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	return m, nil
 }
 
+// validateDBTable to prevent SQL injection attacks. This ensures that the database and table names only have valid
+// characters in them. MySQL allows for more characters that this will allow, but there isn't an easy way of
+// representing the full Unicode Basic Multilingual Plane to check against.
+// https://dev.mysql.com/doc/refman/5.7/en/identifiers.html
+func validateDBTable(db, table string) (err error) {
+	merr := &multierror.Error{}
+	merr = multierror.Append(merr, wrapErr("invalid database: %w", validate(db)))
+	merr = multierror.Append(merr, wrapErr("invalid table: %w", validate(table)))
+	return merr.ErrorOrNil()
+}
+
+func validate(name string) (err error) {
+	if name == "" {
+		return fmt.Errorf("missing name")
+	}
+	// From: https://dev.mysql.com/doc/refman/5.7/en/identifiers.html
+	// - Permitted characters in quoted identifiers include the full Unicode Basic Multilingual Plane (BMP), except U+0000:
+	//    ASCII: U+0001 .. U+007F
+	//    Extended: U+0080 .. U+FFFF
+	// - ASCII NUL (U+0000) and supplementary characters (U+10000 and higher) are not permitted in quoted or unquoted identifiers.
+	// - Identifiers may begin with a digit but unless quoted may not consist solely of digits.
+	// - Database, table, and column names cannot end with space characters.
+	//
+	// We are explicitly excluding all space characters (it's easier to deal with)
+	// The name will be quoted, so the all-digit requirement doesn't apply
+	runes := []rune(name)
+	validationErr := fmt.Errorf("invalid character found: can only include printable, non-space characters between [0x0001-0xFFFF]")
+	for _, r := range runes {
+		// U+0000 Explicitly disallowed
+		if r == 0x0000 {
+			return fmt.Errorf("invalid character: cannot include 0x0000")
+		}
+		// Cannot be above 0xFFFF
+		if r > 0xFFFF {
+			return fmt.Errorf("invalid character: cannot include any characters above 0xFFFF")
+		}
+		if r == '`' {
+			return fmt.Errorf("invalid character: cannot include '`' character")
+		}
+		if r == '\'' || r == '"' {
+			return fmt.Errorf("invalid character: cannot include quotes")
+		}
+		// We are excluding non-printable characters (not mentioned in the docs)
+		if !unicode.IsPrint(r) {
+			return validationErr
+		}
+		// We are excluding space characters (not mentioned in the docs)
+		if unicode.IsSpace(r) {
+			return validationErr
+		}
+	}
+	return nil
+}
+
+func wrapErr(message string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf(message, err)
+}
+
 func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) {
 	var err error
 
@@ -217,7 +285,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	if ok {
 		maxIdleConnInt, err = strconv.Atoi(maxIdleConnStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_idle_connections parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnInt)
@@ -229,7 +297,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	if ok {
 		maxConnLifeInt, err = strconv.Atoi(maxConnLifeStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_connection_lifetime parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_connection_lifetime parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_connection_lifetime set", "max_connection_lifetime", maxConnLifeInt)
@@ -241,7 +309,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -251,20 +319,24 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	}
 
 	dsnParams := url.Values{}
-	tlsCaFile, ok := conf["tls_ca_file"]
-	if ok {
+	tlsCaFile, tlsOk := conf["tls_ca_file"]
+	if tlsOk {
 		if err := setupMySQLTLSConfig(tlsCaFile); err != nil {
-			return nil, errwrap.Wrapf("failed register TLS config: {{err}}", err)
+			return nil, fmt.Errorf("failed register TLS config: %w", err)
 		}
 
 		dsnParams.Add("tls", mysqlTLSKey)
+	}
+	ptAllowed, ptOk := conf["plaintext_connection_allowed"]
+	if !(ptOk && strings.ToLower(ptAllowed) == "true") && !tlsOk {
+		logger.Warn("No TLS specified, credentials will be sent in plaintext. To mute this warning add 'plaintext_connection_allowed' with a true value to your MySQL configuration in your config file.")
 	}
 
 	// Create MySQL handle for the database.
 	dsn := username + ":" + password + "@tcp(" + address + ")/?" + dsnParams.Encode()
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to connect to mysql: {{err}}", err)
+		return nil, fmt.Errorf("failed to connect to mysql: %w", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 	if maxIdleConnInt != 0 {
@@ -281,7 +353,7 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 func (m *MySQLBackend) prepare(name, query string) error {
 	stmt, err := m.client.Prepare(query)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
 	m.statements[name] = stmt
 	return nil
@@ -350,7 +422,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 	likePrefix := prefix + "%"
 	rows, err := m.statements["list"].Query(likePrefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to execute statement: {{err}}", err)
+		return nil, fmt.Errorf("failed to execute statement: %w", err)
 	}
 
 	var keys []string
@@ -358,7 +430,7 @@ func (m *MySQLBackend) List(ctx context.Context, prefix string) ([]string, error
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
 		key = strings.TrimPrefix(key, prefix)
@@ -441,13 +513,13 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 func (i *MySQLHALock) attemptLock(key, value string, didLock chan struct{}, failLock chan error, releaseCh chan bool) {
 	lock, err := NewMySQLLock(i.in, i.logger, key, value)
+	if err != nil {
+		failLock <- err
+		return
+	}
 
 	// Set node value
 	i.lock = lock
-
-	if err != nil {
-		failLock <- err
-	}
 
 	err = lock.Lock()
 	if err != nil {
@@ -599,7 +671,7 @@ func NewMySQLLock(in *MySQLBackend, l log.Logger, key, value string) (*MySQLLock
 func (m *MySQLLock) prepare(name, query string) error {
 	stmt, err := m.in.Prepare(query)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to prepare %q: {{err}}", name), err)
+		return fmt.Errorf("failed to prepare %q: %w", name, err)
 	}
 	m.statements[name] = stmt
 	return nil

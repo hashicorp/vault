@@ -3,7 +3,7 @@ import layout from '../templates/components/confirm-action';
 
 /**
  * @module ConfirmAction
- * `ConfirmAction` is a button followed by a confirmation message and button used to prevent users from performing actions they do not intend to.
+ * `ConfirmAction` is a button followed by a pop up confirmation message and button used to prevent users from performing actions they do not intend to.
  *
  * @example
  * ```js
@@ -43,7 +43,7 @@ export default Component.extend({
     },
 
     onConfirm() {
-      const confirmAction = this.get('onConfirmAction');
+      const confirmAction = this.onConfirmAction;
 
       if (typeof confirmAction !== 'function') {
         throw new Error('confirm-action components expects `onConfirmAction` attr to be a function');

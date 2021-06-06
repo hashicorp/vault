@@ -6,6 +6,10 @@ This plugin provides unique, short-lived credentials for Elasticsearch using nat
 To take advantage of this plugin, you must first enable Elasticsearch's native realm of security by activating X-Pack. These
 instructions will walk you through doing this using ElasticSearch 7.1.1.
 
+### Version compatibility
+
+If you would like to install a different version of this plugin to that which is bundled with Vault, versions v0.6.0 onwards of this plugin are incompatible with Vault versions before 1.6.0 due to an update of the database plugin interface.
+
 ### Enable X-Pack Security in Elasticsearch
 
 Read [Securing the Elastic Stack](https://www.elastic.co/guide/en/elastic-stack-overview/7.1/elasticsearch-security.html) and 
@@ -128,12 +132,37 @@ vault write -force database/rotate-root/my-elasticsearch-database
 
 The Vault plugin system is documented on the [Vault documentation site](https://www.vaultproject.io/docs/internals/plugins.html).
 
-You will need to define a plugin directory using the `plugin_directory` configuration directive, then place the `vault-plugin-database-elasticsearch` executable generated above in the directory.
+The local_dev.sh script will build the plugin, start vault, mount the plugin,
+and run any custom commands in `./scripts/custom.sh`:
 
-Register the plugin using
+```console
+./scripts/local_dev.sh
+```
 
+## Testing
+
+### Unit and integration tests
+
+```console
+make test
 ```
-vault write sys/plugins/catalog/vault-plugin-database-elasticsearch \
-    sha256=$(sha256sum bin/vault-plugin-database-elasticsearch) \
-    command="vault-plugin-database-elasticsearch"
+
+Requires docker.
+
+### Acceptance tests
+
+To also run acceptance tests against an elasticsearch cluster, follow the
+instructions at the top of [acceptance_test.go](./acceptance_test.go), then
+
+```console
+make testacc
 ```
+
+Or to run only the acceptance tests:
+
+```console
+./scripts/run_acceptance.sh
+```
+
+See the comments in [run_acceptance.sh](./scripts/run_acceptance.sh) for
+configuration information.

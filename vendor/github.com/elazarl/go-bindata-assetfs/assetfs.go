@@ -137,6 +137,8 @@ type AssetFS struct {
 	AssetInfo func(path string) (os.FileInfo, error)
 	// Prefix would be prepended to http requests
 	Prefix string
+	// Fallback file that is served if no other is found
+	Fallback string
 }
 
 func (fs *AssetFS) Open(name string) (http.File, error) {
@@ -153,9 +155,13 @@ func (fs *AssetFS) Open(name string) (http.File, error) {
 		}
 		return NewAssetFile(name, b, timestamp), nil
 	}
-	if children, err := fs.AssetDir(name); err == nil {
-		return NewAssetDirectory(name, children, fs), nil
-	} else {
+	children, err := fs.AssetDir(name)
+
+	if err != nil {
+		if len(fs.Fallback) > 0 {
+			return fs.Open(fs.Fallback)
+		}
+
 		// If the error is not found, return an error that will
 		// result in a 404 error. Otherwise the server returns
 		// a 500 error for files not found.
@@ -164,4 +170,6 @@ func (fs *AssetFS) Open(name string) (http.File, error) {
 		}
 		return nil, err
 	}
+
+	return NewAssetDirectory(name, children, fs), nil
 }

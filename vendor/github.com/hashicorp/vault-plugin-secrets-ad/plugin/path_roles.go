@@ -89,7 +89,7 @@ func (b *backend) readRole(ctx context.Context, storage logical.Storage, roleNam
 	}
 
 	// Always check when ActiveDirectory shows the password as last set on the fly.
-	engineConf, err := b.readConfig(ctx, storage)
+	engineConf, err := readConfig(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (b *backend) roleUpdateOperation(ctx context.Context, req *logical.Request,
 	// Get everything we need to construct the role.
 	roleName := fieldData.Get("name").(string)
 
-	engineConf, err := b.readConfig(ctx, req.Storage)
+	engineConf, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,7 @@ func getServiceAccountName(fieldData *framework.FieldData) (string, error) {
 	return serviceAccountName, nil
 }
 
-func getValidatedTTL(passwordConf *passwordConf, fieldData *framework.FieldData) (int, error) {
+func getValidatedTTL(passwordConf passwordConf, fieldData *framework.FieldData) (int, error) {
 	ttl := fieldData.Get("ttl").(int)
 	if ttl == 0 {
 		ttl = passwordConf.TTL

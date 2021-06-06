@@ -13,30 +13,31 @@ export default ClusterRouteBase.extend({
   wizard: service(),
   beforeModel() {
     return this._super().then(() => {
-      return this.get('version').fetchFeatures();
+      return this.version.fetchFeatures();
     });
   },
   model() {
     return this._super(...arguments);
   },
+
   resetController(controller) {
     controller.set('wrappedToken', '');
-    controller.set('authMethod', '');
+    controller.set('authMethod', 'token');
   },
 
   afterModel() {
     if (config.welcomeMessage) {
-      this.get('flashMessages').stickyInfo(config.welcomeMessage);
+      this.flashMessages.stickyInfo(config.welcomeMessage);
     }
   },
   activate() {
-    this.get('wizard').set('initEvent', 'LOGIN');
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOLOGIN');
+    this.wizard.set('initEvent', 'LOGIN');
+    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOLOGIN');
   },
   actions: {
     willTransition(transition) {
       if (transition.targetName !== this.routeName) {
-        this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'INITDONE');
+        this.wizard.transitionTutorialMachine(this.wizard.currentState, 'INITDONE');
       }
     },
   },

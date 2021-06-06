@@ -36,7 +36,9 @@ func NewOAuth2PermissionGrantClient(tenantID string) OAuth2PermissionGrantClient
 	return NewOAuth2PermissionGrantClientWithBaseURI(DefaultBaseURI, tenantID)
 }
 
-// NewOAuth2PermissionGrantClientWithBaseURI creates an instance of the OAuth2PermissionGrantClient client.
+// NewOAuth2PermissionGrantClientWithBaseURI creates an instance of the OAuth2PermissionGrantClient client using a
+// custom endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds,
+// Azure stack).
 func NewOAuth2PermissionGrantClientWithBaseURI(baseURI string, tenantID string) OAuth2PermissionGrantClient {
 	return OAuth2PermissionGrantClient{NewWithBaseURI(baseURI, tenantID)}
 }
@@ -71,6 +73,7 @@ func (client OAuth2PermissionGrantClient) Create(ctx context.Context, body *OAut
 	result, err = client.CreateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "Create", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -103,8 +106,7 @@ func (client OAuth2PermissionGrantClient) CreatePreparer(ctx context.Context, bo
 // CreateSender sends the Create request. The method will close the
 // http.Response Body if it receives an error.
 func (client OAuth2PermissionGrantClient) CreateSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateResponder handles the response to the Create request. The method always
@@ -112,7 +114,6 @@ func (client OAuth2PermissionGrantClient) CreateSender(req *http.Request) (*http
 func (client OAuth2PermissionGrantClient) CreateResponder(resp *http.Response) (result OAuth2PermissionGrant, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -150,6 +151,7 @@ func (client OAuth2PermissionGrantClient) Delete(ctx context.Context, objectID s
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "Delete", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -178,8 +180,7 @@ func (client OAuth2PermissionGrantClient) DeletePreparer(ctx context.Context, ob
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client OAuth2PermissionGrantClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -187,7 +188,6 @@ func (client OAuth2PermissionGrantClient) DeleteSender(req *http.Request) (*http
 func (client OAuth2PermissionGrantClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
 		autorest.ByClosing())
 	result.Response = resp
@@ -230,6 +230,11 @@ func (client OAuth2PermissionGrantClient) List(ctx context.Context, filter strin
 	result.oa2pglr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.oa2pglr.hasNextLink() && result.oa2pglr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -260,8 +265,7 @@ func (client OAuth2PermissionGrantClient) ListPreparer(ctx context.Context, filt
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client OAuth2PermissionGrantClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -269,7 +273,6 @@ func (client OAuth2PermissionGrantClient) ListSender(req *http.Request) (*http.R
 func (client OAuth2PermissionGrantClient) ListResponder(resp *http.Response) (result OAuth2PermissionGrantListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -323,6 +326,7 @@ func (client OAuth2PermissionGrantClient) ListNext(ctx context.Context, nextLink
 	result, err = client.ListNextResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.OAuth2PermissionGrantClient", "ListNext", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -351,8 +355,7 @@ func (client OAuth2PermissionGrantClient) ListNextPreparer(ctx context.Context, 
 // ListNextSender sends the ListNext request. The method will close the
 // http.Response Body if it receives an error.
 func (client OAuth2PermissionGrantClient) ListNextSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListNextResponder handles the response to the ListNext request. The method always
@@ -360,7 +363,6 @@ func (client OAuth2PermissionGrantClient) ListNextSender(req *http.Request) (*ht
 func (client OAuth2PermissionGrantClient) ListNextResponder(resp *http.Response) (result OAuth2PermissionGrantListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

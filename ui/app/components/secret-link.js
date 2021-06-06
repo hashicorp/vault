@@ -6,7 +6,7 @@ export function linkParams({ mode, secret, queryParams }) {
   let params;
   const route = `vault.cluster.secrets.backend.${mode}`;
 
-  if (!secret || secret === ' ') {
+  if ((mode !== 'versions' && !secret) || secret === ' ') {
     params = [route + '-root'];
   } else {
     params = [route, encodePath(secret)];
@@ -20,6 +20,7 @@ export function linkParams({ mode, secret, queryParams }) {
 }
 
 export default Component.extend({
+  onLinkClick() {},
   tagName: '',
   // so that ember-test-selectors doesn't log a warning
   supportsDataTestProperties: true,
@@ -30,7 +31,7 @@ export default Component.extend({
   ariaLabel: null,
 
   linkParams: computed('mode', 'secret', 'queryParams', function() {
-    let data = this.getProperties('mode', 'secret', 'queryParams');
+    let data = { mode: this.mode, secret: this.secret, queryParams: this.queryParams };
     return linkParams(data);
   }),
 });

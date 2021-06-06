@@ -1,0 +1,11 @@
+{{#if showMessage}}
+  {{#if (has-block)}}
+    <p class="namespace-reminder">
+      {{yield (hash namespace=namespace)}}
+    </p>
+  {{else}}
+    <p class="namespace-reminder">
+    This {{noun}} will be {{modeVerb}} in the <span class="tag">{{namespace.path}}/</span>namespace.
+    </p>
+  {{/if}}
+{{/if}}

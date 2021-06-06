@@ -4,9 +4,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 )
 
 type roleEntry struct {
+	tokenutil.TokenParams
+
 	ARN        *arn                          `json:"arn"`
 	Policies   []string                      `json:"policies"`
 	TTL        time.Duration                 `json:"ttl"`
@@ -20,12 +23,26 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 	for i, cidr := range r.BoundCIDRs {
 		cidrs[i] = cidr.String()
 	}
-	return map[string]interface{}{
-		"arn":         r.ARN.String(),
-		"policies":    r.Policies,
-		"ttl":         r.TTL / time.Second,
-		"max_ttl":     r.MaxTTL / time.Second,
-		"period":      r.Period / time.Second,
-		"bound_cidrs": cidrs,
+	d := map[string]interface{}{
+		"arn": r.ARN.String(),
 	}
+	r.PopulateTokenData(d)
+
+	if len(r.Policies) > 0 {
+		d["policies"] = d["token_policies"]
+	}
+	if len(r.BoundCIDRs) > 0 {
+		d["bound_cidrs"] = d["token_bound_cidrs"]
+	}
+	if r.TTL > 0 {
+		d["ttl"] = int64(r.TTL.Seconds())
+	}
+	if r.MaxTTL > 0 {
+		d["max_ttl"] = int64(r.MaxTTL.Seconds())
+	}
+	if r.Period > 0 {
+		d["period"] = int64(r.Period.Seconds())
+	}
+
+	return d
 }

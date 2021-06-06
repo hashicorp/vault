@@ -1,20 +1,14 @@
+import Model, { hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
-import { queryRecord } from 'ember-computed-query';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-const { attr, hasMany } = DS;
+import apiPath from 'vault/utils/api-path';
+import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const configPath = function configPath(strings, key) {
-  return function(...values) {
-    return `${strings[0]}${values[key]}${strings[1]}`;
-  };
-};
-export default DS.Model.extend({
+let ModelExport = Model.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -23,7 +17,7 @@ export default DS.Model.extend({
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   methodType: computed('type', function() {
-    return this.get('type').replace(/^ns_/, '');
+    return this.type.replace(/^ns_/, '');
   }),
   description: attr('string', {
     editType: 'textarea',
@@ -41,10 +35,10 @@ export default DS.Model.extend({
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
   apiPath: computed('path', function() {
-    return `auth/${this.get('path')}`;
+    return `auth/${this.path}`;
   }),
   localDisplay: computed('local', function() {
-    return this.get('local') ? 'local' : 'replicated';
+    return this.local ? 'local' : 'replicated';
   }),
 
   tuneAttrs: computed(function() {
@@ -89,35 +83,23 @@ export default DS.Model.extend({
   }),
 
   attrs: computed('formFields', function() {
-    return expandAttributeMeta(this, this.get('formFields'));
+    return expandAttributeMeta(this, this.formFields);
   }),
 
   fieldGroups: computed('formFieldGroups', function() {
-    return fieldToAttrs(this, this.get('formFieldGroups'));
+    return fieldToAttrs(this, this.formFieldGroups);
   }),
-
-  configPathTmpl: computed('type', function() {
-    const type = this.get('type');
-    if (type === 'aws') {
-      return configPath`auth/${0}/config/client`;
-    } else {
-      return configPath`auth/${0}/config`;
-    }
-  }),
-
-  configPath: queryRecord(
-    'capabilities',
-    context => {
-      const { id, configPathTmpl } = context.getProperties('id', 'configPathTmpl');
-      return {
-        id: configPathTmpl(id),
-      };
-    },
-    'id',
-    'configPathTmpl'
-  ),
-
-  deletePath: lazyCapabilities(apiPath`sys/auth/${'id'}`, 'id'),
   canDisable: alias('deletePath.canDelete'),
   canEdit: alias('configPath.canUpdate'),
+});
+
+export default attachCapabilities(ModelExport, {
+  deletePath: apiPath`sys/auth/${'id'}`,
+  configPath: function(context) {
+    if (context.type === 'aws') {
+      return apiPath`auth/${'id'}/config/client`;
+    } else {
+      return apiPath`auth/${'id'}/config`;
+    }
+  },
 });

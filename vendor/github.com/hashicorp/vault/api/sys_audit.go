@@ -52,7 +52,6 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
-
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +93,6 @@ func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) e
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
-
 	if err != nil {
 		return err
 	}
@@ -116,7 +114,7 @@ func (c *Sys) DisableAudit(path string) error {
 	return err
 }
 
-// Structures for the requests/resposne are all down here. They aren't
+// Structures for the requests/response are all down here. They aren't
 // individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 

@@ -1,48 +1,48 @@
 <div class="columns">
-  {{#menu-sidebar title="Access" class="is-3" data-test-sidebar=true}}
+  <MenuSidebar @title="Access" @class="is-3" @data-test-sidebar={{true}}>
     {{#if (has-permission "access" routeParams="methods")}}
       <li>
-        {{#link-to "vault.cluster.access.methods" data-test-link=true current-when="vault.cluster.access.methods vault.cluster.access.method"}}
+        <LinkTo @route="vault.cluster.access.methods" data-test-link={{true}} @current-when="vault.cluster.access.methods vault.cluster.access.method">
           Auth Methods
-        {{/link-to}}
+        </LinkTo>
       </li>
     {{/if}}
     {{#if (has-permission "access" routeParams="entities")}}
       <li>
-        {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
+        <LinkTo @route="vault.cluster.access.identity" @model="entities" data-test-link={{true}}>
           Entities
-        {{/link-to}}
+        </LinkTo>
       </li>
     {{/if}}
     {{#if (has-permission "access" routeParams="groups")}}
       <li>
-        {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
+        <LinkTo @route="vault.cluster.access.identity" @model="groups" data-test-link={{true}}>
           Groups
-        {{/link-to}}
+        </LinkTo>
       </li>
     {{/if}}
     {{#if (has-permission "access" routeParams="leases")}}
       <li>
-        {{#link-to "vault.cluster.access.leases" data-test-link=true}}
+        <LinkTo @route="vault.cluster.access.leases" data-test-link={{true}}>
           Leases
-        {{/link-to}}
+        </LinkTo>
       </li>
     {{/if}}
     {{#if (and (has-feature "Namespaces") (has-permission "access" routeParams="namespaces"))}}
       <li>
-        {{#link-to "vault.cluster.access.namespaces" data-test-link=true }}
+        <LinkTo @route="vault.cluster.access.namespaces" data-test-link={{true}}>
           Namespaces
-        {{/link-to}}
+        </LinkTo>
       </li>
     {{/if}}
     {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}
       <li>
-        {{#link-to "vault.cluster.access.control-groups" data-test-link=true current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"}}
+        <LinkTo @route="vault.cluster.access.control-groups" data-test-link={{true}} @current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure">
           Control Groups
-        {{/link-to}}
+        </LinkTo>
       </li>
     {{/if}}
-  {{/menu-sidebar}}
+  </MenuSidebar>
   <div class="column is-9">
     {{outlet}}
   </div>

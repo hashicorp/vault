@@ -1,4 +1,4 @@
-{{#if (not (has-feature "DR Replication"))}}
+{{#unless (has-feature "DR Replication")}}
   {{upgrade-page title="Replication"}}
 {{else if (or cluster.allReplicationDisabled cluster.replicationAttrs.replicationDisabled)}}
   <PageHeader as |p|>
@@ -17,8 +17,7 @@
     </p.levelLeft>
   </PageHeader>
 
-  <form
-    onsubmit={{
+  <form onsubmit={{
       action
         "onSubmit"
         "enable"
@@ -31,63 +30,51 @@
           ca_path=ca_path
           replicationMode=replicationMode
           )
-      }}
-    >
+      }}>
     <div class="box is-sideless is-fullwidth is-marginless">
       {{message-error errors=errors}}
       {{#if initialReplicationMode}}
         {{#if (eq initialReplicationMode 'dr')}}
           <h3 class="title is-flex-center is-5 is-marginless">
-            <Icon
-              @size="xl"
-              aria-hidden="true"
-              @glyph="replication"
-            />
+            <Icon @size="xl" aria-hidden="true" @glyph="replication" />
             Disaster Recovery (DR) Replication
           </h3>
           <p class="help has-text-grey-dark">
-            DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward service requests (until they are elected and become a new primary).
+            {{replication-mode-description 'dr'}}
           </p>
         {{else if (eq initialReplicationMode 'performance')}}
           <h3 class="title is-flex-center is-5 is-marginless">
-            <Icon
-              @size="xl"
-              aria-hidden="true"
-              @glyph="perf-replication"
-            />
+            <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
             Performance Replication
           </h3>
-          {{#if (not (has-feature "Performance Replication"))}}
+          {{#unless (has-feature "Performance Replication")}}
             <p class="help has-text-grey-dark">
               Performance Replication is a feature of Vault Enterprise Premium
             </p>
           {{else}}
             <p class="help has-text-grey-dark">
-              Performance replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+              {{replication-mode-description 'performance'}}
             </p>
-          {{/if}}
+          {{/unless}}
         {{/if}}
       {{else}}
         <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
           <label for="replication-mode" class="is-label is-block">
             Type of replication
           </label>
-          In both Performance and Disaster Recovery (DR) Replication, secondaries share the underlying configuration, policies, and supporting secrets as their primary cluster.
+          In both Performance and Disaster Recovery (DR) Replication, secondaries share the underlying configuration,
+          policies, and supporting secrets as their primary cluster.
         </p>
         <div class="columns">
           <div class="column is-flex">
             <label for="dr" class="box-label is-column {{if (eq replicationMode 'dr') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
-                  <Icon
-                    @size="xl"
-                    aria-hidden="true"
-                    @glyph="replication"
-                  />
+                  <Icon @size="xl" aria-hidden="true" @glyph="replication" />
                   Disaster Recovery (DR)
                 </h3>
                 <p class="help has-text-grey-dark">
-                  DR is designed to protect against catastrophic failure of entire clusters. Secondaries do not forward service requests (until they are elected and become a new primary).
+                  {{replication-mode-description 'dr'}}
                 </p>
               </div>
               <div>
@@ -102,15 +89,12 @@
             </label>
           </div>
           <div class="column is-flex">
-            <label for="performance" class="box-label is-column {{if (eq replicationMode 'performance') 'is-selected'}}">
+            <label for="performance"
+              class="box-label is-column {{if (eq replicationMode 'performance') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
-                  <Icon
-                    @size="xl"
-                    aria-hidden="true"
-                    @glyph="perf-replication"
-                  />
-                   Performance
+                  <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+                  Performance
                 </h3>
                 {{#if (not (has-feature "Performance Replication"))}}
                   <p class="help has-text-grey-dark">
@@ -118,7 +102,7 @@
                   </p>
                 {{else}}
                   <p class="help has-text-grey-dark">
-                    Performance Replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+                    {{replication-mode-description 'performance'}}
                   </p>
                 {{/if}}
               </div>
@@ -145,23 +129,18 @@
       </label>
       <div class="field is-expanded">
         <div class="control select is-fullwidth">
-          <select onchange={{action (mut mode) value="target.value"}} id="replication-mode" name="replication-mode" data-test-replication-cluster-mode-select=true>
+          <select onchange={{action (mut mode) value="target.value"}} id="replication-mode" name="replication-mode"
+            data-test-replication-cluster-mode-select=true>
             {{#each (array 'primary' 'secondary') as |modeOption|}}
-              <option
-                selected={{if mode (eq mode modeOption) (eq modeOption 'primary')}}
-                value={{modeOption}}
-              >
+              <option selected={{if mode (eq mode modeOption) (eq modeOption 'primary')}} value={{modeOption}}>
                 {{modeOption}}
               </option>
             {{/each}}
           </select>
         </div>
         {{#if (eq mode 'secondary')}}
-          <AlertInline
-            @class="has-top"
-            @type="warning"
-            @message="This will immediately clear all data in this cluster!"
-          />
+          <AlertInline @class="has-top" @type="warning"
+            @message="This will immediately clear all data in this cluster!" />
         {{/if}}
       </div>
       {{#if (eq mode 'primary')}}
@@ -171,7 +150,7 @@
               Primary cluster address <em class="is-optional">(optional)</em>
             </label>
             <div class="control">
-              {{input  class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
+              {{input class="input" id="primary_cluster_addr" name="primary_cluster_addr" value=primary_cluster_addr}}
             </div>
             <p class="help has-text-grey">
               Overrides the cluster address that the primary gives to secondary nodes.
@@ -201,7 +180,8 @@
               {{#if showExplanation}}
                 <p>
                   When running as a DR Secondary Vault is read only.
-                  For this reason, we don't allow other Replication modes to operate at the same time. This cluster is also
+                  For this reason, we don't allow other Replication modes to operate at the same time. This cluster is
+                  also
                   currently operating as a Performance {{capitalize cluster.performance.modeForUrl}}.
                 </p>
               {{/if}}
@@ -217,14 +197,16 @@
             </div>
             <div class="field">
               <label for="primary_api_addr" class="is-label">
-                Primary API address {{#unless (and token (not tokenIncludesAPIAddr))}}<em class="is-optional">(optional)</em>{{/unless}}
+                Primary API address {{#unless (and token (not tokenIncludesAPIAddr))}}<em
+                    class="is-optional">(optional)</em>{{/unless}}
               </label>
               <div class="control">
                 {{input value=primary_api_addr id="primary_api_addr" name="primary_api_addr" class="input"}}
               </div>
               <p class="help {{if (and token (not tokenIncludesAPIAddr)) 'is-danger' 'has-text-grey'}}">
                 {{#if (and token (not tokenIncludesAPIAddr))}}
-                  The supplied token does not contain an embedded address for the primary cluster. Please enter the primary cluster's API address (normal Vault address).
+                  The supplied token does not contain an embedded address for the primary cluster. Please enter the
+                  primary cluster's API address (normal Vault address).
                 {{else}}
                   Set this to the API address (normal Vault address) to override the
                   value embedded in the token.
@@ -239,7 +221,8 @@
                 {{input value=ca_file id="ca_file" name="ca_file" class="input"}}
               </div>
               <p class="help has-text-grey">
-                Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the primary.
+                Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token
+                from the primary.
               </p>
             </div>
             <div class="field">
@@ -250,11 +233,13 @@
                 {{input value=ca_path id="ca_path" name="ca_file" class="input"}}
               </div>
               <p class="help has-text-grey">
-                Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping the token from the primary.
+                Specifies the path to a CA root directory containing PEM-format files that the secondary can use when
+                unwrapping the token from the primary.
               </p>
             </div>
             <p>
-              Note: If both <code>CA file</code> and <code>CA path</code> are not given, they default to system CA roots.
+              Note: If both <code>CA file</code> and <code>CA path</code> are not given, they default to system CA
+              roots.
             </p>
           {{/if}}
         {{else}}
@@ -273,86 +258,115 @@
     {{/if}}
   </form>
 {{else if showModeSummary}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        Replication
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <h3 class="title is-flex-center is-5 is-marginless">
-      <Icon
-        @size="xl"
-        aria-hidden="true"
-        @glyph="replication"
+  {{#unless (and cluster.dr.replicationEnabled cluster.performance.replicationEnabled)}}
+    <PageHeader as |p|>
+      <p.levelLeft>
+        <h1 class="title is-3">
+          Replication
+        </h1>
+      </p.levelLeft>
+    </PageHeader>
+  {{/unless}}
+
+  {{#if (and (eq cluster.dr.mode "primary") (eq cluster.performance.mode "primary")) }}
+    <ReplicationPage @model={{cluster}} as |Page|>
+      <Page.header
+        @showTabs={{true}}
       />
-      Disaster Recovery (DR)
-    </h3>
-    {{#if cluster.dr.replicationEnabled}}
-      {{#link-to
-        "mode.index"
-        "dr"
-        class="link-plain"
-      }}
+      <Page.dashboard
+        @componentToRender='replication-summary-card' as |Dashboard|>
+        <Dashboard.card
+          @title="Disaster Recovery"
+        />
+        <Dashboard.card
+          @title="Performance"
+        />
+      </Page.dashboard>
+    </ReplicationPage>
+  {{else}}
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <h3 class="title is-flex-center is-5 is-marginless">
+        <Icon @size="xl" aria-hidden="true" @glyph="replication" />
+        Disaster Recovery (DR)
+      </h3>
+      {{#if cluster.dr.replicationEnabled}}
+        {{#if submit.isRunning }}
+          <LayoutLoading />
+        {{else}}
+          {{#link-to
+            "mode.index"
+            "dr"
+            class="link-plain"
+          }}
+            {{replication-mode-summary
+              mode="dr"
+              cluster=cluster
+              tagName="span"
+            }}
+          {{/link-to}}
+        {{/if}}
+      {{else}}
         {{replication-mode-summary
           mode="dr"
           cluster=cluster
-          tagName="span"
+          tagName="div"
         }}
-      {{/link-to}}
-    {{else}}
-      {{replication-mode-summary
-        mode="dr"
-        cluster=cluster
-        tagName="div"
-      }}
-    {{/if}}
-  </div>
-  <div class="box is-bottomless is-fullwidth is-marginless">
-    <h3 class="title is-flex-center is-5 is-marginless">
-      <Icon
-        @size="xl"
-        aria-hidden="true"
-        @glyph="perf-replication"
-      />
-      Performance
-    </h3>
-    {{#if cluster.dr.replicationEnabled}}
-      {{#link-to
-        "mode.index"
-        "performance"
-        class="link-plain"
-      }}
-        {{replication-mode-summary
-          mode="performance"
-          cluster=cluster
-          tagName="span"
-        }}
-      {{/link-to}}
-    {{else}}
-      {{replication-mode-summary
-        mode="performance"
-        cluster=cluster
-        tagName="div"
-      }}
-    {{/if}}
-  </div>
+      {{/if}}
+    </div>
+      {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
+      <div class="box is-bottomless is-fullwidth is-marginless">
+        <h3 class="title is-flex-center is-5 is-marginless">
+          <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+          Performance
+        </h3>
+          {{#link-to
+            "mode.index"
+            "performance"
+            class="link-plain"
+          }}
+            {{replication-mode-summary
+              mode="performance"
+              cluster=cluster
+              tagName="span"
+            }}
+          {{/link-to}}
+      </div>
+    {{/unless}}
+  {{/if}}
 {{else}}
   {{#if (eq replicationAttrs.mode 'initializing')}}
     The cluster is initializing replication. This may take some time.
   {{else}}
-    {{info-table-row label="Mode" value=replicationAttrs.mode}}
-    {{info-table-row label="Replication set" value=replicationAttrs.clusterId}}
-    {{info-table-row label="Secondary ID" value=replicationAttrs.secondaryId}}
-    {{info-table-row label="State" value=replicationAttrs.state}}
-    {{info-table-row label="Primary cluster address" value=replicationAttrs.primaryClusterAddr}}
-    {{info-table-row label="Replication state" value=replicationAttrs.replicationState}}
-    {{info-table-row label="Last WAL entry" value=replicationAttrs.lastWAL}}
-    {{info-table-row label="Last Remote WAL entry" value=replicationAttrs.lastRemoteWAL}}
-    {{info-table-row label="Merkle root index" value=replicationAttrs.merkleRoot}}
-    {{#if replicationAttrs.syncProgress}}
-      {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
-    {{/if}}
+    <p>{{cluster.replicationModeStatus.cluster_id}}</p>
+    <div class="replication">
+      <ReplicationPage @model={{cluster}} as |Page|>
+        <Page.dashboard
+          @data={{cluster}}
+          @componentToRender={{if (eq replicationAttrs.mode 'secondary') 'replication-secondary-card' 'replication-primary-card' }}
+          as |Dashboard|>
+          {{#if (eq replicationAttrs.mode 'secondary')}}
+            <Dashboard.card
+              @title="Status"
+            />
+            <Dashboard.card
+              @title="Primary cluster"
+            />
+          {{else}}
+            <Dashboard.card
+              @title='State'
+              @description='The cluster’s current operating state.'
+              @glyph={{get (cluster-states replicationAttrs.state) "glyph"}}
+              @metric={{replicationAttrs.state}} />
+            <Dashboard.card
+              @title='Last WAL entry'
+              @description='Index of last Write Ahead Logs entry written on local storage. Updates every ten seconds.'
+              @metric={{format-number replicationAttrs.lastWAL}} />
+            <Dashboard.secondaryCard
+              @cluster={{cluster}}
+              @replicationAttrs={{replicationAttrs}} />
+          {{/if}}
+        </Page.dashboard>
+      </ReplicationPage>
+    </div>
   {{/if}}
-{{/if}}
+{{/unless}}

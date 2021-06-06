@@ -15,7 +15,7 @@ export default Mixin.create({
   navToNearestAncestor: task(function*(key) {
     let ancestors = utils.ancestorKeysForKey(key);
     let errored = false;
-    let nearest = ancestors && ancestors.pop();
+    let nearest = ancestors.pop();
     while (nearest) {
       try {
         let transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);

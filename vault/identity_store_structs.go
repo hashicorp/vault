@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -17,10 +17,8 @@ const (
 	entityPrefix = "entity/"
 )
 
-var (
-	// metaKeyFormatRegEx checks if a metadata key string is valid
-	metaKeyFormatRegEx = regexp.MustCompile(`^[a-zA-Z0-9=/+_-]+$`).MatchString
-)
+// metaKeyFormatRegEx checks if a metadata key string is valid
+var metaKeyFormatRegEx = regexp.MustCompile(`^[a-zA-Z0-9=/+_-]+$`).MatchString
 
 const (
 	// The meta key prefix reserved for Vault's internal use
@@ -51,11 +49,17 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// A lock to make sure things are consistent
-	lock sync.RWMutex
+	// locks to make sure things are consistent
+	lock     sync.RWMutex
+	oidcLock sync.RWMutex
 
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex
+
+	// oidcCache stores common response data as well as when the periodic func needs
+	// to run. This is conservatively managed, and most writes to the OIDC endpoints
+	// will invalidate the cache.
+	oidcCache *oidcCache
 
 	// logger is the server logger copied over from core
 	logger log.Logger
@@ -80,4 +84,8 @@ type groupDiff struct {
 	New        []*identity.Group
 	Deleted    []*identity.Group
 	Unmodified []*identity.Group
+}
+
+type casesensitivity struct {
+	DisableLowerCasedNames bool `json:"disable_lower_cased_names"`
 }

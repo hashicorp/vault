@@ -13,12 +13,14 @@ type awsStsEntry struct {
 	StsRole string `json:"sts_role"`
 }
 
-func pathListSts(b *backend) *framework.Path {
+func (b *backend) pathListSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/?",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathStsList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathStsList,
+			},
 		},
 
 		HelpSynopsis:    pathListStsHelpSyn,
@@ -26,7 +28,7 @@ func pathListSts(b *backend) *framework.Path {
 	}
 }
 
-func pathConfigSts(b *backend) *framework.Path {
+func (b *backend) pathConfigSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
 		Fields: map[string]*framework.FieldSchema{
@@ -45,11 +47,19 @@ The Vault server must have permissions to assume this role.`,
 
 		ExistenceCheck: b.pathConfigStsExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.pathConfigStsCreateUpdate,
-			logical.UpdateOperation: b.pathConfigStsCreateUpdate,
-			logical.ReadOperation:   b.pathConfigStsRead,
-			logical.DeleteOperation: b.pathConfigStsDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigStsCreateUpdate,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigStsCreateUpdate,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigStsRead,
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigStsDelete,
+			},
 		},
 
 		HelpSynopsis:    pathConfigStsSyn,
@@ -240,6 +250,7 @@ by assumption of these STS roles.
 The environment in which the Vault server resides must have access to assume the
 given STS roles.
 `
+
 const pathListStsHelpSyn = `
 List all the AWS account/STS role relationships registered with Vault.
 `

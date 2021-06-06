@@ -122,7 +122,9 @@ module('Unit | Service | control group', function(hooks) {
     let url;
     let expected = { ...error, uiParams: { url } };
     let transition = {
-      targetName: 'vault.cluster.foo',
+      to: {
+        name: 'vault.cluster.foo',
+      },
     };
     let service = this.owner.factoryFor('service:control-group').create({
       urlFromTransition: sinon.spy(),
@@ -161,15 +163,24 @@ module('Unit | Service | control group', function(hooks) {
 
   test('urlFromTransition', function(assert) {
     let transition = {
-      targetName: 'vault.cluster.foo',
-      params: {
-        vault: {},
-        cluster: { cluster_name: 'vault' },
-        foo: { bar: '1' },
+      to: {
+        name: 'vault.cluster.foo',
+        params: { bar: '1' },
+        paramNames: ['bar'],
+        queryParams: {},
+        parent: {
+          name: 'vault.cluster',
+          params: { cluster_name: 'vault' },
+          paramNames: ['cluster_name'],
+          parent: {
+            name: 'vault',
+            params: {},
+            paramNames: [],
+          },
+        },
       },
-      queryParams: {},
     };
-    let expected = [transition.targetName, { cluster_name: 'vault' }, { bar: '1' }, { queryParams: {} }];
+    let expected = [transition.to.name, 'vault', '1', { queryParams: {} }];
     let service = this.owner.lookup('service:control-group');
     service.urlFromTransition(transition);
     assert.ok(this.router.urlFor.calledWith(...expected), 'calls urlFor with expected args');

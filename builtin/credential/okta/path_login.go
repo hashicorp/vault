@@ -3,7 +3,6 @@ package okta
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/go-errors/errors"
@@ -16,14 +15,18 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login/(?P<username>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
+			},
+			"totp": {
+				Type:        framework.TypeString,
+				Description: "TOTP passcode.",
 			},
 		},
 
@@ -55,8 +58,9 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
+	totp := d.Get("totp").(string)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -70,15 +74,12 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		resp = &logical.Response{}
 	}
 
-	sort.Strings(policies)
-
 	cfg, err := b.getConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	resp.Auth = &logical.Auth{
-		Policies: policies,
+	auth := &logical.Auth{
 		Metadata: map[string]string{
 			"username": username,
 			"policies": strings.Join(policies, ","),
@@ -87,15 +88,18 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"password": password,
 		},
 		DisplayName: username,
-		LeaseOptions: logical.LeaseOptions{
-			TTL:       cfg.TTL,
-			MaxTTL:    cfg.MaxTTL,
-			Renewable: true,
-		},
 		Alias: &logical.Alias{
 			Name: username,
 		},
 	}
+	cfg.PopulateTokenAuth(auth)
+
+	// Add in configured policies from mappings
+	if len(policies) > 0 {
+		auth.Policies = append(auth.Policies, policies...)
+	}
+
+	resp.Auth = auth
 
 	for _, groupName := range groupNames {
 		if groupName == "" {
@@ -113,23 +117,30 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
-	if len(loginPolicies) == 0 {
-		return resp, err
-	}
-
-	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies have changed, not renewing")
-	}
-
 	cfg, err := b.getConfig(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
+	// No TOTP entry is possible on renew. If push MFA is enabled it will still be triggered, however.
+	// Sending "" as the totp will prompt the push action if it is configured.
+	loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, "")
+	if err != nil || (resp != nil && resp.IsError()) {
+		return resp, err
+	}
+
+	finalPolicies := cfg.TokenPolicies
+	if len(loginPolicies) > 0 {
+		finalPolicies = append(finalPolicies, loginPolicies...)
+	}
+	if !policyutil.EquivalentPolicies(finalPolicies, req.Auth.TokenPolicies) {
+		return nil, fmt.Errorf("policies have changed, not renewing")
+	}
+
 	resp.Auth = req.Auth
-	resp.Auth.TTL = cfg.TTL
-	resp.Auth.MaxTTL = cfg.MaxTTL
+	resp.Auth.Period = cfg.TokenPeriod
+	resp.Auth.TTL = cfg.TokenTTL
+	resp.Auth.MaxTTL = cfg.TokenMaxTTL
 
 	// Remove old aliases
 	resp.Auth.GroupAliases = nil
@@ -141,11 +152,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	return resp, nil
-
 }
 
 func (b *backend) getConfig(ctx context.Context, req *logical.Request) (*ConfigEntry, error) {
-
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err

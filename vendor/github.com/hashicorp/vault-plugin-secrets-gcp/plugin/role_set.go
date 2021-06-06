@@ -2,28 +2,29 @@ package gcpsecrets
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"time"
-
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil"
-	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iam/v1"
 )
 
+var serviceAccountRegex = regexp.MustCompile("[^a-zA-Z0-9-]+")
+
 const (
-	serviceAccountMaxLen          = 30
-	serviceAccountDisplayNameTmpl = "Service account for Vault secrets backend role set %s"
+	serviceAccountMaxLen             = 30
+	serviceAccountEmailTemplate      = "%s@%s.iam.gserviceaccount.com"
+	serviceAccountDisplayNameHashLen = 8
+	serviceAccountDisplayNameMaxLen  = 100
+	serviceAccountDisplayNameTmpl    = "Service account for Vault secrets backend role set %s"
 )
 
 type RoleSet struct {
@@ -37,6 +38,19 @@ type RoleSet struct {
 	TokenGen  *TokenGenerator
 }
 
+// boundResources is a helper method to get the bound gcpAccountResources
+func (rs *RoleSet) boundResources() *gcpAccountResources {
+	if rs.AccountId == nil {
+		return nil
+	}
+	return &gcpAccountResources{
+		accountId: *rs.AccountId,
+		bindings:  rs.Bindings,
+		tokenGen:  rs.TokenGen,
+	}
+}
+
+// validate checks whether a RoleSet has been populated properly before saving
 func (rs *RoleSet) validate() error {
 	var err *multierror.Error
 	if rs.Name == "" {
@@ -74,6 +88,7 @@ func (rs *RoleSet) validate() error {
 	return err.ErrorOrNil()
 }
 
+// save saves a roleset to storage
 func (rs *RoleSet) save(ctx context.Context, s logical.Storage) error {
 	if err := rs.validate(); err != nil {
 		return err
@@ -88,323 +103,262 @@ func (rs *RoleSet) save(ctx context.Context, s logical.Storage) error {
 }
 
 func (rs *RoleSet) bindingHash() string {
-	ssum := sha256.Sum256([]byte(rs.RawBindings)[:])
-	return base64.StdEncoding.EncodeToString(ssum[:])
+	return getStringHash(rs.RawBindings)
 }
 
-func (rs *RoleSet) getServiceAccount(iamAdmin *iam.Service) (*iam.ServiceAccount, error) {
-	if rs.AccountId == nil {
-		return nil, fmt.Errorf("role set '%s' is invalid, has no associated service account", rs.Name)
+// getServiceAccount fetches an service account from the GCP IAM admin API.
+func (b *backend) getServiceAccount(iamAdmin *iam.Service, accountId *gcputil.ServiceAccountId) (*iam.ServiceAccount, error) {
+	if accountId == nil {
+		return nil, fmt.Errorf("cannot fetch nil service account")
 	}
 
-	account, err := iamAdmin.Projects.ServiceAccounts.Get(rs.AccountId.ResourceName()).Do()
+	account, err := iamAdmin.Projects.ServiceAccounts.Get(accountId.ResourceName()).Do()
 	if err != nil {
-		return nil, fmt.Errorf("could not find service account: %v. If account was deleted, role set must be updated (write to roleset/%s/rotate) before generating new secrets", err, rs.Name)
+		return nil, errwrap.Wrapf(fmt.Sprintf("could not find service account %q: {{err}}", accountId.ResourceName()), err)
 	} else if account == nil {
-		return nil, fmt.Errorf("roleset service account was removed - role set must be updated (path roleset/%s/rotate) before generating new secrets", rs.Name)
+		return nil, fmt.Errorf("couldn't fetch service account %q: {{err}}", accountId.ResourceName())
 	}
 
 	return account, nil
 }
 
-type ResourceBindings map[string]util.StringSet
+// saveRoleSetWithNewAccount rotates the role set service account. This includes creating a new service account with
+// a new name and deleting the old service account, updating keys or bindings as required.
+func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, req *logical.Request, rs *RoleSet, project string, newBinds ResourceBindings, scopes []string) (warnings []string, err error) {
+	b.Logger().Debug("updating roleset with new account")
 
-func (rb ResourceBindings) asOutput() map[string][]string {
-	out := make(map[string][]string)
-	for k, v := range rb {
-		out[k] = v.ToSlice()
+	oldResources := rs.boundResources()
+
+	// Generate name for new account
+	newSaName := generateAccountNameForRoleSet(rs.Name)
+
+	// Construct IDs for new resources.
+	// The actual GCP resources are not created yet, but we need the IDs to create WAL entries.
+	newResources := &gcpAccountResources{
+		accountId: gcputil.ServiceAccountId{
+			Project:   project,
+			EmailOrId: emailForServiceAccountName(project, newSaName),
+		},
+		bindings: newBinds,
 	}
-	return out
-}
+	if len(scopes) > 0 {
+		newResources.tokenGen = &TokenGenerator{Scopes: scopes}
+	}
 
-type TokenGenerator struct {
-	KeyName    string
-	B64KeyJSON string
-
-	Scopes []string
-}
-
-func (b *backend) saveRoleSetWithNewAccount(ctx context.Context, s logical.Storage, rs *RoleSet, project string, newBinds ResourceBindings, scopes []string) (warning []string, err error) {
-	b.rolesetLock.Lock()
-	defer b.rolesetLock.Unlock()
-
-	httpC, err := b.HTTPClient(s)
+	// Add WALs for both old and new resources.
+	// WAL callback checks whether resources are still being used by roleset so
+	// there is no harm in adding WALs early, or adding WALs for resources that
+	// will eventually get cleaned up.
+	b.Logger().Debug("adding WALs for old roleset resources")
+	oldWalIds, err := b.addWalsForRoleSetResources(ctx, req, rs.Name, oldResources)
 	if err != nil {
 		return nil, err
 	}
 
-	iamAdmin, err := b.IAMClient(s)
+	b.Logger().Debug("adding WALs for new roleset resources")
+	newWalIds, err := b.addWalsForRoleSetResources(ctx, req, rs.Name, newResources)
 	if err != nil {
 		return nil, err
 	}
 
-	iamHandle := iamutil.GetIamHandle(httpC, useragent.String())
-
-	oldAccount := rs.AccountId
-	oldBindings := rs.Bindings
-	oldTokenKey := rs.TokenGen
-
-	oldWals, err := rs.addWALsForCurrentAccount(ctx, s)
+	// Created new RoleSet resources
+	// Create new service account
+	sa, err := b.createServiceAccount(ctx, req, newResources.accountId.Project, newSaName, fmt.Sprintf("role set %s", rs.Name))
 	if err != nil {
-		tryDeleteWALs(ctx, s, oldWals...)
-		return nil, errwrap.Wrapf("failed to create WAL for cleaning up old account: {{err}}", err)
-	}
-
-	newWals := make([]string, 0, len(newBinds)+2)
-	walId, err := rs.newServiceAccount(ctx, s, iamAdmin, project)
-	if err != nil {
-		tryDeleteWALs(ctx, s, oldWals...)
 		return nil, err
 	}
-	newWals = append(newWals, walId)
 
-	binds := rs.Bindings
-	if newBinds != nil {
-		binds = newBinds
-		rs.Bindings = newBinds
-	}
-	walIds, err := rs.updateIamPolicies(ctx, s, b.iamResources, iamHandle, binds)
-	if err != nil {
-		tryDeleteWALs(ctx, s, oldWals...)
+	// Create new IAM bindings.
+	if err := b.createIamBindings(ctx, req, sa.Email, newResources.bindings); err != nil {
 		return nil, err
 	}
-	newWals = append(newWals, walIds...)
 
-	if rs.SecretType == SecretTypeAccessToken {
-		walId, err := rs.newKeyForTokenGen(ctx, s, iamAdmin, scopes)
+	// Create new token gen if a stubbed tokenGenerator (with scopes) is given.
+	if newResources.tokenGen != nil && len(newResources.tokenGen.Scopes) > 0 {
+		tokenGen, err := b.createNewTokenGen(ctx, req, sa.Name, newResources.tokenGen.Scopes)
 		if err != nil {
-			tryDeleteWALs(ctx, s, oldWals...)
 			return nil, err
 		}
-		newWals = append(newWals, walId)
+		newResources.tokenGen = tokenGen
 	}
 
-	if err := rs.save(ctx, s); err != nil {
-		tryDeleteWALs(ctx, s, oldWals...)
+	// Edit roleset with new resources and save to storage.
+	rs.AccountId = &newResources.accountId
+	rs.Bindings = newResources.bindings
+	rs.TokenGen = newResources.tokenGen
+	if err := rs.save(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
-	// Delete WALs for cleaning up new resources now that they have been saved.
-	tryDeleteWALs(ctx, s, newWals...)
-
-	// Try deleting old resources (WALs exist so we can ignore failures)
-	if oldAccount == nil || oldAccount.EmailOrId == "" {
-		// nothing to clean up
-		return nil, nil
+	// We successfully saved the new roleset with new resources, so try cleaning up WALs
+	// that would rollback the roleset resources (will no-op if still in use by roleset)
+	b.tryDeleteWALs(ctx, req.Storage, newWalIds...)
+	if cleanupErr := b.tryDeleteRoleSetResources(ctx, req, oldResources, oldWalIds); cleanupErr != nil {
+		b.Logger().Warn(
+			"unable to clean up unused old GCP resources for roleset. WALs exist to clean up but ignoring error",
+			"roleset", rs.Name, "errors", cleanupErr)
+		return []string{cleanupErr.Error()}, nil
 	}
-
-	// Return any errors as warnings so user knows immediate cleanup failed
-	warnings := make([]string, 0)
-	if errs := b.removeBindings(ctx, iamHandle, oldAccount.EmailOrId, oldBindings); errs != nil {
-		warnings = make([]string, len(errs.Errors), len(errs.Errors)+2)
-		for idx, err := range errs.Errors {
-			warnings[idx] = fmt.Sprintf("unable to immediately delete old binding (WAL cleanup entry has been added): %v", err)
-		}
-	}
-	if err := b.deleteServiceAccount(ctx, iamAdmin, oldAccount); err != nil {
-		warnings = append(warnings, fmt.Sprintf("unable to immediately delete old account (WAL cleanup entry has been added): %v", err))
-	}
-	if err := b.deleteTokenGenKey(ctx, iamAdmin, oldTokenKey); err != nil {
-		warnings = append(warnings, fmt.Sprintf("unable to immediately delete old key (WAL cleanup entry has been added): %v", err))
-	}
-	return warnings, nil
+	return nil, nil
 }
 
-func (b *backend) saveRoleSetWithNewTokenKey(ctx context.Context, s logical.Storage, rs *RoleSet, scopes []string) (warning string, err error) {
-	b.rolesetLock.Lock()
-	defer b.rolesetLock.Unlock()
-
+// saveRoleSetWithNewTokenKey rotates the role set access_token key and saves it to storage.
+func (b *backend) saveRoleSetWithNewTokenKey(ctx context.Context, req *logical.Request, rs *RoleSet, scopes []string) (warning string, err error) {
 	if rs.SecretType != SecretTypeAccessToken {
 		return "", fmt.Errorf("a key is not saved or used for non-access-token role set '%s'", rs.Name)
 	}
+	if rs.AccountId == nil {
+		return "", fmt.Errorf("unable to save roleset with new key - account ID was nil")
+	}
 
-	iamAdmin, err := b.IAMClient(s)
+	b.Logger().Debug("updating roleset with new account key")
+
+	oldTokenGen := rs.TokenGen
+
+	// Add WALs for new TokenGen - since we don't have a key ID yet, give an empty key name so WAL
+	// will know to just clear keys that aren't being used. This also covers up cleaning up
+	// the old token generator, so we don't add a separate WAL for that.
+	walId, err := b.addWalRoleSetServiceAccountKey(ctx, req, rs.Name, rs.AccountId, "")
 	if err != nil {
 		return "", err
 	}
 
-	oldKeyWalId := ""
-	if rs.TokenGen != nil {
-		if oldKeyWalId, err = framework.PutWAL(ctx, s, walTypeAccountKey, &walAccountKey{
-			RoleSet:            rs.Name,
-			KeyName:            rs.TokenGen.KeyName,
-			ServiceAccountName: rs.AccountId.ResourceName(),
-		}); err != nil {
-			return "", errwrap.Wrapf("unable to create WAL for deleting old key: {{err}}", err)
-		}
-	}
-	oldKeyGen := rs.TokenGen
-
-	newKeyWalId, err := rs.newKeyForTokenGen(ctx, s, iamAdmin, scopes)
+	newTokenGen, err := b.createNewTokenGen(ctx, req, rs.AccountId.ResourceName(), scopes)
 	if err != nil {
-		tryDeleteWALs(ctx, s, oldKeyWalId)
 		return "", err
 	}
 
-	if err := rs.save(ctx, s); err != nil {
-		tryDeleteWALs(ctx, s, oldKeyWalId)
+	// Edit roleset with new key and save to storage.
+	rs.TokenGen = newTokenGen
+	if err := rs.save(ctx, req.Storage); err != nil {
 		return "", err
 	}
 
-	// Delete WALs for cleaning up new key now that it's been saved.
-	tryDeleteWALs(ctx, s, newKeyWalId)
-	if err := b.deleteTokenGenKey(ctx, iamAdmin, oldKeyGen); err != nil {
-		return errwrap.Wrapf("unable to delete old key (delayed cleaned up WAL entry added): {{err}}", err).Error(), nil
+	// Try deleting the old key.
+	iamAdmin, err := b.IAMAdminClient(req.Storage)
+	if err != nil {
+		return "", err
+	}
+	if err := b.deleteTokenGenKey(ctx, iamAdmin, oldTokenGen); err != nil {
+		return errwrap.Wrapf("roleset update succeeded but got error while trying to delete old key - will be cleaned up later by WAL: {{err}}", err).Error(), nil
 	}
 
+	b.tryDeleteWALs(ctx, req.Storage, walId)
 	return "", nil
 }
 
-func (rs *RoleSet) addWALsForCurrentAccount(ctx context.Context, s logical.Storage) ([]string, error) {
-	if rs.AccountId == nil {
+// addWalsForRoleSetResources creates WALs to clean up a roleset's service account, bindings, and a key if needed.
+func (b *backend) addWalsForRoleSetResources(ctx context.Context, req *logical.Request, rolesetName string, boundResources *gcpAccountResources) (walIds []string, err error) {
+	if boundResources == nil {
+		b.Logger().Debug("skip WALs for nil roleset resources")
 		return nil, nil
 	}
-	wals := make([]string, 0, len(rs.Bindings)+2)
-	walId, err := framework.PutWAL(ctx, s, walTypeAccount, &walAccount{
-		RoleSet: rs.Name,
-		Id: gcputil.ServiceAccountId{
-			Project:   rs.AccountId.Project,
-			EmailOrId: rs.AccountId.EmailOrId,
-		},
+
+	walIds = make([]string, 0, len(boundResources.bindings)+2)
+	walId, err := framework.PutWAL(ctx, req.Storage, walTypeAccount, &walAccount{
+		RoleSet: rolesetName,
+		Id:      boundResources.accountId,
 	})
 	if err != nil {
-		return nil, err
+		return walIds, errwrap.Wrapf("unable to create WAL entry to clean up service account: {{err}}", err)
 	}
-	wals = append(wals, walId)
-	for resource, roles := range rs.Bindings {
-		var walId string
-		walId, err = framework.PutWAL(ctx, s, walTypeIamPolicy, &walIamPolicy{
-			RoleSet: rs.Name,
-			AccountId: gcputil.ServiceAccountId{
-				Project:   rs.AccountId.Project,
-				EmailOrId: rs.AccountId.EmailOrId,
-			},
-			Resource: resource,
-			Roles:    roles.ToSlice(),
+	walIds = append(walIds, walId)
+
+	for resource, roles := range boundResources.bindings {
+		walId, err := framework.PutWAL(ctx, req.Storage, walTypeIamPolicy, &walIamPolicy{
+			RoleSet:   rolesetName,
+			AccountId: boundResources.accountId,
+			Resource:  resource,
+			Roles:     roles.ToSlice(),
 		})
 		if err != nil {
-			return nil, err
+			return walIds, errwrap.Wrapf("unable to create WAL entry to clean up service account bindings: {{err}}", err)
 		}
-		wals = append(wals, walId)
+		walIds = append(walIds, walId)
 	}
 
-	if rs.SecretType == SecretTypeAccessToken && rs.TokenGen != nil {
-		walId, err := framework.PutWAL(ctx, s, walTypeAccountKey, &walAccountKey{
-			RoleSet:            rs.Name,
-			KeyName:            rs.TokenGen.KeyName,
-			ServiceAccountName: rs.AccountId.ResourceName(),
-		})
+	if boundResources.tokenGen != nil {
+		walId, err := b.addWalRoleSetServiceAccountKey(ctx, req, rolesetName, &boundResources.accountId, boundResources.tokenGen.KeyName)
 		if err != nil {
 			return nil, err
 		}
-		wals = append(wals, walId)
+		walIds = append(walIds, walId)
 	}
-	return wals, nil
+	return walIds, nil
 }
 
-func (rs *RoleSet) newServiceAccount(ctx context.Context, s logical.Storage, iamAdmin *iam.Service, project string) (string, error) {
-	saEmailPrefix := roleSetServiceAccountName(rs.Name)
-	projectName := fmt.Sprintf("projects/%s", project)
-	displayName := fmt.Sprintf(serviceAccountDisplayNameTmpl, rs.Name)
+// addWalRoleSetServiceAccountKey creates WAL to clean up a service account key (for access tokens) if needed.
+func (b *backend) addWalRoleSetServiceAccountKey(ctx context.Context, req *logical.Request, roleset string, accountId *gcputil.ServiceAccountId, keyName string) (string, error) {
+	if accountId == nil {
+		return "", fmt.Errorf("given nil account ID for WAL for roleset service account key")
+	}
 
-	walId, err := framework.PutWAL(ctx, s, walTypeAccount, &walAccount{
-		RoleSet: rs.Name,
-		Id: gcputil.ServiceAccountId{
-			Project:   project,
-			EmailOrId: fmt.Sprintf("%s@%s.iam.gserviceaccount.com", saEmailPrefix, project),
-		},
+	b.Logger().Debug("add WAL for service account key", "account", accountId.ResourceName(), "keyName", keyName)
+
+	walId, err := framework.PutWAL(ctx, req.Storage, walTypeAccount, &walAccountKey{
+		RoleSet:            roleset,
+		ServiceAccountName: accountId.ResourceName(),
+		KeyName:            keyName,
 	})
 	if err != nil {
-		return "", errwrap.Wrapf("unable to create WAL entry for generating new service account: {{err}}", err)
-	}
-
-	sa, err := iamAdmin.Projects.ServiceAccounts.Create(
-		projectName, &iam.CreateServiceAccountRequest{
-			AccountId:      saEmailPrefix,
-			ServiceAccount: &iam.ServiceAccount{DisplayName: displayName},
-		}).Do()
-	if err != nil {
-		return walId, errwrap.Wrapf(fmt.Sprintf("unable to create new service account under project '%s': {{err}}", projectName), err)
-	}
-	rs.AccountId = &gcputil.ServiceAccountId{
-		Project:   project,
-		EmailOrId: sa.Email,
+		return "", errwrap.Wrapf("unable to create WAL entry to clean up service account key: {{err}}", err)
 	}
 	return walId, nil
 }
 
-func (rs *RoleSet) newKeyForTokenGen(ctx context.Context, s logical.Storage, iamAdmin *iam.Service, scopes []string) (string, error) {
-	walId, err := framework.PutWAL(ctx, s, walTypeAccountKey, &walAccountKey{
-		RoleSet:            rs.Name,
-		KeyName:            "",
-		ServiceAccountName: rs.AccountId.ResourceName(),
-	})
-	if err != nil {
-		return "", err
+// tryDeleteRoleSetResources tries to delete GCP resources previously managed by a roleset.
+// This assumes that deletion of these resources will already be guaranteed by WAL rollbacks (referred to by the walIds)
+// and will return errors as a list of warnings instead.
+func (b *backend) tryDeleteRoleSetResources(ctx context.Context, req *logical.Request, boundResources *gcpAccountResources, walIds []string) error {
+	if boundResources == nil {
+		b.Logger().Debug("skip deletion for nil roleset resources")
+		return nil
 	}
 
-	key, err := iamAdmin.Projects.ServiceAccounts.Keys.Create(rs.AccountId.ResourceName(),
-		&iam.CreateServiceAccountKeyRequest{
-			PrivateKeyType: privateKeyTypeJson,
-		}).Do()
+	httpC, err := b.HTTPClient(req.Storage)
 	if err != nil {
-		framework.DeleteWAL(ctx, s, walId)
-		return "", err
+		return err
 	}
-	rs.TokenGen = &TokenGenerator{
-		KeyName:    key.Name,
-		B64KeyJSON: key.PrivateKeyData,
-		Scopes:     scopes,
+
+	iamAdmin, err := b.IAMAdminClient(req.Storage)
+	if err != nil {
+		return err
 	}
-	return walId, nil
+
+	iamHandle := iamutil.GetApiHandle(httpC, useragent.String())
+
+	var merr *multierror.Error
+	if boundResources.tokenGen != nil {
+		if err := b.deleteTokenGenKey(ctx, iamAdmin, boundResources.tokenGen); err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("unable to delete key under service account %q (WAL entry to clean-up later has been added): %v", boundResources.accountId.ResourceName(), err))
+		}
+	}
+
+	if merr := b.removeBindings(ctx, iamHandle, boundResources.accountId.EmailOrId, boundResources.bindings); merr != nil {
+		for _, err := range merr.Errors {
+			merr = multierror.Append(merr, fmt.Errorf("unable to delete IAM policy bindings for service account %q (WAL entry to clean-up later has been added): %v", boundResources.accountId.EmailOrId, err))
+		}
+	}
+
+	if err := b.deleteServiceAccount(ctx, iamAdmin, boundResources.accountId); err != nil {
+		merr = multierror.Append(merr, fmt.Errorf("unable to delete service account %q (WAL entry to clean-up later has been added): %v", boundResources.accountId.ResourceName(), err))
+	}
+
+	// If resources were deleted, we don't need the WAL rollbacks we created for these resources.
+	if merr == nil || merr.Len() == 0 {
+		b.tryDeleteWALs(ctx, req.Storage, walIds...)
+	}
+	return merr.ErrorOrNil()
 }
 
-func (rs *RoleSet) updateIamPolicies(ctx context.Context, s logical.Storage, enabledIamResources iamutil.IamResourceParser, iamHandle *iamutil.IamHandle, rb ResourceBindings) ([]string, error) {
-	wals := make([]string, 0, len(rb))
-	for rName, roles := range rb {
-		walId, err := framework.PutWAL(ctx, s, walTypeIamPolicy, &walIamPolicy{
-			RoleSet: rs.Name,
-			AccountId: gcputil.ServiceAccountId{
-				Project:   rs.AccountId.Project,
-				EmailOrId: rs.AccountId.EmailOrId,
-			},
-			Resource: rName,
-			Roles:    roles.ToSlice(),
-		})
-		if err != nil {
-			return wals, err
-		}
-
-		resource, err := enabledIamResources.Parse(rName)
-		if err != nil {
-			return wals, err
-		}
-
-		p, err := iamHandle.GetIamPolicy(ctx, resource)
-		if err != nil {
-			return wals, err
-		}
-
-		changed, newP := p.AddBindings(&iamutil.PolicyDelta{
-			Roles: roles,
-			Email: rs.AccountId.EmailOrId,
-		})
-		if !changed || newP == nil {
-			continue
-		}
-
-		if _, err := iamHandle.SetIamPolicy(ctx, resource, newP); err != nil {
-			return wals, err
-		}
-		wals = append(wals, walId)
-	}
-	return wals, nil
-}
-
-func roleSetServiceAccountName(rsName string) (name string) {
+// generateAccountNameForRoleSet returns a new random name for a Vault service account based off roleset name and time.
+// Note this is the name rather than the full email (i.e. string before @)
+//
+// As an example, for roleset "my-role" this returns `vaultmy-role-1234613`
+//
+func generateAccountNameForRoleSet(rsName string) (name string) {
 	// Sanitize role name
-	reg := regexp.MustCompile("[^a-zA-Z0-9-]+")
-	rsName = reg.ReplaceAllString(rsName, "-")
+	rsName = serviceAccountRegex.ReplaceAllString(rsName, "-")
 
 	intSuffix := fmt.Sprintf("%d", time.Now().Unix())
 	fullName := fmt.Sprintf("vault%s-%s", rsName, intSuffix)

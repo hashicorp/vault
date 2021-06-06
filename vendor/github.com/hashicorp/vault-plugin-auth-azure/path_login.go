@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -17,35 +18,39 @@ func pathLogin(b *azureAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeString,
 				Description: `The token role.`,
 			},
-			"jwt": &framework.FieldSchema{
+			"jwt": {
 				Type:        framework.TypeString,
 				Description: `A signed JWT`,
 			},
-			"subscription_id": &framework.FieldSchema{
+			"subscription_id": {
 				Type:        framework.TypeString,
 				Description: `The subscription id for the instance.`,
 			},
-			"resource_group_name": &framework.FieldSchema{
+			"resource_group_name": {
 				Type:        framework.TypeString,
 				Description: `The resource group from the instance.`,
 			},
-			"vm_name": &framework.FieldSchema{
+			"vm_name": {
 				Type:        framework.TypeString,
 				Description: `The name of the virtual machine. This value is ignored if vmss_name is specified.`,
 			},
-			"vmss_name": &framework.FieldSchema{
+			"vmss_name": {
 				Type:        framework.TypeString,
 				Description: `The name of the virtual machine scale set the instance is in.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLogin,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -62,6 +67,25 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 	if roleName == "" {
 		return logical.ErrorResponse("role is required"), nil
 	}
+
+	role, err := b.role(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid role name %q", roleName)), nil
+	}
+
+	if len(role.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
+	}
+
 	subscriptionID := data.Get("subscription_id").(string)
 	resourceGroupName := data.Get("resource_group_name").(string)
 	vmssName := data.Get("vmss_name").(string)
@@ -73,14 +97,6 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 	}
 	if config == nil {
 		config = new(azureConfig)
-	}
-
-	role, err := b.role(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid role name %q", roleName)), nil
 	}
 
 	provider, err := b.getProvider(config)
@@ -109,27 +125,38 @@ func (b *azureAuthBackend) pathLogin(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Policies:    role.Policies,
-			DisplayName: idToken.Subject,
-			Period:      role.Period,
-			NumUses:     role.NumUses,
-			Alias: &logical.Alias{
-				Name: idToken.Subject,
-			},
-			InternalData: map[string]interface{}{
-				"role": roleName,
-			},
+	auth := &logical.Auth{
+		DisplayName: idToken.Subject,
+		Alias: &logical.Alias{
+			Name: idToken.Subject,
 			Metadata: map[string]string{
-				"role": roleName,
-			},
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       role.TTL,
-				MaxTTL:    role.MaxTTL,
+				"resource_group_name": resourceGroupName,
+				"subscription_id":     subscriptionID,
 			},
 		},
+		InternalData: map[string]interface{}{
+			"role": roleName,
+		},
+		Metadata: map[string]string{
+			"role":                roleName,
+			"resource_group_name": resourceGroupName,
+			"subscription_id":     subscriptionID,
+		},
+	}
+
+	if vmName != "" {
+		auth.Alias.Metadata["vm_name"] = vmName
+		auth.Metadata["vm_name"] = vmName
+	}
+	if vmssName != "" {
+		auth.Alias.Metadata["vmss_name"] = vmssName
+		auth.Metadata["vmss_name"] = vmssName
+	}
+
+	role.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	// Add groups to group aliases
@@ -185,7 +212,8 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 		return errors.New("subscription_id and resource_group_name are required")
 	}
 
-	var principalID, location *string
+	var location *string
+	principalIDs := map[string]struct{}{}
 
 	switch {
 	// If vmss name is specified, the vm name will be ignored and only the scale set
@@ -201,21 +229,25 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 			return errwrap.Wrapf("unable to retrieve virtual machine scale set metadata: {{err}}", err)
 		}
 
-		if vmss.Identity == nil {
-			return errors.New("vmss client did not return identity information")
-		}
-		if vmss.Identity.PrincipalID == nil {
-			return errors.New("vmss principal id is empty")
-		}
-
 		// Check bound scale sets
 		if len(role.BoundScaleSets) > 0 && !strListContains(role.BoundScaleSets, vmssName) {
 			return errors.New("scale set not authorized")
 		}
 
-		principalID = vmss.Identity.PrincipalID
 		location = vmss.Location
 
+		if vmss.Identity == nil {
+			return errors.New("vmss client did not return identity information")
+		}
+		// if system-assigned identity's principal id is available
+		if vmss.Identity.PrincipalID != nil {
+			principalIDs[to.String(vmss.Identity.PrincipalID)] = struct{}{}
+			break
+		}
+		// if not, look for user-assigned identities
+		for _, userIdentity := range vmss.Identity.UserAssignedIdentities {
+			principalIDs[to.String(userIdentity.PrincipalID)] = struct{}{}
+		}
 	case vmName != "":
 		client, err := b.provider.ComputeClient(subscriptionID)
 		if err != nil {
@@ -227,29 +259,32 @@ func (b *azureAuthBackend) verifyResource(ctx context.Context, subscriptionID, r
 			return errwrap.Wrapf("unable to retrieve virtual machine metadata: {{err}}", err)
 		}
 
+		location = vm.Location
+
 		if vm.Identity == nil {
 			return errors.New("vm client did not return identity information")
 		}
-
-		if vm.Identity.PrincipalID == nil {
-			return errors.New("vm principal id is empty")
-		}
-
 		// Check bound scale sets
 		if len(role.BoundScaleSets) > 0 {
 			return errors.New("bound scale set defined but this vm isn't in a scale set")
 		}
-
-		principalID = vm.Identity.PrincipalID
-		location = vm.Location
-
+		// if system-assigned identity's principal id is available
+		if vm.Identity.PrincipalID != nil {
+			principalIDs[to.String(vm.Identity.PrincipalID)] = struct{}{}
+			break
+		}
+		// if not, look for user-assigned identities
+		for _, userIdentity := range vm.Identity.UserAssignedIdentities {
+			principalIDs[to.String(userIdentity.PrincipalID)] = struct{}{}
+		}
 	default:
 		return errors.New("either vm_name or vmss_name is required")
 	}
 
-	// Ensure the principal id for the VM matches the verified token OID
-	if to.String(principalID) != claims.ObjectID {
-		return errors.New("token object id does not match virtual machine principal id")
+	// Ensure the token OID is the principal id of the system-assigned identity
+	// or one of the user-assigned identities of the VM
+	if _, ok := principalIDs[claims.ObjectID]; !ok {
+		return errors.New("token object id does not match virtual machine identities")
 	}
 
 	// Check bound subscriptions
@@ -291,9 +326,9 @@ func (b *azureAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Requ
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = role.TTL
-	resp.Auth.MaxTTL = role.MaxTTL
-	resp.Auth.Period = role.Period
+	resp.Auth.TTL = role.TokenTTL
+	resp.Auth.MaxTTL = role.TokenMaxTTL
+	resp.Auth.Period = role.TokenPeriod
 	return resp, nil
 }
 

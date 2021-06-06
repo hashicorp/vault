@@ -24,7 +24,6 @@ func TestScanView(t *testing.T) {
 	err := ScanView(context.Background(), s, func(path string) {
 		keys = append(keys, path)
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,11 +33,28 @@ func TestScanView(t *testing.T) {
 	}
 }
 
+func TestScanView_CancelContext(t *testing.T) {
+	s := prepKeyStorage(t)
+
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	var i int
+	err := ScanView(ctx, s, func(path string) {
+		cancelCtx()
+		i++
+	})
+
+	if err == nil {
+		t.Error("Want context cancel err, got none")
+	}
+	if i != 1 {
+		t.Errorf("Want i==1, got %d", i)
+	}
+}
+
 func TestCollectKeys(t *testing.T) {
 	s := prepKeyStorage(t)
 
 	keys, err := CollectKeys(context.Background(), s)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +68,6 @@ func TestCollectKeysPrefix(t *testing.T) {
 	s := prepKeyStorage(t)
 
 	keys, err := CollectKeysWithPrefix(context.Background(), s, "foo")
-
 	if err != nil {
 		t.Fatal(err)
 	}

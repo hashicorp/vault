@@ -74,6 +74,10 @@ func ScanView(ctx context.Context, view ClearableView, cb func(path string)) err
 
 		// Handle the contents in the directory
 		for _, c := range contents {
+			// Exit if the context has been canceled
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			fullPath := current + c
 			if strings.HasSuffix(c, "/") {
 				frontier = append(frontier, fullPath)

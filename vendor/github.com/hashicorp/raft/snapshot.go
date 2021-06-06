@@ -69,7 +69,7 @@ type SnapshotSink interface {
 func (r *Raft) runSnapshots() {
 	for {
 		select {
-		case <-randomTimeout(r.conf.SnapshotInterval):
+		case <-randomTimeout(r.config().SnapshotInterval):
 			// Check if we should snapshot
 			if !r.shouldSnapshot() {
 				continue
@@ -77,14 +77,14 @@ func (r *Raft) runSnapshots() {
 
 			// Trigger a snapshot
 			if _, err := r.takeSnapshot(); err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to take snapshot: %v", err))
+				r.logger.Error("failed to take snapshot", "error", err)
 			}
 
 		case future := <-r.userSnapshotCh:
 			// User-triggered, run immediately
 			id, err := r.takeSnapshot()
 			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to take snapshot: %v", err))
+				r.logger.Error("failed to take snapshot", "error", err)
 			} else {
 				future.opener = func() (*SnapshotMeta, io.ReadCloser, error) {
 					return r.snapshots.Open(id)
@@ -107,13 +107,13 @@ func (r *Raft) shouldSnapshot() bool {
 	// Check the last log index
 	lastIdx, err := r.logs.LastIndex()
 	if err != nil {
-		r.logger.Error(fmt.Sprintf("Failed to get last log index: %v", err))
+		r.logger.Error("failed to get last log index", "error", err)
 		return false
 	}
 
 	// Compare the delta to the threshold
 	delta := lastIdx - lastSnap
-	return delta >= r.conf.SnapshotThreshold
+	return delta >= r.config().SnapshotThreshold
 }
 
 // takeSnapshot is used to take a new snapshot. This must only be called from
@@ -146,6 +146,7 @@ func (r *Raft) takeSnapshot() (string, error) {
 	// We have to use the future here to safely get this information since
 	// it is owned by the main thread.
 	configReq := &configurationsFuture{}
+	configReq.ShutdownCh = r.shutdownCh
 	configReq.init()
 	select {
 	case r.configurationsCh <- configReq:
@@ -172,7 +173,7 @@ func (r *Raft) takeSnapshot() (string, error) {
 	}
 
 	// Create a new snapshot.
-	r.logger.Info(fmt.Sprintf("Starting snapshot up to %d", snapReq.index))
+	r.logger.Info("starting snapshot up to", "index", snapReq.index)
 	start := time.Now()
 	version := getSnapshotVersion(r.protocolVersion)
 	sink, err := r.snapshots.Create(version, snapReq.index, snapReq.term, committed, committedIndex, r.trans)
@@ -202,7 +203,7 @@ func (r *Raft) takeSnapshot() (string, error) {
 		return "", err
 	}
 
-	r.logger.Info(fmt.Sprintf("Snapshot to %d complete", snapReq.index))
+	r.logger.Info("snapshot complete up to", "index", snapReq.index)
 	return sink.ID(), nil
 }
 
@@ -218,7 +219,11 @@ func (r *Raft) compactLogs(snapIdx uint64) error {
 
 	// Check if we have enough logs to truncate
 	lastLogIdx, _ := r.getLastLog()
-	if lastLogIdx <= r.conf.TrailingLogs {
+
+	// Use a consistent value for trailingLogs for the duration of this method
+	// call to avoid surprising behaviour.
+	trailingLogs := r.config().TrailingLogs
+	if lastLogIdx <= trailingLogs {
 		return nil
 	}
 
@@ -226,10 +231,14 @@ func (r *Raft) compactLogs(snapIdx uint64) error {
 	// back from the head, which ever is further back. This ensures
 	// at least `TrailingLogs` entries, but does not allow logs
 	// after the snapshot to be removed.
-	maxLog := min(snapIdx, lastLogIdx-r.conf.TrailingLogs)
+	maxLog := min(snapIdx, lastLogIdx-trailingLogs)
 
-	// Log this
-	r.logger.Info(fmt.Sprintf("Compacting logs from %d to %d", minLog, maxLog))
+	if minLog > maxLog {
+		r.logger.Info("no logs to truncate")
+		return nil
+	}
+
+	r.logger.Info("compacting logs", "from", minLog, "to", maxLog)
 
 	// Compact the logs
 	if err := r.logs.DeleteRange(minLog, maxLog); err != nil {

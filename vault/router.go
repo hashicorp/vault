@@ -10,6 +10,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	radix "github.com/armon/go-radix"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -17,11 +18,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	deniedPassthroughRequestHeaders = []string{
-		consts.AuthHeaderName,
-	}
-)
+var deniedPassthroughRequestHeaders = []string{
+	consts.AuthHeaderName,
+}
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
@@ -34,6 +33,7 @@ type Router struct {
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
 	storagePrefix *radix.Tree
+	logger        hclog.Logger
 }
 
 // NewRouter returns a new router
@@ -64,6 +64,15 @@ type validateMountResponse struct {
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
 	MountLocal    bool   `json:"mount_local" structs:"mount_local" mapstructure:"mount_local"`
+}
+
+func (r *Router) reset() {
+	r.l.Lock()
+	defer r.l.Unlock()
+	r.root = radix.New()
+	r.storagePrefix = radix.New()
+	r.mountUUIDCache = radix.New()
+	r.mountAccessorCache = radix.New()
 }
 
 // validateMountByAccessor returns the mount type and ID for a given mount
@@ -335,9 +344,11 @@ func (r *Router) MountConflict(ctx context.Context, path string) string {
 func (r *Router) MatchingStorageByAPIPath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, true)
 }
+
 func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, false)
 }
+
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -405,10 +416,18 @@ func (r *Router) MatchingSystemView(ctx context.Context, path string) logical.Sy
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	r.l.RUnlock()
-	if !ok {
+	if !ok || raw.(*routeEntry).backend == nil {
 		return nil
 	}
 	return raw.(*routeEntry).backend.System()
+}
+
+func (r *Router) MatchingMountByAPIPath(ctx context.Context, path string) string {
+	me, _, _ := r.matchingMountEntryByPath(ctx, path, true)
+	if me == nil {
+		return ""
+	}
+	return me.Path
 }
 
 // MatchingStoragePrefixByAPIPath the storage prefix for the given api path
@@ -493,8 +512,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
-	defer metrics.MeasureSince([]string{"route", string(req.Operation),
-		strings.Replace(mount, "/", "-", -1)}, time.Now())
+	defer metrics.MeasureSince([]string{
+		"route", string(req.Operation),
+		strings.Replace(mount, "/", "-", -1),
+	}, time.Now())
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend
@@ -700,12 +721,18 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 					case logical.TokenTypeService, logical.TokenTypeBatch:
 						resp.Auth.TokenType = re.mountEntry.Config.TokenType
 					case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
-						if resp.Auth.TokenType == logical.TokenTypeDefault {
+						switch resp.Auth.TokenType {
+						case logical.TokenTypeDefault, logical.TokenTypeDefaultService, logical.TokenTypeService:
 							resp.Auth.TokenType = logical.TokenTypeService
+						default:
+							resp.Auth.TokenType = logical.TokenTypeBatch
 						}
 					case logical.TokenTypeDefaultBatch:
-						if resp.Auth.TokenType == logical.TokenTypeDefault {
+						switch resp.Auth.TokenType {
+						case logical.TokenTypeDefault, logical.TokenTypeDefaultBatch, logical.TokenTypeBatch:
 							resp.Auth.TokenType = logical.TokenTypeBatch
+						default:
+							resp.Auth.TokenType = logical.TokenTypeService
 						}
 					}
 				}

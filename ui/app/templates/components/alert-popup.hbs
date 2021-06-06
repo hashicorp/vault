@@ -18,9 +18,7 @@
         {{type.text}}
       </div>
       {{#if message}}
-        <p class="message-body" data-test-flash-message-body="true">
-          {{message}}
-        </p>
+        <p class="message-body {{if @isPreformatted 'pre'}}" data-test-flash-message-body="true">{{message}}</p>
       {{/if}}
     </div>
   </div>

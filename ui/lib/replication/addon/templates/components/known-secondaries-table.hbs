@@ -1,0 +1,50 @@
+<div class="replication vlt-table sticky-header" data-test-known-secondaries-table>
+  <table class="is-fullwidth">
+    <caption class="is-collapsed">
+      Known Secondaries
+    </caption>
+    <thead class="has-text-weight-semibold">
+      <tr>
+        <th scope="col">
+          Secondary ID
+        </th>
+        <th scope="col">
+          URL
+        </th>
+        <th scope="col">
+          Connected?
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each secondaries as |secondary|}}
+        <tr>
+          <th scope="row">
+            <code data-test-secondaries={{concat 'row-for-' secondary.node_id}}>
+              {{secondary.node_id}}
+            </code>
+          </th>
+          <td>
+            {{#if secondary.api_address}}
+              <a
+                class="link"
+                href={{concat secondary.api_address '/ui/'}}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-test-secondaries={{concat 'api-address-for-' secondary.node_id}}>
+                <p class="is-word-break">{{secondary.api_address}}</p>
+              </a>
+            {{else}}
+              <p class="is-word-break">{{secondary.api_address}}</p>
+            {{/if}}
+          </td>
+          <td>
+            <code data-test-secondaries={{concat 'connection-status-for-' (or secondary.node_id secondary)}}>
+              {{secondary.connection_status}}
+            </code>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

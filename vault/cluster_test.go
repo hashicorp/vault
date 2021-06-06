@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,11 +15,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/vault/cluster"
 )
 
-var (
-	clusterTestPausePeriod = 2 * time.Second
-)
+var clusterTestPausePeriod = 2 * time.Second
 
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -62,6 +60,7 @@ func TestClusterHAFetching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c.Shutdown()
 	keys, _ := TestCoreInit(t, c)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
@@ -101,13 +100,13 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
-	cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
-	addrs := cores[0].clusterListener.Addrs()
+	clusterListener := cores[0].getClusterListener()
+	clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+	addrs := cores[0].getClusterListener().Addrs()
 
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	checkListenersFunc := func(expectFail bool) {
-		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
-		dialer := cores[0].getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+		dialer := clusterListener.GetDialerFunc(context.Background(), consts.RequestForwardingALPN)
 		for i := range cores[0].Listeners {
 
 			clnAddr := addrs[i]
@@ -129,7 +128,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			}
 			connState := conn.ConnectionState()
 			switch {
-			case connState.Version != tls.VersionTLS12:
+			case connState.Version != tls.VersionTLS12 && connState.Version != tls.VersionTLS13:
 				t.Fatal("version mismatch")
 			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
@@ -157,7 +156,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	// After this period it should be active again
 	TestWaitActive(t, cores[0].Core)
-	cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+	cores[0].getClusterListener().AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 	checkListenersFunc(false)
 
 	err = cores[0].Core.Seal(cluster.RootToken)
@@ -173,11 +172,29 @@ func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	testCluster_ForwardRequestsCommon(t)
+	t.Run("tcpLayer", func(t *testing.T) {
+		testCluster_ForwardRequestsCommon(t, nil)
+	})
+
+	t.Run("inmemLayer", func(t *testing.T) {
+		// Run again with in-memory network
+		inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", 3, log.New(&log.LoggerOptions{
+			Mutex: &sync.Mutex{},
+			Level: log.Trace,
+			Name:  "inmem-cluster",
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testCluster_ForwardRequestsCommon(t, &TestClusterOptions{
+			ClusterLayers: inmemCluster,
+		})
+	})
 }
 
-func testCluster_ForwardRequestsCommon(t *testing.T) {
-	cluster := NewTestCluster(t, nil, nil)
+func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOptions) {
+	cluster := NewTestCluster(t, nil, clusterOpts)
 	cores := cluster.Cores
 	cores[0].Handler.(*http.ServeMux).HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
@@ -200,7 +217,7 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	root := cluster.RootToken
 
 	// Wait for core to become active
-	TestWaitActive(t, cores[0].Core)
+	TestWaitActiveForwardingReady(t, cores[0].Core)
 
 	// Test forwarding a request. Since we're going directly from core to core
 	// with no fallback we know that if it worked, request handling is working
@@ -214,107 +231,78 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	//
 
 	// Ensure active core is cores[1] and test
-	err := cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[2].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core2")
-	testCluster_ForwardRequests(t, cores[2], root, "core2")
+	testCluster_Forwarding(t, cluster, 0, 1, root, "core2")
 
 	// Ensure active core is cores[2] and test
-	err = cores[1].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core3")
-	testCluster_ForwardRequests(t, cores[1], root, "core3")
+	testCluster_Forwarding(t, cluster, 1, 2, root, "core3")
 
 	// Ensure active core is cores[0] and test
-	err = cores[2].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[1].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[0].Core)
-	testCluster_ForwardRequests(t, cores[1], root, "core1")
-	testCluster_ForwardRequests(t, cores[2], root, "core1")
+	testCluster_Forwarding(t, cluster, 2, 0, root, "core1")
 
 	// Ensure active core is cores[1] and test
-	err = cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(clusterTestPausePeriod)
-	_ = cores[2].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core2")
-	testCluster_ForwardRequests(t, cores[2], root, "core2")
+	testCluster_Forwarding(t, cluster, 0, 1, root, "core2")
 
 	// Ensure active core is cores[2] and test
-	err = cores[1].StepDown(context.Background(), &logical.Request{
+	testCluster_Forwarding(t, cluster, 1, 2, root, "core3")
+}
+
+func testCluster_Forwarding(t *testing.T, cluster *TestCluster, oldLeaderCoreIdx, newLeaderCoreIdx int, rootToken, remoteCoreID string) {
+	t.Logf("new leaderidx will be %d, stepping down other cores to make it so", newLeaderCoreIdx)
+	err := cluster.Cores[oldLeaderCoreIdx].StepDown(context.Background(), &logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
-		ClientToken: root,
+		ClientToken: rootToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(clusterTestPausePeriod)
-	_ = cores[0].StepDown(context.Background(), &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: root,
-	})
-	time.Sleep(clusterTestPausePeriod)
-	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], root, "core3")
-	testCluster_ForwardRequests(t, cores[1], root, "core3")
+
+	for i := 0; i < 3; i++ {
+		if i != oldLeaderCoreIdx && i != newLeaderCoreIdx {
+			_ = cluster.Cores[i].StepDown(context.Background(), &logical.Request{
+				Operation:   logical.UpdateOperation,
+				Path:        "sys/step-down",
+				ClientToken: rootToken,
+			})
+			time.Sleep(clusterTestPausePeriod)
+		}
+	}
+
+	TestWaitActiveForwardingReady(t, cluster.Cores[newLeaderCoreIdx].Core)
+
+	deadline := time.Now().Add(5 * time.Second)
+	var ready int
+	for time.Now().Before(deadline) {
+		for i := 0; i < 3; i++ {
+			if i != newLeaderCoreIdx {
+				leaderParams := cluster.Cores[i].clusterLeaderParams.Load().(*ClusterLeaderParams)
+				if leaderParams != nil && leaderParams.LeaderClusterAddr == cluster.Cores[newLeaderCoreIdx].ClusterAddr() {
+					ready++
+				}
+			}
+		}
+		if ready == 2 {
+			break
+		}
+		ready = 0
+
+		time.Sleep(100 * time.Millisecond)
+	}
+	if ready != 2 {
+		t.Fatal("standbys have not discovered the new active node in time")
+	}
+
+	for i := 0; i < 3; i++ {
+		if i != newLeaderCoreIdx {
+			testCluster_ForwardRequests(t, cluster.Cores[i], rootToken, remoteCoreID)
+		}
+	}
 }
 
 func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, remoteCoreID string) {
+	t.Helper()
+
 	standby, err := c.Standby()
 	if err != nil {
 		t.Fatal(err)
@@ -370,40 +358,5 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 		if statusCode != 203 {
 			t.Fatal("bad response")
 		}
-	}
-}
-
-func TestCluster_CustomCipherSuites(t *testing.T) {
-	cluster := NewTestCluster(t, &CoreConfig{
-		ClusterCipherSuites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-	}, nil)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0]
-
-	// Wait for core to become active
-	TestWaitActive(t, core.Core)
-
-	core.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{core.Core})
-
-	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
-	dialer := core.getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
-
-	netConn, err := dialer(core.clusterListener.Addrs()[0].String(), 0)
-	conn := netConn.(*tls.Conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-	err = conn.Handshake()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conn.ConnectionState().CipherSuite != tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 {
-		var availCiphers string
-		for _, cipher := range core.clusterCipherSuites {
-			availCiphers += fmt.Sprintf("%x ", cipher)
-		}
-		t.Fatalf("got bad negotiated cipher %x, core-set suites are %s", conn.ConnectionState().CipherSuite, availCiphers)
 	}
 }

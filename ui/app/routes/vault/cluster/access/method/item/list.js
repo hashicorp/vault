@@ -6,13 +6,19 @@ import ListRoute from 'vault/mixins/list-route';
 export default Route.extend(ListRoute, {
   wizard: service(),
   pathHelp: service('path-help'),
-  model() {
+
+  getMethodAndModelInfo() {
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const { page, pageFilter } = this.paramsFor(this.routeName);
+    const { path: authMethodPath } = this.paramsFor('vault.cluster.access.method');
     const methodModel = this.modelFor('vault.cluster.access.method');
-    const { type } = methodModel;
+    const { apiPath, type } = methodModel;
+    return { apiPath, type, authMethodPath, itemType, methodModel };
+  },
+
+  model() {
+    const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
+    const { page, pageFilter } = this.paramsFor(this.routeName);
     let modelType = `generated-${singularize(itemType)}-${type}`;
-    const { path: method } = this.paramsFor('vault.cluster.access.method');
 
     return this.store
       .lazyPaginatedQuery(modelType, {
@@ -20,7 +26,7 @@ export default Route.extend(ListRoute, {
         page: page,
         pageFilter: pageFilter,
         type: itemType,
-        method: method,
+        id: authMethodPath,
       })
       .catch(err => {
         if (err.httpStatus === 404) {
@@ -38,16 +44,21 @@ export default Route.extend(ListRoute, {
       }
       return true;
     },
+    reload() {
+      this.store.clearAllDatasets();
+      this.refresh();
+    },
   },
   setupController(controller) {
     this._super(...arguments);
-    const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    let { path } = this.paramsFor('vault.cluster.access.method');
-    controller.set('itemType', singularize(itemType));
-    controller.set('method', path);
-    const { apiPath } = this.modelFor('vault.cluster.access.method');
-    this.pathHelp.getPaths(apiPath, path, itemType).then(paths => {
-      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+    const { apiPath, authMethodPath, itemType, methodModel } = this.getMethodAndModelInfo();
+    controller.set('itemType', itemType);
+    controller.set('methodModel', methodModel);
+    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then(paths => {
+      controller.set(
+        'paths',
+        paths.paths.filter(path => path.navigation && path.itemType.includes(itemType))
+      );
     });
   },
 });

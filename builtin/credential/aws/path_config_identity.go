@@ -5,11 +5,53 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/authmetadata"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathConfigIdentity(b *backend) *framework.Path {
+var (
+	// iamAuthMetadataFields is a list of the default auth metadata
+	// added to tokens during login. The default alias type used
+	// by this back-end is the role ID. Subsequently, the default
+	// fields included are expected to have a low rate of change
+	// when the role ID is in use.
+	iamAuthMetadataFields = &authmetadata.Fields{
+		FieldName: "iam_metadata",
+		Default: []string{
+			"account_id",
+			"auth_type",
+		},
+		AvailableToAdd: []string{
+			"canonical_arn",
+			"client_arn",
+			"client_user_id",
+			"inferred_aws_region",
+			"inferred_entity_id",
+			"inferred_entity_type",
+		},
+	}
+
+	// ec2AuthMetadataFields is a list of the default auth metadata
+	// added to tokens during login. The default alias type used
+	// by this back-end is the role ID. Subsequently, the default
+	// fields included are expected to have a low rate of change
+	// when the role ID is in use.
+	ec2AuthMetadataFields = &authmetadata.Fields{
+		FieldName: "ec2_metadata",
+		Default: []string{
+			"account_id",
+			"auth_type",
+		},
+		AvailableToAdd: []string{
+			"ami_id",
+			"instance_id",
+			"region",
+		},
+	}
+)
+
+func (b *backend) pathConfigIdentity() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/identity$",
 		Fields: map[string]*framework.FieldSchema{
@@ -18,16 +60,22 @@ func pathConfigIdentity(b *backend) *framework.Path {
 				Default:     identityAliasIAMUniqueID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasRoleID),
 			},
+			iamAuthMetadataFields.FieldName: authmetadata.FieldSchema(iamAuthMetadataFields),
 			"ec2_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasEC2InstanceID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID, identityAliasRoleID),
 			},
+			ec2AuthMetadataFields.FieldName: authmetadata.FieldSchema(ec2AuthMetadataFields),
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathConfigIdentityRead,
-			logical.UpdateOperation: pathConfigIdentityUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: pathConfigIdentityRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: pathConfigIdentityUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathConfigIdentityHelpSyn,
@@ -41,9 +89,12 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 		return nil, err
 	}
 
-	var entry identityConfig
+	entry := &identityConfig{
+		IAMAuthMetadataHandler: authmetadata.NewHandler(iamAuthMetadataFields),
+		EC2AuthMetadataHandler: authmetadata.NewHandler(ec2AuthMetadataFields),
+	}
 	if entryRaw != nil {
-		if err := entryRaw.DecodeJSON(&entry); err != nil {
+		if err := entryRaw.DecodeJSON(entry); err != nil {
 			return nil, err
 		}
 	}
@@ -56,10 +107,10 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 		entry.EC2Alias = identityAliasRoleID
 	}
 
-	return &entry, nil
+	return entry, nil
 }
 
-func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func pathConfigIdentityRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	config, err := identityConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
@@ -67,8 +118,10 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"iam_alias": config.IAMAlias,
-			"ec2_alias": config.EC2Alias,
+			"iam_alias":                     config.IAMAlias,
+			iamAuthMetadataFields.FieldName: config.IAMAuthMetadataHandler.AuthMetadata(),
+			"ec2_alias":                     config.EC2Alias,
+			ec2AuthMetadataFields.FieldName: config.EC2AuthMetadataHandler.AuthMetadata(),
 		},
 	}, nil
 }
@@ -98,6 +151,12 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 		}
 		config.EC2Alias = ec2Alias
 	}
+	if err := config.IAMAuthMetadataHandler.ParseAuthMetadata(data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+	if err := config.EC2AuthMetadataHandler.ParseAuthMetadata(data); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 
 	entry, err := logical.StorageEntryJSON("config/identity", config)
 	if err != nil {
@@ -113,15 +172,19 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 }
 
 type identityConfig struct {
-	IAMAlias string `json:"iam_alias"`
-	EC2Alias string `json:"ec2_alias"`
+	IAMAlias               string                `json:"iam_alias"`
+	IAMAuthMetadataHandler *authmetadata.Handler `json:"iam_auth_metadata_handler"`
+	EC2Alias               string                `json:"ec2_alias"`
+	EC2AuthMetadataHandler *authmetadata.Handler `json:"ec2_auth_metadata_handler"`
 }
 
-const identityAliasIAMUniqueID = "unique_id"
-const identityAliasIAMFullArn = "full_arn"
-const identityAliasEC2InstanceID = "instance_id"
-const identityAliasEC2ImageID = "image_id"
-const identityAliasRoleID = "role_id"
+const (
+	identityAliasIAMUniqueID   = "unique_id"
+	identityAliasIAMFullArn    = "full_arn"
+	identityAliasEC2InstanceID = "instance_id"
+	identityAliasEC2ImageID    = "image_id"
+	identityAliasRoleID        = "role_id"
+)
 
 const pathConfigIdentityHelpSyn = `
 Configure the way the AWS auth method interacts with the identity store

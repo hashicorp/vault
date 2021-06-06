@@ -1,9 +1,9 @@
+import JSONSerializer from '@ember-data/serializer/json';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.JSONSerializer.extend({
+export default JSONSerializer.extend({
   keyForAttribute: function(attr) {
     return decamelize(attr);
   },
@@ -14,8 +14,14 @@ export default DS.JSONSerializer.extend({
         if (typeof key !== 'string') {
           return key;
         }
-        let pk = this.get('primaryKey') || 'id';
-        return { [pk]: key };
+        let pk = this.primaryKey || 'id';
+        let model = { [pk]: key };
+        // if we've added _requestQuery in the adapter, we want
+        // attach it to the individual models
+        if (payload._requestQuery) {
+          model = { ...model, ...payload._requestQuery };
+        }
+        return model;
       });
       return models;
     }
@@ -37,10 +43,15 @@ export default DS.JSONSerializer.extend({
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload, requestType);
+    delete payload._requestQuery;
     if (id && !responseJSON.id) {
       responseJSON.id = id;
     }
-    return this._super(store, primaryModelClass, responseJSON, id, requestType);
+    let jsonAPIRepresentation = this._super(store, primaryModelClass, responseJSON, id, requestType);
+    if (primaryModelClass.relatedCapabilities) {
+      jsonAPIRepresentation = primaryModelClass.relatedCapabilities(jsonAPIRepresentation);
+    }
+    return jsonAPIRepresentation;
   },
 
   serializeAttribute(snapshot, json, key, attributes) {

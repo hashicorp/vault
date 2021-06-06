@@ -21,12 +21,37 @@ ha_storage "consul" {
     disable_clustering = "true"
 }
 
+service_registration "consul" {
+    foo = "bar"
+}
+
 telemetry {
     statsd_address = "bar"
+    usage_gauge_period = "5m"
+    maximum_gauge_cardinality = 125
     statsite_address = "foo"
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
     prometheus_retention_time = "30s"
+}
+
+entropy "seal" {
+    mode = "augmentation"
+}
+
+sentinel {
+    additional_enabled_modules = []
+}
+kms "commastringpurpose" {
+    purpose = "foo,bar"
+}
+kms "slicepurpose" {
+    purpose = ["zip", "zap"]
+}
+seal "nopurpose" {
+}
+seal "stringpurpose" {
+    purpose = "foo"
 }
 
 max_lease_ttl = "10h"

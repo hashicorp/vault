@@ -11,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuthListCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuthListCommand)(nil)
+var (
+	_ cli.Command             = (*AuthListCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuthListCommand)(nil)
+)
 
 type AuthListCommand struct {
 	*BaseCommand
@@ -143,7 +145,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 		}
 	}
 
-	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | Options | Description | UUID"}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID"}
 	for _, path := range paths {
 		mount := auths[path]
 
@@ -160,7 +162,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			pluginName = mount.Config.PluginName
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s | %s",
 			path,
 			pluginName,
 			mount.Accessor,
@@ -169,6 +171,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			mount.Config.TokenType,
 			replication,
 			mount.SealWrap,
+			mount.ExternalEntropyAccess,
 			mount.Options,
 			mount.Description,
 			mount.UUID,

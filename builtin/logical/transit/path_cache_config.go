@@ -12,7 +12,7 @@ func (b *backend) pathCacheConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "cache-config",
 		Fields: map[string]*framework.FieldSchema{
-			"size": &framework.FieldSchema{
+			"size": {
 				Type:        framework.TypeInt,
 				Required:    false,
 				Default:     0,

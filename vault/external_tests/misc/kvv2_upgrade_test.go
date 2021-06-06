@@ -1,4 +1,4 @@
-package token
+package misc
 
 import (
 	"bytes"
@@ -24,6 +24,7 @@ import (
 func TestKVv2_UpgradePaths(t *testing.T) {
 	m := new(sync.Mutex)
 	logOut := new(bytes.Buffer)
+
 	logger := hclog.New(&hclog.LoggerOptions{
 		Output: logOut,
 		Mutex:  m,

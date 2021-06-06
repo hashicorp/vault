@@ -67,7 +67,12 @@ func (s *Weighted) Acquire(ctx context.Context, n int64) error {
 			// fix up the queue, just pretend we didn't notice the cancelation.
 			err = nil
 		default:
+			isFront := s.waiters.Front() == elem
 			s.waiters.Remove(elem)
+			// If we're at the front and there're extra tokens left, notify other waiters.
+			if isFront && s.size > s.cur {
+				s.notifyWaiters()
+			}
 		}
 		s.mu.Unlock()
 		return err
@@ -95,8 +100,13 @@ func (s *Weighted) Release(n int64) {
 	s.cur -= n
 	if s.cur < 0 {
 		s.mu.Unlock()
-		panic("semaphore: bad release")
+		panic("semaphore: released more than held")
 	}
+	s.notifyWaiters()
+	s.mu.Unlock()
+}
+
+func (s *Weighted) notifyWaiters() {
 	for {
 		next := s.waiters.Front()
 		if next == nil {
@@ -123,5 +133,4 @@ func (s *Weighted) Release(n int64) {
 		s.waiters.Remove(next)
 		close(w.ready)
 	}
-	s.mu.Unlock()
 }

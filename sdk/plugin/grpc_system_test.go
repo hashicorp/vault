@@ -2,17 +2,16 @@ package plugin
 
 import (
 	"context"
-	"testing"
-
-	"google.golang.org/grpc"
-
 	"reflect"
+	"testing"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 func TestSystem_GRPC_GRPC_impl(t *testing.T) {
@@ -48,26 +47,6 @@ func TestSystem_GRPC_maxLeaseTTL(t *testing.T) {
 
 	expected := sys.MaxLeaseTTL()
 	actual := testSystemView.MaxLeaseTTL()
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("expected: %v, got: %v", expected, actual)
-	}
-}
-
-func TestSystem_GRPC_sudoPrivilege(t *testing.T) {
-	sys := logical.TestSystemView()
-	sys.SudoPrivilegeVal = true
-	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
-		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
-			impl: sys,
-		})
-	})
-	defer client.Close()
-	testSystemView := newGRPCSystemView(client)
-
-	ctx := context.Background()
-
-	expected := sys.SudoPrivilege(ctx, "foo", "bar")
-	actual := testSystemView.SudoPrivilege(ctx, "foo", "bar")
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
@@ -175,7 +154,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 			"foo": "bar",
 		},
 		Aliases: []*logical.Alias{
-			&logical.Alias{
+			{
 				MountType:     "logical",
 				MountAccessor: "accessor",
 				Name:          "name",
@@ -200,6 +179,34 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 	}
 	if !proto.Equal(sys.EntityVal, actual) {
 		t.Fatalf("expected: %v, got: %v", sys.EntityVal, actual)
+	}
+}
+
+func TestSystem_GRPC_groupsForEntity(t *testing.T) {
+	sys := logical.TestSystemView()
+	sys.GroupsVal = []*logical.Group{
+		{
+			ID:   "group1-id",
+			Name: "group1",
+			Metadata: map[string]string{
+				"group-metadata": "metadata-value",
+			},
+		},
+	}
+	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer client.Close()
+	testSystemView := newGRPCSystemView(client)
+
+	actual, err := testSystemView.GroupsForEntity("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(sys.GroupsVal[0], actual[0]) {
+		t.Fatalf("expected: %v, got: %v", sys.GroupsVal, actual)
 	}
 }
 
@@ -229,5 +236,40 @@ func TestSystem_GRPC_pluginEnv(t *testing.T) {
 
 	if !proto.Equal(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
+	}
+}
+
+func TestSystem_GRPC_GeneratePasswordFromPolicy(t *testing.T) {
+	policyName := "testpolicy"
+	expectedPassword := "87354qtnjgrehiogd9u0t43"
+	passGen := func() (password string, err error) {
+		return expectedPassword, nil
+	}
+	sys := &logical.StaticSystemView{
+		PasswordPolicies: map[string]logical.PasswordGenerator{
+			policyName: passGen,
+		},
+	}
+
+	client, server := plugin.TestGRPCConn(t, func(s *grpc.Server) {
+		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{
+			impl: sys,
+		})
+	})
+	defer server.Stop()
+	defer client.Close()
+
+	testSystemView := newGRPCSystemView(client)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	password, err := testSystemView.GeneratePasswordFromPolicy(ctx, policyName)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	if password != expectedPassword {
+		t.Fatalf("Actual password: %s\nExpected password: %s", password, expectedPassword)
 	}
 }

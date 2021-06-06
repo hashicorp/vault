@@ -4,12 +4,15 @@ package vault
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func waitForReplicationState(context.Context, *Core, *logical.Request) error { return nil }
+func waitForReplicationState(context.Context, *Core, *logical.Request) (*sync.WaitGroup, error) {
+	return nil, nil
+}
 
 func checkNeedsCG(context.Context, *Core, *logical.Request, *logical.Auth, error, []string) (error, *logical.Response, *logical.Auth, error) {
 	return nil, nil, nil, nil
@@ -19,11 +22,16 @@ func checkErrControlGroupTokenNeedsCreated(err error) bool {
 	return false
 }
 
-func shouldForward(c *Core, routeErr error) bool {
+func shouldForward(c *Core, resp *logical.Response, err error) bool {
 	return false
 }
 
-func syncCounter(c *Core) {
+func syncCounters(c *Core) error {
+	return nil
+}
+
+func syncBarrierEncryptionCounter(c *Core) error {
+	return nil
 }
 
 func couldForward(c *Core) bool {

@@ -1,20 +1,19 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-const { attr } = DS;
 const CREATE_FIELDS = [
   'publicKey',
   'keyId',
   'validPrincipals',
   'certType',
   'criticalOptions',
-  'extension',
+  'extensions',
   'ttl',
 ];
 
 const DISPLAY_FIELDS = ['signedKey', 'leaseId', 'renewable', 'leaseDuration', 'serialNumber'];
 
-export default DS.Model.extend({
+export default Model.extend({
   role: attr('object', {
     readOnly: true,
   }),
@@ -36,7 +35,7 @@ export default DS.Model.extend({
     label: 'Key ID',
   }),
   criticalOptions: attr('object'),
-  extension: attr('object'),
+  extensions: attr('object'),
 
   leaseId: attr('string', {
     label: 'Lease ID',
@@ -47,7 +46,7 @@ export default DS.Model.extend({
   signedKey: attr('string'),
 
   attrs: computed('signedKey', function() {
-    let keys = this.get('signedKey') ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
+    let keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 });

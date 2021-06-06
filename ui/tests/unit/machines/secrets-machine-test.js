@@ -524,10 +524,10 @@ module('Unit | Machine | secrets-machine', function() {
       event: 'CONTINUE',
       params: 'database',
       expectedResults: {
-        value: 'list',
+        value: 'details',
         actions: [
-          { type: 'render', level: 'step', component: 'wizard/secrets-list' },
           { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+          { type: 'render', level: 'step', component: 'wizard/secrets-details' },
         ],
       },
     },
@@ -1061,9 +1061,7 @@ module('Unit | Machine | secrets-machine', function() {
   ];
 
   testCases.forEach(testCase => {
-    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${
-      testCase.params
-    }`, function(assert) {
+    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function(assert) {
       let result = secretsMachine.transition(testCase.currentState, testCase.event, testCase.params);
       assert.equal(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);

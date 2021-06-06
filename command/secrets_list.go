@@ -11,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*SecretsListCommand)(nil)
-var _ cli.CommandAutocomplete = (*SecretsListCommand)(nil)
+var (
+	_ cli.Command             = (*SecretsListCommand)(nil)
+	_ cli.CommandAutocomplete = (*SecretsListCommand)(nil)
+)
 
 type SecretsListCommand struct {
 	*BaseCommand
@@ -143,7 +145,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 		}
 	}
 
-	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | Options | Description | UUID "}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID "}
 	for _, path := range paths {
 		mount := mounts[path]
 
@@ -160,7 +162,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			pluginName = mount.Config.PluginName
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s | %s | %s",
 			path,
 			pluginName,
 			mount.Accessor,
@@ -169,6 +171,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			mount.Config.ForceNoCache,
 			replication,
 			mount.SealWrap,
+			mount.ExternalEntropyAccess,
 			mount.Options,
 			mount.Description,
 			mount.UUID,

@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-// LOW LEVEL API: Repersents a potentially cachable HTTP object.
+// LOW LEVEL API: Represents a potentially cachable HTTP object.
 //
 // This struct is designed to be serialized efficiently, so in a high
 // performance caching server, things like Date-Strings don't need to be
@@ -44,7 +44,7 @@ type Object struct {
 	NowUTC time.Time
 }
 
-// LOW LEVEL API: Repersents the results of examinig an Object with
+// LOW LEVEL API: Represents the results of examining an Object with
 // CachableObject and ExpirationObject.
 //
 // TODO(pquerna): decide if this is a good idea or bad
@@ -103,10 +103,10 @@ func CachableObject(obj *Object, rv *ObjectResults) {
 	// To my knowledge, none of them are cachable. Please open a ticket if this is not the case!
 	//
 	default:
-		rv.OutReasons = append(rv.OutReasons, ReasonRequestMethodUnkown)
+		rv.OutReasons = append(rv.OutReasons, ReasonRequestMethodUnknown)
 	}
 
-	if obj.ReqDirectives.NoStore {
+	if obj.ReqDirectives != nil && obj.ReqDirectives.NoStore {
 		rv.OutReasons = append(rv.OutReasons, ReasonRequestNoStore)
 	}
 
@@ -232,7 +232,7 @@ func ExpirationObject(obj *Object, rv *ObjectResults) {
 			println("Expiration: ", expiresTime.String())
 		}
 	} else {
-		// TODO(pquerna): what should the default behavoir be for expiration time?
+		// TODO(pquerna): what should the default behavior be for expiration time?
 	}
 
 	rv.OutExpirationTime = expiresTime

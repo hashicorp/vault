@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -27,31 +26,34 @@ const (
 // for both OTP and Dynamic roles. Not all the fields are mandatory for both type.
 // Some are applicable for one and not for other. It doesn't matter.
 type sshRole struct {
-	KeyType                string            `mapstructure:"key_type" json:"key_type"`
-	KeyName                string            `mapstructure:"key" json:"key"`
-	KeyBits                int               `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser              string            `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser            string            `mapstructure:"default_user" json:"default_user"`
-	CIDRList               string            `mapstructure:"cidr_list" json:"cidr_list"`
-	ExcludeCIDRList        string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
-	Port                   int               `mapstructure:"port" json:"port"`
-	InstallScript          string            `mapstructure:"install_script" json:"install_script"`
-	AllowedUsers           string            `mapstructure:"allowed_users" json:"allowed_users"`
-	AllowedDomains         string            `mapstructure:"allowed_domains" json:"allowed_domains"`
-	KeyOptionSpecs         string            `mapstructure:"key_option_specs" json:"key_option_specs"`
-	MaxTTL                 string            `mapstructure:"max_ttl" json:"max_ttl"`
-	TTL                    string            `mapstructure:"ttl" json:"ttl"`
-	DefaultCriticalOptions map[string]string `mapstructure:"default_critical_options" json:"default_critical_options"`
-	DefaultExtensions      map[string]string `mapstructure:"default_extensions" json:"default_extensions"`
-	AllowedCriticalOptions string            `mapstructure:"allowed_critical_options" json:"allowed_critical_options"`
-	AllowedExtensions      string            `mapstructure:"allowed_extensions" json:"allowed_extensions"`
-	AllowUserCertificates  bool              `mapstructure:"allow_user_certificates" json:"allow_user_certificates"`
-	AllowHostCertificates  bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
-	AllowBareDomains       bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
-	AllowSubdomains        bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
-	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
-	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
-	AllowedUserKeyLengths  map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
+	KeyType                   string            `mapstructure:"key_type" json:"key_type"`
+	KeyName                   string            `mapstructure:"key" json:"key"`
+	KeyBits                   int               `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser                 string            `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser               string            `mapstructure:"default_user" json:"default_user"`
+	CIDRList                  string            `mapstructure:"cidr_list" json:"cidr_list"`
+	ExcludeCIDRList           string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
+	Port                      int               `mapstructure:"port" json:"port"`
+	InstallScript             string            `mapstructure:"install_script" json:"install_script"`
+	AllowedUsers              string            `mapstructure:"allowed_users" json:"allowed_users"`
+	AllowedUsersTemplate      bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
+	AllowedDomains            string            `mapstructure:"allowed_domains" json:"allowed_domains"`
+	KeyOptionSpecs            string            `mapstructure:"key_option_specs" json:"key_option_specs"`
+	MaxTTL                    string            `mapstructure:"max_ttl" json:"max_ttl"`
+	TTL                       string            `mapstructure:"ttl" json:"ttl"`
+	DefaultCriticalOptions    map[string]string `mapstructure:"default_critical_options" json:"default_critical_options"`
+	DefaultExtensions         map[string]string `mapstructure:"default_extensions" json:"default_extensions"`
+	DefaultExtensionsTemplate bool              `mapstructure:"default_extensions_template" json:"default_extensions_template"`
+	AllowedCriticalOptions    string            `mapstructure:"allowed_critical_options" json:"allowed_critical_options"`
+	AllowedExtensions         string            `mapstructure:"allowed_extensions" json:"allowed_extensions"`
+	AllowUserCertificates     bool              `mapstructure:"allow_user_certificates" json:"allow_user_certificates"`
+	AllowHostCertificates     bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
+	AllowBareDomains          bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
+	AllowSubdomains           bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
+	AllowUserKeyIDs           bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
+	KeyIDFormat               string            `mapstructure:"key_id_format" json:"key_id_format"`
+	AllowedUserKeyLengths     map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
+	AlgorithmSigner           string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -69,22 +71,22 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("role"),
+		Pattern: "roles/" + framework.GenericNameWithAtRegex("role"),
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for all types]
 				Name of the role being created.`,
 			},
-			"key": &framework.FieldSchema{
+			"key": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Name of the registered key in Vault. Before creating the role, use the
 				'keys/' endpoint to create a named key.`,
 			},
-			"admin_user": &framework.FieldSchema{
+			"admin_user": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
@@ -97,7 +99,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Admin Username",
 				},
 			},
-			"default_user": &framework.FieldSchema{
+			"default_user": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for Dynamic type] [Required for OTP type] [Optional for CA type]
@@ -108,7 +110,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Default Username",
 				},
 			},
-			"cidr_list": &framework.FieldSchema{
+			"cidr_list": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
@@ -118,7 +120,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "CIDR List",
 				},
 			},
-			"exclude_cidr_list": &framework.FieldSchema{
+			"exclude_cidr_list": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
@@ -129,7 +131,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Exclude CIDR List",
 				},
 			},
-			"port": &framework.FieldSchema{
+			"port": {
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
@@ -141,7 +143,7 @@ func pathRoles(b *backend) *framework.Path {
 					Value: 22,
 				},
 			},
-			"key_type": &framework.FieldSchema{
+			"key_type": {
 				Type: framework.TypeString,
 				Description: `
 				[Required for all types]
@@ -152,13 +154,13 @@ func pathRoles(b *backend) *framework.Path {
 					Value: "ca",
 				},
 			},
-			"key_bits": &framework.FieldSchema{
+			"key_bits": {
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Length of the RSA dynamic key in bits. It is 1024 by default or it can be 2048.`,
 			},
-			"install_script": &framework.FieldSchema{
+			"install_script": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Not-applicable for OTP type] [Not applicable for CA type]
@@ -166,7 +168,7 @@ func pathRoles(b *backend) *framework.Path {
 				The inbuilt default install script will be for Linux hosts. For sample
 				script, refer the project documentation website.`,
 			},
-			"allowed_users": &framework.FieldSchema{
+			"allowed_users": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for all types] [Works differently for CA type]
@@ -182,7 +184,16 @@ func pathRoles(b *backend) *framework.Path {
 				allow any user.
 				`,
 			},
-			"allowed_domains": &framework.FieldSchema{
+			"allowed_users_template": {
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If set, Allowed users can be specified using identity template policies.
+				Non-templated users are also permitted.
+				`,
+				Default: false,
+			},
+			"allowed_domains": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -190,7 +201,7 @@ func pathRoles(b *backend) *framework.Path {
 				valid host. If only certain domains are allowed, then this list enforces it.
 				`,
 			},
-			"key_option_specs": &framework.FieldSchema{
+			"key_option_specs": {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
@@ -199,7 +210,7 @@ func pathRoles(b *backend) *framework.Path {
 				file format and should not contain spaces.
 				`,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -211,17 +222,17 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "TTL",
 				},
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				The maximum allowed lease duration
 				`,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Value: "Max TTL",
+					Name: "Max TTL",
 				},
 			},
-			"allowed_critical_options": &framework.FieldSchema{
+			"allowed_critical_options": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -229,7 +240,7 @@ func pathRoles(b *backend) *framework.Path {
  				To allow any critical options, set this to an empty string.
 				 `,
 			},
-			"allowed_extensions": &framework.FieldSchema{
+			"allowed_extensions": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -237,7 +248,7 @@ func pathRoles(b *backend) *framework.Path {
 				To allow any extensions, set this to an empty string.
 				`,
 			},
-			"default_critical_options": &framework.FieldSchema{
+			"default_critical_options": {
 				Type: framework.TypeMap,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type]
@@ -247,7 +258,7 @@ func pathRoles(b *backend) *framework.Path {
 				by "allowed_critical_options". Defaults to none.
 				`,
 			},
-			"default_extensions": &framework.FieldSchema{
+			"default_extensions": {
 				Type: framework.TypeMap,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type]
@@ -257,7 +268,16 @@ func pathRoles(b *backend) *framework.Path {
 				"allowed_extensions". Defaults to none.
 				`,
 			},
-			"allow_user_certificates": &framework.FieldSchema{
+			"default_extensions_template": {
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If set, Default extension values can be specified using identity template policies.
+				Non-templated extension values are also permitted.
+				`,
+				Default: false,
+			},
+			"allow_user_certificates": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -265,7 +285,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 				Default: false,
 			},
-			"allow_host_certificates": &framework.FieldSchema{
+			"allow_host_certificates": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -273,7 +293,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 				Default: false,
 			},
-			"allow_bare_domains": &framework.FieldSchema{
+			"allow_bare_domains": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -282,14 +302,14 @@ func pathRoles(b *backend) *framework.Path {
 				This is a separate option as in some cases this can be considered a security threat.
 				`,
 			},
-			"allow_subdomains": &framework.FieldSchema{
+			"allow_subdomains": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains".
 				`,
 			},
-			"allow_user_key_ids": &framework.FieldSchema{
+			"allow_user_key_ids": {
 				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -301,7 +321,7 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Allow User Key IDs",
 				},
 			},
-			"key_id_format": &framework.FieldSchema{
+			"key_id_format": {
 				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
@@ -314,12 +334,22 @@ func pathRoles(b *backend) *framework.Path {
 					Name: "Key ID Format",
 				},
 			},
-			"allowed_user_key_lengths": &framework.FieldSchema{
+			"allowed_user_key_lengths": {
 				Type: framework.TypeMap,
 				Description: `
                                 [Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
                                 If set, allows the enforcement of key types and minimum key sizes to be signed.
                                 `,
+			},
+			"algorithm_signer": {
+				Type: framework.TypeString,
+				Description: `
+				When supplied, this value specifies a signing algorithm for the key. Possible values:
+				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
+				`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Signing Algorithm",
+				},
 			},
 		},
 
@@ -348,7 +378,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if cidrList != "" {
 		valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate cidr_list: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate cidr_list: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate cidr_list"), nil
@@ -360,7 +390,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	if excludeCidrList != "" {
 		valid, err := cidrutil.ValidateCIDRListString(excludeCidrList, ",")
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate exclude_cidr_list entry: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate exclude_cidr_list entry: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse(fmt.Sprintf("failed to validate exclude_cidr_list entry: %v", err)), nil
@@ -456,7 +486,21 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyOptionSpecs:  keyOptionSpecs,
 		}
 	} else if keyType == KeyTypeCA {
-		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), d)
+		algorithmSigner := ""
+		algorithmSignerRaw, ok := d.GetOk("algorithm_signer")
+		if ok {
+			algorithmSigner = algorithmSignerRaw.(string)
+			switch algorithmSigner {
+			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
+			case "":
+				// This case is valid, and the sign operation will use the signer's
+				// default algorithm.
+			default:
+				return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
+			}
+		}
+
+		role, errorResponse := b.createCARole(allowedUsers, d.Get("default_user").(string), algorithmSigner, d)
 		if errorResponse != nil {
 			return errorResponse, nil
 		}
@@ -476,22 +520,25 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 	return nil, nil
 }
 
-func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework.FieldData) (*sshRole, *logical.Response) {
+func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *framework.FieldData) (*sshRole, *logical.Response) {
 	ttl := time.Duration(data.Get("ttl").(int)) * time.Second
 	maxTTL := time.Duration(data.Get("max_ttl").(int)) * time.Second
 	role := &sshRole{
-		AllowedCriticalOptions: data.Get("allowed_critical_options").(string),
-		AllowedExtensions:      data.Get("allowed_extensions").(string),
-		AllowUserCertificates:  data.Get("allow_user_certificates").(bool),
-		AllowHostCertificates:  data.Get("allow_host_certificates").(bool),
-		AllowedUsers:           allowedUsers,
-		AllowedDomains:         data.Get("allowed_domains").(string),
-		DefaultUser:            defaultUser,
-		AllowBareDomains:       data.Get("allow_bare_domains").(bool),
-		AllowSubdomains:        data.Get("allow_subdomains").(bool),
-		AllowUserKeyIDs:        data.Get("allow_user_key_ids").(bool),
-		KeyIDFormat:            data.Get("key_id_format").(string),
-		KeyType:                KeyTypeCA,
+		AllowedCriticalOptions:    data.Get("allowed_critical_options").(string),
+		AllowedExtensions:         data.Get("allowed_extensions").(string),
+		AllowUserCertificates:     data.Get("allow_user_certificates").(bool),
+		AllowHostCertificates:     data.Get("allow_host_certificates").(bool),
+		AllowedUsers:              allowedUsers,
+		AllowedUsersTemplate:      data.Get("allowed_users_template").(bool),
+		AllowedDomains:            data.Get("allowed_domains").(string),
+		DefaultUser:               defaultUser,
+		AllowBareDomains:          data.Get("allow_bare_domains").(bool),
+		AllowSubdomains:           data.Get("allow_subdomains").(bool),
+		AllowUserKeyIDs:           data.Get("allow_user_key_ids").(bool),
+		DefaultExtensionsTemplate: data.Get("default_extensions_template").(bool),
+		KeyIDFormat:               data.Get("key_id_format").(string),
+		KeyType:                   KeyTypeCA,
+		AlgorithmSigner:           signer,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -564,24 +611,27 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 		}
 
 		result = map[string]interface{}{
-			"allowed_users":            role.AllowedUsers,
-			"allowed_domains":          role.AllowedDomains,
-			"default_user":             role.DefaultUser,
-			"ttl":                      int64(ttl.Seconds()),
-			"max_ttl":                  int64(maxTTL.Seconds()),
-			"allowed_critical_options": role.AllowedCriticalOptions,
-			"allowed_extensions":       role.AllowedExtensions,
-			"allow_user_certificates":  role.AllowUserCertificates,
-			"allow_host_certificates":  role.AllowHostCertificates,
-			"allow_bare_domains":       role.AllowBareDomains,
-			"allow_subdomains":         role.AllowSubdomains,
-			"allow_user_key_ids":       role.AllowUserKeyIDs,
-			"key_id_format":            role.KeyIDFormat,
-			"key_type":                 role.KeyType,
-			"key_bits":                 role.KeyBits,
-			"default_critical_options": role.DefaultCriticalOptions,
-			"default_extensions":       role.DefaultExtensions,
-			"allowed_user_key_lengths": role.AllowedUserKeyLengths,
+			"allowed_users":               role.AllowedUsers,
+			"allowed_users_template":      role.AllowedUsersTemplate,
+			"allowed_domains":             role.AllowedDomains,
+			"default_user":                role.DefaultUser,
+			"ttl":                         int64(ttl.Seconds()),
+			"max_ttl":                     int64(maxTTL.Seconds()),
+			"allowed_critical_options":    role.AllowedCriticalOptions,
+			"allowed_extensions":          role.AllowedExtensions,
+			"allow_user_certificates":     role.AllowUserCertificates,
+			"allow_host_certificates":     role.AllowHostCertificates,
+			"allow_bare_domains":          role.AllowBareDomains,
+			"allow_subdomains":            role.AllowSubdomains,
+			"allow_user_key_ids":          role.AllowUserKeyIDs,
+			"key_id_format":               role.KeyIDFormat,
+			"key_type":                    role.KeyType,
+			"key_bits":                    role.KeyBits,
+			"default_critical_options":    role.DefaultCriticalOptions,
+			"default_extensions":          role.DefaultExtensions,
+			"default_extensions_template": role.DefaultExtensionsTemplate,
+			"allowed_user_key_lengths":    role.AllowedUserKeyLengths,
+			"algorithm_signer":            role.AlgorithmSigner,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{

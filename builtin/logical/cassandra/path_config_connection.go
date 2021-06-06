@@ -14,46 +14,47 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"hosts": &framework.FieldSchema{
+			"hosts": {
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of hosts",
 			},
 
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "The username to use for connecting to the cluster",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "The password to use for connecting to the cluster",
 			},
 
-			"tls": &framework.FieldSchema{
+			"tls": {
 				Type: framework.TypeBool,
 				Description: `Whether to use TLS. If pem_bundle or pem_json are
 set, this is automatically set to true`,
 			},
 
-			"insecure_tls": &framework.FieldSchema{
+			"insecure_tls": {
 				Type: framework.TypeBool,
 				Description: `Whether to use TLS but skip verification; has no
 effect if a CA certificate is provided`,
 			},
 
-			"tls_min_version": &framework.FieldSchema{
+			// TLS 1.3 is not supported as this engine is deprecated. Please switch to the Cassandra database secrets engine
+			"tls_min_version": {
 				Type:        framework.TypeString,
 				Default:     "tls12",
 				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
 
-			"pem_bundle": &framework.FieldSchema{
+			"pem_bundle": {
 				Type: framework.TypeString,
 				Description: `PEM-format, concatenated unencrypted secret key
 and certificate, with optional CA certificate`,
 			},
 
-			"pem_json": &framework.FieldSchema{
+			"pem_json": {
 				Type: framework.TypeString,
 				Description: `JSON containing a PEM-format, unencrypted secret
 key and certificate, with optional CA certificate.
@@ -63,12 +64,12 @@ If both this and "pem_bundle" are specified, this will
 take precedence.`,
 			},
 
-			"protocol_version": &framework.FieldSchema{
+			"protocol_version": {
 				Type:        framework.TypeInt,
 				Description: `The protocol version to use. Defaults to 2.`,
 			},
 
-			"connect_timeout": &framework.FieldSchema{
+			"connect_timeout": {
 				Type:        framework.TypeDurationSecond,
 				Default:     5,
 				Description: `The connection timeout to use. Defaults to 5.`,

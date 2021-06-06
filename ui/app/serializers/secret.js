@@ -4,7 +4,12 @@ import ApplicationSerializer from './application';
 export default ApplicationSerializer.extend({
   secretDataPath: 'data',
   normalizeItems(payload, requestType) {
-    if (requestType !== 'queryRecord' && payload.data.keys && Array.isArray(payload.data.keys)) {
+    if (
+      requestType !== 'queryRecord' &&
+      payload.data &&
+      payload.data.keys &&
+      Array.isArray(payload.data.keys)
+    ) {
       // if we have data.keys, it's a list of ids, so we map over that
       // and create objects with id's
       return payload.data.keys.map(secret => {
@@ -22,7 +27,7 @@ export default ApplicationSerializer.extend({
         return { id: fullSecretPath, backend: payload.backend };
       });
     }
-    let path = this.get('secretDataPath');
+    let path = this.secretDataPath;
     // move response that is the contents of the secret from the dataPath
     // to `secret_data` so it will be `secretData` in the model
     payload.secret_data = get(payload, path);

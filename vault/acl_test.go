@@ -20,7 +20,7 @@ func TestACL_NewACL(t *testing.T) {
 
 func testNewACL(t *testing.T, ns *namespace.Namespace) {
 	ctx := namespace.ContextWithNamespace(context.Background(), ns)
-	policy := []*Policy{&Policy{Name: "root"}}
+	policy := []*Policy{{Name: "root"}}
 	_, err := NewACL(ctx, policy)
 	switch ns.ID {
 	case namespace.RootNamespaceID:
@@ -100,7 +100,7 @@ path "secret/split/definition" {
 func TestACL_Capabilities(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
-		policy := []*Policy{&Policy{Name: "root"}}
+		policy := []*Policy{{Name: "root"}}
 		ctx := namespace.RootContext(nil)
 		acl, err := NewACL(ctx, policy)
 		if err != nil {
@@ -158,7 +158,7 @@ func TestACL_Root(t *testing.T) {
 func testACLRoot(t *testing.T, ns *namespace.Namespace) {
 	// Create the root policy ACL. Always create on root namespace regardless of
 	// which namespace to ACL check on.
-	policy := []*Policy{&Policy{Name: "root"}}
+	policy := []*Policy{{Name: "root"}}
 	acl, err := NewACL(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -359,6 +359,13 @@ func testLayeredACL(t *testing.T, acl *ACL, ns *namespace.Namespace) {
 	}
 }
 
+func TestACL_ParseMalformedPolicy(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, `name{}`)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestACL_PolicyMerge(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
@@ -392,14 +399,14 @@ func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
 	}
 
 	tcases := []tcase{
-		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}, []string{"baz"}},
-		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil, []string{"foo", "bar"}},
-		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil, nil},
-		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil, nil},
-		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}, nil},
-		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}, nil},
-		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, nil},
-		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}, nil},
+		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": {}, "baz": {}}, []string{"baz"}},
+		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": {}, "bar": {}}, nil, []string{"foo", "bar"}},
+		{"allow/all", nil, nil, map[string][]interface{}{"*": {}, "test": {}, "test1": {"foo"}}, nil, nil},
+		{"allow/all1", nil, nil, map[string][]interface{}{"*": {}, "test": {}, "test1": {"foo"}}, nil, nil},
+		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": {}, "test": {}}, nil},
+		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": {}, "test": {}}, nil},
+		{"value/merge", nil, nil, map[string][]interface{}{"test": {3, 4, 1, 2}}, map[string][]interface{}{"test": {3, 4, 1, 2}}, nil},
+		{"value/empty", nil, nil, map[string][]interface{}{"empty": {}}, map[string][]interface{}{"empty": {}}, nil},
 	}
 
 	for _, tc := range tcases {
@@ -907,7 +914,7 @@ path "foo/bar" {
 }
 `
 
-//test merging
+// test merging
 var mergingPolicies = `
 name = "ops"
 path "foo/bar" {
@@ -1029,7 +1036,7 @@ path "value/empty" {
 }
 `
 
-//allow operation testing
+// allow operation testing
 var permissionsPolicy = `
 name = "dev"
 path "dev/*" {
@@ -1119,7 +1126,7 @@ path "var/req" {
 }
 `
 
-//allow operation testing
+// allow operation testing
 var valuePermissionsPolicy = `
 name = "op"
 path "dev/*" {

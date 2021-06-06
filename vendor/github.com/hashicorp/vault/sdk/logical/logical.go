@@ -38,6 +38,10 @@ func (b BackendType) String() string {
 // allows for a "procfs" like interaction, as internal state can be exposed by
 // acting like a logical backend and being mounted.
 type Backend interface {
+
+	// Initialize is used to initialize a plugin after it has been mounted.
+	Initialize(context.Context, *InitializationRequest) error
+
 	// HandleRequest is used to handle a request and generate a response.
 	// The backends must check the operation type and handle appropriately.
 	HandleRequest(context.Context, *Request) (*Response, error)

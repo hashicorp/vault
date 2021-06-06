@@ -183,7 +183,7 @@ func TestPriorityQueue_PopByKey(t *testing.T) {
 	testValidateInternalData(t, pq, len(tc)-len(popKeys)-1, true)
 }
 
-// testValidateInternalData checks the internal data stucture of the PriorityQueue
+// testValidateInternalData checks the internal data structure of the PriorityQueue
 // and verifies that items are in-sync. Use drain only at the end of a test,
 // because it will mutate the input queue
 func testValidateInternalData(t *testing.T, pq *PriorityQueue, expectedSize int, drain bool) {

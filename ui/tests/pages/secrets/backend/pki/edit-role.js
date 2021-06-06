@@ -1,4 +1,5 @@
 import { Base } from '../create';
+import { settled } from '@ember/test-helpers';
 import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
 
 export default create({
@@ -9,15 +10,21 @@ export default create({
   toggleOptions: clickable('[data-test-toggle-group="Options"]'),
   name: fillable('[data-test-input="name"]'),
   allowAnyName: clickable('[data-test-input="allowAnyName"]'),
-  allowedDomains: fillable('[data-test-input="allowedDomains"] input'),
+  allowedDomains: fillable('[data-test-input="allowedDomains"] .input'),
   save: clickable('[data-test-role-create]'),
 
-  createRole(name, allowedDomains) {
-    return this.toggleDomain()
-      .toggleOptions()
-      .name(name)
-      .allowAnyName()
-      .allowedDomains(allowedDomains)
-      .save();
+  async createRole(name, allowedDomains) {
+    await this.toggleDomain();
+    await settled();
+    await this.toggleOptions();
+    await settled();
+    await this.name(name);
+    await settled();
+    await this.allowAnyName();
+    await settled();
+    await this.allowedDomains(allowedDomains);
+    await settled();
+    await this.save();
+    await settled();
   },
 });

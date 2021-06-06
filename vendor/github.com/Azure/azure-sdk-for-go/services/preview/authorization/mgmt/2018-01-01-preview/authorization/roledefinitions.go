@@ -35,7 +35,8 @@ func NewRoleDefinitionsClient(subscriptionID string) RoleDefinitionsClient {
 	return NewRoleDefinitionsClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewRoleDefinitionsClientWithBaseURI creates an instance of the RoleDefinitionsClient client.
+// NewRoleDefinitionsClientWithBaseURI creates an instance of the RoleDefinitionsClient client using a custom endpoint.
+// Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure stack).
 func NewRoleDefinitionsClientWithBaseURI(baseURI string, subscriptionID string) RoleDefinitionsClient {
 	return RoleDefinitionsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -72,6 +73,7 @@ func (client RoleDefinitionsClient) CreateOrUpdate(ctx context.Context, scope st
 	result, err = client.CreateOrUpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleDefinitionsClient", "CreateOrUpdate", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -105,8 +107,7 @@ func (client RoleDefinitionsClient) CreateOrUpdatePreparer(ctx context.Context, 
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleDefinitionsClient) CreateOrUpdateSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // CreateOrUpdateResponder handles the response to the CreateOrUpdate request. The method always
@@ -114,7 +115,6 @@ func (client RoleDefinitionsClient) CreateOrUpdateSender(req *http.Request) (*ht
 func (client RoleDefinitionsClient) CreateOrUpdateResponder(resp *http.Response) (result RoleDefinition, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -153,6 +153,7 @@ func (client RoleDefinitionsClient) Delete(ctx context.Context, scope string, ro
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleDefinitionsClient", "Delete", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -181,8 +182,7 @@ func (client RoleDefinitionsClient) DeletePreparer(ctx context.Context, scope st
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleDefinitionsClient) DeleteSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // DeleteResponder handles the response to the Delete request. The method always
@@ -190,7 +190,6 @@ func (client RoleDefinitionsClient) DeleteSender(req *http.Request) (*http.Respo
 func (client RoleDefinitionsClient) DeleteResponder(resp *http.Response) (result RoleDefinition, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -229,6 +228,7 @@ func (client RoleDefinitionsClient) Get(ctx context.Context, scope string, roleD
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleDefinitionsClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -257,8 +257,7 @@ func (client RoleDefinitionsClient) GetPreparer(ctx context.Context, scope strin
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleDefinitionsClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -266,7 +265,6 @@ func (client RoleDefinitionsClient) GetSender(req *http.Request) (*http.Response
 func (client RoleDefinitionsClient) GetResponder(resp *http.Response) (result RoleDefinition, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -307,6 +305,7 @@ func (client RoleDefinitionsClient) GetByID(ctx context.Context, roleID string) 
 	result, err = client.GetByIDResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleDefinitionsClient", "GetByID", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -334,8 +333,7 @@ func (client RoleDefinitionsClient) GetByIDPreparer(ctx context.Context, roleID 
 // GetByIDSender sends the GetByID request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleDefinitionsClient) GetByIDSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // GetByIDResponder handles the response to the GetByID request. The method always
@@ -343,7 +341,6 @@ func (client RoleDefinitionsClient) GetByIDSender(req *http.Request) (*http.Resp
 func (client RoleDefinitionsClient) GetByIDResponder(resp *http.Response) (result RoleDefinition, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
@@ -384,6 +381,11 @@ func (client RoleDefinitionsClient) List(ctx context.Context, scope string, filt
 	result.rdlr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleDefinitionsClient", "List", resp, "Failure responding to request")
+		return
+	}
+	if result.rdlr.hasNextLink() && result.rdlr.IsEmpty() {
+		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -414,8 +416,7 @@ func (client RoleDefinitionsClient) ListPreparer(ctx context.Context, scope stri
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client RoleDefinitionsClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return client.Send(req, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -423,7 +424,6 @@ func (client RoleDefinitionsClient) ListSender(req *http.Request) (*http.Respons
 func (client RoleDefinitionsClient) ListResponder(resp *http.Response) (result RoleDefinitionListResult, err error) {
 	err = autorest.Respond(
 		resp,
-		client.ByInspecting(),
 		azure.WithErrorUnlessStatusCode(http.StatusOK),
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())

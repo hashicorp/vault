@@ -98,7 +98,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 			TLSServerName: c.flagTLSServerName,
 			Insecure:      c.flagTLSSkipVerify,
 		}
-		config.ConfigureTLS(t)
+
+		// Setup TLS config
+		if err := config.ConfigureTLS(t); err != nil {
+			return nil, errors.Wrap(err, "failed to setup TLS config")
+		}
 	}
 
 	// Build the client
@@ -296,7 +300,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "tls-server-name",
+				Name:       flagTLSServerName,
 				Target:     &c.flagTLSServerName,
 				Default:    "",
 				EnvVar:     api.EnvVaultTLSServerName,
@@ -376,9 +380,9 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Target:     &c.flagFormat,
 					Default:    "table",
 					EnvVar:     EnvVaultFormat,
-					Completion: complete.PredictSet("table", "json", "yaml"),
-					Usage: "Print the output in the given format. Valid formats " +
-						"are \"table\", \"json\", or \"yaml\".",
+					Completion: complete.PredictSet("table", "json", "yaml", "pretty"),
+					Usage: `Print the output in the given format. Valid formats
+						are "table", "json", "yaml", or "pretty".`,
 				})
 			}
 		}

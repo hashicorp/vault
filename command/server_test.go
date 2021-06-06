@@ -12,7 +12,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"strings"
 	"sync"
@@ -24,21 +23,10 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func testRandomPort(tb testing.TB) int {
-	tb.Helper()
-
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	if err != nil {
-		tb.Fatal(err)
+func init() {
+	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
+		os.Setenv("VAULT_LICENSE", signed)
 	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	defer l.Close()
-
-	return l.Addr().(*net.TCPAddr).Port
 }
 
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
@@ -51,7 +39,7 @@ func testBaseHCL(tb testing.TB, listenerExtras string) string {
 			tls_disable = "true"
 			%s
 		}
-	`, testRandomPort(tb), listenerExtras))
+	`, 0, listenerExtras))
 }
 
 const (
@@ -129,12 +117,12 @@ func TestServer_ReloadListener(t *testing.T) {
 
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
-	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
-	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
 
 	relhcl := strings.Replace(reloadHCL, "TMPDIR", td, -1)
-	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
+	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
 	certPool := x509.NewCertPool()
@@ -186,10 +174,10 @@ func TestServer_ReloadListener(t *testing.T) {
 
 	relhcl = strings.Replace(reloadHCL, "TMPDIR", td, -1)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
-	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
-	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
-	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
+	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	cmd.SighupCh <- struct{}{}
 	select {
@@ -248,28 +236,28 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_header_timeout_config",
 			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
-			"Could not parse a time value for http_read_header_timeout",
+			"unknown unit \"km\" in duration \"12km\"",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
-			"Could not parse a time value for http_read_timeout",
+			"parsing \"34日\": invalid syntax",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_write_timeout_config",
 			testBaseHCL(t, badListenerWriteTimeout) + inmemHCL,
-			"Could not parse a time value for http_write_timeout",
+			"unknown unit \"lbs\" in duration \"56lbs\"",
 			1,
 			"-test-server-config",
 		},
 		{
 			"bad_listener_idle_timeout_config",
 			testBaseHCL(t, badListenerIdleTimeout) + inmemHCL,
-			"Could not parse a time value for http_idle_timeout",
+			"unknown unit \"gophers\" in duration \"78gophers\"",
 			1,
 			"-test-server-config",
 		},

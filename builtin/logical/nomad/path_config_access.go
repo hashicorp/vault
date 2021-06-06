@@ -2,8 +2,8 @@ package nomad
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -14,19 +14,34 @@ func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
-			"address": &framework.FieldSchema{
+			"address": {
 				Type:        framework.TypeString,
 				Description: "Nomad server address",
 			},
 
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
 
-			"max_token_name_length": &framework.FieldSchema{
+			"max_token_name_length": {
 				Type:        framework.TypeInt,
 				Description: "Max length for name of generated Nomad tokens",
+			},
+			"ca_cert": {
+				Type: framework.TypeString,
+				Description: `CA certificate to use when verifying Nomad server certificate,
+must be x509 PEM encoded.`,
+			},
+			"client_cert": {
+				Type: framework.TypeString,
+				Description: `Client certificate used for Nomad's TLS communication,
+must be x509 PEM encoded and if this is set you need to also set client_key.`,
+			},
+			"client_key": {
+				Type: framework.TypeString,
+				Description: `Client key used for Nomad's TLS communication,
+must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			},
 		},
 
@@ -61,7 +76,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, errwrap.Wrapf("error reading nomad access configuration: {{err}}", err)
+		return nil, fmt.Errorf("error reading nomad access configuration: %w", err)
 	}
 
 	return conf, nil
@@ -101,6 +116,18 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	if ok {
 		conf.Token = token.(string)
 	}
+	caCert, ok := data.GetOk("ca_cert")
+	if ok {
+		conf.CACert = caCert.(string)
+	}
+	clientCert, ok := data.GetOk("client_cert")
+	if ok {
+		conf.ClientCert = clientCert.(string)
+	}
+	clientKey, ok := data.GetOk("client_key")
+	if ok {
+		conf.ClientKey = clientKey.(string)
+	}
 
 	conf.MaxTokenNameLength = data.Get("max_token_name_length").(int)
 
@@ -126,4 +153,7 @@ type accessConfig struct {
 	Address            string `json:"address"`
 	Token              string `json:"token"`
 	MaxTokenNameLength int    `json:"max_token_name_length"`
+	CACert             string `json:"ca_cert"`
+	ClientCert         string `json:"client_cert"`
+	ClientKey          string `json:"client_key"`
 }

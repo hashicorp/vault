@@ -2,7 +2,9 @@ package framework
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -13,7 +15,9 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-kms-wrapping/entropy"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -48,6 +52,10 @@ type Backend struct {
 	// return. It is used to automatically generate proper responses,
 	// and ease specifying callbacks for revocation, renewal, etc.
 	Secrets []*Secret
+
+	// InitializeFunc is the callback, which if set, will be invoked via
+	// Initialize() just after a plugin has been mounted.
+	InitializeFunc InitializeFunc
 
 	// PeriodicFunc is the callback, which if set, will be invoked when the
 	// periodic timer of RollbackManager ticks. This can be used by
@@ -108,6 +116,18 @@ type CleanupFunc func(context.Context)
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
 
+// InitializeFunc is the callback, which if set, will be invoked via
+// Initialize() just after a plugin has been mounted.
+type InitializeFunc func(context.Context, *logical.InitializationRequest) error
+
+// Initialize is the logical.Backend implementation.
+func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	if b.InitializeFunc != nil {
+		return b.InitializeFunc(ctx, req)
+	}
+	return nil
+}
+
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
 	b.once.Do(b.init)
@@ -144,7 +164,8 @@ func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	err = fd.Validate()
 	if err != nil {
@@ -206,6 +227,21 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	if path.Operations != nil {
 		if op, ok := path.Operations[req.Operation]; ok {
+
+			// Check whether this operation should be forwarded
+			if sysView := b.System(); sysView != nil {
+				replState := sysView.ReplicationState()
+				props := op.Properties()
+
+				if props.ForwardPerformanceStandby && replState.HasState(consts.ReplicationPerformanceStandby) {
+					return nil, logical.ErrReadOnly
+				}
+
+				if props.ForwardPerformanceSecondary && !sysView.LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary) {
+					return nil, logical.ErrReadOnly
+				}
+			}
+
 			callback = op.Handler()
 		}
 	} else {
@@ -225,7 +261,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	if req.Operation != logical.HelpOperation {
 		err := fd.Validate()
@@ -261,6 +298,17 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.logger = config.Logger
 	b.system = config.System
 	return nil
+}
+
+// GetRandomReader returns an io.Reader to use for generating key material in
+// backends. If the backend has access to an external entropy source it will
+// return that, otherwise it returns crypto/rand.Reader.
+func (b *Backend) GetRandomReader() io.Reader {
+	if sourcer, ok := b.System().(entropy.Sourcer); ok {
+		return entropy.NewReader(sourcer)
+	}
+
+	return rand.Reader
 }
 
 // Logger can be used to get the logger. If no logger has been set,
@@ -529,20 +577,6 @@ type FieldSchema struct {
 	// dynamic UI generation.
 	AllowedValues []interface{}
 
-	// Display* members are available to provide hints for UI and documentation
-	// generators. They will be included in OpenAPI output if set.
-
-	// DisplayName is the name of the field suitable as a label or documentation heading.
-	DisplayName string
-
-	// DisplayValue is a sample value to display for this field. This may be used
-	// to indicate a default value, but it is for display only and completely separate
-	// from any Default member handling.
-	DisplayValue interface{}
-
-	// DisplaySensitive indicates that the value should be masked by default in the UI.
-	DisplaySensitive bool
-
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
@@ -553,7 +587,7 @@ type FieldSchema struct {
 func (s *FieldSchema) DefaultOrZero() interface{} {
 	if s.Default != nil {
 		switch s.Type {
-		case TypeDurationSecond:
+		case TypeDurationSecond, TypeSignedDurationSecond:
 			resultDur, err := parseutil.ParseDurationSecond(s.Default)
 			if err != nil {
 				return s.Type.Zero()
@@ -581,7 +615,7 @@ func (t FieldType) Zero() interface{} {
 		return map[string]interface{}{}
 	case TypeKVPairs:
 		return map[string]string{}
-	case TypeDurationSecond:
+	case TypeDurationSecond, TypeSignedDurationSecond:
 		return 0
 	case TypeSlice:
 		return []interface{}{}
@@ -591,6 +625,10 @@ func (t FieldType) Zero() interface{} {
 		return []int{}
 	case TypeHeader:
 		return http.Header{}
+	case TypeFloat:
+		return 0.0
+	case TypeTime:
+		return time.Time{}
 	default:
 		panic("unknown type: " + t.String())
 	}

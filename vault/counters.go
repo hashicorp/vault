@@ -2,18 +2,21 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
 	requestCounterDatePathFormat = "2006/01"
-	countersPath                 = systemBarrierPrefix + "counters"
-	requestCountersPath          = "sys/counters/requests/"
+
+	// This storage path stores both the request counters in this file, and the activity log.
+	countersSubPath = "counters/"
+
+	requestCountersPath = "sys/counters/requests/"
 )
 
 type counters struct {
@@ -55,7 +58,7 @@ func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]Dat
 
 	datepaths, err := view.List(ctx, "")
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
+		return nil, fmt.Errorf("failed to read request counters: %w", err)
 	}
 
 	var all []DatedRequestCounter
@@ -63,7 +66,7 @@ func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]Dat
 	for _, datepath := range datepaths {
 		datesubpaths, err := view.List(ctx, datepath)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
+			return nil, fmt.Errorf("failed to read request counters: %w", err)
 		}
 		sort.Strings(datesubpaths)
 		for _, datesubpath := range datesubpaths {
@@ -120,7 +123,7 @@ func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*Reque
 
 	out, err := view.Get(ctx, datepath)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
+		return nil, fmt.Errorf("failed to read request counters: %w", err)
 	}
 	if out == nil {
 		return nil, nil
@@ -157,11 +160,11 @@ func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) er
 	}
 	entry, err := logical.StorageEntryJSON(writeDatePath, localCounters)
 	if err != nil {
-		return errwrap.Wrapf("failed to create request counters entry: {{err}}", err)
+		return fmt.Errorf("failed to create request counters entry: %w", err)
 	}
 
 	if err := view.Put(ctx, entry); err != nil {
-		return errwrap.Wrapf("failed to save request counters: {{err}}", err)
+		return fmt.Errorf("failed to save request counters: %w", err)
 	}
 
 	if shouldReset {
@@ -172,4 +175,65 @@ func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) er
 	}
 
 	return nil
+}
+
+// ActiveTokens contains the number of active tokens.
+type ActiveTokens struct {
+	// ServiceTokens contains information about the number of active service
+	// tokens.
+	ServiceTokens TokenCounter `json:"service_tokens"`
+}
+
+// TokenCounter counts the number of tokens
+type TokenCounter struct {
+	// Total is the total number of tokens
+	Total int `json:"total"`
+}
+
+// countActiveTokens returns the number of active tokens
+func (c *Core) countActiveTokens(ctx context.Context) (*ActiveTokens, error) {
+	// Get all of the namespaces
+	ns := c.collectNamespaces()
+
+	// Count the tokens under each namespace
+	total := 0
+	for i := 0; i < len(ns); i++ {
+		ids, err := c.tokenStore.idView(ns[i]).List(ctx, "")
+		if err != nil {
+			return nil, err
+		}
+		total += len(ids)
+	}
+
+	return &ActiveTokens{
+		ServiceTokens: TokenCounter{
+			Total: total,
+		},
+	}, nil
+}
+
+// ActiveEntities contains the number of active entities.
+type ActiveEntities struct {
+	// Entities contains information about the number of active entities.
+	Entities EntityCounter `json:"entities"`
+}
+
+// EntityCounter counts the number of entities
+type EntityCounter struct {
+	// Total is the total number of entities
+	Total int `json:"total"`
+}
+
+// countActiveEntities returns the number of active entities
+func (c *Core) countActiveEntities(ctx context.Context) (*ActiveEntities, error) {
+	count, err := c.identityStore.countEntities()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ActiveEntities{
+		Entities: EntityCounter{
+			Total: count,
+		},
+	}, nil
 }

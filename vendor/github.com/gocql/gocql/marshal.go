@@ -44,6 +44,52 @@ type Unmarshaler interface {
 
 // Marshal returns the CQL encoding of the value for the Cassandra
 // internal type described by the info parameter.
+//
+// nil is serialized as CQL null.
+// If value implements Marshaler, its MarshalCQL method is called to marshal the data.
+// If value is a pointer, the pointed-to value is marshaled.
+//
+// Supported conversions are as follows, other type combinations may be added in the future:
+//
+//  CQL type                    | Go type (value)    | Note
+//  varchar, ascii, blob, text  | string, []byte     |
+//  boolean                     | bool               |
+//  tinyint, smallint, int      | integer types      |
+//  tinyint, smallint, int      | string             | formatted as base 10 number
+//  bigint, counter             | integer types      |
+//  bigint, counter             | big.Int            |
+//  bigint, counter             | string             | formatted as base 10 number
+//  float                       | float32            |
+//  double                      | float64            |
+//  decimal                     | inf.Dec            |
+//  time                        | int64              | nanoseconds since start of day
+//  time                        | time.Duration      | duration since start of day
+//  timestamp                   | int64              | milliseconds since Unix epoch
+//  timestamp                   | time.Time          |
+//  list, set                   | slice, array       |
+//  list, set                   | map[X]struct{}     |
+//  map                         | map[X]Y            |
+//  uuid, timeuuid              | gocql.UUID         |
+//  uuid, timeuuid              | [16]byte           | raw UUID bytes
+//  uuid, timeuuid              | []byte             | raw UUID bytes, length must be 16 bytes
+//  uuid, timeuuid              | string             | hex representation, see ParseUUID
+//  varint                      | integer types      |
+//  varint                      | big.Int            |
+//  varint                      | string             | value of number in decimal notation
+//  inet                        | net.IP             |
+//  inet                        | string             | IPv4 or IPv6 address string
+//  tuple                       | slice, array       |
+//  tuple                       | struct             | fields are marshaled in order of declaration
+//  user-defined type           | gocql.UDTMarshaler | MarshalUDT is called
+//  user-defined type           | map[string]interface{} |
+//  user-defined type           | struct             | struct fields' cql tags are used for column names
+//  date                        | int64              | milliseconds since Unix epoch to start of day (in UTC)
+//  date                        | time.Time          | start of day (in UTC)
+//  date                        | string             | parsed using "2006-01-02" format
+//  duration                    | int64              | duration in nanoseconds
+//  duration                    | time.Duration      |
+//  duration                    | gocql.Duration     |
+//  duration                    | string             | parsed with time.ParseDuration
 func Marshal(info TypeInfo, value interface{}) ([]byte, error) {
 	if info.Version() < protoVersion1 {
 		panic("protocol version not set")
@@ -118,6 +164,44 @@ func Marshal(info TypeInfo, value interface{}) ([]byte, error) {
 // Unmarshal parses the CQL encoded data based on the info parameter that
 // describes the Cassandra internal data type and stores the result in the
 // value pointed by value.
+//
+// If value implements Unmarshaler, it's UnmarshalCQL method is called to
+// unmarshal the data.
+// If value is a pointer to pointer, it is set to nil if the CQL value is
+// null. Otherwise, nulls are unmarshalled as zero value.
+//
+// Supported conversions are as follows, other type combinations may be added in the future:
+//
+//  CQL type                                | Go type (value)         | Note
+//  varchar, ascii, blob, text              | *string                 |
+//  varchar, ascii, blob, text              | *[]byte                 | non-nil buffer is reused
+//  bool                                    | *bool                   |
+//  tinyint, smallint, int, bigint, counter | *integer types          |
+//  tinyint, smallint, int, bigint, counter | *big.Int                |
+//  tinyint, smallint, int, bigint, counter | *string                 | formatted as base 10 number
+//  float                                   | *float32                |
+//  double                                  | *float64                |
+//  decimal                                 | *inf.Dec                |
+//  time                                    | *int64                  | nanoseconds since start of day
+//  time                                    | *time.Duration          |
+//  timestamp                               | *int64                  | milliseconds since Unix epoch
+//  timestamp                               | *time.Time              |
+//  list, set                               | *slice, *array          |
+//  map                                     | *map[X]Y                |
+//  uuid, timeuuid                          | *string                 | see UUID.String
+//  uuid, timeuuid                          | *[]byte                 | raw UUID bytes
+//  uuid, timeuuid                          | *gocql.UUID             |
+//  timeuuid                                | *time.Time              | timestamp of the UUID
+//  inet                                    | *net.IP                 |
+//  inet                                    | *string                 | IPv4 or IPv6 address string
+//  tuple                                   | *slice, *array          |
+//  tuple                                   | *struct                 | struct fields are set in order of declaration
+//  user-defined types                      | gocql.UDTUnmarshaler    | UnmarshalUDT is called
+//  user-defined types                      | *map[string]interface{} |
+//  user-defined types                      | *struct                 | cql tag is used to determine field name
+//  date                                    | *time.Time              | time of beginning of the day (in UTC)
+//  date                                    | *string                 | formatted with 2006-01-02 format
+//  duration                                | *gocql.Duration         |
 func Unmarshal(info TypeInfo, data []byte, value interface{}) error {
 	if v, ok := value.(Unmarshaler); ok {
 		return v.UnmarshalCQL(info, data)
@@ -713,9 +797,6 @@ func unmarshalIntlike(info TypeInfo, int64Val int64, data []byte, value interfac
 		return nil
 	case *uint:
 		unitVal := uint64(int64Val)
-		if ^uint(0) == math.MaxUint32 && unitVal > math.MaxUint32 {
-			return unmarshalErrorf("unmarshal int: value %d out of range for %T", unitVal, *v)
-		}
 		switch info.Type() {
 		case TypeInt:
 			*v = uint(unitVal) & 0xFFFFFFFF
@@ -724,6 +805,9 @@ func unmarshalIntlike(info TypeInfo, int64Val int64, data []byte, value interfac
 		case TypeTinyInt:
 			*v = uint(unitVal) & 0xFF
 		default:
+			if ^uint(0) == math.MaxUint32 && (int64Val < 0 || int64Val > math.MaxUint32) {
+				return unmarshalErrorf("unmarshal int: value %d out of range for %T", unitVal, *v)
+			}
 			*v = uint(unitVal)
 		}
 		return nil
@@ -749,15 +833,17 @@ func unmarshalIntlike(info TypeInfo, int64Val int64, data []byte, value interfac
 		*v = int32(int64Val)
 		return nil
 	case *uint32:
-		if int64Val > math.MaxUint32 {
-			return unmarshalErrorf("unmarshal int: value %d out of range for %T", int64Val, *v)
-		}
 		switch info.Type() {
+		case TypeInt:
+			*v = uint32(int64Val) & 0xFFFFFFFF
 		case TypeSmallInt:
 			*v = uint32(int64Val) & 0xFFFF
 		case TypeTinyInt:
 			*v = uint32(int64Val) & 0xFF
 		default:
+			if int64Val < 0 || int64Val > math.MaxUint32 {
+				return unmarshalErrorf("unmarshal int: value %d out of range for %T", int64Val, *v)
+			}
 			*v = uint32(int64Val) & 0xFFFFFFFF
 		}
 		return nil
@@ -768,13 +854,15 @@ func unmarshalIntlike(info TypeInfo, int64Val int64, data []byte, value interfac
 		*v = int16(int64Val)
 		return nil
 	case *uint16:
-		if int64Val > math.MaxUint16 {
-			return unmarshalErrorf("unmarshal int: value %d out of range for %T", int64Val, *v)
-		}
 		switch info.Type() {
+		case TypeSmallInt:
+			*v = uint16(int64Val) & 0xFFFF
 		case TypeTinyInt:
 			*v = uint16(int64Val) & 0xFF
 		default:
+			if int64Val < 0 || int64Val > math.MaxUint16 {
+				return unmarshalErrorf("unmarshal int: value %d out of range for %T", int64Val, *v)
+			}
 			*v = uint16(int64Val) & 0xFFFF
 		}
 		return nil
@@ -785,7 +873,7 @@ func unmarshalIntlike(info TypeInfo, int64Val int64, data []byte, value interfac
 		*v = int8(int64Val)
 		return nil
 	case *uint8:
-		if int64Val > math.MaxUint8 {
+		if info.Type() != TypeTinyInt && (int64Val < 0 || int64Val > math.MaxUint8) {
 			return unmarshalErrorf("unmarshal int: value %d out of range for %T", int64Val, *v)
 		}
 		*v = uint8(int64Val) & 0xFF
@@ -833,34 +921,69 @@ func unmarshalIntlike(info TypeInfo, int64Val int64, data []byte, value interfac
 		rv.SetInt(int64Val)
 		return nil
 	case reflect.Uint:
-		if int64Val < 0 || (^uint(0) == math.MaxUint32 && int64Val > math.MaxUint32) {
-			return unmarshalErrorf("unmarshal int: value %d out of range", int64Val)
+		unitVal := uint64(int64Val)
+		switch info.Type() {
+		case TypeInt:
+			rv.SetUint(unitVal & 0xFFFFFFFF)
+		case TypeSmallInt:
+			rv.SetUint(unitVal & 0xFFFF)
+		case TypeTinyInt:
+			rv.SetUint(unitVal & 0xFF)
+		default:
+			if ^uint(0) == math.MaxUint32 && (int64Val < 0 || int64Val > math.MaxUint32) {
+				return unmarshalErrorf("unmarshal int: value %d out of range for %s", unitVal, rv.Type())
+			}
+			rv.SetUint(unitVal)
 		}
-		rv.SetUint(uint64(int64Val))
 		return nil
 	case reflect.Uint64:
-		if int64Val < 0 {
-			return unmarshalErrorf("unmarshal int: value %d out of range", int64Val)
+		unitVal := uint64(int64Val)
+		switch info.Type() {
+		case TypeInt:
+			rv.SetUint(unitVal & 0xFFFFFFFF)
+		case TypeSmallInt:
+			rv.SetUint(unitVal & 0xFFFF)
+		case TypeTinyInt:
+			rv.SetUint(unitVal & 0xFF)
+		default:
+			rv.SetUint(unitVal)
 		}
-		rv.SetUint(uint64(int64Val))
 		return nil
 	case reflect.Uint32:
-		if int64Val < 0 || int64Val > math.MaxUint32 {
-			return unmarshalErrorf("unmarshal int: value %d out of range", int64Val)
+		unitVal := uint64(int64Val)
+		switch info.Type() {
+		case TypeInt:
+			rv.SetUint(unitVal & 0xFFFFFFFF)
+		case TypeSmallInt:
+			rv.SetUint(unitVal & 0xFFFF)
+		case TypeTinyInt:
+			rv.SetUint(unitVal & 0xFF)
+		default:
+			if int64Val < 0 || int64Val > math.MaxUint32 {
+				return unmarshalErrorf("unmarshal int: value %d out of range for %s", int64Val, rv.Type())
+			}
+			rv.SetUint(unitVal & 0xFFFFFFFF)
 		}
-		rv.SetUint(uint64(int64Val))
 		return nil
 	case reflect.Uint16:
-		if int64Val < 0 || int64Val > math.MaxUint16 {
-			return unmarshalErrorf("unmarshal int: value %d out of range", int64Val)
+		unitVal := uint64(int64Val)
+		switch info.Type() {
+		case TypeSmallInt:
+			rv.SetUint(unitVal & 0xFFFF)
+		case TypeTinyInt:
+			rv.SetUint(unitVal & 0xFF)
+		default:
+			if int64Val < 0 || int64Val > math.MaxUint16 {
+				return unmarshalErrorf("unmarshal int: value %d out of range for %s", int64Val, rv.Type())
+			}
+			rv.SetUint(unitVal & 0xFFFF)
 		}
-		rv.SetUint(uint64(int64Val))
 		return nil
 	case reflect.Uint8:
-		if int64Val < 0 || int64Val > math.MaxUint8 {
-			return unmarshalErrorf("unmarshal int: value %d out of range", int64Val)
+		if info.Type() != TypeTinyInt && (int64Val < 0 || int64Val > math.MaxUint8) {
+			return unmarshalErrorf("unmarshal int: value %d out of range for %s", int64Val, rv.Type())
 		}
-		rv.SetUint(uint64(int64Val))
+		rv.SetUint(uint64(int64Val) & 0xff)
 		return nil
 	}
 	return unmarshalErrorf("can not unmarshal %s into %T", info, value)
@@ -1261,6 +1384,16 @@ func unmarshalDate(info TypeInfo, data []byte, value interface{}) error {
 		timestamp := (int64(current) - int64(origin)) * 86400000
 		*v = time.Unix(0, timestamp*int64(time.Millisecond)).In(time.UTC)
 		return nil
+	case *string:
+		if len(data) == 0 {
+			*v = ""
+			return nil
+		}
+		var origin uint32 = 1 << 31
+		var current uint32 = binary.BigEndian.Uint32(data)
+		timestamp := (int64(current) - int64(origin)) * 86400000
+		*v = time.Unix(0, timestamp*int64(time.Millisecond)).In(time.UTC).Format("2006-01-02")
+		return nil
 	}
 	return unmarshalErrorf("can not unmarshal %s into %T", info, value)
 }
@@ -1510,6 +1643,9 @@ func unmarshalList(info TypeInfo, data []byte, value interface{}) error {
 				return err
 			}
 			data = data[p:]
+			if len(data) < m {
+				return unmarshalErrorf("unmarshal list: unexpected eof")
+			}
 			if err := Unmarshal(listInfo.Elem, data[:m], rv.Index(i).Addr().Interface()); err != nil {
 				return err
 			}
@@ -1604,6 +1740,9 @@ func unmarshalMap(info TypeInfo, data []byte, value interface{}) error {
 			return err
 		}
 		data = data[p:]
+		if len(data) < m {
+			return unmarshalErrorf("unmarshal map: unexpected eof")
+		}
 		key := reflect.New(t.Key())
 		if err := Unmarshal(mapInfo.Key, data[:m], key.Interface()); err != nil {
 			return err
@@ -1615,6 +1754,9 @@ func unmarshalMap(info TypeInfo, data []byte, value interface{}) error {
 			return err
 		}
 		data = data[p:]
+		if len(data) < m {
+			return unmarshalErrorf("unmarshal map: unexpected eof")
+		}
 		val := reflect.New(t.Elem())
 		if err := Unmarshal(mapInfo.Elem, data[:m], val.Interface()); err != nil {
 			return err
@@ -1632,6 +1774,8 @@ func marshalUUID(info TypeInfo, value interface{}) ([]byte, error) {
 		return nil, nil
 	case UUID:
 		return val.Bytes(), nil
+	case [16]byte:
+		return val[:], nil
 	case []byte:
 		if len(val) != 16 {
 			return nil, marshalErrorf("can not marshal []byte %d bytes long into %s, must be exactly 16 bytes long", len(val), info)
@@ -1653,7 +1797,7 @@ func marshalUUID(info TypeInfo, value interface{}) ([]byte, error) {
 }
 
 func unmarshalUUID(info TypeInfo, data []byte, value interface{}) error {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		switch v := value.(type) {
 		case *string:
 			*v = ""
@@ -1668,9 +1812,22 @@ func unmarshalUUID(info TypeInfo, data []byte, value interface{}) error {
 		return nil
 	}
 
+	if len(data) != 16 {
+		return unmarshalErrorf("unable to parse UUID: UUIDs must be exactly 16 bytes long")
+	}
+
+	switch v := value.(type) {
+	case *[16]byte:
+		copy((*v)[:], data)
+		return nil
+	case *UUID:
+		copy((*v)[:], data)
+		return nil
+	}
+
 	u, err := UUIDFromBytes(data)
 	if err != nil {
-		return unmarshalErrorf("Unable to parse UUID: %s", err)
+		return unmarshalErrorf("unable to parse UUID: %s", err)
 	}
 
 	switch v := value.(type) {
@@ -1679,9 +1836,6 @@ func unmarshalUUID(info TypeInfo, data []byte, value interface{}) error {
 		return nil
 	case *[]byte:
 		*v = u[:]
-		return nil
-	case *UUID:
-		*v = u
 		return nil
 	}
 	return unmarshalErrorf("can not unmarshal X %s into %T", info, value)
@@ -1781,6 +1935,11 @@ func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
 
 		var buf []byte
 		for i, elem := range v {
+			if elem == nil {
+				buf = appendInt(buf, int32(-1))
+				continue
+			}
+
 			data, err := Marshal(tuple.Elems[i], elem)
 			if err != nil {
 				return nil, err
@@ -1806,7 +1965,14 @@ func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
 
 		var buf []byte
 		for i, elem := range tuple.Elems {
-			data, err := Marshal(elem, rv.Field(i).Interface())
+			field := rv.Field(i)
+
+			if field.Kind() == reflect.Ptr && field.IsNil() {
+				buf = appendInt(buf, int32(-1))
+				continue
+			}
+
+			data, err := Marshal(elem, field.Interface())
 			if err != nil {
 				return nil, err
 			}
@@ -1825,7 +1991,14 @@ func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
 
 		var buf []byte
 		for i, elem := range tuple.Elems {
-			data, err := Marshal(elem, rv.Index(i).Interface())
+			item := rv.Index(i)
+
+			if item.Kind() == reflect.Ptr && item.IsNil() {
+				buf = appendInt(buf, int32(-1))
+				continue
+			}
+
+			data, err := Marshal(elem, item.Interface())
 			if err != nil {
 				return nil, err
 			}
@@ -1865,8 +2038,9 @@ func unmarshalTuple(info TypeInfo, data []byte, value interface{}) error {
 		for i, elem := range tuple.Elems {
 			// each element inside data is a [bytes]
 			var p []byte
-			p, data = readBytes(data)
-
+			if len(data) >= 4 {
+				p, data = readBytes(data)
+			}
 			err := Unmarshal(elem, p, v[i])
 			if err != nil {
 				return err
@@ -1892,16 +2066,26 @@ func unmarshalTuple(info TypeInfo, data []byte, value interface{}) error {
 		}
 
 		for i, elem := range tuple.Elems {
-			m := readInt(data)
-			data = data[4:]
+			var p []byte
+			if len(data) >= 4 {
+				p, data = readBytes(data)
+			}
 
 			v := elem.New()
-			if err := Unmarshal(elem, data[:m], v); err != nil {
+			if err := Unmarshal(elem, p, v); err != nil {
 				return err
 			}
-			rv.Field(i).Set(reflect.ValueOf(v).Elem())
 
-			data = data[m:]
+			switch rv.Field(i).Kind() {
+			case reflect.Ptr:
+				if p != nil {
+					rv.Field(i).Set(reflect.ValueOf(v))
+				} else {
+					rv.Field(i).Set(reflect.Zero(reflect.TypeOf(v)))
+				}
+			default:
+				rv.Field(i).Set(reflect.ValueOf(v).Elem())
+			}
 		}
 
 		return nil
@@ -1916,16 +2100,26 @@ func unmarshalTuple(info TypeInfo, data []byte, value interface{}) error {
 		}
 
 		for i, elem := range tuple.Elems {
-			m := readInt(data)
-			data = data[4:]
+			var p []byte
+			if len(data) >= 4 {
+				p, data = readBytes(data)
+			}
 
 			v := elem.New()
-			if err := Unmarshal(elem, data[:m], v); err != nil {
+			if err := Unmarshal(elem, p, v); err != nil {
 				return err
 			}
-			rv.Index(i).Set(reflect.ValueOf(v).Elem())
 
-			data = data[m:]
+			switch rv.Index(i).Kind() {
+			case reflect.Ptr:
+				if p != nil {
+					rv.Index(i).Set(reflect.ValueOf(v))
+				} else {
+					rv.Index(i).Set(reflect.Zero(reflect.TypeOf(v)))
+				}
+			default:
+				rv.Index(i).Set(reflect.ValueOf(v).Elem())
+			}
 		}
 
 		return nil
@@ -1960,7 +2154,7 @@ func marshalUDT(info TypeInfo, value interface{}) ([]byte, error) {
 	case Marshaler:
 		return v.MarshalCQL(info)
 	case unsetColumn:
-		return nil, unmarshalErrorf("Invalid request: UnsetValue is unsupported for user defined types")
+		return nil, unmarshalErrorf("invalid request: UnsetValue is unsupported for user defined types")
 	case UDTMarshaler:
 		var buf []byte
 		for _, e := range udt.Elements {

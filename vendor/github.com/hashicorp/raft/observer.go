@@ -2,6 +2,7 @@ package raft
 
 import (
 	"sync/atomic"
+	"time"
 )
 
 // Observation is sent along the given channel to observers when an event occurs.
@@ -18,13 +19,19 @@ type Observation struct {
 
 // LeaderObservation is used for the data when leadership changes.
 type LeaderObservation struct {
-	leader ServerAddress
+	Leader ServerAddress
 }
 
 // PeerObservation is sent to observers when peers change.
 type PeerObservation struct {
 	Removed bool
 	Peer    Server
+}
+
+// FailedHeartbeatObservation is sent when a node fails to heartbeat with the leader
+type FailedHeartbeatObservation struct {
+	PeerID      ServerID
+	LastContact time.Time
 }
 
 // nextObserverId is used to provide a unique ID for each observer to aid in

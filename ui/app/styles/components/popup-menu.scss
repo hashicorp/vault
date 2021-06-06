@@ -23,10 +23,6 @@
 
   .menu {
     padding: $size-11 0;
-
-    small code {
-      margin-left: $spacing-xs;
-    }
   }
 
   button.link,
@@ -135,6 +131,8 @@
 }
 
 .ember-basic-dropdown-content {
+  background-color: transparent;
+
   &--left.popup-menu {
     margin: 0px 0 0 -8px;
   }

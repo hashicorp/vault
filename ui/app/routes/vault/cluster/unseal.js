@@ -5,7 +5,7 @@ export default ClusterRoute.extend({
   wizard: service(),
 
   activate() {
-    this.get('wizard').set('initEvent', 'UNSEAL');
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOUNSEAL');
+    this.wizard.set('initEvent', 'UNSEAL');
+    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOUNSEAL');
   },
 });

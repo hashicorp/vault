@@ -3,8 +3,10 @@ package vault
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -13,9 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
-var (
-	logger = logging.NewVaultLogger(log.Trace)
-)
+var logger = logging.NewVaultLogger(log.Trace)
 
 // mockBarrier returns a physical backend, security barrier, and master key
 func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {
@@ -29,8 +29,8 @@ func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {
 	}
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	b.Unseal(context.Background(), key)
 	return inm, b, key
 }
@@ -57,6 +57,34 @@ func TestAESGCMBarrier_Rotate(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	testBarrier_Rotate(t, b)
+}
+
+func TestAESGCMBarrier_MissingRotateConfig(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
+	b.Unseal(context.Background(), key)
+
+	// Write a keyring which lacks rotation config settings
+	oldKeyring := b.keyring.Clone()
+	oldKeyring.rotationConfig = KeyRotationConfig{}
+	b.persistKeyring(context.Background(), oldKeyring)
+
+	b.ReloadKeyring(context.Background())
+
+	// At this point, the rotation config should match the default
+	if !defaultRotationConfig.Equals(b.keyring.rotationConfig) {
+		t.Fatalf("expected empty rotation config to recover as default config")
+	}
 }
 
 func TestAESGCMBarrier_Upgrade(t *testing.T) {
@@ -116,7 +144,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	}
 
 	// Generate a barrier/init entry
-	encrypt, _ := b.GenerateKey()
+	encrypt, _ := b.GenerateKey(rand.Reader)
 	init := &barrierInit{
 		Version: 1,
 		Key:     encrypt,
@@ -124,7 +152,7 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	buf, _ := json.Marshal(init)
 
 	// Protect with master key
-	master, _ := b.GenerateKey()
+	master, _ := b.GenerateKey(rand.Reader)
 	gcm, _ := b.aeadFromKey(master)
 	value, err := b.encrypt(barrierInitPath, initialKeyTerm, gcm, buf)
 	if err != nil {
@@ -205,8 +233,8 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 	}
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
@@ -245,8 +273,8 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 	}
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
@@ -284,8 +312,8 @@ func TestAESGCMBarrier_MoveIntegrityV1(t *testing.T) {
 	b.currentAESGCMVersionByte = AESGCMVersion1
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	err = b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	err = b.Initialize(context.Background(), key, nil, rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -328,8 +356,8 @@ func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
 	b.currentAESGCMVersionByte = AESGCMVersion2
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	err = b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	err = b.Initialize(context.Background(), key, nil, rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -372,8 +400,8 @@ func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
 	b.currentAESGCMVersionByte = AESGCMVersion1
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	err = b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	err = b.Initialize(context.Background(), key, nil, rand.Reader)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -425,8 +453,8 @@ func TestEncrypt_Unique(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	b.Unseal(context.Background(), key)
 
 	if b.keyring == nil {
@@ -465,19 +493,19 @@ func TestInitialize_KeyLength(t *testing.T) {
 	middle := []byte("ThisIsASecretKeyAndMore")
 	short := []byte("Key")
 
-	err = b.Initialize(context.Background(), long)
+	err = b.Initialize(context.Background(), long, nil, rand.Reader)
 
 	if err == nil {
 		t.Fatalf("key length protection failed")
 	}
 
-	err = b.Initialize(context.Background(), middle)
+	err = b.Initialize(context.Background(), middle, nil, rand.Reader)
 
 	if err == nil {
 		t.Fatalf("key length protection failed")
 	}
 
-	err = b.Initialize(context.Background(), short)
+	err = b.Initialize(context.Background(), short, nil, rand.Reader)
 
 	if err == nil {
 		t.Fatalf("key length protection failed")
@@ -498,8 +526,8 @@ func TestEncrypt_BarrierEncryptor(t *testing.T) {
 	}
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	b.Unseal(context.Background(), key)
 
 	cipher, err := b.Encrypt(context.Background(), "foo", []byte("quick brown fox"))
@@ -528,8 +556,8 @@ func TestAESGCMBarrier_ReloadKeyring(t *testing.T) {
 	}
 
 	// Initialize and unseal
-	key, _ := b.GenerateKey()
-	b.Initialize(context.Background(), key)
+	key, _ := b.GenerateKey(rand.Reader)
+	b.Initialize(context.Background(), key, nil, rand.Reader)
 	b.Unseal(context.Background(), key)
 
 	keyringRaw, err := inm.Get(context.Background(), keyringPath)
@@ -550,7 +578,7 @@ func TestAESGCMBarrier_ReloadKeyring(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		b2.Unseal(context.Background(), key)
-		_, err = b2.Rotate(context.Background())
+		_, err = b2.Rotate(context.Background(), rand.Reader)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -593,5 +621,37 @@ func TestAESGCMBarrier_ReloadKeyring(t *testing.T) {
 	if len(b.cache) != 0 {
 		t.Fatal("failed to clear cache")
 	}
+}
 
+func TestBarrier_LegacyRotate(t *testing.T) {
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	b1, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	} // Initialize the barrier
+	key, _ := b1.GenerateKey(rand.Reader)
+	b1.Initialize(context.Background(), key, nil, rand.Reader)
+	err = b1.Unseal(context.Background(), key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	k1 := b1.keyring.TermKey(1)
+	k1.Encryptions = 0
+	k1.InstallTime = time.Now().Add(-24 * 366 * time.Hour)
+	b1.persistKeyring(context.Background(), b1.keyring)
+	b1.Seal()
+
+	err = b1.Unseal(context.Background(), key)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	reason, err := b1.CheckBarrierAutoRotate(context.Background())
+	if err != nil || reason != legacyRotateReason {
+		t.Fail()
+	}
 }

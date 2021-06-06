@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -22,6 +21,9 @@ type batchResponseSignItem struct {
 	// signature for the input present in the corresponding batch
 	// request item
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
+
+	// The key version to be used for encryption
+	KeyVersion int `json:"key_version" mapstructure:"key_version"`
 
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
@@ -111,7 +113,7 @@ to the min_encryption_version configured on the key.`,
 
 			"prehashed": {
 				Type:        framework.TypeBool,
-				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 
 			"signature_algorithm": {
@@ -140,7 +142,7 @@ func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The key to use",
 			},
@@ -193,7 +195,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 
 			"prehashed": {
 				Type:        framework.TypeBool,
-				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
+				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
 
 			"signature_algorithm": {
@@ -247,7 +249,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +271,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -304,7 +306,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 
 		if p.Type.HashSignatureInput() && !prehashed {
-			var hf = keysutil.HashFuncMap[hashAlgorithm]()
+			hf := keysutil.HashFuncMap[hashAlgorithm]()
 			hf.Write(input)
 			input = hf.Sum(nil)
 		}
@@ -329,8 +331,14 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		} else if sig == nil {
 			response[i].err = fmt.Errorf("signature could not be computed")
 		} else {
+			keyVersion := ver
+			if keyVersion == 0 {
+				keyVersion = p.LatestVersion
+			}
+
 			response[i].Signature = sig.Signature
 			response[i].PublicKey = sig.PublicKey
+			response[i].KeyVersion = keyVersion
 		}
 	}
 
@@ -346,15 +354,18 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
 			}
+
 			return nil, response[0].err
 		}
+
 		resp.Data = map[string]interface{}{
-			"signature": response[0].Signature,
+			"signature":   response[0].Signature,
+			"key_version": response[0].KeyVersion,
 		}
+
 		if len(response[0].PublicKey) > 0 {
 			resp.Data["public_key"] = response[0].PublicKey
 		}
-
 	}
 
 	p.Unlock()
@@ -367,7 +378,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if batchInputRaw != nil {
 		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -456,7 +467,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
-	})
+	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

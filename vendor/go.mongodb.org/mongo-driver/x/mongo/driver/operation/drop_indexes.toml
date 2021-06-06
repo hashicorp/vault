@@ -1,0 +1,28 @@
+version = 0
+name = "DropIndexes"
+documentation = "DropIndexes performs an dropIndexes operation."
+
+[properties]
+enabled = ["write concern"]
+
+[command]
+name = "dropIndexes"
+parameter = "collection"
+
+[request.index]
+type = "string"
+constructor = true
+documentation = """
+Index specifies the name of the index to drop. If '*' is specified, all indexes will be dropped.
+"""
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."
+
+[response]
+name = "DropIndexesResult"
+
+[response.field.nIndexesWas]
+type = "int32"
+documentation = "Number of indexes that existed before the drop was executed."

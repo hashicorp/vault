@@ -2,6 +2,7 @@ package keysutil
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"reflect"
 	"testing"
@@ -77,7 +78,7 @@ func TestEncryptedKeysStorage_List(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := policy.Rotate(ctx, s)
+	err := policy.Rotate(ctx, s, rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,7 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := policy.Rotate(ctx, s)
+	err := policy.Rotate(ctx, s, rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +234,6 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 	if data != nil {
 		t.Fatal("data should be nil")
 	}
-
 }
 
 func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
@@ -249,7 +249,7 @@ func BenchmarkEncrytedKeyStorage_List(b *testing.B) {
 
 	ctx := context.Background()
 
-	err := policy.Rotate(ctx, s)
+	err := policy.Rotate(ctx, s, rand.Reader)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -295,7 +295,7 @@ func BenchmarkEncrytedKeyStorage_Put(b *testing.B) {
 
 	ctx := context.Background()
 
-	err := policy.Rotate(ctx, s)
+	err := policy.Rotate(ctx, s, rand.Reader)
 	if err != nil {
 		b.Fatal(err)
 	}

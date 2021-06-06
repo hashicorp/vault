@@ -2,8 +2,8 @@
 // requests and responses.
 package restxml
 
-//go:generate go run -tags codegen ../../../models/protocol_tests/generate.go ../../../models/protocol_tests/input/rest-xml.json build_test.go
-//go:generate go run -tags codegen ../../../models/protocol_tests/generate.go ../../../models/protocol_tests/output/rest-xml.json unmarshal_test.go
+//go:generate go run -tags codegen ../../../private/model/cli/gen-protocol-tests ../../../models/protocol_tests/input/rest-xml.json build_test.go
+//go:generate go run -tags codegen ../../../private/model/cli/gen-protocol-tests ../../../models/protocol_tests/output/rest-xml.json unmarshal_test.go
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ func Build(r *request.Request) {
 			r.Error = awserr.NewRequestFailure(
 				awserr.New(request.ErrCodeSerialization,
 					"failed to encode rest XML request", err),
-				r.HTTPResponse.StatusCode,
+				0,
 				r.RequestID,
 			)
 			return

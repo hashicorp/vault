@@ -1,0 +1,25 @@
+### AWS IAM Authentication
+
+The security updates added in Vault 1.5.1, 1.4.4, 1.3.8, and 1.2.5 include additional header checking
+during AWS IAM authentication. The default list of allowed headers doesn't include some that are
+commonly present, which may result in a login error of the form:
+
+```
+Cannot login using AWS-IAM: invalid request header: X-Amz-Security-Token
+```
+
+This issue affects 1.5.2, 1.4.5, 1.3.9, and 1.2.6 as well. It has been corrected in 1.5.3, 1.4.6,
+1.3.10 and 1.2.7. The affected released versions can work around the issue by manually configuring
+the allowed header list, including all needed headers. A recommended configuration is shown below:
+
+```
+vault write auth/aws/config/client \
+   allowed_sts_header_values="Content-Type" \
+   allowed_sts_header_values="Content-Length" \
+   allowed_sts_header_values="User-Agent" \
+   allowed_sts_header_values="X-Amz-Date" \
+   allowed_sts_header_values="Authorization" \
+   allowed_sts_header_values="X-Amz-Security-Token" \
+   allowed_sts_header_values="Host" \
+   allowed_sts_header_values="X-Vault-Aws-Iam-Server-Id"
+```

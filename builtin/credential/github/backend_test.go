@@ -35,34 +35,35 @@ func TestBackend_Config(t *testing.T) {
 		"ttl":          "",
 		"max_ttl":      "",
 	}
-	expectedTTL1, _ := time.ParseDuration("24h0m0s")
+	expectedTTL1 := 24 * time.Hour
 	config_data2 := map[string]interface{}{
 		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "1h",
 		"max_ttl":      "2h",
 	}
-	expectedTTL2, _ := time.ParseDuration("1h0m0s")
+	expectedTTL2 := time.Hour
 	config_data3 := map[string]interface{}{
 		"organization": os.Getenv("GITHUB_ORG"),
 		"ttl":          "50h",
 		"max_ttl":      "50h",
 	}
+	expectedTTL3 := 48 * time.Hour
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: b,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, config_data1),
-			testLoginWrite(t, login_data, expectedTTL1.Nanoseconds(), false),
+			testLoginWrite(t, login_data, expectedTTL1, false),
 			testConfigWrite(t, config_data2),
-			testLoginWrite(t, login_data, expectedTTL2.Nanoseconds(), false),
+			testLoginWrite(t, login_data, expectedTTL2, false),
 			testConfigWrite(t, config_data3),
-			testLoginWrite(t, login_data, 0, true),
+			testLoginWrite(t, login_data, expectedTTL3, true),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64, expectFail bool) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL time.Duration, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
@@ -72,10 +73,9 @@ func testLoginWrite(t *testing.T, d map[string]interface{}, expectedTTL int64, e
 			if resp.IsError() && expectFail {
 				return nil
 			}
-			var actualTTL int64
-			actualTTL = resp.Auth.LeaseOptions.TTL.Nanoseconds()
+			actualTTL := resp.Auth.LeaseOptions.TTL
 			if actualTTL != expectedTTL {
-				return fmt.Errorf("TTL mismatched. Expected: %d Actual: %d", expectedTTL, resp.Auth.LeaseOptions.TTL.Nanoseconds())
+				return fmt.Errorf("TTL mismatched. Expected: %d Actual: %d", expectedTTL, resp.Auth.LeaseOptions.TTL)
 			}
 			return nil
 		},
@@ -105,25 +105,25 @@ func TestBackend_basic(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck:       func() { testAccPreCheck(t) },
-		LogicalBackend: b,
+		PreCheck:          func() { testAccPreCheck(t) },
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, false),
 			testAccMap(t, "default", "fakepol"),
 			testAccMap(t, "oWnErs", "fakepol"),
-			testAccLogin(t, []string{"default", "fakepol"}),
+			testAccLogin(t, []string{"default", "abc", "fakepol"}),
 			testAccStepConfig(t, true),
 			testAccMap(t, "default", "fakepol"),
 			testAccMap(t, "oWnErs", "fakepol"),
-			testAccLogin(t, []string{"default", "fakepol"}),
+			testAccLogin(t, []string{"default", "abc", "fakepol"}),
 			testAccStepConfigWithBaseURL(t),
 			testAccMap(t, "default", "fakepol"),
 			testAccMap(t, "oWnErs", "fakepol"),
-			testAccLogin(t, []string{"default", "fakepol"}),
+			testAccLogin(t, []string{"default", "abc", "fakepol"}),
 			testAccMap(t, "default", "fakepol"),
 			testAccStepConfig(t, true),
 			mapUserToPolicy(t, os.Getenv("GITHUB_USER"), "userpolicy"),
-			testAccLogin(t, []string{"default", "fakepol", "userpolicy"}),
+			testAccLogin(t, []string{"default", "abc", "fakepol", "userpolicy"}),
 		},
 	})
 }
@@ -131,6 +131,10 @@ func TestBackend_basic(t *testing.T) {
 func testAccPreCheck(t *testing.T) {
 	if v := os.Getenv("GITHUB_TOKEN"); v == "" {
 		t.Skip("GITHUB_TOKEN must be set for acceptance tests")
+	}
+
+	if v := os.Getenv("GITHUB_USER"); v == "" {
+		t.Skip("GITHUB_USER must be set for acceptance tests")
 	}
 
 	if v := os.Getenv("GITHUB_ORG"); v == "" {
@@ -147,7 +151,8 @@ func testAccStepConfig(t *testing.T, upper bool) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			"organization": os.Getenv("GITHUB_ORG"),
+			"organization":   os.Getenv("GITHUB_ORG"),
+			"token_policies": []string{"abc"},
 		},
 	}
 	if upper {

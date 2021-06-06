@@ -21,6 +21,33 @@ func testKVPutCommand(tb testing.TB) (*cli.MockUi, *KVPutCommand) {
 	}
 }
 
+func retryKVCommand(t *testing.T, client *api.Client, args []string) (code int, combined string) {
+	t.Helper()
+
+	// Loop until return message does not indicate upgrade, or timeout.
+	timeout := time.After(20 * time.Second)
+	for true {
+		ui, cmd := testKVPutCommand(t)
+		cmd.client = client
+		code = cmd.Run(args)
+		combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+		// This is an error if a v1 mount, but test case case doesn't
+		// currently contain the information to know the difference.
+		if strings.Contains(combined, "Upgrading from non-versioned to versioned") {
+			select {
+			case <-timeout:
+				t.Errorf("timeout expired waiting for upgrade: %q", combined)
+				return code, combined
+			default:
+			}
+			continue
+		}
+		break
+	}
+	return code, combined
+}
+
 func TestKVPutCommand(t *testing.T) {
 	t.Parallel()
 
@@ -89,15 +116,10 @@ func TestKVPutCommand(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ui, cmd := testKVPutCommand(t)
-			cmd.client = client
-
-			code := cmd.Run(tc.args)
+			code, combined := retryKVCommand(t, client, tc.args)
 			if code != tc.code {
 				t.Errorf("expected %d to be %d", code, tc.code)
 			}
-
-			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 			if !strings.Contains(combined, tc.out) {
 				t.Errorf("expected %q to contain %q", combined, tc.out)
 			}
@@ -116,21 +138,18 @@ func TestKVPutCommand(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		ui, cmd := testKVPutCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
+		// Only have to potentially retry the first time.
+		code, combined := retryKVCommand(t, client, []string{
 			"-cas", "0", "kv/write/cas", "bar=baz",
 		})
 		if code != 0 {
 			t.Fatalf("expected 0 to be %d", code)
 		}
-		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, "created_time") {
 			t.Errorf("expected %q to contain %q", combined, "created_time")
 		}
 
-		ui, cmd = testKVPutCommand(t)
+		ui, cmd := testKVPutCommand(t)
 		cmd.client = client
 		code = cmd.Run([]string{
 			"-cas", "1", "kv/write/cas", "bar=baz",
@@ -155,7 +174,6 @@ func TestKVPutCommand(t *testing.T) {
 		if !strings.Contains(combined, "check-and-set parameter did not match the current version") {
 			t.Errorf("expected %q to contain %q", combined, "check-and-set parameter did not match the current version")
 		}
-
 	})
 
 	t.Run("v1_data", func(t *testing.T) {

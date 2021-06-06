@@ -35,7 +35,7 @@ type AppendEntriesRequest struct {
 	LeaderCommitIndex uint64
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *AppendEntriesRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -59,7 +59,7 @@ type AppendEntriesResponse struct {
 	NoRetryBackoff bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *AppendEntriesResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -83,7 +83,7 @@ type RequestVoteRequest struct {
 	LeadershipTransfer bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *RequestVoteRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -104,7 +104,7 @@ type RequestVoteResponse struct {
 	Granted bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *RequestVoteResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -136,7 +136,7 @@ type InstallSnapshotRequest struct {
 	Size int64
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *InstallSnapshotRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -150,7 +150,7 @@ type InstallSnapshotResponse struct {
 	Success bool
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *InstallSnapshotResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -161,7 +161,7 @@ type TimeoutNowRequest struct {
 	RPCHeader
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *TimeoutNowRequest) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }
@@ -171,7 +171,7 @@ type TimeoutNowResponse struct {
 	RPCHeader
 }
 
-// See WithRPCHeader.
+// GetRPCHeader - See WithRPCHeader.
 func (r *TimeoutNowResponse) GetRPCHeader() RPCHeader {
 	return r.RPCHeader
 }

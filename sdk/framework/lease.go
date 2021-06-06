@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -61,7 +62,8 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 		// Cap the period value to the sys max_ttl value
 		if period > maxTTL {
 			warnings = append(warnings,
-				fmt.Sprintf("period of %q exceeded the effective max_ttl of %q; period value is capped accordingly", period, maxTTL))
+				fmt.Sprintf("period of %q exceeded the effective max_ttl of %q; period value is capped accordingly",
+					humanDuration(period), humanDuration(maxTTL)))
 			period = maxTTL
 		}
 		ttl = period
@@ -89,7 +91,7 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are
-		if maxValidTTL < 0 {
+		if maxValidTTL <= 0 {
 			return 0, nil, fmt.Errorf("past the max TTL, cannot renew")
 		}
 
@@ -97,10 +99,27 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 		// cap the increment to whatever is left
 		if maxValidTTL-ttl < 0 {
 			warnings = append(warnings,
-				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", ttl, maxValidTTL))
+				fmt.Sprintf("TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly",
+					humanDuration(ttl), humanDuration(maxValidTTL)))
 			ttl = maxValidTTL
 		}
 	}
 
 	return ttl, warnings, nil
+}
+
+// humanDuration prints the time duration without zero elements.
+func humanDuration(d time.Duration) string {
+	if d == 0 {
+		return "0s"
+	}
+
+	s := d.String()
+	if strings.HasSuffix(s, "m0s") {
+		s = s[:len(s)-2]
+	}
+	if idx := strings.Index(s, "h0m"); idx > 0 {
+		s = s[:idx+1] + s[idx+3:]
+	}
+	return s
 }

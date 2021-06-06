@@ -19,6 +19,10 @@ func pathGroupsList(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Navigation: true,
+			ItemType:   "Group",
+		},
 	}
 }
 
@@ -45,6 +49,10 @@ func pathGroups(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Action:   "Create",
+			ItemType: "Group",
+		},
 	}
 }
 
@@ -60,7 +68,6 @@ func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*Grou
 		entries, err := groupList(ctx, s)
 		if err != nil {
 			return nil, "", err
-
 		}
 
 		for _, groupName := range entries {

@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import AuthConfigComponent from './config';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import DS from 'ember-data';
 
 /**
  * @module AuthConfigForm/Options
@@ -27,8 +27,15 @@ export default AuthConfigComponent.extend({
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
-      if (err instanceof DS.AdapterError === false) {
+      if (err instanceof AdapterError === false) {
         throw err;
+      }
+      // because we're not calling model.save the model never updates with
+      // the error.  Forcing the error message by manually setting the errorMessage
+      try {
+        this.model.set('errorMessage', err.errors.firstObject);
+      } catch {
+        // do nothing
       }
       return;
     }

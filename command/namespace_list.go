@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceListCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceListCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceListCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceListCommand)(nil)
+)
 
 type NamespaceListCommand struct {
 	*BaseCommand
@@ -21,13 +23,13 @@ func (c *NamespaceListCommand) Synopsis() string {
 
 func (c *NamespaceListCommand) Help() string {
 	helpText := `
-Usage: vault namespaces list [options]
+Usage: vault namespace list [options]
 
   Lists the enabled child namespaces.
 
   List all enabled child namespaces:
 
-      $ vault namespaces list
+      $ vault namespace list
 
 ` + c.Flags().Help()
 
@@ -39,7 +41,7 @@ func (c *NamespaceListCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceListCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return complete.PredictNothing
 }
 
 func (c *NamespaceListCommand) AutocompleteFlags() complete.Flags {
@@ -74,7 +76,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 
 	_, ok := extractListData(secret)
 	if Format(c.UI) != "table" {
-		if secret == nil || secret.Data != nil || !ok {
+		if secret == nil || secret.Data == nil || !ok {
 			OutputData(c.UI, map[string]interface{}{})
 			return 2
 		}

@@ -1,4 +1,4 @@
-/* eslint-disable import/extensions */
+
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import { withKnobs, select } from '@storybook/addon-knobs';
@@ -23,7 +23,7 @@ const MODELS = {
 
 const DEFAULT_VALUE = 'aws/client';
 
-storiesOf('AuthConfigForm/Options/', module)
+storiesOf('AuthConfigForm/Options', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

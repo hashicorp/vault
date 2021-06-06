@@ -1,10 +1,10 @@
 import EmberRouter from '@ember/routing/router';
-import config from './config/environment';
+import config from 'vault/config/environment';
 
-const Router = EmberRouter.extend({
-  location: config.locationType,
-  rootURL: config.rootURL,
-});
+export default class Router extends EmberRouter {
+  location = config.locationType;
+  rootURL = config.rootURL;
+}
 
 Router.map(function() {
   this.route('vault', { path: '/' }, function() {
@@ -13,8 +13,15 @@ Router.map(function() {
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
-      this.route('requests', { path: '/metrics/requests' });
+      this.route('metrics', function() {
+        this.route('index', { path: '/' });
+        this.route('config');
+        this.route('edit');
+      });
+      this.route('storage', { path: '/storage/raft' });
+      this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
@@ -83,6 +90,7 @@ Router.map(function() {
       this.route('secrets', function() {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function() {
+          this.mount('kmip');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
@@ -110,24 +118,27 @@ Router.map(function() {
           // transit-specific routes
           this.route('actions-root', { path: '/actions/' });
           this.route('actions', { path: '/actions/*secret' });
+          // database specific route
+          this.route('overview');
         });
       });
       this.route('policies', { path: '/policies/:type' }, function() {
         this.route('index', { path: '/' });
-        this.route('create', { path: '/create' });
+        this.route('create');
       });
       this.route('policy', { path: '/policy/:type' }, function() {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
-      this.route('replication-dr-promote');
+      this.route('replication-dr-promote', function() {
+        this.route('details');
+      });
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
+
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });
   });
 });
-
-export default Router;

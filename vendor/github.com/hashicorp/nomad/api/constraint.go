@@ -1,5 +1,18 @@
 package api
 
+const (
+	ConstraintDistinctProperty  = "distinct_property"
+	ConstraintDistinctHosts     = "distinct_hosts"
+	ConstraintRegex             = "regexp"
+	ConstraintVersion           = "version"
+	ConstraintSemver            = "semver"
+	ConstraintSetContains       = "set_contains"
+	ConstraintSetContainsAll    = "set_contains_all"
+	ConstraintSetContainsAny    = "set_contains_any"
+	ConstraintAttributeIsSet    = "is_set"
+	ConstraintAttributeIsNotSet = "is_not_set"
+)
+
 // Constraint is used to serialize a job placement constraint.
 type Constraint struct {
 	LTarget string

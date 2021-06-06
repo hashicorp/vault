@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVPatchCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVPatchCommand)(nil)
+var (
+	_ cli.Command             = (*KVPatchCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVPatchCommand)(nil)
+)
 
 type KVPatchCommand struct {
 	*BaseCommand
@@ -119,8 +121,12 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	// First, do a read
+	// First, do a read.
+	// Note that we don't want to see curl output for the read request.
+	curOutputCurl := client.OutputCurlString()
+	client.SetOutputCurlString(false)
 	secret, err := kvReadRequest(client, path, nil)
+	client.SetOutputCurlString(curOutputCurl)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
 		return 2

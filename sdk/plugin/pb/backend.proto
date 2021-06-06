@@ -25,6 +25,7 @@ message ProtoError {
 	// ErrTypeInvalidRequest
 	// ErrTypePermissionDenied
 	// ErrTypeMultiAuthzPending
+	// ErrTypeUnrecoverable
 	uint32 err_type = 1;
 	string err_msg = 2;
 	int64 err_code = 3;
@@ -355,6 +356,15 @@ message HandleRequestReply {
 	ProtoError err = 2;
 }
 
+// InitializeArgs is the args for Initialize method.
+message InitializeArgs {
+}
+
+// InitializeReply is the reply for Initialize method.
+message InitializeReply {
+	ProtoError err = 1;
+}
+
 // SpecialPathsReply is the reply for SpecialPaths method.
 message SpecialPathsReply {
 	Paths paths = 1;
@@ -434,6 +444,10 @@ service Backend {
 	// and SystemView clients.
 	rpc Setup(SetupArgs) returns (SetupReply);
 
+	// Initialize is invoked just after mounting a backend to allow it to
+	// handle any initialization tasks that need to be performed.
+	rpc Initialize(InitializeArgs) returns (InitializeReply);
+
    	// Type returns the BackendType for the particular backend
 	rpc Type(Empty) returns (TypeReply);
 }
@@ -491,15 +505,6 @@ message TTLReply {
 	int64 TTL = 1;
 }
 
-message SudoPrivilegeArgs {
-	string path = 1;
-	string token = 2;
-}
-
-message SudoPrivilegeReply {
-	bool sudo = 1;
-}
-
 message TaintedReply {
 	bool tainted = 1;
 }
@@ -540,9 +545,22 @@ message EntityInfoReply {
 	string err = 2;
 }
 
+message GroupsForEntityReply {
+	repeated logical.Group groups = 1;
+	string err = 2;
+}
+
 message PluginEnvReply {
 	logical.PluginEnvironment plugin_environment = 1;
 	string err = 2;
+}
+
+message GeneratePasswordFromPolicyRequest {
+	string policy_name = 1;
+}
+
+message GeneratePasswordFromPolicyReply {
+	string password = 1;
 }
 
 // SystemView exposes system configuration information in a safe way for plugins
@@ -550,15 +568,11 @@ message PluginEnvReply {
 service SystemView {
   	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
 	rpc DefaultLeaseTTL(Empty) returns (TTLReply);
-	
+
    	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
 	// authors should take care not to issue credentials that last longer than
 	// this value, as Vault will revoke them
 	rpc MaxLeaseTTL(Empty) returns (TTLReply);
-
-	// SudoPrivilege returns true if given path has sudo privileges
-	// for the given client token
-	rpc SudoPrivilege(SudoPrivilegeArgs) returns (SudoPrivilegeReply);
 
 	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
 	// process of being unmounted. This should only be used in special
@@ -594,6 +608,13 @@ service SystemView {
 
 	// PluginEnv returns Vault environment information used by plugins
 	rpc PluginEnv(Empty) returns (PluginEnvReply);
+
+	// GroupsForEntity returns the group membership information for the given
+	// entity id
+	rpc GroupsForEntity(EntityInfoArgs) returns (GroupsForEntityReply);
+
+	// GeneratePasswordFromPolicy generates a password from an existing password policy
+	rpc GeneratePasswordFromPolicy(GeneratePasswordFromPolicyRequest) returns (GeneratePasswordFromPolicyReply);
 }
 
 message Connection {

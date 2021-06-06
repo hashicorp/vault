@@ -1,9 +1,10 @@
 /* eslint-disable */
+import AdapterError from '@ember-data/adapter/error';
 import { isEmpty } from '@ember/utils';
 import { get } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -27,9 +28,9 @@ export default ApplicationAdapter.extend({
 
   findRecord() {
     return this._super(...arguments).catch(errorOrModel => {
-      // if it's a real 404, this will be an error, if not
-      // it will be the body of a deleted / destroyed version
-      if (errorOrModel instanceof DS.AdapterError) {
+      // if the response is a real 404 or if the secret is gated by a control group this will be an error,
+      // otherwise the response will be the body of a deleted / destroyed version
+      if (errorOrModel instanceof AdapterError) {
         throw errorOrModel;
       }
       return errorOrModel;
@@ -69,14 +70,27 @@ export default ApplicationAdapter.extend({
 
   v2DeleteOperation(store, id, deleteType = 'delete') {
     let [backend, path, version] = JSON.parse(id);
-
-    // deleteType should be 'delete', 'destroy', 'undelete'
-    return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
-      () => {
-        let model = store.peekRecord('secret-v2-version', id);
-        return model && model.rollbackAttributes() && model.reload();
-      }
-    );
+    // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-version'
+    if ((!version && deleteType === 'delete') || deleteType === 'delete-latest-version') {
+      return this.ajax(this._url(backend, path, 'data'), 'DELETE')
+        .then(() => {
+          let model = store.peekRecord('secret-v2-version', id);
+          return model && model.rollbackAttributes() && model.reload();
+        })
+        .catch(e => {
+          return e;
+        });
+    } else {
+      return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } })
+        .then(() => {
+          let model = store.peekRecord('secret-v2-version', id);
+          // potential that model.reload() is never called.
+          return model && model.rollbackAttributes() && model.reload();
+        })
+        .catch(e => {
+          return e;
+        });
+    }
   },
 
   handleResponse(status, headers, payload, requestData) {

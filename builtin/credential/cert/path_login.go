@@ -31,7 +31,7 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the certificate role to authenticate against.",
 			},
@@ -72,8 +72,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, nil
 	}
 
-	if err := b.checkCIDR(matched.Entry, req); err != nil {
-		return nil, err
+	if len(matched.Entry.TokenBoundCIDRs) > 0 {
+		if req.Connection == nil {
+			b.Logger().Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, logical.ErrPermissionDenied
+		}
+		if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, matched.Entry.TokenBoundCIDRs) {
+			return nil, logical.ErrPermissionDenied
+		}
 	}
 
 	clientCerts := req.Connection.ConnState.PeerCertificates
@@ -83,36 +89,28 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Period: matched.Entry.Period,
-			InternalData: map[string]interface{}{
-				"subject_key_id":   skid,
-				"authority_key_id": akid,
-			},
-			Policies:    matched.Entry.Policies,
-			DisplayName: matched.Entry.DisplayName,
-			Metadata: map[string]string{
-				"cert_name":        matched.Entry.Name,
-				"common_name":      clientCerts[0].Subject.CommonName,
-				"serial_number":    clientCerts[0].SerialNumber.String(),
-				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
-				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
-			},
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       matched.Entry.TTL,
-				MaxTTL:    matched.Entry.MaxTTL,
-			},
-			Alias: &logical.Alias{
-				Name: clientCerts[0].Subject.CommonName,
-			},
-			BoundCIDRs: matched.Entry.BoundCIDRs,
+	auth := &logical.Auth{
+		InternalData: map[string]interface{}{
+			"subject_key_id":   skid,
+			"authority_key_id": akid,
+		},
+		DisplayName: matched.Entry.DisplayName,
+		Metadata: map[string]string{
+			"cert_name":        matched.Entry.Name,
+			"common_name":      clientCerts[0].Subject.CommonName,
+			"serial_number":    clientCerts[0].SerialNumber.String(),
+			"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
+			"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
+		},
+		Alias: &logical.Alias{
+			Name: clientCerts[0].Subject.CommonName,
 		},
 	}
+	matched.Entry.PopulateTokenAuth(auth)
 
-	// Generate a response
-	return resp, nil
+	return &logical.Response{
+		Auth: auth,
+	}, nil
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -159,14 +157,14 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	if !policyutil.EquivalentPolicies(cert.Policies, req.Auth.TokenPolicies) {
+	if !policyutil.EquivalentPolicies(cert.TokenPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}
-	resp.Auth.TTL = cert.TTL
-	resp.Auth.MaxTTL = cert.MaxTTL
-	resp.Auth.Period = cert.Period
+	resp.Auth.TTL = cert.TokenTTL
+	resp.Auth.MaxTTL = cert.TokenMaxTTL
+	resp.Auth.Period = cert.TokenPeriod
 	return resp, nil
 }
 
@@ -416,21 +414,31 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
-	names, err := storage.List(ctx, "cert/")
-	if err != nil {
-		b.Logger().Error("failed to list trusted certs", "error", err)
-		return
-	}
-	for _, name := range names {
-		// If we are trying to select a single CertEntry and this isn't it
-		if certName != "" && name != certName {
-			continue
+
+	var names []string
+	if certName != "" {
+		names = append(names, certName)
+	} else {
+		var err error
+		names, err = storage.List(ctx, "cert/")
+		if err != nil {
+			b.Logger().Error("failed to list trusted certs", "error", err)
+			return
 		}
+	}
+
+	for _, name := range names {
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
 			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
+		if entry == nil {
+			// This could happen when the certName was provided and the cert doesn't exist,
+			// or just if between the LIST and the GET the cert was deleted.
+			continue
+		}
+
 		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
 			b.Logger().Error("failed to parse certificate", "name", name)
@@ -475,13 +483,6 @@ func (b *backend) checkForValidChain(chains [][]*x509.Certificate) bool {
 		}
 	}
 	return false
-}
-
-func (b *backend) checkCIDR(cert *CertEntry, req *logical.Request) error {
-	if cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, cert.BoundCIDRs) {
-		return nil
-	}
-	return logical.ErrPermissionDenied
 }
 
 // parsePEM parses a PEM encoded x509 certificate
