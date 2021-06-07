@@ -20,9 +20,11 @@ const (
 	spotCheckWarnEventName    = "spot-check-warn"
 	spotCheckErrorEventName   = "spot-check-error"
 	spotCheckSkippedEventName = "spot-check-skipped"
+	adviceEventName           = "advice"
 	errorMessageKey           = attribute.Key("error.message")
 	nameKey                   = attribute.Key("name")
 	messageKey                = attribute.Key("message")
+	adviceKey                 = attribute.Key("advice")
 )
 
 var (
@@ -165,6 +167,17 @@ func SpotError(ctx context.Context, checkName string, err error, options ...trac
 // SpotSkipped adds a Skipped result without adding a new Span.
 func SpotSkipped(ctx context.Context, checkName, message string, options ...trace.EventOption) {
 	addSpotCheckResult(ctx, spotCheckSkippedEventName, checkName, message, options...)
+}
+
+// Advice builds an EventOption containing advice message.  Use to add to spot results.
+func Advice(message string) trace.EventOption {
+	return trace.WithAttributes(adviceKey.String(message))
+}
+
+// Advise adds advice to the current diagnose span
+func Advise(ctx context.Context, message string) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(adviceEventName, Advice(message))
 }
 
 func addSpotCheckResult(ctx context.Context, eventName, checkName, message string, options ...trace.EventOption) {

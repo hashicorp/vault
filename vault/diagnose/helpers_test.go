@@ -10,6 +10,8 @@ import (
 	"testing"
 )
 
+const getMoreCoffee = "You'll find more coffee in the freezer door, or consider buying more for the office."
+
 func TestDiagnoseOtelResults(t *testing.T) {
 	expected := &Result{
 		Name:   "make-coffee",
@@ -17,6 +19,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 		Warnings: []string{
 			"coffee getting low",
 		},
+		Advice: getMoreCoffee,
 		Children: []*Result{
 			{
 				Name:   "warm-milk",
@@ -54,7 +57,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
 	}
-	results.Write(os.Stdout)
+	results.Write(os.Stdout, 0)
 }
 
 const coffeeLeft = 3
@@ -62,6 +65,7 @@ const coffeeLeft = 3
 func makeCoffee(ctx context.Context) error {
 	if coffeeLeft < 5 {
 		Warn(ctx, "coffee getting low")
+		Advise(ctx, getMoreCoffee)
 	}
 
 	err := Test(ctx, "warm-milk", warmMilk)
