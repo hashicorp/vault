@@ -2,12 +2,17 @@ import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { validator, buildValidations } from 'ember-cp-validations';
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-export default Model.extend({
+const Validations = buildValidations({
+  path: validator('presence', true),
+});
+
+export default Model.extend(Validations, {
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
