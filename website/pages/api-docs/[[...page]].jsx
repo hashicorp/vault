@@ -1,17 +1,10 @@
 import { productName, productSlug } from 'data/metadata'
 import DocsPage from '@hashicorp/react-docs-page'
 // Imports below are used in server-side only
-/**
- * DEBT: short term patch for "hidden" docs-sidenav items.
- * See components/_temp-enable-hidden-pages for details.
- * Revert to importing from @hashicorp/react-docs-page/server
- * once https://app.asana.com/0/1100423001970639/1200197752405255/f
- * is complete.
- **/
 import {
   generateStaticPaths,
   generateStaticProps,
-} from 'components/_temp-enable-hidden-pages'
+} from '@hashicorp/react-docs-page/server'
 
 const NAV_DATA_FILE_HIDDEN = 'data/api-docs-nav-data-hidden.json'
 const NAV_DATA_FILE = 'data/api-docs-nav-data.json'

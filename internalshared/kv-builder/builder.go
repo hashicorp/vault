@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
 )
@@ -31,7 +30,7 @@ func (b *Builder) Map() map[string]interface{} {
 func (b *Builder) Add(args ...string) error {
 	for _, a := range args {
 		if err := b.add(a); err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("invalid key/value pair %q: {{err}}", a), err)
+			return fmt.Errorf("invalid key/value pair %q: %w", a, err)
 		}
 	}
 
@@ -88,7 +87,7 @@ func (b *Builder) add(raw string) error {
 		if value[0] == '@' {
 			contents, err := ioutil.ReadFile(value[1:])
 			if err != nil {
-				return errwrap.Wrapf("error reading file: {{err}}", err)
+				return fmt.Errorf("error reading file: %w", err)
 			}
 
 			value = string(contents)

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -88,7 +87,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 
 	c.maxConnectionLifetime, err = parseutil.ParseDurationSecond(c.MaxConnectionLifetimeRaw)
 	if err != nil {
-		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
+		return nil, fmt.Errorf("invalid max_connection_lifetime: %w", err)
 	}
 
 	tlsConfig, err := c.getTLSAuth()
@@ -113,11 +112,11 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 
 	if verifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return nil, fmt.Errorf("error verifying connection: %w", err)
 		}
 
 		if err := c.db.PingContext(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return nil, fmt.Errorf("error verifying connection: %w", err)
 		}
 	}
 

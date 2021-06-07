@@ -438,7 +438,9 @@ github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.5.5
+## explicit
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
@@ -529,7 +531,7 @@ github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.6.0
 ## explicit
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.16.0
+# github.com/hashicorp/go-hclog v0.16.1
 ## explicit
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
@@ -682,7 +684,7 @@ github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.9.0
+# github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-azure
 # github.com/hashicorp/vault-plugin-secrets-gcp v0.9.0
@@ -921,6 +923,9 @@ github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-testing-interface v1.14.0
 ## explicit
 github.com/mitchellh/go-testing-interface
+# github.com/mitchellh/go-wordwrap v1.0.0
+## explicit
+github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/gox v1.0.1
 ## explicit
 github.com/mitchellh/gox
@@ -1107,7 +1112,7 @@ github.com/sethvargo/go-limiter
 github.com/sethvargo/go-limiter/httplimit
 github.com/sethvargo/go-limiter/internal/fasttime
 github.com/sethvargo/go-limiter/memorystore
-# github.com/shirou/gopsutil v3.21.1+incompatible
+# github.com/shirou/gopsutil v3.21.5+incompatible
 ## explicit
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
@@ -1148,6 +1153,11 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312
 # github.com/tidwall/pretty v1.0.1
 ## explicit
+# github.com/tklauser/go-sysconf v0.3.6
+## explicit
+github.com/tklauser/go-sysconf
+# github.com/tklauser/numcpus v0.2.2
+github.com/tklauser/numcpus
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
 # github.com/ulikunitz/xz v0.5.7
@@ -1385,6 +1395,7 @@ golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc
 # golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
+## explicit
 golang.org/x/term
 # golang.org/x/text v0.3.5
 ## explicit

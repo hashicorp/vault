@@ -16,7 +16,6 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-sockaddr"
@@ -787,12 +786,12 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 
 	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
 	if err != nil {
-		return errwrap.Wrapf("failed to marshal accessor index entry: {{err}}", err)
+		return fmt.Errorf("failed to marshal accessor index entry: %w", err)
 	}
 
 	le := &logical.StorageEntry{Key: saltID, Value: aEntryBytes}
 	if err := ts.accessorView(tokenNS).Put(ctx, le); err != nil {
-		return errwrap.Wrapf("failed to persist accessor index entry: {{err}}", err)
+		return fmt.Errorf("failed to persist accessor index entry: %w", err)
 	}
 	return nil
 }
@@ -967,7 +966,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *logical.TokenEntry
 	// Marshal the entry
 	enc, err := json.Marshal(entry)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode entry: {{err}}", err)
+		return fmt.Errorf("failed to encode entry: %w", err)
 	}
 
 	if writeSecondary {
@@ -979,7 +978,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *logical.TokenEntry
 			// Ensure the parent exists
 			parent, err := ts.Lookup(ctx, entry.Parent)
 			if err != nil {
-				return errwrap.Wrapf("failed to lookup parent: {{err}}", err)
+				return fmt.Errorf("failed to lookup parent: %w", err)
 			}
 			if parent == nil {
 				return fmt.Errorf("parent token not found")
@@ -1008,7 +1007,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *logical.TokenEntry
 
 			le := &logical.StorageEntry{Key: path}
 			if err := ts.parentView(parentNS).Put(ctx, le); err != nil {
-				return errwrap.Wrapf("failed to persist entry: {{err}}", err)
+				return fmt.Errorf("failed to persist entry: %w", err)
 			}
 		}
 	}
@@ -1019,7 +1018,7 @@ func (ts *TokenStore) storeCommon(ctx context.Context, entry *logical.TokenEntry
 		le.SealWrap = true
 	}
 	if err := ts.idView(tokenNS).Put(ctx, le); err != nil {
-		return errwrap.Wrapf("failed to persist entry: {{err}}", err)
+		return fmt.Errorf("failed to persist entry: %w", err)
 	}
 	return nil
 }
@@ -1055,7 +1054,7 @@ func (ts *TokenStore) UseToken(ctx context.Context, te *logical.TokenEntry) (*lo
 	var err error
 	te, err = ts.lookupInternal(ctx, te.ID, false, false)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to refresh entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to refresh entry: %w", err)
 	}
 	// If it can't be found we shouldn't be trying to use it, so if we get nil
 	// back, it is because it has been revoked in the interim or will be
@@ -1188,7 +1187,7 @@ func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical
 func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tainted bool) (*logical.TokenEntry, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to find namespace in context: {{err}}", err)
+		return nil, fmt.Errorf("failed to find namespace in context: %w", err)
 	}
 
 	// If it starts with "b." it's a batch token
@@ -1206,7 +1205,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		if nsID != "" {
 			tokenNS, err := NamespaceByID(ctx, nsID, ts.core)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to look up namespace from the token: {{err}}", err)
+				return nil, fmt.Errorf("failed to look up namespace from the token: %w", err)
 			}
 			if tokenNS != nil {
 				if tokenNS.ID != ns.ID {
@@ -1230,7 +1229,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 
 	raw, err = ts.idView(ns).Get(ctx, lookupID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to read entry: %w", err)
 	}
 
 	// Bail if not found
@@ -1241,7 +1240,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// Unmarshal the token
 	entry := new(logical.TokenEntry)
 	if err := jsonutil.DecodeJSON(raw.Value, entry); err != nil {
-		return nil, errwrap.Wrapf("failed to decode entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode entry: %w", err)
 	}
 
 	// This is a token that is awaiting deferred revocation or tainted
@@ -1301,7 +1300,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		// If fields are getting upgraded, store the changes
 		if persistNeeded {
 			if err := ts.store(ctx, entry); err != nil {
-				return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
+				return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 			}
 		}
 		return entry, nil
@@ -1316,7 +1315,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	}
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch lease times: {{err}}", err)
+		return nil, fmt.Errorf("failed to fetch lease times: %w", err)
 	}
 
 	var ret *logical.TokenEntry
@@ -1354,7 +1353,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// If fields are getting upgraded, store the changes
 	if persistNeeded {
 		if err := ts.store(ctx, entry); err != nil {
-			return nil, errwrap.Wrapf("failed to persist token upgrade: {{err}}", err)
+			return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 		}
 	}
 
@@ -1428,7 +1427,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 		// before we return, we can remove the token store entry
 		if ret == nil {
 			if err := ts.idView(tokenNS).Delete(ctx, saltedID); err != nil {
-				ret = errwrap.Wrapf("failed to delete entry: {{err}}", err)
+				ret = fmt.Errorf("failed to delete entry: %w", err)
 			}
 		}
 
@@ -1467,7 +1466,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 			default:
 				parentNS, err = NamespaceByID(ctx, parentNSID, ts.core)
 				if err != nil {
-					return errwrap.Wrapf("failed to get parent namespace: {{err}}", err)
+					return fmt.Errorf("failed to get parent namespace: %w", err)
 				}
 				if parentNS == nil {
 					return namespace.ErrNoNamespace
@@ -1488,7 +1487,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 		}
 
 		if err = ts.parentView(parentNS).Delete(ctx, path); err != nil {
-			return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+			return fmt.Errorf("failed to delete entry: %w", err)
 		}
 	}
 
@@ -1500,7 +1499,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 		}
 
 		if err = ts.accessorView(tokenNS).Delete(ctx, accessorSaltedID); err != nil {
-			return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+			return fmt.Errorf("failed to delete entry: %w", err)
 		}
 	}
 
@@ -1514,7 +1513,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 		// on child prefixes as there will be none (as saltedID entry is a leaf node).
 		children, err := ts.parentView(tokenNS).List(ctx, saltedID+"/")
 		if err != nil {
-			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+			return fmt.Errorf("failed to scan for children: %w", err)
 		}
 		for _, child := range children {
 			var childNSID string
@@ -1523,7 +1522,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 			if childNSID != "" {
 				childNS, err := NamespaceByID(ctx, childNSID, ts.core)
 				if err != nil {
-					return errwrap.Wrapf("failed to get child token: {{err}}", err)
+					return fmt.Errorf("failed to get child token: %w", err)
 				}
 				if childNS == nil {
 					return namespace.ErrNoNamespace
@@ -1534,13 +1533,13 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 
 			entry, err := ts.lookupInternal(childCtx, child, true, true)
 			if err != nil {
-				return errwrap.Wrapf("failed to get child token: {{err}}", err)
+				return fmt.Errorf("failed to get child token: %w", err)
 			}
 			if entry == nil {
 				// Seems it's already revoked, so nothing to do here except delete the index
 				err = ts.parentView(tokenNS).Delete(ctx, child)
 				if err != nil {
-					return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+					return fmt.Errorf("failed to delete child entry: %w", err)
 				}
 				continue
 			}
@@ -1552,7 +1551,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 			err = ts.store(childCtx, entry)
 			if err != nil {
 				lock.Unlock()
-				return errwrap.Wrapf("failed to update child token: {{err}}", err)
+				return fmt.Errorf("failed to update child token: %w", err)
 			}
 			lock.Unlock()
 
@@ -1562,7 +1561,7 @@ func (ts *TokenStore) revokeInternal(ctx context.Context, saltedID string, skipO
 			// of logical.ClearView
 			err = ts.parentView(tokenNS).Delete(ctx, child)
 			if err != nil {
-				return errwrap.Wrapf("failed to delete child entry: {{err}}", err)
+				return fmt.Errorf("failed to delete child entry: %w", err)
 			}
 		}
 	}
@@ -1633,7 +1632,7 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 		if saltedNSID != "" {
 			saltedNS, err = NamespaceByID(ctx, saltedNSID, ts.core)
 			if err != nil {
-				return errwrap.Wrapf("failed to find namespace for token revocation: {{err}}", err)
+				return fmt.Errorf("failed to find namespace for token revocation: %w", err)
 			}
 
 			saltedCtx = namespace.ContextWithNamespace(ctx, saltedNS)
@@ -1642,7 +1641,7 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 		path := saltedID + "/"
 		childrenRaw, err := ts.parentView(saltedNS).List(saltedCtx, path)
 		if err != nil {
-			return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+			return fmt.Errorf("failed to scan for children: %w", err)
 		}
 
 		// Filter the child list to remove any items that have ever been in the dfs stack.
@@ -1653,7 +1652,7 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 				children = append(children, child)
 			} else {
 				if err = ts.parentView(saltedNS).Delete(saltedCtx, path+child); err != nil {
-					return errwrap.Wrapf("failed to delete entry: {{err}}", err)
+					return fmt.Errorf("failed to delete entry: %w", err)
 				}
 
 				ts.Logger().Warn("token cycle found", "token", child)
@@ -1669,7 +1668,7 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 			// would have been deleted, and any pending leases for deletion will be restored
 			// by the expiration manager.
 			if err := ts.revokeInternal(saltedCtx, saltedID, true); err != nil {
-				return errwrap.Wrapf("failed to revoke entry: {{err}}", err)
+				return fmt.Errorf("failed to revoke entry: %w", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
 			if l == 1 {
@@ -1756,7 +1755,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 
 	entry, err := ts.accessorView(ns).Get(ctx, lookupID)
 	if err != nil {
-		return aEntry, errwrap.Wrapf("failed to read index using accessor: {{err}}", err)
+		return aEntry, fmt.Errorf("failed to read index using accessor: %w", err)
 	}
 	if entry == nil {
 		return aEntry, &logical.StatusBadRequest{Err: "invalid accessor"}
@@ -1767,7 +1766,7 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 	if err != nil {
 		te, err := ts.lookupInternal(ctx, string(entry.Value), false, tainted)
 		if err != nil {
-			return accessorEntry{}, errwrap.Wrapf("failed to look up token using accessor index: {{err}}", err)
+			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %w", err)
 		}
 		// It's hard to reason about what to do here if te is nil -- it may be
 		// that the token was revoked async, or that it's an old accessor index
@@ -1799,7 +1798,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to get namespace from context: {{err}}", err)
+		return nil, fmt.Errorf("failed to get namespace from context: %w", err)
 	}
 
 	go func() {
@@ -1818,13 +1817,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			// List out all the accessors
 			saltedAccessorList, err := ts.accessorView(ns).List(quitCtx, "")
 			if err != nil {
-				return errwrap.Wrapf("failed to fetch accessor index entries: {{err}}", err)
+				return fmt.Errorf("failed to fetch accessor index entries: %w", err)
 			}
 
 			// First, clean up secondary index entries that are no longer valid
 			parentList, err := ts.parentView(ns).List(quitCtx, "")
 			if err != nil {
-				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
+				return fmt.Errorf("failed to fetch secondary index entries: %w", err)
 			}
 
 			// List all the cubbyhole storage keys
@@ -1836,7 +1835,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 			cubbyholeKeys, err := bview.List(quitCtx, "")
 			if err != nil {
-				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
+				return fmt.Errorf("failed to fetch cubbyhole storage keys: %w", err)
 			}
 
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -1849,7 +1848,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				// Get the children
 				children, err := ts.parentView(ns).List(quitCtx, parent)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read secondary index: {{err}}", err))
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index: %w", err))
 					continue
 				}
 
@@ -1884,7 +1883,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						te.Parent = ""
 						err = ts.store(quitCtx, te)
 						if err != nil {
-							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to convert child token into an orphan token: {{err}}", err))
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to convert child token into an orphan token: %w", err))
 						}
 						lock.Unlock()
 						continue
@@ -1896,7 +1895,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						ts.logger.Debug("deleting invalid secondary index", "index", index)
 						err = ts.parentView(ns).Delete(quitCtx, index)
 						if err != nil {
-							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete secondary index: {{err}}", err))
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index: %w", err))
 							continue
 						}
 						deletedChildrenCount++
@@ -1933,7 +1932,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				accessorEntry, err := ts.lookupByAccessor(quitCtx, saltedAccessor, true, true)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to read the accessor index: {{err}}", err))
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor index: %w", err))
 					continue
 				}
 
@@ -1945,7 +1944,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					// item since this is just a best-effort operation
 					err = ts.accessorView(ns).Delete(quitCtx, saltedAccessor)
 					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete the accessor index: {{err}}", err))
+						tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor index: %w", err))
 						continue
 					}
 					deletedCountAccessorEmptyToken++
@@ -1958,7 +1957,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				// exist
 				te, err := ts.lookupInternal(quitCtx, accessorEntry.TokenID, false, true)
 				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to lookup tainted ID: {{err}}", err))
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup tainted ID: %w", err))
 					lock.RUnlock()
 					continue
 				}
@@ -1985,7 +1984,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					// the leases associated with the token.
 					err = ts.expiration.RevokeByToken(quitCtx, tokenEntry)
 					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to revoke leases of expired token: {{err}}", err))
+						tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %w", err))
 						continue
 					}
 					deletedCountInvalidTokenInAccessor++
@@ -1996,7 +1995,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					// entry to try again.
 					err = ts.accessorView(ns).Delete(quitCtx, saltedAccessor)
 					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to delete accessor entry: {{err}}", err))
+						tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %w", err))
 						continue
 					}
 					deletedCountAccessorInvalidToken++
@@ -2006,7 +2005,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 						saltedID, err := ts.SaltID(quitCtx, te.ID)
 						if err != nil {
-							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to create salted token id: %w", err))
 							continue
 						}
 						validCubbyholeKeys[salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)] = true
@@ -2033,7 +2032,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					ts.logger.Info("deleting invalid cubbyhole", "key", key)
 					err = ts.cubbyholeBackend.revoke(quitCtx, bview, key)
 					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
+						tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke cubbyhole key %q: %w", key, err))
 					}
 					deletedCountInvalidCubbyholeKey++
 				}
@@ -2215,7 +2214,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
-		return nil, errwrap.Wrapf("parent token lookup failed: {{err}}", err)
+		return nil, fmt.Errorf("parent token lookup failed: %w", err)
 	}
 	if parent == nil {
 		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
@@ -2897,7 +2896,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	// running in the same namespace or a parent.
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
-		return nil, errwrap.Wrapf("error when looking up token to revoke: {{err}}", err)
+		return nil, fmt.Errorf("error when looking up token to revoke: %w", err)
 	}
 	if te == nil {
 		return logical.ErrorResponse("token to revoke not found"), logical.ErrInvalidRequest
@@ -3048,7 +3047,7 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	// Lookup the token
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up token to renew: {{err}}", err)
+		return nil, fmt.Errorf("error looking up token to renew: %w", err)
 	}
 	if te == nil {
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
@@ -3073,7 +3072,7 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 
 	te, err := ts.Lookup(ctx, req.Auth.ClientToken)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up token: {{err}}", err)
+		return nil, fmt.Errorf("error looking up token: %w", err)
 	}
 	if te == nil {
 		return nil, fmt.Errorf("no token entry found during lookup")
@@ -3087,7 +3086,7 @@ func (ts *TokenStore) authRenew(ctx context.Context, req *logical.Request, d *fr
 
 	role, err := ts.tokenStoreRole(ctx, te.Role)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error looking up role %q: {{err}}", te.Role), err)
+		return nil, fmt.Errorf("error looking up role %q: %w", te.Role, err)
 	}
 	if role == nil {
 		return nil, fmt.Errorf("original token role %q could not be found, not renewing", te.Role)
@@ -3305,7 +3304,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 
 	// Next parse token fields from the helper
 	if err := entry.ParseTokenFields(req, data); err != nil {
-		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
+		return logical.ErrorResponse(fmt.Errorf("error parsing role fields: %w", err).Error()), nil
 	}
 
 	entry.TokenType = oldEntryTokenType
@@ -3358,7 +3357,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		if ok {
 			boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw.([]string))
 			if err != nil {
-				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
+				return logical.ErrorResponse(fmt.Errorf("error parsing bound_cidrs: %w", err).Error()), nil
 			}
 			entry.BoundCIDRs = boundCIDRs
 			entry.TokenBoundCIDRs = entry.BoundCIDRs

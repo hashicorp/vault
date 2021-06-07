@@ -410,7 +410,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, error) {
 	for _, path := range c.flagConfigs {
 		current, err := server.LoadConfig(path)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error loading configuration from %s: {{err}}", path), err)
+			return nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
 		}
 
 		if config == nil {
@@ -875,6 +875,33 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 	return backend, nil
 }
 
+func beginServiceRegistration(c *ServerCommand, config *server.Config) (sr.ServiceRegistration, error) {
+	sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
+	if !ok {
+		return nil, fmt.Errorf("Unknown service_registration type %s", config.ServiceRegistration.Type)
+	}
+
+	namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
+	c.allLoggers = append(c.allLoggers, namedSDLogger)
+
+	// Since we haven't even begun starting Vault's core yet,
+	// we know that Vault is in its pre-running state.
+	state := sr.State{
+		VaultVersion:         version.GetVersion().VersionNumber(),
+		IsInitialized:        false,
+		IsSealed:             true,
+		IsActive:             false,
+		IsPerformanceStandby: false,
+	}
+	var err error
+	configSR, err := sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
+	if err != nil {
+		return nil, fmt.Errorf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err)
+	}
+
+	return configSR, nil
+}
+
 // InitListeners returns a response code, error message, Listeners, and a TCP Address list.
 func (c *ServerCommand) InitListeners(config *server.Config, disableClustering bool, infoKeys *[]string, info *map[string]string) (int, []listenerutil.Listener, []*net.TCPAddr, error) {
 	clusterAddrs := []*net.TCPAddr{}
@@ -1121,6 +1148,13 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
+		config.LicensePath = envLicensePath
+	}
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
+		config.License = envLicense
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1163,27 +1197,9 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the Service Discovery, if there is one
 	var configSR sr.ServiceRegistration
 	if config.ServiceRegistration != nil {
-		sdFactory, ok := c.ServiceRegistrations[config.ServiceRegistration.Type]
-		if !ok {
-			c.UI.Error(fmt.Sprintf("Unknown service_registration type %s", config.ServiceRegistration.Type))
-			return 1
-		}
-
-		namedSDLogger := c.logger.Named("service_registration." + config.ServiceRegistration.Type)
-		c.allLoggers = append(c.allLoggers, namedSDLogger)
-
-		// Since we haven't even begun starting Vault's core yet,
-		// we know that Vault is in its pre-running state.
-		state := sr.State{
-			VaultVersion:         version.GetVersion().VersionNumber(),
-			IsInitialized:        false,
-			IsSealed:             true,
-			IsActive:             false,
-			IsPerformanceStandby: false,
-		}
-		configSR, err = sdFactory(config.ServiceRegistration.Config, namedSDLogger, state)
+		configSR, err = beginServiceRegistration(c, config)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing service_registration of type %s: %s", config.ServiceRegistration.Type, err))
+			c.UI.Output(err.Error())
 			return 1
 		}
 	}
@@ -1192,83 +1208,22 @@ func (c *ServerCommand) Run(args []string) int {
 	info := make(map[string]string)
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
+	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
+	// Check error here
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
 
-	var barrierSeal vault.Seal
-	var unwrapSeal vault.Seal
-
-	var sealConfigError error
-	var wrapper wrapping.Wrapper
-	var barrierWrapper wrapping.Wrapper
-	if c.flagDevAutoSeal {
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
-	} else {
-		// Handle the case where no seal is provided
-		switch len(config.Seals) {
-		case 0:
-			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
-		case 1:
-			// If there's only one seal and it's disabled assume they want to
-			// migrate to a shamir seal and simply didn't provide it
-			if config.Seals[0].Disabled {
-				config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
-			}
-		}
-		for _, configSeal := range config.Seals {
-			sealType := wrapping.Shamir
-			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
-				sealType = os.Getenv("VAULT_SEAL_TYPE")
-				configSeal.Type = sealType
-			} else {
-				sealType = configSeal.Type
-			}
-
-			var seal vault.Seal
-			sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-			c.allLoggers = append(c.allLoggers, sealLogger)
-			defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-					Logger: c.logger.Named("shamir"),
-				}),
-			})
-			var sealInfoKeys []string
-			sealInfoMap := map[string]string{}
-			wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
-			if sealConfigError != nil {
-				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-					c.UI.Error(fmt.Sprintf(
-						"Error parsing Seal configuration: %s", sealConfigError))
-					return 1
-				}
-			}
-			if wrapper == nil {
-				seal = defaultSeal
-			} else {
-				seal = vault.NewAutoSeal(&vaultseal.Access{
-					Wrapper: wrapper,
-				})
-			}
-
-			infoPrefix := ""
-			if configSeal.Disabled {
-				unwrapSeal = seal
-				infoPrefix = "Old "
-			} else {
-				barrierSeal = seal
-				barrierWrapper = wrapper
-			}
-			for _, k := range sealInfoKeys {
-				infoKeys = append(infoKeys, infoPrefix+k)
-				info[infoPrefix+k] = sealInfoMap[k]
-			}
-
+	if seals != nil {
+		for _, seal := range seals {
 			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func() {
-				err = seal.Finalize(context.Background())
+			defer func(seal *vault.Seal) {
+				err = (*seal).Finalize(context.Background())
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 				}
-			}()
-
+			}(&seal)
 		}
 	}
 
@@ -1284,231 +1239,34 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	coreConfig := &vault.CoreConfig{
-		RawConfig:                      config,
-		Physical:                       backend,
-		RedirectAddr:                   config.Storage.RedirectAddr,
-		StorageType:                    config.Storage.Type,
-		HAPhysical:                     nil,
-		ServiceRegistration:            configSR,
-		Seal:                           barrierSeal,
-		UnwrapSeal:                     unwrapSeal,
-		AuditBackends:                  c.AuditBackends,
-		CredentialBackends:             c.CredentialBackends,
-		LogicalBackends:                c.LogicalBackends,
-		Logger:                         c.logger,
-		DisableSentinelTrace:           config.DisableSentinelTrace,
-		DisableCache:                   config.DisableCache,
-		DisableMlock:                   config.DisableMlock,
-		MaxLeaseTTL:                    config.MaxLeaseTTL,
-		DefaultLeaseTTL:                config.DefaultLeaseTTL,
-		ClusterName:                    config.ClusterName,
-		CacheSize:                      config.CacheSize,
-		PluginDirectory:                config.PluginDirectory,
-		EnableUI:                       config.EnableUI,
-		EnableRaw:                      config.EnableRawEndpoint,
-		DisableSealWrap:                config.DisableSealWrap,
-		DisablePerformanceStandby:      config.DisablePerformanceStandby,
-		DisableIndexing:                config.DisableIndexing,
-		AllLoggers:                     c.allLoggers,
-		BuiltinRegistry:                builtinplugins.Registry,
-		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
-		MetricsHelper:                  metricsHelper,
-		MetricSink:                     metricSink,
-		SecureRandomReader:             secureRandomReader,
-		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
-		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
-	}
-	if c.flagDev {
-		coreConfig.EnableRaw = true
-		coreConfig.DevToken = c.flagDevRootTokenID
-		if c.flagDevLeasedKV {
-			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
-		}
-		if c.flagDevPluginDir != "" {
-			coreConfig.PluginDirectory = c.flagDevPluginDir
-		}
-		if c.flagDevLatency > 0 {
-			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
-			if _, txnOK := backend.(physical.Transactional); txnOK {
-				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
-			} else {
-				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
-			}
-		}
-	}
-
+	coreConfig := createCoreConfig(c, config, backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 	if c.flagDevThreeNode {
-		return c.enableThreeNodeDevCluster(coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return c.enableThreeNodeDevCluster(&coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	if c.flagDevFourCluster {
-		return enableFourClusterDev(c, coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
-
-	var disableClustering bool
 
 	// Initialize the separate HA storage backend, if it exists
-	var ok bool
-	if config.HAStorage != nil {
-		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
-			c.UI.Error("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
-			return 1
-		}
-
-		if config.Storage.Type == storageTypeRaft {
-			c.UI.Error("HA storage cannot be declared when Raft is the storage type")
-			return 1
-		}
-
-		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
-		if !exists {
-			c.UI.Error(fmt.Sprintf("Unknown HA storage type %s", config.HAStorage.Type))
-			return 1
-
-		}
-
-		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
-		c.allLoggers = append(c.allLoggers, namedHALogger)
-		habackend, err := factory(config.HAStorage.Config, namedHALogger)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf(
-				"Error initializing HA storage of type %s: %s", config.HAStorage.Type, err))
-			return 1
-
-		}
-
-		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
-			c.UI.Error("Specified HA storage does not support HA")
-			return 1
-		}
-
-		if !coreConfig.HAPhysical.HAEnabled() {
-			c.UI.Error("Specified HA storage has HA support disabled; please consult documentation")
-			return 1
-		}
-
-		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
-		disableClustering = config.HAStorage.DisableClustering
-
-		if config.HAStorage.Type == storageTypeRaft && disableClustering {
-			c.UI.Error("Disable clustering cannot be set to true when Raft is the HA storage type")
-			return 1
-		}
-
-		if !disableClustering {
-			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
-		}
-	} else {
-		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
-			coreConfig.RedirectAddr = config.Storage.RedirectAddr
-			disableClustering = config.Storage.DisableClustering
-
-			if (config.Storage.Type == storageTypeRaft) && disableClustering {
-				c.UI.Error("Disable clustering cannot be set to true when Raft is the storage type")
-				return 1
-			}
-
-			if !disableClustering {
-				coreConfig.ClusterAddr = config.Storage.ClusterAddr
-			}
-		}
+	disableClustering, err := initHaBackend(c, config, &coreConfig, backend)
+	if err != nil {
+		c.UI.Output(err.Error())
+		return 1
 	}
 
-	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
-		coreConfig.RedirectAddr = envRA
-	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
-		coreConfig.RedirectAddr = envRA
-	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
-		coreConfig.RedirectAddr = envAA
-	}
-
-	// Attempt to detect the redirect address, if possible
-	if coreConfig.RedirectAddr == "" {
-		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
-	}
-	var detect physical.RedirectDetect
-	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
-		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
-	} else {
-		detect, ok = coreConfig.Physical.(physical.RedirectDetect)
-	}
-	if ok && coreConfig.RedirectAddr == "" {
-		redirect, err := c.detectRedirect(detect, config)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error detecting api address: %s", err))
-		} else if redirect == "" {
-			c.UI.Error("Failed to detect api address")
-		} else {
-			coreConfig.RedirectAddr = redirect
-		}
-	}
-	if coreConfig.RedirectAddr == "" && c.flagDev {
-		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+	// Determine the redirect address from environment variables
+	err = determineRedirectAddr(c, &coreConfig, config)
+	if err != nil {
+		c.UI.Output(err.Error())
 	}
 
 	// After the redirect bits are sorted out, if no cluster address was
 	// explicitly given, derive one from the redirect addr
-	if disableClustering {
-		coreConfig.ClusterAddr = ""
-	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-		coreConfig.ClusterAddr = envCA
-	} else {
-		var addrToUse string
-		switch {
-		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
-			addrToUse = coreConfig.RedirectAddr
-		case c.flagDev:
-			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Address)
-		default:
-			goto CLUSTER_SYNTHESIS_COMPLETE
-		}
-		u, err := url.ParseRequestURI(addrToUse)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing synthesized cluster address %s: %v", addrToUse, err))
-			return 1
-		}
-		host, port, err := net.SplitHostPort(u.Host)
-		if err != nil {
-			// This sucks, as it's a const in the function but not exported in the package
-			if strings.Contains(err.Error(), "missing port in address") {
-				host = u.Host
-				port = "443"
-			} else {
-				c.UI.Error(fmt.Sprintf("Error parsing api address: %v", err))
-				return 1
-			}
-		}
-		nPort, err := strconv.Atoi(port)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err))
-			return 1
-		}
-		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
-		// Will always be TLS-secured
-		u.Scheme = "https"
-		coreConfig.ClusterAddr = u.String()
-	}
-
-CLUSTER_SYNTHESIS_COMPLETE:
-
-	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
-		c.UI.Error(fmt.Sprintf(
-			"Address %q used for both API and cluster addresses", coreConfig.RedirectAddr))
+	err = findClusterAddress(c, &coreConfig, config, disableClustering)
+	if err != nil {
+		c.UI.Output(err.Error())
 		return 1
-	}
-
-	if coreConfig.ClusterAddr != "" {
-		// Force https as we'll always be TLS-secured
-		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err))
-			return 11
-		}
-		u.Scheme = "https"
-		coreConfig.ClusterAddr = u.String()
 	}
 
 	// Override the UI enabling config by the environment variable
@@ -1529,15 +1287,20 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	adjustCoreConfigForEnt(config, coreConfig)
+	adjustCoreConfigForEnt(config, &coreConfig)
 
 	// Initialize the core
-	core, newCoreError := vault.NewCore(coreConfig)
+	core, newCoreError := vault.NewCore(&coreConfig)
 	if newCoreError != nil {
 		if vault.IsFatalError(newCoreError) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
+		c.UI.Warn(wrapAtLength(
+			"WARNING! A non-fatal error occurred during initialization. Please " +
+				"check the logs for more information."))
+		c.UI.Warn("")
+
 	}
 
 	// Copy the reload funcs pointers back
@@ -1641,27 +1404,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
 	if !core.IsInSealMigrationMode() {
-		go func() {
-			for {
-				err := core.UnsealWithStoredKeys(context.Background())
-				if err == nil {
-					return
-				}
-
-				if vault.IsFatalError(err) {
-					c.logger.Error("error unsealing core", "error", err)
-					return
-				} else {
-					c.logger.Warn("failed to unseal core", "error", err)
-				}
-
-				select {
-				case <-c.ShutdownCh:
-					return
-				case <-time.After(5 * time.Second):
-				}
-			}
-		}()
+		go runUnseal(c, core, context.Background())
 	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
@@ -1680,176 +1423,24 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.WaitGroup = &sync.WaitGroup{}
 
 	// If service discovery is available, run service discovery
-	if sd := coreConfig.GetServiceRegistration(); sd != nil {
-		if err := configSR.Run(c.ShutdownCh, c.WaitGroup, coreConfig.RedirectAddr); err != nil {
-			c.UI.Error(fmt.Sprintf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err))
-			return 1
-		}
+	err = runListeners(c, &coreConfig, config, configSR)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	// If we're in Dev mode, then initialize the core
-	if c.flagDev && !c.flagDevSkipInit {
-
-		init, err := c.enableDev(core, coreConfig)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error initializing Dev mode: %s", err))
-			return 1
-		}
-
-		var plugins, pluginsNotLoaded []string
-		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
-
-			f, err := os.Open(c.flagDevPluginDir)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error reading plugin dir: %s", err))
-				return 1
-			}
-
-			list, err := f.Readdirnames(0)
-			f.Close()
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error listing plugins: %s", err))
-				return 1
-			}
-
-			for _, name := range list {
-				path := filepath.Join(f.Name(), name)
-				if err := c.addPlugin(path, init.RootToken, core); err != nil {
-					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
-						c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
-						return 1
-					}
-					pluginsNotLoaded = append(pluginsNotLoaded, name)
-					continue
-				}
-				plugins = append(plugins, name)
-			}
-
-			sort.Strings(plugins)
-		}
-
-		var qw *quiescenceSink
-		var qwo sync.Once
-		qw = &quiescenceSink{
-			t: time.AfterFunc(100*time.Millisecond, func() {
-				qwo.Do(func() {
-					c.logger.DeregisterSink(qw)
-
-					// Print the big dev mode warning!
-					c.UI.Warn(wrapAtLength(
-						"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
-							"in-memory and starts unsealed with a single unseal key. The root " +
-							"token is already authenticated to the CLI, so you can immediately " +
-							"begin using Vault."))
-					c.UI.Warn("")
-					c.UI.Warn("You may need to set the following environment variable:")
-					c.UI.Warn("")
-
-					endpointURL := "http://" + config.Listeners[0].Address
-					if runtime.GOOS == "windows" {
-						c.UI.Warn("PowerShell:")
-						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
-						c.UI.Warn("cmd.exe:")
-						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
-					} else {
-						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
-					}
-
-					// Unseal key is not returned if stored shares is supported
-					if len(init.SecretShares) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The unseal key and root token are displayed below in case you want " +
-								"to seal/unseal the Vault or re-authenticate."))
-						c.UI.Warn("")
-						c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
-					}
-
-					if len(init.RecoveryShares) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The recovery key and root token are displayed below in case you want " +
-								"to seal/unseal the Vault or re-authenticate."))
-						c.UI.Warn("")
-						c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
-					}
-
-					c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
-
-					if len(plugins) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The following dev plugins are registered in the catalog:"))
-						for _, p := range plugins {
-							c.UI.Warn(fmt.Sprintf("    - %s", p))
-						}
-					}
-
-					if len(pluginsNotLoaded) > 0 {
-						c.UI.Warn("")
-						c.UI.Warn(wrapAtLength(
-							"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
-						for _, p := range pluginsNotLoaded {
-							c.UI.Warn(fmt.Sprintf("    - %s", p))
-						}
-					}
-
-					c.UI.Warn("")
-					c.UI.Warn(wrapAtLength(
-						"Development mode should NOT be used in production installations!"))
-					c.UI.Warn("")
-				})
-			}),
-		}
-		c.logger.RegisterSink(qw)
+	err = initDevCore(c, &coreConfig, config, core)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	// Initialize the HTTP servers
-	for _, ln := range lns {
-		if ln.Config == nil {
-			c.UI.Error("Found nil listener config after parsing")
-			return 1
-		}
-		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:                  core,
-			ListenerConfig:        ln.Config,
-			DisablePrintableCheck: config.DisablePrintableCheck,
-			RecoveryMode:          c.flagRecovery,
-		})
-
-		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
-			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
-		}
-
-		// server defaults
-		server := &http.Server{
-			Handler:           handler,
-			ReadHeaderTimeout: 10 * time.Second,
-			ReadTimeout:       30 * time.Second,
-			IdleTimeout:       5 * time.Minute,
-			ErrorLog:          c.logger.StandardLogger(nil),
-		}
-
-		// override server defaults with config values for read/write/idle timeouts if configured
-		if ln.Config.HTTPReadHeaderTimeout > 0 {
-			server.ReadHeaderTimeout = ln.Config.HTTPReadHeaderTimeout
-		}
-		if ln.Config.HTTPReadTimeout > 0 {
-			server.ReadTimeout = ln.Config.HTTPReadTimeout
-		}
-		if ln.Config.HTTPWriteTimeout > 0 {
-			server.WriteTimeout = ln.Config.HTTPWriteTimeout
-		}
-		if ln.Config.HTTPIdleTimeout > 0 {
-			server.IdleTimeout = ln.Config.HTTPIdleTimeout
-		}
-
-		// server config tests can exit now
-		if c.flagTestServerConfig {
-			continue
-		}
-
-		go server.Serve(ln.Listener)
+	err = startHttpServers(c, core, config, lns)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
 
 	if c.flagTestServerConfig {
@@ -1866,13 +1457,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			c.UI.Error("Vault is initialized but no Seal key could be loaded")
 			return 1
 		}
-	}
-
-	if newCoreError != nil {
-		c.UI.Warn(wrapAtLength(
-			"WARNING! A non-fatal error occurred during initialization. Please " +
-				"check the logs for more information."))
-		c.UI.Warn("")
 	}
 
 	// Output the header that the server has started
@@ -1978,6 +1562,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
+			// Reload license file
+			if err := vault.LicenseReload(core); err != nil {
+				c.UI.Error(fmt.Sprintf("Error reloading license: %v", err))
+			}
+
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
@@ -2066,7 +1655,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 
 	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
-		return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
+		return nil, fmt.Errorf("failed to check active status: %w", err)
 	}
 	if err == nil {
 		leaderCount := 5
@@ -2079,7 +1668,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
+				return nil, fmt.Errorf("failed to check active status: %w", err)
 			}
 			leaderCount--
 		}
@@ -2101,7 +1690,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 		resp, err := core.HandleRequest(ctx, req)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
+			return nil, fmt.Errorf("failed to create root token with ID %q: %w", coreConfig.DevToken, err)
 		}
 		if resp == nil {
 			return nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
@@ -2117,7 +1706,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Data = nil
 		resp, err = core.HandleRequest(ctx, req)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
+			return nil, fmt.Errorf("failed to revoke initial root token: %w", err)
 		}
 	}
 
@@ -2151,10 +1740,10 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 	resp, err := core.HandleRequest(ctx, req)
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating default K/V store: {{err}}", err)
+		return nil, fmt.Errorf("error creating default K/V store: %w", err)
 	}
 	if resp.IsError() {
-		return nil, errwrap.Wrapf("failed to create default K/V store: {{err}}", resp.Error())
+		return nil, fmt.Errorf("failed to create default K/V store: %w", resp.Error())
 	}
 
 	return init, nil
@@ -2469,7 +2058,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("error encountered reloading listener: %w", err))
 					}
 				}
 			}
@@ -2478,7 +2067,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("error encountered reloading file audit device at path %q: %w", strings.TrimPrefix(k, "audit_file|"), err))
 					}
 				}
 			}
@@ -2505,7 +2094,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	// Open the PID file
 	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
-		return errwrap.Wrapf("could not open pid file: {{err}}", err)
+		return fmt.Errorf("could not open pid file: %w", err)
 	}
 	defer pidFile.Close()
 
@@ -2513,7 +2102,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	pid := os.Getpid()
 	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
 	if err != nil {
-		return errwrap.Wrapf("could not write to pid file: {{err}}", err)
+		return fmt.Errorf("could not write to pid file: %w", err)
 	}
 	return nil
 }
@@ -2580,6 +2169,493 @@ func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) 
 	}
 
 	return &status, nil
+}
+
+// setSeal return barrierSeal, barrierWrapper, unwrapSeal, and all the created seals from the configs so we can close them in Run
+// The two errors are the sealConfigError and the regular error
+func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string) (vault.Seal, wrapping.Wrapper, vault.Seal, []vault.Seal, error, error) {
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
+
+	var sealConfigError error
+	var wrapper wrapping.Wrapper
+	var barrierWrapper wrapping.Wrapper
+	if c.flagDevAutoSeal {
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		return barrierSeal, nil, nil, nil, nil, nil
+	}
+
+	// Handle the case where no seal is provided
+	switch len(config.Seals) {
+	case 0:
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+	case 1:
+		// If there's only one seal and it's disabled assume they want to
+		// migrate to a shamir seal and simply didn't provide it
+		if config.Seals[0].Disabled {
+			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		}
+	}
+	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
+	for _, configSeal := range config.Seals {
+		sealType := wrapping.Shamir
+		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+			sealType = os.Getenv("VAULT_SEAL_TYPE")
+			configSeal.Type = sealType
+		} else {
+			sealType = configSeal.Type
+		}
+
+		var seal vault.Seal
+		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
+		c.allLoggers = append(c.allLoggers, sealLogger)
+		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
+			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
+				Logger: c.logger.Named("shamir"),
+			}),
+		})
+		var sealInfoKeys []string
+		sealInfoMap := map[string]string{}
+		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
+		if sealConfigError != nil {
+			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+				return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, fmt.Errorf(
+					"Error parsing Seal configuration: %s", sealConfigError)
+			}
+		}
+		if wrapper == nil {
+			seal = defaultSeal
+		} else {
+			seal = vault.NewAutoSeal(&vaultseal.Access{
+				Wrapper: wrapper,
+			})
+		}
+		infoPrefix := ""
+		if configSeal.Disabled {
+			unwrapSeal = seal
+			infoPrefix = "Old "
+		} else {
+			barrierSeal = seal
+			barrierWrapper = wrapper
+		}
+		for _, k := range sealInfoKeys {
+			infoKeys = append(infoKeys, infoPrefix+k)
+			info[infoPrefix+k] = sealInfoMap[k]
+		}
+		createdSeals = append(createdSeals, seal)
+	}
+	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
+}
+
+func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {
+	// Initialize the separate HA storage backend, if it exists
+	var ok bool
+	if config.HAStorage != nil {
+		if config.Storage.Type == storageTypeRaft && config.HAStorage.Type == storageTypeRaft {
+			return false, fmt.Errorf("Raft cannot be set both as 'storage' and 'ha_storage'. Setting 'storage' to 'raft' will automatically set it up for HA operations as well")
+		}
+
+		if config.Storage.Type == storageTypeRaft {
+			return false, fmt.Errorf("HA storage cannot be declared when Raft is the storage type")
+		}
+
+		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
+		if !exists {
+			return false, fmt.Errorf("Unknown HA storage type %s", config.HAStorage.Type)
+		}
+
+		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
+		c.allLoggers = append(c.allLoggers, namedHALogger)
+		habackend, err := factory(config.HAStorage.Config, namedHALogger)
+		if err != nil {
+			return false, fmt.Errorf("Error initializing HA storage of type %s: %s", config.HAStorage.Type, err)
+		}
+
+		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
+			return false, fmt.Errorf("Specified HA storage does not support HA")
+		}
+
+		if !coreConfig.HAPhysical.HAEnabled() {
+			return false, fmt.Errorf("Specified HA storage has HA support disabled; please consult documentation")
+		}
+
+		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
+		disableClustering := config.HAStorage.DisableClustering
+
+		if config.HAStorage.Type == storageTypeRaft && disableClustering {
+			return disableClustering, fmt.Errorf("Disable clustering cannot be set to true when Raft is the HA storage type")
+		}
+
+		if !disableClustering {
+			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
+		}
+	} else {
+		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
+			coreConfig.RedirectAddr = config.Storage.RedirectAddr
+			disableClustering := config.Storage.DisableClustering
+
+			if (config.Storage.Type == storageTypeRaft) && disableClustering {
+				return disableClustering, fmt.Errorf("Disable clustering cannot be set to true when Raft is the storage type")
+			}
+
+			if !disableClustering {
+				coreConfig.ClusterAddr = config.Storage.ClusterAddr
+			}
+		}
+	}
+	return config.DisableClustering, nil
+}
+
+func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config) error {
+	var retErr error
+	if envRA := os.Getenv("VAULT_API_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
+		coreConfig.RedirectAddr = envAA
+	}
+
+	// Attempt to detect the redirect address, if possible
+	if coreConfig.RedirectAddr == "" {
+		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
+	}
+
+	var ok bool
+	var detect physical.RedirectDetect
+	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
+		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
+	} else {
+		detect, ok = coreConfig.Physical.(physical.RedirectDetect)
+	}
+	if ok && coreConfig.RedirectAddr == "" {
+		redirect, err := c.detectRedirect(detect, config)
+		// the following errors did not cause Run to return, so I'm not returning these
+		// as errors.
+		if err != nil {
+			retErr = fmt.Errorf("Error detecting api address: %s", err)
+		} else if redirect == "" {
+			retErr = fmt.Errorf("Failed to detect api address")
+		} else {
+			coreConfig.RedirectAddr = redirect
+		}
+	}
+	if coreConfig.RedirectAddr == "" && c.flagDev {
+		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+	}
+	return retErr
+}
+
+func findClusterAddress(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, disableClustering bool) error {
+	if disableClustering {
+		coreConfig.ClusterAddr = ""
+	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+		coreConfig.ClusterAddr = envCA
+	} else {
+		var addrToUse string
+		switch {
+		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
+			addrToUse = coreConfig.RedirectAddr
+		case c.flagDev:
+			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+		default:
+			goto CLUSTER_SYNTHESIS_COMPLETE
+		}
+		u, err := url.ParseRequestURI(addrToUse)
+		if err != nil {
+			return fmt.Errorf("Error parsing synthesized cluster address %s: %v", addrToUse, err)
+		}
+		host, port, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			// This sucks, as it's a const in the function but not exported in the package
+			if strings.Contains(err.Error(), "missing port in address") {
+				host = u.Host
+				port = "443"
+			} else {
+				return fmt.Errorf("Error parsing api address: %v", err)
+			}
+		}
+		nPort, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err)
+		}
+		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
+		// Will always be TLS-secured
+		u.Scheme = "https"
+		coreConfig.ClusterAddr = u.String()
+	}
+
+CLUSTER_SYNTHESIS_COMPLETE:
+
+	if coreConfig.RedirectAddr == coreConfig.ClusterAddr && len(coreConfig.RedirectAddr) != 0 {
+		return fmt.Errorf("Address %q used for both API and cluster addresses", coreConfig.RedirectAddr)
+	}
+
+	if coreConfig.ClusterAddr != "" {
+		// Force https as we'll always be TLS-secured
+		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
+		if err != nil {
+			return fmt.Errorf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err)
+		}
+		u.Scheme = "https"
+		coreConfig.ClusterAddr = u.String()
+	}
+	return nil
+}
+
+func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
+	for {
+		err := core.UnsealWithStoredKeys(ctx)
+		if err == nil {
+			return
+		}
+
+		if vault.IsFatalError(err) {
+			c.logger.Error("error unsealing core", "error", err)
+			return
+		}
+		c.logger.Warn("failed to unseal core", "error", err)
+
+		select {
+		case <-c.ShutdownCh:
+			return
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+	coreConfig := &vault.CoreConfig{
+		RawConfig:                      config,
+		Physical:                       backend,
+		RedirectAddr:                   config.Storage.RedirectAddr,
+		StorageType:                    config.Storage.Type,
+		HAPhysical:                     nil,
+		ServiceRegistration:            configSR,
+		Seal:                           barrierSeal,
+		UnwrapSeal:                     unwrapSeal,
+		AuditBackends:                  c.AuditBackends,
+		CredentialBackends:             c.CredentialBackends,
+		LogicalBackends:                c.LogicalBackends,
+		Logger:                         c.logger,
+		DisableSentinelTrace:           config.DisableSentinelTrace,
+		DisableCache:                   config.DisableCache,
+		DisableMlock:                   config.DisableMlock,
+		MaxLeaseTTL:                    config.MaxLeaseTTL,
+		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		ClusterName:                    config.ClusterName,
+		CacheSize:                      config.CacheSize,
+		PluginDirectory:                config.PluginDirectory,
+		EnableUI:                       config.EnableUI,
+		EnableRaw:                      config.EnableRawEndpoint,
+		DisableSealWrap:                config.DisableSealWrap,
+		DisablePerformanceStandby:      config.DisablePerformanceStandby,
+		DisableIndexing:                config.DisableIndexing,
+		AllLoggers:                     c.allLoggers,
+		BuiltinRegistry:                builtinplugins.Registry,
+		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
+		MetricsHelper:                  metricsHelper,
+		MetricSink:                     metricSink,
+		SecureRandomReader:             secureRandomReader,
+		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
+		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+		License:                        config.License,
+		LicensePath:                    config.LicensePath,
+	}
+	if c.flagDev {
+		coreConfig.EnableRaw = true
+		coreConfig.DevToken = c.flagDevRootTokenID
+		if c.flagDevLeasedKV {
+			coreConfig.LogicalBackends["kv"] = vault.LeasedPassthroughBackendFactory
+		}
+		if c.flagDevPluginDir != "" {
+			coreConfig.PluginDirectory = c.flagDevPluginDir
+		}
+		if c.flagDevLatency > 0 {
+			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
+			if _, txnOK := backend.(physical.Transactional); txnOK {
+				coreConfig.Physical = physical.NewTransactionalLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
+			} else {
+				coreConfig.Physical = physical.NewLatencyInjector(backend, injectLatency, c.flagDevLatencyJitter, c.logger)
+			}
+		}
+	}
+	return *coreConfig
+}
+
+func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, configSR sr.ServiceRegistration) error {
+	if sd := coreConfig.GetServiceRegistration(); sd != nil {
+		if err := configSR.Run(c.ShutdownCh, c.WaitGroup, coreConfig.RedirectAddr); err != nil {
+			return fmt.Errorf("Error running service_registration of type %s: %s", config.ServiceRegistration.Type, err)
+		}
+	}
+	return nil
+}
+
+func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core) error {
+	if c.flagDev && !c.flagDevSkipInit {
+
+		init, err := c.enableDev(core, coreConfig)
+		if err != nil {
+			return fmt.Errorf("Error initializing Dev mode: %s", err)
+		}
+
+		var plugins, pluginsNotLoaded []string
+		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
+
+			f, err := os.Open(c.flagDevPluginDir)
+			if err != nil {
+				return fmt.Errorf("Error reading plugin dir: %s", err)
+			}
+
+			list, err := f.Readdirnames(0)
+			f.Close()
+			if err != nil {
+				return fmt.Errorf("Error listing plugins: %s", err)
+			}
+
+			for _, name := range list {
+				path := filepath.Join(f.Name(), name)
+				if err := c.addPlugin(path, init.RootToken, core); err != nil {
+					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
+					}
+					pluginsNotLoaded = append(pluginsNotLoaded, name)
+					continue
+				}
+				plugins = append(plugins, name)
+			}
+
+			sort.Strings(plugins)
+		}
+
+		var qw *quiescenceSink
+		var qwo sync.Once
+		qw = &quiescenceSink{
+			t: time.AfterFunc(100*time.Millisecond, func() {
+				qwo.Do(func() {
+					c.logger.DeregisterSink(qw)
+
+					// Print the big dev mode warning!
+					c.UI.Warn(wrapAtLength(
+						"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
+							"in-memory and starts unsealed with a single unseal key. The root " +
+							"token is already authenticated to the CLI, so you can immediately " +
+							"begin using Vault."))
+					c.UI.Warn("")
+					c.UI.Warn("You may need to set the following environment variable:")
+					c.UI.Warn("")
+
+					endpointURL := "http://" + config.Listeners[0].Address
+					if runtime.GOOS == "windows" {
+						c.UI.Warn("PowerShell:")
+						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+						c.UI.Warn("cmd.exe:")
+						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
+					} else {
+						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+					}
+
+					// Unseal key is not returned if stored shares is supported
+					if len(init.SecretShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The unseal key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.SecretShares[0])))
+					}
+
+					if len(init.RecoveryShares) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The recovery key and root token are displayed below in case you want " +
+								"to seal/unseal the Vault or re-authenticate."))
+						c.UI.Warn("")
+						c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+					}
+
+					c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
+
+					if len(plugins) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins are registered in the catalog:"))
+						for _, p := range plugins {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
+					if len(pluginsNotLoaded) > 0 {
+						c.UI.Warn("")
+						c.UI.Warn(wrapAtLength(
+							"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
+						for _, p := range pluginsNotLoaded {
+							c.UI.Warn(fmt.Sprintf("    - %s", p))
+						}
+					}
+
+					c.UI.Warn("")
+					c.UI.Warn(wrapAtLength(
+						"Development mode should NOT be used in production installations!"))
+					c.UI.Warn("")
+				})
+			}),
+		}
+		c.logger.RegisterSink(qw)
+	}
+	return nil
+}
+
+// Initialize the HTTP servers
+func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config, lns []listenerutil.Listener) error {
+	for _, ln := range lns {
+		if ln.Config == nil {
+			return fmt.Errorf("Found nil listener config after parsing")
+		}
+		handler := vaulthttp.Handler(&vault.HandlerProperties{
+			Core:                  core,
+			ListenerConfig:        ln.Config,
+			DisablePrintableCheck: config.DisablePrintableCheck,
+			RecoveryMode:          c.flagRecovery,
+		})
+
+		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
+			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
+		}
+
+		// server defaults
+		server := &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			IdleTimeout:       5 * time.Minute,
+			ErrorLog:          c.logger.StandardLogger(nil),
+		}
+
+		// override server defaults with config values for read/write/idle timeouts if configured
+		if ln.Config.HTTPReadHeaderTimeout > 0 {
+			server.ReadHeaderTimeout = ln.Config.HTTPReadHeaderTimeout
+		}
+		if ln.Config.HTTPReadTimeout > 0 {
+			server.ReadTimeout = ln.Config.HTTPReadTimeout
+		}
+		if ln.Config.HTTPWriteTimeout > 0 {
+			server.WriteTimeout = ln.Config.HTTPWriteTimeout
+		}
+		if ln.Config.HTTPIdleTimeout > 0 {
+			server.IdleTimeout = ln.Config.HTTPIdleTimeout
+		}
+
+		// server config tests can exit now
+		if c.flagTestServerConfig {
+			continue
+		}
+
+		go server.Serve(ln.Listener)
+	}
+	return nil
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {

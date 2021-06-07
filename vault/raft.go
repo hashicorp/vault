@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
@@ -38,6 +37,8 @@ var (
 
 	// TestingUpdateClusterAddr is used in tests to override the cluster address
 	TestingUpdateClusterAddr uint32
+
+	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
 
 // GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
@@ -186,6 +187,12 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
+
+	// Reload the raft TLS keys to ensure we are using the latest version.
+	if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+		return err
+	}
+
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 
@@ -237,13 +244,13 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 		// Create a new key
 		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to generate new raft TLS key: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to generate new raft TLS key: %w", err)
 		}
 
 		// Read the existing keyring
 		keyring, err := c.raftReadTLSKeyring(ctx)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to read raft TLS keyring: %w", err)
 		}
 
 		// Advance the term and store the new key, replacing the old one.
@@ -256,10 +263,10 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 		keyring.ActiveKeyID = raftTLSKey.ID
 		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to json encode keyring: %w", err)
 		}
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to write keyring: %w", err)
 		}
 
 		logger.Info("wrote new raft TLS config")
@@ -354,7 +361,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		// Read the existing keyring
 		keyring, err := c.raftReadTLSKeyring(ctx)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to read raft TLS keyring: %w", err)
 		}
 
 		switch {
@@ -365,10 +372,10 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 			keyring.AppliedIndex = raftBackend.AppliedIndex()
 			entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 			if err != nil {
-				return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+				return time.Time{}, fmt.Errorf("failed to json encode keyring: %w", err)
 			}
 			if err := c.barrier.Put(ctx, entry); err != nil {
-				return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+				return time.Time{}, fmt.Errorf("failed to write keyring: %w", err)
 			}
 
 		case len(keyring.Keys) > 1:
@@ -386,7 +393,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		// Create a new key
 		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to generate new raft TLS key: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to generate new raft TLS key: %w", err)
 		}
 
 		// Advance the term and store the new key
@@ -394,10 +401,10 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		keyring.Keys = append(keyring.Keys, raftTLSKey)
 		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to json encode keyring: %w", err)
 		}
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to write keyring: %w", err)
 		}
 
 		// Write the keyring again with the new applied index. This allows us to
@@ -406,10 +413,10 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		keyring.AppliedIndex = raftBackend.AppliedIndex()
 		entry, err = logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to json encode keyring: %w", err)
 		}
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			return time.Time{}, errwrap.Wrapf("failed to write keyring: {{err}}", err)
+			return time.Time{}, fmt.Errorf("failed to write keyring: %w", err)
 		}
 
 		logger.Info("wrote new raft TLS config")
@@ -423,7 +430,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	checkCommitted := func() error {
 		keyring, err := c.raftReadTLSKeyring(ctx)
 		if err != nil {
-			return errwrap.Wrapf("failed to read raft TLS keyring: {{err}}", err)
+			return fmt.Errorf("failed to read raft TLS keyring: %w", err)
 		}
 
 		switch {
@@ -444,15 +451,15 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		keyring.Term += 1
 		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
 		if err != nil {
-			return errwrap.Wrapf("failed to json encode keyring: {{err}}", err)
+			return fmt.Errorf("failed to json encode keyring: %w", err)
 		}
 		if err := c.barrier.Put(ctx, entry); err != nil {
-			return errwrap.Wrapf("failed to write keyring: {{err}}", err)
+			return fmt.Errorf("failed to write keyring: %w", err)
 		}
 
 		// Update the TLS Key in the backend
 		if err := raftBackend.SetTLSKeyring(keyring); err != nil {
-			return errwrap.Wrapf("failed to install keyring: {{err}}", err)
+			return fmt.Errorf("failed to install keyring: %w", err)
 		}
 
 		logger.Info("installed new raft TLS key", "term", keyring.Term)
@@ -719,7 +726,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 	init, err := c.InitializedLocally(ctx)
 	if err != nil {
-		return false, errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
+		return false, fmt.Errorf("failed to check if core is initialized: %w", err)
 	}
 
 	isRaftHAOnly := c.isRaftHAOnly()
@@ -775,7 +782,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		var adv activeAdvertisement
 		err = jsonutil.DecodeJSON(entry.Value, &adv)
 		if err != nil {
-			return false, errwrap.Wrapf("unable to decoded leader entry: {{err}}", err)
+			return false, fmt.Errorf("unable to decoded leader entry: %w", err)
 		}
 
 		leaderInfos[0].LeaderAPIAddr = adv.RedirectAddr
@@ -783,7 +790,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 	disco, err := newDiscover()
 	if err != nil {
-		return false, errwrap.Wrapf("failed to create auto-join discovery: {{err}}", err)
+		return false, fmt.Errorf("failed to create auto-join discovery: %w", err)
 	}
 
 	join := func(retry bool) error {
@@ -797,7 +804,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			init, err := c.InitializedLocally(ctx)
 			if err != nil {
-				return errwrap.Wrapf("failed to check if core is initialized: {{err}}", err)
+				return fmt.Errorf("failed to check if core is initialized: %w", err)
 			}
 
 			if init && !isRaftHAOnly {
@@ -813,21 +820,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			if leaderInfo.TLSConfig == nil && (len(leaderInfo.LeaderCACert) != 0 || len(leaderInfo.LeaderClientCert) != 0 || len(leaderInfo.LeaderClientKey) != 0) {
 				leaderInfo.TLSConfig, err = tlsutil.ClientTLSConfig([]byte(leaderInfo.LeaderCACert), []byte(leaderInfo.LeaderClientCert), []byte(leaderInfo.LeaderClientKey))
 				if err != nil {
-					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
+					return fmt.Errorf("failed to create TLS config: %w", err)
 				}
 				leaderInfo.TLSConfig.ServerName = leaderInfo.LeaderTLSServerName
 			}
 			if leaderInfo.TLSConfig == nil && leaderInfo.LeaderTLSServerName != "" {
 				leaderInfo.TLSConfig, err = tlsutil.SetupTLSConfig(map[string]string{"address": leaderInfo.LeaderTLSServerName}, "")
 				if err != nil {
-					return errwrap.Wrapf("failed to create TLS config: {{err}}", err)
+					return fmt.Errorf("failed to create TLS config: %w", err)
 				}
 			}
 
 			if leaderInfo.TLSConfig != nil {
 				transport.TLSClientConfig = leaderInfo.TLSConfig.Clone()
 				if err := http2.ConfigureTransport(transport); err != nil {
-					return errwrap.Wrapf("failed to configure TLS: {{err}}", err)
+					return fmt.Errorf("failed to configure TLS: %w", err)
 				}
 			}
 
@@ -837,7 +844,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			config := api.DefaultConfig()
 			if config.Error != nil {
-				return errwrap.Wrapf("failed to create api client: {{err}}", config.Error)
+				return fmt.Errorf("failed to create api client: %w", config.Error)
 			}
 
 			config.Address = leaderAddr
@@ -846,7 +853,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			apiClient, err := api.NewClient(config)
 			if err != nil {
-				return errwrap.Wrapf("failed to create api client: {{err}}", err)
+				return fmt.Errorf("failed to create api client: %w", err)
 			}
 
 			// Attempt to join the leader by requesting for the bootstrap challenge
@@ -854,7 +861,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				"server_id": raftBackend.NodeID(),
 			})
 			if err != nil {
-				return errwrap.Wrapf("error during raft bootstrap init call: {{err}}", err)
+				return fmt.Errorf("error during raft bootstrap init call: %w", err)
 			}
 			if secret == nil {
 				return errors.New("could not retrieve raft bootstrap package")
@@ -876,12 +883,12 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			}
 			challengeRaw, err := base64.StdEncoding.DecodeString(challengeB64.(string))
 			if err != nil {
-				return errwrap.Wrapf("error decoding raft bootstrap challenge: {{err}}", err)
+				return fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 			}
 
 			eBlob := &wrapping.EncryptedBlobInfo{}
 			if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
-				return errwrap.Wrapf("error decoding raft bootstrap challenge: {{err}}", err)
+				return fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 			}
 
 			raftInfo := &raftInformation{
@@ -912,7 +919,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			}
 
 			if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
-				return errwrap.Wrapf("failed to send answer to raft leader node: {{err}}", err)
+				return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 			}
 
 			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
@@ -1014,7 +1021,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	default:
 		if err := join(false); err != nil {
 			c.logger.Error("failed to join raft cluster", "error", err)
-			return false, errwrap.Wrapf("failed to join raft cluster: {{err}}", err)
+			return false, fmt.Errorf("failed to join raft cluster: %w", err)
 		}
 	}
 
@@ -1061,12 +1068,12 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 
 	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
 	if err != nil {
-		return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
+		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
 
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
-		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+		return fmt.Errorf("error parsing cluster address: %w", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
 	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
@@ -1102,13 +1109,16 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
+	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+		return ErrJoinWithoutAutoloading
+	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
 		return err
 	}
 
 	err = c.startClusterListener(ctx)
 	if err != nil {
-		return errwrap.Wrapf("error starting cluster: {{err}}", err)
+		return fmt.Errorf("error starting cluster: %w", err)
 	}
 
 	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
@@ -1118,7 +1128,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 	}
 	err = raftBackend.SetupCluster(ctx, opts)
 	if err != nil {
-		return errwrap.Wrapf("failed to setup raft cluster: {{err}}", err)
+		return fmt.Errorf("failed to setup raft cluster: %w", err)
 	}
 
 	return nil
@@ -1158,7 +1168,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 
 	parsedClusterAddr, err := url.Parse(c.ClusterAddr())
 	if err != nil {
-		return errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+		return fmt.Errorf("error parsing cluster address: %w", err)
 	}
 	if err := raftBackend.Bootstrap([]raft.Peer{
 		{
@@ -1166,7 +1176,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 			Address: parsedClusterAddr.Host,
 		},
 	}); err != nil {
-		return errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+		return fmt.Errorf("could not bootstrap clustered storage: %w", err)
 	}
 
 	raftOpts := raft.SetupOpts{
@@ -1177,7 +1187,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 		// Generate the TLS Keyring info for SetupCluster to consume
 		raftTLS, err := c.raftCreateTLSKeyring(ctx)
 		if err != nil {
-			return errwrap.Wrapf("could not generate TLS keyring during bootstrap: {{err}}", err)
+			return fmt.Errorf("could not generate TLS keyring during bootstrap: %w", err)
 		}
 
 		raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
@@ -1187,7 +1197,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 	}
 
 	if err := raftBackend.SetupCluster(ctx, raftOpts); err != nil {
-		return errwrap.Wrapf("could not start clustered storage: {{err}}", err)
+		return fmt.Errorf("could not start clustered storage: %w", err)
 	}
 
 	return nil
@@ -1202,8 +1212,9 @@ type answerRespData struct {
 }
 
 type answerResp struct {
-	Peers      []raft.Peer      `json:"peers"`
-	TLSKeyring *raft.TLSKeyring `json:"tls_keyring"`
+	Peers             []raft.Peer      `json:"peers"`
+	TLSKeyring        *raft.TLSKeyring `json:"tls_keyring"`
+	AutoloadedLicense bool             `json:"autoloaded_license"`
 }
 
 func newDiscover() (*discover.Discover, error) {

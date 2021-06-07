@@ -23,6 +23,12 @@ import (
 	"github.com/mitchellh/cli"
 )
 
+func init() {
+	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
+		os.Setenv(EnvVaultLicense, signed)
+	}
+}
+
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
 

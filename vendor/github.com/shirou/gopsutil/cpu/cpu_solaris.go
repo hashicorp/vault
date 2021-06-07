@@ -10,22 +10,17 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/tklauser/go-sysconf"
 )
 
 var ClocksPerSec = float64(128)
 
 func init() {
-	getconf, err := exec.LookPath("getconf")
-	if err != nil {
-		return
-	}
-	out, err := invoke.Command(getconf, "CLK_TCK")
+	clkTck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	// ignore errors
 	if err == nil {
-		i, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-		if err == nil {
-			ClocksPerSec = float64(i)
-		}
+		ClocksPerSec = float64(clkTck)
 	}
 }
 
@@ -184,7 +179,7 @@ func parseISAInfo(cmdOutput string) ([]string, error) {
 	return flags, nil
 }
 
-var psrInfoMatch = regexp.MustCompile(`The physical processor has (?:([\d]+) virtual processor \(([\d]+)\)|([\d]+) cores and ([\d]+) virtual processors[^\n]+)\n(?:\s+ The core has.+\n)*\s+.+ \((\w+) ([\S]+) family (.+) model (.+) step (.+) clock (.+) MHz\)\n[\s]*(.*)`)
+var psrInfoMatch = regexp.MustCompile(`The physical processor has (?:([\d]+) virtual processors? \(([\d-]+)\)|([\d]+) cores and ([\d]+) virtual processors[^\n]+)\n(?:\s+ The core has.+\n)*\s+.+ \((\w+) ([\S]+) family (.+) model (.+) step (.+) clock (.+) MHz\)\n[\s]*(.*)`)
 
 const (
 	psrNumCoresOffset   = 1

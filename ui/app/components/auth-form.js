@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
@@ -6,7 +7,7 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
 /**
@@ -127,14 +128,14 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerPartialName: computed('selectedAuthBackend.type', function() {
+  providerName: computed('selectedAuthBackend.type', function() {
     if (!this.selectedAuthBackend) {
       return;
     }
     let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
-    return `partials/auth-form/${templateName}`;
+    return templateName;
   }),
 
   hasCSPError: alias('csp.connectionViolations.firstObject'),
@@ -208,6 +209,9 @@ export default Component.extend(DEFAULTS, {
   authenticate: task(function*(backendType, data) {
     let clusterId = this.cluster.id;
     try {
+      if (backendType === 'okta') {
+        this.delayAuthMessageReminder.perform();
+      }
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
 
       let { isRoot, namespace } = authResponse;
@@ -234,6 +238,15 @@ export default Component.extend(DEFAULTS, {
       this.handleError(e);
     }
   }).withTestWaiter(),
+
+  delayAuthMessageReminder: task(function*() {
+    if (Ember.testing) {
+      this.showLoading = true;
+      yield timeout(0);
+      return;
+    }
+    yield timeout(5000);
+  }),
 
   actions: {
     doSubmit() {

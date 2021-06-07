@@ -90,10 +90,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     .on('didInsertElement')
     .cancelOn('willDestroyElement'),
 
-  partialName: computed('mode', function() {
-    return `partials/secret-form-${this.mode}`;
-  }),
-
   updatePath: maybeQueryRecord(
     'capabilities',
     context => {
@@ -112,7 +108,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('model.canDelete'),
+  canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   v2UpdatePath: maybeQueryRecord(

@@ -3,12 +3,15 @@ package diagnose
 import (
 	"context"
 	"errors"
+	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	wordwrap "github.com/mitchellh/go-wordwrap"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -19,32 +22,61 @@ const (
 	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
 	status_failed  = "\u001b[31m[failed]\u001b[0m "
 	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
-	same_line      = "\u001b[F"
-	ErrorStatus    = "error"
-	WarningStatus  = "warn"
-	OkStatus       = "ok"
+	status_skipped = "\u001b[90m[ skip ]\u001b[0m "
+	same_line      = "\x0d"
+	ErrorStatus    = 2
+	WarningStatus  = 1
+	OkStatus       = 0
+	SkippedStatus  = -1
 )
 
 var errUnimplemented = errors.New("unimplemented")
 
-type Result struct {
-	Time     time.Time
-	Name     string
-	Warnings []string
-	Status   string
-	Message  string
-	Children []*Result
+type status int
+
+func (s status) String() string {
+	switch s {
+	case OkStatus:
+		return "ok"
+	case WarningStatus:
+		return "warn"
+	case ErrorStatus:
+		return "fail"
+	}
+	return "invalid"
 }
 
-func (r *Result) sortChildren() {
+func (s status) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprint("\"", s.String(), "\"")), nil
+}
+
+type Result struct {
+	Time     time.Time `json:"time"`
+	Name     string    `json:"name"`
+	Status   status    `json:"status"`
+	Warnings []string  `json:"warnings,omitempty"`
+	Message  string    `json:"message,omitempty"`
+	Advice   string
+	Children []*Result `json:"children,omitempty"`
+}
+
+func (r *Result) finalize() status {
+	maxStatus := r.Status
 	if len(r.Children) > 0 {
 		sort.SliceStable(r.Children, func(i, j int) bool {
 			return r.Children[i].Time.Before(r.Children[j].Time)
 		})
 		for _, c := range r.Children {
-			c.sortChildren()
+			cms := c.finalize()
+			if cms > maxStatus {
+				maxStatus = cms
+			}
+		}
+		if maxStatus > r.Status {
+			r.Status = maxStatus
 		}
 	}
+	return maxStatus
 }
 
 func (r *Result) ZeroTimes() {
@@ -58,6 +90,7 @@ func (r *Result) ZeroTimes() {
 // TelemetryCollector is an otel SpanProcessor that gathers spans and once the outermost
 // span ends, walks the otel traces in order to produce a top-down tree of Diagnose results.
 type TelemetryCollector struct {
+	ui         io.Writer
 	spans      map[trace.SpanID]sdktrace.ReadOnlySpan
 	rootSpan   sdktrace.ReadOnlySpan
 	results    map[trace.SpanID]*Result
@@ -65,8 +98,12 @@ type TelemetryCollector struct {
 	mu         sync.Mutex
 }
 
-func NewTelemetryCollector() *TelemetryCollector {
+// NewTelemetryCollector creates a SpanProcessor that collects OpenTelemetry spans
+// and aggregates them into a tree structure for use by Diagnose.
+// It also outputs the status of main sections to that writer.
+func NewTelemetryCollector(w io.Writer) *TelemetryCollector {
 	return &TelemetryCollector{
+		ui:      w,
 		spans:   make(map[trace.SpanID]sdktrace.ReadOnlySpan),
 		results: make(map[trace.SpanID]*Result),
 	}
@@ -77,6 +114,18 @@ func (t *TelemetryCollector) OnStart(_ context.Context, s sdktrace.ReadWriteSpan
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.spans[s.SpanContext().SpanID()] = s
+	if isMainSection(s) {
+		fmt.Fprintf(t.ui, status_unknown+s.Name())
+	}
+}
+
+func isMainSection(s sdktrace.ReadOnlySpan) bool {
+	for _, a := range s.Attributes() {
+		if a.Key == "diagnose" && a.Value.AsString() == "main-section" {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
@@ -99,7 +148,13 @@ func (t *TelemetryCollector) OnEnd(e sdktrace.ReadOnlySpan) {
 		}
 
 		// Then walk the results sorting children by time
-		t.RootResult.sortChildren()
+		t.RootResult.finalize()
+	} else if isMainSection(e) {
+		r := t.getOrBuildResult(e.SpanContext().SpanID())
+		if r != nil {
+			fmt.Print(same_line)
+			fmt.Fprintln(t.ui, r.String())
+		}
 	}
 }
 
@@ -133,17 +188,10 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						r.Warnings = append(r.Warnings, a.Value.AsString())
 					}
 				}
-			case ErrorStatus:
-				var message string
-				var action string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case actionKey:
-						action = a.Value.AsString()
-					case errorMessageKey:
-						message = a.Value.AsString()
-					}
-				}
+			case skippedEventName:
+				r.Status = SkippedStatus
+			case "fail":
+				message, action := findAttributes(e, errorMessageKey, actionKey)
 				if message != "" && action != "" {
 					r.Children = append(r.Children, &Result{
 						Name:    action,
@@ -153,16 +201,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 
 				}
 			case spotCheckOkEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -173,16 +212,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						})
 				}
 			case spotCheckWarnEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -193,16 +223,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						})
 				}
 			case spotCheckErrorEventName:
-				var checkName string
-				var message string
-				for _, a := range e.Attributes {
-					switch a.Key {
-					case nameKey:
-						checkName = a.Value.AsString()
-					case messageKey:
-						message = a.Value.AsString()
-					}
-				}
+				checkName, message := findAttributes(e, nameKey, messageKey)
 				if checkName != "" {
 					r.Children = append(r.Children,
 						&Result{
@@ -212,65 +233,147 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Time:    e.Time,
 						})
 				}
+			case spotCheckSkippedEventName:
+				checkName, message := findAttributes(e, nameKey, messageKey)
+				if checkName != "" {
+					r.Children = append(r.Children,
+						&Result{
+							Name:    checkName,
+							Status:  SkippedStatus,
+							Message: message,
+							Time:    e.Time,
+						})
+				}
+			case adviceEventName:
+				message, _ := findAttributes(e, adviceKey, "")
+				if message != "" {
+					r.Advice = message
+				}
 			}
+
 		}
 		switch s.StatusCode() {
 		case codes.Unset:
 			if len(r.Warnings) > 0 {
 				r.Status = WarningStatus
-			} else {
+			} else if r.Status != SkippedStatus {
 				r.Status = OkStatus
 			}
 		case codes.Ok:
-			r.Status = OkStatus
+			if r.Status != SkippedStatus {
+				r.Status = OkStatus
+			}
 		case codes.Error:
-			r.Status = ErrorStatus
+			if r.Status != SkippedStatus {
+				r.Status = ErrorStatus
+			}
 		}
 		t.results[id] = r
 	}
 	return r
 }
 
+func findAttributes(e trace.Event, attr1, attr2 attribute.Key) (string, string) {
+	var av1, av2 string
+	for _, a := range e.Attributes {
+		switch a.Key {
+		case attr1:
+			av1 = a.Value.AsString()
+		case attr2:
+			av2 = a.Value.AsString()
+		}
+	}
+	return av1, av2
+}
+
 // Write outputs a human readable version of the results tree
-func (r *Result) Write(writer io.Writer) error {
+func (r *Result) Write(writer io.Writer, wrapLimit int) error {
 	var sb strings.Builder
-	r.write(&sb, 0)
+	r.write(&sb, 0, wrapLimit)
 	_, err := writer.Write([]byte(sb.String()))
 	return err
 }
 
-func (r *Result) write(sb *strings.Builder, depth int) {
-	if r.Status != WarningStatus || (len(r.Warnings) == 0 && r.Message != "") {
-		for i := 0; i < depth; i++ {
-			sb.WriteRune('\t')
-		}
+const (
+	indentString    = "  "
+	statusPrefixLen = 9
+)
+
+func indent(sb *strings.Builder, depth int) {
+	for i := 0; i < depth; i++ {
+		sb.WriteString(indentString)
+	}
+}
+
+func (r *Result) String() string {
+	return r.StringWrapped(80)
+}
+
+func (r *Result) StringWrapped(wrapLimit int) string {
+	var sb strings.Builder
+	r.write(&sb, 0, wrapLimit)
+	return sb.String()
+}
+
+func (r *Result) write(sb *strings.Builder, depth int, limit int) {
+	indent(sb, depth)
+	var prelude string
+	if len(r.Warnings) == 0 {
 		switch r.Status {
 		case OkStatus:
-			sb.WriteString(status_ok)
+			prelude = status_ok
 		case WarningStatus:
-			sb.WriteString(status_warn)
+			prelude = status_warn
 		case ErrorStatus:
-			sb.WriteString(status_failed)
+			prelude = status_failed
+		case SkippedStatus:
+			prelude = status_skipped
 		}
-		sb.WriteString(r.Name)
+		prelude = prelude + r.Name
 
-		if r.Message != "" || len(r.Warnings) > 0 {
-			sb.WriteString(": ")
+		if r.Message != "" {
+			prelude = prelude + ": " + r.Message
 		}
-		sb.WriteString(r.Message)
 	}
-	for _, w := range r.Warnings {
+	warnings := r.Warnings
+	if r.Message == "" && len(warnings) > 0 {
+		prelude = status_warn + r.Name + ": " + warnings[0]
+		warnings = warnings[1:]
+	}
+	writeWrapped(sb, prelude, depth+1, limit)
+	for _, w := range warnings {
 		sb.WriteRune('\n')
-		for i := 0; i < depth; i++ {
-			sb.WriteRune('\t')
-		}
+		indent(sb, depth)
 		sb.WriteString(status_warn)
 		sb.WriteString(r.Name)
 		sb.WriteString(": ")
-		sb.WriteString(w)
+		writeWrapped(sb, w, depth+1, limit)
+	}
+
+	if r.Advice != "" {
+		sb.WriteString("\n\n")
+		indent(sb, depth+1)
+		writeWrapped(sb, r.Advice, depth+1, limit)
+		sb.WriteRune('\n')
 	}
 	sb.WriteRune('\n')
 	for _, c := range r.Children {
-		c.write(sb, depth+1)
+		c.write(sb, depth+1, limit)
+	}
+}
+
+func writeWrapped(sb *strings.Builder, msg string, depth int, limit int) {
+	if limit > 0 {
+		sz := uint(limit - depth*len(indentString))
+		msg = wordwrap.WrapString(msg, sz)
+		parts := strings.Split(msg, "\n")
+		sb.WriteString(parts[0])
+		for _, p := range parts[1:] {
+			sb.WriteRune('\n')
+			indent(sb, depth)
+			sb.WriteString(p)
+		}
+	} else {
+		sb.WriteString(msg)
 	}
 }

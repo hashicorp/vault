@@ -352,6 +352,16 @@ func HostDev(combineWith ...string) string {
 	return GetEnv("HOST_DEV", "/dev", combineWith...)
 }
 
+// MockEnv set environment variable and return revert function.
+// MockEnv should be used testing only.
+func MockEnv(key string, value string) func() {
+	original := os.Getenv(key)
+	os.Setenv(key, value)
+	return func() {
+		os.Setenv(key, original)
+	}
+}
+
 // getSysctrlEnv sets LC_ALL=C in a list of env vars for use when running
 // sysctl commands (see DoSysctrl).
 func getSysctrlEnv(env []string) []string {

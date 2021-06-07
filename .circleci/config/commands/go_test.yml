@@ -14,10 +14,14 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/circleci/golang:1.15.11-buster"
+    default: "docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster"
   use_docker:
     type: boolean
     default: false
+  arch:
+    type: string
+    # Only supported for use_docker=false, and only other value allowed is 386
+    default: amd64
 steps:
   - run:
       name: Compute test cache key
@@ -55,13 +59,13 @@ steps:
             jq -r 'select(.Deps != null) |
               select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
               .ForTest | select(. != null)' |
-              sort -u | circleci tests split --split-by=timings --timings-type=classname)
+              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
         else
           package_names=$(go list -test -json ./... |
             jq -r 'select(.Deps != null) |
               select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
               .ForTest | select(. != null)' |
-              sort -u | circleci tests split --split-by=timings --timings-type=classname)
+              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
         fi
 
         # After running tests split step, we are now running the following steps
@@ -71,6 +75,16 @@ steps:
 
         make prep
         mkdir -p test-results/go-test
+
+        # We don't want VAULT_LICENSE set when running Go tests, because that's
+        # not what developers have in their environments and it could break some
+        # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+        # CI commands, like the UI tests, shouldn't have to worry about licensing.
+        # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+        # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+        # an externally supplied license can opt-in to using it.
+        export VAULT_LICENSE_CI="$VAULT_LICENSE"
+        VAULT_LICENSE=
 
         # Create a docker network for our testcontainer
         if [ $USE_DOCKER == 1 ]; then
@@ -102,6 +116,7 @@ steps:
 
           docker exec -w /go/src/github.com/hashicorp/vault/ \
             -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+            -e VAULT_LICENSE_CI \
             testcontainer \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
@@ -113,7 +128,8 @@ steps:
               << parameters.extra_flags >> \
               ${package_names}
         else
-          GOCACHE=<< parameters.cache_dir >> \
+          GOARCH=<< parameters.arch >> \
+            GOCACHE=<< parameters.cache_dir >> \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \

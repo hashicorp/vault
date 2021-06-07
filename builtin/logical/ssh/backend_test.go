@@ -19,8 +19,10 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )
@@ -122,6 +124,7 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 
 	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
+
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
@@ -158,7 +161,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 
 		// Install util-linux for non-busybox flock that supports timeout option
 		err = testSSH("vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
-			set -e; 
+			set -e;
 			sudo ln -s /config /home/vaultssh
 			sudo apk add util-linux;
 			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
@@ -1318,6 +1321,252 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Write SSH role.
+	_, err = client.Logical().Write("ssh/roles/test", map[string]interface{}{
+		"key_type":                    "ca",
+		"allowed_extensions":          "login@zipzap.com",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"default_extensions_template": true,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+
+	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
+	client.SetToken(userpassToken)
+	resp, err := client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey := resp.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defaultExtensionPermissions := map[string]string{
+		"login@foobar.com": testUserName,
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating enabled, and user-provided extensions
+	// The certificate should only have the user-provided extensions, and no templated extensions
+	userProvidedExtensionPermissions := map[string]string{
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey = resp.Data["signed_key"].(string)
+	key, _ = base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err = ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, userProvidedExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating enabled, and invalid user-provided extensions - it should fail
+	invalidUserProvidedExtensionPermissions := map[string]string{
+		"login@foobar.com": "{{identity.entity.metadata}}",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": invalidUserProvidedExtensionPermissions,
+	})
+	if err == nil {
+		t.Fatal("expected an error while attempting to sign a key with invalid permissions")
+	}
+}
+
+func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Write SSH role to test with any extension. We also provide a templated default extension,
+	// to verify that it's not actually being evaluated
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+		"key_type":                    "ca",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"default_extensions_template": false,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+
+// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
+	client.SetToken(userpassToken)
+	defaultExtensionPermissions := map[string]string{
+		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err := client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": defaultExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey := resp.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating disabled, and user-provided extensions
+	client.SetToken(userpassToken)
+	userProvidedAnyExtensionPermissions := map[string]string{
+		"login@foobar.com": "not_userpassname",
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedAnyExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey = resp.Data["signed_key"].(string)
+	key, _ = base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err = ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, userProvidedAnyExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	client := cluster.Cores[0].Client
+
+	// Write test policy for userpass auth method.
+	err := client.Sys().PutPolicy("test", `
+   path "ssh/*" {
+     capabilities = ["update"]
+   }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable userpass auth method.
+	if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure test role for userpass.
+	if _, err := client.Logical().Write("auth/userpass/users/"+userIdentity, map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Login userpass for test role and keep client token.
+	secret, err := client.Logical().Write("auth/userpass/login/"+userIdentity, map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+
+	// Mount SSH.
+	err = client.Sys().Mount("ssh", &api.MountInput{
+		Type: "ssh",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure SSH CA.
+	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
+		"public_key":  testCAPublicKey,
+		"private_key": testCAPrivateKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return cluster, userpassToken
+}
+
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -1391,7 +1640,7 @@ func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, v
 
 	actualTTL := time.Unix(int64(cert.ValidBefore), 0).Add(-30 * time.Second).Sub(time.Unix(int64(cert.ValidAfter), 0))
 	if actualTTL != ttl {
-		return fmt.Errorf("incorrect ttl: expected: %v, actualL %v", ttl, actualTTL)
+		return fmt.Errorf("incorrect ttl: expected: %v, actual %v", ttl, actualTTL)
 	}
 
 	if !reflect.DeepEqual(cert.ValidPrincipals, validPrincipals) {

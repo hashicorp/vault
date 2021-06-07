@@ -1,5 +1,10 @@
 module.exports = [
   {
+    source: '/trial',
+    destination: 'https://www.hashicorp.com/products/vault/trial',
+    permanent: true,
+  },
+  {
     source: '/intro',
     destination: '/intro/getting-started',
     permanent: false,
@@ -32,6 +37,11 @@ module.exports = [
   {
     source: '/docs/auth/aws-ec2',
     destination: '/docs/auth/aws',
+    permanent: true,
+  },
+  {
+    source: '/docs/auth/jwt_oidc_providers',
+    destination: '/docs/auth/jwt/oidc_providers',
     permanent: true,
   },
   {
