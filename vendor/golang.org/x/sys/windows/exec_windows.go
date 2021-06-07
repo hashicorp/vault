@@ -78,6 +78,40 @@ func EscapeArg(s string) string {
 	return string(qs[:j])
 }
 
+// ComposeCommandLine escapes and joins the given arguments suitable for use as a Windows command line,
+// in CreateProcess's CommandLine argument, CreateService/ChangeServiceConfig's BinaryPathName argument,
+// or any program that uses CommandLineToArgv.
+func ComposeCommandLine(args []string) string {
+	var commandLine string
+	for i := range args {
+		if i > 0 {
+			commandLine += " "
+		}
+		commandLine += EscapeArg(args[i])
+	}
+	return commandLine
+}
+
+// DecomposeCommandLine breaks apart its argument command line into unescaped parts using CommandLineToArgv,
+// as gathered from GetCommandLine, QUERY_SERVICE_CONFIG's BinaryPathName argument, or elsewhere that
+// command lines are passed around.
+func DecomposeCommandLine(commandLine string) ([]string, error) {
+	if len(commandLine) == 0 {
+		return []string{}, nil
+	}
+	var argc int32
+	argv, err := CommandLineToArgv(StringToUTF16Ptr(commandLine), &argc)
+	if err != nil {
+		return nil, err
+	}
+	defer LocalFree(Handle(unsafe.Pointer(argv)))
+	var args []string
+	for _, v := range (*argv)[:argc] {
+		args = append(args, UTF16ToString((*v)[:]))
+	}
+	return args, nil
+}
+
 func CloseOnExec(fd Handle) {
 	SetHandleInformation(Handle(fd), HANDLE_FLAG_INHERIT, 0)
 }

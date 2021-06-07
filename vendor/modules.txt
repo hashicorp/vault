@@ -275,6 +275,8 @@ github.com/containerd/continuity/pathdriver
 github.com/containerd/continuity/sysx
 # github.com/coreos/go-oidc v2.2.1+incompatible
 github.com/coreos/go-oidc
+# github.com/coreos/go-oidc/v3 v3.0.0
+github.com/coreos/go-oidc/v3/oidc
 # github.com/coreos/go-semver v0.2.0
 ## explicit
 github.com/coreos/go-semver/semver
@@ -363,7 +365,7 @@ github.com/duosecurity/duo_api_golang/authapi
 # github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 ## explicit
 github.com/elazarl/go-bindata-assetfs
-# github.com/fatih/color v1.10.0
+# github.com/fatih/color v1.11.0
 ## explicit
 github.com/fatih/color
 # github.com/fatih/structs v1.1.0
@@ -481,7 +483,7 @@ github.com/gorhill/cronexpr
 github.com/gorilla/websocket
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
-# github.com/hashicorp/cap v0.0.0-20210204173447-5fcddadbf7c7
+# github.com/hashicorp/cap v0.1.0
 github.com/hashicorp/cap/jwt
 github.com/hashicorp/cap/oidc
 github.com/hashicorp/cap/oidc/internal/base62
@@ -555,7 +557,7 @@ github.com/hashicorp/go-memdb
 # github.com/hashicorp/go-msgpack v1.1.5
 ## explicit
 github.com/hashicorp/go-msgpack/codec
-# github.com/hashicorp/go-multierror v1.1.0
+# github.com/hashicorp/go-multierror v1.1.1
 ## explicit
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/go-plugin v1.0.1
@@ -648,7 +650,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 ## explicit
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.9.3
+# github.com/hashicorp/vault-plugin-auth-jwt v0.9.4
 ## explicit
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
@@ -1324,7 +1326,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
+# golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 ## explicit
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
@@ -1334,6 +1336,7 @@ golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
+golang.org/x/crypto/curve25519/internal/field
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/hkdf
@@ -1354,7 +1357,7 @@ golang.org/x/lint/golint
 # golang.org/x/mod v0.4.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
+# golang.org/x/net v0.0.0-20210510120150-4163338589ed
 ## explicit
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -1385,7 +1388,7 @@ golang.org/x/oauth2/jwt
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
+# golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
@@ -1394,11 +1397,10 @@ golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 golang.org/x/sys/windows/svc
-# golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
+# golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 ## explicit
 golang.org/x/term
-# golang.org/x/text v0.3.5
-## explicit
+# golang.org/x/text v0.3.6
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/internal
@@ -1623,7 +1625,7 @@ gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
 # gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
 # honnef.co/go/tools v0.0.1-2020.1.3
 honnef.co/go/tools/arg

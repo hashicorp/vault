@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"mime"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -13,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/hashicorp/cap/oidc/internal/strutils"
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/oauth2"
@@ -113,6 +116,13 @@ func (p *Provider) Done() {
 	if p.client != nil {
 		p.client.CloseIdleConnections()
 	}
+}
+
+// ConfigHash will produce a hash value for the provider's Config, which is
+// suitable to use for comparing two configurations for equality, which is
+// important if you're caching the providers
+func (p *Provider) ConfigHash() (uint64, error) {
+	return p.config.Hash()
 }
 
 // AuthURL will generate a URL the caller can use to kick off an OIDC
@@ -346,7 +356,7 @@ func (p *Provider) UserInfo(ctx context.Context, tokenSource oauth2.TokenSource,
 	type verifyClaims struct {
 		Sub string
 		Iss string
-		Aud []string
+		Aud interface{}
 	}
 	var vc verifyClaims
 	err = userinfo.Claims(&vc)
@@ -362,8 +372,21 @@ func (p *Provider) UserInfo(ctx context.Context, tokenSource oauth2.TokenSource,
 		return fmt.Errorf("%s: %w", op, ErrInvalidIssuer)
 	}
 	// optional audiences check...
-	if len(opts.withAudiences) > 0 {
-		if err := p.verifyAudience(opts.withAudiences, vc.Aud); err != nil {
+	if len(opts.withAudiences) > 0 && vc.Aud != nil {
+		var infoAudiences []string
+		switch v := vc.Aud.(type) {
+		case []interface{}:
+			for _, raw := range v {
+				if s, ok := raw.(string); ok {
+					infoAudiences = append(infoAudiences, s)
+				}
+			}
+		default:
+			if s, ok := v.(string); ok {
+				infoAudiences = append(infoAudiences, s)
+			}
+		}
+		if err := p.verifyAudience(opts.withAudiences, infoAudiences); err != nil {
 			return fmt.Errorf("%s: %w", op, ErrInvalidAudience)
 		}
 	}
@@ -652,4 +675,120 @@ func (p *Provider) validRedirect(uri string) error {
 		}
 	}
 	return fmt.Errorf("%s: redirect URI %s: %w", op, uri, ErrUnauthorizedRedirectURI)
+}
+
+// DiscoveryInfo is the Provider's configuration info which is published to
+// a well-known discoverable location (based on the Issuer of the provider).
+type DiscoveryInfo struct {
+	// Issuer (REQUIRED): Issuer is a case-sensitive URL string using the https
+	// scheme that contains scheme, host, and optionally, port number and path
+	// components and no query or fragment components.
+	Issuer string `json:"issuer"`
+
+	// AuthURL (REQUIRED): URL of the OP's OAuth 2.0 Authorization Endpoint
+	AuthURL string `json:"authorization_endpoint"`
+
+	// TokenURL (REQUIRED): URL of the OP's OAuth 2.0 Token Endpoint
+	TokenURL string `json:"token_endpoint"`
+
+	// UserInfoURL (OPTIONAL, omitempty): URL of the OP's UserInfo Endpoint
+	UserInfoURL string `json:"userinfo_endpoint,omitempty"`
+
+	// JWKSURL (REQUIRED): URL of the OP's JSON Web Key Set [JWK] document
+	JWKSURL string `json:"jwks_uri"`
+
+	// ScopesSupported (RECOMMENDED, omitempty): scope values that this server
+	// supports.
+	ScopesSupported []string `json:"scopes_supported,omitempty"`
+
+	// GrantTypesSupported (OPTIONAL, omitempty):  a list of the OAuth 2.0
+	// Grant Type values that this OP supports. Dynamic OpenID Providers
+	// MUST support the authorization_code and implicit Grant Type values
+	// and MAY support other Grant Types. If omitted, the default value is
+	// ["authorization_code", "implicit"].
+	GrantTypesSupported []string `json:"grant_types_supported,omitempty"`
+
+	// IdTokenSigningAlgsSupported (REQUIRED): a list of the JWS signing
+	// algorithms (alg values) supported by the OP for the ID Token to
+	// encode the Claims in a JWT [JWT]. The algorithm RS256 MUST be included.
+	IdTokenSigningAlgsSupported []string `json:"id_token_signing_alg_values_supported"`
+
+	// DisplayValuesSupported (OPTIONAL, omitempty): a list of the display parameter
+	// values that the OpenID Provider supports.
+	DisplayValuesSupported []string `json:"display_values_supported,omitempty"`
+
+	// UILocalesSupported (OPTIONAL, omitempty): Languages and scripts supported
+	// for the user interface
+	UILocalesSupported []string `json:"ui_locales_supported,omitempty"`
+
+	// ClaimsParameterSupported (OPTIONAL, omitempty): Boolean value specifying whether
+	// the OP supports use of the claims parameter, with true indicating support.
+	ClaimsParameterSupported bool `json:"claims_parameter_supported,omitempty"`
+
+	// ClaimsSupported (RECOMMENDED, omitempty): a list of the Claim Names of
+	// the Claims that the OpenID Provider MAY be able to supply values for.
+	// Note that for privacy or other reasons, this might not be an exhaustive
+	// list.
+	ClaimsSupported []string `json:"claims_supported,omitempty"`
+
+	// AcrValuesSupported (OPTIONAL, omitempty): a list of the Authentication
+	// Context Class References that this OP supports
+	AcrValuesSupported []string `json:"acr_values_supported,omitempty"`
+}
+
+// DiscoveryInfo will use the provider's Issuer to discover and retrieve its
+// published configuration
+//
+// See: https://openid.net/specs/openid-connect-discovery-1_0.html
+func (p *Provider) DiscoveryInfo(ctx context.Context) (*DiscoveryInfo, error) {
+	const op = "Provider.DiscoveryInfo"
+
+	wellKnown := strings.TrimSuffix(p.config.Issuer, "/") + "/.well-known/openid-configuration"
+	req, err := http.NewRequest("GET", wellKnown, nil)
+	if err != nil {
+		return nil, err
+	}
+	client, err := p.HTTPClient()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to read response body: %w", op, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", resp.Status, body)
+	}
+
+	var info DiscoveryInfo
+	err = unmarshalRespJSON(resp, body, &info)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to marshal provider discovery information: %w", op, err)
+	}
+
+	if p.config.Issuer != info.Issuer {
+		return nil, fmt.Errorf("%s: provider issuer %s did not match the issuer %s in discovery info by: %w", op, p.config.Issuer, info.Issuer, ErrInvalidIssuer)
+	}
+	return &info, nil
+}
+
+func unmarshalRespJSON(r *http.Response, body []byte, v interface{}) error {
+	const op = "Provider.unmarshalResp"
+	err := json.Unmarshal(body, &v)
+	if err == nil {
+		return nil
+	}
+	ct := r.Header.Get("Content-Type")
+	mediaType, _, parseErr := mime.ParseMediaType(ct)
+	if parseErr == nil && mediaType == "application/json" {
+		return fmt.Errorf("%s: Content-Type = application/json, but could not unmarshal it as JSON: %w", op, err)
+	}
+	return fmt.Errorf("%s: expected Content-Type = application/json, got %q and could not unmarshal it as JSON: %w", op, ct, err)
 }

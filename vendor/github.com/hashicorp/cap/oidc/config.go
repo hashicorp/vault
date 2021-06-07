@@ -3,14 +3,20 @@ package oidc
 import (
 	"bytes"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"hash"
+	"hash/fnv"
 	"net/url"
+	"reflect"
+	"runtime"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/hashicorp/cap/oidc/internal/strutils"
 )
 
@@ -112,6 +118,84 @@ func NewConfig(issuer string, clientID string, clientSecret ClientSecret, suppor
 		return nil, fmt.Errorf("%s: invalid provider config: %w", op, err)
 	}
 	return c, nil
+}
+
+// Hash will produce a hash value for the Config, which is suitable to use for
+// comparing two configurations for equality.
+func (c *Config) Hash() (uint64, error) {
+	var h uint64
+	var err error
+
+	algs := make([]string, 0, len(c.SupportedSigningAlgs))
+	for _, a := range c.SupportedSigningAlgs {
+		algs = append(algs, string(a))
+	}
+
+	scopes := make([]string, 0, len(c.Scopes))
+	scopes = append(scopes, c.Scopes...)
+
+	audiences := make([]string, 0, len(c.Audiences))
+	audiences = append(audiences, c.Audiences...)
+
+	redirects := make([]string, 0, len(c.AllowedRedirectURLs))
+	redirects = append(redirects, c.AllowedRedirectURLs...)
+
+	sort.Strings(algs)
+	sort.Strings(scopes)
+	sort.Strings(audiences)
+	sort.Strings(redirects)
+
+	args := make([]string, 0, len(algs)+len(scopes)+len(audiences)+len(redirects)+5)
+	args = append(
+		args,
+		c.Issuer,
+		c.ClientID,
+		string(c.ClientSecret),
+		c.ProviderCA,
+		runtime.FuncForPC(reflect.ValueOf(c.NowFunc).Pointer()).Name(),
+	)
+	args = append(args, algs...)
+	args = append(args, scopes...)
+	args = append(args, audiences...)
+	args = append(args, redirects...)
+	if h, err = hashStrings(args...); err != nil {
+		return 0, fmt.Errorf("hashing error: %w", err)
+	}
+
+	return h, nil
+}
+
+func hashStrings(s ...string) (uint64, error) {
+	hasher := fnv.New64()
+	var h uint64
+	var err error
+	for _, current := range s {
+		hasher.Reset()
+		if _, err = hasher.Write([]byte(current)); err != nil {
+			return 0, err
+		}
+		if h, err = hashUpdateOrdered(hasher, h, hasher.Sum64()); err != nil {
+			return 0, err
+		}
+	}
+	return h, nil
+}
+
+// hashUpdateOrdered is taken directly from
+// https://github.com/mitchellh/hashstructure
+func hashUpdateOrdered(h hash.Hash64, a, b uint64) (uint64, error) {
+	// For ordered updates, use a real hash function
+	h.Reset()
+
+	e1 := binary.Write(h, binary.LittleEndian, a)
+	e2 := binary.Write(h, binary.LittleEndian, b)
+	if e1 != nil {
+		return 0, e1
+	}
+	if e2 != nil {
+		return 0, e2
+	}
+	return h.Sum64(), nil
 }
 
 // Validate the provider configuration.  Among other validations, it verifies
