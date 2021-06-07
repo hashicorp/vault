@@ -77,13 +77,13 @@ func RaftFilePermsChecks(ctx context.Context, path string) {
 
 // RaftStorageQuorum checks that there is an odd number of voters present
 // It returns the status message for testing purposes
-func RaftStorageQuorum(ctx context.Context, b *raft.RaftBackend) string {
+func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) string {
 	var conf *raft.RaftConfigurationResponse
 	var err error
 	conf, err = b.GetConfiguration(ctx)
 	if err != nil {
 		SpotError(ctx, "raft quorum", fmt.Errorf("error retrieving server configuration: %w", err))
-		return "error retrieving server configuration"
+		return fmt.Sprintf("error retrieving server configuration: %s", err.Error())
 	}
 	voterCount := 0
 	for _, s := range conf.Servers {
@@ -96,7 +96,7 @@ func RaftStorageQuorum(ctx context.Context, b *raft.RaftBackend) string {
 		SpotOk(ctx, "raft quorum", okMsg)
 		return okMsg
 	}
-	warnMsg := fmt.Sprintf("even number of voters found: %d", voterCount)
+	warnMsg := fmt.Sprintf("error: even number of voters found: %d", voterCount)
 	SpotWarn(ctx, "raft quorum", warnMsg)
 	return warnMsg
 }

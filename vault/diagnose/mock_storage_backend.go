@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -28,7 +29,8 @@ var goodEntry physical.Entry = physical.Entry{Key: "diagnose", Value: []byte(sec
 var badEntry physical.Entry = physical.Entry{}
 
 type mockStorageBackend struct {
-	callType string
+	callType             string
+	raftServerQuorumType int
 }
 
 func (m mockStorageBackend) storageLogicGeneralInternal(op string) error {
@@ -88,4 +90,31 @@ func callTypeToOp(ctype string) string {
 		return deleteOp
 	}
 	return ""
+}
+
+func (m mockStorageBackend) GetConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+	twoServerList := []*raft.RaftServer{}
+	threeServerList := []*raft.RaftServer{}
+	for i := 0; i < 2; i++ {
+		twoServerList = append(twoServerList, &raft.RaftServer{Voter: true})
+		threeServerList = append(threeServerList, &raft.RaftServer{Voter: true})
+	}
+	threeServerList = append(threeServerList, &raft.RaftServer{Voter: true})
+	switch m.raftServerQuorumType {
+	case 0:
+		return &raft.RaftConfigurationResponse{Servers: twoServerList}, nil
+	case 1:
+		return &raft.RaftConfigurationResponse{Servers: threeServerList}, nil
+	case 2:
+		threeServerList[2].Voter = false
+		return &raft.RaftConfigurationResponse{Servers: threeServerList}, nil
+	case 3:
+		return &raft.RaftConfigurationResponse{Servers: threeServerList}, fmt.Errorf("error: something bad")
+	}
+	return nil, nil
+}
+
+// Don't have this in test file
+type RaftConfigurableStorageBackend interface {
+	GetConfiguration(context.Context) (*raft.RaftConfigurationResponse, error)
 }
