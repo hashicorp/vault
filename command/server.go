@@ -1148,10 +1148,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
 		config.LicensePath = envLicensePath
 	}
-	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
 

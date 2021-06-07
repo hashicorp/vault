@@ -25,7 +25,7 @@ import (
 
 func init() {
 	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
-		os.Setenv("VAULT_LICENSE", signed)
+		os.Setenv(EnvVaultLicense, signed)
 	}
 }
 
