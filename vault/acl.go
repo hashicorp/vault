@@ -246,7 +246,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				existingPerms.MFAMethods = strutil.RemoveDuplicates(existingPerms.MFAMethods, false)
 			}
 
-			// No need to dedupe this list since any authorization can satisfy any factor
+			// No need to dedupe this list since any authorization can satisfy any factor, so long as
+			// the factor matches the specified permission requested.
 			if pc.Permissions.ControlGroup != nil {
 				if len(pc.Permissions.ControlGroup.Factors) > 0 {
 					if existingPerms.ControlGroup == nil {

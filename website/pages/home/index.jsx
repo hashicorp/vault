@@ -31,8 +31,7 @@ export default function Homepage({ content }) {
             {
               external: false,
               title: 'Try Cloud',
-              url:
-                'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
+              url: 'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
             },
             {
               external: false,
@@ -83,7 +82,7 @@ export default function Homepage({ content }) {
                 {
                   title: 'Secrets Management',
                   description:
-                    'Audit access, automatically Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
+                    'Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
                   image: {
                     alt: null,
                     format: 'png',
@@ -139,8 +138,7 @@ export default function Homepage({ content }) {
           links={[
             {
               text: 'Learn More',
-              url:
-                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
+              url: 'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
             },
           ]}
         />

@@ -67,7 +67,10 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @model={{model}} />
       <NamespaceReminder @mode={{mode}} @noun="SSH role" />
-      {{partial "partials/form-field-groups-loop"}}
+      <FormFieldGroupsLoop
+        @model={{model}}
+        @mode={{mode}}
+      />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">

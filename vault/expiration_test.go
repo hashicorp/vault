@@ -612,6 +612,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 			Path:        "prod/aws/" + pathUUID,
 			ClientToken: "root",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -623,7 +624,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 				"secret_key": "abcd",
 			},
 		}
-		_, err = exp.Register(context.Background(), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -644,6 +645,52 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 		}
 	}
 	b.StopTimer()
+}
+
+func BenchmarkExpiration_Create_Leases(b *testing.B) {
+	logger := logging.NewVaultLogger(log.Trace)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	c, _, _ := TestCoreUnsealedBackend(b, inm)
+	exp := c.expiration
+	noop := &NoopBackend{}
+	view := NewBarrierView(c.barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		b.Fatal(err)
+	}
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		ClientToken: "root",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: 400 * time.Second,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req.Path = fmt.Sprintf("prod/aws/%d", i)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp)
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
 }
 
 func TestExpiration_Restore(t *testing.T) {
@@ -3006,49 +3053,31 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	}
 }
 
-// set up multiple mounts, and return a mapping of the path to the mount accessor
-func mountNoopBackends(t *testing.T, c *Core, paths []string) map[string]string {
-	t.Helper()
-
-	// enable the noop backend
-	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return &NoopBackend{}, nil
-	}
-
-	pathToMount := make(map[string]string)
-	for _, path := range paths {
-		me := &MountEntry{
-			Table: mountTableType,
-			Path:  path,
-			Type:  "noop",
-		}
-		err := c.mount(namespace.RootContext(nil), me)
-		if err != nil {
-			t.Fatalf("err mounting backend %s: %v", path, err)
-		}
-
-		mount := c.router.MatchingMountEntry(namespace.RootContext(nil), path)
-		if mount == nil {
-			t.Fatalf("couldn't find mount for path %s", path)
-		}
-		pathToMount[path] = mount.Accessor
-	}
-
-	return pathToMount
-}
-
 func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	mountPrefixes := []string{"foo/bar/1/", "foo/bar/2/", "foo/bar/3/"}
-	pathToMount := mountNoopBackends(t, c, mountPrefixes)
+	backends := []*backend{
+		{
+			path: "foo/bar/1/",
+			ns:   namespace.RootNamespace,
+		},
+		{
+			path: "foo/bar/2/",
+			ns:   namespace.RootNamespace,
+		},
+		{
+			path: "foo/bar/3/",
+			ns:   namespace.RootNamespace,
+		},
+	}
+	pathToMount := mountNoopBackends(t, c, backends)
 
 	exp := c.expiration
 
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
-		for _, mountPrefix := range mountPrefixes {
-			addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+		for _, backend := range backends {
+			addIrrevocableLease(t, exp, backend.path, namespace.RootNamespace)
 		}
 	}
 
@@ -3070,19 +3099,19 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 	count := countRaw.(int)
 	countPerMount := countPerMountRaw.(map[string]int)
 
-	expectedCount := len(mountPrefixes) * expectedPerMount
+	expectedCount := len(backends) * expectedPerMount
 	if count != expectedCount {
 		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
 	}
 
-	if len(countPerMount) != len(mountPrefixes) {
-		t.Fatalf("bad mounts. got %#v, expected %v", countPerMount, mountPrefixes)
+	if len(countPerMount) != len(backends) {
+		t.Fatalf("bad mounts. got %#v, expected %#v", countPerMount, backends)
 	}
 
-	for _, mountPrefix := range mountPrefixes {
-		mountCount := countPerMount[pathToMount[mountPrefix]]
+	for _, backend := range backends {
+		mountCount := countPerMount[pathToMount[backend.path]]
 		if mountCount != expectedPerMount {
-			t.Errorf("bad count for prefix %q. expected %d, got %d", mountPrefix, expectedPerMount, mountCount)
+			t.Errorf("bad count for prefix %q. expected %d, got %d", backend.path, expectedPerMount, mountCount)
 		}
 	}
 }
@@ -3090,19 +3119,32 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	mountPrefixes := []string{"foo/bar/1/", "foo/bar/2/", "foo/bar/3/"}
-	pathToMount := mountNoopBackends(t, c, mountPrefixes)
+	backends := []*backend{
+		{
+			path: "foo/bar/1/",
+			ns:   namespace.RootNamespace,
+		},
+		{
+			path: "foo/bar/2/",
+			ns:   namespace.RootNamespace,
+		},
+		{
+			path: "foo/bar/3/",
+			ns:   namespace.RootNamespace,
+		},
+	}
+	pathToMount := mountNoopBackends(t, c, backends)
 
 	exp := c.expiration
 
 	expectedLeases := make([]*basicLeaseTestInfo, 0)
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
-		for _, mountPrefix := range mountPrefixes {
-			le := addIrrevocableLease(t, exp, mountPrefix, namespace.RootNamespace)
+		for _, backend := range backends {
+			le := addIrrevocableLease(t, exp, backend.path, namespace.RootNamespace)
 			expectedLeases = append(expectedLeases, &basicLeaseTestInfo{
 				id:     le.id,
-				mount:  pathToMount[mountPrefix],
+				mount:  pathToMount[backend.path],
 				expire: le.expire,
 			})
 		}
@@ -3129,7 +3171,7 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	count := countRaw.(int)
 	leases := leasesRaw.([]*leaseResponse)
 
-	expectedCount := len(mountPrefixes) * expectedPerMount
+	expectedCount := len(backends) * expectedPerMount
 	if count != expectedCount {
 		t.Errorf("bad count. expected %d, got %d", expectedCount, count)
 	}

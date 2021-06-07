@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"path"
 	"testing"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type basicLeaseTestInfo struct {
@@ -31,15 +33,16 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 		ns = namespace.RootNamespace
 	}
 
-	nsSuffix := ""
+	leaseID := path.Join(pathPrefix, "lease"+uuid)
+
 	if ns != namespace.RootNamespace {
-		nsSuffix = fmt.Sprintf("/blah.%s", ns.ID)
+		leaseID = fmt.Sprintf("%s.%s", leaseID, ns.ID)
 	}
 
 	randomTimeDelta := time.Duration(rand.Int31n(24))
 	le := &leaseEntry{
-		LeaseID:    pathPrefix + "lease" + uuid + nsSuffix,
-		Path:       pathPrefix + nsSuffix,
+		LeaseID:    leaseID,
+		Path:       pathPrefix,
 		namespace:  ns,
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now().Add(randomTimeDelta * time.Hour),
@@ -78,4 +81,42 @@ func (c *Core) InjectIrrevocableLeases(t *testing.T, ctx context.Context, count 
 	}
 
 	return out
+}
+
+type backend struct {
+	path string
+	ns   *namespace.Namespace
+}
+
+// set up multiple mounts, and return a mapping of the path to the mount accessor
+func mountNoopBackends(t *testing.T, c *Core, backends []*backend) map[string]string {
+	t.Helper()
+
+	// enable the noop backend
+	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	pathToMount := make(map[string]string)
+	for _, backend := range backends {
+		me := &MountEntry{
+			Table: mountTableType,
+			Path:  backend.path,
+			Type:  "noop",
+		}
+
+		nsCtx := namespace.ContextWithNamespace(context.Background(), backend.ns)
+		err := c.mount(nsCtx, me)
+		if err != nil {
+			t.Fatalf("err mounting backend %s: %v", backend.path, err)
+		}
+
+		mount := c.router.MatchingMountEntry(nsCtx, backend.path)
+		if mount == nil {
+			t.Fatalf("couldn't find mount for path %s", backend.path)
+		}
+		pathToMount[backend.path] = mount.Accessor
+	}
+
+	return pathToMount
 }
