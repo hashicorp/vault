@@ -68,7 +68,7 @@ func RaftFilePermsChecks(ctx context.Context, path string) {
 	}
 	if !canRead || !canWrite {
 		okFlag = false
-		SpotError(ctx, "raft file permission checks", fmt.Errorf("owner read: %v, owner write: %v", canRead, canWrite))
+		SpotError(ctx, "raft file permission checks", fmt.Errorf("error: not enough permissions -- owner read: %v, owner write: %v", canRead, canWrite))
 	}
 	if okFlag {
 		SpotOk(ctx, "raft file permission checks", "correct permissions to raft storage backend file path")
