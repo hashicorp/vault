@@ -77,7 +77,6 @@ export default Component.extend({
     // change it here to match the new type
     let isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
-      console.log('here1`');
       mount.set('path', type);
     }
   },
@@ -107,7 +106,6 @@ export default Component.extend({
         this.wizard.set('componentState', value);
         this.checkPathChange(value);
       }
-      console.log(this.mountModel.path, 'PATH');
       if (!this.mountModel.validations.attrs.path.isValid) {
         this.set('validationError', this.mountModel.validations.attrs.path.messages);
       }
