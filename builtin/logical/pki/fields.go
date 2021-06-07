@@ -259,7 +259,7 @@ the key_type.`,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec"},
+		AllowedValues: []interface{}{"rsa", "ec","ed25519"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},

@@ -246,6 +246,13 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key: %v", err)}
 		}
+	case "ed25519":
+		privateKeyType = Ed25519PrivateKey
+		privateKey, err = ed25519.GenerateKey(randReader)
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error generating ed25519 private key: %v",err)}
+		}
+		privateKeyBytes = x509.MarshalPkcs1PrivateKey(privateKey.(ed25519.PrivateKey))
 	default:
 		return errutil.UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
 	}

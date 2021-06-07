@@ -56,6 +56,7 @@ const (
 	UnknownPrivateKey PrivateKeyType = ""
 	RSAPrivateKey     PrivateKeyType = "rsa"
 	ECPrivateKey      PrivateKeyType = "ec"
+	Ed25519PrivateKey PrivateKeyType = "ed25519"
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
