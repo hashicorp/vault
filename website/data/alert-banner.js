@@ -1,6 +1,6 @@
 export const ALERT_BANNER_ACTIVE = true
 
-// https://github.com/hashicorp/web-components/tree/master/packages/alert-banner
+// https://github.com/hashicorp/react-components/tree/main/packages/alert-banner
 export default {
   tag: 'June 8-11',
   url: 'https://hashiconf.com/europe/?utm_source=DocsBanner',
