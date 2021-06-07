@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -152,7 +151,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+		return nil, fmt.Errorf("client setup failed: %w", err)
 	}
 
 	// Setup the backend
