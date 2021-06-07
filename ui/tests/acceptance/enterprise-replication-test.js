@@ -275,6 +275,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-secondary-add]');
     await settled();
     await pollCluster(this.owner);
+    await settled();
 
     // checks on secondary token modal
     assert.dom('#modal-wormhole').exists();
