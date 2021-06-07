@@ -252,8 +252,8 @@
         value={{or (get model valuePath) attr.options.defaultValue}} onChange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }} class="input" maxLength={{attr.options.characterLimit}} />
-
+        }} class="input {{if validationError "has-error-border"}}" maxLength={{attr.options.characterLimit}} />
+      {{!-- Custom Validation --}}
       {{#if attr.options.validationAttr}}
         {{#if
           (and
@@ -261,8 +261,15 @@
           )
         }}
           <AlertInline @type="danger" @message={{attr.options.invalidMessage}} />
-
         {{/if}}
+      {{/if}}
+      {{!-- Cp Validations Library --}}
+      {{#if validationError}}
+        <AlertInline 
+          @type="danger" 
+          @message={{validationError}} 
+          @paddingTop=true
+        />
       {{/if}}
     {{/if}}
   </div>

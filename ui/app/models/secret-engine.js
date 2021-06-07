@@ -9,7 +9,10 @@ import { validator, buildValidations } from 'ember-cp-validations';
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const Validations = buildValidations({
-  path: validator('presence', true),
+  path: validator('presence', {
+    presence: true,
+    message: "Path can't be blank",
+  }),
 });
 
 export default Model.extend(Validations, {

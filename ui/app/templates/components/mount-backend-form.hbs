@@ -29,10 +29,9 @@
       @mode="enable"
       @noun={{if (eq mountType "auth") "Auth Method" "Secret Engine"}}
      />
-
     <MessageError @model={{mountModel}} />
     {{#if showEnable}}
-      <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="default" />
+      <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="default" @validationError={{validationError}}/>
       <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
