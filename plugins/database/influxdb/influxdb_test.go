@@ -3,6 +3,7 @@ package influxdb
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/url"
 	"os"
 	"reflect"
@@ -220,7 +221,7 @@ func makeConfig(rootConfig map[string]interface{}, keyValues ...interface{}) map
 	return config
 }
 
-func TestInfluxdb_CreateUser(t *testing.T) {
+func TestInfluxdb_CreateUser_DefaultUsernameTemplate(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
@@ -234,8 +235,8 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 	password := "nuozxby98523u89bdfnkjl"
 	newUserReq := dbplugin.NewUserRequest{
 		UsernameConfig: dbplugin.UsernameMetadata{
-			DisplayName: "test",
-			RoleName:    "test",
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
 		},
 		Statements: dbplugin.Statements{
 			Commands: []string{createUserStatements},
@@ -250,6 +251,46 @@ func TestInfluxdb_CreateUser(t *testing.T) {
 	}
 
 	assertCredsExist(t, config.URL().String(), resp.Username, password)
+
+	require.Regexp(t, `^v_token_mylongrolenamew_[a-z0-9]{20}_[0-9]{10}$`, resp.Username)
+}
+
+func TestInfluxdb_CreateUser_CustomUsernameTemplate(t *testing.T) {
+	cleanup, config := prepareInfluxdbTestContainer(t)
+	defer cleanup()
+
+	db := new()
+
+	conf := config.connectionParams()
+	conf["username_template"] = "{{.DisplayName}}_{{random 10}}"
+
+	req := dbplugin.InitializeRequest{
+		Config:           conf,
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	password := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	resp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
+	}
+
+	assertCredsExist(t, config.URL().String(), resp.Username, password)
+
+	require.Regexp(t, `^token_[a-zA-Z0-9]{10}$`, resp.Username)
 }
 
 func TestUpdateUser_expiration(t *testing.T) {
