@@ -6,7 +6,12 @@
           {{#with (or method.path method.type) as |methodKey|}}
               <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
                 <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with=methodKey}} data-test-auth-method-link={{method.type}}>
-                  {{or method.id (capitalize method.type)}}
+                   <Icon
+                      @glyph={{method.type}}
+                      @size="m"
+                      class="has-text-grey-light"
+                    />
+                  {{or method.typeDisplay (capitalize method.type)}}
                 </LinkTo>
               </li>
           {{/with}}
@@ -26,6 +31,10 @@
       @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
       data-test-auth-error
     />
+    <div class="has-bottom-margin-s ">
+      <p class="is-label"> {{this.selectedAuthBackend.path}}</p>
+      <span class="description has-text-grey"> {{this.selectedAuthBackend.mountDescription}} </span>
+    </div>
     {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
       <Select
         @label='Method'

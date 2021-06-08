@@ -153,7 +153,17 @@ export default Component.extend(DEFAULTS, {
   }),
   methodsToShow: computed('methods', function() {
     let methods = this.methods || [];
-    let shownMethods = methods.filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()));
+    let shownMethods = methods
+      .filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()))
+      .map(m => {
+        const backend = BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase());
+        const method = {
+          ...m,
+          typeDisplay: backend.typeDisplay,
+        };
+        return method;
+      });
+    const methodTypes = methods.map(m => m.type.toLowerCase());
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
@@ -178,7 +188,16 @@ export default Component.extend(DEFAULTS, {
           unauthenticated: true,
         },
       });
-      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
+      this.set(
+        'methods',
+        methods.map(m => {
+          const method = m.serialize({ includeId: true });
+          return {
+            ...method,
+            mountDescription: method.description,
+          };
+        })
+      );
       next(() => {
         store.unloadAll('auth-method');
       });
