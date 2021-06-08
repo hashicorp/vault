@@ -510,6 +510,114 @@ func TestFairshare_nilLoggerJobManager(t *testing.T) {
 	}
 }
 
-func TestFairshare_GetWorkerCounts(t *testing.T) {
-	// TODO
+func TestFairshare_getNextQueueFairshare(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 18, nil, nil)
+
+	for i := 0; i < 10; i++ {
+		job := newDefaultTestJob(t, fmt.Sprintf("job-%d", i))
+		j.AddJob(&job, "a")
+		j.AddJob(&job, "b")
+		j.AddJob(&job, "c")
+	}
+
+	// fake out some number of workers with various remaining work scenario
+	j.l.Lock()
+	j.workerCount["a"] = 1
+	j.workerCount["b"] = 2
+	j.workerCount["c"] = 5
+	j.l.Unlock()
+
+	// this also tests j.sortByNumWorkers() indirectly
+	expectedOrder := []string{"a", "a", "b", "a", "b", "a", "b", "a", "b", "c"}
+
+	for _, expectedQueueID := range expectedOrder {
+		queueID, _, haveWork := j.getNextQueueFairshare()
+
+		if !haveWork {
+			t.Fatalf("expected have work true, got false for queue %q", queueID)
+		}
+		if queueID != expectedQueueID {
+			t.Errorf("expected queueID %q, got %q", expectedQueueID, queueID)
+		}
+
+		// simulate a worker being added to that queue
+		j.workerCount[queueID]++
+	}
+}
+
+func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 18, nil, nil)
+
+	job := newDefaultTestJob(t, "job-0")
+	j.AddJob(&job, "a")
+	j.AddJob(&job, "b")
+	j.AddJob(&job, "c")
+
+	// test to make sure increment works
+	j.incrementWorkerCount("a")
+	workerCounts := j.GetWorkerCounts()
+	if workerCounts["a"] != 1 {
+		t.Fatalf("expected 1 worker on 'a', got %d", workerCounts["a"])
+	}
+	if workerCounts["b"] != 0 {
+		t.Fatalf("expected 0 workers on 'b', got %d", workerCounts["b"])
+	}
+	if workerCounts["c"] != 0 {
+		t.Fatalf("expected 0 workers on 'c', got %d", workerCounts["c"])
+	}
+
+	// test to make sure decrement works (when there is still work for the queue)
+	j.decrementWorkerCount("a")
+	workerCounts = j.GetWorkerCounts()
+	if workerCounts["a"] != 0 {
+		t.Fatalf("expected 0 workers on 'a', got %d", workerCounts["a"])
+	}
+
+	// add a worker to queue "a" and remove all work to ensure worker count gets
+	// cleared out for "a"
+	j.incrementWorkerCount("a")
+	j.l.Lock()
+	j.queues["a"].Remove(j.queues["a"].Front())
+	j.l.Unlock()
+
+	j.decrementWorkerCount("a")
+	workerCounts = j.GetWorkerCounts()
+	if _, ok := workerCounts["a"]; ok {
+		t.Fatalf("expected no worker count for 'a', got %#v", workerCounts)
+	}
+}
+
+func TestFairshare_queueWorkersSaturated(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 20, nil, nil)
+
+	job := newDefaultTestJob(t, "job-0")
+	j.AddJob(&job, "a")
+	j.AddJob(&job, "b")
+
+	// no more than 9 workers can be assigned to a single queue in this example
+	for i := 0; i < 8; i++ {
+		j.incrementWorkerCount("a")
+		j.incrementWorkerCount("b")
+
+		if j.queueWorkersSaturated("a") {
+			t.Fatalf("queue 'a' falsely saturated: %#v", j.GetWorkerCounts())
+		}
+		if j.queueWorkersSaturated("b") {
+			t.Fatalf("queue 'b' falsely saturated: %#v", j.GetWorkerCounts())
+		}
+	}
+
+	// adding the 9th and 10th workers should saturate the number of workers we
+	// can have per queue
+	for i := 8; i < 10; i++ {
+		j.incrementWorkerCount("a")
+		j.incrementWorkerCount("b")
+
+		if !j.queueWorkersSaturated("a") {
+			t.Fatalf("queue 'a' falsely unsaturated: %#v", j.GetWorkerCounts())
+		}
+		if !j.queueWorkersSaturated("b") {
+			t.Fatalf("queue 'b' falsely unsaturated: %#v", j.GetWorkerCounts())
+		}
+	}
 }

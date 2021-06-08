@@ -28,8 +28,6 @@ Future Work:
 */
 
 type JobManager struct {
-	queueLock sync.RWMutex
-
 	// TODO check when these maps/slices need to be locked
 	// TODO check if queuesIndex is still needed
 	name              string
@@ -222,7 +220,6 @@ func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
 
 	// TODO lock?
 
-	numWorkersPerQueue := j.GetWorkerCounts()
 	queueIDsByIncreasingWorkers := j.sortByNumWorkers()
 	for _, queueID := range queueIDsByIncreasingWorkers {
 		if j.queues[queueID].Len() < 1 {
@@ -230,9 +227,10 @@ func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
 			continue
 		}
 
-		numCurrentWorkers := numWorkersPerQueue[queueID]
-		if !j.queueWorkersSaturated(numCurrentWorkers) {
+		if !j.queueWorkersSaturated(queueID) {
 			nextQueue = queueID
+			haveWork = true
+			break
 		}
 	}
 
@@ -241,25 +239,29 @@ func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
 }
 
 // returns true if there are already too many workers on this queue
-func (j *JobManager) queueWorkersSaturated(numCurrentWorkers int) bool {
-	numActiveQueues := float64(len(j.queuesIndex))
+func (j *JobManager) queueWorkersSaturated(queueID string) bool {
+	numActiveQueues := float64(len(j.queues))
 	numTotalWorkers := float64(j.workerPool.numWorkers)
+	maxWorkersPerQueue := math.Ceil(0.9 * numTotalWorkers / numActiveQueues)
 
-	maxWorkersOnQueue := math.Ceil(0.9 * numTotalWorkers / numActiveQueues)
+	numWorkersPerQueue := j.GetWorkerCounts()
 
-	return numCurrentWorkers >= int(maxWorkersOnQueue)
+	return numWorkersPerQueue[queueID] >= int(maxWorkersPerQueue)
 }
 
 // sortByNumWorkers returns queueIDs in order of increasing number of workers
 func (j *JobManager) sortByNumWorkers() []string {
-	// TODO test
 	// TODO lock?
-	out := make([]string, len(j.queuesIndex))
+	out := make([]string, len(j.queues))
 	copy(out, j.queuesIndex)
 
 	workersPerQueue := j.GetWorkerCounts()
 
 	sort.Slice(out, func(i, j int) bool {
+		if workersPerQueue[out[i]] == workersPerQueue[out[j]] {
+			return out[i] < out[j]
+		}
+
 		return workersPerQueue[out[i]] < workersPerQueue[out[j]]
 	})
 
