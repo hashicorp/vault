@@ -149,6 +149,9 @@ export default Component.extend({
     },
 
     handleKeyUp(value) {
+      if (!this.onKeyUp) {
+        return;
+      }
       this.onKeyUp(value);
     },
   },

@@ -81,10 +81,22 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
   },
 
-  waitForKeyUp: task(function*() {
+  waitForKeyUp: task(function*(value) {
+    // ARG TODO replace with Validation
+    // if (type === 'create' && isBlank(model.path || model.id)) {
+    //   this.flashMessages.danger('Please provide a path for the secret');
+    //   return;
+    // }
+
+    if (value) {
+      this.model.set('maxVersions', value);
+    }
+
+    console.log(this.model.validations.attrs.maxVersions.isValid, 'fiond value?');
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
+      // Validation through cp-validators
     }
   })
     .on('didInsertElement')
@@ -312,19 +324,20 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
-      const MAXIMUM_VERSIONS = 9999999999999999;
+      // const MAXIMUM_VERSIONS = 9999999999999999; // ARG TODO taking care of htis in validation model
       let model = this.modelForData;
-      let secret = this.model;
+      // let secret = this.model;
       // prevent from submitting if there's no key
+      // ARG TODO replace with Validation
       if (type === 'create' && isBlank(model.path || model.id)) {
         this.flashMessages.danger('Please provide a path for the secret');
         return;
       }
-      const maxVersions = secret.get('maxVersions');
-      if (MAXIMUM_VERSIONS < maxVersions) {
-        this.flashMessages.danger('Max versions is too large');
-        return;
-      }
+      // const maxVersions = secret.get('maxVersions');
+      // if (MAXIMUM_VERSIONS < maxVersions) {
+      //   this.flashMessages.danger('Max versions is too large');
+      //   return;
+      // }
 
       this.persistKey(key => {
         let secretKey;

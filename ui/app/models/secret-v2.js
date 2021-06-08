@@ -4,8 +4,16 @@ import { alias } from '@ember/object/computed';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import KeyMixin from 'vault/mixins/key-mixin';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { validator, buildValidations } from 'ember-cp-validations';
 
-export default Model.extend(KeyMixin, {
+const Validations = buildValidations({
+  maxVersions: validator('format', {
+    regex: /[0-9]+/,
+    message: 'Maximum versions must be a number',
+  }),
+});
+
+export default Model.extend(KeyMixin, Validations, {
   failedServerRead: attr('boolean'),
   engine: belongsTo('secret-engine', { async: false }),
   engineId: attr('string'),
