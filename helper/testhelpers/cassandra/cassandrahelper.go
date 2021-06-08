@@ -14,12 +14,26 @@ import (
 )
 
 type containerConfig struct {
+	imageName  string
 	version    string
 	copyFromTo map[string]string
-	sslOpts    *gocql.SslOptions
+	env        []string
+
+	sslOpts *gocql.SslOptions
 }
 
 type ContainerOpt func(*containerConfig)
+
+func Image(imageName string, version string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.imageName = imageName
+		cfg.version = version
+
+		// Reset the environment because there's a very good chance the default environment doesn't apply to the
+		// non-default image being used
+		cfg.env = nil
+	}
+}
 
 func Version(version string) ContainerOpt {
 	return func(cfg *containerConfig) {
@@ -30,6 +44,12 @@ func Version(version string) ContainerOpt {
 func CopyFromTo(copyFromTo map[string]string) ContainerOpt {
 	return func(cfg *containerConfig) {
 		cfg.copyFromTo = copyFromTo
+	}
+}
+
+func Env(keyValue string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.env = append(cfg.env, keyValue)
 	}
 }
 
@@ -63,7 +83,9 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	containerCfg := &containerConfig{
-		version: "3.11",
+		imageName: "cassandra",
+		version:   "3.11",
+		env:       []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
 	}
 
 	for _, opt := range opts {
@@ -79,13 +101,15 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 		copyFromTo[absFrom] = to
 	}
 
-	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:  "cassandra",
-		ImageTag:   containerCfg.version,
-		Ports:      []string{"9042/tcp"},
-		CopyFromTo: copyFromTo,
-		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
-	})
+	runOpts := docker.RunOptions{
+		ContainerName: "cassandra",
+		ImageRepo:     containerCfg.imageName,
+		ImageTag:      containerCfg.version,
+		Ports:         []string{"9042/tcp"},
+		CopyFromTo:    copyFromTo,
+		Env:           containerCfg.env,
+	}
+	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
 		t.Fatalf("Could not start docker cassandra: %s", err)
 	}
