@@ -147,5 +147,9 @@ export default Component.extend({
         this.send('setAndBroadcast', path, null);
       }
     },
+
+    handleKeyUp(value) {
+      this.onKeyUp(value);
+    },
   },
 });

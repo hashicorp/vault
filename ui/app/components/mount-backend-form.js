@@ -69,7 +69,7 @@ export default Component.extend({
     this.mountModel.rollbackAttributes();
   },
 
-  checkPathChange(type) {
+  checkPathChangeOnFocusOut(type) {
     let mount = this.mountModel;
     let currentPath = mount.path;
     let list = this.mountTypes;
@@ -78,6 +78,15 @@ export default Component.extend({
     let isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
       mount.set('path', type);
+    }
+  },
+
+  checkPathChangeOnKeyUp(pathName) {
+    let mount = this.mountModel;
+    let currentPath = mount.path;
+
+    if (pathName !== currentPath) {
+      mount.set('path', pathName);
     }
   },
 
@@ -101,13 +110,23 @@ export default Component.extend({
     .withTestWaiter(),
 
   actions: {
+    onKeyUp(value) {
+      this.checkPathChangeOnKeyUp(value);
+      if (!this.mountModel.validations.attrs.path.isValid) {
+        this.set('validationError', this.mountModel.validations.attrs.path.messages);
+      } else {
+        this.set('validationError', false);
+      }
+    },
     onTypeChange(path, value) {
       if (path === 'type') {
         this.wizard.set('componentState', value);
-        this.checkPathChange(value);
+        this.checkPathChangeOnFocusOut(value);
       }
       if (!this.mountModel.validations.attrs.path.isValid) {
         this.set('validationError', this.mountModel.validations.attrs.path.messages);
+      } else {
+        this.set('validationError', false);
       }
     },
 

@@ -248,11 +248,19 @@
       {{/if}}
     {{else}}
       {{!-- Regular Text Input --}}
-      <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-        value={{or (get model valuePath) attr.options.defaultValue}} onChange={{action
+      <input 
+        data-test-input={{attr.name}}
+        id={{attr.name}}
+        autocomplete="off"
+        spellcheck="false"
+        value={{or (get model valuePath) attr.options.defaultValue}}
+        onChange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }} class="input {{if validationError "has-error-border"}}" maxLength={{attr.options.characterLimit}} />
+        }}
+        onkeyup={{action "handleKeyUp" value="target.value"}}
+        class="input {{if validationError "has-error-border"}}"
+        maxLength={{attr.options.characterLimit}} />
       {{!-- Custom Validation --}}
       {{#if attr.options.validationAttr}}
         {{#if
