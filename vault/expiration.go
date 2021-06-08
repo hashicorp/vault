@@ -983,6 +983,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		return err
 	}
 
+	// Lease has been removed, also remove the in-memory lock.
 	m.deleteLockForLease(leaseID)
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
@@ -2180,6 +2181,15 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(ctx context.Cont
 
 	// If there's no associated leaseEntry for the token, we create one
 	if le == nil {
+
+		// Acquire the lock here so persistEntry and updatePending are atomic,
+		// although it is *very unlikely* that anybody could grab the lease ID
+		// before this function returns. (They could find it in an index, or
+		// find it in a list.)
+		leaseLock := m.lockForLeaseID(leaseID)
+		leaseLock.Lock()
+		defer leaseLock.Unlock()
+
 		auth := &logical.Auth{
 			ClientToken: te.ID,
 			LeaseOptions: logical.LeaseOptions{
@@ -2206,6 +2216,7 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(ctx context.Cont
 
 		// Encode the entry
 		if err := m.persistEntry(ctx, le); err != nil {
+			m.deleteLockForLease(leaseID)
 			return "", err
 		}
 	}
