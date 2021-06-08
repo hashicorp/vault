@@ -134,7 +134,6 @@ definitions. For example suppose you have a CLI app and a `--no-color` bool flag
 can easily disable the color output with:
 
 ```go
-
 var flagNoColor = flag.Bool("no-color", false, "Disable color output")
 
 if *flagNoColor {
@@ -156,6 +155,10 @@ c.EnableColor()
 c.Println("This prints again cyan...")
 ```
 
+## GitHub Actions
+
+To output color in GitHub Actions (or other CI systems that support ANSI colors), make sure to set `color.NoColor = false` so that it bypasses the check for non-tty output streams. 
+
 ## Todo
 
 * Save/Return previous values
@@ -170,4 +173,3 @@ c.Println("This prints again cyan...")
 ## License
 
 The MIT License (MIT) - see [`LICENSE.md`](https://github.com/fatih/color/blob/master/LICENSE.md) for more details
-

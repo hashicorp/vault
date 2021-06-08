@@ -40,7 +40,7 @@ require (
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.11.0
 	github.com/fatih/structs v1.1.0
 	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -60,11 +60,11 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.7.0
-	github.com/hashicorp/go-hclog v0.16.0
+	github.com/hashicorp/go-hclog v0.16.1
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v1.1.5
-	github.com/hashicorp/go-multierror v1.1.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -83,7 +83,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.8.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.9.1
-	github.com/hashicorp/vault-plugin-auth-jwt v0.9.3
+	github.com/hashicorp/vault-plugin-auth-jwt v0.9.4
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.7.0
@@ -146,7 +146,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v3.21.1+incompatible
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
@@ -157,13 +157,12 @@ require (
 	go.mongodb.org/mongo-driver v1.4.6
 	go.uber.org/atomic v1.6.0
 	go.uber.org/goleak v1.1.10
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+	golang.org/x/net v0.0.0-20210510120150-4163338589ed
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
-	golang.org/x/text v0.3.5 // indirect
-	golang.org/x/tools v0.0.0-20200521155704-91d71f6c2f04
+	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
+	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
