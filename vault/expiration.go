@@ -948,7 +948,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 
 	if !skipToken {
-		// Acquire lease for this lock
+		// Acquire lock for this lease
 		// If skipToken is true, then we're either being (1) called via RevokeByToken, so
 		// probably the lock is already held, and if we re-acquire we get deadlock, or
 		// (2) called by tidy, in which case the lock is held by the tidy thread.
@@ -1738,7 +1738,7 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 // to only create one lock.  Instead, we'll create locks on-demand in an atomic fashion.
 //
 // Acquiring a lock from a leaseEntry is a bad idea because it could change
-// between loading and acquirung the lock. So we only provide an ID-based map, and the
+// between loading and acquiring the lock. So we only provide an ID-based map, and the
 // locking discipline should be:
 //    1. Lock lease
 //    2. Load, or attempt to load, leaseEntry
