@@ -666,26 +666,26 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		ClientToken: "root",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: 400 * time.Second,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		req := &logical.Request{
-			Operation:   logical.ReadOperation,
-			Path:        fmt.Sprintf("prod/aws/%d", i),
-			ClientToken: "root",
-		}
-		req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
-		resp := &logical.Response{
-			Secret: &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 400 * time.Second,
-				},
-			},
-			Data: map[string]interface{}{
-				"access_key": "xyz",
-				"secret_key": "abcd",
-			},
-		}
+		req.Path = fmt.Sprintf("prod/aws/%d", i)
 		_, err = exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			b.Fatalf("err: %v", err)
