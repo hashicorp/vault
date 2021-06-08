@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"fmt"
 	"io/ioutil"
+	"math"
+	"sort"
 	"sync"
 
 	"github.com/armon/go-metrics"
@@ -26,18 +28,28 @@ Future Work:
 */
 
 type JobManager struct {
+	queueLock sync.RWMutex
+
+	// TODO check when these maps/slices need to be locked
+	// TODO check if queuesIndex is still needed
 	name              string
 	queues            map[string]*list.List
 	queuesIndex       []string
 	lastQueueAccessed int
-	quit              chan struct{}
-	newWork           chan struct{} // must be buffered
-	workerPool        *dispatcher
-	onceStart         sync.Once
-	onceStop          sync.Once
-	logger            log.Logger
-	totalJobs         int
-	metricSink        *metricsutil.ClusterMetricSink
+
+	quit    chan struct{}
+	newWork chan struct{} // must be buffered
+
+	workerPool  *dispatcher
+	workerCount map[string]int
+
+	onceStart sync.Once
+	onceStop  sync.Once
+
+	logger log.Logger
+
+	totalJobs  int
+	metricSink *metricsutil.ClusterMetricSink
 
 	// waitgroup for testing stop functionality
 	wg sync.WaitGroup
@@ -71,6 +83,7 @@ func NewJobManager(name string, numWorkers int, l log.Logger, metricSink *metric
 		quit:              make(chan struct{}),
 		newWork:           make(chan struct{}, 1),
 		workerPool:        wp,
+		workerCount:       make(map[string]int),
 		logger:            l,
 		metricSink:        metricSink,
 	}
@@ -112,6 +125,7 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 
 	if _, ok := j.queues[queueID]; !ok {
 		j.addQueue(queueID)
+		j.workerCount[queueID] = 0
 	}
 
 	j.queues[queueID].PushBack(job)
@@ -138,11 +152,10 @@ func (j *JobManager) GetPendingJobCount() int {
 
 // GetWorkerCounts() returns a map of queue ID to number of active workers
 func (j *JobManager) GetWorkerCounts() map[string]int {
-	// TODO implement with VLT-145
-	return nil
+	return j.workerCount
 }
 
-// GetWorkQueueLengths() returns a map of queue ID to number of active workers
+// GetWorkQueueLengths() returns a map of queue ID to number of jobs in the queue
 func (j *JobManager) GetWorkQueueLengths() map[string]int {
 	out := make(map[string]int)
 
@@ -156,17 +169,18 @@ func (j *JobManager) GetWorkQueueLengths() map[string]int {
 	return out
 }
 
-// getNextJob grabs the next job to be processed and prunes empty queues
-func (j *JobManager) getNextJob() Job {
+// getNextJob pops the next job to be processed and prunes empty queues
+// it also returns the ID of the queue the job is associated with
+func (j *JobManager) getNextJob() (Job, string) {
 	j.l.Lock()
 	defer j.l.Unlock()
 
 	if len(j.queues) == 0 {
-		return nil
+		return nil, ""
 	}
 
-	j.lastQueueAccessed = (j.lastQueueAccessed + 1) % len(j.queuesIndex)
-	queueID := j.queuesIndex[j.lastQueueAccessed]
+	queueID, queueIdx, _ := j.getNextQueueLegacy()
+	j.lastQueueAccessed = queueIdx
 
 	jobElement := j.queues[queueID].Front()
 	out := j.queues[queueID].Remove(jobElement)
@@ -179,10 +193,94 @@ func (j *JobManager) getNextJob() Job {
 	}
 
 	if j.queues[queueID].Len() == 0 {
+		// we remove the empty queue, but we don't remove the worker count
+		// in case we are still working on previous jobs from this queue.
+
+		// worker count cleanup is handled in *JobManager.decrementWorkerCount
+
 		j.removeLastQueueAccessed()
 	}
 
-	return out.(Job)
+	return out.(Job), queueID
+}
+
+// returns the next queue to assign work from, and a bool if there is work to be assigned
+// TODO update doc
+func (j *JobManager) getNextQueueLegacy() (string, int, bool) {
+	queueIdx := (j.lastQueueAccessed + 1) % len(j.queuesIndex)
+	return j.queuesIndex[queueIdx], queueIdx, true
+}
+
+// returns the next queue to assign work from, and a bool if there is a queue that
+// can have a worker assigned.
+// the intent is to avoid over-allocating work from specific queues, as
+// outlined in RFC VLT-145
+// TODO update doc
+func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
+	var nextQueue string
+	var haveWork bool
+
+	// TODO lock?
+
+	numWorkersPerQueue := j.GetWorkerCounts()
+	queueIDsByIncreasingWorkers := j.sortByNumWorkers()
+	for _, queueID := range queueIDsByIncreasingWorkers {
+		if j.queues[queueID].Len() < 1 {
+			// TODO this shouldn't happen as we prune empty queues
+			continue
+		}
+
+		numCurrentWorkers := numWorkersPerQueue[queueID]
+		if !j.queueWorkersSaturated(numCurrentWorkers) {
+			nextQueue = queueID
+		}
+	}
+
+	// TODO update this 0 return - we don't have the queue index here
+	return nextQueue, 0, haveWork
+}
+
+// returns true if there are already too many workers on this queue
+func (j *JobManager) queueWorkersSaturated(numCurrentWorkers int) bool {
+	numActiveQueues := float64(len(j.queuesIndex))
+	numTotalWorkers := float64(j.workerPool.numWorkers)
+
+	maxWorkersOnQueue := math.Ceil(0.9 * numTotalWorkers / numActiveQueues)
+
+	return numCurrentWorkers >= int(maxWorkersOnQueue)
+}
+
+// sortByNumWorkers returns queueIDs in order of increasing number of workers
+func (j *JobManager) sortByNumWorkers() []string {
+	// TODO test
+	// TODO lock?
+	out := make([]string, len(j.queuesIndex))
+	copy(out, j.queuesIndex)
+
+	workersPerQueue := j.GetWorkerCounts()
+
+	sort.Slice(out, func(i, j int) bool {
+		return workersPerQueue[out[i]] < workersPerQueue[out[j]]
+	})
+
+	return out
+}
+
+// TODO do these need to be locked? i think we should have a lock to protect
+// some state against multiple goroutines from worker pool
+func (j *JobManager) incrementWorkerCount(queueID string) {
+	j.workerCount[queueID]++
+}
+
+// decrement the worker count, and clean up worker tracking for this queue
+// if needed
+func (j *JobManager) decrementWorkerCount(queueID string) {
+	j.workerCount[queueID]--
+
+	_, queueEmpty := j.queues[queueID]
+	if queueEmpty && j.workerCount[queueID] < 1 {
+		delete(j.workerCount, queueID)
+	}
 }
 
 // assignWork continually loops checks for new jobs and dispatches them to the
@@ -203,22 +301,24 @@ func (j *JobManager) assignWork() {
 				default:
 				}
 
-				job := j.getNextJob()
+				job, queueID := j.getNextJob()
 				if job != nil {
-					j.workerPool.dispatch(job)
+					j.workerPool.dispatch(job, func() {
+						j.incrementWorkerCount(queueID)
+					}, func() {
+						j.decrementWorkerCount(queueID)
+					})
 				} else {
 					break
 				}
 			}
 
-			// listen for a wake-up when an emtpy job manager has been given
-			// new work
+			// listen for wake-up when an emtpy job manager has been given work
 			select {
 			case <-j.quit:
 				j.wg.Done()
 				return
 			case <-j.newWork:
-				break
 			}
 		}
 	}()

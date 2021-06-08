@@ -509,3 +509,7 @@ func TestFairshare_nilLoggerJobManager(t *testing.T) {
 		t.Error("logger not set up properly")
 	}
 }
+
+func TestFairshare_GetWorkerCounts(t *testing.T) {
+	// TODO
+}
