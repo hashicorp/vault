@@ -944,7 +944,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
 
 	if !skipToken {
-		// Acquire lease for this lock
+		// Acquire lock for this lease
 		// If skipToken is true, then we're either being (1) called via RevokeByToken, so
 		// probably the lock is already held, and if we re-acquire we get deadlock, or
 		// (2) called by tidy, in which case the lock is not held.
