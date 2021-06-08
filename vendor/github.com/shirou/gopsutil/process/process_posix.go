@@ -1,4 +1,4 @@
-// +build linux freebsd openbsd darwin
+// +build linux freebsd openbsd darwin solaris
 
 package process
 
@@ -71,6 +71,30 @@ func getTerminalMap() (map[uint64]string, error) {
 	return ret, nil
 }
 
+// isMount is a port of python's os.path.ismount()
+// https://github.com/python/cpython/blob/08ff4369afca84587b1c82034af4e9f64caddbf2/Lib/posixpath.py#L186-L216
+// https://docs.python.org/3/library/os.path.html#os.path.ismount
+func isMount(path string) bool {
+	// Check symlinkness with os.Lstat; unix.DT_LNK is not portable
+	fileInfo, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+	if fileInfo.Mode() & os.ModeSymlink != 0 {
+		return false
+	}
+	var stat1 unix.Stat_t
+	if err := unix.Lstat(path, &stat1); err != nil {
+		return false
+	}
+	parent := filepath.Join(path, "..")
+	var stat2 unix.Stat_t
+	if err := unix.Lstat(parent, &stat2); err != nil {
+		return false
+	}
+	return stat1.Dev != stat2.Dev || stat1.Ino == stat2.Ino
+}
+
 func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
 	if pid <= 0 {
 		return false, fmt.Errorf("invalid pid %v", pid)
@@ -80,10 +104,7 @@ func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
 		return false, err
 	}
 
-	if _, err := os.Stat(common.HostProc()); err == nil { //Means that proc filesystem exist
-		// Checking PID existence based on existence of /<HOST_PROC>/proc/<PID> folder
-		// This covers the case when running inside container with a different process namespace (by default)
-
+	if isMount(common.HostProc()) { // if /<HOST_PROC>/proc exists and is mounted, check if /<HOST_PROC>/proc/<PID> folder exists
 		_, err := os.Stat(common.HostProc(strconv.Itoa(int(pid))))
 		if os.IsNotExist(err) {
 			return false, nil
@@ -91,8 +112,7 @@ func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
 		return err == nil, err
 	}
 
-	//'/proc' filesystem is not exist, checking of PID existence is done via signalling the process
-	//Make sense only if we run in the same process namespace
+	// procfs does not exist or is not mounted, check PID existence by signalling the pid
 	err = proc.Signal(syscall.Signal(0))
 	if err == nil {
 		return true, nil

@@ -124,6 +124,7 @@ var (
 	LicenseAutoloaded            = func(*Core) bool { return false }
 	LicenseInitCheck             = func(*Core) error { return nil }
 	LicenseSummary               = func(*Core) (*LicenseState, error) { return nil, nil }
+	LicenseReload                = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -707,9 +708,9 @@ func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 	return nil
 }
 
-// NewCoreUninit conducts static validations on the Core Config
+// CreateCore conducts static validations on the Core Config
 // and returns an uninitialized core.
-func NewCoreUninit(conf *CoreConfig) (*Core, error) {
+func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		if conf.RedirectAddr == "" {
 			return nil, fmt.Errorf("missing API address, please set in configuration or via environment")
@@ -903,7 +904,7 @@ func NewCoreUninit(conf *CoreConfig) (*Core, error) {
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
 	var err error
-	c, err := NewCoreUninit(conf)
+	c, err := CreateCore(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -2733,7 +2734,7 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby)
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.

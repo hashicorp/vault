@@ -44,6 +44,23 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-listeners",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "check-listener-tls",
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"TLS is disabled in a Listener config stanza.",
+							},
+						},
+					},
+				},
+				{
 					Name:   "storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
@@ -349,7 +366,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 
 				if err := compareResults(tc.expected, result.Children); err != nil {
 					t.Fatalf("Did not find expected test results: %v", err)
-					t.Fatal(result.String())
 				}
 			})
 		}
@@ -398,7 +414,7 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 			return fmt.Errorf("section %s, warning message not found: %s in %s", exp.Name, exp.Warnings[j], act.Warnings[j])
 		}
 	}
-	if len(exp.Children) != len(act.Children) {
+	if len(exp.Children) > len(act.Children) {
 		errStrings := []string{}
 		for _, c := range act.Children {
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
@@ -409,5 +425,6 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	if len(exp.Children) > 0 {
 		return compareResults(exp.Children, act.Children)
 	}
+
 	return nil
 }

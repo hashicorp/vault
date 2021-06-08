@@ -24,6 +24,6 @@ export default Model.extend({
   features: attr('array'),
   licenseId: attr('string'),
   startTime: attr('string'),
-  text: attr('string'),
   performanceStandbyCount: attr('number'),
+  autoloaded: attr('boolean'),
 });

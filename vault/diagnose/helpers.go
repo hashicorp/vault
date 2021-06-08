@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/disk"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -15,15 +13,18 @@ import (
 )
 
 const (
-	warningEventName        = "warning"
-	skippedEventName        = "skipped"
-	actionKey               = "actionKey"
-	spotCheckOkEventName    = "spot-check-ok"
-	spotCheckWarnEventName  = "spot-check-warn"
-	spotCheckErrorEventName = "spot-check-error"
-	errorMessageKey         = attribute.Key("error.message")
-	nameKey                 = attribute.Key("name")
-	messageKey              = attribute.Key("message")
+	warningEventName          = "warning"
+	skippedEventName          = "skipped"
+	actionKey                 = "actionKey"
+	spotCheckOkEventName      = "spot-check-ok"
+	spotCheckWarnEventName    = "spot-check-warn"
+	spotCheckErrorEventName   = "spot-check-error"
+	spotCheckSkippedEventName = "spot-check-skipped"
+	adviceEventName           = "advice"
+	errorMessageKey           = attribute.Key("error.message")
+	nameKey                   = attribute.Key("name")
+	messageKey                = attribute.Key("message")
+	adviceKey                 = attribute.Key("advice")
 )
 
 var (
@@ -128,9 +129,10 @@ func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 }
 
 // Skipped marks the current span skipped
-func Skipped(ctx context.Context) {
+func Skipped(ctx context.Context, message string) {
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent(skippedEventName)
+	span.SetStatus(codes.Error, message)
 }
 
 // Warn records a warning on the current span
@@ -160,6 +162,22 @@ func SpotError(ctx context.Context, checkName string, err error, options ...trac
 	}
 	addSpotCheckResult(ctx, spotCheckErrorEventName, checkName, message, options...)
 	return err
+}
+
+// SpotSkipped adds a Skipped result without adding a new Span.
+func SpotSkipped(ctx context.Context, checkName, message string, options ...trace.EventOption) {
+	addSpotCheckResult(ctx, spotCheckSkippedEventName, checkName, message, options...)
+}
+
+// Advice builds an EventOption containing advice message.  Use to add to spot results.
+func Advice(message string) trace.EventOption {
+	return trace.WithAttributes(adviceKey.String(message))
+}
+
+// Advise adds advice to the current diagnose span
+func Advise(ctx context.Context, message string) {
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(adviceEventName, Advice(message))
 }
 
 func addSpotCheckResult(ctx context.Context, eventName, checkName, message string, options ...trace.EventOption) {
@@ -223,41 +241,9 @@ func Skippable(skipName string, f testFunction) testFunction {
 			if !session.IsSkipped(skipName) {
 				return f(ctx)
 			} else {
-				Skipped(ctx)
+				Skipped(ctx, "skipped as requested")
 			}
 		}
 		return nil
 	}
-}
-
-func DiskUsageCheck(ctx context.Context) error {
-	partitions, err := disk.Partitions(false)
-	if err != nil {
-		return err
-	}
-
-	partitionExcludes := []string{"/boot"}
-partLoop:
-	for _, partition := range partitions {
-		for _, exc := range partitionExcludes {
-			if strings.HasPrefix(partition.Mountpoint, exc) {
-				continue partLoop
-			}
-		}
-		usage, err := disk.Usage(partition.Mountpoint)
-		testName := "disk-usage: " + partition.Mountpoint
-		if err != nil {
-			Warn(ctx, fmt.Sprintf("could not obtain partition usage for %s: %v", partition.Mountpoint, err))
-		} else {
-			if usage.UsedPercent > 95 {
-				SpotWarn(ctx, testName, "more than 95% full")
-			} else if usage.Free < 2<<30 {
-				SpotWarn(ctx, testName, "less than 1GB free")
-			} else {
-				SpotOk(ctx, testName, "ok")
-			}
-		}
-
-	}
-	return nil
 }

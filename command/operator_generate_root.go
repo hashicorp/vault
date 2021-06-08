@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -310,7 +309,7 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind gener
 	default:
 		otp, err := base62.Random(status.OTPLength)
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error reading random bytes: {{err}}", err).Error())
+			c.UI.Error(fmt.Errorf("Error reading random bytes: %w", err).Error())
 			return "", 2
 		}
 
@@ -363,13 +362,13 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 	default:
 		tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error decoding base64'd token: {{err}}", err).Error())
+			c.UI.Error(fmt.Errorf("Error decoding base64'd token: %w", err).Error())
 			return 1
 		}
 
 		tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error xoring token: {{err}}", err).Error())
+			c.UI.Error(fmt.Errorf("Error xoring token: %w", err).Error())
 			return 1
 		}
 		token = string(tokenBytes)
