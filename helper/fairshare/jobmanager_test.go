@@ -599,12 +599,16 @@ func TestFairshare_queueWorkersSaturated(t *testing.T) {
 		j.incrementWorkerCount("a")
 		j.incrementWorkerCount("b")
 
+		j.l.RLock()
 		if j.queueWorkersSaturated("a") {
+			j.l.RUnlock()
 			t.Fatalf("queue 'a' falsely saturated: %#v", j.GetWorkerCounts())
 		}
 		if j.queueWorkersSaturated("b") {
+			j.l.RUnlock()
 			t.Fatalf("queue 'b' falsely saturated: %#v", j.GetWorkerCounts())
 		}
+		j.l.RUnlock()
 	}
 
 	// adding the 9th and 10th workers should saturate the number of workers we
@@ -613,11 +617,15 @@ func TestFairshare_queueWorkersSaturated(t *testing.T) {
 		j.incrementWorkerCount("a")
 		j.incrementWorkerCount("b")
 
+		j.l.RLock()
 		if !j.queueWorkersSaturated("a") {
+			j.l.RUnlock()
 			t.Fatalf("queue 'a' falsely unsaturated: %#v", j.GetWorkerCounts())
 		}
 		if !j.queueWorkersSaturated("b") {
+			j.l.RUnlock()
 			t.Fatalf("queue 'b' falsely unsaturated: %#v", j.GetWorkerCounts())
 		}
+		j.l.RUnlock()
 	}
 }

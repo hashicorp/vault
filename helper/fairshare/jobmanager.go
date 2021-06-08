@@ -28,7 +28,6 @@ Future Work:
 */
 
 type JobManager struct {
-	// TODO check when these maps/slices need to be locked
 	// TODO check if queuesIndex is still needed
 	name              string
 	queues            map[string]*list.List
@@ -203,7 +202,8 @@ func (j *JobManager) getNextJob() (Job, string) {
 }
 
 // returns the next queue to assign work from, and a bool if there is work to be assigned
-// TODO update doc
+// note: this must be called with j.l held
+// TODO remove during legacy strategy cleanup
 func (j *JobManager) getNextQueueLegacy() (string, int, bool) {
 	queueIdx := (j.lastQueueAccessed + 1) % len(j.queuesIndex)
 	return j.queuesIndex[queueIdx], queueIdx, true
@@ -214,16 +214,15 @@ func (j *JobManager) getNextQueueLegacy() (string, int, bool) {
 // the intent is to avoid over-allocating work from specific queues, as
 // outlined in RFC VLT-145
 // TODO update doc
+// note: this must be called with j.l held
 func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
 	var nextQueue string
 	var haveWork bool
 
-	// TODO lock?
-
 	queueIDsByIncreasingWorkers := j.sortByNumWorkers()
 	for _, queueID := range queueIDsByIncreasingWorkers {
 		if j.queues[queueID].Len() < 1 {
-			// TODO this shouldn't happen as we prune empty queues
+			// TODO this shouldn't happen as we prune empty queues - verify and remove
 			continue
 		}
 
@@ -239,6 +238,7 @@ func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
 }
 
 // returns true if there are already too many workers on this queue
+// note: this must be called with j.l held (at least for read)
 func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 	numActiveQueues := float64(len(j.queues))
 	numTotalWorkers := float64(j.workerPool.numWorkers)
@@ -250,8 +250,8 @@ func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 }
 
 // sortByNumWorkers returns queueIDs in order of increasing number of workers
+// note: this must be called with j.l held
 func (j *JobManager) sortByNumWorkers() []string {
-	// TODO lock?
 	out := make([]string, len(j.queues))
 	copy(out, j.queuesIndex)
 
@@ -268,15 +268,20 @@ func (j *JobManager) sortByNumWorkers() []string {
 	return out
 }
 
-// TODO do these need to be locked? i think we should have a lock to protect
-// some state against multiple goroutines from worker pool
+// increment the worker count for this queue
 func (j *JobManager) incrementWorkerCount(queueID string) {
+	j.l.Lock()
+	defer j.l.Unlock()
+
 	j.workerCount[queueID]++
 }
 
-// decrement the worker count, and clean up worker tracking for this queue
-// if needed
+// decrement the worker count for this queue
+// this also removes worker tracking for this queue if needed
 func (j *JobManager) decrementWorkerCount(queueID string) {
+	j.l.Lock()
+	defer j.l.Unlock()
+
 	j.workerCount[queueID]--
 
 	_, queueEmpty := j.queues[queueID]
