@@ -1735,7 +1735,7 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 // to only create one lock.  Instead, we'll create locks on-demand in an atomic fashion.
 //
 // Acquiring a lock from a leaseEntry is a bad idea because it could change
-// between loading and acquirung the lock. So we only provide an ID-based map, and the
+// between loading and acquiring the lock. So we only provide an ID-based map, and the
 // locking discipline should be:
 //    1. Lock lease
 //    2. Load, or attempt to load, leaseEntry
