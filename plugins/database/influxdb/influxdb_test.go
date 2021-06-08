@@ -3,7 +3,6 @@ package influxdb
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"net/url"
 	"os"
 	"reflect"
@@ -16,6 +15,7 @@ import (
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	influx "github.com/influxdata/influxdb/client/v2"
+	"github.com/stretchr/testify/require"
 )
 
 const createUserStatements = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`

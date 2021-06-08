@@ -64,7 +64,7 @@ func (i *Influxdb) getConnection(ctx context.Context) (influx.Client, error) {
 
 func (i *Influxdb) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (resp dbplugin.InitializeResponse, err error) {
 	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
-     if err != nil {
+	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
 	}
 	if usernameTemplate == "" {
