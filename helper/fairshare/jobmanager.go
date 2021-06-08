@@ -15,18 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
-/*
-Future Work:
-- track workers per queue. this will involve things like:
-	- somehow wrap the Execute/OnFailure functions to increment counter when
-		they start running, and decrement when they stop running
-		-- put a queue.IncrementCounter() call at the beginning
-		-- call the provided work function in the middle
-		-- put a queue.DecrementCounter() call at the end
-	- job has a queueID or reference to the queue
-- queue only removed when empty AND no workers
-*/
-
 type JobManager struct {
 	// TODO check if queuesIndex is still needed
 	name              string
@@ -51,7 +39,7 @@ type JobManager struct {
 	// waitgroup for testing stop functionality
 	wg sync.WaitGroup
 
-	// protects `queues`, `queuesIndex`, `lastQueueAccessed`
+	// protects `queues`, `workerCount`, `queuesIndex`, `lastQueueAccessed`
 	l sync.RWMutex
 }
 
@@ -149,6 +137,8 @@ func (j *JobManager) GetPendingJobCount() int {
 
 // GetWorkerCounts() returns a map of queue ID to number of active workers
 func (j *JobManager) GetWorkerCounts() map[string]int {
+	j.l.RLock()
+	defer j.l.RUnlock()
 	return j.workerCount
 }
 
@@ -244,7 +234,7 @@ func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 	numTotalWorkers := float64(j.workerPool.numWorkers)
 	maxWorkersPerQueue := math.Ceil(0.9 * numTotalWorkers / numActiveQueues)
 
-	numWorkersPerQueue := j.GetWorkerCounts()
+	numWorkersPerQueue := j.workerCount
 
 	return numWorkersPerQueue[queueID] >= int(maxWorkersPerQueue)
 }
@@ -255,7 +245,7 @@ func (j *JobManager) sortByNumWorkers() []string {
 	out := make([]string, len(j.queues))
 	copy(out, j.queuesIndex)
 
-	workersPerQueue := j.GetWorkerCounts()
+	workersPerQueue := j.workerCount
 
 	sort.Slice(out, func(i, j int) bool {
 		if workersPerQueue[out[i]] == workersPerQueue[out[j]] {
