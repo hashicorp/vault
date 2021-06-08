@@ -646,7 +646,11 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 		if revokeLease {
 			// Force the revocation and skip going through the token store
 			// again
+
+			leaseLock := m.lockForLeaseID(leaseID)
+			leaseLock.Lock()
 			err = m.revokeCommon(ctx, leaseID, true, true)
+			leaseLock.Unlock()
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke an invalid lease with ID %q: %w", leaseID, err))
 				return
@@ -947,8 +951,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		// Acquire lease for this lock
 		// If skipToken is true, then we're either being (1) called via RevokeByToken, so
 		// probably the lock is already held, and if we re-acquire we get deadlock, or
-		// (2) called by tidy, in which case the lock is not held.
-		// Is it worth separating those cases out, or is (2) OK to proceed unlocked?
+		// (2) called by tidy, in which case the lock is held by the tidy thread.
 		leaseLock := m.lockForLeaseID(leaseID)
 		leaseLock.Lock()
 		defer leaseLock.Unlock()
