@@ -22,9 +22,6 @@ jobs:
         key: package-cbdbdba3a25dc848c96b3600c11eff858392b7b1-{{checksum ".buildcache/cache-keys/package-cbdbdba3a25dc848c96b3600c11eff858392b7b1"}}
         name: Restore package cache
     - restore_cache:
-        key: package-97a54b601b4f8e95e365b6cbfb7ced2db20a19fb-{{checksum ".buildcache/cache-keys/package-97a54b601b4f8e95e365b6cbfb7ced2db20a19fb"}}
-        name: Restore package cache
-    - restore_cache:
         key: package-0724dc55f36e7d43ff29c7712c868c97495e1093-{{checksum ".buildcache/cache-keys/package-0724dc55f36e7d43ff29c7712c868c97495e1093"}}
         name: Restore package cache
     - restore_cache:
@@ -76,20 +73,20 @@ jobs:
         command: ls -lahR .buildcache
         name: List Build Cache
     - run:
-        command: cp packages*.lock/pkgs.yml lockfile-c92e36137d5c5886.yml
+        command: cp packages*.lock/pkgs.yml lockfile-295bfc01d2f779fc.yml
         name: Update Lockfile Name
     - run:
-        command: tar -czf packages-c92e36137d5c5886.tar.gz .buildcache/packages lockfile-c92e36137d5c5886.yml
+        command: tar -czf packages-295bfc01d2f779fc.tar.gz .buildcache/packages lockfile-295bfc01d2f779fc.yml
         name: Create Raw Package Tarball
     - run:
-        command: tar -czf meta-c92e36137d5c5886.tar.gz .buildcache/packages/store/*.json lockfile-c92e36137d5c5886.yml
+        command: tar -czf meta-295bfc01d2f779fc.tar.gz .buildcache/packages/store/*.json lockfile-295bfc01d2f779fc.yml
         name: Create Metadata Tarball
     - store_artifacts:
-        path: lockfile-c92e36137d5c5886.yml
+        path: lockfile-295bfc01d2f779fc.yml
     - store_artifacts:
-        path: packages-c92e36137d5c5886.tar.gz
+        path: packages-295bfc01d2f779fc.tar.gz
     - store_artifacts:
-        path: meta-c92e36137d5c5886.tar.gz
+        path: meta-295bfc01d2f779fc.tar.gz
     - store_artifacts:
         path: .buildcache/packages
     environment:
@@ -171,84 +168,6 @@ jobs:
         name: List packages
     - save_cache:
         key: package-cbdbdba3a25dc848c96b3600c11eff858392b7b1-{{checksum ".buildcache/cache-keys/package-cbdbdba3a25dc848c96b3600c11eff858392b7b1"}}
-        name: Save package cache
-        paths:
-        - .buildcache/packages/store
-  darwin_arm64_package:
-    docker:
-    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    environment:
-    - AUTO_INSTALL_TOOLS: 'YES'
-    - BUILDKIT_PROGRESS: plain
-    - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 97a54b601b4f8e95e365b6cbfb7ced2db20a19fb
-    steps:
-    - setup_remote_docker:
-        docker_layer_caching: false
-        version: 19.03.12
-    - add_ssh_keys:
-        fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
-    - checkout:
-        path: .
-    - run:
-        command: make -C packages*.lock write-package-cache-key
-        name: Write package cache key
-    - restore_cache:
-        key: package-97a54b601b4f8e95e365b6cbfb7ced2db20a19fb-{{checksum ".buildcache/cache-keys/package-97a54b601b4f8e95e365b6cbfb7ced2db20a19fb"}}
-        name: Restore package cache
-    - run:
-        command: |2
-
-          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
-            echo "No package found, continuing with build."
-            exit 0
-          fi
-          echo "Package already cached, skipping build."
-          circleci-agent step halt
-        name: Check cache status
-    - run:
-        command: make -C packages*.lock write-builder-cache-keys
-        name: Write builder layer cache keys
-    - restore_cache:
-        key: copy-source_f4d8_{{checksum ".buildcache/cache-keys/copy-source-f4d858fefd04dbc5852777d5c75257a58a52e1ad"}}
-        keys:
-        - warm-go-build-vendor-cache_dcbb_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-dcbb2085ceca726bbb20e68e590b7745bdfc34a3"}}
-        - build-static-assets_373e_{{checksum ".buildcache/cache-keys/build-static-assets-373ea9e750a0bd0fe70f0e11fc92d848bfe14dbc"}}
-        - build-ui_993e_{{checksum ".buildcache/cache-keys/build-ui-993e50cbb3d37120b1391442177827b615c77f82"}}
-        - ui-dependencies_5132_{{checksum ".buildcache/cache-keys/ui-dependencies-513283a98d2b8a1570bf027e95364b888df651a9"}}
-        - install-yarn_6b98_{{checksum ".buildcache/cache-keys/install-yarn-6b98fb22387ba58bb85acb0cc5909e6b6b2dbfea"}}
-        - set-workdir_577a_{{checksum ".buildcache/cache-keys/set-workdir-577aad3893a929a48a2ce7319179c253507dee67"}}
-        - install-go-tools_a10e_{{checksum ".buildcache/cache-keys/install-go-tools-a10e38af920222100809a5d52ac413e922688b48"}}
-        - install-go_d3cf_{{checksum ".buildcache/cache-keys/install-go-d3cfbf34edb1074513e0377a86595f5e740cd03b"}}
-        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Builder Image Cache: copy-source'
-    - run:
-        command: make -C packages*.lock load-builder-cache
-        name: Load whatever builder cache we have (if any) into the Docker daemon
-        no_output_timeout: 30m
-    - run:
-        command: |2-
-
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
-          eval "$(ssh-agent -s)"
-          if [ -f "$KEYFILE" ]; then
-            ssh-add "$KEYFILE"
-          else
-            echo "==> INFO: SSH key for github.com not found"
-            echo "    Attempts to access private repositories from within"
-            echo "    the build will fail, e.g. for private go modules, or"
-            echo "    attempts to directly clone private repositories."
-          fi
-
-          make -C packages*.lock package
-        name: Compile Package
-    - run:
-        command: ls -lahR .buildcache/packages
-        name: List packages
-    - save_cache:
-        key: package-97a54b601b4f8e95e365b6cbfb7ced2db20a19fb-{{checksum ".buildcache/cache-keys/package-97a54b601b4f8e95e365b6cbfb7ced2db20a19fb"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -2488,7 +2407,7 @@ jobs:
     - GO_TAGS: ''
     - GO111MODULE: 'off'
 workflows:
-  build-c92e36137d5c5886:
+  build-295bfc01d2f779fc:
     jobs:
     - build-common-layers
     - darwin_amd64_package:
@@ -2497,7 +2416,6 @@ workflows:
     - bundle-releases:
         requires:
         - darwin_amd64_package
-        - darwin_arm64_package
         - freebsd_386_package
         - freebsd_amd64_package
         - freebsd_arm_package
@@ -2512,9 +2430,6 @@ workflows:
         - solaris_amd64_package
         - windows_386_package
         - windows_amd64_package
-    - darwin_arm64_package:
-        requires:
-        - build-common-layers
     - freebsd_386_package:
         requires:
         - build-common-layers
