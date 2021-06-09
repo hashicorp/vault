@@ -175,9 +175,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
 
-			// If unlimited retry was not specified, then we return after
-			// stopping the runner
-			if !ts.config.AgentConfig.Vault.Retry.TemplateUnlimitedRetries {
+			// Return after stopping the runner if exit on retry failure was
+			// specified
+			if ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
 
@@ -266,9 +266,9 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
 		attempts = 0
 
-		// If unlimited template retries is specified, let consul-template
-		// handle retry and backoff logic
-		if sc.AgentConfig.Vault.Retry.TemplateUnlimitedRetries {
+		// If we don't want exit on template retry failure (i.e. unlimited
+		// retries), let consul-template handle retry and backoff logic
+		if sc.AgentConfig.TemplateConfig != nil && !sc.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 			attempts = ctconfig.DefaultRetryAttempts
 		}
 

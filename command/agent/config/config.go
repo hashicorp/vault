@@ -22,11 +22,12 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth      *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth bool                       `hcl:"exit_after_auth"`
-	Cache         *Cache                     `hcl:"cache"`
-	Vault         *Vault                     `hcl:"vault"`
-	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth       *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth  bool                       `hcl:"exit_after_auth"`
+	Cache          *Cache                     `hcl:"cache"`
+	Vault          *Vault                     `hcl:"vault"`
+	TemplateConfig *TemplateConfig            `hcl:"template_config"`
+	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
 func (c *Config) Prune() {
@@ -44,8 +45,7 @@ func (c *Config) Prune() {
 }
 
 type Retry struct {
-	NumRetries               int  `hcl:"num_retries"`
-	TemplateUnlimitedRetries bool `hcl:"template_unlimited_retries"`
+	NumRetries int `hcl:"num_retries"`
 }
 
 // Vault contains configuration for connecting to Vault servers
@@ -115,6 +115,11 @@ type Sink struct {
 	Config     map[string]interface{}
 }
 
+// TemplateConfig defines global behaviors around template
+type TemplateConfig struct {
+	ExitOnRetryFailure bool `hcl:"exit_on_retry_failure"`
+}
+
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
@@ -176,6 +181,10 @@ func LoadConfig(path string) (*Config, error) {
 
 	if err := parseCache(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'cache':%w", err)
+	}
+
+	if err := parseTemplateConfig(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
 	}
 
 	if err := parseTemplates(result, list); err != nil {
@@ -549,6 +558,31 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.AutoAuth.Sinks = ts
+	return nil
+}
+
+func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
+	name := "template_config"
+
+	templateConfigList := list.Filter(name)
+	if len(templateConfigList.Items) == 0 {
+		return nil
+	}
+
+	if len(templateConfigList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
+	}
+
+	// Get our item
+	item := templateConfigList.Items[0]
+
+	var cfg TemplateConfig
+	if err := hcl.DecodeObject(&cfg, item.Val); err != nil {
+		return err
+	}
+
+	result.TemplateConfig = &cfg
+
 	return nil
 }
 
