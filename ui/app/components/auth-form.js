@@ -127,6 +127,31 @@ export default Component.extend(DEFAULTS, {
       return BACKENDS.findBy('type', selectedAuth);
     }
   ),
+  selectedAuthType: computed(
+    'wrappedToken',
+    'methods',
+    'methods.[]',
+    'selectedAuth',
+    'selectedAuthIsPath',
+    function() {
+      let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+      if (!methods && !wrappedToken) {
+        return '';
+      }
+      console.log({ selectedAuth });
+      if (keyIsPath) {
+        return methods.findBy('path', selectedAuth)?.type;
+      }
+      return selectedAuth;
+    }
+  ),
+
+  currentAuth: computed('selectedAuthType', 'methods', 'methods.[]', function() {
+    let { methods, selectedAuthType } = this;
+    console.log({ methods });
+    console.log({ selectedAuthType });
+    return {};
+  }),
 
   providerName: computed('selectedAuthBackend.type', function() {
     if (!this.selectedAuthBackend) {
