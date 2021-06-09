@@ -2,16 +2,16 @@ import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    let transformedPayload = { autoloaded: payload.autoloading_used, license_id: 'no-license' };
-    if (payload.autoloaded) {
+    let transformedPayload = { autoloaded: payload.data.autoloading_used, license_id: 'no-license' };
+    if (payload.data.autoloaded) {
       transformedPayload = {
         ...transformedPayload,
-        ...payload.autoloaded,
+        ...payload.data.autoloaded,
       };
-    } else if (payload.stored) {
+    } else if (payload.data.stored) {
       transformedPayload = {
         ...transformedPayload,
-        ...payload.stored,
+        ...payload.data.stored,
       };
     }
     transformedPayload.id = transformedPayload.license_id;
