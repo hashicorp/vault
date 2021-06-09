@@ -232,7 +232,7 @@ func (j *JobManager) sortByNumWorkers() []string {
 
 	sort.Slice(out, func(i, j int) bool {
 		// TODO should we be explicitly breaking ties with the queueID, or
-		// might we want some randomness?
+		// might we want some randomness from the map iter order?
 		// I think it's probably fine since it only breaks ties between queues
 		// with equal workers assigned, and makes testing much easier
 		if workersPerQueue[out[i]] == workersPerQueue[out[j]] {
