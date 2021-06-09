@@ -237,7 +237,7 @@ layers:
   - name: build-ui
     source-include: ui/
     dockerfile: |-
-      RUN cd ui && yarn --verbose run build
+      RUN { while true; do sleep 30; echo keepalive; done; } & cd ui && yarn --verbose run build
   - name: build-static-assets
     source-include: Makefile
     dockerfile: |-
