@@ -229,13 +229,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	// Process is root check
 	isRootContext, isRootSpan := diagnose.StartSpan(ctx, "is-root")
-	isRoot, err := diagnose.IsProcRoot()
-	if err == nil || !strings.Contains(err.Error(), diagnose.OSCheckIncompatibilityError) {
-		if isRoot {
-			diagnose.SpotWarn(isRootContext, "is-root", "vault is running as root")
-		} else {
-			diagnose.SpotOk(isRootContext, "is-root", "vault is not running as root")
-		}
+	if diagnose.IsProcRoot() {
+		diagnose.SpotWarn(isRootContext, "is-root", "vault is running as root")
+	} else {
+		diagnose.SpotOk(isRootContext, "is-root", "vault is not running as root")
 	}
 	isRootSpan.End()
 
