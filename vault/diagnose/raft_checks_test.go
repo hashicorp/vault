@@ -2,9 +2,77 @@ package diagnose
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestRaftFolderPerms(t *testing.T) {
+	// Make sure overpermissive permissions are caught
+	err := os.Mkdir("diagnose", 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, _ := os.Stat("diagnose")
+
+	if !IsDir(info) {
+		t.Fatal("directory was reported to not be a directory")
+	}
+
+	// Create a boltDB formatted file and make sure isDB returns true
+	fullDBPath := "diagnose/" + DatabaseFilename
+	_, err = os.Create(fullDBPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !HasDB(fullDBPath) {
+		t.Fatal("well-formatted database path is not accepted by DB check function")
+	}
+
+	hasCorrectPerms, errs := HasCorrectFilePerms(info)
+	if hasCorrectPerms {
+		t.Fatal("overpermissive folder returns correct permissions")
+	}
+	if len(errs) != 1 || !strings.Contains(errs[0], FileTooPermissiveWarning) {
+		t.Fatalf("wrong error or number of errors returned: %v", errs)
+	}
+
+	// Make sure underpermissiveness is caught
+	err = os.Chmod("diagnose", 0100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, _ = os.Stat("diagnose")
+	hasCorrectPerms, errs = HasCorrectFilePerms(info)
+	if hasCorrectPerms {
+		t.Fatal("underpermissive folder returns correct permissions")
+	}
+	if len(errs) != 1 || !strings.Contains(errs[0], FilePermissionsMissingWarning) {
+		t.Fatalf("wrong error or number of errors returned: %v", errs)
+	}
+
+	// Make sure the correct permissions passes
+
+	err = os.Chmod("diagnose", 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, _ = os.Stat("diagnose")
+	hasCorrectPerms, errs = HasCorrectFilePerms(info)
+	if errs != nil || !hasCorrectPerms {
+		t.Fatal("folder with correct perms returns error")
+	}
+
+	// Make sure we can clean up the diagnose folder
+	os.Chmod("diagnose", 0777)
+
+	// Clean up test diagnose folder
+	err = os.RemoveAll("diagnose")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestRaftStorageQuorum(t *testing.T) {
 	m := mockStorageBackend{}
