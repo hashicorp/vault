@@ -58,6 +58,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   isV2: false,
 
   validationError: null,
+  validationMessage: '',
 
   init() {
     this._super(...arguments);
@@ -92,6 +93,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (name === 'path') {
       if (!value) {
         this.validationError.path = "Secret path can't be blank";
+        this.set('validationMessage', this.validationError.path);
       }
     }
     if (name === 'maxVersions') {
