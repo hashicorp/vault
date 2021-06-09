@@ -209,6 +209,7 @@ func (j *JobManager) getNextQueue() (string, bool) {
 
 // returns true if there are already too many workers on this queue
 // note: this must be called with j.l held (at least for read)
+// down the road we may want to factor in queue length relative to num queues
 func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 	numActiveQueues := float64(len(j.queues))
 	numTotalWorkers := float64(j.workerPool.numWorkers)
@@ -303,7 +304,7 @@ func (j *JobManager) assignWork() {
 				return
 			case <-j.newWork:
 				// listen for wake-up when an emtpy job manager has been given work
-			case <-time.After(1 * time.Second):
+			case <-time.After(50 * time.Millisecond):
 				// periodically check if new workers can be assigned. with the
 				// fairsharing worker distribution it can be the case that there
 				// is work waiting, but no queues are elligible for another worker
