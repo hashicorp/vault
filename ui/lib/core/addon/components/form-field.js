@@ -35,6 +35,7 @@ export default Component.extend({
   subText: '',
   // This is only used internally for `optional-text` editType
   showInput: false,
+  validationMessage: false,
 
   init() {
     this._super(...arguments);
@@ -147,12 +148,24 @@ export default Component.extend({
         this.send('setAndBroadcast', path, null);
       }
     },
-
-    handleKeyUp(value) {
-      if (!this.onKeyUp) {
+    handleKeyUp(name, value) {
+      if (!this.onKeyUp && !this.validationError) {
         return;
       }
-      this.onKeyUp(value);
+      this.onKeyUp(name, value);
+
+      let keys = Object.keys(this.validationError);
+      if (this.validationError?.[name]) {
+        keys.forEach(key => {
+          if (key === name) {
+            this.set('validationMessage', this.validationError[name]);
+          } else {
+            this.set('validationMessage', false);
+          }
+        });
+      } else {
+        this.set('validationMessage', false);
+      }
     },
   },
 });

@@ -57,6 +57,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   hasLintError: false,
   isV2: false,
 
+  validationError: null,
+
   init() {
     this._super(...arguments);
     let secrets = this.model.secretData;
@@ -75,28 +77,39 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
-
     if (this.mode === 'edit') {
       this.send('addRow');
     }
+    let errorObject = {
+      path: '',
+      maxVersions: '',
+    };
+    this.set('validationError', errorObject);
   },
 
-  waitForKeyUp: task(function*(value) {
-    // ARG TODO replace with Validation
-    // if (type === 'create' && isBlank(model.path || model.id)) {
-    //   this.flashMessages.danger('Please provide a path for the secret');
-    //   return;
-    // }
-
-    if (value) {
-      this.model.set('maxVersions', value);
+  waitForKeyUp: task(function*(name, value) {
+    // path and key are not on the model (there via key-mixin) doing custom validations here instead of cp validations
+    if (name === 'path') {
+      if (!value) {
+        this.validationError.path = "Secret path can't be blank";
+      }
     }
-
-    console.log(this.model.validations.attrs.maxVersions.isValid, 'fiond value?');
+    if (name === 'maxVersions') {
+      // checking for value because value is blank on first loading, no keyup event has occurred and default is 10.
+      if (value) {
+        let number = Number(value);
+        this.model.set('maxVersions', number);
+      }
+      // cannot use async validators method because it causes a delay of one onkeyup
+      if (!this.model.validations.attrs.maxVersions.isValid) {
+        this.validationError.maxVersions = this.model.validations.attrs.maxVersions.message;
+      } else {
+        this.validationError.maxVersions = '';
+      }
+    }
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
-      // Validation through cp-validators
     }
   })
     .on('didInsertElement')
@@ -322,23 +335,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.send('clearWrappedData');
     },
 
-    createOrUpdateKey(type, event) {
+    createOrUpdateKey(event) {
       event.preventDefault();
-      // const MAXIMUM_VERSIONS = 9999999999999999; // ARG TODO taking care of htis in validation model
-      let model = this.modelForData;
-      // let secret = this.model;
-      // prevent from submitting if there's no key
-      // ARG TODO replace with Validation
-      if (type === 'create' && isBlank(model.path || model.id)) {
-        this.flashMessages.danger('Please provide a path for the secret');
-        return;
-      }
-      // const maxVersions = secret.get('maxVersions');
-      // if (MAXIMUM_VERSIONS < maxVersions) {
-      //   this.flashMessages.danger('Max versions is too large');
-      //   return;
-      // }
-
       this.persistKey(key => {
         let secretKey;
         try {

@@ -7,10 +7,18 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { validator, buildValidations } from 'ember-cp-validations';
 
 const Validations = buildValidations({
-  maxVersions: validator('format', {
-    regex: /[0-9]+/,
-    message: 'Maximum versions must be a number',
-  }),
+  maxVersions: [
+    validator('number', {
+      allowString: false,
+      integer: true,
+      message: 'Maximum versions must be a number',
+    }),
+    validator('length', {
+      min: 1,
+      max: 16,
+      message: 'You cannot go over 16 characters',
+    }),
+  ],
 });
 
 export default Model.extend(KeyMixin, Validations, {

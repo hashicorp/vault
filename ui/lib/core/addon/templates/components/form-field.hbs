@@ -258,8 +258,11 @@
           (action "setAndBroadcast" valuePath)
           value="target.value"
         }}
-        onkeyup={{action "handleKeyUp" value="target.value"}}
-        class="input {{if validationError "has-error-border"}}"
+        onkeyup={{action
+          (action "handleKeyUp" attr.name)
+          value="target.value"
+        }}
+        class="input {{if validationMessage "has-error-border"}}"
         maxLength={{attr.options.characterLimit}} />
       {{!-- Custom Validation --}}
       {{#if attr.options.validationAttr}}
@@ -272,10 +275,10 @@
         {{/if}}
       {{/if}}
       {{!-- Cp Validations Library --}}
-      {{#if validationError}}
+      {{#if validationMessage}}
         <AlertInline 
           @type="danger" 
-          @message={{validationError}} 
+          @message={{validationMessage}} 
           @paddingTop=true
         />
       {{/if}}

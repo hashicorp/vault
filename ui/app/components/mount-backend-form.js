@@ -43,7 +43,7 @@ export default Component.extend({
 
   showEnable: false,
 
-  validationError: false,
+  validationError: '',
 
   init() {
     this._super(...arguments);
@@ -113,25 +113,18 @@ export default Component.extend({
   actions: {
     onKeyUp(value) {
       this.checkPathChangeOnKeyUp(value);
-      if (!this.mountModel.validations.attrs.path.isValid) {
-        this.set('validationError', this.mountModel.validations.attrs.path.messages);
-      } else {
-        this.set('validationError', false);
-      }
+      this.mountModel.validate().then(({ validations }) => {
+        if (validations.get('isValid')) {
+          this.set('validationError', '');
+        } else {
+          this.set('validationError', this.mountModel.validations.attrs.path.message);
+        }
+      });
     },
     onTypeChange(path, value) {
       if (path === 'type') {
         this.wizard.set('componentState', value);
         this.checkPathChangeOnFocusOut(value);
-      }
-      if (!this.mountModel.validations.attrs.path.isValid) {
-        this.set('validationError', this.mountModel.validations.attrs.path.messages);
-      } else {
-        this.set('validationError', false);
-      }
-      console.log(this.mountModel.path, 'PATH');
-      if (!this.mountModel.validations.attrs.path.isValid) {
-        this.set('validationError', this.mountModel.validations.attrs.path.messages);
       }
     },
 
