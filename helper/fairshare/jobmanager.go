@@ -231,7 +231,7 @@ func (j *JobManager) sortByNumWorkers() []string {
 	workersPerQueue := j.workerCount
 
 	sort.Slice(out, func(i, j int) bool {
-		// TODO should we be explicitly breaking times with the queueID, or
+		// TODO should we be explicitly breaking ties with the queueID, or
 		// might we want some randomness?
 		// I think it's probably fine since it only breaks ties between queues
 		// with equal workers assigned, and makes testing much easier
