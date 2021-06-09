@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
@@ -16,11 +17,8 @@ import (
 )
 
 type JobManager struct {
-	// TODO check if queuesIndex is still needed
-	name              string
-	queues            map[string]*list.List
-	queuesIndex       []string
-	lastQueueAccessed int
+	name   string
+	queues map[string]*list.List
 
 	quit    chan struct{}
 	newWork chan struct{} // must be buffered
@@ -39,7 +37,7 @@ type JobManager struct {
 	// waitgroup for testing stop functionality
 	wg sync.WaitGroup
 
-	// protects `queues`, `workerCount`, `queuesIndex`, `lastQueueAccessed`
+	// protects `queues`, `workerCount`
 	l sync.RWMutex
 }
 
@@ -61,16 +59,14 @@ func NewJobManager(name string, numWorkers int, l log.Logger, metricSink *metric
 	wp := newDispatcher(fmt.Sprintf("%s-dispatcher", name), numWorkers, l)
 
 	j := JobManager{
-		name:              name,
-		queues:            make(map[string]*list.List),
-		queuesIndex:       make([]string, 0),
-		lastQueueAccessed: -1,
-		quit:              make(chan struct{}),
-		newWork:           make(chan struct{}, 1),
-		workerPool:        wp,
-		workerCount:       make(map[string]int),
-		logger:            l,
-		metricSink:        metricSink,
+		name:        name,
+		queues:      make(map[string]*list.List),
+		quit:        make(chan struct{}),
+		newWork:     make(chan struct{}, 1),
+		workerPool:  wp,
+		workerCount: make(map[string]int),
+		logger:      l,
+		metricSink:  metricSink,
 	}
 
 	j.logger.Trace("created job manager", "name", name, "pool_size", numWorkers)
@@ -110,7 +106,6 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 
 	if _, ok := j.queues[queueID]; !ok {
 		j.addQueue(queueID)
-		j.workerCount[queueID] = 0
 	}
 
 	j.queues[queueID].PushBack(job)
@@ -166,8 +161,10 @@ func (j *JobManager) getNextJob() (Job, string) {
 		return nil, ""
 	}
 
-	queueID, queueIdx, _ := j.getNextQueueLegacy()
-	j.lastQueueAccessed = queueIdx
+	queueID, canAssignWorker := j.getNextQueue()
+	if !canAssignWorker {
+		return nil, ""
+	}
 
 	jobElement := j.queues[queueID].Front()
 	out := j.queues[queueID].Remove(jobElement)
@@ -182,49 +179,32 @@ func (j *JobManager) getNextJob() (Job, string) {
 	if j.queues[queueID].Len() == 0 {
 		// we remove the empty queue, but we don't remove the worker count
 		// in case we are still working on previous jobs from this queue.
-
-		// worker count cleanup is handled in *JobManager.decrementWorkerCount
-
-		j.removeLastQueueAccessed()
+		// worker count cleanup is handled in j.decrementWorkerCount
+		delete(j.queues, queueID)
 	}
 
 	return out.(Job), queueID
 }
 
-// returns the next queue to assign work from, and a bool if there is work to be assigned
-// note: this must be called with j.l held
-// TODO remove during legacy strategy cleanup
-func (j *JobManager) getNextQueueLegacy() (string, int, bool) {
-	queueIdx := (j.lastQueueAccessed + 1) % len(j.queuesIndex)
-	return j.queuesIndex[queueIdx], queueIdx, true
-}
-
-// returns the next queue to assign work from, and a bool if there is a queue that
-// can have a worker assigned.
+// returns the next queue to assign work from, and a bool if there is a queue
+// that can have a worker assigned.
 // the intent is to avoid over-allocating work from specific queues, as
 // outlined in RFC VLT-145
-// TODO update doc
 // note: this must be called with j.l held
-func (j *JobManager) getNextQueueFairshare() (string, int, bool) {
+func (j *JobManager) getNextQueue() (string, bool) {
 	var nextQueue string
-	var haveWork bool
+	var canAssignWorker bool
 
 	queueIDsByIncreasingWorkers := j.sortByNumWorkers()
 	for _, queueID := range queueIDsByIncreasingWorkers {
-		if j.queues[queueID].Len() < 1 {
-			// TODO this shouldn't happen as we prune empty queues - verify and remove
-			continue
-		}
-
 		if !j.queueWorkersSaturated(queueID) {
 			nextQueue = queueID
-			haveWork = true
+			canAssignWorker = true
 			break
 		}
 	}
 
-	// TODO update this 0 return - we don't have the queue index here
-	return nextQueue, 0, haveWork
+	return nextQueue, canAssignWorker
 }
 
 // returns true if there are already too many workers on this queue
@@ -242,12 +222,17 @@ func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 // sortByNumWorkers returns queueIDs in order of increasing number of workers
 // note: this must be called with j.l held
 func (j *JobManager) sortByNumWorkers() []string {
-	out := make([]string, len(j.queues))
-	copy(out, j.queuesIndex)
+	out := make([]string, 0, len(j.queues))
+	for queueID := range j.queues {
+		out = append(out, queueID)
+	}
 
 	workersPerQueue := j.workerCount
 
 	sort.Slice(out, func(i, j int) bool {
+		// TODO do we want this explicity, or do we want some randomness?
+		// I think it's fine since it only breaks ties between number of workers,
+		// and it makes it easier to test
 		if workersPerQueue[out[i]] == workersPerQueue[out[j]] {
 			return out[i] < out[j]
 		}
@@ -300,57 +285,46 @@ func (j *JobManager) assignWork() {
 
 				job, queueID := j.getNextJob()
 				if job != nil {
-					j.workerPool.dispatch(job, func() {
-						j.incrementWorkerCount(queueID)
-					}, func() {
-						j.decrementWorkerCount(queueID)
-					})
+					j.workerPool.dispatch(job,
+						func() {
+							j.incrementWorkerCount(queueID)
+						},
+						func() {
+							j.decrementWorkerCount(queueID)
+						})
 				} else {
 					break
 				}
 			}
 
-			// listen for wake-up when an emtpy job manager has been given work
 			select {
 			case <-j.quit:
 				j.wg.Done()
 				return
 			case <-j.newWork:
+				// listen for wake-up when an emtpy job manager has been given work
+			case <-time.After(1 * time.Second):
+				// periodically check if new workers can be assigned. with the
+				// fairsharing worker distribution it can be the case that there
+				// is work waiting, but no queues are elligible for another worker
 			}
 		}
 	}()
 }
 
 // addQueue generates a new queue if a queue for `queueID` doesn't exist
+// it also starts tracking workers on that queue, if not already tracked
 // note: this must be called with l held for write
 func (j *JobManager) addQueue(queueID string) {
 	if _, ok := j.queues[queueID]; !ok {
 		j.queues[queueID] = list.New()
-		j.queuesIndex = append(j.queuesIndex, queueID)
-	}
-}
-
-// removeLastQueueAccessed removes the queue and index map for the last queue
-// accessed. It is to be used when the last queue accessed has emptied.
-// note: this must be called with l held for write
-func (j *JobManager) removeLastQueueAccessed() {
-	if j.lastQueueAccessed == -1 || j.lastQueueAccessed > len(j.queuesIndex)-1 {
-		j.logger.Warn("call to remove queue out of bounds", "idx", j.lastQueueAccessed)
-		return
 	}
 
-	queueID := j.queuesIndex[j.lastQueueAccessed]
-
-	// remove the queue
-	delete(j.queues, queueID)
-
-	// remove the index for the queue
-	j.queuesIndex = append(j.queuesIndex[:j.lastQueueAccessed], j.queuesIndex[j.lastQueueAccessed+1:]...)
-
-	// correct the last queue accessed for round robining
-	if j.lastQueueAccessed > 0 {
-		j.lastQueueAccessed--
-	} else {
-		j.lastQueueAccessed = len(j.queuesIndex) - 1
+	// it's possible the queue ran out of work and was pruned, but there were
+	// still workers operating on data formerly in that queue, which were still
+	// being tracked. if that is the case, we don't want to wipe out that worker
+	// count when the queue is re-initialized.
+	if _, ok := j.workerCount[queueID]; !ok {
+		j.workerCount[queueID] = 0
 	}
 }

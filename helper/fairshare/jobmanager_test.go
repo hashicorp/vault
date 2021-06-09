@@ -51,9 +51,6 @@ func TestJobManager_NewJobManager(t *testing.T) {
 		if j.queues == nil {
 			t.Errorf("tc %d: queues not set up properly", tcNum)
 		}
-		if j.queuesIndex == nil {
-			t.Errorf("tc %d: queues index not set up properly", tcNum)
-		}
 		if j.quit == nil {
 			t.Errorf("tc %d: quit channel not set up properly", tcNum)
 		}
@@ -312,10 +309,10 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 		j.AddJob(&job, queueID)
 
 		if _, ok := expected[queueID]; !ok {
-			expected[queueID] = 1
-		} else {
-			expected[queueID]++
+			expected[queueID] = 0
 		}
+
+		expected[queueID]++
 	}
 
 	pendingJobs := j.GetWorkQueueLengths()
@@ -324,81 +321,7 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 	}
 }
 
-func TestJobManager_removeLastQueueAccessed(t *testing.T) {
-	j := NewJobManager("job-mgr-test", 1, newTestLogger("jobmanager-test"), nil)
-
-	j.addQueue("queue-0")
-	j.addQueue("queue-1")
-	j.addQueue("queue-2")
-
-	testCases := []struct {
-		lastQueueAccessed        int
-		updatedLastQueueAccessed int
-		len                      int
-		expectedQueues           []string
-	}{
-		{
-			// remove with bad index (too low)
-			lastQueueAccessed:        -1,
-			updatedLastQueueAccessed: -1,
-			len:                      3,
-			expectedQueues:           []string{"queue-0", "queue-1", "queue-2"},
-		},
-		{
-			// remove with bad index (too high)
-			lastQueueAccessed:        3,
-			updatedLastQueueAccessed: 3,
-			len:                      3,
-			expectedQueues:           []string{"queue-0", "queue-1", "queue-2"},
-		},
-		{
-			// remove queue-1 (index 1)
-			lastQueueAccessed:        1,
-			updatedLastQueueAccessed: 0,
-			len:                      2,
-			expectedQueues:           []string{"queue-0", "queue-2"},
-		},
-		{
-			// remove queue-0 (index 0)
-			lastQueueAccessed:        0,
-			updatedLastQueueAccessed: 0,
-			len:                      1,
-			expectedQueues:           []string{"queue-2"},
-		},
-		{
-			// remove queue-1 (index 1)
-			lastQueueAccessed:        0,
-			updatedLastQueueAccessed: -1,
-			len:                      0,
-			expectedQueues:           []string{},
-		},
-	}
-
-	j.l.Lock()
-	defer j.l.Unlock()
-	for _, tc := range testCases {
-		j.lastQueueAccessed = tc.lastQueueAccessed
-		j.removeLastQueueAccessed()
-
-		if j.lastQueueAccessed != tc.updatedLastQueueAccessed {
-			t.Errorf("last queue access update failed. expected %d, got %d", tc.updatedLastQueueAccessed, j.lastQueueAccessed)
-		}
-		if len(j.queuesIndex) != tc.len {
-			t.Fatalf("queue index update failed. expected %d elements, found %v", tc.len, j.queues)
-		}
-		if len(j.queues) != len(tc.expectedQueues) {
-			t.Fatalf("bad amount of queues. expected %d, found %v", len(tc.expectedQueues), j.queues)
-		}
-
-		for _, q := range tc.expectedQueues {
-			if _, ok := j.queues[q]; !ok {
-				t.Errorf("bad queue. expected %s in %v", q, j.queues)
-			}
-		}
-	}
-}
-
-func TestJobManager_getNextJob(t *testing.T) {
+func TestJobManager_EndToEnd(t *testing.T) {
 	testCases := []struct {
 		name    string
 		queueID string
@@ -425,51 +348,10 @@ func TestJobManager_getNextJob(t *testing.T) {
 		},
 	}
 
-	// we add the jobs before starting the workers, so we'd expect the round
-	// robin to pick the least-recently-added job from each queue, and cycle
-	// through queues in a round-robin fashion. jobs would appear on the queues
-	// as illustrated below, and we expect to round robin as:
-	// queue-1 -> queue-2 -> queue-3 -> queue-1 ...
-	//
-	// queue-1 [job-3, job-1]
-	// queue-2 [job-2]
-	// queue-3 [job-5, job-4]
-
-	// ... where jobs are pushed to the left side and popped from the right side
-
-	expectedOrder := []string{"job-1", "job-2", "job-4", "job-3", "job-5"}
-
-	// use one worker to guarantee ordering
-	numWorkers := 1
-	resultsCh := make(chan string)
-	defer close(resultsCh)
-
-	j := NewJobManager("test-job-mgr", numWorkers, newTestLogger("jobmanager-test"), nil)
-
-	doneCh := make(chan struct{})
-	var mu sync.Mutex
-	order := make([]string, 0)
-	timeout := time.After(5 * time.Second)
-
-	go func() {
-		for {
-			select {
-			case res, ok := <-resultsCh:
-				if !ok {
-					return
-				}
-
-				mu.Lock()
-				order = append(order, res)
-				mu.Unlock()
-			}
-		}
-	}()
+	j := NewJobManager("test-job-mgr", 1, newTestLogger("jobmanager-test"), nil)
 
 	var wg sync.WaitGroup
 	ex := func(name string) error {
-		resultsCh <- name
-		time.Sleep(50 * time.Millisecond)
 		wg.Done()
 		return nil
 	}
@@ -484,22 +366,18 @@ func TestJobManager_getNextJob(t *testing.T) {
 	j.Start()
 	defer j.Stop()
 
+	doneCh := make(chan struct{})
 	go func() {
 		wg.Wait()
 		doneCh <- struct{}{}
 	}()
 
+	timeout := time.After(5 * time.Second)
 	select {
 	case <-doneCh:
 		break
 	case <-timeout:
 		t.Fatal("timed out")
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	if !reflect.DeepEqual(order, expectedOrder) {
-		t.Fatalf("results out of order. \nexpected: %v\ngot: %v", expectedOrder, order)
 	}
 }
 
@@ -510,7 +388,7 @@ func TestFairshare_nilLoggerJobManager(t *testing.T) {
 	}
 }
 
-func TestFairshare_getNextQueueFairshare(t *testing.T) {
+func TestFairshare_getNextQueue(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 18, nil, nil)
 
 	for i := 0; i < 10; i++ {
@@ -531,9 +409,9 @@ func TestFairshare_getNextQueueFairshare(t *testing.T) {
 	expectedOrder := []string{"a", "a", "b", "a", "b", "a", "b", "a", "b", "c"}
 
 	for _, expectedQueueID := range expectedOrder {
-		queueID, _, haveWork := j.getNextQueueFairshare()
+		queueID, canAssignWorker := j.getNextQueue()
 
-		if !haveWork {
+		if !canAssignWorker {
 			t.Fatalf("expected have work true, got false for queue %q", queueID)
 		}
 		if queueID != expectedQueueID {
@@ -542,6 +420,64 @@ func TestFairshare_getNextQueueFairshare(t *testing.T) {
 
 		// simulate a worker being added to that queue
 		j.workerCount[queueID]++
+	}
+}
+
+func TestJobManager_pruneEmptyQueues(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 18, nil, nil)
+
+	// add a few jobs to test out queue pruning
+	// for test simplicity, we'll keep the number of workers per queue at 0
+	testJob := newDefaultTestJob(t, "job-0")
+	j.AddJob(&testJob, "a")
+	j.AddJob(&testJob, "a")
+	j.AddJob(&testJob, "b")
+
+	job, queueID := j.getNextJob()
+	if queueID != "a" || job == nil {
+		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
+	}
+
+	j.l.RLock()
+	if _, ok := j.queues["a"]; !ok {
+		t.Error("expected queue 'a' to exist")
+	}
+	if _, ok := j.queues["b"]; !ok {
+		t.Error("expected queue 'b' to exist")
+	}
+	j.l.RUnlock()
+
+	job, queueID = j.getNextJob()
+	if queueID != "a" || job == nil {
+		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
+	}
+
+	j.l.RLock()
+	if _, ok := j.queues["a"]; ok {
+		t.Error("expected queue 'a' to be pruned")
+	}
+	if _, ok := j.queues["b"]; !ok {
+		t.Error("expected queue 'b' to exist")
+	}
+	j.l.RUnlock()
+
+	job, queueID = j.getNextJob()
+	if queueID != "b" || job == nil {
+		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
+	}
+
+	j.l.RLock()
+	if _, ok := j.queues["a"]; ok {
+		t.Error("expected queue 'a' to be pruned")
+	}
+	if _, ok := j.queues["b"]; ok {
+		t.Error("expected queue 'b' to be pruned")
+	}
+	j.l.RUnlock()
+
+	job, queueID = j.getNextJob()
+	if job != nil {
+		t.Errorf("expected no more jobs (out of queues). queueID: %s, job: %#v", queueID, job)
 	}
 }
 
