@@ -261,8 +261,8 @@ func (j *JobManager) decrementWorkerCount(queueID string) {
 
 	j.workerCount[queueID]--
 
-	_, queueEmpty := j.queues[queueID]
-	if queueEmpty && j.workerCount[queueID] < 1 {
+	_, queueExists := j.queues[queueID]
+	if !queueExists && j.workerCount[queueID] < 1 {
 		delete(j.workerCount, queueID)
 	}
 }

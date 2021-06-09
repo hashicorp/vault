@@ -513,7 +513,7 @@ func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
 	// cleared out for "a"
 	j.incrementWorkerCount("a")
 	j.l.Lock()
-	j.queues["a"].Remove(j.queues["a"].Front())
+	delete(j.queues, "a")
 	j.l.Unlock()
 
 	j.decrementWorkerCount("a")
