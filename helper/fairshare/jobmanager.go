@@ -208,8 +208,8 @@ func (j *JobManager) getNextQueue() (string, bool) {
 }
 
 // returns true if there are already too many workers on this queue
-// note: this must be called with j.l held (at least for read)
-// down the road we may want to factor in queue length relative to num queues
+// note: this must be called with j.l held (at least for read).
+// note: we may want to eventually factor in queue length relative to num queues
 func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 	numActiveQueues := float64(len(j.queues))
 	numTotalWorkers := float64(j.workerPool.numWorkers)
@@ -231,9 +231,10 @@ func (j *JobManager) sortByNumWorkers() []string {
 	workersPerQueue := j.workerCount
 
 	sort.Slice(out, func(i, j int) bool {
-		// TODO do we want this explicity, or do we want some randomness?
-		// I think it's fine since it only breaks ties between number of workers,
-		// and it makes it easier to test
+		// TODO should we be explicitly breaking times with the queueID, or
+		// might we want some randomness?
+		// I think it's probably fine since it only breaks ties between queues
+		// with equal workers assigned, and makes testing much easier
 		if workersPerQueue[out[i]] == workersPerQueue[out[j]] {
 			return out[i] < out[j]
 		}
@@ -303,7 +304,7 @@ func (j *JobManager) assignWork() {
 				j.wg.Done()
 				return
 			case <-j.newWork:
-				// listen for wake-up when an emtpy job manager has been given work
+				// listen for wake-up when an empty job manager has been given work
 			case <-time.After(50 * time.Millisecond):
 				// periodically check if new workers can be assigned. with the
 				// fairsharing worker distribution it can be the case that there
