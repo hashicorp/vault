@@ -228,14 +228,16 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	diagnose.OSChecks(ctx)
 
 	// Process is root check
+	isRootContext, isRootSpan := diagnose.StartSpan(ctx, "is-root")
 	isRoot, err := diagnose.IsProcRoot()
-	if !strings.Contains(err.Error(), OSCheckIncompatibilityError) {
+	if err == nil || !strings.Contains(err.Error(), diagnose.OSCheckIncompatibilityError) {
 		if isRoot {
-			diagnose.SpotWarn(ctx, "is-root", "vault is running as root")	
+			diagnose.SpotWarn(isRootContext, "is-root", "vault is running as root")
 		} else {
-			diagnose.SpotOk(ctx, "is-root", "vault is not running as root")
+			diagnose.SpotOk(isRootContext, "is-root", "vault is not running as root")
 		}
 	}
+	isRootSpan.End()
 
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
@@ -270,13 +272,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Check for raft quorum status
 		if config.Storage.Type == storageTypeRaft {
-			path := os.Getenv(EnvVaultRaftPath)
+			path := os.Getenv(raft.EnvVaultRaftPath)
 			if path == "" {
 				path, ok := config.Storage.Config["path"]
 				if !ok {
-					diagnose.SpotError(ctx, "raft file permission checks", fmt.Errorf("storage file path is required"))
-				}	
-			diagnose.RaftFileChecks(ctx, path)
+					diagnose.SpotError(ctx, "raft folder permission checks", fmt.Errorf("storage file path is required"))
+				}
+				diagnose.RaftFileChecks(ctx, path)
+			}
 			if backend != nil {
 				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
 			} else {
