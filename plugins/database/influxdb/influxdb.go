@@ -3,13 +3,13 @@ package influxdb
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/template"
 	"strings"
 
 	multierror "github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	influx "github.com/influxdata/influxdb/client/v2"
 )
 
