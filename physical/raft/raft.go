@@ -983,7 +983,7 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 }
 
 // GetConfigurationOffline is used to read the stale, last known raft
-// configuration know to this node. It accesses the last state written into the
+// configuration to this node. It accesses the last state written into the
 // FSM. When a server is online use GetConfiguration instead.
 func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, error) {
 	b.l.RLock()
