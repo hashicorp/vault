@@ -177,7 +177,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 			// Return after stopping the runner if exit on retry failure was
 			// specified
-			if ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 				return fmt.Errorf("template server: %w", err)
 			}
 

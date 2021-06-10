@@ -1387,6 +1387,9 @@ vault {
   tls_skip_verify = true
 }
 %s
+template_config {
+  exit_on_retry_failure = true
+}
 `, methodConf, serverClient.Address(), retryConf, templateConfig)
 
 			configPath := makeTempFile(t, "config.hcl", config)
