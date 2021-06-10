@@ -62,10 +62,6 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 			}
 			tlsConfig.InsecureSkipVerify = cfg.InsecureTLS
 
-			if cfg.TLSServerName != "" {
-				tlsConfig.ServerName = cfg.TLSServerName
-			}
-
 			if cfg.TLSMinVersion != "" {
 				var ok bool
 				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
