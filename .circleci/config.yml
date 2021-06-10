@@ -2503,9 +2503,19 @@ workflows:
         - install-ui-dependencies
         - build-go-dev
     - test-go:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-remote-docker:
+        filters:
+          branches:
+            ignore:
+            - /^docs\/.*/
+            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-race:
