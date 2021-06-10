@@ -32,6 +32,11 @@ With Vault 1.8, a valid license is required on-disk (autol-oading) or in-storage
 
 - When deploying new Vault 1.8(+) clusters, please ensure a valid license exists on-disk (auto-loading).
 
+## Q: How will Vault behave at startup when a license expires or terminates?
+
+When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.8. The grace period, defined as the time between license expiration and license termination, is 1 day for EVAL licenses (as of 1.8), and ten years for non-Evaluation licenses. Customers must install a valid license before the grace period expires. This license can be autoloaded or loaded into storage using existing methods (``/sys/license`) depending on the applicable scenarios as described above.
+When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to install one, and this license will need to be autoloaded.
+
 ## Q: What is the impact on EVAL licenses due to this change?
 
 The 6-hour trial period for Enterprise binaries allows these particular binaries to run without a license file and will be deprecated as of Vault 1.8(+). This change means that any clusters deployed with Vault 1.8(+) ENT binaries must have a valid license, and the license must be on the disk (auto-loading).
@@ -93,4 +98,4 @@ The downgrade procedure remains the same for Vault customers who are currently o
 
 ## Q: Is there a limited time for support of licenses that are in storage?
 
-The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, we plan to scale support for licenses in storage for Vault. With this plan, Vault customers have up to a 1-year migration period, or until the release of Vault 1.11, to migrate their licenses from in-storage to auto-loading. Starting with Vault 1.11, licensing endpoints that are put in storage will be deprecated, and Vault will no longer check for valid licenses in storage. This change requires that all customers have auto-loaded licenses to upgrade to 11.1(+) successfully.
+The support of licenses installed by alternative means often leads to difficulties providing the appropriate support. To provide the support expected by our customers, we plan to scale support for licenses in storage for Vault. With this plan, Vault customers have up to a 1-year migration period, or until the release of Vault 1.11, to migrate their licenses from in-storage to auto-loading. Starting with Vault 1.11, licensing endpoints that are put in storage will be removed, and Vault will no longer check for valid licenses in storage. This change requires that all customers have auto-loaded licenses to upgrade to 11.1(+) successfully.
