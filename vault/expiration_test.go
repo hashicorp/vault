@@ -612,6 +612,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 			Path:        "prod/aws/" + pathUUID,
 			ClientToken: "root",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -623,7 +624,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 				"secret_key": "abcd",
 			},
 		}
-		_, err = exp.Register(context.Background(), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -644,6 +645,52 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 		}
 	}
 	b.StopTimer()
+}
+
+func BenchmarkExpiration_Create_Leases(b *testing.B) {
+	logger := logging.NewVaultLogger(log.Trace)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	c, _, _ := TestCoreUnsealedBackend(b, inm)
+	exp := c.expiration
+	noop := &NoopBackend{}
+	view := NewBarrierView(c.barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		b.Fatal(err)
+	}
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		b.Fatal(err)
+	}
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		ClientToken: "root",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: 400 * time.Second,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req.Path = fmt.Sprintf("prod/aws/%d", i)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp)
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
 }
 
 func TestExpiration_Restore(t *testing.T) {
