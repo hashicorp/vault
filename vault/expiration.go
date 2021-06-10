@@ -131,6 +131,7 @@ type ExpirationManager struct {
 	restoreLoaded      sync.Map
 	quitCh             chan struct{}
 
+	// do not hold coreStateLock in any API handler code - it is already held
 	coreStateLock     *DeadlockRWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
@@ -268,7 +269,7 @@ func (r *revocationJob) OnFailure(err error) {
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
 	nsCtx := namespace.ContextWithNamespace(ctx, ns)
 
-	mountAccessor := m.getLeaseMountAccessor(ctx, leaseID)
+	mountAccessor := m.getLeaseMountAccessorLocked(ctx, leaseID)
 
 	job, err := newRevocationJob(nsCtx, leaseID, ns, m)
 	if err != nil {
@@ -2434,10 +2435,15 @@ func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID
 	return leaseNS, nil
 }
 
-func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID string) string {
+func (m *ExpirationManager) getLeaseMountAccessorLocked(ctx context.Context, leaseID string) string {
 	m.coreStateLock.RLock()
+	defer m.coreStateLock.RUnlock()
+	return m.getLeaseMountAccessor(ctx, leaseID)
+}
+
+// note: this function must be called with m.coreStateLock held for read
+func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID string) string {
 	mount := m.core.router.MatchingMountEntry(ctx, leaseID)
-	m.coreStateLock.RUnlock()
 
 	var mountAccessor string
 	if mount == nil {
