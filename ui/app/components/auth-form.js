@@ -127,31 +127,31 @@ export default Component.extend(DEFAULTS, {
       return BACKENDS.findBy('type', selectedAuth);
     }
   ),
-  selectedAuthType: computed(
-    'wrappedToken',
-    'methods',
-    'methods.[]',
-    'selectedAuth',
-    'selectedAuthIsPath',
-    function() {
-      let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
-      if (!methods && !wrappedToken) {
-        return '';
-      }
-      console.log({ selectedAuth });
-      if (keyIsPath) {
-        return methods.findBy('path', selectedAuth)?.type;
-      }
-      return selectedAuth;
-    }
-  ),
+  // selectedAuthType: computed(
+  //   'wrappedToken',
+  //   'methods',
+  //   'methods.[]',
+  //   'selectedAuth',
+  //   'selectedAuthIsPath',
+  //   function() {
+  //     let { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+  //     if (!methods && !wrappedToken) {
+  //       return '';
+  //     }
+  //     console.log({ selectedAuth });
+  //     if (keyIsPath) {
+  //       return methods.findBy('path', selectedAuth)?.type;
+  //     }
+  //     return selectedAuth;
+  //   }
+  // ),
 
-  currentAuth: computed('selectedAuthType', 'methods', 'methods.[]', function() {
-    let { methods, selectedAuthType } = this;
-    console.log({ methods });
-    console.log({ selectedAuthType });
-    return {};
-  }),
+  // currentAuth: computed('selectedAuthType', 'methods', 'methods.[]', function() {
+  //   let { methods, selectedAuthType } = this;
+  //   console.log({ methods });
+  //   console.log({ selectedAuthType });
+  //   return {};
+  // }),
 
   providerName: computed('selectedAuthBackend.type', function() {
     if (!this.selectedAuthBackend) {
@@ -178,17 +178,18 @@ export default Component.extend(DEFAULTS, {
   }),
   methodsToShow: computed('methods', function() {
     let methods = this.methods || [];
-    let shownMethods = methods
-      .filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()))
-      .map(m => {
-        const backend = BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase());
-        const method = {
-          ...m,
-          typeDisplay: backend.typeDisplay,
-        };
-        return method;
-      });
-    const methodTypes = methods.map(m => m.type.toLowerCase());
+    let shownMethods = methods.filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()));
+    // let shownMethods = methods
+    //   .filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()))
+    //   .map(m => {
+    //     const backend = BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase());
+    //     const method = {
+    //       ...m,
+    //       typeDisplay: backend.typeDisplay,
+    //     };
+    //     return method;
+    //   });
+    // const methodTypes = methods.map(m => m.type.toLowerCase());
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 

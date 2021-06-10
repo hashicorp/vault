@@ -6,12 +6,7 @@
           {{#with (or method.path method.type) as |methodKey|}}
               <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
                 <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with=methodKey}} data-test-auth-method-link={{method.type}}>
-                   <Icon
-                      @glyph={{method.type}}
-                      @size="m"
-                      class="has-text-grey-light"
-                    />
-                  {{or method.typeDisplay (capitalize method.type)}}
+                  {{or method.id (capitalize method.type)}}
                 </LinkTo>
               </li>
           {{/with}}
@@ -47,8 +42,7 @@
         @onChange={{action (mut this.selectedAuth)}}
         />
     {{/if}}
-    {{currentAuth.title}}
-  {{!-- {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
+  {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
     <AuthJwt
       @onError={{action "handleError"}}
       @onLoading={{action (mut this.isLoading)}}
@@ -76,16 +70,6 @@
     >
         {{#if (eq providerName 'github')}}
           <div class="field">          
-            <Select
-              @label='Path'
-              @name='path'
-              @options={{this.customPath}}
-              @valueAttribute={{'type'}}
-              @labelAttribute={{'typeDisplay'}}
-              @isFullwidth={{true}}
-              @selectedValue={{this.selectedAuthBackend.path}}
-              @onChange={{action (mut this.selectedAuth.path)}}
-            />
             <label for="token" class="is-label">GitHub token</label>
             <div class="control">
               <Input @type="password" @value={{token}} @name="token" @id="token" class="input" data-test-token={{true}} @autocomplete="off" @spellcheck="false" />
@@ -132,6 +116,6 @@
           />
         {{/if}}
     </form>
-  {{/if}} --}}
+  {{/if}}
   </div>
 </div>
