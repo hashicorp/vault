@@ -69,6 +69,7 @@ type sessionConfig struct {
 	Password        string `json:"password" structs:"password" mapstructure:"password"`
 	TLS             bool   `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS     bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	TLSServerName   string `json:"tls_server_name" structs:"tls_server_name" mapstructure:"tls_server_name"`
 	Certificate     string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 	PrivateKey      string `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 	IssuingCA       string `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`

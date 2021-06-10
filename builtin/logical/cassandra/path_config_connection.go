@@ -48,6 +48,11 @@ effect if a CA certificate is provided`,
 				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
 
+			"tls_server_name": {
+				Type:        framework.TypeString,
+				Description: "Name to use as the SNI host when connecting to the Cassandra server via TLS",
+			},
+
 			"pem_bundle": {
 				Type: framework.TypeString,
 				Description: `PEM-format, concatenated unencrypted secret key
@@ -111,6 +116,7 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 			"protocol_version": config.ProtocolVersion,
 			"connect_timeout":  config.ConnectTimeout,
 			"tls_min_version":  config.TLSMinVersion,
+			"tls_server_name":  config.TLSServerName,
 		},
 	}
 	return resp, nil
@@ -138,6 +144,7 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 		InsecureTLS:     data.Get("insecure_tls").(bool),
 		ProtocolVersion: data.Get("protocol_version").(int),
 		ConnectTimeout:  data.Get("connect_timeout").(int),
+		TLSServerName:   data.Get("tls_server_name").(string),
 	}
 
 	config.TLSMinVersion = data.Get("tls_min_version").(string)
