@@ -20,6 +20,8 @@ jobs:
             - /^ui\/.*/
             - /release\/.*/
             - /merge.*/
+  # We don't filter test-ui-browserstack like we do test-ui so that
+  # we still have a spot check for the UI on all PRs.
   - test-ui-browserstack:
       requires:
         - install-ui-dependencies
