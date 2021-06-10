@@ -1209,6 +1209,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
+
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
