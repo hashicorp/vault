@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add API client method for listing token accessors
+```

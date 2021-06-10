@@ -101,6 +101,39 @@ func (s *Secret) TokenRemainingUses() (int, error) {
 	return int(uses), nil
 }
 
+// extractListOfStrings will try to extract the value of the key from the Data
+// map of the secret as a list of strings. If the value is empty, a nil list will
+// be returned.
+func (s *Secret) extractListOfStrings(key string) ([]string, error) {
+	var listOfData []string
+
+	if s.Data == nil {
+		return nil, nil
+	}
+	_, ok := s.Data[key]
+	if !ok {
+		return nil, nil
+	}
+
+	listOfData, ok = s.Data[key].([]string)
+	if ok {
+		return listOfData, nil
+	}
+
+	list, ok := s.Data[key].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unable to convert identity policies to expected format")
+	}
+	for _, v := range list {
+		item, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("unable to convert item %v to string", v)
+		}
+		listOfData = append(listOfData, item)
+	}
+	return listOfData, nil
+}
+
 // TokenPolicies returns the standardized list of policies for the given secret.
 // If the secret is nil or does not contain any policies, this returns nil. It
 // also populates the secret's Auth info with identity/token policy info.
@@ -113,68 +146,18 @@ func (s *Secret) TokenPolicies() ([]string, error) {
 		return s.Auth.Policies, nil
 	}
 
-	if s.Data == nil || s.Data["policies"] == nil {
+	if s.Data == nil {
 		return nil, nil
 	}
 
-	var tokenPolicies []string
-
-	// Token policies
-	{
-		_, ok := s.Data["policies"]
-		if !ok {
-			goto TOKEN_DONE
-		}
-
-		sList, ok := s.Data["policies"].([]string)
-		if ok {
-			tokenPolicies = sList
-			goto TOKEN_DONE
-		}
-
-		list, ok := s.Data["policies"].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("unable to convert token policies to expected format")
-		}
-		for _, v := range list {
-			p, ok := v.(string)
-			if !ok {
-				return nil, fmt.Errorf("unable to convert policy %v to string", v)
-			}
-			tokenPolicies = append(tokenPolicies, p)
-		}
+	tokenPolicies, err := s.extractListOfStrings("policies")
+	if tokenPolicies == nil || err != nil {
+		return tokenPolicies, err
 	}
-
-TOKEN_DONE:
-	var identityPolicies []string
-
-	// Identity policies
-	{
-		_, ok := s.Data["identity_policies"]
-		if !ok {
-			goto DONE
-		}
-
-		sList, ok := s.Data["identity_policies"].([]string)
-		if ok {
-			identityPolicies = sList
-			goto DONE
-		}
-
-		list, ok := s.Data["identity_policies"].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("unable to convert identity policies to expected format")
-		}
-		for _, v := range list {
-			p, ok := v.(string)
-			if !ok {
-				return nil, fmt.Errorf("unable to convert policy %v to string", v)
-			}
-			identityPolicies = append(identityPolicies, p)
-		}
+	identityPolicies, err := s.extractListOfStrings("identity_policies")
+	if err != nil {
+		return nil, err
 	}
-
-DONE:
 
 	if s.Auth == nil {
 		s.Auth = &SecretAuth{}
@@ -187,6 +170,23 @@ DONE:
 	s.Auth.Policies = policies
 
 	return policies, nil
+}
+
+// TokenAccessors returns the standardized list of accessors for the given secret
+func (s *Secret) TokenAccessors() ([]string, error) {
+	if s == nil {
+		return nil, nil
+	}
+
+	if s.Auth != nil && len(s.Auth.Policies) > 0 {
+		return s.Auth.Policies, nil
+	}
+
+	if s.Data == nil {
+		return nil, nil
+	}
+
+	return s.extractListOfStrings("keys")
 }
 
 // TokenMetadata returns the map of metadata associated with this token, if any

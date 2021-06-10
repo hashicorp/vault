@@ -1,6 +1,9 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/url"
+)
 
 // TokenAuth is used to perform token backend operations on Vault
 type TokenAuth struct {
@@ -12,6 +15,7 @@ func (a *Auth) Token() *TokenAuth {
 	return &TokenAuth{c: a.c}
 }
 
+// Create will create a new token that it not orphan
 func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/create")
 	if err := r.SetJSONBody(opts); err != nil {
@@ -29,6 +33,7 @@ func (c *TokenAuth) Create(opts *TokenCreateRequest) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// CreateOrphan will create an orphan token
 func (c *TokenAuth) CreateOrphan(opts *TokenCreateRequest) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/create-orphan")
 	if err := r.SetJSONBody(opts); err != nil {
@@ -46,6 +51,7 @@ func (c *TokenAuth) CreateOrphan(opts *TokenCreateRequest) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// CreateWithRole will create a token and attach a role to it
 func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/create/"+roleName)
 	if err := r.SetJSONBody(opts); err != nil {
@@ -63,6 +69,7 @@ func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*
 	return ParseSecret(resp.Body)
 }
 
+// Lookup will lookup a token
 func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/lookup")
 	if err := r.SetJSONBody(map[string]interface{}{
@@ -82,6 +89,25 @@ func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// ListAccessors returns a secret containing a list of strings
+// which are all the token accessors of the system
+func (c *TokenAuth) ListAccessors() (*Secret, error) {
+	r := c.c.NewRequest("GET", "/v1/auth/token/accessors/")
+	r.Params = make(url.Values)
+	r.Params.Add("list", "true")
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// LookupAccessor lookups a token related to an accessor
 func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/lookup-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
@@ -115,6 +141,7 @@ func (c *TokenAuth) LookupSelf() (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// RenewAccessor renews an accessor by a certain increment
 func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("POST", "/v1/auth/token/renew-accessor")
 	if err := r.SetJSONBody(map[string]interface{}{
@@ -135,6 +162,7 @@ func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, erro
 	return ParseSecret(resp.Body)
 }
 
+// Renew will renew a token
 func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew")
 	if err := r.SetJSONBody(map[string]interface{}{
@@ -155,6 +183,7 @@ func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// RenewSelf will re-new the provided token
 func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
 
