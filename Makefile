@@ -17,7 +17,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.16.2
+GO_VERSION_MIN=1.16.5
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -53,10 +53,10 @@ dev-dynamic-mem: dev-dynamic
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
 # The resulting image is tagged "vault:dev".
 docker-dev: prep
-	docker build --build-arg VERSION=$(GO_VERSION_MIN) -f scripts/docker/Dockerfile -t vault:dev .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
 docker-dev-ui: prep
-	docker build --build-arg VERSION=$(GO_VERSION_MIN) -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep

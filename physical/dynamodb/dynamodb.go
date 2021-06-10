@@ -22,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
@@ -213,7 +212,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 
 	awsSession, err := session.NewSession(awsConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("Could not establish AWS session: {{err}}", err)
+		return nil, fmt.Errorf("Could not establish AWS session: %w", err)
 	}
 
 	client := dynamodb.New(awsSession)
@@ -233,7 +232,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -260,7 +259,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 	}
 	item, err := dynamodbattribute.MarshalMap(record)
 	if err != nil {
-		return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
+		return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 	}
 	requests := []*dynamodb.WriteRequest{{
 		PutRequest: &dynamodb.PutRequest{
@@ -275,7 +274,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		}
 		item, err := dynamodbattribute.MarshalMap(record)
 		if err != nil {
-			return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
+			return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 		}
 		requests = append(requests, &dynamodb.WriteRequest{
 			PutRequest: &dynamodb.PutRequest{

@@ -120,6 +120,11 @@ var (
 	LastRemoteWAL                = lastRemoteWALImpl
 	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
+	storedLicenseCheck           = func(c *Core, conf *CoreConfig) error { return nil }
+	LicenseAutoloaded            = func(*Core) bool { return false }
+	LicenseInitCheck             = func(*Core) error { return nil }
+	LicenseSummary               = func(*Core) (*LicenseState, error) { return nil, nil }
+	LicenseReload                = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -648,9 +653,9 @@ type CoreConfig struct {
 	ReloadFuncsLock *sync.RWMutex
 
 	// Licensing
+	License         string
+	LicensePath     string
 	LicensingConfig *LicensingConfig
-	// Don't set this unless in dev mode, ideally only when using inmem
-	DevLicenseDuration time.Duration
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -725,7 +730,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.RedirectAddr != "" {
 		u, err := url.Parse(conf.RedirectAddr)
 		if err != nil {
-			return nil, errwrap.Wrapf("redirect address is not valid url: {{err}}", err)
+			return nil, fmt.Errorf("redirect address is not valid url: %w", err)
 		}
 
 		if u.Scheme == "" {
@@ -873,7 +878,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	default:
 		suites, err := tlsutil.ParseCiphers(conf.ClusterCipherSuites)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing cluster cipher suites: {{err}}", err)
+			return nil, fmt.Errorf("error parsing cluster cipher suites: %w", err)
 		}
 		c.clusterCipherSuites = suites
 	}
@@ -918,9 +923,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Construct a new AES-GCM barrier
 	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
-		return nil, errwrap.Wrapf("barrier setup failed: {{err}}", err)
+		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
 
+	if err := storedLicenseCheck(c, conf); err != nil {
+		return nil, err
+	}
 	// We create the funcs here, then populate the given config with it so that
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
@@ -938,7 +946,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.PluginDirectory != "" {
 		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
 		if err != nil {
-			return nil, errwrap.Wrapf("core setup failed, could not verify plugin directory: {{err}}", err)
+			return nil, fmt.Errorf("core setup failed, could not verify plugin directory: %w", err)
 		}
 	}
 
@@ -1340,7 +1348,7 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	} else {
 		unsealKey, err = shamir.Combine(c.unlockInfo.Parts)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to compute combined key: {{err}}", err)
+			return nil, fmt.Errorf("failed to compute combined key: %w", err)
 		}
 	}
 
@@ -1424,20 +1432,20 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		// Set the recovery and barrier keys to be the same.
 		recoveryKey, err := c.migrationInfo.seal.RecoveryKey(ctx)
 		if err != nil {
-			return errwrap.Wrapf("error getting recovery key to set on new seal: {{err}}", err)
+			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
 		if err := c.seal.SetRecoveryKey(ctx, recoveryKey); err != nil {
-			return errwrap.Wrapf("error setting new recovery key information during migrate: {{err}}", err)
+			return fmt.Errorf("error setting new recovery key information during migrate: %w", err)
 		}
 
 		barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
 		if err != nil {
-			return errwrap.Wrapf("error getting stored keys to set on new seal: {{err}}", err)
+			return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
 		}
 
 		if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
-			return errwrap.Wrapf("error setting new barrier key information during migrate: {{err}}", err)
+			return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
 		}
 
 	case c.migrationInfo.seal.RecoveryKeySupported():
@@ -1446,22 +1454,22 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 
 		recoveryKey, err := c.migrationInfo.seal.RecoveryKey(ctx)
 		if err != nil {
-			return errwrap.Wrapf("error getting recovery key to set on new seal: {{err}}", err)
+			return fmt.Errorf("error getting recovery key to set on new seal: %w", err)
 		}
 
 		// We have recovery keys; we're going to use them as the new shamir KeK.
 		err = c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(recoveryKey)
 		if err != nil {
-			return errwrap.Wrapf("failed to set master key in seal: {{err}}", err)
+			return fmt.Errorf("failed to set master key in seal: %w", err)
 		}
 
 		barrierKeys, err := c.migrationInfo.seal.GetStoredKeys(ctx)
 		if err != nil {
-			return errwrap.Wrapf("error getting stored keys to set on new seal: {{err}}", err)
+			return fmt.Errorf("error getting stored keys to set on new seal: %w", err)
 		}
 
 		if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
-			return errwrap.Wrapf("error setting new barrier key information during migrate: {{err}}", err)
+			return fmt.Errorf("error setting new barrier key information during migrate: %w", err)
 		}
 
 	case c.seal.RecoveryKeySupported():
@@ -1469,24 +1477,24 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		// Migration is happening from shamir -> auto. In this case use the shamir
 		// combined key that was used to store the master key as the new recovery key.
 		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.unsealKey); err != nil {
-			return errwrap.Wrapf("error setting new recovery key information: {{err}}", err)
+			return fmt.Errorf("error setting new recovery key information: %w", err)
 		}
 
 		// Generate a new master key
 		newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
 		if err != nil {
-			return errwrap.Wrapf("error generating new master key: {{err}}", err)
+			return fmt.Errorf("error generating new master key: %w", err)
 		}
 
 		// Rekey the barrier.  This handles the case where the shamir seal we're
 		// migrating from was a legacy seal without a stored master key.
 		if err := c.barrier.Rekey(ctx, newMasterKey); err != nil {
-			return errwrap.Wrapf("error rekeying barrier during migration: {{err}}", err)
+			return fmt.Errorf("error rekeying barrier during migration: %w", err)
 		}
 
 		// Store the new master key
 		if err := c.seal.SetStoredKeys(ctx, [][]byte{newMasterKey}); err != nil {
-			return errwrap.Wrapf("error storing new master key: {{err}}", err)
+			return fmt.Errorf("error storing new master key: %w", err)
 		}
 
 	default:
@@ -1495,7 +1503,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 
 	err = c.migrateSealConfig(ctx)
 	if err != nil {
-		return errwrap.Wrapf("error storing new seal configs: {{err}}", err)
+		return fmt.Errorf("error storing new seal configs: %w", err)
 	}
 
 	// Flag migration performed for seal-rewrap later
@@ -2144,30 +2152,28 @@ func (c *Core) preSeal() error {
 
 	c.clusterParamsLock.Lock()
 	if err := stopReplication(c); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error stopping replication: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error stopping replication: %w", err))
 	}
 	c.clusterParamsLock.Unlock()
 
 	if err := c.teardownAudits(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
 	if err := c.stopExpiration(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error stopping expiration: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
-	if err := c.stopActivityLog(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error stopping activity log: {{err}}", err))
-	}
+	c.stopActivityLog()
 	if err := c.teardownCredentials(context.Background()); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error tearing down credentials: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
 	if err := c.teardownPolicyStore(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error tearing down policy store: %w", err))
 	}
 	if err := c.stopRollback(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error stopping rollback: %w", err))
 	}
 	if err := c.unloadMounts(context.Background()); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
+		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
@@ -2266,7 +2272,7 @@ func lastRemoteUpstreamWALImpl(c *Core) uint64 {
 func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfig, error) {
 	pe, err := c.physical.Get(ctx, barrierSealConfigPath)
 	if err != nil {
-		return nil, nil, errwrap.Wrapf("failed to fetch barrier seal configuration at migration check time: {{err}}", err)
+		return nil, nil, fmt.Errorf("failed to fetch barrier seal configuration at migration check time: %w", err)
 	}
 	if pe == nil {
 		return nil, nil, nil
@@ -2275,11 +2281,11 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	barrierConf := new(SealConfig)
 
 	if err := jsonutil.DecodeJSON(pe.Value, barrierConf); err != nil {
-		return nil, nil, errwrap.Wrapf("failed to decode barrier seal configuration at migration check time: {{err}}", err)
+		return nil, nil, fmt.Errorf("failed to decode barrier seal configuration at migration check time: %w", err)
 	}
 	err = barrierConf.Validate()
 	if err != nil {
-		return nil, nil, errwrap.Wrapf("failed to validate barrier seal configuration at migration check time: {{err}}", err)
+		return nil, nil, fmt.Errorf("failed to validate barrier seal configuration at migration check time: %w", err)
 	}
 	// In older versions of vault the default seal would not store a type. This
 	// is here to offer backwards compatibility for older seal configs.
@@ -2290,16 +2296,16 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	var recoveryConf *SealConfig
 	pe, err = c.physical.Get(ctx, recoverySealConfigPlaintextPath)
 	if err != nil {
-		return nil, nil, errwrap.Wrapf("failed to fetch seal configuration at migration check time: {{err}}", err)
+		return nil, nil, fmt.Errorf("failed to fetch seal configuration at migration check time: %w", err)
 	}
 	if pe != nil {
 		recoveryConf = &SealConfig{}
 		if err := jsonutil.DecodeJSON(pe.Value, recoveryConf); err != nil {
-			return nil, nil, errwrap.Wrapf("failed to decode seal configuration at migration check time: {{err}}", err)
+			return nil, nil, fmt.Errorf("failed to decode seal configuration at migration check time: %w", err)
 		}
 		err = recoveryConf.Validate()
 		if err != nil {
-			return nil, nil, errwrap.Wrapf("failed to validate seal configuration at migration check time: {{err}}", err)
+			return nil, nil, fmt.Errorf("failed to validate seal configuration at migration check time: %w", err)
 		}
 		// In older versions of vault the default seal would not store a type. This
 		// is here to offer backwards compatibility for older seal configs.
@@ -2388,7 +2394,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	if existBarrierSealConfig.Type != wrapping.Shamir && existRecoverySealConfig == nil {
 		entry, err := c.physical.Get(ctx, recoverySealConfigPath)
 		if err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to read %q recovery seal configuration: {{err}}", existBarrierSealConfig.Type), err)
+			return fmt.Errorf("failed to read %q recovery seal configuration: %w", existBarrierSealConfig.Type, err)
 		}
 		if entry == nil {
 			return errors.New("Recovery seal configuration not found for existing seal")
@@ -2444,15 +2450,15 @@ func (c *Core) migrateSealConfig(ctx context.Context) error {
 	}
 
 	if err := c.seal.SetBarrierConfig(ctx, bc); err != nil {
-		return errwrap.Wrapf("error storing barrier config after migration: {{err}}", err)
+		return fmt.Errorf("error storing barrier config after migration: %w", err)
 	}
 
 	if c.seal.RecoveryKeySupported() {
 		if err := c.seal.SetRecoveryConfig(ctx, rc); err != nil {
-			return errwrap.Wrapf("error storing recovery config after migration: {{err}}", err)
+			return fmt.Errorf("error storing recovery config after migration: %w", err)
 		}
 	} else if err := c.physical.Delete(ctx, recoverySealConfigPlaintextPath); err != nil {
-		return errwrap.Wrapf("failed to delete old recovery seal configuration during migration: {{err}}", err)
+		return fmt.Errorf("failed to delete old recovery seal configuration during migration: %w", err)
 	}
 
 	return nil
@@ -2508,7 +2514,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 	switch seal.StoredKeysSupported() {
 	case vaultseal.StoredKeysSupportedGeneric:
 		if err := seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
-			return nil, errwrap.Wrapf("recovery key verification failed: {{err}}", err)
+			return nil, fmt.Errorf("recovery key verification failed: %w", err)
 		}
 
 		storedKeys, err := seal.GetStoredKeys(ctx)
@@ -2520,7 +2526,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			err = fmt.Errorf("expected exactly one stored key, got %d", len(storedKeys))
 		}
 		if err != nil {
-			return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
+			return nil, fmt.Errorf("unable to retrieve stored keys: %w", err)
 		}
 		return storedKeys[0], nil
 
@@ -2534,7 +2540,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			testseal.SetCore(c)
 			cfg, err := seal.BarrierConfig(ctx)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to setup test barrier config: {{err}}", err)
+				return nil, fmt.Errorf("failed to setup test barrier config: %w", err)
 			}
 			testseal.SetCachedBarrierConfig(cfg)
 			seal = testseal
@@ -2542,7 +2548,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 		err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(combinedKey)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to setup unseal key: {{err}}", err)
+			return nil, fmt.Errorf("failed to setup unseal key: %w", err)
 		}
 		storedKeys, err := seal.GetStoredKeys(ctx)
 		if storedKeys == nil && err == nil && allowMissing {
@@ -2552,7 +2558,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			err = fmt.Errorf("expected exactly one stored key, got %d", len(storedKeys))
 		}
 		if err != nil {
-			return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
+			return nil, fmt.Errorf("unable to retrieve stored keys: %w", err)
 		}
 		return storedKeys[0], nil
 
@@ -2719,7 +2725,7 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby)
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
@@ -2861,4 +2867,10 @@ func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,
 	}, nil
+}
+
+type LicenseState struct {
+	State      string
+	ExpiryTime time.Time
+	Terminated bool
 }
