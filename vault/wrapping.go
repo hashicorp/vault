@@ -444,11 +444,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		return false, nil
 	}
 
-	if len(te.Policies) != 1 {
-		return false, nil
-	}
-
-	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
+	if !IsWrappingToken(te) {
 		return false, nil
 	}
 
@@ -459,4 +455,16 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	return true, nil
+}
+
+func IsWrappingToken(te *logical.TokenEntry) bool {
+	if len(te.Policies) != 1 {
+		return false
+	}
+
+	if te.Policies[0] != responseWrappingPolicyName && te.Policies[0] != controlGroupPolicyName {
+		return false
+	}
+
+	return true
 }
