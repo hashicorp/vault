@@ -77,7 +77,6 @@ export default Component.extend({
     // change it here to match the new type
     let isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
-      console.log('here1`');
       mount.set('path', type);
     }
   },

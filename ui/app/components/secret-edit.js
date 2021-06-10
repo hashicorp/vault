@@ -57,8 +57,10 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   hasLintError: false,
   isV2: false,
 
-  validationError: null,
-  validationMessage: '',
+  validationMessagePath: '',
+  validationMessageKey: '',
+  validationMessageMaxVersions: '',
+  validationErrorCount: 0,
 
   init() {
     this._super(...arguments);
@@ -81,31 +83,19 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (this.mode === 'edit') {
       this.send('addRow');
     }
-    let errorObject = {
-      key: '',
-      path: '',
-      maxVersions: '',
-    };
-    this.set('validationError', errorObject);
   },
 
   waitForKeyUp: task(function*(name, value) {
     // path and key are not on the model (there via key-mixin) doing custom validations here instead of cp validations
     if (name === 'path') {
       // no value indicates missing presence
-      if (!value) {
-        this.set('validationMessagePath', `Secret path can't be blank`);
-      } else {
-        this.set('validationMessagePath', '');
-      }
+      !value
+        ? this.set('validationMessagePath', `Secret path can't be blank`)
+        : this.set('validationMessagePath', '');
     }
     if (name === 'key') {
       // no value indicates missing presence
-      if (!value) {
-        this.set('validationMessageKey', `Key can't be blank`);
-      } else {
-        this.set('validationMessageKey', '');
-      }
+      !value ? this.set('validationMessageKey', `Key can't be blank`) : this.set('validationMessageKey', '');
     }
     if (name === 'maxVersions') {
       // checking for value because value is blank on first loading, no keyup event has occurred and default is 10.
@@ -120,7 +110,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.set('validationMessageMaxVersions', '');
       }
     }
-
+    this.set(
+      'validationErrorCount',
+      (this.validationMessagePath === '' ? 0 : 1) +
+        (this.validationMessageKey === '' ? 0 : 1) +
+        (this.validationMessageMaxVersions === '' ? 0 : 1)
+    );
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
