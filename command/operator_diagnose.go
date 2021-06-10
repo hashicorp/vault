@@ -377,6 +377,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
 	var seals []vault.Seal
 	var sealConfigError error
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
 	// Check error here
 	if err != nil {
