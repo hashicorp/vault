@@ -2485,6 +2485,11 @@ workflows:
         requires:
         - pre-flight-checks
     - test-ui:
+        filters:
+          branches:
+            only:
+            - /^ui\/.*/
+            - master
         requires:
         - install-ui-dependencies
         - build-go-dev
