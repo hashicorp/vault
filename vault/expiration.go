@@ -133,8 +133,7 @@ type ExpirationManager struct {
 	restoreLoaded      sync.Map
 	quitCh             chan struct{}
 
-	// do not hold coreStateLock in any code being called by API handlers
-	// as it is already held by the calling code
+	// do not hold coreStateLock in any API handler code - it is already held
 	coreStateLock     *DeadlockRWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
