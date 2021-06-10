@@ -2488,9 +2488,10 @@ workflows:
         filters:
           branches:
             only:
-            - /^ui\/.*/
             - master
+            - /^ui\/.*/
             - /release\/.*/
+            - /merge.*/
         requires:
         - install-ui-dependencies
         - build-go-dev

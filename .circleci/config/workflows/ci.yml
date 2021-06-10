@@ -16,9 +16,10 @@ jobs:
       filters:
         branches:
           only:
-            - /^ui\/.*/
             - master
+            - /^ui\/.*/
             - /release\/.*/
+            - /merge.*/
   - test-ui-browserstack:
       requires:
         - install-ui-dependencies
