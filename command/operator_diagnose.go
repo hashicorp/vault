@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -225,13 +226,20 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// OS Specific checks
 	diagnose.OSChecks(ctx)
 
-	server.flagConfigs = c.flagConfigs
-	config, err := server.parseConfig()
-	if err != nil {
-		return diagnose.SpotError(ctx, "parse-config", err)
-	} else {
-		diagnose.SpotOk(ctx, "parse-config", "")
-	}
+	var config *cserver.Config
+
+	diagnose.Test(ctx, "Parse configuration", func(ctx context.Context) (err error) {
+		server.flagConfigs = c.flagConfigs
+		var configErrors []configutil.ConfigError
+		config, configErrors, err = server.parseConfig()
+		if err != nil {
+			return err
+		}
+		for _, ce := range configErrors {
+			diagnose.Warn(ctx, ce.String())
+		}
+		return nil
+	})
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
@@ -254,7 +262,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
-				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+				err := physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
 					return err
 				}
@@ -322,7 +330,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.Test(ctx, "test-serviceregistration-tls-consul", func(ctx context.Context) error {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
+			err := srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
 				return err
 			}
