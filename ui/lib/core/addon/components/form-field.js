@@ -149,23 +149,10 @@ export default Component.extend({
       }
     },
     handleKeyUp(name, value) {
-      if (!this.onKeyUp && !this.validationError) {
+      if (!this.onKeyUp) {
         return;
       }
       this.onKeyUp(name, value);
-
-      let keys = Object.keys(this.validationError);
-      if (this.validationError?.[name]) {
-        keys.forEach(key => {
-          if (key === name) {
-            this.set('validationMessage', this.validationError[name]);
-          } else {
-            this.set('validationMessage', false);
-          }
-        });
-      } else {
-        this.set('validationMessage', false);
-      }
     },
   },
 });

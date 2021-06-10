@@ -82,6 +82,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.send('addRow');
     }
     let errorObject = {
+      key: '',
       path: '',
       maxVersions: '',
     };
@@ -91,9 +92,19 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   waitForKeyUp: task(function*(name, value) {
     // path and key are not on the model (there via key-mixin) doing custom validations here instead of cp validations
     if (name === 'path') {
+      // no value indicates missing presence
       if (!value) {
-        this.validationError.path = "Secret path can't be blank";
-        this.set('validationMessage', this.validationError.path);
+        this.set('validationMessagePath', `Secret path can't be blank`);
+      } else {
+        this.set('validationMessagePath', '');
+      }
+    }
+    if (name === 'key') {
+      // no value indicates missing presence
+      if (!value) {
+        this.set('validationMessageKey', `Key can't be blank`);
+      } else {
+        this.set('validationMessageKey', '');
       }
     }
     if (name === 'maxVersions') {
@@ -104,11 +115,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       }
       // cannot use async validators method because it causes a delay of one onkeyup
       if (!this.model.validations.attrs.maxVersions.isValid) {
-        this.validationError.maxVersions = this.model.validations.attrs.maxVersions.message;
+        this.set('validationMessageMaxVersions', this.model.validations.attrs.maxVersions.message);
       } else {
-        this.validationError.maxVersions = '';
+        this.set('validationMessageMaxVersions', '');
       }
     }
+
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
