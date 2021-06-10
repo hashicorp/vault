@@ -2490,6 +2490,7 @@ workflows:
             only:
             - /^ui\/.*/
             - master
+            - /release\/.*/
         requires:
         - install-ui-dependencies
         - build-go-dev
