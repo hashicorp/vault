@@ -26,15 +26,16 @@ No, these changes will not impact HCP Vault.
 
 ## Q: What is the product behavior change introduced by the licensing changes?
 
-With Vault 1.8, a valid license is required on-disk (autol-oading) or in-storage for Vault to boot up successfully.
+With Vault 1.8, a valid license is required on-disk (auto-loading) or in-storage for Vault to boot up successfully.
 
-- Existing clusters upgrading to Vault 1.8(+) will not be affected. Customers may continue to use an in-storage license for their existing clusters until they decide to move to auto-loading. Please see the question below: [“Is there a limited time for support of licenses that are in storage?”](q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
+- Existing clusters upgrading to Vault 1.8(+) will not be affected. Customers may continue to use an in-storage license for their existing clusters until they decide to move to auto-loading. Please see the question below: [Is there a limited time for support of licenses that are in storage?](#q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
 
 - When deploying new Vault 1.8(+) clusters, please ensure a valid license exists on-disk (auto-loading).
 
 ## Q: How will Vault behave at startup when a license expires or terminates?
 
-When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.8. The grace period, defined as the time between license expiration and license termination, is 1 day for EVAL licenses (as of 1.8), and ten years for non-Evaluation licenses. Customers must install a valid license before the grace period expires. This license can be autoloaded or loaded into storage using existing methods (``/sys/license`) depending on the applicable scenarios as described above.
+ß
+When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.8. The grace period, defined as the time between license expiration and license termination, is 1 day for EVAL licenses (as of 1.8), and ten years for non-Evaluation licenses. Customers must install a valid license before the grace period expires. This license can be autoloaded or loaded into storage using existing methods (`/sys/license`) depending on the applicable scenarios as described above.
 When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to install one, and this license will need to be autoloaded.
 
 ## Q: What is the impact on EVAL licenses due to this change?
@@ -45,7 +46,7 @@ The 6-hour trial period for Enterprise binaries allows these particular binaries
 
 There are no significant changes to the API or CLI license loading with Vault 1.8.
 However, the `/sys/license` endpoint is slated for deprecation in a future release.
-Please see the question: [“Is there a limited time for support of licenses that are in storage?”](q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
+Please see the question: [Is there a limited time for support of licenses that are in storage?](#q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
 
 ## Q: Is there a grace period when Eval licenses expire?
 
@@ -64,7 +65,7 @@ The changes to licenses apply to all nodes in a cluster. The license files are n
 Yes, starting with Vault 1.8, ENT binaries will be subjected to a EULA check. The release of Vault 1.8 introduces the EULA check for Evaluation licenses (non-Evaluation licenses are evaluated with a EULA check during contractual agreement) .
 Although the agreement to a EULA occurs only once (when the user receives their license), Vault will check for the presence of a valid license every time a node is restarted.
 
-When a customer upgrades existing clusters to a 1.8(+) release, a valid license must exist to upgrade successfully. This valid license must be in storage or on-disk (auto-loaded). Please see the below question: [“Is there a limited time for support of licenses that are in storage?”](q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
+When a customer upgrades existing clusters to a 1.8(+) release, a valid license must exist to upgrade successfully. This valid license must be in storage or on-disk (auto-loaded). Please see the below question: [Is there a limited time for support of licenses that are in storage?](#q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
 
 Also, when customers deploy new clusters to a 1.8(+) release, a valid license must exist to upgrade successfully. This valid license must be on-disk (auto-loaded).
 
@@ -72,7 +73,7 @@ Also, when customers deploy new clusters to a 1.8(+) release, a valid license mu
 
 - **New Cluster Deployment**: When a customer deploys new clusters to a 1.8(+) release, a valid license must exist to successfully deploy. This valid license must be on-disk (auto-loaded).
 
-- **Eventual Migration**: Since in-storage licenses will not be supported forever, migrating to auto-loaded licenses will be required. Please see the below question: [“Is there a limited time for support of licenses that are in storage?”](q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
+- **Eventual Migration**: Since in-storage licenses will not be supported forever, migrating to auto-loaded licenses will be required. Please see the below question: [Is there a limited time for support of licenses that are in storage?](#q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
 
 ## Q: What is the migration path for customers who want to migrate from their existing license-as-applied-via-the-CLI flow to the license on disk flow?
 
@@ -86,11 +87,11 @@ If a Vault 1.7 cluster is upgraded to Vault 1.8(+) and still has a stored licens
 
 ## Q: What is the migration path for customers who wish to migrate from their existing perpetually licensed binaries to the license on disk flow (auto-loading)?
 
-A Vault customer who is currently using S3 unlocked binaries, upgrading their clusters to Vault 1.8(+), and wishes to move to auto-loading, will need a valid enterprise binary version 1.8(+) and a valid license. The steps are the same as in the above question: [“What is the migration path for customers who want to migrate from their existing license-as-applied-via-the-CLI flow to the license on disk flow?”](q:-what-is-the-migration-path-for-customers-who-want-to-migrate-from-their-existing-license-as-applied-via-the-cli-flow-to-the-license-on-disk-flow?) starting at Step 2.
+A Vault customer who is currently using S3 unlocked binaries, upgrading their clusters to Vault 1.8(+), and wishes to move to auto-loading, will need a valid enterprise binary version 1.8(+) and a valid license. The steps are the same as in the above question: [What is the migration path for customers who want to migrate from their existing license-as-applied-via-the-CLI flow to the license on disk flow?](#q:-what-is-the-migration-path-for-customers-who-want-to-migrate-from-their-existing-license-as-applied-via-the-cli-flow-to-the-license-on-disk-flow?) starting at Step 2.
 
 ## Q: What is the migration path for customers who want to migrate from their existing perpetually licensed binaries to the current license on storage flow?
 
-A Vault customer currently using S3 unlocked binaries is upgrading their clusters to a pre-Vault 1.8 version, the customer must retrieve the corresponding enterprise binary version <1.8 and a valid license to load the license in storage (/sys/license). Please see the below question: [“Is there a limited time for support of licenses that are in storage?”](q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
+A Vault customer currently using S3 unlocked binaries is upgrading their clusters to a pre-Vault 1.8 version, the customer must retrieve the corresponding enterprise binary version <1.8 and a valid license to load the license in storage (/sys/license). Please see the below question: [Is there a limited time for support of licenses that are in storage?](#q:-is-there-a-limited-time-for-support-of-licenses-that-are-in-storage?).
 
 ## Q: What is the path for customers who want to downgrade/rollback from Vault 1.8(+) (auto-loading) to a pre- Vault 1.8 (license in storage)?
 
