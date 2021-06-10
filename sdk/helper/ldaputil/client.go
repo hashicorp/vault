@@ -95,17 +95,20 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 }
 
 /*
- * Discover and return the bind string for the user attempting to authenticate.
+ * Discover and return the bind string for the user attempting to authenticate, as well as the 
+ * value to use for the identity alias.
  * This is handled in one of several ways:
  *
  * 1. If DiscoverDN is set, the user object will be searched for using userdn (base search path)
- *    and userattr (the attribute that maps to the provided username).
+ *    and userattr (the attribute that maps to the provided username) or user search filter.
  *    The bind will either be anonymous or use binddn and bindpassword if they were provided.
- * 2. If upndomain is set, the user dn is constructed as 'username@upndomain'. See https://msdn.microsoft.com/en-us/library/cc223499.aspx
+ * 2. If upndomain is set, the user dn and alias attribte are constructed as 'username@upndomain'. 
+ *    See https://msdn.microsoft.com/en-us/library/cc223499.aspx
  *
  */
 func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username string) (string, error) {
 	bindDN := ""
+
 	// Note: The logic below drives the logic in ConfigEntry.Validate().
 	// If updated, please update there as well.
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
@@ -119,19 +122,16 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 			return bindDN, errwrap.Wrapf("LDAP bind (service) failed: {{err}}", err)
 		}
 
-		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username))
-		if cfg.UPNDomain != "" {
-			filter = fmt.Sprintf("(userPrincipalName=%s@%s)", EscapeLDAPValue(username), cfg.UPNDomain)
-		}
+        renderedFilter, err := c.RenderUserSearchFilter(cfg, username)
 
 		if c.Logger.IsDebug() {
-			c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", filter)
+			c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", renderedFilter)
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
 			BaseDN:    cfg.UserDN,
 			Scope:     ldap.ScopeWholeSubtree,
-			Filter:    filter,
-			SizeLimit: math.MaxInt32,
+			Filter:    renderedFilter,
+			SizeLimit: 2,   //Should be only 1 result. Any number larger (2 or more) means access denied.
 		})
 		if err != nil {
 			return bindDN, errwrap.Wrapf("LDAP search for binddn failed: {{err}}", err)
@@ -139,7 +139,9 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 		if len(result.Entries) != 1 {
 			return bindDN, fmt.Errorf("LDAP search for binddn 0 or not unique")
 		}
+
 		bindDN = result.Entries[0].DN
+
 	} else {
 		if cfg.UPNDomain != "" {
 			bindDN = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
@@ -149,6 +151,114 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 	}
 
 	return bindDN, nil
+}
+
+func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (string, error) {
+    // The UserFilter can be blank if not set, or running this version of the code 
+    // on an existing ldap configuration 
+    if cfg.UserFilter == "" {
+        cfg.UserFilter = "({{.UserAttr}}={{.Username}})"
+    }
+
+    // If userfilter was defined, resolve it as a Go template and use the query to
+    // find the login user
+    if c.Logger.IsDebug() {
+        c.Logger.Debug("compiling search filter", "search_filter", cfg.UserFilter)
+    }
+
+    // Parse the configuration as a template.
+    // Example template "({{.UserAttr}}={{.Username}})"
+    t, err := template.New("queryTemplate").Parse(cfg.UserFilter)
+    if err != nil {
+        return "", errwrap.Wrapf("LDAP search failed due to template compilation error: {{err}}", err)
+    }
+
+    // Build context to pass to template - we will be exposing UserDn and Username.
+    context := struct {
+        UserAttr string
+        Username string
+    }{
+        ldap.EscapeFilter(cfg.UserAttr),
+        ldap.EscapeFilter(username),
+    }
+    if cfg.UPNDomain != "" {
+        context.UserAttr = "userPrincipalName"
+        context.Username = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+    }
+
+    var renderedFilter bytes.Buffer
+    if err := t.Execute(&renderedFilter, context); err != nil {
+        return "", errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
+    }
+
+    return renderedFilter.String(), nil
+}
+
+/*
+ * Returns the value to be used for the entity alias of this user
+ * This is handled in one of several ways:
+ *
+ * 1. If DiscoverDN is set, the user will be searched for using userdn (base search path)
+ *    and userattr (the attribute that maps to the provided username) or user search filter.
+ *    The bind will either be anonymous or use binddn and bindpassword if they were provided.
+ * 2. If upndomain is set, the alias attribte is constructed as 'username@upndomain'. 
+ *
+ */
+func (c *Client) GetUserAliasAttributeValue(cfg *ConfigEntry, conn Connection, username string) (string, error) {
+    aliasAttributeValue := ""
+
+	// Note: The logic below drives the logic in ConfigEntry.Validate().
+	// If updated, please update there as well.
+	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
+		var err error
+		if cfg.BindPassword != "" {
+			err = conn.Bind(cfg.BindDN, cfg.BindPassword)
+		} else {
+			err = conn.UnauthenticatedBind(cfg.BindDN)
+		}
+		if err != nil {
+			return aliasAttributeValue, errwrap.Wrapf("LDAP bind (service) failed: {{err}}", err)
+		}
+
+        renderedFilter, err := c.RenderUserSearchFilter(cfg, username)
+
+		if c.Logger.IsDebug() {
+			c.Logger.Debug("reading entity alias attribute value", "userdn", cfg.UserDN, "filter", renderedFilter)
+		}
+		result, err := conn.Search(&ldap.SearchRequest{
+			BaseDN:    cfg.UserDN,
+			Scope:     ldap.ScopeWholeSubtree,
+			Filter:    renderedFilter,
+			SizeLimit: 2,   //Should be only 1 hit. Any number larger (2 or more) is an error
+            Attributes: []string{
+                cfg.UserAttr,
+            },
+		})
+		if err != nil {
+			return aliasAttributeValue, errwrap.Wrapf("LDAP search for entity alias attribute failed: {{err}}", err)
+		}
+		if len(result.Entries) != 1 {
+			return aliasAttributeValue, fmt.Errorf("LDAP search for entity alias attribute 0 or not unique")
+		}
+
+        if len(result.Entries[0].Attributes) != 1 {
+            return aliasAttributeValue, errwrap.Wrapf("LDAP attribute missing for entity alias mapping{{err}}", err)
+        }
+
+        if len(result.Entries[0].Attributes[0].Values) != 1 {
+            return aliasAttributeValue, fmt.Errorf("LDAP entity alias attribute %s empty or not unique for entity alias mapping", cfg.UserAttr)
+        }
+
+        aliasAttributeValue = result.Entries[0].Attributes[0].Values[0]
+	} else {
+		if cfg.UPNDomain != "" {
+			aliasAttributeValue = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+		} else {
+			aliasAttributeValue = fmt.Sprintf("%s=%s,%s", cfg.UserAttr, EscapeLDAPValue(username), cfg.UserDN)
+		}
+	}
+
+	return aliasAttributeValue, nil
 }
 
 /*
