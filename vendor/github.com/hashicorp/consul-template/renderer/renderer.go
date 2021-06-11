@@ -140,23 +140,24 @@ func AtomicWrite(path string, createDestDirs bool, contents []byte, perms os.Fil
 	// If the user did not explicitly set permissions, attempt to lookup the
 	// current permissions on the file. If the file does not exist, fall back to
 	// the default. Otherwise, inherit the current permissions.
-	if perms == 0 {
-		currentInfo, err := os.Stat(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				perms = DefaultFilePerms
-			} else {
-				return err
-			}
-		} else {
-			perms = currentInfo.Mode()
-
-			// The file exists, so try to preserve the ownership as well.
-			if err := preserveFilePermissions(f.Name(), currentInfo); err != nil {
-				log.Printf("[WARN] (runner) could not preserve file permissions for %q: %v",
-					f.Name(), err)
-			}
+	var existingPerms os.FileMode = DefaultFilePerms
+	currentInfo, err := os.Stat(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
 		}
+	} else {
+		existingPerms = currentInfo.Mode()
+
+		// The file exists, so try to preserve the ownership as well.
+		if err := preserveFilePermissions(f.Name(), currentInfo); err != nil {
+			log.Printf("[WARN] (runner) could not preserve file permissions for %q: %v",
+				f.Name(), err)
+		}
+	}
+
+	if perms == 0 {
+		perms = existingPerms
 	}
 
 	if err := os.Chmod(f.Name(), perms); err != nil {
