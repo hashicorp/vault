@@ -99,10 +99,11 @@ type ServerCommand struct {
 
 	cleanupGuard sync.Once
 
-	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reloadutil.ReloadFunc
-	startedCh       chan (struct{}) // for tests
-	reloadedCh      chan (struct{}) // for tests
+	reloadFuncsLock   *sync.RWMutex
+	reloadFuncs       *map[string][]reloadutil.ReloadFunc
+	startedCh         chan (struct{}) // for tests
+	reloadedCh        chan (struct{}) // for tests
+	licenseReloadedCh chan (error)    // for tests
 
 	allLoggers []log.Logger
 
@@ -1564,8 +1565,13 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err := vault.LicenseReload(core); err != nil {
-				c.UI.Error(fmt.Sprintf("Error reloading license: %v", err))
+			if err = vault.LicenseReload(core); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			select {
+			case c.licenseReloadedCh <- err:
+			default:
 			}
 
 		case <-c.SigUSR2Ch:
