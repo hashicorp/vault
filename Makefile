@@ -17,7 +17,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.16.2
+GO_VERSION_MIN=1.16.5
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -53,10 +53,10 @@ dev-dynamic-mem: dev-dynamic
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
 # The resulting image is tagged "vault:dev".
 docker-dev: prep
-	docker build --build-arg VERSION=$(GO_VERSION_MIN) -f scripts/docker/Dockerfile -t vault:dev .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
 docker-dev-ui: prep
-	docker build --build-arg VERSION=$(GO_VERSION_MIN) -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep
@@ -136,7 +136,7 @@ bootstrap: ci-bootstrap
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
 update-plugins:
-	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
+	grep vault-plugin- go.mod | cut -d ' ' -f 1 | while read -r P; do echo "Updating $P..."; go get -v "$P"; done
 
 static-assets-dir:
 	@mkdir -p ./pkg/web_ui
@@ -185,7 +185,7 @@ ember-dist-dev:
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
 static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets

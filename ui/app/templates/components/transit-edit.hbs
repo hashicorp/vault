@@ -14,4 +14,37 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{partial (concat 'partials/transit-form-' mode)}}
+{{#if (eq mode "create")}}
+  <TransitFormCreate
+    @createOrUpdateKey={{action "createOrUpdateKey" mode}}
+    @setValueOnKey={{action "setValueOnKey" "exportable"}}
+    @derivedChange={{action "derivedChange" value="target.checked"}}
+    @convergentEncryptionChange={{action "convergentEncryptionChange" value="target.checked"}}
+    @key={{key}}
+    @requestInFlight={{requestInFlight}}
+  />
+{{else if (eq mode "edit")}}
+  <TransitFormEdit
+    @createOrUpdateKey={{action "createOrUpdateKey" mode}}
+    @setValueOnKey={{action "setValueOnKey" "deletionAllowed"}}
+    @deleteKey={{action "deleteKey"}}
+    @key={{key}}
+    @requestInFlight={{requestInFlight}}
+    @capabilities={{capabilities}}
+  />
+{{else if (eq mode "show")}}
+  <TransitFormShow
+    @refresh={{action "refresh"}}
+    @tab={{tab}}
+    @key={{key}}
+    @capabilities={{capabilities}}
+    @mode={{mode}}
+    @model={{model}}
+    @backend={{backend}}
+  />
+{{else}}
+  <EmptyState
+    @title="No Transit mode selected"
+  />
+{{/if}}
+

@@ -99,10 +99,11 @@ type ServerCommand struct {
 
 	cleanupGuard sync.Once
 
-	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reloadutil.ReloadFunc
-	startedCh       chan (struct{}) // for tests
-	reloadedCh      chan (struct{}) // for tests
+	reloadFuncsLock   *sync.RWMutex
+	reloadFuncs       *map[string][]reloadutil.ReloadFunc
+	startedCh         chan (struct{}) // for tests
+	reloadedCh        chan (struct{}) // for tests
+	licenseReloadedCh chan (error)    // for tests
 
 	allLoggers []log.Logger
 
@@ -1148,10 +1149,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
 		config.LicensePath = envLicensePath
 	}
-	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
 
@@ -1209,6 +1210,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
+
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1560,6 +1562,16 @@ func (c *ServerCommand) Run(args []string) int {
 		RUNRELOADFUNCS:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+			}
+
+			// Reload license file
+			if err = vault.LicenseReload(core); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			select {
+			case c.licenseReloadedCh <- err:
+			default:
 			}
 
 		case <-c.SigUSR2Ch:
