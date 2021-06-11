@@ -1757,56 +1757,93 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
-	missingKeyTemplateContent := `{{- with secret "secret/non-existent"}}{"secret": "other",
-{{- if .Data.data.foo}}"foo":"{{ .Data.data.foo}}",{{- end }}
+	missingKeyTemplateContent := `{{- with secret "secret/otherapp"}}{"secret": "other",
+{{- if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{- end }}}
+{{- end }}`
+	missingKeyTemplateRender := `{"secret": "other",}`
+
+	badTemplateContent := `{{- with secret "secret/non-existent"}}{"secret": "other",
+{{- if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{- end }}}
 {{- end }}`
 
 	testCases := map[string]struct {
 		exitOnRetryFailure        *bool
 		templateContents          string
+		expectTemplateRender      string
 		templateErrorOnMissingKey bool
+		expectExit                bool
 		expectError               bool
 	}{
 		"true, no template error": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
 			templateContents:          templateContents(0),
+			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
+			expectExit:                true,
 			expectError:               false,
 		},
-		"true, with template error": {
+		"true, with non-existent secret": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
-			templateContents:          missingKeyTemplateContent,
+			templateContents:          badTemplateContent,
+			expectTemplateRender:      "",
 			templateErrorOnMissingKey: false,
+			expectExit:                true,
 			expectError:               true,
 		},
-		"true, with template error, with error_on_missing_key": {
+		"true, with missing key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
 			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      missingKeyTemplateRender,
+			templateErrorOnMissingKey: false,
+			expectExit:                true,
+			expectError:               false,
+		},
+		"true, with missing key, with error_on_missing_key": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(true),
+			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      "",
 			templateErrorOnMissingKey: true,
+			expectExit:                true,
 			expectError:               true,
 		},
 		"false, no template error": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
 			templateContents:          templateContents(0),
+			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
+			expectExit:                false,
 			expectError:               false,
 		},
-		"false, with template error": {
+		"false, with non-existent secret": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
-			templateContents:          missingKeyTemplateContent,
+			templateContents:          badTemplateContent,
+			expectTemplateRender:      "",
 			templateErrorOnMissingKey: false,
+			expectExit:                false,
 			expectError:               true,
 		},
-		"false, with template error, with error_on_missing_key": {
+		"false, with missing key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
 			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      missingKeyTemplateRender,
+			templateErrorOnMissingKey: false,
+			expectExit:                false,
+			expectError:               false,
+		},
+		"false, with missing key, with error_on_missing_key": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(false),
+			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      missingKeyTemplateRender,
 			templateErrorOnMissingKey: true,
+			expectExit:                false,
 			expectError:               true,
 		},
 		"missing": {
 			exitOnRetryFailure:        nil,
 			templateContents:          templateContents(0),
+			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
+			expectExit:                false,
 			expectError:               false,
 		},
 	}
@@ -1876,11 +1913,17 @@ vault {
 			ui, cmd := testAgentCommand(t, logger)
 			cmd.startedCh = make(chan struct{})
 
+			// Channel to let verify() know to stop early if agent
+			// has exited
+			cmdRunDoneCh := make(chan struct{})
+			var exited bool
+
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			var code int
 			go func() {
 				code = cmd.Run([]string{"-config", configPath})
+				close(cmdRunDoneCh)
 				wg.Done()
 			}()
 
@@ -1895,6 +1938,9 @@ vault {
 				var err error
 				for {
 					select {
+					case <-cmdRunDoneCh:
+						exited = true
+						return nil
 					case <-timeout:
 						return fmt.Errorf("timed out waiting for templates to render, last error: %w", err)
 					case <-tick:
@@ -1918,8 +1964,8 @@ vault {
 					if err != nil {
 						continue
 					}
-					if strings.TrimSpace(string(c)) != templateRendered(0) {
-						err = fmt.Errorf("expected='%s', got='%s'", templateRendered(0), string(c))
+					if strings.TrimSpace(string(c)) != tc.expectTemplateRender {
+						err = fmt.Errorf("expected='%s', got='%s'", tc.expectTemplateRender, strings.TrimSpace(string(c)))
 						continue
 					}
 					return nil
@@ -1932,6 +1978,9 @@ vault {
 
 			switch {
 			case (code != 0 || err != nil) && tc.expectError:
+				if exited != tc.expectExit {
+					t.Fatalf("expected program exit to be '%t', got '%t'", tc.expectExit, exited)
+				}
 			case code == 0 && err == nil && !tc.expectError:
 			default:
 				if code != 0 {
