@@ -115,7 +115,7 @@ steps:
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
           docker exec -w /go/src/github.com/hashicorp/vault/ \
-            -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+            -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
             -e VAULT_LICENSE_CI \
             testcontainer \
             gotestsum --format=short-verbose \

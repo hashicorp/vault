@@ -6,9 +6,6 @@ jobs:
   - build-go-dev:
       requires:
         - pre-flight-checks
-  - go-mod-vendor:
-      requires:
-        - pre-flight-checks
   - test-ui:
       requires:
         - install-ui-dependencies
