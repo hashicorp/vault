@@ -81,13 +81,14 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
+
     if (this.mode === 'edit') {
       this.send('addRow');
     }
   },
 
   waitForKeyUp: task(function*(name, value) {
-    // path and key are not on the model (there via key-mixin) doing custom validations here instead of cp validations
+    // because path and key are not on the model performing custom validations instead of cp-validations
     if (name === 'path') {
       // no value indicates missing presence
       !value
@@ -99,12 +100,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       !value ? this.set('validationMessageKey', `Key can't be blank`) : this.set('validationMessageKey', '');
     }
     if (name === 'maxVersions') {
-      // checking for value because value is blank on first loading, no keyup event has occurred and default is 10.
+      // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
       if (value) {
         let number = Number(value);
         this.model.set('maxVersions', number);
       }
-      // cannot use async validators method because it causes a delay of one onkeyup
       if (!this.model.validations.attrs.maxVersions.isValid) {
         this.set('validationMessageMaxVersions', this.model.validations.attrs.maxVersions.message);
       } else {
@@ -357,6 +357,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.set('validationMessageKey', "Secret key can't be blank");
         return;
       }
+
       this.persistKey(key => {
         let secretKey;
         try {

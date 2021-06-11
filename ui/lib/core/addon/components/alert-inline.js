@@ -16,7 +16,7 @@ import layout from '../templates/components/alert-inline';
  * @param [message=null]{String} - The message to display within the alert.
  * @param [sizeSmall=false]{Boolean} - Whether or not to display a small font with padding below of alert message.
  * @param [paddingTop=false]{Boolean} - Whether or not to add padding above component.
- * @param [noMarginBottom=false]{Boolean} - Whether or not remove margin bottom below component.
+ * @param [noMarginBottom=false]{Boolean} - Whether or not to remove margin bottom below component.
  */
 
 export default Component.extend({
