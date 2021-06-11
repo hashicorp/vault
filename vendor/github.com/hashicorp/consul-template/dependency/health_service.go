@@ -38,20 +38,21 @@ func init() {
 
 // HealthService is a service entry in Consul.
 type HealthService struct {
-	Node                string
-	NodeID              string
-	NodeAddress         string
-	NodeTaggedAddresses map[string]string
-	NodeMeta            map[string]string
-	ServiceMeta         map[string]string
-	Address             string
-	ID                  string
-	Name                string
-	Tags                ServiceTags
-	Checks              api.HealthChecks
-	Status              string
-	Port                int
-	Weights             api.AgentWeights
+	Node                   string
+	NodeID                 string
+	NodeAddress            string
+	NodeTaggedAddresses    map[string]string
+	NodeMeta               map[string]string
+	ServiceMeta            map[string]string
+	Address                string
+	ServiceTaggedAddresses map[string]api.ServiceAddress
+	ID                     string
+	Name                   string
+	Tags                   ServiceTags
+	Checks                 api.HealthChecks
+	Status                 string
+	Port                   int
+	Weights                api.AgentWeights
 }
 
 // HealthServiceQuery is the representation of all a service query in Consul.
@@ -177,15 +178,16 @@ func (d *HealthServiceQuery) Fetch(clients *ClientSet, opts *QueryOptions) (inte
 		}
 
 		list = append(list, &HealthService{
-			Node:                entry.Node.Node,
-			NodeID:              entry.Node.ID,
-			NodeAddress:         entry.Node.Address,
-			NodeTaggedAddresses: entry.Node.TaggedAddresses,
-			NodeMeta:            entry.Node.Meta,
-			ServiceMeta:         entry.Service.Meta,
-			Address:             address,
-			ID:                  entry.Service.ID,
-			Name:                entry.Service.Service,
+			Node:                   entry.Node.Node,
+			NodeID:                 entry.Node.ID,
+			NodeAddress:            entry.Node.Address,
+			NodeTaggedAddresses:    entry.Node.TaggedAddresses,
+			NodeMeta:               entry.Node.Meta,
+			ServiceMeta:            entry.Service.Meta,
+			Address:                address,
+			ServiceTaggedAddresses: entry.Service.TaggedAddresses,
+			ID:                     entry.Service.ID,
+			Name:                   entry.Service.Service,
 			Tags: ServiceTags(
 				deepCopyAndSortTags(entry.Service.Tags)),
 			Status:  status,
@@ -234,6 +236,9 @@ func (d *HealthServiceQuery) String() string {
 	}
 	if len(d.filters) > 0 {
 		name = name + "|" + strings.Join(d.filters, ",")
+	}
+	if d.connect {
+		return fmt.Sprintf("health.connect(%s)", name)
 	}
 	return fmt.Sprintf("health.service(%s)", name)
 }
