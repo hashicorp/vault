@@ -1,6 +1,5 @@
 executor: go-machine
 steps:
-  - check-branch-name
   - setup-go
   - checkout
   - go_test:
