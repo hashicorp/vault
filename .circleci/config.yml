@@ -878,8 +878,10 @@ jobs:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -962,7 +964,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
@@ -974,7 +976,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
@@ -1105,8 +1107,10 @@ jobs:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -1188,7 +1192,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
@@ -1200,7 +1204,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
@@ -1582,8 +1586,10 @@ jobs:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -1665,7 +1671,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
@@ -1677,7 +1683,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
@@ -1728,8 +1734,10 @@ jobs:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -1811,7 +1819,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
@@ -1823,7 +1831,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
@@ -2299,8 +2307,10 @@ jobs:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -2383,7 +2393,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
@@ -2395,7 +2405,7 @@ jobs:
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
