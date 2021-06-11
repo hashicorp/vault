@@ -1,0 +1,3 @@
+```release-note:bug
+agent: fix timestamp format in log messages from the templating engine
+```
