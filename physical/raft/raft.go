@@ -364,7 +364,14 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
+		raftOptions := raftboltdb.Options{
+			Path: filepath.Join(path, "raft.db"),
+			BoltOptions: &bolt.Options{
+				FreelistType:   bolt.FreelistMapType,
+				NoFreelistSync: true,
+			},
+		}
+		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
 			return nil, err
 		}
