@@ -1757,6 +1757,10 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
+	// Note that missing key is different from a non-existent secret. A missing
+	// key (2xx response with missing keys in the response map) can still yield
+	// a successful render unless error_on_missing_key is specified, whereas a
+	// missing secret (4xx response) always results in an error.
 	missingKeyTemplateContent := `{{- with secret "secret/otherapp"}}{"secret": "other",
 {{- if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{- end }}}
 {{- end }}`
