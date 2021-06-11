@@ -30,10 +30,10 @@ to join, there must be at least one existing member of the cluster. If Shamir
 seal is in use, then unseal keys are to be supplied before or after the
 join process, depending on whether it's being used exclusively for HA.
 
-If raft is used for `storage`, the node must be joined before unsealing and the
-`leader-api-addr` argument must be provided. If raft is used for `ha_storage`,
-the node must be first unsealed before joining and the `leader-api-addr` must
-_not_ be provided.
+If raft is used for `storage`, the node must be joined before initializing or 
+unsealing and the `leader-api-addr` argument must be provided. If raft is used 
+for `ha_storage`, the node must be first unsealed before joining and the 
+`leader-api-addr` must _not_ be provided.
 
 ```text
 Usage: vault operator raft join [options] <leader-api-addr>
