@@ -27,6 +27,7 @@ type cassandraConnectionProducer struct {
 	Password           string      `json:"password" structs:"password" mapstructure:"password"`
 	TLS                bool        `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS        bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	TLSServerName      string      `json:"tls_server_name" structs:"tls_server_name" mapstructure:"tls_server_name"`
 	ProtocolVersion    int         `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeoutRaw  interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
 	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
@@ -184,7 +185,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	clusterConfig.SocketKeepalive = c.socketKeepAlive
 
 	if c.TLS {
-		sslOpts, err := getSslOpts(c.certBundle, c.TLSMinVersion, c.InsecureTLS)
+		sslOpts, err := getSslOpts(c.certBundle, c.TLSMinVersion, c.TLSServerName, c.InsecureTLS)
 		if err != nil {
 			return nil, err
 		}
@@ -230,7 +231,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	return session, nil
 }
 
-func getSslOpts(certBundle *certutil.CertBundle, minTLSVersion string, insecureSkipVerify bool) (*gocql.SslOptions, error) {
+func getSslOpts(certBundle *certutil.CertBundle, minTLSVersion, serverName string, insecureSkipVerify bool) (*gocql.SslOptions, error) {
 	tlsConfig := &tls.Config{}
 	if certBundle != nil {
 		if certBundle.Certificate == "" && certBundle.PrivateKey != "" {
@@ -252,6 +253,10 @@ func getSslOpts(certBundle *certutil.CertBundle, minTLSVersion string, insecureS
 	}
 
 	tlsConfig.InsecureSkipVerify = insecureSkipVerify
+
+	if serverName != "" {
+		tlsConfig.ServerName = serverName
+	}
 
 	if minTLSVersion != "" {
 		var ok bool
