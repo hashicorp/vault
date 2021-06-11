@@ -1,4 +1,4 @@
-<form onsubmit={{action 'onSubmit' (hash plaintext=@plaintext context=@context nonce=@nonce key_version=@key_version encodedBase64=@encodedBase64)}}>
+<form onsubmit={{action @doSubmit (hash plaintext=@plaintext context=@context nonce=@nonce key_version=@key_version encodedBase64=@encodedBase64)}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="encryption" />
       <div class="content">
@@ -86,7 +86,7 @@
       data-test-button="modal-copy-close"
       @clipboardText={{@ciphertext}}
       @buttonType="button"
-      @success={{action "toggleModal" "Ciphertext copied!"}}>
+      @success={{action @toggleModal "Ciphertext copied!"}}>
       Copy &amp; Close
     </CopyButton>
   </footer>

@@ -1,4 +1,4 @@
-<form onsubmit={{action 'onSubmit' (hash input=@input hash_algorithm=@hash_algorithm signature_algorithm=@signature_algorithm key_version=@key_version context=@context prehashed=@prehashed encodedBase64=@encodedBase64)}}>
+<form onsubmit={{action @doSubmit (hash input=@input hash_algorithm=@hash_algorithm signature_algorithm=@signature_algorithm key_version=@key_version context=@context prehashed=@prehashed encodedBase64=@encodedBase64)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="signing" />
     <div class="content">
@@ -121,7 +121,7 @@
       data-test-button="modal-copy-close"
       @clipboardText={{@signature}}
       @buttonType="button"
-      @success={{action "toggleModal" "Signature copied!"}}>
+      @success={{action @toggleModal "Signature copied!"}}>
       Copy &amp; Close
     </CopyButton>
   </footer>

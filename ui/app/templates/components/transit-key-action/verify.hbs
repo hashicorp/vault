@@ -1,4 +1,4 @@
-<form onsubmit={{action 'onSubmit' (hash input=@input signature=@signature signature_algorithm=@signature_algorithm hmac=@hmac hash_algorithm=@hash_algorithm context=@context prehashed=@prehashed encodedBase64=@encodedBase64)}}>
+<form onsubmit={{action @doSubmit (hash input=@input signature=@signature signature_algorithm=@signature_algorithm hmac=@hmac hash_algorithm=@hash_algorithm context=@context prehashed=@prehashed encodedBase64=@encodedBase64)}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="content">
         <p>Check whether the provided signature is valid for the given data.</p>
@@ -45,7 +45,7 @@
                    id="verification"
                    onchange={{queue
                     (action (mut @verification) value="target.value")
-                    (action "clearParams" (array "hmac" "signature"))
+                    (action @clearParams (array "hmac" "signature"))
                    }}
                   >
                     {{#each (array 'Signature' 'HMAC') as |type|}}

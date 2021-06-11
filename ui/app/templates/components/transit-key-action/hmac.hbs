@@ -1,4 +1,4 @@
-<form onsubmit={{action 'onSubmit' (hash input=@input algorithm=@algorithm key_version=@key_version)}}>
+<form onsubmit={{action @doSubmit (hash input=@input algorithm=@algorithm key_version=@key_version)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
     <div class="content">
@@ -62,7 +62,7 @@
   </section>
   <footer class="modal-card-foot">
     <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{@hmac}}
-      @buttonType="button" @success={{action "toggleModal" "HMAC copied!"}}>
+      @buttonType="button" @success={{action @toggleModal "HMAC copied!"}}>
       Copy &amp; Close
     </CopyButton>
   </footer>
