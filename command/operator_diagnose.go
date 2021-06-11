@@ -227,15 +227,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// OS Specific checks
 	diagnose.OSChecks(ctx)
 
-	// Process is root check
-	isRootContext, isRootSpan := diagnose.StartSpan(ctx, "is-root")
-	if diagnose.IsProcRoot() {
-		diagnose.SpotWarn(isRootContext, "is-root", "vault is running as root")
-	} else {
-		diagnose.SpotOk(isRootContext, "is-root", "vault is not running as root")
-	}
-	isRootSpan.End()
-
 	server.flagConfigs = c.flagConfigs
 	config, err := server.parseConfig()
 	if err != nil {
@@ -379,6 +370,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var sealConfigError error
 
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+
 	// Check error here
 	if err != nil {
 		diagnose.Fail(sealcontext, err.Error())

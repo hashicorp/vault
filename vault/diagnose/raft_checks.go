@@ -10,12 +10,6 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 )
 
-const (
-	FileIsSymlinkWarning          = "raft storage backend file is a symlink"
-	FileTooPermissiveWarning      = "too many permissions"
-	FilePermissionsMissingWarning = "owner needs read and write permissions"
-)
-
 const DatabaseFilename = "vault.db"
 const owner = "owner"
 const group = "group"
@@ -37,7 +31,7 @@ func RaftFileChecks(ctx context.Context, path string) {
 		SpotWarn(ctx, "raft folder ownership checks", "boltDB file has not been created")
 	}
 
-	correctPerms, errs := HasCorrectFilePerms(info)
+	hasOnlyOwnerRW, errs := CheckFilePerms(info)
 	if errs != nil {
 		for _, err := range errs {
 			switch {
@@ -47,17 +41,16 @@ func RaftFileChecks(ctx context.Context, path string) {
 				SpotError(ctx, "raft folder permission checks", errors.New(err))
 			}
 		}
-	} else if correctPerms {
-		SpotOk(ctx, "raft folder permission checks", "boltDB file has correct set of permissions")
+	}
+	ownedByRoot := IsOwnedByRoot(info)
+	requiresRoot := ownedByRoot && hasOnlyOwnerRW
+	if requiresRoot {
+		SpotWarn(ctx, "raft folder ownership checks", "raft backend files owned by root and only accessible as root or with overpermissive file perms. This prevents Vault from running as a non-privileged user")
+		Advise(ctx, "Please change raft path permissions to allow for non-root access.")
 	}
 
-	ownedByRoot, err := IsOwnedByRoot(info)
-	if err != nil {
-		SpotError(ctx, "raft folder ownership checks", fmt.Errorf("vault could not determine file owner for boltDB storage file"))
-	}
-	if ownedByRoot {
-		SpotWarn(ctx, "raft folder ownership checks", "raft backend files owned by root and only accessible as root or with overpermissive file perms")
-		Advise(ctx, "this prevents Vault from running as a non-privileged user")
+	if errs == nil && !requiresRoot {
+		SpotOk(ctx, "raft folder permission checks", "boltDB file has correct set of permissions")
 	}
 }
 

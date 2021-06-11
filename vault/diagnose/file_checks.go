@@ -7,6 +7,12 @@ import (
 	"path/filepath"
 )
 
+const (
+	FileIsSymlinkWarning          = "raft storage backend file is a symlink"
+	FileTooPermissiveWarning      = "too many permissions"
+	FilePermissionsMissingWarning = "owner or group needs read and write permissions"
+)
+
 func IsDir(info fs.FileInfo) bool {
 	if info.Mode().IsDir() {
 		return true
@@ -22,28 +28,63 @@ func HasDB(path string) bool {
 	return true
 }
 
-// HasCorrectFilePerms checks if the specified file has owner rw perms
-// and no other permissions
-func HasCorrectFilePerms(info fs.FileInfo) (bool, []string) {
+// CheckFilePerms checks if the specified file does not have other permissions, and
+// whether the specified file just has owner rw permissions.
+func CheckFilePerms(info fs.FileInfo) (bool, []string) {
 	var errors []string
 	mode := info.Mode()
+	hasOnlyOwnerRW := false
+	hasOwnerRead := false
+	hasOwnerWrite := false
+	hasSomeRead := false
+	hasSomeWrite := false
 
-	//check that owners have read and write permissions
-	if mode&(1<<7) == 0 || mode&(1<<8) == 0 {
-		errors = append(errors, fmt.Sprintf(FilePermissionsMissingWarning+": perms are %s", mode.String()))
+	fmt.Printf("perms are %s", mode)
+	fmt.Printf("owner read is: %b, %b", mode&0400, mode&0200)
+
+	// Check owner perms
+	if mode&0400 != 0 {
+		hasSomeRead = true
+		hasOwnerRead = true
+	}
+	if mode&0200 != 0 {
+		hasSomeWrite = true
+		hasOwnerWrite = true
 	}
 
-	// Check user rw and group rw for overpermissions
-	if mode&(1<<1) != 0 || mode&(1<<2) != 0 || mode&(1<<4) != 0 || mode&(1<<5) != 0 {
+	if hasOwnerRead && hasOwnerWrite {
+		hasOnlyOwnerRW = true
+	}
+
+	// These are "other" perms.
+	// These don't count has "some read" or "some write" permissions because there should
+	// never be a case when these permissions are set.
+	if mode&0007 != 0 {
+		hasOnlyOwnerRW = false
 		errors = append(errors, fmt.Sprintf(FileTooPermissiveWarning+": perms are %s", mode.String()))
+	}
+
+	// Check group permissions
+	if mode&0040 != 0 {
+		hasOnlyOwnerRW = false
+		hasSomeRead = true
+	}
+	if mode&0020 != 0 {
+		hasOnlyOwnerRW = false
+		hasSomeWrite = true
+	}
+
+	//check that owners have read and write permissions
+	if !hasSomeRead || !hasSomeWrite {
+		errors = append(errors, fmt.Sprintf(FilePermissionsMissingWarning+": perms are %s", mode.String()))
 	}
 
 	if mode&os.ModeSymlink != 0 {
 		errors = append(errors, FileIsSymlinkWarning)
 	}
 
-	if len(errors) > 0 {
-		return false, errors
+	if hasOnlyOwnerRW {
+		return true, errors
 	}
-	return true, nil
+	return false, errors
 }

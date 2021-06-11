@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/raft-boltdb/v2"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -982,6 +982,7 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
+// Roy
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()

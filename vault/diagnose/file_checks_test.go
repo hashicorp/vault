@@ -30,12 +30,12 @@ func TestRaftFolderPerms(t *testing.T) {
 		t.Fatal("well-formatted database path is not accepted by DB check function")
 	}
 
-	hasCorrectPerms, errs := HasCorrectFilePerms(info)
-	if hasCorrectPerms {
-		t.Fatal("overpermissive folder returns correct permissions")
+	hasOnlyOwnerRW, errs := CheckFilePerms(info)
+	if hasOnlyOwnerRW {
+		t.Fatal("folder has more than owner rw")
 	}
-	if len(errs) != 1 || !strings.Contains(errs[0], FileTooPermissiveWarning) {
-		t.Fatalf("wrong error or number of errors returned: %v", errs)
+	if len(errs) != 1 && !strings.Contains(errs[0], FileTooPermissiveWarning) {
+		t.Fatalf("wrong error or number of errors or wrong error returned: %v", errs)
 	}
 
 	// Make sure underpermissiveness is caught
@@ -44,23 +44,22 @@ func TestRaftFolderPerms(t *testing.T) {
 		t.Fatal(err)
 	}
 	info, _ = os.Stat("diagnose")
-	hasCorrectPerms, errs = HasCorrectFilePerms(info)
-	if hasCorrectPerms {
-		t.Fatal("underpermissive folder returns correct permissions")
+	hasOnlyOwnerRW, errs = CheckFilePerms(info)
+	if hasOnlyOwnerRW {
+		t.Fatal("folder should not have owner write")
 	}
 	if len(errs) != 1 || !strings.Contains(errs[0], FilePermissionsMissingWarning) {
 		t.Fatalf("wrong error or number of errors returned: %v", errs)
 	}
 
-	// Make sure the correct permissions passes
-
+	// Make sure actually setting owner rw returns properly
 	err = os.Chmod("diagnose", 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 	info, _ = os.Stat("diagnose")
-	hasCorrectPerms, errs = HasCorrectFilePerms(info)
-	if errs != nil || !hasCorrectPerms {
+	hasOnlyOwnerRW, errs = CheckFilePerms(info)
+	if errs != nil || !hasOnlyOwnerRW {
 		t.Fatal("folder with correct perms returns error")
 	}
 
