@@ -1215,6 +1215,10 @@
                 "path": "platform/k8s/helm/run"
               },
               {
+                "title": "Running Vault Enterprise",
+                "path": "platform/k8s/helm/enterprise"
+              },
+              {
                 "title": "Running Vault on OpenShift",
                 "path": "platform/k8s/helm/openshift"
               },
