@@ -600,7 +600,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		case RSAPrivateKey:
 			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 		case ECPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public())
 		}
 
 		caCert := data.SigningBundle.Certificate
@@ -620,7 +620,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		case "rsa":
 			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 		case "ec":
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public())
 		}
 
 		certTemplate.AuthorityKeyId = subjKeyID
@@ -653,6 +653,23 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 	}
 
 	return result, nil
+}
+
+func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey) x509.SignatureAlgorithm {
+	key, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return x509.ECDSAWithSHA256
+	}
+	switch key.Curve {
+	case elliptic.P224(), elliptic.P256():
+		return x509.ECDSAWithSHA256
+	case elliptic.P384():
+		return x509.ECDSAWithSHA384
+	case elliptic.P521():
+		return x509.ECDSAWithSHA512
+	default:
+		return x509.ECDSAWithSHA256
+	}
 }
 
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
