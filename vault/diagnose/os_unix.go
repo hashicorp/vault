@@ -5,6 +5,7 @@ package diagnose
 import (
 	"context"
 	"fmt"
+
 	"golang.org/x/sys/unix"
 )
 

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/term"
 	"io"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/term"
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
@@ -489,7 +490,12 @@ SEALFAIL:
 				if err != nil {
 					return err
 				}
-
+				fmt.Println("Checking TLS Client CA File Check")
+				err = diagnose.TLSClientCAFileCheck(ln.Config)
+				fmt.Println("Checking TLS cleint CA file check and the error is : ", err)
+				if err != nil {
+					return err
+				}
 				sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
 					Listener: ln.Listener,
 					Config:   ln.Config,

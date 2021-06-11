@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
@@ -120,5 +121,32 @@ func TLSFileChecks(certFilePath, keyFilePath string) error {
 		return err
 	}
 
+	return nil
+}
+
+// TLSClientCAFileCheck checks whether client CA file is readable and parsable or not
+func TLSClientCAFileCheck(l *configutil.Listener) error {
+
+	caPool := x509.NewCertPool()
+	data, err := ioutil.ReadFile(l.TLSClientCAFile)
+	if err != nil {
+		return fmt.Errorf("failed to read tls_client_ca_file: %w", err)
+	}
+
+	if !caPool.AppendCertsFromPEM(data) {
+		return fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
+	}
+	// TODO: should we run the CA cert through the TLSFileChecks function as well?
+	return nil
+}
+
+// TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
+func TLSMutualExclusionCertCheck(l *configutil.Listener) error {
+
+	if l.TLSDisableClientCerts {
+		if l.TLSRequireAndVerifyClientCert {
+			return fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
+		}
+	}
 	return nil
 }

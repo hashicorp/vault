@@ -163,6 +163,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 
 	if l.TLSRequireAndVerifyClientCert {
 		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+		// TODO: Wouldn't we have to provide the TLSClientCAFile if TLSRequireAndVerifyClientCert is set?
 		if l.TLSClientCAFile != "" {
 			caPool := x509.NewCertPool()
 			data, err := ioutil.ReadFile(l.TLSClientCAFile)
