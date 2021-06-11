@@ -159,9 +159,8 @@ func (v *View) poll(viewCh chan<- *View, errCh chan<- error) {
 						return
 					}
 				}
+				log.Printf("[ERR] (view) %s (exceeded maximum retries)", err)
 			}
-
-			log.Printf("[ERR] (view) %s (exceeded maximum retries)", err)
 
 			// Push the error back up to the watcher
 			select {

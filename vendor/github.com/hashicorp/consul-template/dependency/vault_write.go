@@ -157,14 +157,15 @@ func (d *VaultWriteQuery) writeSecret(clients *ClientSet, opts *QueryOptions) (*
 		RawQuery: opts.String(),
 	})
 
+	path := d.path
 	data := d.data
-
-	_, isv2, _ := isKVv2(clients.Vault(), d.path)
+	mountPath, isv2, _ := isKVv2(clients.Vault(), path)
 	if isv2 {
+		path = shimKVv2Path(path, mountPath)
 		data = map[string]interface{}{"data": d.data}
 	}
 
-	vaultSecret, err := clients.Vault().Logical().Write(d.path, data)
+	vaultSecret, err := clients.Vault().Logical().Write(path, data)
 	if err != nil {
 		return nil, errors.Wrap(err, d.String())
 	}
