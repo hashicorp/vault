@@ -57,6 +57,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   hasLintError: false,
   isV2: false,
 
+  // cp-validation related properties
   validationMessagePath: '',
   validationMessageKey: '',
   validationMessageMaxVersions: '',
@@ -344,8 +345,18 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.send('clearWrappedData');
     },
 
-    createOrUpdateKey(event) {
+    createOrUpdateKey(type, event) {
       event.preventDefault();
+      let model = this.modelForData;
+      let arraySecretKeys = Object.keys(model.secretData);
+      if (type === 'create' && isBlank(model.path || model.id)) {
+        this.set('validationMessagePath', "Secret path can't be blank");
+        return;
+      }
+      if (arraySecretKeys.includes('')) {
+        this.set('validationMessageKey', "Secret key can't be blank");
+        return;
+      }
       this.persistKey(key => {
         let secretKey;
         try {
