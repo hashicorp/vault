@@ -43,7 +43,7 @@ export default Component.extend({
 
   showEnable: false,
 
-  validationError: '',
+  validationMessage: '',
 
   init() {
     this._super(...arguments);
@@ -69,7 +69,7 @@ export default Component.extend({
     this.mountModel.rollbackAttributes();
   },
 
-  checkPathChangeOnFocusOut(type) {
+  checkPathChange(type) {
     let mount = this.mountModel;
     let currentPath = mount.path;
     let list = this.mountTypes;
@@ -78,15 +78,6 @@ export default Component.extend({
     let isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
       mount.set('path', type);
-    }
-  },
-
-  checkPathChangeOnKeyUp(pathName) {
-    let mount = this.mountModel;
-    let currentPath = mount.path;
-
-    if (pathName !== currentPath) {
-      mount.set('path', pathName);
     }
   },
 
@@ -110,20 +101,16 @@ export default Component.extend({
     .withTestWaiter(),
 
   actions: {
-    onKeyUp(value) {
-      this.checkPathChangeOnKeyUp(value);
-      this.mountModel.validate().then(({ validations }) => {
-        if (validations.get('isValid')) {
-          this.set('validationError', '');
-        } else {
-          this.set('validationError', this.mountModel.validations.attrs.path.message);
-        }
-      });
+    onKeyUp(name, value) {
+      this.mountModel.set('path', value);
+      this.mountModel.validations.attrs.path.isValid
+        ? this.set('validationMessage', '')
+        : this.set('validationMessage', this.mountModel.validations.attrs.path.message);
     },
     onTypeChange(path, value) {
       if (path === 'type') {
         this.wizard.set('componentState', value);
-        this.checkPathChangeOnFocusOut(value);
+        this.checkPathChange(value);
       }
     },
 
