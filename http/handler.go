@@ -449,25 +449,6 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	})
 }
 
-// A lookup on a token that is about to expire returns nil, which means by the
-// time we can validate a wrapping token lookup will return nil since it will
-// be revoked after the call. So we have to do the validation here.
-func wrappingVerificationFunc(ctx context.Context, core *vault.Core, req *logical.Request) error {
-	if req == nil {
-		return fmt.Errorf("invalid request")
-	}
-
-	valid, err := core.ValidateWrappingToken(ctx, req)
-	if err != nil {
-		return fmt.Errorf("error validating wrapping token: %w", err)
-	}
-	if !valid {
-		return consts.ErrInvalidWrappingToken
-	}
-
-	return nil
-}
-
 // stripPrefix is a helper to strip a prefix from the path. It will
 // return false from the second return value if it the prefix doesn't exist.
 func stripPrefix(prefix, path string) (string, bool) {
@@ -731,7 +712,7 @@ func forwardBasedOnHeaders(core *vault.Core, r *http.Request) (bool, error) {
 		return false, nil
 	}
 
-	return core.MissingRequiredState(r.Header.Values(VaultIndexHeaderName)), nil
+	return core.MissingRequiredState(r.Header.Values(VaultIndexHeaderName), core.PerfStandby()), nil
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
@@ -977,7 +958,7 @@ func getTokenFromReq(r *http.Request) (string, bool) {
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
-func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
+func requestAuth(r *http.Request, req *logical.Request) {
 	// Attach the header value if we have it
 	token, fromAuthzHeader := getTokenFromReq(r)
 	if token != "" {
@@ -987,29 +968,7 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logi
 			req.ClientTokenSource = logical.ClientTokenFromAuthzHeader
 		}
 
-		// Also attach the accessor if we have it. This doesn't fail if it
-		// doesn't exist because the request may be to an unauthenticated
-		// endpoint/login endpoint where a bad current token doesn't matter, or
-		// a token from a Vault version pre-accessors. We ignore errors for
-		// JWTs.
-		te, err := core.LookupToken(r.Context(), token)
-		if err != nil {
-			dotCount := strings.Count(token, ".")
-			// If we have two dots but the second char is a dot it's a vault
-			// token of the form s.SOMETHING.nsid, not a JWT
-			if dotCount != 2 ||
-				dotCount == 2 && token[1] == '.' {
-				return req, err
-			}
-		}
-		if err == nil && te != nil {
-			req.ClientTokenAccessor = te.Accessor
-			req.ClientTokenRemainingUses = te.NumUses
-			req.SetTokenEntry(te)
-		}
 	}
-
-	return req, nil
 }
 
 func requestPolicyOverride(r *http.Request, req *logical.Request) error {

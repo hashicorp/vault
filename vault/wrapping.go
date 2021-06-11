@@ -334,7 +334,7 @@ DONELISTHANDLING:
 // validateWrappingToken checks whether a token is a wrapping token. The passed
 // in logical request will be updated if the wrapping token was provided within
 // a JWT token.
-func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
+func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
 	}
@@ -342,9 +342,6 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	if c.Sealed() {
 		return false, consts.ErrSealed
 	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 
 	if c.standby && !c.perfStandby {
 		return false, consts.ErrStandby
