@@ -185,7 +185,7 @@ ember-dist-dev:
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
 static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets
