@@ -55,6 +55,8 @@ These are the currently-available general configuration option:
 
 - `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
 
+- `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
+
 ### vault Stanza
 
 There can at most be one top level `vault` block and it has the following
@@ -199,6 +201,7 @@ template {
 [autoauth]: /docs/agent/autoauth
 [caching]: /docs/agent/caching
 [template]: /docs/agent/template
+[template-config]: /docs/agent/template-config
 [listener]: /docs/agent#listener-stanza
 [listener_main]: /docs/configuration/listener/tcp
 [winsvc]: /docs/agent/winsvc
