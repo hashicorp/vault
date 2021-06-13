@@ -92,7 +92,7 @@ func callTypeToOp(ctype string) string {
 	return ""
 }
 
-func (m mockStorageBackend) GetConfiguration(ctx context.Context) (*raft.RaftConfigurationResponse, error) {
+func (m mockStorageBackend) GetConfigurationOffline() (*raft.RaftConfigurationResponse, error) {
 	twoServerList := []*raft.RaftServer{}
 	threeServerList := []*raft.RaftServer{}
 	for i := 0; i < 2; i++ {
@@ -116,5 +116,5 @@ func (m mockStorageBackend) GetConfiguration(ctx context.Context) (*raft.RaftCon
 
 // Don't have this in test file
 type RaftConfigurableStorageBackend interface {
-	GetConfiguration(context.Context) (*raft.RaftConfigurationResponse, error)
+	GetConfigurationOffline() (*raft.RaftConfigurationResponse, error)
 }

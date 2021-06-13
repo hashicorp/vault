@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/hashicorp/vault/physical/raft"
@@ -49,7 +50,9 @@ func RaftFileChecks(ctx context.Context, path string) {
 		Advise(ctx, "Please change raft path permissions to allow for non-root access.")
 	}
 
-	if errs == nil && !requiresRoot {
+	if runtime.GOOS == "windows" {
+		SpotWarn(ctx, "raft folder permission checks", "Diagnose cannot determine if vault needs to run as root to open boltDB file. Please check these permissions manually.")
+	} else if errs == nil && !requiresRoot {
 		SpotOk(ctx, "raft folder permission checks", "boltDB file has correct set of permissions")
 	}
 }
@@ -59,7 +62,7 @@ func RaftFileChecks(ctx context.Context, path string) {
 func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) string {
 	var conf *raft.RaftConfigurationResponse
 	var err error
-	conf, err = b.GetConfiguration(ctx)
+	conf, err = b.GetConfigurationOffline()
 	if err != nil {
 		SpotError(ctx, "raft quorum", fmt.Errorf("error retrieving server configuration: %w", err))
 		return fmt.Sprintf("error retrieving server configuration: %s", err.Error())
