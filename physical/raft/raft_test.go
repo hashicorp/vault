@@ -362,7 +362,7 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 		NonVoter bool   `json:"non_voter"`
 	}
 
-	// NOTE: THIS DOESN'T SEEM TO MAKE RAFT3 A NONVOTER (ASK WHY)
+	// NOTE: THIS DOESN'T SEEM TO MAKE RAFT3 A NONVOTER (WHY?)
 	peersList := make([]*RecoveryPeer, 0, 1)
 	peersList = append(peersList, &RecoveryPeer{
 		ID:       raft3.NodeID(),
