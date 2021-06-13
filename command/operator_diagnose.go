@@ -435,6 +435,7 @@ SEALFAIL:
 			}
 			return nil
 		})
+
 		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
 			if config.HAStorage == nil {
 				diagnose.Skipped(ctx, "no HA storage configured")
@@ -470,6 +471,26 @@ SEALFAIL:
 		return diagnose.SpotError(ctx, "find-cluster-addr", err)
 	}
 	diagnose.SpotOk(ctx, "find-cluster-addr", "")
+
+	// Run all the checks that are utilized when initializing a core object
+	// without actually calling core.Init. These are in the init-core section
+	// as they are runtime checks.
+	diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
+		var newCoreError error
+		if coreConfig.RawConfig == nil {
+			return fmt.Errorf(CoreConfigUninitializedErr)
+		}
+		_, newCoreError = vault.CreateCore(&coreConfig)
+		if newCoreError != nil {
+			if vault.IsFatalError(newCoreError) {
+				return fmt.Errorf("Error initializing core: %s", newCoreError)
+			}
+			diagnose.Warn(ctx, wrapAtLength(
+				"WARNING! A non-fatal error occurred during initialization. Please "+
+					"check the logs for more information."))
+		}
+		return nil
+	})
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
@@ -531,5 +552,43 @@ SEALFAIL:
 	})
 
 	// TODO: Diagnose logging configuration
+
+	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
+	// decrypt a mock value. It will not call runUnseal.
+	diagnose.Test(ctx, "unseal", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+		if barrierWrapper == nil {
+			return fmt.Errorf("Diagnose could not create a barrier seal object")
+		}
+		barrierUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return fmt.Errorf("Diagnose could not create unique UUID for unsealing")
+		}
+		barrierEncValue := "diagnose-" + barrierUUID
+		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
+		if err != nil {
+			return fmt.Errorf("Error encrypting with seal barrier: %w", err)
+		}
+		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
+		if err != nil {
+			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
+
+		}
+		if string(plaintext) != barrierEncValue {
+			return fmt.Errorf("barrier returned incorrect decrypted value for mock data")
+		}
+		return nil
+	}))
+
+	// The following block contains static checks that are run during the
+	// startHttpServers portion of server run. In other words, they are static
+	// checks during resource creation.
+	diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+		for _, ln := range lns {
+			if ln.Config == nil {
+				return fmt.Errorf("Found nil listener config after parsing")
+			}
+		}
+		return nil
+	})
 	return nil
 }

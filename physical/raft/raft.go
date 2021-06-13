@@ -982,7 +982,39 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
-// Roy
+// GetConfigurationOffline is used to read the stale, last known raft
+// configuration to this node. It accesses the last state written into the
+// FSM. When a server is online use GetConfiguration instead.
+func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft != nil {
+		return nil, errors.New("raft storage is initialized, used GetConfiguration instead")
+	}
+
+	if b.fsm == nil {
+		return nil, nil
+	}
+
+	state, configuration := b.fsm.LatestState()
+	config := &RaftConfigurationResponse{
+		Index: state.Index,
+	}
+	for _, server := range configuration.Servers {
+		entry := &RaftServer{
+			NodeID:  server.Id,
+			Address: server.Address,
+			// Since we are offline no node is the leader.
+			Leader: false,
+			Voter:  raft.ServerSuffrage(server.Suffrage) == raft.Voter,
+		}
+		config.Servers = append(config.Servers, entry)
+	}
+
+	return config, nil
+}
+
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()

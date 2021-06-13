@@ -177,6 +177,6 @@ func (c *Core) AllowForwardingViaHeader() bool {
 	return false
 }
 
-func (c *Core) MissingRequiredState(raw []string) bool {
+func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 	return false
 }

@@ -23,7 +23,7 @@ const generateHealthResponse = state => {
     sealed: false,
     standby: false,
     license: {
-      expiry: formatRFC3339(expiry),
+      expiry_time: formatRFC3339(expiry),
       state: 'stored',
     },
     performance_standby: false,

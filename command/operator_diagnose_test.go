@@ -82,6 +82,94 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name:   "service-discovery",
+					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "test-serviceregistration-tls-consul",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-consul-direct-access-service-discovery",
+							Status: diagnose.OkStatus,
+						},
+					},
+				},
+				{
+					Name:   "create-seal",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "setup-core",
+					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "init-randreader",
+							Status: diagnose.OkStatus,
+						},
+					},
+				},
+				{
+					Name:   "setup-ha-storage",
+					Status: diagnose.OkStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-ha-storage-backend",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-consul-direct-access-storage",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "test-ha-storage-tls-consul",
+							Status: diagnose.OkStatus,
+						},
+					},
+				},
+				{
+					Name:   "determine-redirect",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "find-cluster-addr",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-core",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "init-listeners",
+					Status: diagnose.WarningStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:   "create-listeners",
+							Status: diagnose.OkStatus,
+						},
+						{
+							Name:   "check-listener-tls",
+							Status: diagnose.WarningStatus,
+							Warnings: []string{
+								"TLS is disabled in a Listener config stanza.",
+							},
+						},
+					},
+				},
+				{
+					Name:    "unseal",
+					Status:  diagnose.ErrorStatus,
+					Message: "Diagnose could not create a barrier seal object",
+				},
+				{
+					Name:   "start-servers",
+					Status: diagnose.OkStatus,
+				},
+				{
+					Name:   "finalize-seal-shamir",
+					Status: diagnose.OkStatus,
+				},
 			},
 		},
 		{
