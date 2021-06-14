@@ -20,7 +20,7 @@ export async function getStaticProps() {
 
 export default function Homepage({ content }) {
   return (
-    <div id="page-home">
+    <main id="page-home">
       <div className="g-section-block page-wrap">
         <HomepageHero
           uiVideo="https://www.datocms-assets.com/2885/1543956852-vault-v1-0-ui-opt.mp4"
@@ -167,6 +167,6 @@ export default function Homepage({ content }) {
           </div>
         </section>
       </div>
-    </div>
+    </main>
   )
 }
