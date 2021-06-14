@@ -48,9 +48,6 @@ func UnusedFieldDifference(a, b UnusedKeyMap, foundKeys []string) UnusedKeyMap {
 	if a == nil {
 		return nil
 	}
-	if b == nil {
-		return a
-	}
 	res := make(UnusedKeyMap)
 	for k, v := range a {
 		if _, ok := b[k]; !ok && !strutil.StrListContainsCaseInsensitive(foundKeys, govalidator.UnderscoreToCamelCase(k)) {
