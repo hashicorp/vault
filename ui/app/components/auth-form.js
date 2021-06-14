@@ -178,7 +178,16 @@ export default Component.extend(DEFAULTS, {
           unauthenticated: true,
         },
       });
-      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
+      this.set(
+        'methods',
+        methods.map(m => {
+          const method = m.serialize({ includeId: true });
+          return {
+            ...method,
+            mountDescription: method.description,
+          };
+        })
+      );
       next(() => {
         store.unloadAll('auth-method');
       });

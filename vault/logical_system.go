@@ -124,6 +124,9 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
+				"replication/dr/secondary/license/signed",
+				"replication/dr/secondary/license/status",
+				"replication/dr/secondary/sys/config/reload/license",
 				"replication/dr/secondary/reindex",
 				"storage/raft/bootstrap/challenge",
 				"storage/raft/bootstrap/answer",
@@ -1168,7 +1171,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.PerfStandby()); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.perfStandby); err != nil {
 		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
