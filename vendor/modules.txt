@@ -488,7 +488,7 @@ github.com/hashicorp/cap/jwt
 github.com/hashicorp/cap/oidc
 github.com/hashicorp/cap/oidc/internal/base62
 github.com/hashicorp/cap/oidc/internal/strutils
-# github.com/hashicorp/consul-template v0.25.2
+# github.com/hashicorp/consul-template v0.26.0
 ## explicit
 github.com/hashicorp/consul-template/child
 github.com/hashicorp/consul-template/config
@@ -677,7 +677,7 @@ github.com/hashicorp/vault-plugin-database-snowflake
 # github.com/hashicorp/vault-plugin-mock v0.16.1
 ## explicit
 github.com/hashicorp/vault-plugin-mock
-# github.com/hashicorp/vault-plugin-secrets-ad v0.9.0
+# github.com/hashicorp/vault-plugin-secrets-ad v0.9.1
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
@@ -900,7 +900,7 @@ github.com/mattn/go-colorable
 github.com/mattn/go-ieproxy
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/mattn/go-shellwords v1.0.10
+# github.com/mattn/go-shellwords v1.0.12
 github.com/mattn/go-shellwords
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
