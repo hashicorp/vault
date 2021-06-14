@@ -329,3 +329,94 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
+
+func TestDisabledClientCertsAndDisabledTLSClientCAVerfiy(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMaxVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: false,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := TLSMutualExclusionCertCheck(listeners[0].Config)
+	if err != nil {
+		t.Fatalf("TLS config failed when both TLSRequireAndVerifyClientCert and TLSDisableClientCerts are false")
+	}
+}
+
+func TestTLSClientCAVerfiy(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMaxVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	err := TLSMutualExclusionCertCheck(listeners[0].Config)
+	if err != nil {
+		t.Fatalf("TLS config check failed with %s", err)
+	}
+}
+
+func TestTLSClientCAVerfiySkip(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMaxVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: false,
+				TLSDisableClientCerts:         true,
+			},
+		},
+	}
+	err := TLSMutualExclusionCertCheck(listeners[0].Config)
+	if err != nil {
+		t.Fatalf("TLS config check did not skip verification and failed with %s", err)
+	}
+}
+
+func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "./../../api/test-fixtures/root/rootcacert.pem",
+				TLSMaxVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         true,
+			},
+		},
+	}
+	err := TLSMutualExclusionCertCheck(listeners[0].Config)
+	if err == nil {
+		t.Fatalf("TLS config check should have failed when both 'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are true")
+	}
+	if !strings.Contains(err.Error(), "'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive") {
+		t.Fatalf("Bad error message: %s", err)
+	}
+}

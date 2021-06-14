@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
@@ -207,4 +208,15 @@ func NearExpiration(c *x509.Certificate) bool {
 		return true
 	}
 	return false
+}
+
+// TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
+func TLSMutualExclusionCertCheck(l *configutil.Listener) error {
+
+	if l.TLSDisableClientCerts {
+		if l.TLSRequireAndVerifyClientCert {
+			return fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
+		}
+	}
+	return nil
 }
