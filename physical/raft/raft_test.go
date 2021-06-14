@@ -352,66 +352,24 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	// Bring down raft3 and re-add it as a non-voter
-	raft3.TeardownCluster(nil)
-
-	// Prepare peers.json
-	type RecoveryPeer struct {
-		ID       string `json:"id"`
-		Address  string `json:"address"`
-		NonVoter bool   `json:"non_voter"`
-	}
-
-	// NOTE: THIS DOESN'T SEEM TO MAKE RAFT3 A NONVOTER (WHY?)
-	peersList := make([]*RecoveryPeer, 0, 1)
-	peersList = append(peersList, &RecoveryPeer{
-		ID:       raft3.NodeID(),
-		Address:  raft3.NodeID(),
-		NonVoter: true,
-	})
-
-	peersJSONBytes, err := jsonutil.EncodeJSON(peersList)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Bring up node 3 and ensure there are 3 peers
-	raft3.SetupCluster(context.Background(), SetupOpts{})
-
-	peers, err := raft1.Peers(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(peers) != 3 {
-		t.Fatalf("failed to recover the cluster")
-	}
-
-	// Sleep a bit so that the cluster settles down
-	time.Sleep(10 * time.Second)
-
-	raft1.fsm.upgradeLocalNodeConfig()
-	raft2.fsm.upgradeLocalNodeConfig()
-	raft3.fsm.upgradeLocalNodeConfig()
-
-	// Take everything down and ensure that GetConfigurationOffline yields 2 voters and 1 nonvoter
+	// Spin down the raft cluster and check that GetConfigurationOffline
+	// returns 3 voters
 	raft3.TeardownCluster(nil)
 	raft2.TeardownCluster(nil)
 	raft1.TeardownCluster(nil)
 
 	conf, err := raft1.GetConfigurationOffline()
-	c2, _ := raft2.GetConfigurationOffline()
-	c3, _ := raft3.GetConfigurationOffline()
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%+v", conf)
-	fmt.Printf("%+v", c2)
-	fmt.Printf("%+v", c3)
-
+	if len(conf.Servers) != 3 {
+		t.Fatalf("three raft nodes existed but we only see %d", len(conf.Servers))
+	}
+	for _, s := range conf.Servers {
+		if s.Voter != true {
+			t.Fatalf("one of the nodes is not a voter")
+		}
+	}
 }
 
 func TestRaft_Recovery(t *testing.T) {

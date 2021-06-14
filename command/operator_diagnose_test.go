@@ -44,10 +44,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "is-root",
-					Status: diagnose.OkStatus,
-				},
-				{
 					Name:   "init-listeners",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
