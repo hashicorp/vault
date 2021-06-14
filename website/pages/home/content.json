@@ -5,13 +5,13 @@
       "format": "svg"
     },
     "beforeHeadline": "Static Infrastructure",
-    "beforeContent": "Datacenters with inherently high-trust networks with clear network perimeters.\n\n#### Traditional Approach\n\n- High trust networks\n- A clear network perimeter\n- Security enforced by IP Address",
+    "beforeContent": "Datacenters with inherently high-trust networks with clear network perimeters.\n\n <h4 class=\"g-type-label\">Traditional Approach </h4>\n\n- High trust networks\n- A clear network perimeter\n- Security enforced by IP Address",
     "afterImage": {
       "url": "https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg",
       "format": "svg"
     },
     "afterHeadline": "Dynamic Infrastructure",
-    "afterContent": "Multiple clouds and private datacenters without a clear network perimeter.\n\n#### Vault Approach\n\n\n- Low-trust networks in public clouds\n- Unknown network perimeter across clouds\n- Security enforced by Identity"
+    "afterContent": "Multiple clouds and private datacenters without a clear network perimeter.\n\n <h4 class=\"g-type-label\">Vault Approach</h4> \n\n\n- Low-trust networks in public clouds\n- Unknown network perimeter across clouds\n- Security enforced by Identity"
   },
   "principles": [
     {
