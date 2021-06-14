@@ -120,6 +120,27 @@ settings. Like Vault, plugins support [the use of mlock when available](/docs/co
 plugin executable in your [plugins directory](/docs/internals/plugins#plugin-directory) must be
 given the ability to use the `mlock` syscall.
 
+### Troubleshooting
+
+#### Unrecognized remote plugin message
+
+If the following error is encountered when enabling mounting a plugin secret
+egine or auth method:
+
+```sh
+Unrecognized remote plugin message:
+
+This usually means that the plugin is either invalid or simply
+needs to be recompiled to support the latest protocol.
+```
+
+Verify whether the Vault process has `mlock` enabled, and if so run the
+following command against the plugin binary:
+
+```sh
+sudo setcap cap_ipc_lock=+ep <plugin-binary>
+```
+
 # Plugin Development
 
 ~> Advanced topic! Plugin development is a highly advanced topic in Vault, and
