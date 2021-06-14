@@ -29,7 +29,7 @@ not specified or set to `false` and the key to render is not in the secret's
 response, the templating engine will ignore it (or render `"<no value>"`)
 and continue on with its rendering.
 
-If the desired is to have Agent fail and exit on a missing key, both
+If the desire is to have Agent fail and exit on a missing key, both
 `template.error_on_missing_key` and `template_config.exit_on_retry_failure` must
 be set to true. Otherwise, the templating engine will error and render to its
 destination, but agent will not exit and retry until it's able to do so or until
