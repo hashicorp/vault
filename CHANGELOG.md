@@ -56,7 +56,7 @@ information from the auto-auth config map on renewals or retries. [[GH-11576](ht
 * replication: Fix panic trying to update walState during identity group invalidation. [[GH-1865](https://github.com/hashicorp/vault/pull/1865)]
 * replication: Fix: mounts created within a namespace that was part of an Allow
 filtering rule would not appear on performance secondary if created after rule
-was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
+was defined.
 * secret/pki: use case insensitive domain name comparison as per RFC1035 section 2.3.3
 * secrets/database/cassandra: Fixed issue where hostnames were not being validated when using TLS [[GH-11365](https://github.com/hashicorp/vault/pull/11365)]
 * secrets/database/cassandra: Updated default statement for password rotation to allow for special characters. This applies to root and static credentials. [[GH-11262](https://github.com/hashicorp/vault/pull/11262)]
@@ -156,7 +156,7 @@ BUG FIXES:
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
 * replication: Fix: mounts created within a namespace that was part of an Allow
   filtering rule would not appear on performance secondary if created after rule
-  was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
+  was defined.
 * replication: Perf standby nodes on newly enabled DR secondary sometimes couldn't connect to active node with TLS errors. [[GH-1823](https://github.com/hashicorp/vault/pull/1823)]
 * secrets/database/cassandra: Fixed issue where hostnames were not being validated when using TLS [[GH-11365](https://github.com/hashicorp/vault/pull/11365)]
 * secrets/database/cassandra: Updated default statement for password rotation to allow for special characters. This applies to root and static credentials. [[GH-11262](https://github.com/hashicorp/vault/pull/11262)]
@@ -365,7 +365,7 @@ BUG FIXES:
 * pki: Preserve ordering of all DN attribute values when issuing certificates [[GH-11259](https://github.com/hashicorp/vault/pull/11259)]
 * replication: Fix: mounts created within a namespace that was part of an Allow
   filtering rule would not appear on performance secondary if created after rule
-  was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
+  was defined.
 * secrets/database/cassandra: Fixed issue where hostnames were not being validated when using TLS [[GH-11365](https://github.com/hashicorp/vault/pull/11365)]
 * storage/raft: leader_tls_servername wasn't used unless leader_ca_cert_file and/or mTLS were configured. [[GH-11252](https://github.com/hashicorp/vault/pull/11252)]
 
