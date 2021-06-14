@@ -450,7 +450,7 @@ func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, cl
 	return i.entityByAliasFactorsInTxn(txn, mountAccessor, aliasName, clone)
 }
 
-// entityByAlaisFactorsInTxn fetches the entity based on factors of alias, i.e
+// entityByAliasFactorsInTxn fetches the entity based on factors of alias, i.e
 // mount accessor and the alias name.
 func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
 	if txn == nil {
