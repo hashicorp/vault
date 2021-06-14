@@ -34,36 +34,40 @@
       "logoGrid": [
         {
           "url": "https://www.datocms-assets.com/2885/1566919170-aws.svg",
-          "alt": "AWS"
+          "alt": "AWS logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg",
-          "alt": "Microsoft Azure"
+          "alt": "Microsoft Azure logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1513617132-google-cloud.svg",
-          "alt": "Google Cloud"
+          "alt": "Google Cloud logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1556657783-oktalogo.svg",
-          "alt": "Okta"
+          "alt": "Okta logo"
         },
-        { "url": "https://www.datocms-assets.com/2885/1539817287-cf.svg" },
+        {
+          "url": "https://www.datocms-assets.com/2885/1539817287-cf.svg",
+          "alt": "Cloud Foundary logo"
+        },
+
         {
           "url": "https://www.datocms-assets.com/2885/1521842502-alibaba.png",
-          "alt": "Alibaba Cloud"
+          "alt": "Alibaba Cloud logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1506540149-black.svg",
-          "alt": "SSH"
+          "alt": "SSH logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1540418681-kubernetes.png",
-          "alt": "Kubernetes"
+          "alt": "Kubernetes logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1622654359-githublogo.png",
-          "alt": "GitHub"
+          "alt": "GitHub logo"
         }
       ]
     },
@@ -75,39 +79,39 @@
       "logoGrid": [
         {
           "url": "https://www.datocms-assets.com/2885/1506540090-color.svg",
-          "alt": "MySQL"
+          "alt": "MySQL logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1506540114-color.svg",
-          "alt": "Cassandra"
+          "alt": "Cassandra logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1566919186-oracle.svg",
-          "alt": "Oracle"
+          "alt": "Oracle logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1566919170-aws.svg",
-          "alt": "AWS"
+          "alt": "AWS logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1506540175-color.svg",
-          "alt": "MongoDB"
+          "alt": "MongoDB logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1619808181-conusul-attributedcolor.svg",
-          "alt": "Consul"
+          "alt": "Consul logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg",
-          "alt": "Microsoft SQL"
+          "alt": "Microsoft SQL logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539818112-postgresql.svg",
-          "alt": "PostgreSql"
+          "alt": "PostgreSql logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg",
-          "alt": "Microsoft Azure"
+          "alt": "Microsoft Azure logo"
         }
       ]
     }
