@@ -404,7 +404,7 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 
 	conf, err := raft1.GetConfigurationOffline()
 	c2, _ := raft2.GetConfigurationOffline()
-	c3, _ := raft2.GetConfigurationOffline()
+	c3, _ := raft3.GetConfigurationOffline()
 	if err != nil {
 		t.Fatal(err)
 	}
