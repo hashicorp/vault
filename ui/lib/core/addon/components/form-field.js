@@ -24,7 +24,7 @@ import layout from '../templates/components/form-field';
  * @param [disabled=false] {Boolean} - whether the field is disabled
  * @param [showHelpText=true] {Boolean} - whether to show the tooltip with help text from OpenAPI
  * @param [subText] {String} - Text to be displayed below the label
- * @param [validationMessage] {String} - AlertInline error message to be displayed if cp-validation error.
+ * @param [validationMessages] {Object} - Object of errors.  If attr.name is in object and has error message display in AlertInline.
  *
  */
 
@@ -37,7 +37,6 @@ export default Component.extend({
   subText: '',
   // This is only used internally for `optional-text` editType
   showInput: false,
-  validationMessage: false,
 
   init() {
     this._super(...arguments);

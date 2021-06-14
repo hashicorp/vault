@@ -58,9 +58,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   isV2: false,
 
   // cp-validation related properties
-  validationMessagePath: '',
-  validationMessageKey: '',
-  validationMessageMaxVersions: '',
+  validationMessages: null,
   validationErrorCount: 0,
 
   init() {
@@ -85,38 +83,16 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (this.mode === 'edit') {
       this.send('addRow');
     }
+
+    this.set('validationMessages', {
+      path: '',
+      key: '',
+      maxVersions: '',
+    });
   },
 
   waitForKeyUp: task(function*(name, value) {
-    // because path and key are not on the model performing custom validations instead of cp-validations
-    if (name === 'path') {
-      // no value indicates missing presence
-      !value
-        ? this.set('validationMessagePath', `Secret path can't be blank`)
-        : this.set('validationMessagePath', '');
-    }
-    if (name === 'key') {
-      // no value indicates missing presence
-      !value ? this.set('validationMessageKey', `Key can't be blank`) : this.set('validationMessageKey', '');
-    }
-    if (name === 'maxVersions') {
-      // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
-      if (value) {
-        let number = Number(value);
-        this.model.set('maxVersions', number);
-      }
-      if (!this.model.validations.attrs.maxVersions.isValid) {
-        this.set('validationMessageMaxVersions', this.model.validations.attrs.maxVersions.message);
-      } else {
-        this.set('validationMessageMaxVersions', '');
-      }
-    }
-    this.set(
-      'validationErrorCount',
-      (this.validationMessagePath === '' ? 0 : 1) +
-        (this.validationMessageKey === '' ? 0 : 1) +
-        (this.validationMessageMaxVersions === '' ? 0 : 1)
-    );
+    this.checkValidation(name, value);
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
@@ -204,6 +180,32 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
+  },
+
+  checkValidation(name, value) {
+    // because path and key are not on the model performing custom validations instead of cp-validations
+    if (name === 'path' || name === 'key') {
+      // no value indicates missing presence
+      !value
+        ? set(this.validationMessages, name, `${name} can't be blank`)
+        : set(this.validationMessages, name, '');
+    }
+    if (name === 'maxVersions') {
+      // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
+      if (value) {
+        let number = Number(value);
+        this.model.set('maxVersions', number);
+      }
+      if (!this.model.validations.attrs.maxVersions.isValid) {
+        set(this.validationMessages, name, this.model.validations.attrs.maxVersions.message);
+      } else {
+        set(this.validationMessages, name, '');
+      }
+    }
+
+    let values = Object.values(this.validationMessages);
+
+    this.set('validationErrorCount', values.filter(Boolean).length);
   },
 
   onEscape(e) {
@@ -350,11 +352,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let model = this.modelForData;
       let arraySecretKeys = Object.keys(model.secretData);
       if (type === 'create' && isBlank(model.path || model.id)) {
-        this.set('validationMessagePath', "Secret path can't be blank");
+        this.checkValidation('path', '');
         return;
       }
       if (arraySecretKeys.includes('')) {
-        this.set('validationMessageKey', "Secret key can't be blank");
+        this.checkValidation('key', '');
         return;
       }
 
