@@ -705,7 +705,7 @@ github.com/hashicorp/vault-plugin-secrets-terraform
 # github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
 ## explicit
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.2.1-0.20210519002511-48c5544c77f4 => ./sdk
+# github.com/hashicorp/vault/sdk v0.2.1-0.20210614231108-a35199734e5f => ./sdk
 ## explicit
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
