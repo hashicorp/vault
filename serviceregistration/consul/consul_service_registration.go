@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -146,7 +147,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	SetupSecureTLS(consulConf, conf, logger, false)
+	SetupSecureTLS(context.Background(), consulConf, conf, logger, false)
 
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
@@ -178,7 +179,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	return c, nil
 }
 
-func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
+func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -216,13 +217,17 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			certPath, okCert := conf["tls_cert_file"]
 			keyPath, okKey := conf["tls_key_file"]
 			if okCert && okKey {
-				err := diagnose.TLSFileChecks(certPath, keyPath)
+				warnings, err := diagnose.TLSFileChecks(certPath, keyPath)
+				for _, warning := range warnings {
+					diagnose.Warn(ctx, warning)
+				}
 				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+				return nil
+
 			}
+			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
 		}
 
 		// Use the parsed Address instead of the raw conf['address']
