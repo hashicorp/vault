@@ -15,6 +15,7 @@ var LastOutputStringError *OutputStringError
 
 type OutputStringError struct {
 	*retryablehttp.Request
+	TLSSkipVerify    bool
 	parsingError     error
 	parsedCurlString string
 }
@@ -39,6 +40,9 @@ func (d *OutputStringError) parseRequest() {
 
 	// Build cURL string
 	d.parsedCurlString = "curl "
+	if d.TLSSkipVerify {
+		d.parsedCurlString += "--insecure "
+	}
 	if d.Request.Method != "GET" {
 		d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
 	}
