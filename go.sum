@@ -650,6 +650,8 @@ github.com/hashicorp/hcl v1.0.1-0.20210611213112-8a6d2ce4ce85 h1:gsSirWaAXU7U1Tm
 github.com/hashicorp/hcl v1.0.1-0.20210611213112-8a6d2ce4ce85/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
 github.com/hashicorp/hcl v1.0.1-vault-2 h1:j0lTHGBdaU13Pc3GaTCdWjmsT22X98bsHnA+ShzIOtg=
 github.com/hashicorp/hcl v1.0.1-vault-2/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
+github.com/hashicorp/hcl v1.0.1-vault-3 h1:V95v5KSTu6DB5huDSKiq4uAfILEuNigK/+qPET6H/Mg=
+github.com/hashicorp/hcl v1.0.1-vault-3/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
 github.com/hashicorp/logutils v1.0.0 h1:dLEQVugN8vlakKOUE3ihGLTZJRB4j+M2cdTm/ORI65Y=
 github.com/hashicorp/logutils v1.0.0/go.mod h1:QIAnNjmIWmVIIkWDTG1z5v++HQmx9WQRO+LraFDTW64=
 github.com/hashicorp/mdns v1.0.0/go.mod h1:tL+uN++7HEJ6SQLQ2/p+z2pH24WQKWjBPkE0mNTz8vQ=
