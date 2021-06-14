@@ -588,7 +588,7 @@ github.com/hashicorp/go-version
 ## explicit
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
-# github.com/hashicorp/hcl v1.0.1-vault
+# github.com/hashicorp/hcl v1.0.1-0.20201015184941-809e678c39ec
 ## explicit
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
