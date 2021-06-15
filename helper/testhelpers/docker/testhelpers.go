@@ -29,9 +29,13 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo       string
-	ImageTag        string
-	ContainerName   string
+	ImageRepo string
+	ImageTag  string
+
+	ContainerName string
+	// DoNotAppendUUID to the container name for uniqueness
+	DoNotAppendUUID bool
+
 	Cmd             []string
 	Env             []string
 	NetworkID       string
@@ -186,11 +190,14 @@ type Service struct {
 }
 
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, error) {
-	suffix, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, nil, err
+	name := d.RunOptions.ContainerName
+	if !d.RunOptions.DoNotAppendUUID {
+		suffix, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, nil, err
+		}
+		name += "-" + suffix
 	}
-	name := d.RunOptions.ContainerName + "-" + suffix
 
 	cfg := &container.Config{
 		Hostname: name,

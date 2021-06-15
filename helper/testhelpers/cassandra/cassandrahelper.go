@@ -102,12 +102,13 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	runOpts := docker.RunOptions{
-		ContainerName: "cassandra",
-		ImageRepo:     containerCfg.imageName,
-		ImageTag:      containerCfg.version,
-		Ports:         []string{"9042/tcp"},
-		CopyFromTo:    copyFromTo,
-		Env:           containerCfg.env,
+		ContainerName:   "cassandra",
+		DoNotAppendUUID: true,
+		ImageRepo:       containerCfg.imageName,
+		ImageTag:        containerCfg.version,
+		Ports:           []string{"9042/tcp"},
+		CopyFromTo:      copyFromTo,
+		Env:             containerCfg.env,
 	}
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
