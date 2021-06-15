@@ -61,6 +61,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   validationMessages: null,
   validationErrorCount: 0,
 
+  secretPaths: null,
+
   init() {
     this._super(...arguments);
     let secrets = this.model.secretData;
@@ -79,16 +81,16 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
-
     if (this.mode === 'edit') {
       this.send('addRow');
     }
-
     this.set('validationMessages', {
       path: '',
       key: '',
       maxVersions: '',
     });
+    // for validation return array of path names already assigned
+    this.set('secretPaths', this.store.peekAll('secret-V2').mapBy('id'));
   },
 
   waitForKeyUp: task(function*(name, value) {
@@ -187,7 +189,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (name === 'path' || name === 'key') {
       // no value indicates missing presence
       !value
-        ? set(this.validationMessages, name, `${name} can't be blank`)
+        ? set(this.validationMessages, name, `${name} can't be blank.`)
+        : set(this.validationMessages, name, '');
+
+      this.secretPaths.includes(value)
+        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
     }
     if (name === 'maxVersions') {
