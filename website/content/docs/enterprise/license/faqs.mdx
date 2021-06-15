@@ -34,7 +34,7 @@ With Vault 1.8, a valid license is required on-disk (auto-loading) or in-storage
 
 ## Q: How will Vault behave at startup when a license expires or terminates?
 
-When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.8. The grace period, defined as the time between license expiration and license termination, is 1 day for EVAL licenses (as of 1.8), and ten years for non-Evaluation licenses. Customers must install a valid license before the grace period expires. This license can be autoloaded or loaded into storage using existing methods (`/sys/license`) depending on the applicable scenarios as described above.
+When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.8. The grace period, defined as the time between license expiration and license termination, is 1 day for evaluation licenses (as of 1.8), and ten years for non-evaluation licenses. Customers must install a valid license before the grace period expires. This license can be autoloaded or loaded into storage using existing methods (`/sys/license`) depending on the applicable scenarios as described above.
 When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to install one, and this license will need to be autoloaded.
 
 ## Q: What is the impact on EVAL licenses due to this change?
