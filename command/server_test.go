@@ -96,8 +96,9 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		},
 
 		// These prevent us from random sleep guessing...
-		startedCh:  make(chan struct{}, 5),
-		reloadedCh: make(chan struct{}, 5),
+		startedCh:         make(chan struct{}, 5),
+		reloadedCh:        make(chan struct{}, 5),
+		licenseReloadedCh: make(chan error),
 	}
 }
 

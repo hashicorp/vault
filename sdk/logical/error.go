@@ -42,6 +42,11 @@ var (
 	// unrecoverable error.
 	// e.g.: misconfigured or disconnected storage backend.
 	ErrUnrecoverable = errors.New("unrecoverable error")
+
+	// ErrMissingRequiredState is returned when a request can't be satisfied
+	// with the data in the local node's storage, based on the provided
+	// X-Vault-Index request header.
+	ErrMissingRequiredState = errors.New("required index state not present")
 )
 
 type HTTPCodedError interface {

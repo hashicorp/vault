@@ -8191,6 +8191,15 @@ ember-copy@1.0.0, ember-copy@^1.0.0:
   dependencies:
     ember-cli-babel "^6.6.0"
 
+ember-cp-validations@^4.0.0-beta.12:
+  version "4.0.0-beta.12"
+  resolved "https://registry.yarnpkg.com/ember-cp-validations/-/ember-cp-validations-4.0.0-beta.12.tgz#27c7e79e36194b8bb55c5c97421b2671f0abf58c"
+  integrity sha512-GHOJm2pjan4gOOBFecs7PdEf86vnWgTPCtfqwyqf3wlN0CihYf+mHZhjnnN6R1fnPDn+qLwByl6gJq7il115dw==
+  dependencies:
+    ember-cli-babel "^7.1.2"
+    ember-require-module "^0.3.0"
+    ember-validators "^3.0.1"
+
 ember-data-model-fragments@5.0.0-beta.0:
   version "5.0.0-beta.0"
   resolved "https://registry.yarnpkg.com/ember-data-model-fragments/-/ember-data-model-fragments-5.0.0-beta.0.tgz#da90799970317ca852f96b2ea1548ca70094a5bb"
@@ -8399,6 +8408,13 @@ ember-radio-button@^2.0.1:
     ember-cli-babel "^6.9.2"
     ember-cli-htmlbars "^1.1.1"
 
+ember-require-module@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/ember-require-module/-/ember-require-module-0.3.0.tgz#65aff7908b5b846467e4526594d33cfe0c23456b"
+  integrity sha512-rYN4YoWbR9VlJISSmx0ZcYZOgMcXZLGR7kdvp3zDerjIvYmHm/3p+K56fEAYmJILA6W4F+cBe41Tq2HuQAZizA==
+  dependencies:
+    ember-cli-babel "^6.9.2"
+
 ember-resolver@^8.0.2:
   version "8.0.2"
   resolved "https://registry.yarnpkg.com/ember-resolver/-/ember-resolver-8.0.2.tgz#8a45a744aaf5391eb52b4cb393b3b06d2db1975c"
@@ -8603,6 +8619,14 @@ ember-truth-helpers@^2.1.0:
   integrity sha512-BQlU8aTNl1XHKTYZ243r66yqtR9JU7XKWQcmMA+vkqfkE/c9WWQ9hQZM8YABihCmbyxzzZsngvldokmeX5GhAw==
   dependencies:
     ember-cli-babel "^6.6.0"
+
+ember-validators@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/ember-validators/-/ember-validators-3.0.1.tgz#9e0f7ed4ce6817aa05f7d46e95a0267c03f1f043"
+  integrity sha512-GbvvECDG9N7U+4LXxPWNgiSnGbOzgvGBIxtS4kw2uyEIy7kymtgszhpSnm8lGMKYnhCKBqFingh8qnVKlCi0lg==
+  dependencies:
+    ember-cli-babel "^6.9.2"
+    ember-require-module "^0.3.0"
 
 ember-wormhole@^0.5.5:
   version "0.5.5"

@@ -26,6 +26,10 @@
       @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
       data-test-auth-error
     />
+    <div class="has-bottom-margin-s ">
+      <p class="is-label">{{this.selectedAuthBackend.path}}</p>
+      <span class="description has-text-grey" data-test-description={{true}}>{{this.selectedAuthBackend.mountDescription}}</span>
+    </div>
     {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
       <Select
         @label='Method'

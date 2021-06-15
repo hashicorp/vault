@@ -452,13 +452,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 // is particularly useful to fetch the accessor of the client token and get it
 // populated in the logical request along with the client token. The accessor
 // of the client token can get audit logged.
+//
+// Should be called with read stateLock held.
 func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEntry, error) {
 	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 
 	if c.standby && !c.perfStandby {
 		return nil, consts.ErrStandby
