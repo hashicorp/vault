@@ -399,14 +399,15 @@ func TestFairshare_getNextQueue(t *testing.T) {
 	}
 
 	// fake out some number of workers with various remaining work scenario
+	// no queue can be assigned more than 6 workers
 	j.l.Lock()
+	defer j.l.Unlock()
 	j.workerCount["a"] = 1
 	j.workerCount["b"] = 2
 	j.workerCount["c"] = 5
-	j.l.Unlock()
 
 	// this also tests j.sortByNumWorkers() indirectly
-	expectedOrder := []string{"a", "a", "b", "a", "b", "a", "b", "a", "b", "c"}
+	expectedOrder := []string{"a", "b", "c", "a", "b", "a", "b", "a", "b", "a"}
 
 	for _, expectedQueueID := range expectedOrder {
 		queueID, canAssignWorker := j.getNextQueue()
@@ -420,6 +421,20 @@ func TestFairshare_getNextQueue(t *testing.T) {
 
 		// simulate a worker being added to that queue
 		j.workerCount[queueID]++
+	}
+
+	// queues are saturated with work, we shouldn't be able to find a queue
+	// eligible for a worker (and last accessed queue shouldn't update)
+	expectedLastQueueAccessed := j.lastQueueAccessed
+	queueID, canAssignWork := j.getNextQueue()
+	if canAssignWork {
+		t.Error("should not be able to assign work with all queues saturated")
+	}
+	if queueID != "" {
+		t.Errorf("expected no queueID, got %s", queueID)
+	}
+	if j.lastQueueAccessed != expectedLastQueueAccessed {
+		t.Errorf("expected no last queue accessed update. had %d, got %d", expectedLastQueueAccessed, j.lastQueueAccessed)
 	}
 }
 
@@ -448,21 +463,21 @@ func TestJobManager_pruneEmptyQueues(t *testing.T) {
 	j.l.RUnlock()
 
 	job, queueID = j.getNextJob()
-	if queueID != "a" || job == nil {
+	if queueID != "b" || job == nil {
 		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
 	}
 
 	j.l.RLock()
-	if _, ok := j.queues["a"]; ok {
-		t.Error("expected queue 'a' to be pruned")
+	if _, ok := j.queues["a"]; !ok {
+		t.Error("expected queue 'a' to exist")
 	}
-	if _, ok := j.queues["b"]; !ok {
-		t.Error("expected queue 'b' to exist")
+	if _, ok := j.queues["b"]; ok {
+		t.Error("expected queue 'b' to be pruned")
 	}
 	j.l.RUnlock()
 
 	job, queueID = j.getNextJob()
-	if queueID != "b" || job == nil {
+	if queueID != "a" || job == nil {
 		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
 	}
 

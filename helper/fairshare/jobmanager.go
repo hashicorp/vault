@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"sort"
 	"sync"
 	"time"
 
@@ -37,8 +36,12 @@ type JobManager struct {
 	// waitgroup for testing stop functionality
 	wg sync.WaitGroup
 
-	// protects `queues`, `workerCount`
+	// protects `queues`, `workerCount`, `queuesIndex`, `lastQueueAccessed`
 	l sync.RWMutex
+
+	// track queues by index for round robin worker assignment
+	queuesIndex       []string
+	lastQueueAccessed int
 }
 
 // NewJobManager creates a job manager, with an optional name
@@ -59,14 +62,16 @@ func NewJobManager(name string, numWorkers int, l log.Logger, metricSink *metric
 	wp := newDispatcher(fmt.Sprintf("%s-dispatcher", name), numWorkers, l)
 
 	j := JobManager{
-		name:        name,
-		queues:      make(map[string]*list.List),
-		quit:        make(chan struct{}),
-		newWork:     make(chan struct{}, 1),
-		workerPool:  wp,
-		workerCount: make(map[string]int),
-		logger:      l,
-		metricSink:  metricSink,
+		name:              name,
+		queues:            make(map[string]*list.List),
+		quit:              make(chan struct{}),
+		newWork:           make(chan struct{}, 1),
+		workerPool:        wp,
+		workerCount:       make(map[string]int),
+		logger:            l,
+		metricSink:        metricSink,
+		queuesIndex:       make([]string, 0),
+		lastQueueAccessed: -1,
 	}
 
 	j.logger.Trace("created job manager", "name", name, "pool_size", numWorkers)
@@ -167,7 +172,7 @@ func (j *JobManager) getNextJob() (Job, string) {
 	}
 
 	jobElement := j.queues[queueID].Front()
-	out := j.queues[queueID].Remove(jobElement)
+	jobRaw := j.queues[queueID].Remove(jobElement)
 
 	j.totalJobs--
 
@@ -180,31 +185,43 @@ func (j *JobManager) getNextJob() (Job, string) {
 		// we remove the empty queue, but we don't remove the worker count
 		// in case we are still working on previous jobs from this queue.
 		// worker count cleanup is handled in j.decrementWorkerCount
-		delete(j.queues, queueID)
+		j.removeLastQueueAccessed()
 	}
 
-	return out.(Job), queueID
+	return jobRaw.(Job), queueID
 }
 
 // returns the next queue to assign work from, and a bool if there is a queue
-// that can have a worker assigned.
-// the intent is to avoid over-allocating work from specific queues, as
-// outlined in RFC VLT-145
+// that can have a worker assigned. if there is work to be assigned,
+// j.lastQueueAccessed will be updated to that queue.
 // note: this must be called with j.l held
 func (j *JobManager) getNextQueue() (string, bool) {
 	var nextQueue string
 	var canAssignWorker bool
 
-	queueIDsByIncreasingWorkers := j.sortByNumWorkers()
-	for _, queueID := range queueIDsByIncreasingWorkers {
-		if !j.queueWorkersSaturated(queueID) {
-			nextQueue = queueID
+	// ensure we loop through all existing queues until we find an eligible
+	// queue, if one exists.
+	queueIdx := j.nextQueueIndex(j.lastQueueAccessed)
+	for i := 0; i < len(j.queuesIndex); i++ {
+		potentialQueueID := j.queuesIndex[queueIdx]
+
+		if !j.queueWorkersSaturated(potentialQueueID) {
+			nextQueue = potentialQueueID
 			canAssignWorker = true
+			j.lastQueueAccessed = queueIdx
 			break
 		}
+
+		queueIdx = j.nextQueueIndex(queueIdx)
 	}
 
 	return nextQueue, canAssignWorker
+}
+
+// get the index of the next queue in round-robin order
+// note: this must be called with j.l held
+func (j *JobManager) nextQueueIndex(currentIdx int) int {
+	return (currentIdx + 1) % len(j.queuesIndex)
 }
 
 // returns true if there are already too many workers on this queue
@@ -218,31 +235,6 @@ func (j *JobManager) queueWorkersSaturated(queueID string) bool {
 	numWorkersPerQueue := j.workerCount
 
 	return numWorkersPerQueue[queueID] >= int(maxWorkersPerQueue)
-}
-
-// sortByNumWorkers returns queueIDs in order of increasing number of workers
-// note: this must be called with j.l held
-func (j *JobManager) sortByNumWorkers() []string {
-	out := make([]string, 0, len(j.queues))
-	for queueID := range j.queues {
-		out = append(out, queueID)
-	}
-
-	workersPerQueue := j.workerCount
-
-	sort.Slice(out, func(i, j int) bool {
-		// TODO should we be explicitly breaking ties with the queueID, or
-		// might we want some randomness from the map iter order?
-		// I think it's probably fine since it only breaks ties between queues
-		// with equal workers assigned, and makes testing much easier
-		if workersPerQueue[out[i]] == workersPerQueue[out[j]] {
-			return out[i] < out[j]
-		}
-
-		return workersPerQueue[out[i]] < workersPerQueue[out[j]]
-	})
-
-	return out
 }
 
 // increment the worker count for this queue
@@ -308,7 +300,7 @@ func (j *JobManager) assignWork() {
 			case <-time.After(50 * time.Millisecond):
 				// periodically check if new workers can be assigned. with the
 				// fairsharing worker distribution it can be the case that there
-				// is work waiting, but no queues are elligible for another worker
+				// is work waiting, but no queues are eligible for another worker
 			}
 		}
 	}()
@@ -316,10 +308,11 @@ func (j *JobManager) assignWork() {
 
 // addQueue generates a new queue if a queue for `queueID` doesn't exist
 // it also starts tracking workers on that queue, if not already tracked
-// note: this must be called with l held for write
+// note: this must be called with j.l held for write
 func (j *JobManager) addQueue(queueID string) {
 	if _, ok := j.queues[queueID]; !ok {
 		j.queues[queueID] = list.New()
+		j.queuesIndex = append(j.queuesIndex, queueID)
 	}
 
 	// it's possible the queue ran out of work and was pruned, but there were
@@ -328,5 +321,30 @@ func (j *JobManager) addQueue(queueID string) {
 	// count when the queue is re-initialized.
 	if _, ok := j.workerCount[queueID]; !ok {
 		j.workerCount[queueID] = 0
+	}
+}
+
+// removes the queue and index tracker for the last queue accessed.
+// it is to be used when the last queue accessed has emptied.
+// note: this must be called with j.l held.
+func (j *JobManager) removeLastQueueAccessed() {
+	if j.lastQueueAccessed == -1 || j.lastQueueAccessed > len(j.queuesIndex)-1 {
+		j.logger.Warn("call to remove queue out of bounds", "idx", j.lastQueueAccessed)
+		return
+	}
+
+	queueID := j.queuesIndex[j.lastQueueAccessed]
+
+	// remove the queue
+	delete(j.queues, queueID)
+
+	// remove the index for the queue
+	j.queuesIndex = append(j.queuesIndex[:j.lastQueueAccessed], j.queuesIndex[j.lastQueueAccessed+1:]...)
+
+	// correct the last queue accessed for round robining
+	if j.lastQueueAccessed > 0 {
+		j.lastQueueAccessed--
+	} else {
+		j.lastQueueAccessed = len(j.queuesIndex) - 1
 	}
 }
