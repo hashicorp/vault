@@ -82,17 +82,13 @@ export default Component.extend({
     this.onError(err);
   },
 
-  prepareForOIDC: task(function*(oidcWindow) {
+  prepareForOIDC(oidcWindow) {
     // show the loading animation in the parent
     this.onLoading(true);
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
-    // and then wait for storage event to be fired from the popup
-    // window setting a value in localStorage when the callback route is loaded
-    let storageEvent = yield waitForEvent(this.getWindow(), 'storage');
-    this.exchangeOIDC.perform(storageEvent, oidcWindow);
-  }),
+  },
 
   watchPopup: task(function*(oidcWindow) {
     while (true) {
@@ -104,6 +100,7 @@ export default Component.extend({
   }),
 
   watchCurrent: task(function*(oidcWindow) {
+    // when user is about to change pages, close the popup window
     yield waitForEvent(this.getWindow(), 'beforeunload');
     oidcWindow.close();
   }),
@@ -114,20 +111,15 @@ export default Component.extend({
     oidcWindow.close();
   },
 
-  exchangeOIDC: task(function*(event, oidcWindow) {
+  exchangeOIDC: task(function*(oidcState, oidcWindow) {
     // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
-    let oidcState = Ember.testing
-      ? event.storageArea.getItem('oidcState')
-      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
-
     if (oidcState === null || oidcState === undefined) {
       return;
     }
     this.onLoading(true);
     // get the info from the event fired by the other window and
     // then remove it from localStorage
-    let { namespace, path, state, code } = JSON.parse(oidcState);
-    this.getWindow().localStorage.removeItem('oidcState');
+    let { namespace, path, state, code } = oidcState;
 
     // The namespace can be either be passed as a query paramter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
@@ -176,7 +168,6 @@ export default Component.extend({
 
       await this.fetchRole.perform(this.roleName, { debounce: false });
       let win = this.getWindow();
-
       const POPUP_WIDTH = 500;
       const POPUP_HEIGHT = 600;
       let left = win.screen.width / 2 - POPUP_WIDTH / 2;
@@ -186,8 +177,10 @@ export default Component.extend({
         'vaultOIDCWindow',
         `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
       );
-
-      this.prepareForOIDC.perform(oidcWindow);
+      win.addEventListener('message', event => {
+        this.exchangeOIDC.perform(event.data, oidcWindow);
+      });
+      this.prepareForOIDC(oidcWindow);
     },
   },
 });
