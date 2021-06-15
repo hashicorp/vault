@@ -21,7 +21,7 @@ import (
 const (
 	mongoDBTypeName = "mongodb"
 
-	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 }}`
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | replace "." "-" | truncate 15) (.RoleName | replace "." "-" | truncate 15) (random 20) (unix_time) | truncate 100 }}`
 )
 
 // MongoDB is an implementation of Database interface
