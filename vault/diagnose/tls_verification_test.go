@@ -123,7 +123,6 @@ func TestTLSExpiredCert(t *testing.T) {
 	if !strings.Contains(warnings[0], "expired or near expiry") {
 		t.Fatalf("Bad warning: %s", errs[0])
 	}
-	fmt.Printf(warnings[0])
 }
 
 // TestTLSMismatchedCryptographicInfo verifies that a cert and key of differing cryptographic
