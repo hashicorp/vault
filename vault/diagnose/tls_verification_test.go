@@ -58,7 +58,7 @@ func TestTLSFakeCert(t *testing.T) {
 		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if len(errs) != 1 {
-		t.Fatalf("more than one error returned")
+		t.Fatalf("more than one error returned: %+v", errs)
 	}
 	if !strings.Contains(errs[0].Error(), "could not decode cert") {
 		t.Fatalf("Bad error message: %s", errs[0])
