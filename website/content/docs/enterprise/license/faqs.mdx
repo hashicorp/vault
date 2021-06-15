@@ -82,7 +82,7 @@ If a Vault 1.7 cluster is upgraded to Vault 1.8(+) and still has a stored licens
 2. Put the license on disk, configure auto-loading (new `license_path` config option, OR new environment variable `VAULT_LICENSE_PATH` OR new environment variable `VAULT_LICENSE` containing the actual license itself).
 3. Restart the Vault node.
 4. A warning will explain that the license is in storage and using auto-loading.
-5. Use the new command `delete /sys/license` to fully transition to auto-loading.
+5. Use the new command `vault delete /sys/license` to fully transition to auto-loading.
 
 ## Q: What is the migration path for customers who wish to migrate from their existing perpetually licensed binaries to the license on disk flow (auto-loading)?
 
