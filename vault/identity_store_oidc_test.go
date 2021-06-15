@@ -531,6 +531,9 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
@@ -694,6 +697,9 @@ func TestOIDC_Config(t *testing.T) {
 				"issuer": iss,
 			},
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if resp == nil || !resp.IsError() {
 			t.Fatalf("Expected issuer %q to fail but it succeeded.", iss)
 		}
