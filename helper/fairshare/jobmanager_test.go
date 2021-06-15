@@ -51,6 +51,9 @@ func TestJobManager_NewJobManager(t *testing.T) {
 		if j.queues == nil {
 			t.Errorf("tc %d: queues not set up properly", tcNum)
 		}
+		if j.queuesIndex == nil {
+			t.Errorf("tc %d: queues index not set up properly", tcNum)
+		}
 		if j.quit == nil {
 			t.Errorf("tc %d: quit channel not set up properly", tcNum)
 		}
@@ -321,6 +324,81 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 	}
 }
 
+func TestJobManager_removeLastQueueAccessed(t *testing.T) {
+	j := NewJobManager("job-mgr-test", 1, newTestLogger("jobmanager-test"), nil)
+
+	testCases := []struct {
+		lastQueueAccessed        int
+		updatedLastQueueAccessed int
+		len                      int
+		expectedQueues           []string
+	}{
+		{
+			// remove with bad index (too low)
+			lastQueueAccessed:        -1,
+			updatedLastQueueAccessed: -1,
+			len:                      3,
+			expectedQueues:           []string{"queue-0", "queue-1", "queue-2"},
+		},
+		{
+			// remove with bad index (too high)
+			lastQueueAccessed:        3,
+			updatedLastQueueAccessed: 3,
+			len:                      3,
+			expectedQueues:           []string{"queue-0", "queue-1", "queue-2"},
+		},
+		{
+			// remove queue-1 (index 1)
+			lastQueueAccessed:        1,
+			updatedLastQueueAccessed: 0,
+			len:                      2,
+			expectedQueues:           []string{"queue-0", "queue-2"},
+		},
+		{
+			// remove queue-0 (index 0)
+			lastQueueAccessed:        0,
+			updatedLastQueueAccessed: 0,
+			len:                      1,
+			expectedQueues:           []string{"queue-2"},
+		},
+		{
+			// remove queue-1 (index 1)
+			lastQueueAccessed:        0,
+			updatedLastQueueAccessed: -1,
+			len:                      0,
+			expectedQueues:           []string{},
+		},
+	}
+
+	j.l.Lock()
+	defer j.l.Unlock()
+
+	j.addQueue("queue-0")
+	j.addQueue("queue-1")
+	j.addQueue("queue-2")
+
+	for _, tc := range testCases {
+		j.lastQueueAccessed = tc.lastQueueAccessed
+		j.removeLastQueueAccessed()
+
+		if j.lastQueueAccessed != tc.updatedLastQueueAccessed {
+			t.Errorf("last queue access update failed. expected %d, got %d", tc.updatedLastQueueAccessed, j.lastQueueAccessed)
+		}
+		if len(j.queuesIndex) != tc.len {
+			t.Fatalf("queue index update failed. expected %d elements, found %v", tc.len, j.queues)
+		}
+		if len(j.queues) != len(tc.expectedQueues) {
+			t.Fatalf("bad amount of queues. expected %d, found %v", len(tc.expectedQueues), j.queues)
+		}
+
+		for _, q := range tc.expectedQueues {
+			if _, ok := j.queues[q]; !ok {
+				t.Errorf("bad queue. expected %s in %v", q, j.queues)
+			}
+		}
+	}
+}
+
 func TestJobManager_EndToEnd(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -348,15 +426,52 @@ func TestJobManager_EndToEnd(t *testing.T) {
 		},
 	}
 
-	j := NewJobManager("test-job-mgr", 1, newTestLogger("jobmanager-test"), nil)
+	// we add the jobs before starting the workers, so we'd expect the round
+	// robin to pick the least-recently-added job from each queue, and cycle
+	// through queues in a round-robin fashion. jobs would appear on the queues
+	// as illustrated below, and we expect to round robin as:
+	// queue-1 -> queue-2 -> queue-3 -> queue-1 ...
+	//
+	// queue-1 [job-3, job-1]
+	// queue-2 [job-2]
+	// queue-3 [job-5, job-4]
+
+	// ... where jobs are pushed to the left side and popped from the right side
+
+	expectedOrder := []string{"job-1", "job-2", "job-4", "job-3", "job-5"}
+
+	resultsCh := make(chan string)
+	defer close(resultsCh)
+
+	var mu sync.Mutex
+	order := make([]string, 0)
+
+	go func() {
+		for {
+			select {
+			case res, ok := <-resultsCh:
+				if !ok {
+					return
+				}
+
+				mu.Lock()
+				order = append(order, res)
+				mu.Unlock()
+			}
+		}
+	}()
 
 	var wg sync.WaitGroup
 	ex := func(name string) error {
+		resultsCh <- name
+		time.Sleep(50 * time.Millisecond)
 		wg.Done()
 		return nil
 	}
 	onFail := func(_ error) {}
 
+	// use one worker to guarantee ordering
+	j := NewJobManager("test-job-mgr", 1, newTestLogger("jobmanager-test"), nil)
 	for _, tc := range testCases {
 		wg.Add(1)
 		job := newTestJob(t, tc.name, ex, onFail)
@@ -379,6 +494,12 @@ func TestJobManager_EndToEnd(t *testing.T) {
 	case <-timeout:
 		t.Fatal("timed out")
 	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if !reflect.DeepEqual(order, expectedOrder) {
+		t.Fatalf("results out of order. \nexpected: %v\ngot: %v", expectedOrder, order)
+	}
 }
 
 func TestFairshare_nilLoggerJobManager(t *testing.T) {
@@ -398,15 +519,15 @@ func TestFairshare_getNextQueue(t *testing.T) {
 		j.AddJob(&job, "c")
 	}
 
-	// fake out some number of workers with various remaining work scenario
-	// no queue can be assigned more than 6 workers
 	j.l.Lock()
 	defer j.l.Unlock()
+
+	// fake out some number of workers with various remaining work scenario
+	// no queue can be assigned more than 6 workers
 	j.workerCount["a"] = 1
 	j.workerCount["b"] = 2
 	j.workerCount["c"] = 5
 
-	// this also tests j.sortByNumWorkers() indirectly
 	expectedOrder := []string{"a", "b", "c", "a", "b", "a", "b", "a", "b", "a"}
 
 	for _, expectedQueueID := range expectedOrder {

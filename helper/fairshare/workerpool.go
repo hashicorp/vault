@@ -91,7 +91,7 @@ func newDispatcher(name string, numWorkers int, l log.Logger) *dispatcher {
 }
 
 // dispatch dispatches a job to the worker pool, with optional initialization
-// and cleanup functions (useful for tracking job completion)
+// and cleanup functions (useful for tracking job progress)
 func (d *dispatcher) dispatch(job Job, init initFn, cleanup cleanupFn) {
 	wJob := wrappedJob{
 		init:    init,
