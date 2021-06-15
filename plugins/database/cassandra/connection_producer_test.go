@@ -36,6 +36,8 @@ func TestSelfSignedCA(t *testing.T) {
 	}
 
 	host, cleanup := cassandra.PrepareTestContainer(t,
+		cassandra.ContainerName("cassandra"),
+		cassandra.DoNotAppendUUID(true),
 		cassandra.Image("bitnami/cassandra", "latest"),
 		cassandra.CopyFromTo(copyFromTo),
 		cassandra.SslOpts(sslOpts),

@@ -14,15 +14,23 @@ import (
 )
 
 type containerConfig struct {
-	imageName  string
-	version    string
-	copyFromTo map[string]string
-	env        []string
+	containerName   string
+	doNotAppendUUID bool
+	imageName       string
+	version         string
+	copyFromTo      map[string]string
+	env             []string
 
 	sslOpts *gocql.SslOptions
 }
 
 type ContainerOpt func(*containerConfig)
+
+func ContainerName(name string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.containerName = name
+	}
+}
 
 func Image(imageName string, version string) ContainerOpt {
 	return func(cfg *containerConfig) {
@@ -32,6 +40,12 @@ func Image(imageName string, version string) ContainerOpt {
 		// Reset the environment because there's a very good chance the default environment doesn't apply to the
 		// non-default image being used
 		cfg.env = nil
+	}
+}
+
+func DoNotAppendUUID(doNotAppendUUID bool) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.doNotAppendUUID = doNotAppendUUID
 	}
 }
 
@@ -102,8 +116,8 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	runOpts := docker.RunOptions{
-		ContainerName:   "cassandra",
-		DoNotAppendUUID: true,
+		ContainerName:   containerCfg.containerName,
+		DoNotAppendUUID: containerCfg.doNotAppendUUID,
 		ImageRepo:       containerCfg.imageName,
 		ImageTag:        containerCfg.version,
 		Ports:           []string{"9042/tcp"},
