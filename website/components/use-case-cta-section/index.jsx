@@ -8,6 +8,7 @@ export default function UseCaseCtaSection() {
         <Button
           url="/downloads"
           title="Download"
+          label="Download CLI"
           linkType="download"
           theme={{
             variant: 'primary',

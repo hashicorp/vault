@@ -29,6 +29,7 @@ export default function HcpCalloutSection({
                 <div key={link.text}>
                   <Button
                     title={link.text}
+                    label="Learn more — HCP Vault"
                     linkType={link.type}
                     url={link.url}
                     theme={{ variant, brand: 'neutral', background: 'light' }}

@@ -161,6 +161,7 @@ export default function Homepage({ content }) {
           <div className="button-container">
             <Button
               title="Learn More"
+              label="Learn more — Vault pricing tiers"
               url="https://www.hashicorp.com/products/vault/enterprise"
               theme={{ brand: 'vault' }}
             />

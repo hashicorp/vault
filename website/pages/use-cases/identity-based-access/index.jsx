@@ -33,7 +33,12 @@ export default function DataEncryptionUseCase({ content }) {
             url="/downloads"
             theme={{ brand: 'vault' }}
           />
-          <Button title="Get Started" url="/intro" theme="dark-outline" />
+          <Button
+            title="Get Started"
+            label="Get started — external link to education platform"
+            url="/intro"
+            theme="dark-outline"
+          />
         </div>
       </section>
 
