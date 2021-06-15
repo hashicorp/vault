@@ -29,7 +29,7 @@ func ValidateUnusedFields(unusedKeyPositions UnusedKeyMap, sourceFilePath string
 	}
 	var errors []ConfigError
 	for field, positions := range unusedKeyPositions {
-		problem := fmt.Sprintf("unknown field %s found in configuration", field)
+		problem := fmt.Sprintf("unknown or unsupported field %s found in configuration", field)
 		for _, pos := range positions {
 			if pos.Filename == "" && sourceFilePath != "" {
 				pos.Filename = sourceFilePath

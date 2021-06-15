@@ -40,8 +40,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
-					Status: diagnose.OkStatus,
+					Name:   "Parse configuration",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						"unknown or unsupported field sentinel found in configuration at ./server/test-fixtures/config_bad_https_storage.hcl:42:1",
+					},
 				},
 				{
 					Name:   "init-listeners",
