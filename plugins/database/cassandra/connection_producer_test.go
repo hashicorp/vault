@@ -127,7 +127,7 @@ func TestSelfSignedCA(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Set values that we don't know until the cassandra container is started
 			config := map[string]interface{}{
-				"hosts":            host.ConnectionURL(),
+				"hosts":            "localhost",
 				"port":             host.Port,
 				"username":         "cassandra",
 				"password":         "cassandra",
