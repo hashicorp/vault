@@ -887,9 +887,11 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		switch tokenTypeRaw.(string) {
 		case "default-service":
 			data.Raw["token_type"] = "service"
+			resp = &logical.Response{}
 			resp.AddWarning("default-service has no useful meaning; adjusting to service")
 		case "default-batch":
 			data.Raw["token_type"] = "batch"
+			resp = &logical.Response{}
 			resp.AddWarning("default-batch has no useful meaning; adjusting to batch")
 		}
 	}
@@ -976,7 +978,9 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if role.TokenMaxTTL > b.System().MaxLeaseTTL() {
-		resp = &logical.Response{}
+		if resp == nil {
+			resp = &logical.Response{}
+		}
 		resp.AddWarning("token_max_ttl is greater than the backend mount's maximum TTL value; issued tokens' max TTL value will be truncated")
 	}
 
