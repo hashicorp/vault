@@ -186,29 +186,31 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) ([]string, error) {
 	var warnings []string
 	for _, c := range leafCerts {
-		if NearExpiration(c) {
-			warnings = append(warnings, fmt.Sprintf("leaf certificate %d is expired or near expiry", c.SerialNumber))
+		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
+			warnings = append(warnings, fmt.Sprintf("leaf certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))
 		}
 	}
 	for _, c := range interCerts {
-		if NearExpiration(c) {
-			warnings = append(warnings, fmt.Sprintf("intermediate certificate %d is expired or near expiry", c.SerialNumber))
+		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
+			warnings = append(warnings, fmt.Sprintf("intermediate certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))
 		}
 	}
 	for _, c := range rootCerts {
-		if NearExpiration(c) {
-			warnings = append(warnings, fmt.Sprintf("root certificate %d is expired or near expiry", c.SerialNumber))
+		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
+			warnings = append(warnings, fmt.Sprintf("root certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))
 		}
 	}
 
 	return warnings, nil
 }
 
-// NearExpiration returns a true if a certficate will expire in a week and false otherwise
-func NearExpiration(c *x509.Certificate) bool {
-	oneWeekFromNow := time.Now().Add(7 * 24 * time.Hour)
-	if oneWeekFromNow.After(c.NotAfter) {
-		return true
+// NearExpiration returns a true if a certficate will expire in a month and false otherwise
+func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
+	oneMonthFromNow := time.Now().Add(30 * 24 * time.Hour)
+	var timeToExpiry time.Duration
+	if oneMonthFromNow.After(c.NotAfter) {
+		timeToExpiry := oneMonthFromNow.Sub(c.NotAfter)
+		return true, timeToExpiry
 	}
-	return false
+	return false, timeToExpiry
 }
