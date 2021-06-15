@@ -1,4 +1,12 @@
-import { click, visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import {
+  click,
+  visit,
+  settled,
+  currentURL,
+  currentRouteName,
+  fillIn,
+  triggerKeyEvent,
+} from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -54,6 +62,22 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  test('it disables save when validation errors occur', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await click('[data-test-secret-create="true"]');
+    await fillIn('[data-test-secret-path="true"]', 'abc');
+    await fillIn('[data-test-input="maxVersions"]', 'abc');
+    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await settled();
+    assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
+    await fillIn('[data-test-input="maxVersions"]', 20);
+    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await click('[data-test-secret-save="true"]');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/abc`, 'navigates to show secret');
   });
 
   test('version 1 performs the correct capabilities lookup', async function(assert) {

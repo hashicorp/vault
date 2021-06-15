@@ -18,6 +18,8 @@ import (
 const minVersionError = "'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
 const maxVersionError = "'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
 
+// ListenerChecks diagnoses warnings and the first encountered error for the listener
+// configuration stanzas.
 func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]string, []error) {
 
 	// These aggregated warnings and errors are returned purely for testing purposes.
@@ -99,7 +101,7 @@ func ParseTLSInformation(certFilePath string) ([]*x509.Certificate, []*x509.Cert
 	rootCerts := []*x509.Certificate{}
 	data, err := ioutil.ReadFile(certFilePath)
 	if err != nil {
-		return leafCerts, interCerts, rootCerts, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
+		return leafCerts, interCerts, rootCerts, fmt.Errorf("failed to read certificate file: %w", err)
 	}
 
 	certBlocks := []*pem.Block{}
@@ -180,34 +182,27 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 	return nil
 }
 
-func TLSFileWarningChecks(leafcerts, interCerts, rootCerts []*x509.Certificate) ([]string, error) {
+// TLSFileWarningChecks returns warnings based on the leaf certificates, intermediate certificates,
+// and root certificates provided.
+func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) ([]string, error) {
 	var warnings []string
-	for _, c := range leafcerts {
-		if NearExpiration(c) {
-			warnings = append(warnings, fmt.Sprintf("certificate %d is expired or near expiry", c.SerialNumber))
+	for _, c := range leafCerts {
+		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
+			warnings = append(warnings, fmt.Sprintf("leaf certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))
 		}
 	}
 	for _, c := range interCerts {
-		if NearExpiration(c) {
-			warnings = append(warnings, fmt.Sprintf("certificate %d is expired or near expiry", c.SerialNumber))
+		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
+			warnings = append(warnings, fmt.Sprintf("intermediate certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))
 		}
 	}
 	for _, c := range rootCerts {
-		if NearExpiration(c) {
-			warnings = append(warnings, fmt.Sprintf("certificate %d is expired or near expiry", c.SerialNumber))
+		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
+			warnings = append(warnings, fmt.Sprintf("root certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))
 		}
 	}
 
 	return warnings, nil
-}
-
-// NearExpiration returns a true if a certficate will expire in a week and false otherwise
-func NearExpiration(c *x509.Certificate) bool {
-	oneWeekFromNow := time.Now().Add(7 * 24 * time.Hour)
-	if oneWeekFromNow.After(c.NotAfter) {
-		return true
-	}
-	return false
 }
 
 // TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
@@ -219,4 +214,15 @@ func TLSMutualExclusionCertCheck(l *configutil.Listener) error {
 		}
 	}
 	return nil
+}
+
+// NearExpiration returns a true if a certficate will expire in a month and false otherwise
+func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
+	oneMonthFromNow := time.Now().Add(30 * 24 * time.Hour)
+	var timeToExpiry time.Duration
+	if oneMonthFromNow.After(c.NotAfter) {
+		timeToExpiry := oneMonthFromNow.Sub(c.NotAfter)
+		return true, timeToExpiry
+	}
+	return false, timeToExpiry
 }

@@ -127,6 +127,10 @@
   &.padding-top {
     padding-top: $size-8;
   }
+
+  &.is-marginless {
+    margin-bottom: 0;
+  }
 }
 
 .has-text-highlight {

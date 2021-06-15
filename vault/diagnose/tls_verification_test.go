@@ -58,7 +58,11 @@ func TestTLSFakeCert(t *testing.T) {
 		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 	if len(errs) != 1 {
+<<<<<<< HEAD
 		t.Fatalf("more than one error returned")
+=======
+		t.Fatalf("more than one error returned: %+v", errs)
+>>>>>>> master
 	}
 	if !strings.Contains(errs[0].Error(), "could not decode cert") {
 		t.Fatalf("Bad error message: %s", errs[0])
@@ -327,6 +331,7 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(maxVersionError, "0").Error()) {
 		t.Fatalf("Bad error message: %s", errs[0])
+<<<<<<< HEAD
 	}
 }
 
@@ -418,5 +423,7 @@ func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive") {
 		t.Fatalf("Bad error message: %s", err)
+=======
+>>>>>>> master
 	}
 }

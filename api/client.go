@@ -973,7 +973,10 @@ START:
 	}
 
 	if outputCurlString {
-		LastOutputStringError = &OutputStringError{Request: req}
+		LastOutputStringError = &OutputStringError{
+			Request:       req,
+			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+		}
 		return nil, LastOutputStringError
 	}
 

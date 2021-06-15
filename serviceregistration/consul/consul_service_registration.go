@@ -225,7 +225,6 @@ func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string
 					return err
 				}
 				return nil
-
 			}
 			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
 		}
