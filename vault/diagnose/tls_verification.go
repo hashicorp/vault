@@ -204,10 +204,10 @@ func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) 
 	return warnings, nil
 }
 
-// NearExpiration returns a true if a certficate will expire in a week and false otherwise
+// NearExpiration returns a true if a certficate will expire in a month and false otherwise
 func NearExpiration(c *x509.Certificate) bool {
-	oneWeekFromNow := time.Now().Add(7 * 24 * time.Hour)
-	if oneWeekFromNow.After(c.NotAfter) {
+	oneMonthFromNow := time.Now().Add(30 * 24 * time.Hour)
+	if oneMonthFromNow.After(c.NotAfter) {
 		return true
 	}
 	return false
