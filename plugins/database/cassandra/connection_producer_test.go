@@ -30,6 +30,7 @@ func TestSelfSignedCA(t *testing.T) {
 	}
 
 	tlsConfig := loadServerCA(t, "test-fixtures/with_tls/ca.pem")
+	tlsConfig.ServerName = "127.0.0.1"
 	sslOpts := &gocql.SslOptions{
 		Config:                 tlsConfig,
 		EnableHostVerification: true,
