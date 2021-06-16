@@ -263,7 +263,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
-				err := physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+				err := physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
 					return err
 				}
@@ -331,7 +331,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.Test(ctx, "test-serviceregistration-tls-consul", func(ctx context.Context) error {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err := srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
+			err := srconsul.SetupSecureTLS(ctx, api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
 				return err
 			}
@@ -432,7 +432,7 @@ SEALFAIL:
 		})
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-ha-storage-tls-consul", func(ctx context.Context) error {
-				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+				err = physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
 					return err
 				}
@@ -501,36 +501,26 @@ SEALFAIL:
 
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 
-		diagnose.Test(ctx, "check-listener-tls", func(ctx context.Context) error {
-			sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-			for _, ln := range lns {
-				if ln.Config.TLSDisable {
-					diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
-					continue
-				}
-				if ln.Config.TLSDisableClientCerts {
-					diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
-				}
-
-				// Check ciphersuite and load ca/cert/key files
-				// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
-				// perform an active probe.
-				_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
-				if err != nil {
-					return err
-				}
-
-				sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-					Listener: ln.Listener,
-					Config:   ln.Config,
-				})
+		listenerTLSContext, listenerTLSSpan := diagnose.StartSpan(ctx, "check-listener-tls")
+		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
+		for _, ln := range lns {
+			if ln.Config.TLSDisable {
+				diagnose.Warn(listenerTLSContext, "TLS is disabled in a Listener config stanza.")
+				continue
 			}
-			err = diagnose.ListenerChecks(sanitizedListeners)
-			if err != nil {
-				return err
+			if ln.Config.TLSDisableClientCerts {
+				diagnose.Warn(listenerTLSContext, "TLS for a listener is turned on without requiring client certs.")
 			}
-			return nil
-		})
+
+			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+				Listener: ln.Listener,
+				Config:   ln.Config,
+			})
+		}
+		diagnose.ListenerChecks(listenerTLSContext, sanitizedListeners)
+
+		listenerTLSSpan.End()
+
 		return nil
 	})
 

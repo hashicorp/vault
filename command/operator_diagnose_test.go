@@ -226,7 +226,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						{
 							Name:    "test-storage-tls-consul",
 							Status:  diagnose.ErrorStatus,
-							Message: "expired",
+							Message: "certificate has expired or is not yet valid",
+							Warnings: []string{
+								"expired or near expiry",
+							},
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
@@ -281,7 +284,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						{
 							Name:    "test-ha-storage-tls-consul",
 							Status:  diagnose.ErrorStatus,
-							Message: "x509: certificate has expired or is not yet valid",
+							Message: "certificate has expired or is not yet valid",
+							Warnings: []string{
+								"expired or near expiry",
+							},
 						},
 					},
 				},
@@ -304,7 +310,10 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						{
 							Name:    "test-serviceregistration-tls-consul",
 							Status:  diagnose.ErrorStatus,
-							Message: "failed to verify certificate: x509: certificate has expired or is not yet valid",
+							Message: "certificate has expired or is not yet valid",
+							Warnings: []string{
+								"expired or near expiry",
+							},
 						},
 						{
 							Name:   "test-consul-direct-access-service-discovery",
