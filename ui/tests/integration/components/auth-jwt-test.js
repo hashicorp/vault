@@ -70,15 +70,8 @@ const renderIt = async (context, path = 'jwt') => {
   let fake = fakeWindow.create();
   context.set('window', fake);
   context.set('handler', sinon.spy(handler));
-  // context.set(
-  //   'onError',
-  //   sinon.spy(function(err) {
-  //     console.log('Error passed on error', err);
-  //   })
-  // );
   context.set('roleName', '');
   context.set('selectedAuthPath', path);
-
   await render(hbs`
     <AuthJwt
       @window={{window}}
@@ -274,6 +267,7 @@ module('Integration | Component | auth jwt', function(hooks) {
         },
       })
     );
+    await settled();
     assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
     assert.equal(this.token, 'token', 'calls onToken with token');
     assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
