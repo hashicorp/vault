@@ -502,6 +502,49 @@ func TestJobManager_EndToEnd(t *testing.T) {
 	}
 }
 
+func TestFairshare_StressTest(t *testing.T) {
+	var wg sync.WaitGroup
+	ex := func(name string) error {
+		wg.Done()
+		return nil
+	}
+	onFail := func(_ error) {}
+
+	j := NewJobManager("test-job-mgr", 15, nil, nil)
+	j.Start()
+	defer j.Stop()
+
+	for i := 0; i < 3000; i++ {
+		wg.Add(1)
+		job := newTestJob(t, fmt.Sprintf("a-job-%d", i), ex, onFail)
+		j.AddJob(&job, "a")
+	}
+	for i := 0; i < 4000; i++ {
+		wg.Add(1)
+		job := newTestJob(t, fmt.Sprintf("b-job-%d", i), ex, onFail)
+		j.AddJob(&job, "b")
+	}
+	for i := 0; i < 3000; i++ {
+		wg.Add(1)
+		job := newTestJob(t, fmt.Sprintf("c-job-%d", i), ex, onFail)
+		j.AddJob(&job, "c")
+	}
+
+	doneCh := make(chan struct{})
+	go func() {
+		wg.Wait()
+		doneCh <- struct{}{}
+	}()
+
+	timeout := time.After(5 * time.Second)
+	select {
+	case <-doneCh:
+		break
+	case <-timeout:
+		t.Fatal("timed out")
+	}
+}
+
 func TestFairshare_nilLoggerJobManager(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 1, nil, nil)
 	if j.logger == nil {
