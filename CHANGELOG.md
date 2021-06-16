@@ -3,12 +3,15 @@
 
 CHANGES:
 
+* core: License/EULA changes that ensure the presence of a valid HashiCorp license to start Vault. More information is available in the [Vault License FAQ](https://www.vaultproject.io/docs/enterprise/license/faqs)
 * go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
+
 FEATURES:
 
 * **MySQL Database UI**: The UI now supports adding and editing MySQL connections in the database secret engine [[GH-11532 | MySQL Database UI](https://github.com/hashicorp/vault/pull/11532 | MySQL Database UI)]
 * cli/api: Add lease lookup command [[GH-11129](https://github.com/hashicorp/vault/pull/11129)]
 * core: Add controlled capabilities to control group policy stanza
+* core: Add a darwin/arm64 binary release supporting the Apple M1 CPU
 * ssh: add support for templated values in SSH CA DefaultExtensions [[GH-11495](https://github.com/hashicorp/vault/pull/11495)]
 * ui: Add database secret engine support for MSSQL [[GH-11231](https://github.com/hashicorp/vault/pull/11231)]
 
