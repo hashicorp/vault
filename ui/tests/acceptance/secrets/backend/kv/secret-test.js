@@ -6,6 +6,7 @@ import {
   currentRouteName,
   fillIn,
   triggerKeyEvent,
+  find,
 } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
@@ -69,15 +70,26 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', 'abc');
-    await fillIn('[data-test-input="maxVersions"]', 'abc');
+    await fillIn('[data-test-secret-path="true"]', 'beep');
+    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    assert.equal(
+      find('[data-test-inline-error-message]').innerText,
+      'A secret with this path already exists.',
+      'when duplicate path it shows correct error message'
+    );
+
+    document.querySelector('#maxVersions').value = 'abc';
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
-    await settled();
+    assert
+      .dom('[data-test-input="maxVersions"]')
+      .hasClass('has-error-border', 'shows border error on input with error');
     assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
     await fillIn('[data-test-input="maxVersions"]', 20);
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await fillIn('[data-test-secret-path="true"]', 'meep');
+    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     await click('[data-test-secret-save="true"]');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/abc`, 'navigates to show secret');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');
   });
 
   test('version 1 performs the correct capabilities lookup', async function(assert) {

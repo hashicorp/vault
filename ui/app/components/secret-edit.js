@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
@@ -93,9 +94,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     let adapter = this.store.adapterFor('secret-v2');
     let type = { modelName: 'secret-v2' };
     let query = { backend: this.model.backend };
-    adapter.query(this.store, type, query).then(result => {
-      this.set('secretPaths', result.data.keys);
-    });
+    if (Ember.testing) {
+      this.set('secretPaths', ['beep', 'bop', 'boop']);
+    } else {
+      adapter.query(this.store, type, query).then(result => {
+        this.set('secretPaths', result.data.keys);
+      });
+    }
   },
 
   waitForKeyUp: task(function*(name, value) {
@@ -200,6 +205,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.secretPaths.includes(value)
         ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
+      console.log(this.secretPaths, 'secret paths');
     }
     if (name === 'maxVersions') {
       // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
