@@ -12,54 +12,54 @@ export default function DownloadsPage(staticProps) {
     : `https://github.com/hashicorp/vault/blob/v${VERSION}/CHANGELOG.md`
 
   return (
-    <ProductDownloadsPage
-      {...staticProps}
-      changelog={changelogUrl}
-      getStartedDescription="Follow step-by-step tutorials on the essentials of Vault."
-      getStartedLinks={[
-        {
-          label: 'Getting Started with the CLI',
-          href: 'http://learn.hashicorp.com/collections/vault/getting-started',
-        },
-        {
-          label: 'Getting Started with Vault UI',
-          href:
-            'http://learn.hashicorp.com/collections/vault/getting-started-ui',
-        },
-        {
-          label: 'Vault on HCP',
-          href:
-            'http://learn.hashicorp.com/collections/vault/getting-started-ui',
-        },
-        {
-          label: 'View all Vault tutorials',
+    <main>
+      <ProductDownloadsPage
+        {...staticProps}
+        changelog={changelogUrl}
+        getStartedDescription="Follow step-by-step tutorials on the essentials of Vault."
+        getStartedLinks={[
+          {
+            label: 'Getting Started with the CLI',
+            href: 'http://learn.hashicorp.com/collections/vault/getting-started',
+          },
+          {
+            label: 'Getting Started with Vault UI',
+            href: 'http://learn.hashicorp.com/collections/vault/getting-started-ui',
+          },
+          {
+            label: 'Vault on HCP',
+            href: 'http://learn.hashicorp.com/collections/vault/getting-started-ui',
+          },
+          {
+            label: 'View all Vault tutorials',
+            href: 'https://learn.hashicorp.com/vault',
+          },
+        ]}
+        logo={
+          <img
+            className={s.logo}
+            alt="Vault"
+            src={require('./img/vault-logo.svg')}
+          />
+        }
+        tutorialLink={{
           href: 'https://learn.hashicorp.com/vault',
-        },
-      ]}
-      logo={
-        <img
-          className={s.logo}
-          alt="Vault"
-          src={require('./img/vault-logo.svg')}
-        />
-      }
-      tutorialLink={{
-        href: 'https://learn.hashicorp.com/vault',
-        label: 'View Tutorials at HashiCorp Learn',
-      }}
-      merchandisingSlot={
-        <>
-          <MerchandisingSlot />
-          <p className={s.releaseNote}>
-            Release notes are available in our{' '}
-            <Link href={`/docs/release-notes/${VERSION}`}>
-              <a>documentation</a>
-            </Link>
-            .
-          </p>
-        </>
-      }
-    />
+          label: 'View Tutorials at HashiCorp Learn',
+        }}
+        merchandisingSlot={
+          <>
+            <MerchandisingSlot />
+            <p className={s.releaseNote}>
+              Release notes are available in our{' '}
+              <Link href={`/docs/release-notes/${VERSION}`}>
+                <a>documentation</a>
+              </Link>
+              .
+            </p>
+          </>
+        }
+      />
+    </main>
   )
 }
 

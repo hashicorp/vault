@@ -19,7 +19,7 @@ export async function getStaticProps() {
 
 export default function SecretsManagmentUseCase({ content }) {
   return (
-    <div id="use-cases" className="g-section-block page-wrap">
+    <main id="use-cases" className="g-section-block page-wrap">
       <section className="g-container">
         {/* Header / Buttons */}
 
@@ -88,6 +88,6 @@ export default function SecretsManagmentUseCase({ content }) {
       </section>
 
       <UseCaseCtaSection />
-    </div>
+    </main>
   )
 }

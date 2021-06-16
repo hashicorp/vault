@@ -15,12 +15,14 @@ const additionalComponents = { Columns, Tag }
 
 export default function DocsLayout(props) {
   return (
-    <DocsPage
-      product={{ name: productName, slug: productSlug }}
-      baseRoute={basePath}
-      staticProps={props}
-      additionalComponents={additionalComponents}
-    />
+    <main>
+      <DocsPage
+        product={{ name: productName, slug: productSlug }}
+        baseRoute={basePath}
+        staticProps={props}
+        additionalComponents={additionalComponents}
+      />
+    </main>
   )
 }
 

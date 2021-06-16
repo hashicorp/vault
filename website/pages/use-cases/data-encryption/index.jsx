@@ -18,7 +18,7 @@ export async function getStaticProps() {
 
 export default function DataEncryptionUseCase({ content }) {
   return (
-    <div id="use-cases" className="g-section-block page-wrap">
+    <main id="use-cases" className="g-section-block page-wrap">
       {/* Header / Buttons */}
       <section className="g-container">
         <SectionHeader
@@ -59,6 +59,6 @@ export default function DataEncryptionUseCase({ content }) {
       </section>
 
       <UseCaseCtaSection />
-    </div>
+    </main>
   )
 }
