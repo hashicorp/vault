@@ -33,8 +33,8 @@ type RunOptions struct {
 	ImageTag  string
 
 	ContainerName string
-	// DoNotAppendUUID to the container name for uniqueness
-	DoNotAppendUUID bool
+	// SkipHostnameUUID to the container name for uniqueness
+	SkipHostnameUUID bool
 
 	Cmd             []string
 	Env             []string
@@ -191,7 +191,7 @@ type Service struct {
 
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, error) {
 	name := d.RunOptions.ContainerName
-	if !d.RunOptions.DoNotAppendUUID {
+	if !d.RunOptions.SkipHostnameUUID {
 		suffix, err := uuid.GenerateUUID()
 		if err != nil {
 			return nil, nil, err

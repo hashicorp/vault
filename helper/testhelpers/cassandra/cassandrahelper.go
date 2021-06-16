@@ -14,12 +14,12 @@ import (
 )
 
 type containerConfig struct {
-	containerName   string
-	doNotAppendUUID bool
-	imageName       string
-	version         string
-	copyFromTo      map[string]string
-	env             []string
+	containerName    string
+	skipHostnameUUID bool
+	imageName        string
+	version          string
+	copyFromTo       map[string]string
+	env              []string
 
 	sslOpts *gocql.SslOptions
 }
@@ -45,7 +45,7 @@ func Image(imageName string, version string) ContainerOpt {
 
 func DoNotAppendUUID(doNotAppendUUID bool) ContainerOpt {
 	return func(cfg *containerConfig) {
-		cfg.doNotAppendUUID = doNotAppendUUID
+		cfg.skipHostnameUUID = doNotAppendUUID
 	}
 }
 
@@ -116,13 +116,13 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	runOpts := docker.RunOptions{
-		ContainerName:   containerCfg.containerName,
-		DoNotAppendUUID: containerCfg.doNotAppendUUID,
-		ImageRepo:       containerCfg.imageName,
-		ImageTag:        containerCfg.version,
-		Ports:           []string{"9042/tcp"},
-		CopyFromTo:      copyFromTo,
-		Env:             containerCfg.env,
+		ContainerName:    containerCfg.containerName,
+		SkipHostnameUUID: containerCfg.skipHostnameUUID,
+		ImageRepo:        containerCfg.imageName,
+		ImageTag:         containerCfg.version,
+		Ports:            []string{"9042/tcp"},
+		CopyFromTo:       copyFromTo,
+		Env:              containerCfg.env,
 	}
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
