@@ -1599,9 +1599,24 @@
         "path": "enterprise"
       },
       {
+        "title": "License",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/license"
+          },
+          {
+            "title": "FAQs",
+            "path": "enterprise/license/faqs"
+          }
+        ]
+      },
+
+      {
         "title": "Replication",
         "path": "enterprise/replication"
       },
+
       {
         "title": "HSM Support",
         "routes": [
