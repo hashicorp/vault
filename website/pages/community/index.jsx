@@ -10,7 +10,7 @@ function CommunityPage() {
       <SectionHeader
         headline="Community"
         description="Vault is an open source project with a growing community. There are active, dedicated users willing to help you through various mediums."
-        use_h1={true}
+        useH1={true}
       />
       <VerticalTextBlockList
         product="vault"
