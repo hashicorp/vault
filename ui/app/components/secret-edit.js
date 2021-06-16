@@ -205,7 +205,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       this.secretPaths.includes(value)
         ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
-      console.log(this.secretPaths, 'secret paths');
     }
     if (name === 'maxVersions') {
       // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
