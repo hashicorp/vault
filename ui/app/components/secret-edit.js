@@ -91,12 +91,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       maxVersions: '',
     });
     // for validation, return array of path names already assigned
-    let adapter = this.store.adapterFor('secret-v2');
-    let type = { modelName: 'secret-v2' };
-    let query = { backend: this.model.backend };
     if (Ember.testing) {
       this.set('secretPaths', ['beep', 'bop', 'boop']);
     } else {
+      let adapter = this.store.adapterFor('secret-v2');
+      let type = { modelName: 'secret-v2' };
+      let query = { backend: this.model.backend };
       adapter.query(this.store, type, query).then(result => {
         this.set('secretPaths', result.data.keys);
       });
