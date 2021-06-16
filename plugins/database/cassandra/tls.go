@@ -12,7 +12,7 @@ import (
 )
 
 func jsonBundleToTLSConfig(rawJSON string, tlsMinVersion uint16, serverName string, insecureSkipVerify bool) (*tls.Config, error) {
-	certBundle := certutil.CertBundle{}
+	var certBundle certutil.CertBundle
 	err := json.Unmarshal([]byte(rawJSON), &certBundle)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
@@ -41,10 +41,7 @@ func pemBundleToTLSConfig(pemBundle string, tlsMinVersion uint16, serverName str
 	privateKey := ""
 	caChain := []string{}
 
-	count := 0
 	for len(pemBytes) > 0 {
-		count++
-
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
 			return nil, errutil.UserError{Err: "no data found in PEM block"}
@@ -69,11 +66,13 @@ func pemBundleToTLSConfig(pemBundle string, tlsMinVersion uint16, serverName str
 			}
 			certificate = string(blockBytes)
 
-		case "PRIVATE KEY":
+		case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 			if privateKey != "" {
 				return nil, errutil.UserError{Err: "multiple private keys not supported"}
 			}
 			privateKey = string(blockBytes)
+		default:
+			return nil, fmt.Errorf("unsupported PEM block type [%s]", pemBlock.Type)
 		}
 	}
 
