@@ -12,13 +12,14 @@ pertains to the templating engine.
 
 ## Functionality
 
-The `template_config` stanza. Note that `template_config` can only be defined
-once, and is different from the `template` stanza. Unlike `template` which
-focuses on where and how a specific secret is rendered, `template_config`
-contains parameters affects how the templating engine as a whole behaves and its
-interaction with the rest of Agent. This includes, but is not limited to,
-program exit behavior. Other parameters that applies to the templating engine as
-a whole may be added over time.
+The `template_config` stanza configures overall default behavior for the
+templating engine. Note that `template_config` can only be defined once, and is
+different from the `template` stanza. Unlike `template` which focuses on where
+and how a specific secret is rendered, `template_config` contains parameters
+affects how the templating engine as a whole behaves and its interaction with
+the rest of Agent. This includes, but is not limited to, program exit behavior.
+Other parameters that applies to the templating engine as a whole may be added
+over time.
 
 ### Interaction with `error_on_missing_key`
 
@@ -36,11 +37,15 @@ destination, but agent will not exit and retry until it's able to do so or until
 the process is terminated.
 
 Note that a missing key from a secret's response is different from a missing or
-non-existent secret. The templating engine will always error if a secret is missing, but will only error for a missing key if `error_on_missing_key` is set. Whether Vault Agent will exit when the templating engine errors depends on the value of `exit_on_retry_failure`.
+non-existent secret. The templating engine will always error if a secret is
+missing, but will only error for a missing key if `error_on_missing_key` is set.
+Whether Vault Agent will exit when the templating engine errors depends on the
+value of `exit_on_retry_failure`.
 
 ## Configuration
 
 The top level `template_config` block has the following configuration entries:
 
-- `exit_on_retry_failure` `(bool: false)` - This option configures Vault Agent to create
-  the parent directories of the destination path if they do not exist.
+- `exit_on_retry_failure` `(bool: false)` - This option configures Vault Agent
+to exit after it has exhausted its number of template retry attempts due to
+failures.
