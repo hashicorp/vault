@@ -10,7 +10,7 @@ export default Route.extend({
     let { namespaceQueryParam: namespace } = this.paramsFor('vault.cluster');
     path = window.decodeURIComponent(path);
     let queryParams = { namespace, path, code, state };
-    window.opener.postMessage(queryParams);
+    window.opener.postMessage(queryParams, window.origin);
   },
   renderTemplate() {
     this.render(this.templateName, {

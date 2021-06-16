@@ -82,13 +82,21 @@ export default Component.extend({
     this.onError(err);
   },
 
-  prepareForOIDC(oidcWindow) {
+  prepareForOIDC: task(function*(oidcWindow) {
+    const thisWindow = this.getWindow();
     // show the loading animation in the parent
     this.onLoading(true);
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
-  },
+    // wait for message posted from popup
+    const event = yield waitForEvent(thisWindow, 'message');
+    if (event.origin === thisWindow.origin && event.isTrusted) {
+      this.exchangeOIDC.perform(event.data, oidcWindow);
+    } else {
+      this.handleOIDCError();
+    }
+  }),
 
   watchPopup: task(function*(oidcWindow) {
     while (true) {
@@ -177,10 +185,7 @@ export default Component.extend({
         'vaultOIDCWindow',
         `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
       );
-      win.addEventListener('message', event => {
-        this.exchangeOIDC.perform(event.data, oidcWindow);
-      });
-      this.prepareForOIDC(oidcWindow);
+      this.prepareForOIDC.perform(oidcWindow);
     },
   },
 });
