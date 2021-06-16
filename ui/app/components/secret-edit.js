@@ -89,8 +89,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       key: '',
       maxVersions: '',
     });
-    // for validation return array of path names already assigned
-    this.set('secretPaths', this.store.peekAll('secret-V2').mapBy('id'));
+    // for validation, return array of path names already assigned
+    let adapter = this.store.adapterFor('secret-v2');
+    let type = { modelName: 'secret-v2' };
+    let query = { backend: this.model.backend };
+    adapter.query(this.store, type, query).then(result => {
+      this.set('secretPaths', result.data.keys);
+    });
   },
 
   waitForKeyUp: task(function*(name, value) {
