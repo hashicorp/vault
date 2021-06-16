@@ -137,7 +137,7 @@ func TestSelfSignedCA(t *testing.T) {
 				"protocol_version": "4",
 				"connect_timeout":  "20s",
 				"tls":              "true",
-				"server_name":      "127.0.0.1",
+				"tls_server_name":  "127.0.0.1",
 			}
 
 			// Apply the generated & common fields to the config to be sent to the DB
