@@ -37,7 +37,6 @@ const fakeWindow = EmberObject.extend(Evented, {
   }),
   origin: 'http://localhost:8200',
   closed: false,
-  message: null,
 });
 
 fakeWindow.reopen({
@@ -201,7 +200,6 @@ module('Integration | Component | auth jwt', function(hooks) {
     });
     this.window.close();
     await settled();
-    // assert.ok(this.onError.calledWith(ERROR_WINDOW_CLOSED), 'calls onError with error string');
     assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
@@ -216,6 +214,30 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.window.trigger('message', buildMessage({ data: { state: 'state', foo: 'bar' } }));
     run.cancelTimers();
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
+  });
+
+  test('oidc: storage event fires with state key, correct params', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.trigger(
+      'message',
+      buildMessage({
+        data: {
+          path: 'foo',
+          state: 'state',
+          code: 'code',
+        },
+      })
+    );
+    await settled();
+    assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
+    assert.equal(this.token, 'token', 'calls onToken with token');
+    assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
   });
 
   test('oidc: fails silently when event origin does not match window origin', async function(assert) {
@@ -242,7 +264,7 @@ module('Integration | Component | auth jwt', function(hooks) {
     assert.notOk(this.handler.called, 'should not call the submit handler');
   });
 
-  test('oidc: storage event fires with state key, correct params', async function(assert) {
+  test('oidc: fails silently when event is not trusted', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -250,16 +272,10 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    // this.window.localStorage.getItem.returns(
-    //   JSON.stringify({
-    //     path: 'foo',
-    //     state: 'state',
-    //     code: 'code',
-    //   })
-    // );
     this.window.trigger(
       'message',
       buildMessage({
+        isTrusted: false,
         data: {
           path: 'foo',
           state: 'state',
@@ -267,9 +283,8 @@ module('Integration | Component | auth jwt', function(hooks) {
         },
       })
     );
+    run.cancelTimers();
     await settled();
-    assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
-    assert.equal(this.token, 'token', 'calls onToken with token');
-    assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
+    assert.notOk(this.handler.called, 'should not call the submit handler');
   });
 });

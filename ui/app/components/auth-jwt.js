@@ -120,7 +120,6 @@ export default Component.extend({
   },
 
   exchangeOIDC: task(function*(oidcState, oidcWindow) {
-    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
     if (oidcState === null || oidcState === undefined) {
       return;
     }
@@ -176,6 +175,7 @@ export default Component.extend({
 
       await this.fetchRole.perform(this.roleName, { debounce: false });
       let win = this.getWindow();
+
       const POPUP_WIDTH = 500;
       const POPUP_HEIGHT = 600;
       let left = win.screen.width / 2 - POPUP_WIDTH / 2;
@@ -185,6 +185,7 @@ export default Component.extend({
         'vaultOIDCWindow',
         `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
       );
+
       this.prepareForOIDC.perform(oidcWindow);
     },
   },
