@@ -1,5 +1,5 @@
 import { inject as service } from '@ember/service';
-import { computed } from '@ember/object';
+import { computed, set } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
@@ -49,6 +49,10 @@ export default Component.extend({
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
     this.set('mountModel', model);
+
+    this.set('validationMessages', {
+      path: '',
+    });
   },
 
   mountTypes: computed('engines', 'mountType', function() {
@@ -99,6 +103,12 @@ export default Component.extend({
     .withTestWaiter(),
 
   actions: {
+    onKeyUp(name, value) {
+      this.mountModel.set('path', value);
+      this.mountModel.validations.attrs.path.isValid
+        ? set(this.validationMessages, 'path', '')
+        : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
+    },
     onTypeChange(path, value) {
       if (path === 'type') {
         this.wizard.set('componentState', value);

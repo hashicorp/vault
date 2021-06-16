@@ -337,6 +337,10 @@ are needed.
   all the roles for which you have configured cross-account access, and each of
   those roles should have this IAM policy attached (except for the
   `sts:AssumeRole` statement).
+- The `ManageOwnAccessKeys` stanza is necessary when you have configured Vault
+  with static credentials, and wish to rotate these credentials with the
+  [Rotate Root Credentials](https://www.vaultproject.io/api-docs/auth/aws#rotate-root-credentials)
+  API call.
 
 ## Client Nonce
 

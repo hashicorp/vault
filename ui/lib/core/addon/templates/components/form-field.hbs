@@ -248,12 +248,22 @@
       {{/if}}
     {{else}}
       {{!-- Regular Text Input --}}
-      <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-        value={{or (get model valuePath) attr.options.defaultValue}} onChange={{action
+      <input 
+        data-test-input={{attr.name}}
+        id={{attr.name}}
+        autocomplete="off"
+        spellcheck="false"
+        value={{or (get model valuePath) attr.options.defaultValue}}
+        onChange={{action
           (action "setAndBroadcast" valuePath)
           value="target.value"
-        }} class="input" maxLength={{attr.options.characterLimit}} />
-
+        }}
+        onkeyup={{action
+          (action "handleKeyUp" attr.name)
+          value="target.value"
+        }}
+        class="input {{if (get validationMessages attr.name) "has-error-border"}}"
+        maxLength={{attr.options.characterLimit}} />
       {{#if attr.options.validationAttr}}
         {{#if
           (and
@@ -261,8 +271,14 @@
           )
         }}
           <AlertInline @type="danger" @message={{attr.options.invalidMessage}} />
-
         {{/if}}
+      {{/if}}
+      {{#if (get validationMessages attr.name)}}
+        <AlertInline 
+          @type="danger" 
+          @message={{get validationMessages attr.name}} 
+          @paddingTop=true
+        />
       {{/if}}
     {{/if}}
   </div>

@@ -1504,7 +1504,9 @@ func (a *ActivityLog) HandleTokenCreation(entry *logical.TokenEntry) {
 	if entry.EntityID != "" {
 		a.AddEntityToFragment(entry.EntityID, entry.NamespaceID, entry.CreationTime)
 	} else {
-		a.AddTokenToFragment(entry.NamespaceID)
+		if !IsWrappingToken(entry) {
+			a.AddTokenToFragment(entry.NamespaceID)
+		}
 	}
 }
 
