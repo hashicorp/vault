@@ -238,8 +238,8 @@ module('Integration | Component | auth jwt', function(hooks) {
       })
     );
     run.cancelTimers();
-    // assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
-    assert.notOk(this.handler.calledOnce, 'should not call the submit handler');
+    await settled();
+    assert.notOk(this.handler.called, 'should not call the submit handler');
   });
 
   test('oidc: storage event fires with state key, correct params', async function(assert) {
