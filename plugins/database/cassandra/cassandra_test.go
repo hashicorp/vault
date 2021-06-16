@@ -55,14 +55,27 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 }
 
 func TestInitialize(t *testing.T) {
-	// getCassandra performs an Initialize call
-	db, cleanup := getCassandra(t, 4)
-	defer cleanup()
+	t.Run("integer protocol version", func(t *testing.T) {
+		// getCassandra performs an Initialize call
+		db, cleanup := getCassandra(t, 4)
+		t.Cleanup(cleanup)
 
-	err := db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		err := db.Close()
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+	})
+
+	t.Run("string protocol version", func(t *testing.T) {
+		// getCassandra performs an Initialize call
+		db, cleanup := getCassandra(t, "4")
+		t.Cleanup(cleanup)
+
+		err := db.Close()
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+	})
 }
 
 func TestCreateUser(t *testing.T) {
