@@ -154,3 +154,9 @@ things such as access keys. The test itself should error early and tell
 you what to set, so it is not documented here.
 
 For more information on Vault Enterprise features, visit the [Vault Enterprise site](https://www.hashicorp.com/products/vault/?utm_source=github&utm_medium=referral&utm_campaign=github-vault-enterprise).
+
+End-User License Agreement & Terms of Evaluation (Vault Enterprise)
+--------------------------------------------------------------------
+The following shall apply unless your organization has a separately signed Enterprise License Agreement or Evaluation Agreement governing your use of the software:
+
+Software in this repository is subject to the license terms located in the software, copies of which are also available at [EULA](https://eula.hashicorp.com/ClickThruELA-Global.pdf) or [Terms Of Evaluation](https://www.hashicorp.com/terms-of-evaluation) as applicable. Please read the license terms prior to using the software. Your installation and use of the software constitutes your acceptance of these terms. If you do not accept the terms, do not use the software.”
