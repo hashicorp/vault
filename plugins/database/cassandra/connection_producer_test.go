@@ -38,7 +38,7 @@ func TestSelfSignedCA(t *testing.T) {
 
 	host, cleanup := cassandra.PrepareTestContainer(t,
 		cassandra.ContainerName("cassandra"),
-		cassandra.DoNotAppendUUID(true),
+		// cassandra.DoNotAppendUUID(true),
 		cassandra.Image("bitnami/cassandra", "latest"),
 		cassandra.CopyFromTo(copyFromTo),
 		cassandra.SslOpts(sslOpts),
@@ -48,8 +48,6 @@ func TestSelfSignedCA(t *testing.T) {
 		cassandra.Env("CASSANDRA_CLIENT_ENCRYPTION=true"),
 	)
 	t.Cleanup(cleanup)
-
-	t.Logf("Connection info: %#v\n", host)
 
 	type testCase struct {
 		config    map[string]interface{}
@@ -137,9 +135,9 @@ func TestSelfSignedCA(t *testing.T) {
 				"username":         "cassandra",
 				"password":         "cassandra",
 				"protocol_version": "4",
-				"connect_timeout":  "20s",
+				"connect_timeout":  "30s",
 				"tls":              "true",
-				"tls_server_name":  "localhost",
+				"tls_server_name":  host.Name,
 			}
 
 			// Apply the generated & common fields to the config to be sent to the DB
@@ -153,7 +151,7 @@ func TestSelfSignedCA(t *testing.T) {
 				VerifyConnection: true,
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			_, err := db.Initialize(ctx, initReq)
