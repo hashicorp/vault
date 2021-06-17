@@ -13,13 +13,11 @@ const basePath = 'api-docs'
 
 export default function DocsLayout(props) {
   return (
-    <main>
-      <DocsPage
-        product={{ name: productName, slug: productSlug }}
-        baseRoute={basePath}
-        staticProps={props}
-      />
-    </main>
+    <DocsPage
+      product={{ name: productName, slug: productSlug }}
+      baseRoute={basePath}
+      staticProps={props}
+    />
   )
 }
 
