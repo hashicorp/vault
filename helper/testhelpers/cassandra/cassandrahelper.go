@@ -14,12 +14,11 @@ import (
 )
 
 type containerConfig struct {
-	containerName    string
-	skipHostnameUUID bool
-	imageName        string
-	version          string
-	copyFromTo       map[string]string
-	env              []string
+	containerName string
+	imageName     string
+	version       string
+	copyFromTo    map[string]string
+	env           []string
 
 	sslOpts *gocql.SslOptions
 }
@@ -40,12 +39,6 @@ func Image(imageName string, version string) ContainerOpt {
 		// Reset the environment because there's a very good chance the default environment doesn't apply to the
 		// non-default image being used
 		cfg.env = nil
-	}
-}
-
-func SkipHostnameUUID(skipUUID bool) ContainerOpt {
-	return func(cfg *containerConfig) {
-		cfg.skipHostnameUUID = skipUUID
 	}
 }
 
@@ -116,13 +109,12 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	runOpts := docker.RunOptions{
-		ContainerName:    containerCfg.containerName,
-		SkipHostnameUUID: containerCfg.skipHostnameUUID,
-		ImageRepo:        containerCfg.imageName,
-		ImageTag:         containerCfg.version,
-		Ports:            []string{"9042/tcp"},
-		CopyFromTo:       copyFromTo,
-		Env:              containerCfg.env,
+		ContainerName: containerCfg.containerName,
+		ImageRepo:     containerCfg.imageName,
+		ImageTag:      containerCfg.version,
+		Ports:         []string{"9042/tcp"},
+		CopyFromTo:    copyFromTo,
+		Env:           containerCfg.env,
 	}
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
