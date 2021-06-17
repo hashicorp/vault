@@ -40,7 +40,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "parse-config",
+					Name:   "Parse configuration",
 					Status: diagnose.OkStatus,
 				},
 				{
