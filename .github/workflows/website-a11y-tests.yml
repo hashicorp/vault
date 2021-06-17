@@ -16,14 +16,14 @@ jobs:
       - name: Set up node
         uses: actions/setup-node@v1
 
-      - name: Install pa11y-ci dependencies.
-        run: npm install
+      - name: Install pa11y-ci dependencies 
+        run: cd website && npm install 
 
-      - name: Start up dev server.
-        run: npm run start
+      - name: Start dev server
+        run: cd website && npm run start
 
       - name: Run pa11y-ci.
-        run: npm run a11y-test:dev 2>&1 | tee pa11y_output.txt
+        run: cd website && npm run a11y-test:dev 2>&1 | tee pa11y_output.txt
         
       - name: Read pa11y_output file.
         id: pa11y_output

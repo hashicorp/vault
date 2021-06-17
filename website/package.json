@@ -50,7 +50,7 @@
     }
   },
   "scripts": {
-    "a11y-test:dev": " pa11y-ci --sitemap http://localhost:3000/sitemap.xml --sitemap-find s://vaultproject.io --sitemap-replace ://localhost --json",
+    "a11y-test:dev": " pa11y-ci --sitemap http://localhost:3000/sitemap.xml --sitemap-find s://www.vaultproject.io --sitemap-replace ://localhost:3000",
     "build": "next build",
     "dynamic": "NODE_ENV=production next build && next start",
     "export": "next export",
