@@ -1611,6 +1611,10 @@
             "path": "enterprise/license"
           },
           {
+            "title": "Autoloading",
+            "path": "enterprise/license/autoloading"
+          },
+          {
             "title": "FAQs",
             "path": "enterprise/license/faqs"
           }
