@@ -482,6 +482,23 @@
         ]
       },
       {
+        "title": "<code>license</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/license"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/license/get"
+          },
+          {
+            "title": "<code>inspect</code>",
+            "path": "commands/license/inspect"
+          }
+        ]
+      },
+      {
         "title": "<code>list</code>",
         "path": "commands/list"
       },
