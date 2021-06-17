@@ -3,6 +3,8 @@ name: pa11y tests
 on: 
   pull_request:
     branches: [ master ]
+    paths: 
+      - 'website/**/*'
 
 jobs:
   build:
