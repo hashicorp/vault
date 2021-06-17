@@ -38,10 +38,11 @@
   "devDependencies": {
     "@types/react": "^17.0.6",
     "dart-linkcheck": "^2.0.15",
+    "globby": "^11.0.4",
     "husky": "^4.3.8",
     "inquirer": "^8.1.1",
     "pa11y": "^6.0.0",
-    "globby": "^11.0.4",
+    "pa11y-ci": "^2.4.1",
     "prettier": "^2.3.1"
   },
   "husky": {
