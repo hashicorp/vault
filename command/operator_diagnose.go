@@ -295,7 +295,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 
 		// Attempt to use storage backend
-		if !c.skipEndEnd {
+		if !c.skipEndEnd && config.Storage.Type != storageTypeRaft {
 			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 				maxDurationCrudOperation := "write"
 				maxDuration := time.Duration(0)
