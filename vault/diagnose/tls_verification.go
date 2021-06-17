@@ -52,21 +52,61 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 
 		// Perform checks on the TLS Cryptographic Information.
 		warnings, err := TLSFileChecks(l.TLSCertFile, l.TLSKeyFile)
-		for _, warning := range warnings {
-			warning = listenerID + ": " + warning
-			listenerWarnings = append(listenerWarnings, warning)
-			Warn(ctx, warning)
-		}
-		if err != nil {
-			errMsg := listenerID + ": " + err.Error()
-			listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
-			Error(ctx, fmt.Errorf(errMsg))
-		}
+		listenerWarnings, listenerErrors = appendWarErr(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
 	}
 	return listenerWarnings, listenerErrors
+}
+
+func appendWarErr(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
+	for _, warning := range newWarnings {
+		warning = listenerID + ": " + warning
+		if !containsString(listenerWarnings, warning) {
+			listenerWarnings = append(listenerWarnings, warning)
+			Warn(ctx, warning)
+		}
+	}
+	if newErr != nil {
+		errMsg := listenerID + ": " + newErr.Error()
+		if !containsError(listenerErrors, fmt.Errorf(errMsg)) {
+			listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
+			Error(ctx, fmt.Errorf(errMsg))
+		}
+	}
+	return listenerWarnings, listenerErrors
+}
+
+func containsString(messages []string, lookup_msg string) bool {
+	//TODO: change messages to a map for performance reasons
+	for _, msg := range messages {
+		if msg == lookup_msg {
+			return true
+		}
+	}
+	return false
+
+}
+
+func containsError(errors []error, lookup_err error) bool {
+	//TODO: change errors to a map for performance reasons
+	for _, err := range errors {
+		if err == lookup_err {
+			return true
+		}
+	}
+	return false
+}
+
+// GetCertsSubjects returns a list of the DER-encoded subjects of
+// all of the certificates in the slice.
+func GetCertsSubjects(certs []*x509.Certificate) [][]byte {
+	res := make([][]byte, len(certs))
+	for i, lc := range certs {
+		res[i] = lc.RawSubject
+	}
+	return res
 }
 
 // TLSFileChecks returns an error and warnings after checking TLS information
@@ -136,11 +176,25 @@ func ParseTLSInformation(certFilePath string) ([]*x509.Certificate, []*x509.Cert
 			leafCerts = append(leafCerts, cert)
 		}
 	}
+
+	rootSubjects := GetCertsSubjects(rootCerts)
+	if len(rootSubjects) == 0 {
+		// This is either a self signed cert or the root is just not provided. In any
+		// case, we need to bypass the root verification step by adding the leaf itself to the
+		// root pool.
+		rootCerts = append(rootCerts, leafCerts[0])
+	}
+
 	return leafCerts, interCerts, rootCerts, nil
 }
 
 // TLSErrorChecks contains manual error checks against the TLS configuration
 func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error {
+	// Make sure there's the proper number of leafCerts. If there are multiple, it's a bad pem file.
+	if len(leafCerts) < 1 {
+		return fmt.Errorf("Number of leaf certificates detected is not %d.", len(leafCerts))
+	}
+
 	// First, create root pools and interPools from the root and inter certs lists
 
 	rootPool := x509.NewCertPool()
@@ -153,26 +207,35 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 		interPool.AddCert(inter)
 	}
 
-	// Make sure there's only one leaf. If there are multiple, it's a bad pem file.
-	if len(leafCerts) != 1 {
-		return fmt.Errorf("Number of leaf certificates detected is not one. Instead, it is: %d", len(leafCerts))
-	}
-
-	rootSubjs := rootPool.Subjects()
-	if len(rootSubjs) == 0 {
-		// this is a self signed server certificate, or the root is just not provided. In any
-		// case, we need to bypass the root verification step by adding the leaf itself to the
-		// root pool.
-		rootPool.AddCert(leafCerts[0])
-	}
-
+	var err error
 	// Verify checks that certificate isn't expired, is of correct usage type, and has an appropriate
-	// chain.
-	_, err := leafCerts[0].Verify(x509.VerifyOptions{
-		Roots:         rootPool,
-		Intermediates: interPool,
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-	})
+	// chain. We start with Root
+	for _, root := range rootCerts {
+		_, err = root.Verify(x509.VerifyOptions{
+			Roots:     rootPool,
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		})
+	}
+
+	// Verifying intermediate certs
+	for _, inter := range interCerts {
+		_, err = inter.Verify(x509.VerifyOptions{
+			Roots:     rootPool,
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to verify intermediate certificate: %w", err)
+		}
+	}
+
+	// Verifying leaf cert
+	for _, leaf := range leafCerts {
+		_, err = leaf.Verify(x509.VerifyOptions{
+			Roots:         rootPool,
+			Intermediates: interPool,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		})
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to verify primary provided leaf certificate: %w", err)
@@ -185,6 +248,11 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 // and root certificates provided.
 func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) ([]string, error) {
 	var warnings []string
+	// add a warning for when there are more than one leaf certs
+	if len(leafCerts) > 1 {
+		warnings = append(warnings, fmt.Sprintf("LeafCerts contains more than one leafCert."))
+	}
+
 	for _, c := range leafCerts {
 		if willExpire, timeToExpiry := NearExpiration(c); willExpire {
 			warnings = append(warnings, fmt.Sprintf("leaf certificate %d is expired or near expiry. Time to expire is: %s", c.SerialNumber, timeToExpiry))

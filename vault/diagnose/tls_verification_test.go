@@ -117,7 +117,7 @@ func TestTLSExpiredCert(t *testing.T) {
 	if !strings.Contains(errs[0].Error(), "certificate has expired or is not yet valid") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
-	if warnings == nil || len(warnings) != 1 {
+	if warnings == nil {
 		t.Fatalf("TLS Config check on fake certificate should warn")
 	}
 	if !strings.Contains(warnings[0], "expired or near expiry") {
@@ -201,7 +201,7 @@ func TestTLSMultiKeys(t *testing.T) {
 }
 
 // TestTLSMultiCerts verifies that a unique error message is thrown when a cert is specified twice.
-func TestTLSMultiCerts(t *testing.T) {
+func TestTLSCertAsKey(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
 			Config: &configutil.Listener{
@@ -264,6 +264,27 @@ func TestTLSNoRoot(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
 				TLSKeyFile:                    "./test-fixtures/goodkey.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	_, errs := ListenerChecks(context.Background(), listeners)
+	if errs != nil {
+		t.Fatalf("server certificate without root certificate is insecure, but still valid")
+	}
+}
+
+func TestTLSSelfSignedCert(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./test-fixtures/selfSignedCert.pem",
+				TLSKeyFile:                    "./test-fixtures/selfSignedCertKey.pem",
 				TLSMinVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
