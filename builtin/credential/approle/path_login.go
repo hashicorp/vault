@@ -26,9 +26,17 @@ func pathLogin(b *backend) *framework.Path {
 				Description: "SecretID belong to the App role",
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLoginUpdate,
-			logical.AliasLookaheadOperation: b.pathLoginUpdateAliasLookahead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.pathLoginUpdate,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback:                    b.pathLoginUpdateAliasLookahead,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 		HelpSynopsis:    pathLoginHelpSys,
 		HelpDescription: pathLoginHelpDesc,
