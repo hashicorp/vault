@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.vaultproject.io/404</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/security</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/community/</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/downloads/</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/not-found/</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/use-cases/data-encryption/</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/use-cases/identity-based-access/</loc>
+  </url>
+
+  <url>
+    <loc>https://www.vaultproject.io/use-cases/secrets-management/</loc>
+  </url>
+</urlset>
