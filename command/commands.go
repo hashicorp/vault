@@ -75,6 +75,11 @@ const (
 	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
+	// EnvVaultLicense is an env var used in Vault Enterprise to provide a license blob
+	EnvVaultLicense = "VAULT_LICENSE"
+	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
+	// path to a license file on disk
+	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -167,6 +172,8 @@ var (
 		"consul":     csr.NewServiceRegistration,
 		"kubernetes": ksr.NewServiceRegistration,
 	}
+
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
 )
 
 // Commands is the mapping of all the available commands.
@@ -293,16 +300,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"license": func() (cli.Command, error) {
-			return &LicenseCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"license get": func() (cli.Command, error) {
-			return &LicenseGetCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -730,6 +727,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			}, nil
 		}
 	}
+
+	initCommandsEnt(ui, serverCmdUi, runOpts)
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

@@ -14,7 +14,7 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/circleci/golang:1.16.2-buster"
+    default: "docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster"
   use_docker:
     type: boolean
     default: false
@@ -36,8 +36,10 @@ steps:
       command: |
         set -x
 
+        EXTRA_TAGS=
         case "<< parameters.extra_flags >>" in
         *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+        *)       EXTRA_TAGS=deadlock;;
         esac
 
         # Install CircleCI CLI
@@ -115,14 +117,14 @@ steps:
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
           docker exec -w /go/src/github.com/hashicorp/vault/ \
-            -e GO111MODULE -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+            -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
             -e VAULT_LICENSE_CI \
             testcontainer \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${GO_TAGS}" \
+              -tags "${GO_TAGS} ${EXTRA_TAGS}" \
               -timeout=60m \
               -parallel=20 \
               << parameters.extra_flags >> \
@@ -134,7 +136,7 @@ steps:
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
               -- \
-              -tags "${GO_TAGS}" \
+              -tags "${GO_TAGS} ${EXTRA_TAGS}" \
               -timeout=60m \
               -parallel=20 \
               << parameters.extra_flags >> \

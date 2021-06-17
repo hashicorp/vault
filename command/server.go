@@ -99,10 +99,11 @@ type ServerCommand struct {
 
 	cleanupGuard sync.Once
 
-	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reloadutil.ReloadFunc
-	startedCh       chan (struct{}) // for tests
-	reloadedCh      chan (struct{}) // for tests
+	reloadFuncsLock   *sync.RWMutex
+	reloadFuncs       *map[string][]reloadutil.ReloadFunc
+	startedCh         chan (struct{}) // for tests
+	reloadedCh        chan (struct{}) // for tests
+	licenseReloadedCh chan (error)    // for tests
 
 	allLoggers []log.Logger
 
@@ -404,14 +405,17 @@ func (c *ServerCommand) flushLog() {
 	}, c.gatedWriter)
 }
 
-func (c *ServerCommand) parseConfig() (*server.Config, error) {
+func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {
+	var configErrors []configutil.ConfigError
 	// Load the configuration
 	var config *server.Config
 	for _, path := range c.flagConfigs {
 		current, err := server.LoadConfig(path)
 		if err != nil {
-			return nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
+			return nil, nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
 		}
+
+		configErrors = append(configErrors, current.Validate(path)...)
 
 		if config == nil {
 			config = current
@@ -419,11 +423,11 @@ func (c *ServerCommand) parseConfig() (*server.Config, error) {
 			config = config.Merge(current)
 		}
 	}
-	return config, nil
+	return config, configErrors, nil
 }
 
 func (c *ServerCommand) runRecoveryMode() int {
-	config, err := c.parseConfig()
+	config, _, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1062,7 +1066,7 @@ func (c *ServerCommand) Run(args []string) int {
 		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
-	parsedConfig, err := c.parseConfig()
+	parsedConfig, _, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1148,10 +1152,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
 		config.LicensePath = envLicensePath
 	}
-	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
 
@@ -1209,6 +1213,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
+
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1563,8 +1568,13 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err := vault.LicenseReload(core); err != nil {
-				c.UI.Error(fmt.Sprintf("Error reloading license: %v", err))
+			if err = vault.LicenseReload(core); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			select {
+			case c.licenseReloadedCh <- err:
+			default:
 			}
 
 		case <-c.SigUSR2Ch:

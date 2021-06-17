@@ -1,1 +1,0 @@
-# raft-snapshot

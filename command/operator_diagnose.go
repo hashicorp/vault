@@ -10,15 +10,19 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/term"
+
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -161,7 +165,6 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 			c.diagnose = diagnose.New(os.Stdout)
 		}
 	}
-	c.UI.Output(version.GetVersion().FullVersionNumber(true))
 	ctx := diagnose.Context(context.Background(), c.diagnose)
 	c.diagnose.SetSkipList(c.flagSkips)
 	err := c.offlineDiagnostics(ctx)
@@ -176,7 +179,12 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		c.UI.Output(string(resultsJS))
 	} else {
 		c.UI.Output("\nResults:")
-		results.Write(os.Stdout)
+		w, _, err := term.GetSize(0)
+		if err == nil {
+			results.Write(os.Stdout, w)
+		} else {
+			results.Write(os.Stdout, 0)
+		}
 	}
 
 	if err != nil {
@@ -220,36 +228,65 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	// OS Specific checks
 	diagnose.OSChecks(ctx)
 
-	server.flagConfigs = c.flagConfigs
-	config, err := server.parseConfig()
-	if err != nil {
-		return diagnose.SpotError(ctx, "parse-config", err)
-	} else {
-		diagnose.SpotOk(ctx, "parse-config", "")
-	}
+	var config *cserver.Config
+
+	diagnose.Test(ctx, "Parse configuration", func(ctx context.Context) (err error) {
+		server.flagConfigs = c.flagConfigs
+		var configErrors []configutil.ConfigError
+		config, configErrors, err = server.parseConfig()
+		if err != nil {
+			return err
+		}
+		for _, ce := range configErrors {
+			diagnose.Warn(ctx, ce.String())
+		}
+		return nil
+	})
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 
+		// Ensure that there is a storage stanza
+		if config.Storage == nil {
+			return fmt.Errorf("no storage stanza found in config")
+		}
+
+		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 			b, err := server.setupStorage(config)
 			if err != nil {
 				return err
+			}
+			if b == nil {
+				return fmt.Errorf("storage backend was initialized to nil")
 			}
 			backend = &b
 			return nil
 		})
 
-		if config.Storage == nil {
-			return fmt.Errorf("no storage stanza found in config")
+		// Check for raft quorum status
+		if config.Storage.Type == storageTypeRaft {
+			path := os.Getenv(raft.EnvVaultRaftPath)
+			if path == "" {
+				path, ok := config.Storage.Config["path"]
+				if !ok {
+					diagnose.SpotError(ctx, "raft folder permission checks", fmt.Errorf("storage file path is required"))
+				}
+				diagnose.RaftFileChecks(ctx, path)
+			}
+			if backend != nil {
+				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
+			} else {
+				diagnose.SpotError(ctx, "raft quorum", fmt.Errorf("could not determine quorum status without initialized backend"))
+			}
 		}
 
+		// Consul storage checks
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
-				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.Storage.Config, server.logger, true)
+				err := physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
 					return err
 				}
@@ -266,7 +303,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 
 		// Attempt to use storage backend
-		if !c.skipEndEnd {
+		if !c.skipEndEnd && config.Storage.Type != storageTypeRaft {
 			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 				maxDurationCrudOperation := "write"
 				maxDuration := time.Duration(0)
@@ -317,7 +354,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.Test(ctx, "test-serviceregistration-tls-consul", func(ctx context.Context) error {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
-			err = srconsul.SetupSecureTLS(api.DefaultConfig(), srConfig, server.logger, true)
+			err := srconsul.SetupSecureTLS(ctx, api.DefaultConfig(), srConfig, server.logger, true)
 			if err != nil {
 				return err
 			}
@@ -339,7 +376,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
 	var seals []vault.Seal
 	var sealConfigError error
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+
 	// Check error here
 	if err != nil {
 		diagnose.Fail(sealcontext, err.Error())
@@ -404,6 +443,7 @@ SEALFAIL:
 			}
 			return nil
 		})
+
 		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
 			if config.HAStorage == nil {
 				diagnose.Skipped(ctx, "no HA storage configured")
@@ -417,7 +457,7 @@ SEALFAIL:
 		})
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-ha-storage-tls-consul", func(ctx context.Context) error {
-				err = physconsul.SetupSecureTLS(api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
+				err = physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
 					return err
 				}
@@ -439,6 +479,26 @@ SEALFAIL:
 		return diagnose.SpotError(ctx, "find-cluster-addr", err)
 	}
 	diagnose.SpotOk(ctx, "find-cluster-addr", "")
+
+	// Run all the checks that are utilized when initializing a core object
+	// without actually calling core.Init. These are in the init-core section
+	// as they are runtime checks.
+	diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
+		var newCoreError error
+		if coreConfig.RawConfig == nil {
+			return fmt.Errorf(CoreConfigUninitializedErr)
+		}
+		_, newCoreError = vault.CreateCore(&coreConfig)
+		if newCoreError != nil {
+			if vault.IsFatalError(newCoreError) {
+				return fmt.Errorf("Error initializing core: %s", newCoreError)
+			}
+			diagnose.Warn(ctx, wrapAtLength(
+				"WARNING! A non-fatal error occurred during initialization. Please "+
+					"check the logs for more information."))
+		}
+		return nil
+	})
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
@@ -466,39 +526,67 @@ SEALFAIL:
 
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 
-		diagnose.Test(ctx, "check-listener-tls", func(ctx context.Context) error {
-			sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-			for _, ln := range lns {
-				if ln.Config.TLSDisable {
-					diagnose.Warn(ctx, "TLS is disabled in a Listener config stanza.")
-					continue
-				}
-				if ln.Config.TLSDisableClientCerts {
-					diagnose.Warn(ctx, "TLS for a listener is turned on without requiring client certs.")
-				}
-
-				// Check ciphersuite and load ca/cert/key files
-				// TODO: TLSConfig returns a reloadFunc and a TLSConfig. We can use this to
-				// perform an active probe.
-				_, _, err := listenerutil.TLSConfig(ln.Config, make(map[string]string), c.UI)
-				if err != nil {
-					return err
-				}
-
-				sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-					Listener: ln.Listener,
-					Config:   ln.Config,
-				})
+		listenerTLSContext, listenerTLSSpan := diagnose.StartSpan(ctx, "check-listener-tls")
+		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
+		for _, ln := range lns {
+			if ln.Config.TLSDisable {
+				diagnose.Warn(listenerTLSContext, "TLS is disabled in a Listener config stanza.")
+				continue
 			}
-			err = diagnose.ListenerChecks(sanitizedListeners)
-			if err != nil {
-				return err
+			if ln.Config.TLSDisableClientCerts {
+				diagnose.Warn(listenerTLSContext, "TLS for a listener is turned on without requiring client certs.")
 			}
-			return nil
-		})
+
+			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
+				Listener: ln.Listener,
+				Config:   ln.Config,
+			})
+		}
+		diagnose.ListenerChecks(listenerTLSContext, sanitizedListeners)
+
+		listenerTLSSpan.End()
+
 		return nil
 	})
 
 	// TODO: Diagnose logging configuration
+
+	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
+	// decrypt a mock value. It will not call runUnseal.
+	diagnose.Test(ctx, "unseal", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+		if barrierWrapper == nil {
+			return fmt.Errorf("Diagnose could not create a barrier seal object")
+		}
+		barrierUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return fmt.Errorf("Diagnose could not create unique UUID for unsealing")
+		}
+		barrierEncValue := "diagnose-" + barrierUUID
+		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
+		if err != nil {
+			return fmt.Errorf("Error encrypting with seal barrier: %w", err)
+		}
+		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
+		if err != nil {
+			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
+
+		}
+		if string(plaintext) != barrierEncValue {
+			return fmt.Errorf("barrier returned incorrect decrypted value for mock data")
+		}
+		return nil
+	}))
+
+	// The following block contains static checks that are run during the
+	// startHttpServers portion of server run. In other words, they are static
+	// checks during resource creation.
+	diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+		for _, ln := range lns {
+			if ln.Config == nil {
+				return fmt.Errorf("Found nil listener config after parsing")
+			}
+		}
+		return nil
+	})
 	return nil
 }

@@ -1,3 +1,5 @@
+const EXPIRY_DATE = '2021-05-12T23:20:50.52Z';
+
 export default function() {
   this.namespace = 'v1';
 
@@ -25,6 +27,35 @@ export default function() {
     return {
       data: {
         feature_flags: featuresResponse ? featuresResponse.feature_flags : null,
+      },
+    };
+  });
+
+  this.get('/sys/license/status', function() {
+    return {
+      data: {
+        autoloading_used: false,
+        stored: {
+          expiration_time: EXPIRY_DATE,
+          features: ['DR Replication', 'Namespaces', 'Lease Count Quotas', 'Automated Snapshots'],
+          license_id: '0eca7ef8-ebc0-f875-315e-3cc94a7870cf',
+          performance_standby_count: 0,
+          start_time: '2020-04-28T00:00:00Z',
+        },
+        persisted_autoload: {
+          expiration_time: EXPIRY_DATE,
+          features: ['DR Replication', 'Namespaces', 'Lease Count Quotas', 'Automated Snapshots'],
+          license_id: '0eca7ef8-ebc0-f875-315e-3cc94a7870cf',
+          performance_standby_count: 0,
+          start_time: '2020-04-28T00:00:00Z',
+        },
+        autoloaded: {
+          expiration_time: EXPIRY_DATE,
+          features: ['DR Replication', 'Namespaces', 'Lease Count Quotas', 'Automated Snapshots'],
+          license_id: '0eca7ef8-ebc0-f875-315e-3cc94a7870cf',
+          performance_standby_count: 0,
+          start_time: '2020-04-28T00:00:00Z',
+        },
       },
     };
   });
