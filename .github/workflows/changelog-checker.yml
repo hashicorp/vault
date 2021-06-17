@@ -6,7 +6,7 @@ name: Check Changelog
 on:
   pull_request:
     types: [opened, synchronize, labeled, unlabeled]
-    # Runs on PRs to master and all release branches
+    # Runs on PRs to master
     branches:
       - master/*
 
