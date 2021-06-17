@@ -82,9 +82,12 @@ func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) st
 	if voterCount%2 == 0 {
 		warnMsg = fmt.Sprintf("error: even number of voters found: %d", voterCount)
 		SpotWarn(ctx, "raft quorum", warnMsg)
+		return warnMsg
 	}
 	if voterCount > 7 {
 		warnMsg = fmt.Sprintf("very large cluster detected: %d voters", voterCount)
+		SpotWarn(ctx, "raft quorum", warnMsg)
+		return warnMsg
 	}
 
 	okMsg := fmt.Sprintf("voter quorum exists: %d voters", voterCount)
