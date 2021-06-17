@@ -49,6 +49,8 @@ func TestSelfSignedCA(t *testing.T) {
 	)
 	t.Cleanup(cleanup)
 
+	t.Logf("Connection info: %#v\n", host)
+
 	type testCase struct {
 		config    map[string]interface{}
 		expectErr bool
@@ -130,14 +132,14 @@ func TestSelfSignedCA(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Set values that we don't know until the cassandra container is started
 			config := map[string]interface{}{
-				"hosts":            "127.0.0.1",
+				"hosts":            host.Name,
 				"port":             host.Port,
 				"username":         "cassandra",
 				"password":         "cassandra",
 				"protocol_version": "4",
 				"connect_timeout":  "20s",
 				"tls":              "true",
-				"tls_server_name":  "127.0.0.1",
+				"tls_server_name":  "localhost",
 			}
 
 			// Apply the generated & common fields to the config to be sent to the DB
