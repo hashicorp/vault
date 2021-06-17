@@ -39,8 +39,10 @@
     "@types/react": "^17.0.6",
     "dart-linkcheck": "^2.0.15",
     "husky": "^4.3.8",
-    "inquirer": "^8.1.0",
-    "prettier": "^2.3.0"
+    "inquirer": "^8.1.1",
+    "pa11y": "^6.0.0",
+    "globby": "^11.0.4",
+    "prettier": "^2.3.1"
   },
   "husky": {
     "hooks": {
@@ -48,12 +50,14 @@
     }
   },
   "scripts": {
+    "a11y-test:dev": " pa11y-ci --sitemap http://localhost:3000/sitemap.xml --sitemap-find s://vaultproject.io --sitemap-replace ://localhost --json",
     "build": "next build",
     "dynamic": "NODE_ENV=production next build && next start",
     "export": "next export",
     "format": "next-hashicorp format",
     "generate:component": "next-hashicorp generate component",
     "generate:readme": "next-hashicorp markdown-blocks README.md",
+    "generate:sitemap": "node scripts/generate_sitemap.js",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
     "start": "next-remote-watch ./content/**/*.mdx",
