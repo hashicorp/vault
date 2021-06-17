@@ -21,14 +21,15 @@ the rest of Agent. This includes, but is not limited to, program exit behavior.
 Other parameters that applies to the templating engine as a whole may be added
 over time.
 
-### Interaction with `error_on_missing_key`
+### Interaction between `exit_on_retry_failure` and `error_on_missing_key`
 
-The parameter [`error_on_missing_key`](/docs/agent/template#error_on_missing_key) can be specified within the `template`
-stanza which determines if a template should error when a key is missing
-in the secret. When `error_on_missing_key` is
-not specified or set to `false` and the key to render is not in the secret's
-response, the templating engine will ignore it (or render `"<no value>"`)
-and continue on with its rendering.
+The parameter
+[`error_on_missing_key`](/docs/agent/template#error_on_missing_key) can be
+specified within the `template` stanza which determines if a template should
+error when a key is missing in the secret. When `error_on_missing_key` is not
+specified or set to `false` and the key to render is not in the secret's
+response, the templating engine will ignore it (or render `"<no value>"`) and
+continue on with its rendering.
 
 If the desire is to have Agent fail and exit on a missing key, both
 `template.error_on_missing_key` and `template_config.exit_on_retry_failure` must
