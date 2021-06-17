@@ -1210,6 +1210,10 @@
                 "path": "platform/k8s/helm/run"
               },
               {
+                "title": "Enterprise Licensing",
+                "path": "platform/k8s/helm/enterprise"
+              },
+              {
                 "title": "Running Vault on OpenShift",
                 "path": "platform/k8s/helm/openshift"
               },
