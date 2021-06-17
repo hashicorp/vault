@@ -65,7 +65,7 @@ backend).
 Perform these steps on each standby:
 
 1. Properly shut down Vault on the standby node via `SIGINT` or `SIGTERM`
-2. Replace the Vault binary with the new version
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
 3. Start the standby node
 4. Unseal the standby node
 5. Verify `vault status` shows correct Version and HA Mode is `standby`
