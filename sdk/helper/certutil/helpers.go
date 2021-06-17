@@ -248,11 +248,14 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 		}
 	case "ed25519":
 		privateKeyType = Ed25519PrivateKey
-		privateKey, err = ed25519.GenerateKey(randReader)
+		_, privateKey, err = ed25519.GenerateKey(randReader)
 		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("error generating ed25519 private key: %v",err)}
+			return errutil.InternalError{Err: fmt.Sprintf("error generating ed25519 private key: %v", err)}
 		}
-		privateKeyBytes = x509.MarshalPkcs1PrivateKey(privateKey.(ed25519.PrivateKey))
+		privateKeyBytes, err = x509.MarshalPKCS8PrivateKey(privateKey.(ed25519.PrivateKey))
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error marshalling Ed25519 private key: %v", err)}
+		}
 	default:
 		return errutil.UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
 	}
