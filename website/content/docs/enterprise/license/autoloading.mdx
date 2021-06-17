@@ -1,0 +1,24 @@
+---
+layout: docs
+page_title: License Autoloading
+description: An overview of license autoloading.
+---
+
+Prior to Vault 1.8, Vault Enterprise would be licensed using special binaries
+that contained embedded licenses, or via a license written into Vault storage
+using the `PUT sys/license` API.
+
+As of Vault 1.8 those options still exist but are deprecated, and the recommended
+mechanism for managing licenses is called License Autoloading.  New clusters are
+required to use the autoloading method.
+
+License Autoloading can be done using one of these mechanisms, in increasing order
+of priority (i.e. `VAULT_LICENSE` takes precedence over `VAULT_LICENSE_PATH`, which
+takes precedence over `license_path` in config.)
+* [license_path in config](/docs/configuration#license_path)
+* [VAULT_LICENSE_PATH environment variable](/docs/commands#vault_license_path)
+* [VAULT_LICENSE environment variable](/docs/commands#vault_license)
+
+Each node needs to be licensed, they should all use the same license string, and
+they should all use autoloading or none should. Warnings will be written to
+the log when there are discrepancies.

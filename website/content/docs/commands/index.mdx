@@ -246,6 +246,17 @@ when in High Availability mode.
 
 Provide Vault output (read/status/write) in the specified format. Valid formats are "table", "json", or "yaml".
 
+### `VAULT_LICENSE`
+
+[Enterprise, Server only] Specify a license to use for this node.  This takes
+precedence over [#VAULT_LICENSE_PATH](#VAULT_LICENSE_PATH) and
+[license_path in config](/docs/configuration#license_path).
+
+### `VAULT_LICENSE_PATH`
+
+[Enterprise, Server only] Specify a path to a license on disk to use for this node.
+This takes precedence over [license_path in config](/docs/configuration#license_path).
+
 ### `VAULT_MAX_RETRIES`
 
 Maximum number of retries when a `5xx` error code is encountered. The default is
