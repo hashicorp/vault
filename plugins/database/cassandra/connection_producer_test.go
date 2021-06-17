@@ -34,7 +34,7 @@ func TestSelfSignedCA(t *testing.T) {
 	// ServerName is not set, the tests fail within CI. It's not entirely clear to me why they are failing in CI
 	// however by manually setting the ServerName we can get around the hostname/DNS issue and get them passing.
 	// Setting the ServerName isn't the ideal solution, but it was the only reliable one I was able to find
-	tlsConfig.ServerName = "127.0.0.1"
+	tlsConfig.ServerName = "cassandra"
 	sslOpts := &gocql.SslOptions{
 		Config:                 tlsConfig,
 		EnableHostVerification: true,
@@ -145,7 +145,7 @@ func TestSelfSignedCA(t *testing.T) {
 				// tls_server_name is not set, the tests fail within CI. It's not entirely clear to me why they are failing in CI
 				// however by manually setting the tls_server_name we can get around the hostname/DNS issue and get them passing.
 				// Setting the tls_server_name isn't the ideal solution, but it was the only reliable one I was able to find
-				"tls_server_name": host.Name,
+				"tls_server_name": "cassandra",
 			}
 
 			// Apply the generated & common fields to the config to be sent to the DB
