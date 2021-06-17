@@ -169,6 +169,35 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 		},
 		{
+			"diagnose_raft_problems",
+			[]string{
+				"-config", "./server/test-fixtures/config_raft.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "storage",
+					Status: diagnose.ErrorStatus,
+					Children: []*diagnose.Result{
+						{
+							Name:    "create-storage-backend",
+							Status:  diagnose.ErrorStatus,
+							Message: "failed to open bolt file",
+						},
+						{
+							Name:    "raft folder permission checks",
+							Status:  diagnose.WarningStatus,
+							Message: "too many permissions",
+						},
+						{
+							Name:    "raft quorum",
+							Status:  diagnose.ErrorStatus,
+							Message: "could not determine quorum status",
+						},
+					},
+				},
+			},
+		},
+		{
 			"diagnose_invalid_storage",
 			[]string{
 				"-config", "./server/test-fixtures/nostore_config.hcl",
@@ -178,12 +207,6 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Name:    "storage",
 					Status:  diagnose.ErrorStatus,
 					Message: "no storage stanza found in config",
-					Children: []*diagnose.Result{
-						{
-							Name:   "create-storage-backend",
-							Status: diagnose.ErrorStatus,
-						},
-					},
 				},
 			},
 		},
@@ -386,6 +409,7 @@ func compareResults(expected []*diagnose.Result, actual []*diagnose.Result) erro
 		found := false
 		// Check them all so we don't have to be order specific
 		for _, act := range actual {
+			fmt.Printf("%+v", act)
 			if exp.Name == act.Name {
 				found = true
 				if err := compareResult(exp, act); err != nil {

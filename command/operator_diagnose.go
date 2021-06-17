@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -239,20 +240,42 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
-		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 
+		// Ensure that there is a storage stanza
+		if config.Storage == nil {
+			return fmt.Errorf("no storage stanza found in config")
+		}
+
+		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
 			b, err := server.setupStorage(config)
 			if err != nil {
 				return err
+			}
+			if b == nil {
+				return fmt.Errorf("storage backend was initialized to nil")
 			}
 			backend = &b
 			return nil
 		})
 
-		if config.Storage == nil {
-			return fmt.Errorf("no storage stanza found in config")
+		// Check for raft quorum status
+		if config.Storage.Type == storageTypeRaft {
+			path := os.Getenv(raft.EnvVaultRaftPath)
+			if path == "" {
+				path, ok := config.Storage.Config["path"]
+				if !ok {
+					diagnose.SpotError(ctx, "raft folder permission checks", fmt.Errorf("storage file path is required"))
+				}
+				diagnose.RaftFileChecks(ctx, path)
+			}
+			if backend != nil {
+				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
+			} else {
+				diagnose.SpotError(ctx, "raft quorum", fmt.Errorf("could not determine quorum status without initialized backend"))
+			}
 		}
 
+		// Consul storage checks
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
 			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.Storage.Config, server.logger, true)
@@ -345,7 +368,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
 	var seals []vault.Seal
 	var sealConfigError error
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+
 	// Check error here
 	if err != nil {
 		diagnose.Fail(sealcontext, err.Error())
