@@ -56,7 +56,7 @@
       @roleName={{this.roleName}}
       @selectedAuthType={{this.selectedAuthBackend.type}}
       @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-      @disabled={{authenticate.isRunning}}
+      @disabled={{or authenticate.isRunning this.isLoading}}
     >
       <AuthFormOptions
         @customPath={{this.customPath}}
