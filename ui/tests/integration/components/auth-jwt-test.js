@@ -17,7 +17,7 @@ const component = create(form);
 const windows = [];
 const buildMessage = opts => ({
   isTrusted: true,
-  origin: 'http://localhost:8200',
+  origin: 'https://my-vault.com',
   data: {},
   ...opts,
 });
@@ -35,7 +35,7 @@ const fakeWindow = EmberObject.extend(Evented, {
       width: 500,
     };
   }),
-  origin: 'http://localhost:8200',
+  origin: 'https://my-vault.com',
   closed: false,
 });
 

@@ -124,8 +124,7 @@ export default Component.extend({
       return;
     }
     this.onLoading(true);
-    // get the info from the event fired by the other window and
-    // then remove it from localStorage
+
     let { namespace, path, state, code } = oidcState;
 
     // The namespace can be either be passed as a query paramter, or be embedded
