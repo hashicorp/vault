@@ -859,6 +859,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
 		l.RawConfig = nil
+		l.UnusedKeys = nil
 	}
 	c.FoundKeys = nil
 	c.UnusedKeys = nil
