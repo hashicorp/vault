@@ -6,9 +6,10 @@ name: Check Changelog
 on:
   pull_request:
     types: [opened, synchronize, labeled, unlabeled]
-    # Runs on PRs to master
+    # Runs on PRs to master and all release branches
     branches:
       - master/*
+      - release/*
 
 jobs:
   # checks that a changelog entry is present for a PR
@@ -34,11 +35,11 @@ jobs:
             exit 1
           else
             # Don't want square brackets bc not using test
-            if $(grep -q 'enhancement' $changelog_files); then
+            if grep -q ':enhancement$' $changelog_files; then
               # "Enhancement is not a valid type of changelog entry, but it's a common mistake.
               echo "Found invalid type (enhancement) in changelog - did you mean improvement?"
               exit 1
-            elif ! $(grep -q '```release-note:' $changelog_files); then
+            elif ! grep -q '```release-note:' $changelog_files; then
               # People often make changelog files like ```changelog:, which is incorrect.
               echo "Changelog file did not contain 'release-note' heading - check formatting."
               exit 1
