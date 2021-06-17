@@ -29,13 +29,10 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo string
-	ImageTag  string
-
-	ContainerName string
-	// SkipHostnameUUID to the container name for uniqueness
-	SkipHostnameUUID bool
-
+	ImageRepo       string
+	ImageTag        string
+	ContainerName   string
+	Hostname        string
 	Cmd             []string
 	Env             []string
 	NetworkID       string
@@ -190,17 +187,17 @@ type Service struct {
 }
 
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, error) {
-	name := d.RunOptions.ContainerName
-	if !d.RunOptions.SkipHostnameUUID {
-		suffix, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, nil, err
-		}
-		name += "-" + suffix
+	suffix, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, nil, err
+	}
+	hostname := d.RunOptions.Hostname
+	if hostname == "" {
+		hostname = d.RunOptions.ContainerName + "-" + suffix
 	}
 
 	cfg := &container.Config{
-		Hostname: name,
+		Hostname: hostname,
 		Image:    fmt.Sprintf("%s:%s", d.RunOptions.ImageRepo, d.RunOptions.ImageTag),
 		Env:      d.RunOptions.Env,
 		Cmd:      d.RunOptions.Cmd,
