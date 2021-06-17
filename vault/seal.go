@@ -488,7 +488,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 
 	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
-		return nil, &ErrDecrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
+		return nil, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)}
 	}
 
 	// Decode the barrier entry
