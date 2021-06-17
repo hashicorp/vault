@@ -38,7 +38,7 @@ func TestSelfSignedCA(t *testing.T) {
 
 	host, cleanup := cassandra.PrepareTestContainer(t,
 		cassandra.ContainerName("cassandra"),
-		// cassandra.DoNotAppendUUID(true),
+		cassandra.SkipHostnameUUID(true),
 		cassandra.Image("bitnami/cassandra", "latest"),
 		cassandra.CopyFromTo(copyFromTo),
 		cassandra.SslOpts(sslOpts),
@@ -137,7 +137,6 @@ func TestSelfSignedCA(t *testing.T) {
 				"protocol_version": "4",
 				"connect_timeout":  "30s",
 				"tls":              "true",
-				"tls_server_name":  host.Name,
 			}
 
 			// Apply the generated & common fields to the config to be sent to the DB

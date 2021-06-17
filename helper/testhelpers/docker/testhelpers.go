@@ -29,18 +29,18 @@ type Runner struct {
 }
 
 type RunOptions struct {
-	ImageRepo       string
-	ImageTag        string
-	ContainerName   string
-	Hostname        string
-	Cmd             []string
-	Env             []string
-	NetworkID       string
-	CopyFromTo      map[string]string
-	Ports           []string
-	DoNotAutoRemove bool
-	AuthUsername    string
-	AuthPassword    string
+	ImageRepo        string
+	ImageTag         string
+	ContainerName    string
+	SkipHostnameUUID bool
+	Cmd              []string
+	Env              []string
+	NetworkID        string
+	CopyFromTo       map[string]string
+	Ports            []string
+	DoNotAutoRemove  bool
+	AuthUsername     string
+	AuthPassword     string
 }
 
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
@@ -187,13 +187,13 @@ type Service struct {
 }
 
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, error) {
-	suffix, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, nil, err
-	}
-	hostname := d.RunOptions.Hostname
-	if hostname == "" {
-		hostname = d.RunOptions.ContainerName + "-" + suffix
+	hostname := d.RunOptions.ContainerName
+	if !d.RunOptions.SkipHostnameUUID {
+		suffix, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, nil, err
+		}
+		hostname += "-" + suffix
 	}
 
 	cfg := &container.Config{

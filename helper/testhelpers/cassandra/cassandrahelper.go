@@ -43,11 +43,11 @@ func Image(imageName string, version string) ContainerOpt {
 	}
 }
 
-// func DoNotAppendUUID(doNotAppendUUID bool) ContainerOpt {
-// 	return func(cfg *containerConfig) {
-// 		cfg.skipHostnameUUID = doNotAppendUUID
-// 	}
-// }
+func SkipHostnameUUID(skipUUID bool) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.skipHostnameUUID = skipUUID
+	}
+}
 
 func Version(version string) ContainerOpt {
 	return func(cfg *containerConfig) {
@@ -116,14 +116,13 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	runOpts := docker.RunOptions{
-		ContainerName: containerCfg.containerName,
-		// SkipHostnameUUID: containerCfg.skipHostnameUUID,
-		Hostname:   "cassandra",
-		ImageRepo:  containerCfg.imageName,
-		ImageTag:   containerCfg.version,
-		Ports:      []string{"9042/tcp"},
-		CopyFromTo: copyFromTo,
-		Env:        containerCfg.env,
+		ContainerName:    containerCfg.containerName,
+		SkipHostnameUUID: containerCfg.skipHostnameUUID,
+		ImageRepo:        containerCfg.imageName,
+		ImageTag:         containerCfg.version,
+		Ports:            []string{"9042/tcp"},
+		CopyFromTo:       copyFromTo,
+		Env:              containerCfg.env,
 	}
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
