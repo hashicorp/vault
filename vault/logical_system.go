@@ -106,6 +106,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-force/*",
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
+				"leases",
+				"leases/",
 			},
 
 			Unauthenticated: []string{
