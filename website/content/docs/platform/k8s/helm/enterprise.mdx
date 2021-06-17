@@ -22,7 +22,7 @@ kubectl create secret generic vault-ent-license --from-literal="license=${secret
 
 -> **Note:** If you cannot find your `.hclic` file, please contact your sales team or Technical Account Manager.
 
-In your chart overrides, set the values of [`server.image`](/docs/platform/k8s/helm/configuration#image-2) to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Also set the name of the secret you just created in [`server.enterpriseLicense`](/docs/platform/k8s/helm/configuration#enterpriseLicense).
+In your chart overrides, set the values of [`server.image`](/docs/platform/k8s/helm/configuration#image-2) to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Also set the name of the secret you just created in [`server.enterpriseLicense`](/docs/platform/k8s/helm/configuration#enterpriselicense).
 
 ```yaml
 # config.yaml
