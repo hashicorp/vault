@@ -267,7 +267,14 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		attempts = 0
 
 		// If we don't want exit on template retry failure (i.e. unlimited
-		// retries), let consul-template handle retry and backoff logic
+		// retries), let consul-template handle retry and backoff logic.
+		//
+		// Note: This is a fixed value (12) that ends up being a multiplier to
+		// retry.num_retires (i.e. 12 * N total retries per runner restart).
+		// Since we are performing retries indefinitely this base number helps
+		// prevent agent from spamming Vault if retry.num_retries is set to a
+		// low value by forcing exponential backoff to be high towards the end
+		// of retries during the process.
 		if sc.AgentConfig.TemplateConfig != nil && !sc.AgentConfig.TemplateConfig.ExitOnRetryFailure {
 			attempts = ctconfig.DefaultRetryAttempts
 		}
