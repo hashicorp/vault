@@ -154,16 +154,19 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
+	freelistType, noFreelistSync := freelistOptions()
 	start := time.Now()
 	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{
 		Timeout:        1 * time.Second,
-		FreelistType:   bolt.FreelistMapType,
-		NoFreelistSync: true,
+		FreelistType:   freelistType,
+		NoFreelistSync: noFreelistSync,
 	})
 	if err != nil {
 		return err
 	}
-	f.logger.Debug("time to open database", "elapsed", time.Now().Sub(start), "path", dbPath)
+	elapsed := time.Now().Sub(start)
+	f.logger.Debug("time to open database", "elapsed", elapsed, "path", dbPath)
+	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
 
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
