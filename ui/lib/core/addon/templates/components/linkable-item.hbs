@@ -1,0 +1,25 @@
+<div class="list-item-row linkable-item">
+  <div class="linkable-item-content">
+      <div>{{@title}}</div>
+      <div>{{@accessor}}</div>
+      <div class="overflow-ellipsis">{{@description}}</div>
+  </div>
+  <div class="linkable-item-seemore">
+    Where do i live
+  </div>
+  <div class="linkable-item-menu">
+    <PopupMenu name="engine-menu">
+      <Confirm as |c|>
+        <nav class="menu">
+          <ul class="menu-list">
+            <li class="action">
+              {{#link-to "vault.cluster.secrets"}}
+                TODO: CHANGE
+              {{/link-to}}
+            </li>
+          </ul>
+        </nav>
+      </Confirm>
+    </PopupMenu>
+  </div>
+</div>
