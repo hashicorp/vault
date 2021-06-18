@@ -150,6 +150,10 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 	if !strings.Contains(errs[0].Error(), "certificate signed by unknown authority") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
+
+	// TODO: Due to the cert used in this test, the code in ListenerChecks does not reach the part where
+	// tls.LoadX509KeyPair is called. So for now, adding that part to the test. We may need to find good
+	// certs for theses tests
 	_, err := tls.LoadX509KeyPair("./../../api/test-fixtures/keys/cert.pem", "./test-fixtures/ecdsa.key")
 	if !strings.Contains(err.Error(), "tls: private key type does not match public key type") {
 		t.Fatalf("Bad error message: %s", err)
@@ -175,6 +179,7 @@ func TestTLSMismatchedCryptographicInfo(t *testing.T) {
 		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
 
+	// TODO: Manually testing tls.LoadX509KeyPair. Find a fix for it
 	_, err = tls.LoadX509KeyPair("./test-fixtures/ecdsa.crt", "./../../api/test-fixtures/keys/key.pem")
 	if !strings.Contains(err.Error(), "tls: private key type does not match public key type") {
 		t.Fatalf("Bad error message: %s", err)
@@ -230,6 +235,7 @@ func TestTLSCertAsKey(t *testing.T) {
 	if !strings.Contains(errs[0].Error(), "certificate signed by unknown authority") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
+	// TODO: Manually testing tls.LoadX509KeyPair. Find a fix for it
 	_, err := tls.LoadX509KeyPair("./../../api/test-fixtures/keys/cert.pem", "./../../api/test-fixtures/keys/cert.pem")
 	if !strings.Contains(err.Error(), "found a certificate rather than a key in the PEM for the private key") {
 		t.Fatalf("Bad error message: %s", errs[0])
@@ -282,9 +288,14 @@ func TestTLSNoRoot(t *testing.T) {
 		},
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
-	if errs != nil {
+
+	if errs == nil {
 		t.Fatalf("server certificate without root certificate is insecure, but still valid")
 	}
+	if !strings.Contains(errs[0].Error(), "certificate signed by unknown authority") {
+		t.Fatalf("Bad error message: %s", errs[0])
+	}
+
 }
 
 func TestTLSSelfSignedCert(t *testing.T) {
@@ -304,9 +315,9 @@ func TestTLSSelfSignedCert(t *testing.T) {
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
 	if errs == nil {
-		t.Fatalf("server certificate without root certificate is insecure, but still valid")
+		t.Fatalf("Self-signed certificate is insecure")
 	}
-	if !strings.Contains(errs[0].Error(), "A Self-Signed Cert is detected.") {
+	if !strings.Contains(errs[0].Error(), "certificate signed by unknown authority") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
@@ -330,10 +341,13 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 		},
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
-	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on fake certificate should fail")
+	if errs == nil {
+		t.Fatalf("TLS Config check on invalid 'tls_min_version' should fail")
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(minVersionError, "0").Error()) {
+		t.Fatalf("Bad error message: %s", errs[0])
+	}
+	if !strings.Contains(errs[1].Error(), "certificate signed by unknown authority") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
@@ -357,10 +371,13 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 		},
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
-	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on fake certificate should fail")
+	if errs == nil {
+		t.Fatalf("TLS Config check on invalid 'tls_max_version' should fail")
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(maxVersionError, "0").Error()) {
+		t.Fatalf("Bad error message: %s", errs[0])
+	}
+	if !strings.Contains(errs[1].Error(), "certificate signed by unknown authority") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
