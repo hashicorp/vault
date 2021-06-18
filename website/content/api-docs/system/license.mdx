@@ -95,8 +95,8 @@ error if license autoloading is in use.
 _DR Secondary Specific Parameters_
 
 - `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
-Note that this is the legacy mechanism for providing a DR operation token, it is
-equally valid to provide the DR operation token in the `X-Vault-Token` header as
+Note that this is the legacy mechanism for providing a DR operation token. It is
+equally valid to provide the DR operation token in the `X-Vault-Token` header, as
 with a regular vault token.
 
 ### Sample Payload
@@ -143,7 +143,7 @@ $ curl \
 
 This endpoint returns information about licensing.  It returns similar information
 to a GET of `sys/license`, but whereas that endpoint reports solely on the
-license Vault is currently actively using, this one reports on all licensing
+license Vault is currently using, this one reports on all licensing
 information the Vault cluster has.  See
 [license autoloading](/docs/enterprise/license/autoloading) for background.
 
@@ -153,7 +153,7 @@ In the response:
 * `autoloaded` is the autoloaded license if autoloading_used is true
 * `persisted_autoload` is the autoloaded license the active node last wrote to
   storage; this is only used to detect inconsistently licensed nodes in the
-  cluster, it cannot be used as a license itself
+  cluster. It cannot be used as a license itself
 * `stored` is the stored license if any, i.e. one written using `PUT sys/license`
 
 `autoloaded`, `persisted_autoload`, and `stored` all have the same structure,
