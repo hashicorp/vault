@@ -31,7 +31,7 @@ jobs:
           if [ -z "$changelog_files" ]; then
             echo "Did not find a changelog entry named ${{ github.event.pull_request.number }}.txt"
             echo "If your changelog file is correct, skip this check with the 'pr/no-changelog' label"
-            echo "Reference - https://github.com/hashicorp/vault/pull/10363"
+            echo "Reference - https://github.com/hashicorp/vault/pull/10363 and https://github.com/hashicorp/vault/pull/11894"
             exit 1
           elif grep -q ':enhancement$' $changelog_files; then
             # "Enhancement is not a valid type of changelog entry, but it's a common mistake.
