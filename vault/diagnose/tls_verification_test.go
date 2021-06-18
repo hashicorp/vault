@@ -118,11 +118,11 @@ func TestTLSExpiredCert(t *testing.T) {
 	if !strings.Contains(errs[0].Error(), "certificate has expired or is not yet valid") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
-	if warnings == nil {
+	if warnings == nil || len(warnings) != 1 {
 		t.Fatalf("TLS Config check on fake certificate should warn")
 	}
 	if !strings.Contains(warnings[0], "expired or near expiry") {
-		t.Fatalf("Bad warning: %s", errs[0])
+		t.Fatalf("Bad warning: %s", warnings[0])
 	}
 }
 
