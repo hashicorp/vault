@@ -33,9 +33,7 @@ func pathLogin(b *backend) *framework.Path {
 				ForwardPerformanceSecondary: true,
 			},
 			logical.AliasLookaheadOperation: &framework.PathOperation{
-				Callback:                    b.pathLoginUpdateAliasLookahead,
-				ForwardPerformanceStandby:   true,
-				ForwardPerformanceSecondary: true,
+				Callback: b.pathLoginUpdateAliasLookahead,
 			},
 		},
 		HelpSynopsis:    pathLoginHelpSys,
