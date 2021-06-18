@@ -96,11 +96,16 @@ configuration entries:
 
 #### retry Stanza
 
-The `vault` stanza may contain a `retry` stanza that controls how failing
-Vault requests are handled, whether these requests are issued in order to render
+The `vault` stanza may contain a `retry` stanza that controls how failing Vault
+requests are handled, whether these requests are issued in order to render
 templates, or are proxied requests coming from the proxy cache subsystem.
 Auto-auth, however, has its own notion of retrying and is not affected by this
 section.
+
+For requests from the templating engine, Agent will restart its internal runner
+and perform retries again once all retries are exhausted unless
+`exit_after_retry_failure` from the
+[`template_config`](/docs/agent/template-config) stanza is set to `true`.
 
 Here are the options for the `retry` stanza:
 
