@@ -1,3 +1,31 @@
+.linkable-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 50px 35px;
+  gap: 1em 1em;
+}
+
+.linkable-item-content {
+  grid-column-start: 1;
+  grid-column-end: span 2;
+  grid-row: 1;
+  &.truncated {
+    grid-column-end: span 1;
+  }
+}
+.linkable-item-seemore {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: baseline;
+}
+.linkable-item-menu {
+  box-sizing: border-box;
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  // text-align: right;
+  // padding-left: 1em;
+}
+
 // .truncate-description {
 //   display: block;
 //   overflow: hidden;
@@ -6,7 +34,7 @@
 // }
 
 .overflow-ellipsis {
-  width: 100%;
+  // width: 100%;
   box-sizing: border-box;
   border: 1px solid;
   padding: 2px 5px;
@@ -15,41 +43,3 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.description-block {
-  max-width: 500px;
-  display: block;
-  background-color: aqua;
-}
-
-.show-description {
-  display: block;
-  overflow: hidden;
-  white-space: wrap;
-  text-overflow: ellipsis;
-}
-
-.truncate-container {
-  flex: 1;
-  overflow: hidden;
-}
-
-.truncate-div {
-  max-width: 90%;
-}
-
-// .level-left {
-//   flex: 1;
-//   overflow: hidden;
-// ​
-//   > div {
-//     max-width: 100%;
-// ​
-//     .text-description {
-//       display: block;
-//       overflow: hidden;
-//       white-space: nowrap;
-//       text-overflow: ellipsis;
-//     }
-//   }
-// }
