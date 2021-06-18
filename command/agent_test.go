@@ -1775,80 +1775,80 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 		templateContents          string
 		expectTemplateRender      string
 		templateErrorOnMissingKey bool
-		expectExit                bool
 		expectError               bool
+		expectExitFromError       bool
 	}{
 		"true, no template error": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
 			templateContents:          templateContents(0),
 			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
-			expectExit:                true,
 			expectError:               false,
+			expectExitFromError:       true,
 		},
 		"true, with non-existent secret": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
 			templateContents:          badTemplateContent,
 			expectTemplateRender:      "",
 			templateErrorOnMissingKey: false,
-			expectExit:                true,
 			expectError:               true,
+			expectExitFromError:       true,
 		},
 		"true, with missing key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
 			templateContents:          missingKeyTemplateContent,
 			expectTemplateRender:      missingKeyTemplateRender,
 			templateErrorOnMissingKey: false,
-			expectExit:                true,
 			expectError:               false,
+			expectExitFromError:       true,
 		},
 		"true, with missing key, with error_on_missing_key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
 			templateContents:          missingKeyTemplateContent,
 			expectTemplateRender:      "",
 			templateErrorOnMissingKey: true,
-			expectExit:                true,
 			expectError:               true,
+			expectExitFromError:       true,
 		},
 		"false, no template error": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
 			templateContents:          templateContents(0),
 			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
-			expectExit:                false,
 			expectError:               false,
+			expectExitFromError:       false,
 		},
 		"false, with non-existent secret": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
 			templateContents:          badTemplateContent,
 			expectTemplateRender:      "",
 			templateErrorOnMissingKey: false,
-			expectExit:                false,
 			expectError:               true,
+			expectExitFromError:       false,
 		},
 		"false, with missing key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
 			templateContents:          missingKeyTemplateContent,
 			expectTemplateRender:      missingKeyTemplateRender,
 			templateErrorOnMissingKey: false,
-			expectExit:                false,
 			expectError:               false,
+			expectExitFromError:       false,
 		},
 		"false, with missing key, with error_on_missing_key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(false),
 			templateContents:          missingKeyTemplateContent,
 			expectTemplateRender:      missingKeyTemplateRender,
 			templateErrorOnMissingKey: true,
-			expectExit:                false,
 			expectError:               true,
+			expectExitFromError:       false,
 		},
 		"missing": {
 			exitOnRetryFailure:        nil,
 			templateContents:          templateContents(0),
 			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
-			expectExit:                false,
 			expectError:               false,
+			expectExitFromError:       false,
 		},
 	}
 
@@ -1982,8 +1982,8 @@ vault {
 
 			switch {
 			case (code != 0 || err != nil) && tc.expectError:
-				if exited != tc.expectExit {
-					t.Fatalf("expected program exit to be '%t', got '%t'", tc.expectExit, exited)
+				if exited != tc.expectExitFromError {
+					t.Fatalf("expected program exit to be '%t', got '%t'", tc.expectExitFromError, exited)
 				}
 			case code == 0 && err == nil && !tc.expectError:
 			default:
