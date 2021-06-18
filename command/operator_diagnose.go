@@ -506,7 +506,7 @@ SEALFAIL:
 			}
 			err = diagnose.TLSMutualExclusionCertCheck(ln.Config)
 			if err != nil {
-				diagnose.Warn(listenerTLSContext, "TLSDisableClientCerts and TLSRequireAndVerifyClientCert should not both be set.")
+				diagnose.Warn(listenerTLSContext, fmt.Sprintf("TLSDisableClientCerts and TLSRequireAndVerifyClientCert should not both be set. %s", err))
 			}
 
 			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{

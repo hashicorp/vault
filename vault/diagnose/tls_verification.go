@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -53,11 +54,11 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 
 		// Perform checks on the TLS Cryptographic Information.
 		warnings, err := TLSFileChecks(l.TLSCertFile, l.TLSKeyFile)
-		listenerWarnings, listenerErrors = appendWarErr(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// Perform checks on the Client CA Cert
 		warnings, err = TLSClientCAFileCheck(l)
-		listenerWarnings, listenerErrors = appendWarErr(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
@@ -65,13 +66,11 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 	return listenerWarnings, listenerErrors
 }
 
-func appendWarErr(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
+func outputError(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
 	for _, warning := range newWarnings {
 		warning = listenerID + ": " + warning
-		if !containsString(listenerWarnings, warning) {
-			listenerWarnings = append(listenerWarnings, warning)
-			Warn(ctx, warning)
-		}
+		listenerWarnings = append(listenerWarnings, warning)
+		Warn(ctx, warning)
 	}
 	if newErr != nil {
 		errMsg := listenerID + ": " + newErr.Error()
@@ -80,16 +79,6 @@ func appendWarErr(ctx context.Context, newWarnings, listenerWarnings []string, n
 
 	}
 	return listenerWarnings, listenerErrors
-}
-
-func containsString(messages []string, lookup_msg string) bool {
-	for _, msg := range messages {
-		if msg == lookup_msg {
-			return true
-		}
-	}
-	return false
-
 }
 
 // TLSFileChecks returns an error and warnings after checking TLS information
@@ -235,7 +224,7 @@ func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) 
 
 	// add a warning for when there are more than one leaf certs
 	if len(leafCerts) > 1 {
-		warnings = append(warnings, fmt.Sprintf("LeafCerts contains more than one leafCert."))
+		warnings = append(warnings, "leafCerts contains more than one cert.")
 	}
 
 	for _, c := range leafCerts {
@@ -311,27 +300,30 @@ func TLSClientCAFileCheck(l *configutil.Listener) ([]string, error) {
 	}
 
 	if len(interCerts) > 0 {
-		return nil, fmt.Errorf("Found at least one intermediate cert in a root CA cert.")
+		return warningsSlc, fmt.Errorf("Found at least one intermediate cert in a root CA cert.")
 	}
 
 	if len(leafCerts) > 0 {
-		return nil, fmt.Errorf("Found at least one leafCert in a root CA cert.")
+		return warningsSlc, fmt.Errorf("Found at least one leafCert in a root CA cert.")
 	}
-
-	// Adding rootCerts to leafCert to perform verification in TLSErrorChecks
-	leafCerts = append(leafCerts, rootCerts[0])
 
 	var warnings []string
 	// Check for TLS Warnings
 	warnings, err = TLSFileWarningChecks(leafCerts, interCerts, rootCerts)
 	warningsSlc = append(warningsSlc, warnings...)
+	for i, warning := range warningsSlc {
+		warningsSlc[i] = strings.Replace(warning, "leaf", "root", -1)
+	}
 	if err != nil {
 		return warningsSlc, err
 	}
 
+	// Adding rootCerts to leafCert to perform verification in TLSErrorChecks
+	leafCerts = append(leafCerts, rootCerts[0])
+
 	// Check for TLS Errors
 	if err = TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
-		return warningsSlc, err
+		return warningsSlc, fmt.Errorf(strings.Replace(err.Error(), "leaf", "root", -1))
 	}
 
 	return warningsSlc, err
