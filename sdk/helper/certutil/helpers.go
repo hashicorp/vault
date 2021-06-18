@@ -613,8 +613,8 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 		case ECPrivateKey:
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-		case ED25519:
-			certTemplate.SignatureAlgorithm = x509.Ed25519
+		case Ed25519PrivateKey:
+			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		}
 
 		caCert := data.SigningBundle.Certificate
