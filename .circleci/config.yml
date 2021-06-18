@@ -571,7 +571,7 @@ jobs:
     - run:
         command: |
           case "$CIRCLE_BRANCH" in
-          master|ui/*|release/*|merge*) ;;
+          main|ui/*|release/*|merge*) ;;
           *) # If the branch being tested doesn't match one of the above patterns,
              # we don't need to run test-ui and can abort the job.
              circleci-agent step halt
@@ -2385,7 +2385,7 @@ workflows:
         filters:
           branches:
             only:
-            - master
+            - main
         context: vault-docs
     - algolia-index:
         filters:
