@@ -359,14 +359,10 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.checkValidation('key', '');
         return;
       }
-
       this.persistKey(key => {
-        let secretKey;
-        try {
-          secretKey = JSON.parse(key).id;
-        } catch (error) {
-          secretKey = key;
-        }
+        // ARG todo check for JSON key.. not sure how to do.
+        let secretKey = typeof key === 'object' ? JSON.parse(key).id : key;
+        typeof secretKey === 'number' ? secretKey.toString() : secretKey;
         this.transitionToRoute(SHOW_ROUTE, secretKey);
       });
     },
