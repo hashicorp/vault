@@ -1,3 +1,0 @@
-```release-note:bug
-auth/approle: Prevent the `cannot write to readonly storage` error message when login is attempted against a performance standby
-```
