@@ -52,7 +52,7 @@ has a number of parameters to further configure a connection.
 <summary><b>Default Username Template</b></summary>
 
 ```
-{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 }}
+{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | replace "." "-"  | truncate 100 }}
 ```
 
 <details>
