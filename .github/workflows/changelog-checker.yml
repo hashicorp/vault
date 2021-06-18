@@ -6,10 +6,9 @@ name: Check Changelog
 on:
   pull_request:
     types: [opened, synchronize, labeled, unlabeled]
-    # Runs on PRs to master and all release branches
+    # Runs on PRs to master
     branches:
-      - master/*
-      - release/*
+      - master
 
 jobs:
   # checks that a changelog entry is present for a PR
@@ -28,21 +27,23 @@ jobs:
           # check if there is a diff in the changelog directory
           changelog_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- changelog/${{ github.event.pull_request.number }}.txt)
 
-          # If we do not find a file in changelog/, we fail the check
+          # If we do not find a file matching the PR # in changelog/, we fail the check
           if [ -z "$changelog_files" ]; then
-            # Fail status check when no changelog entry was found on the PR
-            echo "Did not find a changelog entry and the 'pr/no-changelog' label was not applied. Reference - https://github.com/hashicorp/vault/pull/10363"
+            echo "Did not find a changelog entry named ${{ github.event.pull_request.number }}.txt"
+            echo "If your changelog file is correct, skip this check with the 'pr/no-changelog' label"
+            echo "Reference - https://github.com/hashicorp/vault/pull/10363"
+            exit 1
+          elif grep -q ':enhancement$' $changelog_files; then
+            # "Enhancement is not a valid type of changelog entry, but it's a common mistake.
+            echo "Found invalid type (enhancement) in changelog - did you mean improvement?"
+            exit 1
+          elif grep -q ':bugs$' $changelog_files; then
+            echo "Found invalid type (bugs) in changelog - did you mean bug?"
+            exit 1
+          elif ! grep -q '```release-note:' $changelog_files; then
+            # People often make changelog files like ```changelog:, which is incorrect.
+            echo "Changelog file did not contain 'release-note' heading - check formatting."
             exit 1
           else
-            # Don't want square brackets bc not using test
-            if grep -q ':enhancement$' $changelog_files; then
-              # "Enhancement is not a valid type of changelog entry, but it's a common mistake.
-              echo "Found invalid type (enhancement) in changelog - did you mean improvement?"
-              exit 1
-            elif ! grep -q '```release-note:' $changelog_files; then
-              # People often make changelog files like ```changelog:, which is incorrect.
-              echo "Changelog file did not contain 'release-note' heading - check formatting."
-              exit 1
-            fi
             echo "Found changelog entry in PR!"
           fi
