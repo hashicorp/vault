@@ -6,9 +6,9 @@ name: Check Changelog
 on:
   pull_request:
     types: [opened, synchronize, labeled, unlabeled]
-    # Runs on PRs to master
+    # Runs on PRs to main
     branches:
-      - master
+      - main
 
 jobs:
   # checks that a changelog entry is present for a PR
