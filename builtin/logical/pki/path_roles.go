@@ -193,8 +193,8 @@ protection use. Defaults to false.`,
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
-and "ec" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec","ed25519"},
+"ec" and "ed25519" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
 			},
 
 			"key_bits": {

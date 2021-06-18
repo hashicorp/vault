@@ -520,6 +520,8 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 		default:
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
+	case "ed25519":
+		return nil
 	case "any":
 	default:
 		return fmt.Errorf("unknown key type %s", keyType)
@@ -611,6 +613,8 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 		case ECPrivateKey:
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		case ED25519:
+			certTemplate.SignatureAlgorithm = x509.Ed25519
 		}
 
 		caCert := data.SigningBundle.Certificate
@@ -631,6 +635,8 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 		case "ec":
 			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		case "ed25519":
+			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		}
 
 		certTemplate.AuthorityKeyId = subjKeyID
@@ -725,6 +731,8 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 	case "ec":
 		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+	case "ed25519":
+		csrTemplate.SignatureAlgorithm = x509.PureEd25519
 	}
 
 	csr, err := x509.CreateCertificateRequest(randReader, csrTemplate, result.PrivateKey)

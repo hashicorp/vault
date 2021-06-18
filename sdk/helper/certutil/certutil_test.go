@@ -325,6 +325,13 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		if csrb.PrivateKey != privECKeyPem {
 			return fmt.Errorf("bundle ec private key does not match")
 		}
+	case "ed25519":
+		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
+			return fmt.Errorf("bundle has wrong private key type")
+		}
+		if csrb.PrivateKey != privEd25519KeyPem {
+			return fmt.Errorf("bundle ec private key does not match")
+		}
 	default:
 		return fmt.Errorf("bundle has unknown private key type")
 	}
@@ -718,14 +725,15 @@ func setCerts() {
 }
 
 var (
-	initTest          sync.Once
-	privRSA8KeyPem    string
-	privRSAKeyPem     string
-	csrRSAPem         string
-	certRSAPem        string
-	privECKeyPem      string
-	csrECPem          string
-	privEC8KeyPem     string
-	certECPem         string
-	issuingCaChainPem []string
+	initTest           sync.Once
+	privRSA8KeyPem     string
+	privRSAKeyPem      string
+	csrRSAPem          string
+	certRSAPem         string
+	privECKeyPem       string
+	privEd255119KeyPem string
+	csrECPem           string
+	privEC8KeyPem      string
+	certECPem          string
+	issuingCaChainPem  []string
 )
