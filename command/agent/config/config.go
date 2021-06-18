@@ -32,6 +32,8 @@ type Config struct {
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
 		l.RawConfig = nil
+		l.Profiling.UnusedKeys = nil
+		l.Telemetry.UnusedKeys = nil
 	}
 	c.FoundKeys = nil
 	c.UnusedKeys = nil

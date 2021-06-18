@@ -1215,6 +1215,10 @@
                 "path": "platform/k8s/helm/run"
               },
               {
+                "title": "Enterprise Licensing",
+                "path": "platform/k8s/helm/enterprise"
+              },
+              {
                 "title": "Running Vault on OpenShift",
                 "path": "platform/k8s/helm/openshift"
               },
@@ -1604,9 +1608,24 @@
         "path": "enterprise"
       },
       {
+        "title": "License",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/license"
+          },
+          {
+            "title": "FAQs",
+            "path": "enterprise/license/faqs"
+          }
+        ]
+      },
+
+      {
         "title": "Replication",
         "path": "enterprise/replication"
       },
+
       {
         "title": "HSM Support",
         "routes": [

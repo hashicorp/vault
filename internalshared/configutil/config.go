@@ -98,36 +98,42 @@ func ParseConfig(d string) (*SharedConfig, error) {
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
+		result.found("hsm", "hsm")
 		if err := parseKMS(&result.Seals, o, "hsm", 2); err != nil {
 			return nil, fmt.Errorf("error parsing 'hsm': %w", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
+		result.found("seal", "Seal")
 		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
 			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
+		result.found("kms", "Seal")
 		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
 			return nil, fmt.Errorf("error parsing 'kms': %w", err)
 		}
 	}
 
 	if o := list.Filter("entropy"); len(o.Items) > 0 {
+		result.found("entropy", "Entropy")
 		if err := ParseEntropy(&result, o, "entropy"); err != nil {
 			return nil, fmt.Errorf("error parsing 'entropy': %w", err)
 		}
 	}
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
+		result.found("listener", "Listener")
 		if err := ParseListeners(&result, o); err != nil {
 			return nil, fmt.Errorf("error parsing 'listener': %w", err)
 		}
 	}
 
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
+		result.found("telemetry", "Telemetry")
 		if err := parseTelemetry(&result, o); err != nil {
 			return nil, fmt.Errorf("error parsing 'telemetry': %w", err)
 		}
@@ -229,4 +235,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	return result
+}
+
+func (c *SharedConfig) found(s, k string) {
+	delete(c.UnusedKeys, s)
+	c.FoundKeys = append(c.FoundKeys, k)
 }
