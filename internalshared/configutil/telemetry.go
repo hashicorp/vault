@@ -41,7 +41,7 @@ type Telemetry struct {
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
 	UsageGaugePeriod    time.Duration
-	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
+	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period,alias:UsageGaugePeriod"`
 
 	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 

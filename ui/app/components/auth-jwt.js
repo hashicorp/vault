@@ -83,15 +83,19 @@ export default Component.extend({
   },
 
   prepareForOIDC: task(function*(oidcWindow) {
+    const thisWindow = this.getWindow();
     // show the loading animation in the parent
     this.onLoading(true);
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
-    // and then wait for storage event to be fired from the popup
-    // window setting a value in localStorage when the callback route is loaded
-    let storageEvent = yield waitForEvent(this.getWindow(), 'storage');
-    this.exchangeOIDC.perform(storageEvent, oidcWindow);
+    // wait for message posted from popup
+    const event = yield waitForEvent(thisWindow, 'message');
+    if (event.origin === thisWindow.origin && event.isTrusted) {
+      this.exchangeOIDC.perform(event.data, oidcWindow);
+    } else {
+      this.handleOIDCError();
+    }
   }),
 
   watchPopup: task(function*(oidcWindow) {
@@ -104,6 +108,7 @@ export default Component.extend({
   }),
 
   watchCurrent: task(function*(oidcWindow) {
+    // when user is about to change pages, close the popup window
     yield waitForEvent(this.getWindow(), 'beforeunload');
     oidcWindow.close();
   }),
@@ -114,20 +119,13 @@ export default Component.extend({
     oidcWindow.close();
   },
 
-  exchangeOIDC: task(function*(event, oidcWindow) {
-    // in non-incognito mode we need to use a timeout because it takes time before oidcState is written to local storage.
-    let oidcState = Ember.testing
-      ? event.storageArea.getItem('oidcState')
-      : yield timeout(1000).then(() => event.storageArea.getItem('oidcState'));
-
+  exchangeOIDC: task(function*(oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
     }
     this.onLoading(true);
-    // get the info from the event fired by the other window and
-    // then remove it from localStorage
-    let { namespace, path, state, code } = JSON.parse(oidcState);
-    this.getWindow().localStorage.removeItem('oidcState');
+
+    let { namespace, path, state, code } = oidcState;
 
     // The namespace can be either be passed as a query paramter, or be embedded
     // in the state param in the format `<state_id>,ns=<namespace>`. So if
