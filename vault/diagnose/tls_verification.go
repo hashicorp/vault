@@ -75,10 +75,9 @@ func appendWarErr(ctx context.Context, newWarnings, listenerWarnings []string, n
 	}
 	if newErr != nil {
 		errMsg := listenerID + ": " + newErr.Error()
-		if !containsError(listenerErrors, fmt.Errorf(errMsg)) {
-			listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
-			Error(ctx, fmt.Errorf(errMsg))
-		}
+		listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
+		Error(ctx, fmt.Errorf(errMsg))
+
 	}
 	return listenerWarnings, listenerErrors
 }
@@ -91,15 +90,6 @@ func containsString(messages []string, lookup_msg string) bool {
 	}
 	return false
 
-}
-
-func containsError(errors []error, lookup_err error) bool {
-	for _, err := range errors {
-		if err == lookup_err {
-			return true
-		}
-	}
-	return false
 }
 
 func GetCertsSubjects(certs []*x509.Certificate) [][]byte {
@@ -178,23 +168,14 @@ func ParseTLSInformation(certFilePath string) ([]*x509.Certificate, []*x509.Cert
 		}
 	}
 
-	rootSubjs := GetCertsSubjects(rootCerts)
-	if len(rootSubjs) == 0 && len(leafCerts) > 0 {
-		// this is a self signed server certificate, or the root is just not provided. In any
-		// case, we need to bypass the root verification step by adding the leaf itself to the
-		// root pool.
-		// TODO: do we need to remove this cert that we are adding to the root pool from the leafCerts?
-		rootCerts = append(rootCerts, leafCerts[0])
-	}
-
 	return leafCerts, interCerts, rootCerts, nil
 }
 
 // TLSErrorChecks contains manual error checks against the TLS configuration
 func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error {
 	// Make sure there's the proper number of leafCerts. If there are multiple, it's a bad pem file.
-	if len(leafCerts) < 1 {
-		return fmt.Errorf("Number of leaf certificates detected is not %d.", len(leafCerts))
+	if len(leafCerts) == 0 {
+		return fmt.Errorf("No leaf certificates detected.")
 	}
 
 	// First, create root pools and interPools from the root and inter certs lists
@@ -227,6 +208,15 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 		if err != nil {
 			return fmt.Errorf("failed to verify intermediate certificate: %w", err)
 		}
+	}
+
+	rootSubjs := GetCertsSubjects(rootCerts)
+	if len(rootSubjs) == 0 && len(leafCerts) > 0 {
+		// this is a self signed server certificate, or the root is just not provided. In any
+		// case, we need to bypass the root verification step by adding the leaf itself to the
+		// root pool.
+		// TODO: do we need to remove this cert that we are adding to the root pool from the leafCerts?
+		rootCerts = append(rootCerts, leafCerts[0])
 	}
 
 	// Verifying leaf cert
@@ -290,7 +280,8 @@ func TLSMutualExclusionCertCheck(l *configutil.Listener) error {
 
 	if l.TLSDisableClientCerts {
 		if l.TLSRequireAndVerifyClientCert {
-			return fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
+			return fmt.Errorf("the tls_disable_client_certs and tls_require_and_verify_client_cert fields in the " +
+				"listener stanza of the vault server config are mutually exclusive fields. Please ensure they are not both set to true.")
 		}
 	}
 	return nil
@@ -316,17 +307,22 @@ func TLSClientCAFileCheck(l *configutil.Listener) ([]string, error) {
 	if len(rootCerts) == 0 {
 		return nil, fmt.Errorf("No root cert found!")
 	}
+	if len(rootCerts) > 1 {
+		warningsSlc = append(warningsSlc, fmt.Sprintf("Found Multiple rootCerts instead of just one!"))
+	}
 
-	if len(leafCerts) > 0 {
-		return nil, fmt.Errorf("Found at least one leafCert in a root CA cert.")
+	// Checking for Self-Signed cert and return an explicit error about it.
+	// Self-Signed certs are placed in the leafCerts slice when parsed.
+	if len(leafCerts) > 0 && !leafCerts[0].IsCA && bytes.Equal(leafCerts[0].RawIssuer, leafCerts[0].RawSubject) {
+		return warningsSlc, fmt.Errorf("Found a Self-Signed certificate!")
 	}
 
 	if len(interCerts) > 0 {
 		return nil, fmt.Errorf("Found at least one intermediate cert in a root CA cert.")
 	}
 
-	if len(rootCerts) > 1 {
-		warningsSlc = append(warningsSlc, fmt.Sprintf("Found Multiple rootCerts! we expected one."))
+	if len(leafCerts) > 0 {
+		return nil, fmt.Errorf("Found at least one leafCert in a root CA cert.")
 	}
 
 	// Adding rootCerts to leafCert to perform verification in TLSErrorChecks

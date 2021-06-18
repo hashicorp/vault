@@ -411,7 +411,8 @@ func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
 	if err == nil {
 		t.Fatalf("TLS config check should have failed when both 'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are true")
 	}
-	if !strings.Contains(err.Error(), "'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive") {
+	if !strings.Contains(err.Error(), "the tls_disable_client_certs and tls_require_and_verify_client_cert fields in the "+
+		"listener stanza of the vault server config are mutually exclusive fields") {
 		t.Fatalf("Bad error message: %s", err)
 	}
 }
@@ -544,7 +545,32 @@ func TestTLSMultipleRootInClietCACert(t *testing.T) {
 	if warnings == nil {
 		t.Fatalf("TLS Config check on valid but bad certificate should warn")
 	}
-	if !strings.Contains(warnings[0], "Found Multiple rootCerts! we expected one.") {
-		t.Fatalf("Bad warning: %s", errs[0])
+	if !strings.Contains(warnings[0], "Found Multiple rootCerts instead of just one!") {
+		t.Fatalf("Bad warning: %s", warnings[0])
+	}
+}
+
+func TestTLSSelfSignedCert(t *testing.T) {
+	listeners := []listenerutil.Listener{
+		{
+			Config: &configutil.Listener{
+				Type:                          "tcp",
+				Address:                       "127.0.0.1:443",
+				ClusterAddress:                "127.0.0.1:8201",
+				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
+				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
+				TLSClientCAFile:               "test-fixtures/selfSignedCert.pem",
+				TLSMinVersion:                 "tls10",
+				TLSRequireAndVerifyClientCert: true,
+				TLSDisableClientCerts:         false,
+			},
+		},
+	}
+	_, errs := ListenerChecks(context.Background(), listeners)
+	if errs == nil {
+		t.Fatalf("Self-signed certificate is insecure")
+	}
+	if !strings.Contains(errs[0].Error(), "Found a Self-Signed certificate!") {
+		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
