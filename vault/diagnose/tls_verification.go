@@ -92,14 +92,6 @@ func containsString(messages []string, lookup_msg string) bool {
 
 }
 
-func GetCertsSubjects(certs []*x509.Certificate) [][]byte {
-	res := make([][]byte, len(certs))
-	for i, lc := range certs {
-		res[i] = lc.RawSubject
-	}
-	return res
-}
-
 // TLSFileChecks returns an error and warnings after checking TLS information
 func TLSFileChecks(certpath, keypath string) ([]string, error) {
 	// Parse TLS Certs from the certpath
@@ -197,6 +189,9 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 			Roots:     rootPool,
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		})
+		if err != nil {
+			return fmt.Errorf("failed to verify root certificate: %w", err)
+		}
 	}
 
 	// Verifying intermediate certs
@@ -210,13 +205,12 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 		}
 	}
 
-	rootSubjs := GetCertsSubjects(rootCerts)
+	rootSubjs := rootPool.Subjects()
 	if len(rootSubjs) == 0 && len(leafCerts) > 0 {
 		// this is a self signed server certificate, or the root is just not provided. In any
 		// case, we need to bypass the root verification step by adding the leaf itself to the
 		// root pool.
-		// TODO: do we need to remove this cert that we are adding to the root pool from the leafCerts?
-		rootCerts = append(rootCerts, leafCerts[0])
+		rootPool.AddCert(leafCerts[0])
 	}
 
 	// Verifying leaf cert
@@ -226,10 +220,9 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 			Intermediates: interPool,
 			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		})
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to verify primary provided leaf certificate: %w", err)
+		if err != nil {
+			return fmt.Errorf("failed to verify primary provided leaf certificate: %w", err)
+		}
 	}
 
 	return nil

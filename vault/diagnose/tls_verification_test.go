@@ -453,7 +453,7 @@ func TestTLSLeafCertInClientCAFile(t *testing.T) {
 				ClusterAddress:                "127.0.0.1:8201",
 				TLSCertFile:                   "./../../api/test-fixtures/keys/cert.pem",
 				TLSKeyFile:                    "./../../api/test-fixtures/keys/key.pem",
-				TLSClientCAFile:               "./../../api/test-fixtures/keys/cert.pem",
+				TLSClientCAFile:               "./test-fixtures/goodcertbadroot.pem",
 				TLSMaxVersion:                 "tls10",
 				TLSRequireAndVerifyClientCert: true,
 				TLSDisableClientCerts:         false,
@@ -570,7 +570,7 @@ func TestTLSSelfSignedCert(t *testing.T) {
 	if errs == nil {
 		t.Fatalf("Self-signed certificate is insecure")
 	}
-	if !strings.Contains(errs[0].Error(), "Found a Self-Signed certificate!") {
+	if !strings.Contains(errs[0].Error(), "No root cert found!") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
