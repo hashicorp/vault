@@ -1,0 +1,55 @@
+// .truncate-description {
+//   display: block;
+//   overflow: hidden;
+//   white-space: nowrap;
+//   text-overflow: ellipsis;
+// }
+
+.overflow-ellipsis {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid;
+  padding: 2px 5px;
+  /* Both of the following are required for text-overflow */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.description-block {
+  max-width: 500px;
+  display: block;
+  background-color: aqua;
+}
+
+.show-description {
+  display: block;
+  overflow: hidden;
+  white-space: wrap;
+  text-overflow: ellipsis;
+}
+
+.truncate-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.truncate-div {
+  max-width: 90%;
+}
+
+// .level-left {
+//   flex: 1;
+//   overflow: hidden;
+// ​
+//   > div {
+//     max-width: 100%;
+// ​
+//     .text-description {
+//       display: block;
+//       overflow: hidden;
+//       white-space: nowrap;
+//       text-overflow: ellipsis;
+//     }
+//   }
+// }
