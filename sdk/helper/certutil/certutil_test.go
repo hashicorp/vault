@@ -179,6 +179,14 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		if pcbut.PrivateKeyType != ECPrivateKey {
 			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
+	case privEd25519KeyPem:
+		if pcbut.PrivateKeyType != Ed25519PrivateKey {
+			return fmt.Errorf("parsed bundle has wrong private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
+		}
+	case privEd255198KeyPem:
+		if pcbut.PrivateKeyType != Ed25519PrivateKey {
+			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
+		}
 	default:
 		return fmt.Errorf("parsed bundle has unknown private key type")
 	}
@@ -219,6 +227,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		}
 	case ECPrivateKey:
 		if cb.PrivateKey != privECKeyPem && cb.PrivateKey != privEC8KeyPem {
+			return fmt.Errorf("bundle private key does not match")
+		}
+	case Ed25519PrivateKey:
+		if cb.PrivateKey != privEd25519KeyPem && cb.PrivateKey != privEC8KeyPem {
 			return fmt.Errorf("bundle private key does not match")
 		}
 	default:
@@ -292,6 +304,10 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		}
 	case privECKeyPem:
 		if pcsrbut.PrivateKeyType != ECPrivateKey {
+			return fmt.Errorf("parsed bundle has wrong private key type")
+		}
+	case privEd25519KeyPem:
+		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
 			return fmt.Errorf("parsed bundle has wrong private key type")
 		}
 	default:
@@ -730,8 +746,11 @@ var (
 	privRSAKeyPem      string
 	csrRSAPem          string
 	certRSAPem         string
+	privEd255198KeyPem string
+	privEd25519KeyPem  string
+	csrEd25519Pem      string
+	certEd25519Pem     string
 	privECKeyPem       string
-	privEd255119KeyPem string
 	csrECPem           string
 	privEC8KeyPem      string
 	certECPem          string

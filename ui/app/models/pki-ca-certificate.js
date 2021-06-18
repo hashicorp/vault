@@ -123,7 +123,7 @@ export default Certificate.extend({
   }),
 
   keyType: attr('string', {
-    possibleValues: ['rsa', 'ec'],
+    possibleValues: ['rsa', 'ec','ed25519'],
     defaultValue: 'rsa',
   }),
   keyBits: attr('number', {

@@ -164,6 +164,10 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKey = signer
 				parsedBundle.PrivateKeyType = ECPrivateKey
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+			case ed25519.PrivateKey:
+				parsedBundle.PrivateKey = signer
+				parsedBundle.PrivateKeyType = Ed25519PrivateKey
+				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			certPath = append(certPath, &CertBlock{
@@ -319,7 +323,16 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 			return false, nil
 		}
 		return true, nil
-
+	case ed25519.PublicKey:
+		key1 := key1Iface.(ed25519.PublicKey)
+		key2, ok := key2Iface.(ed25519.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		if !key1.Equal(key2) {
+			return false, nil
+		}
+		return true, nil
 	default:
 		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
 	}

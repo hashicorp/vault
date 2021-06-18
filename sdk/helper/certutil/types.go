@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -186,6 +187,8 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 				c.PrivateKeyType = ECPrivateKey
 			case RSAPrivateKey:
 				c.PrivateKeyType = RSAPrivateKey
+			case Ed25519PrivateKey:
+				c.PrivateKeyType = Ed25519PrivateKey
 			}
 		default:
 			return nil, errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
@@ -291,6 +294,8 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 				block.Type = string(ECBlock)
 			case RSAPrivateKey:
 				block.Type = string(PKCS1Block)
+			case Ed25519PrivateKey:
+				block.Type = string(PKCS8Block)
 			}
 		}
 
@@ -381,7 +386,7 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 	case PKCS8Block:
 		if k, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes); err == nil {
 			switch k := k.(type) {
-			case *rsa.PrivateKey, *ecdsa.PrivateKey:
+			case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
 				return k.(crypto.Signer), nil
 			default:
 				return nil, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
@@ -412,6 +417,8 @@ func getPKCS8Type(bs []byte) (PrivateKeyType, error) {
 		return ECPrivateKey, nil
 	case *rsa.PrivateKey:
 		return RSAPrivateKey, nil
+	case ed25519.PrivateKey:
+		return Ed25519PrivateKey, nil
 	default:
 		return UnknownPrivateKey, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
 	}
@@ -444,6 +451,9 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 			} else if _, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes); err == nil {
 				result.PrivateKeyType = RSAPrivateKey
 				c.PrivateKeyType = "rsa"
+			} else if _, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes); err == nil {
+				result.PrivateKeyType = Ed25519PrivateKey
+				c.PrivateKeyType = "ed25519"
 			} else {
 				return nil, errutil.UserError{Err: fmt.Sprintf("Unknown private key type in bundle: %s", c.PrivateKeyType)}
 			}
@@ -492,6 +502,9 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 		case ECPrivateKey:
 			result.PrivateKeyType = "ec"
 			block.Type = "EC PRIVATE KEY"
+		case Ed25519PrivateKey:
+			result.PrivateKeyType = "ed25519"
+			block.Type = "PRIVATE KEY"
 		default:
 			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
@@ -525,6 +538,12 @@ func (p *ParsedCSRBundle) getSigner() (crypto.Signer, error) {
 		if err != nil {
 			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
 		}
+
+	// case Ed25519PrivateKey:
+	// 	signer, err = x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes)
+	// 	if err != nil {
+	// 		return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private Ed25519 key: %s", err)}
+	// 	}
 
 	default:
 		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA and EC are supported"}

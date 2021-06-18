@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -205,6 +206,8 @@ func TestBackend_Roles(t *testing.T) {
 		{"RSACSR", &rsaCAKey, &rsaCACert, true},
 		{"EC", &ecCAKey, &ecCACert, false},
 		{"ECCSR", &ecCAKey, &ecCACert, true},
+		{"ED", &edCAKey, &edCACert, false},
+		{"EDCSR", &edCAKey, &edCACert, true},
 	}
 
 	for _, tc := range cases {
@@ -302,6 +305,13 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 			parsedCertBundle.PrivateKeyBytes, err = x509.MarshalECPrivateKey(key.(*ecdsa.PrivateKey))
 			if err != nil {
 				return nil, fmt.Errorf("error parsing EC key: %s", err)
+			}
+		case "ed25519":
+			parsedCertBundle.PrivateKeyType = certutil.Ed25519PrivateKey
+			parsedCertBundle.PrivateKey = key
+			parsedCertBundle.PrivateKeyBytes, err = x509.MarshalPKCS8PrivateKey(key.(ed25519.PrivateKey))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing Ed25519 key: %s", err)
 			}
 		}
 	}
@@ -702,7 +712,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	generatedRSAKeys := map[int]crypto.Signer{}
 	generatedECKeys := map[int]crypto.Signer{}
-
+	generatedEdKeys := map[int]crypto.Signer{}
 	/*
 		// For the number of tests being run, a seed of 1 has been tested
 		// to hit all of the various values below. However, for normal
@@ -1010,6 +1020,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			if !ok {
 				privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
 				generatedECKeys[keyBits] = privKey
+			}
+
+		case "ed25519":
+			privKey, ok = generatedEdKeys[keyBits]
+			if !ok {
+				_, privKey, _ = ed25519.GenerateKey(rand.Reader)
+				generatedEdKeys[keyBits] = privKey
 			}
 
 		default:
@@ -2924,6 +2941,36 @@ func setCerts() {
 		Bytes: caBytes,
 	}
 	rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+
+	_, edk, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	marshaledKey, err = x509.MarshalPKCS8PrivateKey(edk)
+	if err != nil {
+		panic(err)
+	}
+	keyPEMBlock = &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: marshaledKey,
+	}
+	edCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+	if err != nil {
+		panic(err)
+	}
+	subjKeyID, err = certutil.GetSubjKeyID(edk)
+	if err != nil {
+		panic(err)
+	}
+	caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, edk.Public(), edk)
+	if err != nil {
+		panic(err)
+	}
+	caCertPEMBlock = &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	}
+	edCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 }
 
 func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
@@ -3107,4 +3154,6 @@ var (
 	rsaCACert string
 	ecCAKey   string
 	ecCACert  string
+	edCAKey   string
+	edCACert  string
 )
