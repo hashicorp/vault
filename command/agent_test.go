@@ -1784,7 +1784,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 			expectTemplateRender:      templateRendered(0),
 			templateErrorOnMissingKey: false,
 			expectError:               false,
-			expectExitFromError:       true,
+			expectExitFromError:       false,
 		},
 		"true, with non-existent secret": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
@@ -1800,7 +1800,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 			expectTemplateRender:      missingKeyTemplateRender,
 			templateErrorOnMissingKey: false,
 			expectError:               false,
-			expectExitFromError:       true,
+			expectExitFromError:       false,
 		},
 		"true, with missing key, with error_on_missing_key": {
 			exitOnRetryFailure:        pointerutil.BoolPtr(true),
@@ -1920,7 +1920,7 @@ vault {
 			// Channel to let verify() know to stop early if agent
 			// has exited
 			cmdRunDoneCh := make(chan struct{})
-			var exited bool
+			var exitedEarly bool
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -1943,7 +1943,7 @@ vault {
 				for {
 					select {
 					case <-cmdRunDoneCh:
-						exited = true
+						exitedEarly = true
 						return nil
 					case <-timeout:
 						return fmt.Errorf("timed out waiting for templates to render, last error: %w", err)
@@ -1982,10 +1982,13 @@ vault {
 
 			switch {
 			case (code != 0 || err != nil) && tc.expectError:
-				if exited != tc.expectExitFromError {
-					t.Fatalf("expected program exit to be '%t', got '%t'", tc.expectExitFromError, exited)
+				if exitedEarly != tc.expectExitFromError {
+					t.Fatalf("expected program exit due to error to be '%t', got '%t'", tc.expectExitFromError, exitedEarly)
 				}
 			case code == 0 && err == nil && !tc.expectError:
+				if exitedEarly {
+					t.Fatalf("did not expect program to exit before verify completes")
+				}
 			default:
 				if code != 0 {
 					t.Logf("output from agent:\n%s", ui.OutputWriter.String())
