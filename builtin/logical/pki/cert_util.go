@@ -596,7 +596,7 @@ func signCert(b *backend,
 
 	case "ed25519":
 		// Verify that the key matches the role type
-		if csr.PublicKeyAlgorithm != x509.PublicKeyAlgorithm(x509.PureEd25519) {
+		if csr.PublicKeyAlgorithm != x509.PublicKeyAlgorithm(x509.Ed25519) {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"role requires keys of type %s",
 				data.role.KeyType)}
