@@ -80,6 +80,21 @@ func TestClientSetAddress(t *testing.T) {
 	if client.addr.Host != "172.168.2.1:8300" {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
 	}
+	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
+	}
+	if client.addr.Host != "/var/run/vault.sock" {
+		t.Fatalf("bad: expected: '/var/run/vault.sock' actual: %q", client.addr.Host)
+	}
+	if client.addr.Path != "" {
+		t.Fatalf("bad: expected '' actual: %q", client.addr.Path)
+	}
+	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("bad: expected DialContext to not be nil")
+	}
 }
 
 func TestClientToken(t *testing.T) {
@@ -1282,5 +1297,27 @@ func TestVaultProxy(t *testing.T) {
 				t.Fatalf("Expected resolved proxy URL to be %v but was %v", tc.expectedResolvedProxyUrl, proxyUrl.String())
 			}
 		})
+	}
+}
+
+func TestParseAddressWithUnixSocket(t *testing.T) {
+	address := "unix:///var/run/vault.sock"
+	config := DefaultConfig()
+
+	u, err := ParseAddress(address, config)
+	if err != nil {
+		t.Fatal("Error not expected")
+	}
+	if u.Scheme != "http" {
+		t.Fatal("Scheme not changed to http")
+	}
+	if u.Host != "/var/run/vault.sock" {
+		t.Fatal("Host not changed to socket name")
+	}
+	if u.Path != "" {
+		t.Fatal("Path expected to be blank")
+	}
+	if config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("DialContext function not set in config.HttpClient.Transport")
 	}
 }
