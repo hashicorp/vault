@@ -42,7 +42,9 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     payload.data.id = payload.id;
     return requestType === 'queryRecord' ? payload.data : [payload.data];
   },
-  serializeHasMany() {
-    return;
+  serializeHasMany(snapshot, json, relationship) {
+    let newJson = { ...json };
+    delete newJson.casRequired;
+    this._super(snapshot, newJson, relationship);
   },
 });

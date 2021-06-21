@@ -232,13 +232,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       secretData.set(secretData.pathAttr, key);
     }
 
+    let successKey = key;
     if (this.mode === 'create') {
-      key = JSON.stringify({
+      successKey = JSON.stringify({
         backend: secret.backend,
         id: key,
       });
     }
-
     return secretData
       .save()
       .then(() => {
@@ -251,13 +251,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
             secret
               .save()
               .then(() => {
-                this.saveComplete(successCallback, key);
+                this.saveComplete(successCallback, successKey);
               })
               .catch(e => {
                 this.set(e, e.errors.join(' '));
               });
           } else {
-            this.saveComplete(successCallback, key);
+            this.saveComplete(successCallback, successKey);
           }
         }
       })
