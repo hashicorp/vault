@@ -586,6 +586,13 @@ func ParseAddress(address string, config *Config) (*url.URL, error) {
 		u.Scheme = "http"
 		u.Host = socket
 		u.Path = ""
+	} else {
+		transport := config.HttpClient.Transport.(*http.Transport)
+		transport.DialContext = (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext
 	}
 
 	return u, nil
