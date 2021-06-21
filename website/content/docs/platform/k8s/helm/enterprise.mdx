@@ -13,6 +13,8 @@ You can use this Helm chart to deploy Vault Enterprise by following a few extra 
 
 ## Vault Enterprise 1.8+
 
+### License Install
+
 First create a Kubernetes secret using the contents of your license file. For example, the following commands create a secret with the name `vault-ent-license` and key `license`:
 
 ```bash
@@ -41,6 +43,38 @@ $ helm install hashicorp hashicorp/vault -f config.yaml
 ```
 
 Once the cluster is [initialized and unsealed](/docs/platform/k8s/helm/run), you may check the license status using the `vault license get` command:
+
+```shell
+kubectl exec -ti vault-0 -- vault license get
+```
+
+### License Update
+
+To update the autoloaded license in Vault, you may do the following:
+
+- Delete and recreate the secret
+
+  Use the name specified in chart option [`server.enterpriseLicense.secretName`](/docs/platform/k8s/helm/configuration#secretname-1). Updating the existing secret will work as well.
+
+```shell
+kubectl delete secret vault-ent-license
+secret=$(cat new-license.hclic)
+kubectl create secret generic vault-ent-license --from-literal="license=${secret}"
+```
+
+- Wait until [`vault license inspect`](/docs/commands/license/inspect) shows the updated license
+
+```shell
+kubectl exec -ti vault-0 -- vault license inspect
+```
+
+- Reload Vault's config by issuing an HUP signal
+
+```shell
+kubectl exec -ti vault-0 -- pkill -HUP vault
+```
+
+- Verify that [`vault license get`](/docs/commands/license/get) shows the updated license
 
 ```shell
 kubectl exec -ti vault-0 -- vault license get
