@@ -33,26 +33,22 @@ export default function App({ Component, pageProps }) {
         image="https://www.vaultproject.io/img/og-image.png"
         icon={[
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
             type: 'image/png',
             sizes: '16x16',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
             type: 'image/png',
             sizes: '32x32',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
             type: 'image/png',
             sizes: '96x96',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
             type: 'image/png',
             sizes: '192x192',
           },

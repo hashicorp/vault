@@ -20,7 +20,7 @@ export async function getStaticProps() {
 
 export default function Homepage({ content }) {
   return (
-    <div id="page-home">
+    <main id="page-home">
       <div className="g-section-block page-wrap">
         <HomepageHero
           uiVideo="https://www.datocms-assets.com/2885/1543956852-vault-v1-0-ui-opt.mp4"
@@ -62,10 +62,12 @@ export default function Homepage({ content }) {
           <BeforeAfterDiagram
             {...content.beforeAfterDiagram}
             beforeImage={{
+              alt: 'Static database graphic',
               format: 'png',
               url: require('./img/vault_static_isometric@2x.png'),
             }}
             afterImage={{
+              alt: 'Dynamic VM and database graphic',
               format: 'png',
               url: require('./img/vault_dynamic_isometric@2x.png'),
             }}
@@ -84,7 +86,7 @@ export default function Homepage({ content }) {
                   description:
                     'Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
                   image: {
-                    alt: null,
+                    alt: 'Key icon',
                     format: 'png',
                     url: require('./img/use-cases/secrets-management.svg?url'),
                   },
@@ -99,7 +101,7 @@ export default function Homepage({ content }) {
                   description:
                     'Keep secrets and application data secure with one centralized workflow to encrypt data in flight and at rest',
                   image: {
-                    alt: null,
+                    alt: 'Lock icon',
                     format: 'png',
                     url: require('./img/use-cases/data_encryption.svg?url'),
                   },
@@ -114,7 +116,7 @@ export default function Homepage({ content }) {
                   description:
                     'Authenticate and access different clouds, systems, and endpoints using trusted identities',
                   image: {
-                    alt: null,
+                    alt: 'Access badge icon',
                     format: 'png',
                     url: require('./img/use-cases/identity-based-access.svg?url'),
                   },
@@ -159,12 +161,13 @@ export default function Homepage({ content }) {
           <div className="button-container">
             <Button
               title="Learn More"
+              label="Learn more — Vault pricing tiers"
               url="https://www.hashicorp.com/products/vault/enterprise"
               theme={{ brand: 'vault' }}
             />
           </div>
         </section>
       </div>
-    </div>
+    </main>
   )
 }
