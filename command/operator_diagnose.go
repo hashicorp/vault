@@ -222,7 +222,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		reloadFuncsLock: new(sync.RWMutex),
 	}
 
-	ctx, span := diagnose.StartSpan(ctx, "initialization")
+	ctx, span := diagnose.StartSpan(ctx, "Vault Diagnose")
 	defer span.End()
 
 	// OS Specific checks
@@ -230,7 +230,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var config *cserver.Config
 
-	diagnose.Test(ctx, "Parse configuration", func(ctx context.Context) (err error) {
+	diagnose.Test(ctx, "Parse Configuration", func(ctx context.Context) (err error) {
 		server.flagConfigs = c.flagConfigs
 		var configErrors []configutil.ConfigError
 		config, configErrors, err = server.parseConfig()
@@ -240,6 +240,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		for _, ce := range configErrors {
 			diagnose.Warn(ctx, ce.String())
 		}
+		diagnose.Success(ctx, "Vault configuration syntax is ok.")
 		return nil
 	})
 
@@ -247,14 +248,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var metricsHelper *metricsutil.MetricsHelper
 
 	var backend *physical.Backend
-	diagnose.Test(ctx, "storage", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Storage", func(ctx context.Context) error {
 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
 			return fmt.Errorf("no storage stanza found in config")
 		}
 
-		diagnose.Test(ctx, "create-storage-backend", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Create storage backend", func(ctx context.Context) error {
 			b, err := server.setupStorage(config)
 			if err != nil {
 				return err
