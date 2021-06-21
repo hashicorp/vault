@@ -1589,11 +1589,11 @@ func freelistOptions() (bolt.FreelistType, bool) {
 	freelistType := bolt.FreelistMapType
 	noFreelistSync := true
 
-	if os.Getenv("VAULT_FREELIST_TYPE") == "array" {
+	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
 		freelistType = bolt.FreelistArrayType
 	}
 
-	if os.Getenv("VAULT_NO_FREELIST_SYNC") == "false" {
+	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
 		noFreelistSync = false
 	}
 
