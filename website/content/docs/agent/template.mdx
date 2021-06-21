@@ -32,7 +32,7 @@ The top level `template` block has multiple configurations entries:
 - `source` `(string: "")` - Path on disk to use as the input template. This
   option is required if not using the `contents` option.
 - `destination` `(string: required)` - Path on disk where the rendered secrets should
-  be created. If the parent directories If the parent directories do not exist, Vault
+  be created. If the parent directories do not exist, Vault
   Agent will attempt to create them, unless `create_dest_dirs` is false.
 - `create_dest_dirs` `(bool: true)` - This option tells Vault Agent to create
   the parent directories of the destination path if they do not exist.
