@@ -48,7 +48,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.create();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
-
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -67,6 +67,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('it disables save when validation errors occur', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     await mountSecrets.visit();
+
     await mountSecrets.enable('kv', enginePath);
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', 'abc');
@@ -77,6 +78,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await fillIn('[data-test-input="maxVersions"]', 20);
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
     await click('[data-test-secret-save="true"]');
+    await settled();
     assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/abc`, 'navigates to show secret');
   });
 
@@ -90,10 +92,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .next()
       .path(enginePath)
       .toggleOptions()
-      .version(1)
-      .submit();
+      .version(1);
+    await mountSecrets.submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -164,10 +167,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .next()
       .path(enginePath)
       .toggleOptions()
-      .version(1)
-      .submit();
+      .version(1);
+    await mountSecrets.submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
+    await settled();
     await showPage.deleteSecretV1();
     assert.equal(
       currentRouteName(),
@@ -184,6 +188,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'vault write test/a keys=a keys=b',
     ]);
     await showPage.visit({ backend: 'test', id: 'a' });
+    await settled();
     assert.ok(showPage.editIsPresent, 'renders the page properly');
   });
 

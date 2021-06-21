@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update box radio component for more stable usage
+```

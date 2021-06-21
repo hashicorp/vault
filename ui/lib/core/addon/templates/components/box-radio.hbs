@@ -1,46 +1,45 @@
 {{#if @disabled}}
-<div class="box-radio-spacing">
   <ToolTip
     @verticalPosition="above"
     @horizontalPosition="center"
     as |T|>
     <T.trigger @tabindex="-1">
-      <label
-        for={{@type}}
-        class="box-radio is-disabled is-marginless"
-        data-test-mount-type-radio
-        data-test-mount-type={{@type}}
+      <div
+        class="box-radio is-disabled"
+        data-test-mount-type={{@key}}
       >
-        <Icon
-          @glyph={{@glyph}}
-          @size="xl"
-          class="has-text-grey-light"
+        <label for={{@key}}>
+          <Icon
+            @glyph={{@glyph}}
+            @size="xl"
+            class="has-text-grey-light"
+          />
+          <span>{{@displayName}}</span>
+        </label>
+        <input
+          type="radio"
+          disabled
+          id={{@key}}
+          name={{@groupName}}
+          value={{@key}}
+          aria-checked={{eq @groupValue @key}}
+          checked={{eq @groupValue @key}}
         />
-        {{@displayName}}
-        <RadioButton
-          @value={{@type}}
-          @radioClass="radio"
-          @groupValue={{@groupValue}}
-          @changed={{@onRadioChange}}
-          @name={{@groupName}}
-          @radioId={{@type}}
-          @disabled={{@disabled}}
-        />
-      </label>
+        <span class="radio-indicator"></span>
+      </div>
     </T.trigger>
     <T.content @class="tool-tip">
       <div class="box">
-        {{@tooltipMessage}}
+        {{or @tooltipMessage this.defaultTooltipMessage}}
       </div>
     </T.content>
   </ToolTip>
-</div>
 {{else}}
-<div class="box-radio-spacing">
+<div
+  class="box-radio {{if (eq @groupValue @key) 'is-selected'}}"
+>
   <label
-    for={{@type}}
-    class="box-radio is-marginless
-    {{if (eq @groupValue @type) " is-selected"}}"
+    for={{@key}}
     data-test-mount-type-radio
     data-test-mount-type={{@type}}
   >
@@ -49,16 +48,18 @@
       @size="xl"
       class="has-text-grey-light"
     />
-    {{@displayName}}
-    <RadioButton
-      @value={{@type}}
-      @radioClass="radio"
-      @groupValue={{@mountType}}
-      @changed={{@onRadioChange}}
-      @name={{@groupName}}
-      @radioId={{@type}}
-      @disabled={{@disabled}}
-      />
+    <span>{{@displayName}}</span>
   </label>
-  </div>
+  <input
+    type="radio"
+    id={{@key}}
+    name={{@groupName}}
+    value={{@key}}
+    aria-checked={{eq @groupValue @key}}
+    checked={{eq @groupValue @key}}
+    data-test-box-radio-input
+    data-test-box-radio-input={{@key}}
+    {{on 'click' this.handleRadioChange}}
+  />
+</div>
 {{/if}}

@@ -12,12 +12,12 @@ export default {
   path: fillable('[data-test-input="path"]'),
   toggleOptions: clickable('[data-test-toggle-group="Method Options"]'),
   pathValue: value('[data-test-input="path"]'),
-  types: collection('[data-test-mount-type-radio] input', {
+  types: collection('[data-test-box-radio-input]', {
     select: clickable(),
     id: attribute('id'),
   }),
   type: fillable('[name="mount-type"]'),
-  async selectType(type) {
+  selectType(type) {
     return this.types.filterBy('id', type)[0].select();
   },
   async mount(type, path) {
