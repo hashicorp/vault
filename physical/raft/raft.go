@@ -671,6 +671,11 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	config.NoSnapshotRestoreOnStart = true
 	config.MaxAppendEntries = 64
 
+	// Setting BatchApplyCh allows the raft library to enqueue up to
+	// MaxAppendEntries into each raft apply rather than relying on the
+	// scheduler.
+	config.BatchApplyCh = true
+
 	return nil
 }
 
