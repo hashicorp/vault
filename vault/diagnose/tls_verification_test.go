@@ -286,7 +286,7 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
 	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on invalid 'tls_min_version' should fail")
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(minVersionError, "0").Error()) {
 		t.Fatalf("Bad error message: %s", errs[0])
@@ -312,7 +312,7 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
 	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on invalid 'tls_max_version' should fail")
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(maxVersionError, "0").Error()) {
 		t.Fatalf("Bad error message: %s", errs[0])
