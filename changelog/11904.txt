@@ -1,0 +1,3 @@
+```release-note:bug
+api: extracting Unix domain socket handling to separate function
+```
