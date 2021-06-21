@@ -536,6 +536,11 @@ SEALFAIL:
 			}
 			if ln.Config.TLSDisableClientCerts {
 				diagnose.Warn(listenerTLSContext, "TLS for a listener is turned on without requiring client certs.")
+
+			}
+			err = diagnose.TLSMutualExclusionCertCheck(ln.Config)
+			if err != nil {
+				diagnose.Warn(listenerTLSContext, fmt.Sprintf("TLSDisableClientCerts and TLSRequireAndVerifyClientCert should not both be set. %s", err))
 			}
 
 			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
