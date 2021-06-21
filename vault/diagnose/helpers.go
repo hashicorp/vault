@@ -125,6 +125,7 @@ func Fail(ctx context.Context, message string) {
 func Error(ctx context.Context, err error, options ...trace.EventOption) error {
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err, options...)
+	span.SetStatus(codes.Error, err.Error())
 	return err
 }
 

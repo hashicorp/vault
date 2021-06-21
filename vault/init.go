@@ -11,7 +11,6 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/seal"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
@@ -467,11 +466,9 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	// This usually happens when auto-unseal is configured, but the servers have
 	// not been initialized yet.
 	if len(keys) == 0 {
-		diagnose.Error(ctx, errors.New("stored unseal keys are supported, but none were found"))
 		return NewNonFatalError(errors.New("stored unseal keys are supported, but none were found"))
 	}
 	if len(keys) != 1 {
-		diagnose.Error(ctx, errors.New("expected exactly one stored key"))
 		return NewNonFatalError(errors.New("expected exactly one stored key"))
 	}
 
@@ -485,7 +482,6 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		// subset of the required threshold of keys. We still consider this a
 		// "success", since trying again would yield the same result.
 		c.Logger().Warn("vault still sealed after using stored unseal key")
-		diagnose.Warn(ctx, "vault still sealed after using stored unseal key")
 	} else {
 		c.Logger().Info("unsealed with stored key")
 	}
