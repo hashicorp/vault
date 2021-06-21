@@ -113,12 +113,20 @@ type ExpirationManager struct {
 	// RegisterAuth to simulate a partial failure during a token creation
 	// request. This value should only be set by tests.
 	testRegisterAuthFailure uberAtomic.Bool
+
+	// track the number of in-flight revocations.
+	// this is to provide insight into system lease revocation load
+	inflightRevocations uberAtomic.Int64
 }
 
 type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *namespace.Namespace)
 
 // revokeIDFunc is invoked when a given ID is expired
 func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
+	numInFlight := m.inflightRevocations.Inc()
+	defer m.inflightRevocations.Dec()
+	m.logger.Info("expiring lease", "num_currently_remaining", numInFlight)
+
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		releasePermit := func() {}
 		if m.revokePermitPool != nil {
