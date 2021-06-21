@@ -65,7 +65,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('it can create a secret with a non default max version', async function(assert) {
-    // addressing bug where max version looked like it was saving but it wasn't
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'maxVersions';
     let maxVersions = 101;
