@@ -25,14 +25,27 @@
 # VERSION is the packagespec version to upgrade to.
 VERSION="$1"
 BRANCH="$2"
+FLAG="$3"
+REPO_NAME="$4"
+BINNAME="$0"
+usage() { echo "usage: $BINNAME <packagespec version> <branch name> [-pr PRODUCT_NAME]"; }
 
 if [ -z "$VERSION" ]; then
-	echo "usage: $0 <packagespec version> <branch name>"
-	exit 1
+	usage; exit 1
 fi
 if [ -z "$BRANCH" ]; then
-	echo "usage: $0 <packagespec version> <branch name>"
-	exit 1
+	usage; exit 1
+fi
+PR=false
+if [ -n "$FLAG" ]; then
+	if [ "$FLAG" = "-pr" ]; then
+		if [ -z "$REPO_NAME" ]; then
+			usage; exit 1
+		fi
+		PR=true
+	else
+		usage; exit 1
+	fi
 fi
 
 set -euo pipefail
@@ -108,3 +121,10 @@ git push -u "$TARGET_REMOTE" "$NEW_BRANCH"
 echo "==> All done: upgrade pushed to branch $NEW_BRANCH on ${REMOTES[$TARGET_REMOTE]}"
 
 echo "==> ACTIONS FOR YOU: Open a PR with base: $BRANCH compare: $NEW_BRANCH"
+
+if ! $PR; then
+	exit 0
+fi
+
+# Open browser with PR ready:
+open https://github.com/hashicorp/$REPO_NAME/compare/$BRANCH...$NEW_BRANCH?expand=1

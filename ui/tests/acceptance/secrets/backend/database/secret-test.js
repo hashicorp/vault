@@ -47,10 +47,13 @@ const connectionTests = [
     plugin: 'mongodb-database-plugin',
     url: `mongodb://127.0.0.1:4321/test`,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password').exists(`Password field exists for ${name}`);
-      assert.dom('[data-test-input="write_concern').exists(`Write concern field exists for ${name}`);
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom('[data-test-input="write_concern"]').exists(`Write concern field exists for ${name}`);
       assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
     },
   },
   {
@@ -58,8 +61,8 @@ const connectionTests = [
     plugin: 'mssql-database-plugin',
     url: `mssql://127.0.0.1:4321/test`,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password').exists(`Password field exists for ${name}`);
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
       assert
         .dom('[data-test-input="max_open_connections"]')
         .exists(`Max open connections exists for ${name}`);
@@ -69,6 +72,97 @@ const connectionTests = [
       assert
         .dom('[data-test-input="max_connection_lifetime"]')
         .exists(`Max connection lifetime exists for ${name}`);
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+    },
+  },
+  {
+    name: 'mysql-connection',
+    plugin: 'mysql-database-plugin',
+    url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+    },
+  },
+  {
+    name: 'mysql-aurora-connection',
+    plugin: 'mysql-aurora-database-plugin',
+    url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+    },
+  },
+  {
+    name: 'mysql-rds-connection',
+    plugin: 'mysql-rds-database-plugin',
+    url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+    },
+  },
+  {
+    name: 'mysql-legacy-connection',
+    plugin: 'mysql-legacy-database-plugin',
+    url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
     },
   },
 ];

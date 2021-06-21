@@ -31,8 +31,7 @@ export default function Homepage({ content }) {
             {
               external: false,
               title: 'Try Cloud',
-              url:
-                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hero',
+              url: 'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
             },
             {
               external: false,
@@ -60,7 +59,17 @@ export default function Homepage({ content }) {
         {/* Before-After Diagram */}
 
         <section className="g-container before-after">
-          <BeforeAfterDiagram {...content.beforeAfterDiagram} />
+          <BeforeAfterDiagram
+            {...content.beforeAfterDiagram}
+            beforeImage={{
+              format: 'png',
+              url: require('./img/vault_static_isometric@2x.png'),
+            }}
+            afterImage={{
+              format: 'png',
+              url: require('./img/vault_dynamic_isometric@2x.png'),
+            }}
+          />
         </section>
 
         {/* Use cases */}
@@ -68,17 +77,16 @@ export default function Homepage({ content }) {
         <section>
           <div className="g-container">
             <UseCases
-              theme="vault"
+              product="vault"
               items={[
                 {
                   title: 'Secrets Management',
                   description:
-                    'Audit access, automatically Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
+                    'Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
                   image: {
                     alt: null,
                     format: 'png',
-                    url:
-                      'https://www.datocms-assets.com/2885/1575422126-secrets.png',
+                    url: require('./img/use-cases/secrets-management.svg?url'),
                   },
                   link: {
                     external: false,
@@ -93,8 +101,7 @@ export default function Homepage({ content }) {
                   image: {
                     alt: null,
                     format: 'png',
-                    url:
-                      'https://www.datocms-assets.com/2885/1575422166-encryption.png',
+                    url: require('./img/use-cases/data_encryption.svg?url'),
                   },
                   link: {
                     external: false,
@@ -109,8 +116,7 @@ export default function Homepage({ content }) {
                   image: {
                     alt: null,
                     format: 'png',
-                    url:
-                      'https://www.datocms-assets.com/2885/1575422201-identity.png',
+                    url: require('./img/use-cases/identity-based-access.svg?url'),
                   },
                   link: {
                     external: false,
@@ -128,12 +134,11 @@ export default function Homepage({ content }) {
           title="HCP Vault"
           chin="Available on AWS"
           description="HCP Vault provides all of the power and security of Vault, without the complexity and overhead of managing it yourself. Access Vault’s best-in-class secrets management and encryption capabilities instantly and onboard applications and teams easily."
-          image={require('./img/hcp-vault.svg?url')}
+          image={require('./img/hcp_vault.svg?url')}
           links={[
             {
               text: 'Learn More',
-              url:
-                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
+              url: 'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
             },
           ]}
         />
@@ -155,6 +160,7 @@ export default function Homepage({ content }) {
             <Button
               title="Learn More"
               url="https://www.hashicorp.com/products/vault/enterprise"
+              theme={{ brand: 'vault' }}
             />
           </div>
         </section>

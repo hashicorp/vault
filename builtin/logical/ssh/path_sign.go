@@ -155,7 +155,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	extensions, err := b.calculateExtensions(data, role)
+	extensions, err := b.calculateExtensions(data, req, role)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -356,27 +356,51 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 	return criticalOptions, nil
 }
 
-func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
+func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, error) {
 	unparsedExtensions := data.Get("extensions").(map[string]interface{})
-	if len(unparsedExtensions) == 0 {
-		return role.DefaultExtensions, nil
-	}
+	extensions := make(map[string]string)
 
-	extensions := convertMapToStringValue(unparsedExtensions)
+	if len(unparsedExtensions) > 0 {
+		extensions := convertMapToStringValue(unparsedExtensions)
+		if role.AllowedExtensions != "" {
+			notAllowed := []string{}
+			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
 
-	if role.AllowedExtensions != "" {
-		notAllowed := []string{}
-		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+			for extensionKey, _ := range extensions {
+				if !strutil.StrListContains(allowedExtensions, extensionKey) {
+					notAllowed = append(notAllowed, extensionKey)
+				}
+			}
 
-		for extension := range extensions {
-			if !strutil.StrListContains(allowedExtensions, extension) {
-				notAllowed = append(notAllowed, extension)
+			if len(notAllowed) != 0 {
+				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 			}
 		}
+		return extensions, nil
+	}
 
-		if len(notAllowed) != 0 {
-			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
+	if role.DefaultExtensionsTemplate {
+		for extensionKey, extensionValue := range role.DefaultExtensions {
+			// Look for templating markers {{ .* }}
+			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)
+			if matched {
+				if req.EntityID != "" {
+					// Retrieve extension value based on template + entityID from request.
+					templateExtensionValue, err := framework.PopulateIdentityTemplate(extensionValue, req.EntityID, b.System())
+					if err == nil {
+						// Template returned an extension value that we can use
+						extensions[extensionKey] = templateExtensionValue
+					} else {
+						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
+					}
+				}
+			} else {
+				// Static extension value or err template
+				extensions[extensionKey] = extensionValue
+			}
 		}
+	} else {
+		extensions = role.DefaultExtensions
 	}
 
 	return extensions, nil

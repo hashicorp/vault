@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
@@ -95,7 +94,7 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 func (cl *Listener) SetAdvertiseAddr(addr string) error {
 	u, err := url.ParseRequestURI(addr)
 	if err != nil {
-		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
+		return fmt.Errorf("failed to parse advertise address: %w", err)
 	}
 	cl.advertise = &NetAddr{
 		Host: u.Host,
@@ -280,6 +279,15 @@ func (cl *Listener) Run(ctx context.Context) error {
 				close(closeCh)
 			}()
 
+			// baseDelay is the initial delay after an Accept() error before attempting again
+			const baseDelay = 5 * time.Millisecond
+
+			// maxDelay is the maximum delay after an Accept() error before attempting again.
+			// In the case that this function is error-looping, it will delay the shutdown check.
+			// Therefore, changes to maxDelay may have an effect on the latency of shutdown.
+			const maxDelay = 1 * time.Second
+
+			var loopDelay time.Duration
 			for {
 				if atomic.LoadUint32(cl.shutdown) > 0 {
 					return
@@ -293,14 +301,34 @@ func (cl *Listener) Run(ctx context.Context) error {
 				// Accept the connection
 				conn, err := tlsLn.Accept()
 				if err != nil {
-					if err, ok := err.(net.Error); ok && !err.Timeout() {
+					err, ok := err.(net.Error)
+					if ok && !err.Timeout() {
 						cl.logger.Debug("non-timeout error accepting on cluster port", "error", err)
 					}
 					if conn != nil {
 						conn.Close()
 					}
+					if ok && err.Timeout() {
+						loopDelay = 0
+						continue
+					}
+
+					if loopDelay == 0 {
+						loopDelay = baseDelay
+					} else {
+						loopDelay *= 2
+					}
+
+					if loopDelay > maxDelay {
+						loopDelay = maxDelay
+					}
+
+					time.Sleep(loopDelay)
 					continue
 				}
+				// No error, reset loop delay
+				loopDelay = 0
+
 				if conn == nil {
 					continue
 				}

@@ -100,6 +100,10 @@
         "path": "concepts/ha"
       },
       {
+        "title": "Storage",
+        "path": "concepts/storage"
+      },
+      {
         "title": "Integrated Storage",
         "routes": [
           {
@@ -226,6 +230,11 @@
           {
             "title": "Aerospike",
             "path": "configuration/storage/aerospike"
+          },
+          {
+            "title": "Alicloud OSS",
+            "path": "configuration/storage/alicloudoss",
+            "hidden": true
           },
           {
             "title": "Azure",
@@ -397,6 +406,11 @@
         "path": "commands/delete"
       },
       {
+        "title": "<code>help</code>",
+        "path": "commands/help",
+        "hidden": true
+      },
+      {
         "title": "<code>kv</code>",
         "routes": [
           {
@@ -453,12 +467,34 @@
             "path": "commands/lease"
           },
           {
+            "title": "<code>lookup</code>",
+            "path": "commands/lease/lookup",
+            "hidden": true
+          },
+          {
             "title": "<code>renew</code>",
             "path": "commands/lease/renew"
           },
           {
             "title": "<code>revoke</code>",
             "path": "commands/lease/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>license</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/license"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/license/get"
+          },
+          {
+            "title": "<code>inspect</code>",
+            "path": "commands/license/inspect"
           }
         ]
       },
@@ -822,6 +858,11 @@
         "path": "secrets/azure"
       },
       {
+        "title": "Cassandra",
+        "path": "secrets/cassandra",
+        "hidden": true
+      },
+      {
         "title": "Consul",
         "path": "secrets/consul"
       },
@@ -1001,6 +1042,11 @@
             "path": "secrets/transform"
           },
           {
+            "title": "FF3-1 Tweak Usage",
+            "path": "secrets/transform/ff3-tweak-details",
+            "hidden": true
+          },
+          {
             "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
             "path": "secrets/transform/tokenization"
           }
@@ -1060,7 +1106,7 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt_oidc_providers"
+            "path": "auth/jwt/oidc_providers"
           }
         ]
       },
@@ -1184,6 +1230,10 @@
               {
                 "title": "Running Vault",
                 "path": "platform/k8s/helm/run"
+              },
+              {
+                "title": "Enterprise Licensing",
+                "path": "platform/k8s/helm/enterprise"
               },
               {
                 "title": "Running Vault on OpenShift",
@@ -1313,6 +1363,11 @@
   },
   {
     "divider": true
+  },
+  {
+    "title": "Versus Other Software",
+    "path": "vs",
+    "hidden": true
   },
   {
     "title": "Upgrade Guides",
@@ -1570,9 +1625,28 @@
         "path": "enterprise"
       },
       {
+        "title": "License",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/license"
+          },
+          {
+            "title": "Autoloading",
+            "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "FAQs",
+            "path": "enterprise/license/faqs"
+          }
+        ]
+      },
+
+      {
         "title": "Replication",
         "path": "enterprise/replication"
       },
+
       {
         "title": "HSM Support",
         "routes": [

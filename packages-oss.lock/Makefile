@@ -291,6 +291,8 @@ $(RELEASE_TARGETS):
 
 # QUERY_TARGETS are targets in the release repo that perform queries, and are therefore
 # not necessarily bound to a specific PRODUCT_VERSION or PRODUCT_REVISION.
+# We still export PRODUCT_VERSION and PRODUCT_REVISION because they can be used as query
+# parameters.
 QUERY_TARGETS := list-staged-builds list-promoted-builds list-custom-builds watch-ci
 
 $(QUERY_TARGETS): RELEASE_SYSTEM_BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)

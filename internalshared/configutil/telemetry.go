@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -13,12 +14,10 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
@@ -33,14 +32,16 @@ const (
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
+	FoundKeys    []string     `hcl:",decodedFields"`
+	UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
+	StatsiteAddr string       `hcl:"statsite_address"`
+	StatsdAddr   string       `hcl:"statsd_address"`
 
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
 	UsageGaugePeriod    time.Duration
-	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
+	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period,alias:UsageGaugePeriod"`
 
 	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 
@@ -149,6 +150,10 @@ type Telemetry struct {
 
 	// Whether or not telemetry should add labels for namespaces
 	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
+}
+
+func (t *Telemetry) Validate(source string) []ConfigError {
+	return ValidateUnusedFields(t.UnusedKeys, source)
 }
 
 func (t *Telemetry) GoString() string {
@@ -336,7 +341,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, nil, false, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)

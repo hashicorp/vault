@@ -79,6 +79,14 @@ type Config struct {
 	// (or http.DefaultClient).
 	HttpClient *http.Client
 
+	// MinRetryWait controls the minimum time to wait before retrying when a 5xx
+	// error occurs. Defaults to 1000 milliseconds.
+	MinRetryWait time.Duration
+
+	// MaxRetryWait controls the maximum time to wait before retrying when a 5xx
+	// error occurs. Defaults to 1500 milliseconds.
+	MaxRetryWait time.Duration
+
 	// MaxRetries controls the maximum number of times to retry when a 5xx
 	// error occurs. Set to 0 to disable retrying. Defaults to 2 (for a total
 	// of three tries).
@@ -96,6 +104,9 @@ type Config struct {
 
 	// The CheckRetry function to use; a default is used if not provided
 	CheckRetry retryablehttp.CheckRetry
+
+	// Logger is the leveled logger to provide to the retryable HTTP client.
+	Logger retryablehttp.LeveledLogger
 
 	// Limiter is the rate limiter used by the client.
 	// If this pointer is nil, then there will be no limit set.
@@ -150,11 +161,13 @@ type TLSConfig struct {
 // If an error is encountered, this will return nil.
 func DefaultConfig() *Config {
 	config := &Config{
-		Address:    "https://127.0.0.1:8200",
-		HttpClient: cleanhttp.DefaultPooledClient(),
-		Timeout:    time.Second * 60,
-		MaxRetries: 2,
-		Backoff:    retryablehttp.LinearJitterBackoff,
+		Address:      "https://127.0.0.1:8200",
+		HttpClient:   cleanhttp.DefaultPooledClient(),
+		Timeout:      time.Second * 60,
+		MinRetryWait: time.Millisecond * 1000,
+		MaxRetryWait: time.Millisecond * 1500,
+		MaxRetries:   2,
+		Backoff:      retryablehttp.LinearJitterBackoff,
 	}
 
 	transport := config.HttpClient.Transport.(*http.Transport)
@@ -413,6 +426,14 @@ func NewClient(c *Config) (*Client, error) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
+	if c.MinRetryWait == 0 {
+		c.MinRetryWait = def.MinRetryWait
+	}
+
+	if c.MaxRetryWait == 0 {
+		c.MaxRetryWait = def.MaxRetryWait
+	}
+
 	if c.HttpClient == nil {
 		c.HttpClient = def.HttpClient
 	}
@@ -473,10 +494,13 @@ func (c *Client) CloneConfig() *Config {
 	newConfig := DefaultConfig()
 	newConfig.Address = c.config.Address
 	newConfig.AgentAddress = c.config.AgentAddress
+	newConfig.MinRetryWait = c.config.MinRetryWait
+	newConfig.MaxRetryWait = c.config.MaxRetryWait
 	newConfig.MaxRetries = c.config.MaxRetries
 	newConfig.Timeout = c.config.Timeout
 	newConfig.Backoff = c.config.Backoff
 	newConfig.CheckRetry = c.config.CheckRetry
+	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
@@ -534,6 +558,44 @@ func (c *Client) Limiter() *rate.Limiter {
 	defer c.config.modifyLock.RUnlock()
 
 	return c.config.Limiter
+}
+
+// SetMinRetryWait sets the minimum time to wait before retrying in the case of certain errors.
+func (c *Client) SetMinRetryWait(retryWait time.Duration) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.MinRetryWait = retryWait
+}
+
+func (c *Client) MinRetryWait() time.Duration {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.MinRetryWait
+}
+
+// SetMaxRetryWait sets the maximum time to wait before retrying in the case of certain errors.
+func (c *Client) SetMaxRetryWait(retryWait time.Duration) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.MaxRetryWait = retryWait
+}
+
+func (c *Client) MaxRetryWait() time.Duration {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.MaxRetryWait
 }
 
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
@@ -738,6 +800,15 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 	c.config.Backoff = backoff
 }
 
+func (c *Client) SetLogger(logger retryablehttp.LeveledLogger) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.Logger = logger
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
@@ -757,10 +828,13 @@ func (c *Client) Clone() (*Client, error) {
 	newConfig := &Config{
 		Address:          config.Address,
 		HttpClient:       config.HttpClient,
+		MinRetryWait:     config.MinRetryWait,
+		MaxRetryWait:     config.MaxRetryWait,
 		MaxRetries:       config.MaxRetries,
 		Timeout:          config.Timeout,
 		Backoff:          config.Backoff,
 		CheckRetry:       config.CheckRetry,
+		Logger:           config.Logger,
 		Limiter:          config.Limiter,
 		OutputCurlString: config.OutputCurlString,
 		AgentAddress:     config.AgentAddress,
@@ -859,12 +933,15 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	c.config.modifyLock.RLock()
 	limiter := c.config.Limiter
+	minRetryWait := c.config.MinRetryWait
+	maxRetryWait := c.config.MaxRetryWait
 	maxRetries := c.config.MaxRetries
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
 	outputCurlString := c.config.OutputCurlString
+	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
@@ -896,7 +973,10 @@ START:
 	}
 
 	if outputCurlString {
-		LastOutputStringError = &OutputStringError{Request: req}
+		LastOutputStringError = &OutputStringError{
+			Request:       req,
+			TLSSkipVerify: c.config.HttpClient.Transport.(*http.Transport).TLSClientConfig.InsecureSkipVerify,
+		}
 		return nil, LastOutputStringError
 	}
 
@@ -919,11 +999,12 @@ START:
 
 	client := &retryablehttp.Client{
 		HTTPClient:   httpClient,
-		RetryWaitMin: 1000 * time.Millisecond,
-		RetryWaitMax: 1500 * time.Millisecond,
+		RetryWaitMin: minRetryWait,
+		RetryWaitMax: maxRetryWait,
 		RetryMax:     maxRetries,
 		Backoff:      backoff,
 		CheckRetry:   checkRetry,
+		Logger:       logger,
 		ErrorHandler: retryablehttp.PassthroughErrorHandler,
 	}
 

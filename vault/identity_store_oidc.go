@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
@@ -780,7 +779,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	signedIdToken, err := key.signPayload(payload)
 	if err != nil {
-		return nil, errwrap.Wrapf("error signing OIDC token: {{err}}", err)
+		return nil, fmt.Errorf("error signing OIDC token: %w", err)
 	}
 
 	return &logical.Response{

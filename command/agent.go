@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -357,7 +356,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 				s, err := file.NewFileSink(config)
 				if err != nil {
-					c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
+					c.UI.Error(fmt.Errorf("Error creating file sink: %w", err).Error())
 					return 1
 				}
 				config.Sink = s
@@ -411,7 +410,7 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
+			c.UI.Error(fmt.Errorf("Error creating %s auth method: %w", config.AutoAuth.Method.Type, err).Error())
 			return 1
 		}
 	}
@@ -947,7 +946,7 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 	// Open the PID file
 	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
-		return errwrap.Wrapf("could not open pid file: {{err}}", err)
+		return fmt.Errorf("could not open pid file: %w", err)
 	}
 	defer pidFile.Close()
 
@@ -955,7 +954,7 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 	pid := os.Getpid()
 	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
 	if err != nil {
-		return errwrap.Wrapf("could not write to pid file: {{err}}", err)
+		return fmt.Errorf("could not write to pid file: %w", err)
 	}
 	return nil
 }

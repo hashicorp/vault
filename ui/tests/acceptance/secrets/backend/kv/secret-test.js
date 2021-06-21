@@ -1,4 +1,12 @@
-import { click, visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import {
+  click,
+  visit,
+  settled,
+  currentURL,
+  currentRouteName,
+  fillIn,
+  triggerKeyEvent,
+} from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -54,6 +62,22 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  test('it disables save when validation errors occur', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await click('[data-test-secret-create="true"]');
+    await fillIn('[data-test-secret-path="true"]', 'abc');
+    await fillIn('[data-test-input="maxVersions"]', 'abc');
+    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await settled();
+    assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
+    await fillIn('[data-test-input="maxVersions"]', 20);
+    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await click('[data-test-secret-save="true"]');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/abc`, 'navigates to show secret');
   });
 
   test('version 1 performs the correct capabilities lookup', async function(assert) {
@@ -144,7 +168,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-    await showPage.deleteSecret();
+    await showPage.deleteSecretV1();
     assert.equal(
       currentRouteName(),
       'vault.cluster.secrets.backend.list-root',
@@ -251,6 +275,78 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
+  test('version 2 with policy with destroy capabilities shows modal', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/destroy/*" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/metadata/*" {
+        capabilities = ["list", "update", "delete"]
+      }
+      path "kv-v2/data/secret" {
+        capabilities = ["create", "read", "update"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await click('[data-test-delete-open-modal]');
+    await settled();
+    assert.dom('[data-test-delete-modal="destroy-version"]').exists('destroy this version option shows');
+    assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists('destroy all versions option shows');
+    assert.dom('[data-test-delete-modal="delete-version"]').doesNotExist('delete version does not show');
+  });
+
+  test('version 2 with policy with only delete option does not show modal and undelete is an option', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/delete/*" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/undelete/*" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/metadata/*" {
+        capabilities = ["list","read","create","update"]
+      }
+      path "kv-v2/data/secret" {
+        capabilities = ["create", "read"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    assert.dom('[data-test-delete-open-modal]').doesNotExist('delete version does not show');
+    assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+    await showPage.deleteSecretV2();
+    // unable to reload page in test scenario so going to list and back to secret to confirm deletion
+    let url = `/vault/secrets/${backend}/list`;
+    await visit(url);
+    await click('[data-test-secret-link="secret"]');
+    assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
+    assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
+  });
+
   test('paths are properly encoded', async function(assert) {
     let backend = 'kv';
     let paths = [
@@ -305,7 +401,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await settled();
-    await click('[data-test-popup-menu-trigger="history"]');
+    await click('[data-test-popup-menu-trigger="version"]');
     await settled();
     await click('[data-test-version-history]');
     await settled();

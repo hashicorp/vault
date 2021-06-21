@@ -91,6 +91,54 @@ func TestActivityLog_Creation(t *testing.T) {
 	}
 }
 
+func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+
+	a := core.activityLog
+	a.SetEnable(true)
+
+	if a == nil {
+		t.Fatal("no activity log found")
+	}
+	if a.logger == nil || a.view == nil {
+		t.Fatal("activity log not initialized")
+	}
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("activity log already has fragment")
+	}
+	a.fragmentLock.Unlock()
+	const namespace_id = "ns123"
+
+	a.HandleTokenCreation(&logical.TokenEntry{
+		Path:         "test",
+		Policies:     []string{responseWrappingPolicyName},
+		CreationTime: time.Now().Unix(),
+		TTL:          3600,
+		NamespaceID:  namespace_id,
+	})
+
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("fragment created")
+	}
+	a.fragmentLock.Unlock()
+
+	a.HandleTokenCreation(&logical.TokenEntry{
+		Path:         "test",
+		Policies:     []string{controlGroupPolicyName},
+		CreationTime: time.Now().Unix(),
+		TTL:          3600,
+		NamespaceID:  namespace_id,
+	})
+
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("fragment created")
+	}
+	a.fragmentLock.Unlock()
+}
+
 func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string) {
 	t.Helper()
 
@@ -431,6 +479,11 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 
 	// Stop timers for test purposes
 	close(a.doneCh)
+	defer func() {
+		a.l.Lock()
+		a.doneCh = make(chan struct{}, 1)
+		a.l.Unlock()
+	}()
 
 	startTimestamp := a.GetStartTimestamp()
 	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", startTimestamp)
@@ -516,7 +569,11 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	a.receivedFragment(fragment1)
 	a.receivedFragment(fragment2)
 
-	<-a.newFragmentCh
+	select {
+	case <-a.newFragmentCh:
+	case <-time.After(time.Minute):
+		t.Fatal("timed out waiting for new fragment")
+	}
 
 	err = a.saveCurrentSegmentToStorage(context.Background(), false)
 	if err != nil {
@@ -1376,6 +1433,11 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 
 	var wg sync.WaitGroup
 	close(a.doneCh)
+	defer func() {
+		a.l.Lock()
+		a.doneCh = make(chan struct{}, 1)
+		a.l.Unlock()
+	}()
 
 	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
@@ -1794,6 +1856,10 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if intentRaw == nil {
+		t.Fatal("no intent log present")
+	}
+
 	var intent ActivityIntentLog
 	err = intentRaw.DecodeJSON(&intent)
 	if err != nil {
@@ -2249,7 +2315,8 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 
 	// This will block if the shutdown didn't work.
 	go func() {
-		a.precomputedQueryWorker()
+		// We expect this to error because of BlockingInmemStorage
+		_ = a.precomputedQueryWorker()
 		close(done)
 	}()
 

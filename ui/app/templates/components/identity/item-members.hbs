@@ -1,5 +1,5 @@
-{{#if model.hasMembers}}
-  {{#each model.memberGroupIds as |gid|}}
+{{#if @model.hasMembers}}
+  {{#each @model.memberGroupIds as |gid|}}
     {{#linked-block
       "vault.cluster.access.identity.show"
       "groups"
@@ -15,14 +15,14 @@
             />{{gid}}</LinkTo>
         </div>
         <div class="column has-text-right">
-          {{#if model.canEdit}}
-            <Identity::PopupMembers @params={{array model "memberGroupIds" gid}} />
+          {{#if @model.canEdit}}
+            <Identity::PopupMembers @params={{array @model "memberGroupIds" gid}} />
           {{/if}}
         </div>
       </div>
     {{/linked-block}}
   {{/each}}
-  {{#each model.memberEntityIds as |gid|}}
+  {{#each @model.memberEntityIds as |gid|}}
     {{#linked-block
       "vault.cluster.access.identity.show"
       "groups"
@@ -32,14 +32,19 @@
     }}
       <div class="columns">
         <div class="column is-10">
-          <LinkTo @route="vault.cluster.access.identity.show" @models={{array "entities" gid "details"}} class="is-block has-text-black has-text-weight-semibold"><Icon
+          <LinkTo
+            @route="vault.cluster.access.identity.show"
+            @models={{array "entities" gid "details"}}
+            class="is-block has-text-black has-text-weight-semibold">
+              <Icon
                 @glyph="user-square-outline"
                 class="has-text-grey-light"
-              />{{gid}}</LinkTo>
+              />{{gid}}
+          </LinkTo>
         </div>
         <div class="column has-text-right">
-          {{#if model.canEdit}}
-            <Identity::PopupMembers @params={{array model "memberEntityIds" gid}} />
+          {{#if @model.canEdit}}
+            <Identity::PopupMembers @params={{array @model "memberEntityIds" gid}} />
           {{/if}}
         </div>
       </div>

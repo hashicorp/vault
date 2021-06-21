@@ -23,7 +23,7 @@
 
 import { computed } from '@ember/object';
 import { typeOf } from '@ember/utils';
-import Duration from 'Duration.js';
+import Duration from '@icholy/duration';
 import TtlForm from './ttl-form';
 import layout from '../templates/components/ttl-picker2';
 

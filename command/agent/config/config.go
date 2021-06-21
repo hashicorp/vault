@@ -9,7 +9,6 @@ import (
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -28,6 +27,22 @@ type Config struct {
 	Cache         *Cache                     `hcl:"cache"`
 	Vault         *Vault                     `hcl:"vault"`
 	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
+}
+
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+		l.Profiling.UnusedKeys = nil
+		l.Telemetry.UnusedKeys = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
 }
 
 type Retry struct {
@@ -131,6 +146,14 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
+	// Attribute
+	ast.Walk(obj, func(n ast.Node) (ast.Node, bool) {
+		if k, ok := n.(*ast.ObjectKey); ok {
+			k.Token.Pos.Filename = path
+		}
+		return n, true
+	})
+
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
@@ -149,15 +172,15 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if err := parseAutoAuth(result, list); err != nil {
-		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
+		return nil, fmt.Errorf("error parsing 'auto_auth': %w", err)
 	}
 
 	if err := parseCache(result, list); err != nil {
-		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
+		return nil, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
 	if err := parseTemplates(result, list); err != nil {
-		return nil, errwrap.Wrapf("error parsing 'template': {{err}}", err)
+		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
 	if result.Cache != nil {
@@ -185,7 +208,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	err = parseVault(result, list)
 	if err != nil {
-		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
+		return nil, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
 	if result.Vault == nil {
@@ -241,7 +264,7 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	}
 
 	if err := parseRetry(result, subs.List); err != nil {
-		return errwrap.Wrapf("error parsing 'retry': {{err}}", err)
+		return fmt.Errorf("error parsing 'retry': %w", err)
 	}
 
 	return nil
@@ -387,14 +410,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	subList := subs.List
 
 	if err := parseMethod(result, subList); err != nil {
-		return errwrap.Wrapf("error parsing 'method': {{err}}", err)
+		return fmt.Errorf("error parsing 'method': %w", err)
 	}
 	if a.Method == nil {
 		return fmt.Errorf("no 'method' block found")
 	}
 
 	if err := parseSinks(result, subList); err != nil {
-		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
+		return fmt.Errorf("error parsing 'sink' stanzas: %w", err)
 	}
 
 	if result.AutoAuth.Method.WrapTTL > 0 {
