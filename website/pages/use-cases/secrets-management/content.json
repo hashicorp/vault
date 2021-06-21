@@ -2,12 +2,14 @@
   "beforeAfterDiagram": {
     "beforeImage": {
       "url": "/img/use-cases/secrets-management/secrets-mgmt-challenge.png",
+      "alt": "Graphic — keys connecting with providers",
       "format": "svg"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "Secrets for applications and systems need to be centralized and static IP-based solutions don't scale in dynamic environments with frequently changing applications and machines",
     "afterImage": {
       "url": "/img/use-cases/secrets-management/secrets-mgmt-solution.png",
+      "alt": "Graphic — keys connecting with providers through vault",
       "format": "png"
     },
     "afterHeadline": "The Solution",
@@ -20,7 +22,8 @@
         "content": "Dynamically create, revoke, and rotate secrets programmatically."
       },
       "image": {
-        "url": "/img/use-cases/secrets-management/dynamic_secrets@3x.png"
+        "url": "/img/use-cases/secrets-management/dynamic_secrets@3x.png",
+        "alt": "Vault UI with AWS config"
       }
     },
     {
@@ -43,39 +46,39 @@
       "logoGrid": [
         {
           "url": "https://www.datocms-assets.com/2885/1506540090-color.svg",
-          "alt": "MySQL"
+          "alt": "MySQL logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1506540114-color.svg",
-          "alt": "Cassandra"
+          "alt": "Cassandra logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1566919186-oracle.svg",
-          "alt": "Oracle"
+          "alt": "Oracle logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1619808181-conusul-attributedcolor.svg",
-          "alt": "Consul"
+          "alt": "Consul logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1566919170-aws.svg",
-          "alt": "AWS"
+          "alt": "AWS logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1506540175-color.svg",
-          "alt": "MongoDB"
+          "alt": "MongoDB logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539818112-postgresql.svg",
-          "alt": "PostgreSql"
+          "alt": "PostgreSql logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg",
-          "alt": "Microsoft SQL"
+          "alt": "Microsoft SQL logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1608143270-ellipsis.png",
-          "alt": "ellipsis icon"
+          "alt": "ellipsis icon logo"
         }
       ]
     },
