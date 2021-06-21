@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
@@ -21,15 +20,14 @@ const maxVersionError = "'tls_max_version' value %q not supported, please specif
 
 // ListenerChecks diagnoses warnings and the first encountered error for the listener
 // configuration stanzas.
-func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]string, []error) {
+func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]string, []error) {
 
 	// These aggregated warnings and errors are returned purely for testing purposes.
 	// The errors and warnings will report in this function itself.
 	var listenerWarnings []string
 	var listenerErrors []error
-
-	for _, listener := range listeners {
-		l := listener.Config
+	fmt.Printf("there are: %d listeners", len(listeners))
+	for _, l := range listeners {
 		listenerID := l.Address
 
 		// Perform the TLS version check for listeners.
@@ -53,27 +51,35 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 		}
 
 		// Perform checks on the TLS Cryptographic Information.
+		fmt.Println("going into file checks")
 		warnings, err := TLSFileChecks(l.TLSCertFile, l.TLSKeyFile)
-		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		fmt.Printf("warnings are %+v\n", warnings)
+		fmt.Printf("error is: %+v\n", err)
+		listenerWarnings, listenerErrors = OutputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// Perform checks on the Client CA Cert
 		warnings, err = TLSClientCAFileCheck(l)
-		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		listenerWarnings, listenerErrors = OutputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
 	}
+	fmt.Println("end")
 	return listenerWarnings, listenerErrors
 }
 
-func outputError(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
+func OutputError(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
 	for _, warning := range newWarnings {
 		warning = listenerID + ": " + warning
+		fmt.Println("wrning")
+		fmt.Println(warning)
 		listenerWarnings = append(listenerWarnings, warning)
 		Warn(ctx, warning)
 	}
 	if newErr != nil {
 		errMsg := listenerID + ": " + newErr.Error()
+		fmt.Println("hi")
+		fmt.Println(errMsg)
 		listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
 		Error(ctx, fmt.Errorf(errMsg))
 

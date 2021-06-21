@@ -252,16 +252,17 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
-			return fmt.Errorf("no storage stanza found in config")
+			return fmt.Errorf("No storage stanza in config.")
 		}
 
 		diagnose.Test(ctx, "Create storage backend", func(ctx context.Context) error {
 			b, err := server.setupStorage(config)
 			if err != nil {
+				diagnose.Advise(ctx, "For more information on how to specify a storage backend, see the configuration documentation: https://www.vaultproject.io/docs/configuration#parameters.")
 				return err
 			}
 			if b == nil {
-				return fmt.Errorf("storage backend was initialized to nil")
+				return fmt.Errorf("Storage backend could not be initialized.")
 			}
 			backend = &b
 			return nil
@@ -508,6 +509,7 @@ SEALFAIL:
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener
 		var status int
+		fmt.Println("create listeners")
 		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
 			status, listeners, _, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
 			if status != 0 {
@@ -527,28 +529,24 @@ SEALFAIL:
 
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 
+		fmt.Println("check listener tls")
+
 		listenerTLSContext, listenerTLSSpan := diagnose.StartSpan(ctx, "check-listener-tls")
-		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-		for _, ln := range lns {
-			if ln.Config.TLSDisable {
+
+		fmt.Printf("there are %d listeners in the config \n", len(config.Listeners))
+
+		for _, ln := range config.Listeners {
+			if ln.TLSDisable {
 				diagnose.Warn(listenerTLSContext, "TLS is disabled in a Listener config stanza.")
+				fmt.Println("continue is called")
 				continue
 			}
-			if ln.Config.TLSDisableClientCerts {
+			if ln.TLSDisableClientCerts {
 				diagnose.Warn(listenerTLSContext, "TLS for a listener is turned on without requiring client certs.")
-
 			}
-			err = diagnose.TLSMutualExclusionCertCheck(ln.Config)
-			if err != nil {
-				diagnose.Warn(listenerTLSContext, fmt.Sprintf("TLSDisableClientCerts and TLSRequireAndVerifyClientCert should not both be set. %s", err))
-			}
-
-			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-				Listener: ln.Listener,
-				Config:   ln.Config,
-			})
 		}
-		diagnose.ListenerChecks(listenerTLSContext, sanitizedListeners)
+		fmt.Println("ListenerChecks")
+		diagnose.ListenerChecks(listenerTLSContext, config.Listeners)
 
 		listenerTLSSpan.End()
 
