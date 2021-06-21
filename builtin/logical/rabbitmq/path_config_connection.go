@@ -41,7 +41,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 			},
 			"username_template": {
 				Type:        framework.TypeString,
-				Description: "When a request is made, username_template allows Vault to recognize the argument",
+				Description: "Template describing how dynamic usernames are generated.",
 			},
 		},
 
