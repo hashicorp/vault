@@ -1,0 +1,3 @@
+```release-note:bug
+ui: max_versions was not being saved on create kv-2 secret.
+```
