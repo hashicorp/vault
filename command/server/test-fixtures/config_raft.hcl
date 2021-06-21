@@ -4,23 +4,15 @@ disable_mlock = true
 ui = true
 
 listener "tcp" {
-    address = "127.0.0.1:443"
+    address = "127.0.0.1:1024"
+    tls_disable = true
 }
 
-backend "consul" {
-    foo = "bar"
-    advertise_addr = "foo"
+storage "raft" {
+  path = "./server/test-fixtures/raft_storage_file.db"
+  node_id = "raft_node_1"
 }
-
-ha_backend "consul" {
-    bar = "baz"
-    advertise_addr = "snafu"
-    disable_clustering = "true"
-}
-
-service_registration "consul" {
-    foo = "bar"
-}
+cluster_addr = "http://127.0.0.1:8201"
 
 telemetry {
     statsd_address = "bar"
@@ -31,7 +23,6 @@ telemetry {
     dogstatsd_addr = "127.0.0.1:7254"
     dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
     metrics_prefix = "myprefix"
-    bad_value = "shouldn't be here"
 }
 
 sentinel {
@@ -45,6 +36,3 @@ pid_file = "./pidfile"
 raw_storage_endpoint = true
 disable_sealwrap = true
 disable_printable_check = true
-enable_response_header_hostname = true
-enable_response_header_raft_node_id = true
-license_path = "/path/to/license"

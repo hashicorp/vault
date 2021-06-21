@@ -8,8 +8,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
@@ -52,49 +54,30 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 
 		// Perform checks on the TLS Cryptographic Information.
 		warnings, err := TLSFileChecks(l.TLSCertFile, l.TLSKeyFile)
-		listenerWarnings, listenerErrors = outputErrors(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
+		// Perform checks on the Client CA Cert
+		warnings, err = TLSClientCAFileCheck(l)
+		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
 	}
 	return listenerWarnings, listenerErrors
 }
 
-func outputErrors(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
+func outputError(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
 	for _, warning := range newWarnings {
 		warning = listenerID + ": " + warning
-		if !containsString(listenerWarnings, warning) {
-			listenerWarnings = append(listenerWarnings, warning)
-			Warn(ctx, warning)
-		}
+		listenerWarnings = append(listenerWarnings, warning)
+		Warn(ctx, warning)
 	}
 	if newErr != nil {
 		errMsg := listenerID + ": " + newErr.Error()
 		listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
 		Error(ctx, fmt.Errorf(errMsg))
+
 	}
 	return listenerWarnings, listenerErrors
-}
-
-func containsString(messages []string, lookup_msg string) bool {
-	//TODO: change messages to a map for performance reasons
-	for _, msg := range messages {
-		if msg == lookup_msg {
-			return true
-		}
-	}
-	return false
-
-}
-
-// GetCertsSubjects returns a list of the DER-encoded subjects of
-// all of the certificates in the slice.
-func GetCertsSubjects(certs []*x509.Certificate) [][]byte {
-	res := make([][]byte, len(certs))
-	for i, lc := range certs {
-		res[i] = lc.RawSubject
-	}
-	return res
 }
 
 // TLSFileChecks returns an error and warnings after checking TLS information
@@ -186,10 +169,11 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 		interPool.AddCert(inter)
 	}
 
+	var err error
 	// Verify checks that certificate isn't expired, is of correct usage type, and has an appropriate
 	// chain. We start with Root
 	for _, root := range rootCerts {
-		_, err := root.Verify(x509.VerifyOptions{
+		_, err = root.Verify(x509.VerifyOptions{
 			Roots:     rootPool,
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		})
@@ -200,7 +184,7 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 
 	// Verifying intermediate certs
 	for _, inter := range interCerts {
-		_, err := inter.Verify(x509.VerifyOptions{
+		_, err = inter.Verify(x509.VerifyOptions{
 			Roots:     rootPool,
 			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		})
@@ -209,17 +193,17 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 		}
 	}
 
-	rootSubjects := GetCertsSubjects(rootCerts)
-	if len(rootSubjects) == 0 {
-		// This is either a self signed cert or the root is just not provided. In any
+	rootSubjs := rootPool.Subjects()
+	if len(rootSubjs) == 0 && len(leafCerts) > 0 {
+		// this is a self signed server certificate, or the root is just not provided. In any
 		// case, we need to bypass the root verification step by adding the leaf itself to the
 		// root pool.
-		rootCerts = append(rootCerts, leafCerts[0])
+		rootPool.AddCert(leafCerts[0])
 	}
 
 	// Verifying leaf cert
 	for _, leaf := range leafCerts {
-		_, err := leaf.Verify(x509.VerifyOptions{
+		_, err = leaf.Verify(x509.VerifyOptions{
 			Roots:         rootPool,
 			Intermediates: interPool,
 			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
@@ -269,4 +253,77 @@ func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
 		return true, timeToExpiry
 	}
 	return false, timeToExpiry
+}
+
+// TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
+func TLSMutualExclusionCertCheck(l *configutil.Listener) error {
+
+	if l.TLSDisableClientCerts {
+		if l.TLSRequireAndVerifyClientCert {
+			return fmt.Errorf("the tls_disable_client_certs and tls_require_and_verify_client_cert fields in the " +
+				"listener stanza of the vault server config are mutually exclusive fields. Please ensure they are not both set to true.")
+		}
+	}
+	return nil
+}
+
+// TLSClientCAFileCheck Checks the validity of a client CA file
+func TLSClientCAFileCheck(l *configutil.Listener) ([]string, error) {
+
+	if l.TLSDisableClientCerts {
+		return nil, nil
+	} else if !l.TLSRequireAndVerifyClientCert {
+		return nil, nil
+	}
+
+	var warningsSlc []string
+
+	// Parse TLS Certs from the tls config
+	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(l.TLSClientCAFile)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rootCerts) == 0 {
+		return nil, fmt.Errorf("No root cert found!")
+	}
+	if len(rootCerts) > 1 {
+		warningsSlc = append(warningsSlc, fmt.Sprintf("Found Multiple rootCerts instead of just one!"))
+	}
+
+	// Checking for Self-Signed cert and return an explicit error about it.
+	// Self-Signed certs are placed in the leafCerts slice when parsed.
+	if len(leafCerts) > 0 && !leafCerts[0].IsCA && bytes.Equal(leafCerts[0].RawIssuer, leafCerts[0].RawSubject) {
+		return warningsSlc, fmt.Errorf("Found a Self-Signed certificate!")
+	}
+
+	if len(interCerts) > 0 {
+		return warningsSlc, fmt.Errorf("Found at least one intermediate cert in a root CA cert.")
+	}
+
+	if len(leafCerts) > 0 {
+		return warningsSlc, fmt.Errorf("Found at least one leafCert in a root CA cert.")
+	}
+
+	var warnings []string
+	// Check for TLS Warnings
+	warnings, err = TLSFileWarningChecks(leafCerts, interCerts, rootCerts)
+	warningsSlc = append(warningsSlc, warnings...)
+	for i, warning := range warningsSlc {
+		warningsSlc[i] = strings.Replace(warning, "leaf", "root", -1)
+	}
+	if err != nil {
+		return warningsSlc, err
+	}
+
+	// Adding rootCerts to leafCert to perform verification in TLSErrorChecks
+	leafCerts = append(leafCerts, rootCerts[0])
+
+	// Check for TLS Errors
+	if err = TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
+		return warningsSlc, fmt.Errorf(strings.Replace(err.Error(), "leaf", "root", -1))
+	}
+
+	return warningsSlc, err
+
 }

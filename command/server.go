@@ -405,14 +405,17 @@ func (c *ServerCommand) flushLog() {
 	}, c.gatedWriter)
 }
 
-func (c *ServerCommand) parseConfig() (*server.Config, error) {
+func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {
+	var configErrors []configutil.ConfigError
 	// Load the configuration
 	var config *server.Config
 	for _, path := range c.flagConfigs {
 		current, err := server.LoadConfig(path)
 		if err != nil {
-			return nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
+			return nil, nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
 		}
+
+		configErrors = append(configErrors, current.Validate(path)...)
 
 		if config == nil {
 			config = current
@@ -420,11 +423,11 @@ func (c *ServerCommand) parseConfig() (*server.Config, error) {
 			config = config.Merge(current)
 		}
 	}
-	return config, nil
+	return config, configErrors, nil
 }
 
 func (c *ServerCommand) runRecoveryMode() int {
-	config, err := c.parseConfig()
+	config, _, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1063,7 +1066,7 @@ func (c *ServerCommand) Run(args []string) int {
 		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
-	parsedConfig, err := c.parseConfig()
+	parsedConfig, _, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
