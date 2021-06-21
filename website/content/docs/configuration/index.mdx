@@ -204,6 +204,10 @@ The following parameters are only used with Vault Enterprise
   node will disable this feature when this node is Active or Standby. It's
   recommended to sync this setting across all nodes in the cluster.
 
+- `license_path` `(string: "")` - Path to license file.  This can also be
+  provided via the environment variable `VAULT_LICENSE_PATH`, or the license
+  itself can be provided in the environment variable `VAULT_LICENSE`.
+
 [storage-backend]: /docs/configuration/storage
 [listener]: /docs/configuration/listener
 [seal]: /docs/configuration/seal
