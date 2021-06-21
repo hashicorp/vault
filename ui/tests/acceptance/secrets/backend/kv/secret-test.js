@@ -64,6 +64,30 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
+  test('it can create a secret with a non default max version', async function(assert) {
+    // addressing bug where max version looked like it was saving but it wasn't
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'maxVersions';
+    let maxVersions = 101;
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await click('[data-test-secret-create="true"]');
+    await fillIn('[data-test-secret-path="true"]', secretPath);
+    await fillIn('[data-test-input="maxVersions"]', maxVersions);
+    await fillIn('[data-test-secret-key]', 'key');
+    await click('[data-test-secret-save]');
+    await settled();
+    await click('[data-test-secret-edit="true"]');
+    await settled();
+
+    let savedMaxVersions = document.querySelector('[data-test-input="maxVersions"]').value;
+    assert.equal(
+      maxVersions,
+      savedMaxVersions,
+      'max_version displays the saved number set when creating the secret'
+    );
+  });
+
   test('it disables save when validation errors occur', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     await mountSecrets.visit();
