@@ -551,6 +551,7 @@ func TestTLSMultipleRootInClietCACert(t *testing.T) {
 	}
 }
 
+// TestTLSSelfSignedCerts tests invalid self-signed cert as TLSClientCAFile
 func TestTLSSelfSignedCerts(t *testing.T) {
 	listeners := []listenerutil.Listener{
 		{
