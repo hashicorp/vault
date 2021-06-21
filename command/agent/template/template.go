@@ -172,8 +172,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 		case err := <-ts.runner.ErrCh:
+			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
-			return fmt.Errorf("template server: %w", err)
+
+			// Return after stopping the runner if exit on retry failure was
+			// specified
+			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+				return fmt.Errorf("template server: %w", err)
+			}
+
+			ts.runner, err = manager.NewRunner(runnerConfig, false)
+			if err != nil {
+				return fmt.Errorf("template server failed to create: %w", err)
+			}
+			go ts.runner.Start()
 
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
@@ -253,6 +265,20 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// that need to be fixed for 1.7x/1.8
 	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
 		attempts = 0
+
+		// If we don't want exit on template retry failure (i.e. unlimited
+		// retries), let consul-template handle retry and backoff logic.
+		//
+		// Note: This is a fixed value (12) that ends up being a multiplier to
+		// retry.num_retires (i.e. 12 * N total retries per runner restart).
+		// Since we are performing retries indefinitely this base number helps
+		// prevent agent from spamming Vault if retry.num_retries is set to a
+		// low value by forcing exponential backoff to be high towards the end
+		// of retries during the process.
+		if sc.AgentConfig.TemplateConfig != nil && !sc.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+			attempts = ctconfig.DefaultRetryAttempts
+		}
+
 		scheme := "unix://"
 		if sc.AgentConfig.Listeners[0].Type == "tcp" {
 			scheme = "https://"
