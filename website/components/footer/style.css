@@ -11,6 +11,7 @@
 
   & a {
     color: var(--gray-3);
+    transition: color 0.25s ease;
     cursor: pointer;
     display: inline-block;
 
