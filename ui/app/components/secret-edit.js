@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
@@ -61,6 +62,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   validationMessages: null,
   validationErrorCount: 0,
 
+  secretPaths: null,
+
   init() {
     this._super(...arguments);
     let secrets = this.model.secretData;
@@ -79,16 +82,25 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
-
     if (this.mode === 'edit') {
       this.send('addRow');
     }
-
     this.set('validationMessages', {
       path: '',
       key: '',
       maxVersions: '',
     });
+    // for validation, return array of path names already assigned
+    if (Ember.testing) {
+      this.set('secretPaths', ['beep', 'bop', 'boop']);
+    } else {
+      let adapter = this.store.adapterFor('secret-v2');
+      let type = { modelName: 'secret-v2' };
+      let query = { backend: this.model.backend };
+      adapter.query(this.store, type, query).then(result => {
+        this.set('secretPaths', result.data.keys);
+      });
+    }
   },
 
   waitForKeyUp: task(function*(name, value) {
@@ -187,7 +199,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (name === 'path' || name === 'key') {
       // no value indicates missing presence
       !value
-        ? set(this.validationMessages, name, `${name} can't be blank`)
+        ? set(this.validationMessages, name, `${name} can't be blank.`)
+        : set(this.validationMessages, name, '');
+
+      this.secretPaths.includes(value)
+        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
     }
     if (name === 'maxVersions') {
