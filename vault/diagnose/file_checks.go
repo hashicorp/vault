@@ -39,9 +39,6 @@ func CheckFilePerms(info fs.FileInfo) (bool, []string) {
 	hasSomeRead := false
 	hasSomeWrite := false
 
-	fmt.Printf("perms are %s", mode)
-	fmt.Printf("owner read is: %b, %b", mode&0400, mode&0200)
-
 	// Check owner perms
 	if mode&0400 != 0 {
 		hasSomeRead = true
