@@ -68,11 +68,11 @@ func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]st
 
 		// Perform checks on the TLS Cryptographic Information.
 		warnings, err := TLSFileChecks(l.TLSCertFile, l.TLSKeyFile)
-		listenerWarnings, listenerErrors = outputError(ctx, testName, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// Perform checks on the Client CA Cert
 		warnings, err = TLSClientCAFileCheck(l)
-		listenerWarnings, listenerErrors = outputError(ctx, testName, warnings, listenerWarnings, err, listenerErrors, listenerID)
+		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
 
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
@@ -80,7 +80,7 @@ func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]st
 	return listenerWarnings, listenerErrors
 }
 
-func outputError(ctx context.Context, testName string, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
+func outputError(ctx context.Context, newWarnings, listenerWarnings []string, newErr error, listenerErrors []error, listenerID string) ([]string, []error) {
 	for _, warning := range newWarnings {
 		warning = listenerID + ": " + warning
 		listenerWarnings = append(listenerWarnings, warning)

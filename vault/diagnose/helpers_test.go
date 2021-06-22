@@ -3,7 +3,6 @@ package diagnose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -76,8 +75,6 @@ func TestDiagnoseOtelResults(t *testing.T) {
 
 	results := sess.Finalize(ctx)
 	results.ZeroTimes()
-
-	fmt.Printf("results are %+v\n", results)
 
 	if !reflect.DeepEqual(results, expected) {
 		t.Fatalf("results mismatch: %s", strings.Join(deep.Equal(results, expected), "\n"))
