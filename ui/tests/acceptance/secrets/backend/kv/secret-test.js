@@ -72,8 +72,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', 'beep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    let errorMessage = document.querySelector('[data-test-inline-error-message]').innerText;
     assert.equal(
-      find('[data-test-inline-error-message]').innerText,
+      errorMessage,
       'A secret with this path already exists.',
       'when duplicate path it shows correct error message'
     );
