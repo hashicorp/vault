@@ -71,13 +71,12 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', 'beep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
-    let errorMessage = document.querySelector('[data-test-inline-error-message]').innerText;
-    errorMessage.trim(); // browserstack issue ie 11 windows 8.1
-    assert.equal(
-      errorMessage,
-      'A secret with this path already exists.',
-      'when duplicate path it shows correct error message'
-    );
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText(
+        'A secret with this path already exists.',
+        'when duplicate path it shows correct error message'
+      );
 
     document.querySelector('#maxVersions').value = 'abc';
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
