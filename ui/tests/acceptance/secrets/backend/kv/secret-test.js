@@ -72,6 +72,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await fillIn('[data-test-secret-path="true"]', 'beep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     let errorMessage = document.querySelector('[data-test-inline-error-message]').innerText;
+    errorMessage.trim(); // browserstack issue ie 11 windows 8.1
     assert.equal(
       errorMessage,
       'A secret with this path already exists.',
