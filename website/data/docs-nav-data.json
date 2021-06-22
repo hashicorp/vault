@@ -826,6 +826,10 @@
         "path": "agent/template"
       },
       {
+        "title": "Template Config",
+        "path": "agent/template-config"
+      },
+      {
         "title": "Windows service",
         "path": "agent/winsvc"
       }
