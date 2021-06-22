@@ -82,6 +82,18 @@ func outputError(ctx context.Context, newWarnings, listenerWarnings []string, ne
 
 // TLSFileChecks returns an error and warnings after checking TLS information
 func TLSFileChecks(certpath, keypath string) ([]string, error) {
+	warnings, err := TLSCertCheck(certpath)
+	if err != nil {
+		return warnings, err
+	}
+
+	// Utilize the native TLS Loading mechanism to ensure we have missed no errors
+	_, err = tls.LoadX509KeyPair(certpath, keypath)
+	return warnings, err
+}
+
+// TLSCertCheck returns an error and warning after checking TLS information on the given cert
+func TLSCertCheck(certpath string) ([]string, error) {
 	// Parse TLS Certs from the certpath
 	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(certpath)
 	if err != nil {
@@ -98,9 +110,6 @@ func TLSFileChecks(certpath, keypath string) ([]string, error) {
 	if err = TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
 		return warnings, err
 	}
-
-	// Utilize the native TLS Loading mechanism to ensure we have missed no errors
-	_, err = tls.LoadX509KeyPair(certpath, keypath)
 	return warnings, err
 }
 
@@ -275,11 +284,15 @@ func TLSClientCAFileCheck(l *configutil.Listener) ([]string, error) {
 	} else if !l.TLSRequireAndVerifyClientCert {
 		return nil, nil
 	}
+	return TLSCAFileCheck(l.TLSClientCAFile)
+}
 
+// TLSCAFileCheck checks the validity of a TLS CA file
+func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 	var warningsSlc []string
 
 	// Parse TLS Certs from the tls config
-	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(l.TLSClientCAFile)
+	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(CAFilePath)
 	if err != nil {
 		return nil, err
 	}

@@ -321,6 +321,18 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 		},
 		{
+			"diagnose_seal_transit_ok",
+			[]string{
+				"-config", "./command/server/test-fixtures/diagnose_seal_trasit_tls_check.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "transit-tls-checks",
+					Status: diagnose.ErrorStatus,
+				},
+			},
+		},
+		{
 			"diagnose_invalid_https_sr",
 			[]string{
 				"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",

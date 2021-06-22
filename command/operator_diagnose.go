@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -369,6 +370,53 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				}
 				return nil
 			})
+		}
+		return nil
+	})
+
+	diagnose.Test(ctx, "seal-transit-tls-checks", func(ctx context.Context) error {
+		var checkSealTransit bool
+		for _, seal := range config.Seals {
+			if seal.Type == "transit" {
+				tls_skip_verify, ok := seal.Config["tls_skip_verify"]
+				if !ok {
+					return fmt.Errorf("tls_skip_verify key not found in seal config")
+				}
+				tls_skip_verify_bool, err := strconv.ParseBool(tls_skip_verify)
+				if err != nil {
+					return fmt.Errorf("Invalid value for tls_skip_verify")
+				}
+				if tls_skip_verify_bool {
+					diagnose.Warn(ctx, "TLS verification is Skipped! Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
+					return nil
+				}
+				checkSealTransit = true
+				// Checking tls_client_cert and tls_client_key
+				tls_client_cert, ok := seal.Config["tls_client_cert"]
+				if !ok {
+					return fmt.Errorf("tls_client_cert path is required")
+				}
+				tls_client_key, ok := seal.Config["tls_client_key"]
+				if !ok {
+					return fmt.Errorf("tls_client_key path is required")
+				}
+				_, err = diagnose.TLSFileChecks(tls_client_cert, tls_client_key)
+				if err != nil {
+					return err
+				}
+				// checking tls_ca_cert
+				tls_ca_cert, ok := seal.Config["tls_ca_cert"]
+				if !ok {
+					return fmt.Errorf("tls_ca_cert path is required")
+				}
+				_, err = diagnose.TLSCAFileCheck(tls_ca_cert)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if !checkSealTransit {
+			diagnose.Skipped(ctx, "No transit seal found!")
 		}
 		return nil
 	})
