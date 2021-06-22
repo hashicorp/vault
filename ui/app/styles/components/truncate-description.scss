@@ -34,12 +34,10 @@
 // }
 
 .overflow-ellipsis {
-  // width: 100%;
   box-sizing: border-box;
-  border: 1px solid;
-  padding: 2px 5px;
-  /* Both of the following are required for text-overflow */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  &.is-closed {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
