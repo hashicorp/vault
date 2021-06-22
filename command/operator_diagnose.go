@@ -505,6 +505,9 @@ SEALFAIL:
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener
 		var status int
+
+		diagnose.ListenerChecks(ctx, config.Listeners)
+
 		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
 			status, listeners, _, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
 			if status != 0 {
@@ -522,9 +525,7 @@ SEALFAIL:
 			}
 		}
 
-		defer c.cleanupGuard.Do(listenerCloseFunc)
-
-		diagnose.ListenerChecks(ctx, config.Listeners)
+		c.cleanupGuard.Do(listenerCloseFunc)
 
 		return nil
 	})
