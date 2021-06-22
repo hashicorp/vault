@@ -114,7 +114,7 @@ func makeCoffee(ctx context.Context) error {
 // buildMicrowave will throw an error in the function itself to fail the span,
 // but will return nil so the caller test doesn't necessarily throw an error.
 // The intended behavior is that the superspan will detect the failed subspan
-// and fail regardless.This happens when Fail is used to fail the span, but not
+// and fail regardless. This happens when Fail is used to fail the span, but not
 // when Error is used. See the comment in the function itself.
 func buildMicrowave(ctx context.Context) error {
 	ctx, span := StartSpan(ctx, "buy-parts")
