@@ -15,6 +15,12 @@ import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN } from 'vaul
 
 const component = create(form);
 const windows = [];
+const buildMessage = opts => ({
+  isTrusted: true,
+  origin: 'https://my-vault.com',
+  data: {},
+  ...opts,
+});
 const fakeWindow = EmberObject.extend(Evented, {
   init() {
     this._super(...arguments);
@@ -29,12 +35,7 @@ const fakeWindow = EmberObject.extend(Evented, {
       width: 500,
     };
   }),
-  localStorage: computed(function() {
-    return {
-      getItem: sinon.stub(),
-      removeItem: sinon.stub(),
-    };
-  }),
+  origin: 'https://my-vault.com',
   closed: false,
 });
 
@@ -70,7 +71,6 @@ const renderIt = async (context, path = 'jwt') => {
   context.set('handler', sinon.spy(handler));
   context.set('roleName', '');
   context.set('selectedAuthPath', path);
-
   await render(hbs`
     <AuthJwt
       @window={{window}}
@@ -135,7 +135,7 @@ module('Integration | Component | auth jwt', function(hooks) {
     assert.equal(component.yieldContent, 'Hello!', 'yields properly');
   });
 
-  test('jwt: it renders', async function(assert) {
+  test('jwt: it renders and makes auth_url requests', async function(assert) {
     await renderIt(this);
     await settled();
     assert.ok(component.jwtPresent, 'renders jwt field');
@@ -203,7 +203,7 @@ module('Integration | Component | auth jwt', function(hooks) {
     assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
-  test('oidc: storage event fires without state key', async function(assert) {
+  test('oidc: shows error when message posted with state key, wrong params', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
@@ -211,26 +211,8 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.localStorage.getItem.returns(null);
-    this.window.trigger('storage', { storageArea: this.window.localStorage });
+    this.window.trigger('message', buildMessage({ data: { state: 'state', foo: 'bar' } }));
     run.cancelTimers();
-    assert.ok(this.window.localStorage.getItem.calledOnce, 'calls getItem');
-    assert.notOk(this.window.localStorage.removeItem.called, 'never calls removeItem');
-  });
-
-  test('oidc: storage event fires with state key, wrong params', async function(assert) {
-    await renderIt(this);
-    this.set('selectedAuthPath', 'foo');
-    await component.role('test');
-    component.login();
-    await waitUntil(() => {
-      return this.openSpy.calledOnce;
-    });
-    this.window.localStorage.getItem.returns(JSON.stringify({}));
-    this.window.trigger('storage', { storageArea: this.window.localStorage });
-    run.cancelTimers();
-    assert.ok(this.window.localStorage.getItem.calledOnce, 'calls getItem');
-    assert.ok(this.window.localStorage.removeItem.calledOnce, 'calls removeItem');
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 
@@ -242,17 +224,67 @@ module('Integration | Component | auth jwt', function(hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.localStorage.getItem.returns(
-      JSON.stringify({
-        path: 'foo',
-        state: 'state',
-        code: 'code',
+    this.window.trigger(
+      'message',
+      buildMessage({
+        data: {
+          path: 'foo',
+          state: 'state',
+          code: 'code',
+        },
       })
     );
-    this.window.trigger('storage', { storageArea: this.window.localStorage });
     await settled();
     assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
     assert.equal(this.token, 'token', 'calls onToken with token');
     assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
+  });
+
+  test('oidc: fails silently when event origin does not match window origin', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.trigger(
+      'message',
+      buildMessage({
+        origin: 'http://hackerz.com',
+        data: {
+          path: 'foo',
+          state: 'state',
+          code: 'code',
+        },
+      })
+    );
+    run.cancelTimers();
+    await settled();
+    assert.notOk(this.handler.called, 'should not call the submit handler');
+  });
+
+  test('oidc: fails silently when event is not trusted', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.trigger(
+      'message',
+      buildMessage({
+        isTrusted: false,
+        data: {
+          path: 'foo',
+          state: 'state',
+          code: 'code',
+        },
+      })
+    );
+    run.cancelTimers();
+    await settled();
+    assert.notOk(this.handler.called, 'should not call the submit handler');
   });
 });
