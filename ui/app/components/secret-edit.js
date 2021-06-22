@@ -201,10 +201,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
-
-      this.secretPaths.includes(value)
-        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
-        : set(this.validationMessages, name, '');
+      // only check duplicate on path not on the key
+      if (name === 'path') {
+        this.secretPaths?.includes(value)
+          ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
+          : set(this.validationMessages, name, '');
+      }
     }
     if (name === 'maxVersions') {
       // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
