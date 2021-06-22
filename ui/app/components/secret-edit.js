@@ -256,7 +256,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         id: key,
       });
     }
-
     return secretData
       .save()
       .then(() => {
@@ -378,16 +377,14 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         return;
       }
       this.persistKey(key => {
-        // ARG TODO issue with saving no value but key and transition.
-        // I'm at a loss. Need better handler of JSON.parse and catching the error.
-        console.log(key, 'KEY!!!');
         let secretKey;
         try {
-          secretKey = typeof key === 'object' ? JSON.parse(key).id : key;
-          typeof secretKey === 'number' ? secretKey.toString() : secretKey;
+          secretKey = JSON.parse(key).id;
         } catch {
           secretKey = key;
         }
+        // if you save a number for path and then try and create new version the catch does not work
+        secretKey = secretKey ? secretKey : key;
         this.transitionToRoute(SHOW_ROUTE, secretKey);
       });
     },
