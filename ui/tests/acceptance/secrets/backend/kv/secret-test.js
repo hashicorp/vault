@@ -6,7 +6,6 @@ import {
   currentRouteName,
   fillIn,
   triggerKeyEvent,
-  find,
 } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
