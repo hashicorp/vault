@@ -59,7 +59,6 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 		// Perform checks on the Client CA Cert
 		warnings, err = TLSClientCAFileCheck(l)
 		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
-
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
 	}
@@ -221,10 +220,9 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 // and root certificates provided.
 func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) ([]string, error) {
 	var warnings []string
-
 	// add a warning for when there are more than one leaf certs
 	if len(leafCerts) > 1 {
-		warnings = append(warnings, "leafCerts contains more than one cert.")
+		warnings = append(warnings, fmt.Sprintf("More than one leaf certificate detected. Please ensure that there is one unique leaf certificate being supplied to vault in the vault server config file."))
 	}
 
 	for _, c := range leafCerts {
