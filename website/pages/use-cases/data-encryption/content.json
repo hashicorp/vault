@@ -2,12 +2,14 @@
   "beforeAfterDiagram": {
     "beforeImage": {
       "url": "/img/use-cases/data-encryption/data-encryption-challenge.png",
+      "alt": "Graphic — data sharing to keys broken by bad actor",
       "format": "svg"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "All application data should be encrypted, but deploying a cryptography and key management infrastructure is expensive, hard to develop against, and not cloud or multi-datacenter friendly",
     "afterImage": {
       "url": "/img/use-cases/data-encryption/data-encryption-solution.png",
+      "alt": "Graphic — data sharing between keys safely with Vault in middle",
       "format": "svg"
     },
     "afterHeadline": "The Solution",

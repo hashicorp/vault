@@ -364,7 +364,15 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
+		freelistType, noFreelistSync := freelistOptions()
+		raftOptions := raftboltdb.Options{
+			Path: filepath.Join(path, "raft.db"),
+			BoltOptions: &bolt.Options{
+				FreelistType:   freelistType,
+				NoFreelistSync: noFreelistSync,
+			},
+		}
+		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -662,6 +670,11 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 
 	config.NoSnapshotRestoreOnStart = true
 	config.MaxAppendEntries = 64
+
+	// Setting BatchApplyCh allows the raft library to enqueue up to
+	// MaxAppendEntries into each raft apply rather than relying on the
+	// scheduler.
+	config.BatchApplyCh = true
 
 	return nil
 }
@@ -1572,4 +1585,22 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
+}
+
+// freelistOptions returns the freelist type and nofreelistsync values to use
+// when opening boltdb files, based on our preferred defaults, and the possible
+// presence of overriding environment variables.
+func freelistOptions() (bolt.FreelistType, bool) {
+	freelistType := bolt.FreelistMapType
+	noFreelistSync := true
+
+	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
+		freelistType = bolt.FreelistArrayType
+	}
+
+	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
+		noFreelistSync = false
+	}
+
+	return freelistType, noFreelistSync
 }

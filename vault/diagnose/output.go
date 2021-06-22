@@ -337,17 +337,18 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 	}
 	warnings := r.Warnings
 	if r.Message == "" && len(warnings) > 0 {
-		prelude = status_warn + r.Name + ": " + warnings[0]
-		warnings = warnings[1:]
+		prelude = status_warn + r.Name + ": "
+		if len(warnings) == 1 {
+			prelude = prelude + warnings[0]
+			warnings = warnings[1:]
+		}
 	}
 	writeWrapped(sb, prelude, depth+1, limit)
 	for _, w := range warnings {
 		sb.WriteRune('\n')
-		indent(sb, depth)
+		indent(sb, depth+1)
 		sb.WriteString(status_warn)
-		sb.WriteString(r.Name)
-		sb.WriteString(": ")
-		writeWrapped(sb, w, depth+1, limit)
+		writeWrapped(sb, w, depth+2, limit)
 	}
 
 	if r.Advice != "" {

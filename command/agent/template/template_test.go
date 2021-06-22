@@ -352,8 +352,9 @@ func TestServerRun(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		templateMap map[string]*templateTest
-		expectError bool
+		templateMap        map[string]*templateTest
+		expectError        bool
+		exitOnRetryFailure bool
 	}{
 		"simple": {
 			templateMap: map[string]*templateTest{
@@ -363,7 +364,8 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
-			expectError: false,
+			expectError:        false,
+			exitOnRetryFailure: false,
 		},
 		"multiple": {
 			templateMap: map[string]*templateTest{
@@ -403,7 +405,8 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
-			expectError: false,
+			expectError:        false,
+			exitOnRetryFailure: false,
 		},
 		"bad secret": {
 			templateMap: map[string]*templateTest{
@@ -413,7 +416,8 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
-			expectError: true,
+			expectError:        true,
+			exitOnRetryFailure: true,
 		},
 		"missing key": {
 			templateMap: map[string]*templateTest{
@@ -424,7 +428,8 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
-			expectError: true,
+			expectError:        true,
+			exitOnRetryFailure: true,
 		},
 		"permission denied": {
 			templateMap: map[string]*templateTest{
@@ -434,7 +439,8 @@ func TestServerRun(t *testing.T) {
 					},
 				},
 			},
-			expectError: true,
+			expectError:        true,
+			exitOnRetryFailure: true,
 		},
 	}
 
@@ -457,6 +463,9 @@ func TestServerRun(t *testing.T) {
 						Retry: &config.Retry{
 							NumRetries: 3,
 						},
+					},
+					TemplateConfig: &config.TemplateConfig{
+						ExitOnRetryFailure: tc.exitOnRetryFailure,
 					},
 				},
 				LogLevel:      hclog.Trace,

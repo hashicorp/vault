@@ -535,6 +535,59 @@ func TestLoadConfigFile_AgentCache_PersistMissingType(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFile_TemplateConfig(t *testing.T) {
+
+	testCases := map[string]struct {
+		fixturePath            string
+		expectedTemplateConfig TemplateConfig
+	}{
+		"set-true": {
+			"./test-fixtures/config-template_config.hcl",
+			TemplateConfig{
+				ExitOnRetryFailure: true,
+			},
+		},
+		"empty": {
+			"./test-fixtures/config-template_config-empty.hcl",
+			TemplateConfig{
+				ExitOnRetryFailure: false,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config, err := LoadConfig(tc.fixturePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{},
+				Vault: &Vault{
+					Address: "http://127.0.0.1:1111",
+					Retry: &Retry{
+						NumRetries: 5,
+					},
+				},
+				TemplateConfig: &tc.expectedTemplateConfig,
+				Templates: []*ctconfig.TemplateConfig{
+					{
+						Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+						Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+					},
+				},
+			}
+
+			config.Prune()
+			if diff := deep.Equal(config, expected); diff != nil {
+				t.Fatal(diff)
+			}
+		})
+	}
+
+}
+
 // TestLoadConfigFile_Template tests template definitions in Vault Agent
 func TestLoadConfigFile_Template(t *testing.T) {
 	testCases := map[string]struct {

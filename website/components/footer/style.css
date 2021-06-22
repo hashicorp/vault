@@ -10,14 +10,13 @@
   }
 
   & a {
-    color: black;
-    opacity: 0.5;
-    transition: opacity 0.25s ease;
+    color: var(--gray-3);
+    transition: color 0.25s ease;
     cursor: pointer;
     display: inline-block;
 
     &:hover {
-      opacity: 1;
+      color: black;
     }
   }
 
