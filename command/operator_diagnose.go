@@ -243,8 +243,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 	if config == nil {
-		diagnose.Fail(ctx, "Diagnose could not parse configuration.")
-		span.End()
 		return fmt.Errorf("Diagnose could not parse configuration.")
 	}
 
