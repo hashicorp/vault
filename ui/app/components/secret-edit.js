@@ -92,7 +92,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     });
     // for validation, return array of path names already assigned
     if (Ember.testing) {
-      this.set('secretPaths', ['beep', 'bop', 'boop']);
+      this.set('secretPaths', ['beep', 'bop', '123']);
     } else {
       let adapter = this.store.adapterFor('secret-v2');
       let type = { modelName: 'secret-v2' };

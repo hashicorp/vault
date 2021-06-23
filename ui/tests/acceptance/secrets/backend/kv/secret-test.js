@@ -69,7 +69,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', 'beep');
+    await fillIn('[data-test-secret-path="true"]', '123');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     assert
       .dom('[data-test-inline-error-message]')
@@ -84,12 +84,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
     assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
+
     await fillIn('[data-test-input="maxVersions"]', 20);
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
-    await fillIn('[data-test-secret-path="true"]', 'meep');
+    await fillIn('[data-test-secret-path="true"]', '1234');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    await fillIn('[data-test-secret-key]', 'someKey');
+    await triggerKeyEvent('[data-test-secret-key]', 'keyup', 65);
     await click('[data-test-secret-save="true"]');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/1234`, 'navigates to show secret');
+    // using a number for path to check for bug where paths as numbers wouldn't render properly
+    assert.dom('[data-test-row-label="someKey"]').exists({ count: 1 }, 'renders the key');
   });
 
   test('version 1 performs the correct capabilities lookup', async function(assert) {
