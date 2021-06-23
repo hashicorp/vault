@@ -380,7 +380,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         let secretKey;
         try {
           secretKey = JSON.parse(key).id;
-        } catch {
+        } catch (error) {
           secretKey = key;
         }
         // if you save a number for path and then try and create new version the catch does not work
