@@ -544,7 +544,8 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 		"set-true": {
 			"./test-fixtures/config-template_config.hcl",
 			TemplateConfig{
-				ExitOnRetryFailure: true,
+				ExitOnRetryFailure:   true,
+				DefaultLeaseDuration: 1 * time.Minute,
 			},
 		},
 		"empty": {

@@ -7,6 +7,7 @@ vault {
 
 template_config {
   exit_on_retry_failure = true
+  default_lease_duration = 60
 }
 
 template {

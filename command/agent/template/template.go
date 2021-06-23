@@ -240,6 +240,10 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		conf.Vault.Namespace = &sc.Namespace
 	}
 
+	if sc.AgentConfig.TemplateConfig.DefaultLeaseDuration != 0 {
+		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.DefaultLeaseDuration
+	}
+
 	conf.Vault.SSL = &ctconfig.SSLConfig{
 		Enabled:    pointerutil.BoolPtr(false),
 		Verify:     pointerutil.BoolPtr(false),
