@@ -65,19 +65,19 @@ kubectl create secret generic vault-ent-license --from-literal="license=${secret
 - Wait until [`vault license inspect`](/docs/commands/license/inspect) shows the updated license
 
 ```shell
-kubectl exec -ti vault-0 -- vault license inspect
+kubectl exec vault-0 -- vault license inspect
 ```
 
 - Reload Vault's config by issuing an HUP signal
 
 ```shell
-kubectl exec -ti vault-0 -- pkill -HUP vault
+kubectl exec vault-0 -- pkill -HUP vault
 ```
 
 - Verify that [`vault license get`](/docs/commands/license/get) shows the updated license
 
 ```shell
-kubectl exec -ti vault-0 -- vault license get
+kubectl exec vault-0 -- vault license get
 ```
 
 ## Vault Enterprise prior to 1.8
