@@ -29,7 +29,7 @@ function BeforeAfterDiagram(props) {
           </span>
           <div>
             {beforeHeadline && (
-              <h3
+              <h2
                 className={s.contentHeadline}
                 dangerouslySetInnerHTML={{
                   __html: beforeHeadline,
@@ -59,7 +59,7 @@ function BeforeAfterDiagram(props) {
           </span>
           <div>
             {afterHeadline && (
-              <h3
+              <h2
                 className={s.contentHeadline}
                 dangerouslySetInnerHTML={{
                   __html: afterHeadline,
