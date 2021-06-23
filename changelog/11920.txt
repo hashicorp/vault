@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix bug when setting kv path as a number and trying to create new version later. 
+```
