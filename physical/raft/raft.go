@@ -1240,10 +1240,8 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	if entry != nil {
 		valueLen := len(entry.Value)
 		if uint64(valueLen) > b.maxEntrySize {
-			b.logger.Warn(
-				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
-				"size", valueLen, "suggested", b.maxEntrySize,
-			)
+			b.logger.Warn("retrieved entry value is too large, has raft's max_entry_size been reduced?",
+				"size", valueLen, "max_entry_size", b.maxEntrySize)
 		}
 	}
 
