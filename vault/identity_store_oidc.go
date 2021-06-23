@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
@@ -103,16 +102,18 @@ const (
 	roleConfigPath       = oidcTokensPrefix + "roles/"
 )
 
-var requiredClaims = []string{"iat", "aud", "exp", "iss", "sub", "namespace"}
-var supportedAlgs = []string{
-	string(jose.RS256),
-	string(jose.RS384),
-	string(jose.RS512),
-	string(jose.ES256),
-	string(jose.ES384),
-	string(jose.ES512),
-	string(jose.EdDSA),
-}
+var (
+	requiredClaims = []string{"iat", "aud", "exp", "iss", "sub", "namespace"}
+	supportedAlgs  = []string{
+		string(jose.RS256),
+		string(jose.RS384),
+		string(jose.RS512),
+		string(jose.ES256),
+		string(jose.ES384),
+		string(jose.ES512),
+		string(jose.EdDSA),
+	}
+)
 
 // pseudo-namespace for cache items that don't belong to any real namespace.
 var noNamespace = &namespace.Namespace{ID: "__NO_NAMESPACE"}
@@ -160,7 +161,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 					Default:     "RS256",
 				},
 
-				"allowed_client_ids": &framework.FieldSchema{
+				"allowed_client_ids": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Comma separated string or array of role client ids allowed to use this key for signing. If empty no roles are allowed. If \"*\" all roles are allowed.",
 				},
@@ -569,6 +570,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	// it is an error to delete a key that is actively referenced by a role
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
@@ -577,10 +579,12 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	for _, roleName := range roleNames {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
 		if err != nil {
+			i.oidcLock.Unlock()
 			return nil, err
 		}
 		if entry != nil {
 			if err := entry.DecodeJSON(&role); err != nil {
+				i.oidcLock.Unlock()
 				return nil, err
 			}
 			if role.Key == targetKeyName {
@@ -599,6 +603,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	// key can safely be deleted now
 	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
@@ -774,7 +779,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	signedIdToken, err := key.signPayload(payload)
 	if err != nil {
-		return nil, errwrap.Wrapf("error signing OIDC token: {{err}}", err)
+		return nil, fmt.Errorf("error signing OIDC token: %w", err)
 	}
 
 	return &logical.Response{
@@ -806,7 +811,6 @@ func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity
 		Groups: identity.ToSDKGroups(groups),
 		// namespace?
 	})
-
 	if err != nil {
 		logger.Warn("error populating OIDC token template", "template", template, "error", err)
 	}
@@ -911,7 +915,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 			Groups: make([]*logical.Group, 0),
 			// namespace?
 		})
-
 		if err != nil {
 			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
 		}
@@ -1478,7 +1481,6 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 
 			if err := s.Put(ctx, entry); err != nil {
 				i.Logger().Error("error saving key", "key", key.name, "error", err)
-
 			}
 			didUpdate = true
 		}

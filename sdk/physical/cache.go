@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -28,6 +29,7 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
+	"core/license",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the
@@ -57,6 +59,7 @@ type Cache struct {
 	logger          log.Logger
 	enabled         *uint32
 	cacheExceptions *pathmanager.PathManager
+	metricSink      metrics.MetricSink
 }
 
 // TransactionalCache is a Cache that wraps the physical that is transactional
@@ -66,14 +69,16 @@ type TransactionalCache struct {
 }
 
 // Verify Cache satisfies the correct interfaces
-var _ ToggleablePurgemonster = (*Cache)(nil)
-var _ ToggleablePurgemonster = (*TransactionalCache)(nil)
-var _ Backend = (*Cache)(nil)
-var _ Transactional = (*TransactionalCache)(nil)
+var (
+	_ ToggleablePurgemonster = (*Cache)(nil)
+	_ ToggleablePurgemonster = (*TransactionalCache)(nil)
+	_ Backend                = (*Cache)(nil)
+	_ Transactional          = (*TransactionalCache)(nil)
+)
 
 // NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
-func NewCache(b Backend, size int, logger log.Logger) *Cache {
+func NewCache(b Backend, size int, logger log.Logger, metricSink metrics.MetricSink) *Cache {
 	if logger.IsDebug() {
 		logger.Debug("creating LRU cache", "size", size)
 	}
@@ -93,13 +98,14 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 		// This fails safe.
 		enabled:         new(uint32),
 		cacheExceptions: pm,
+		metricSink:      metricSink,
 	}
 	return c
 }
 
-func NewTransactionalCache(b Backend, size int, logger log.Logger) *TransactionalCache {
+func NewTransactionalCache(b Backend, size int, logger log.Logger, metricSink metrics.MetricSink) *TransactionalCache {
 	c := &TransactionalCache{
-		Cache:         NewCache(b, size, logger),
+		Cache:         NewCache(b, size, logger, metricSink),
 		Transactional: b.(Transactional),
 	}
 	return c
@@ -146,6 +152,7 @@ func (c *Cache) Put(ctx context.Context, entry *Entry) error {
 	err := c.backend.Put(ctx, entry)
 	if err == nil {
 		c.lru.Add(entry.Key, entry)
+		c.metricSink.IncrCounter([]string{"cache", "write"}, 1)
 	}
 	return err
 }
@@ -165,10 +172,12 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 			if raw == nil {
 				return nil, nil
 			}
+			c.metricSink.IncrCounter([]string{"cache", "hit"}, 1)
 			return raw.(*Entry), nil
 		}
 	}
 
+	c.metricSink.IncrCounter([]string{"cache", "miss"}, 1)
 	// Read from the underlying backend
 	ent, err := c.backend.Get(ctx, key)
 	if err != nil {
@@ -241,8 +250,10 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 		switch txn.Operation {
 		case PutOperation:
 			c.lru.Add(txn.Entry.Key, txn.Entry)
+			c.metricSink.IncrCounter([]string{"cache", "write"}, 1)
 		case DeleteOperation:
 			c.lru.Remove(txn.Entry.Key)
+			c.metricSink.IncrCounter([]string{"cache", "delete"}, 1)
 		}
 	}
 

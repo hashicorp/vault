@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -19,7 +18,7 @@ import (
 // A map type allows us to distinguish between empty and missing values.
 type batchRequestHMACItem map[string]string
 
-// BatchResponseItem represents a response item for batch processing
+// batchResponseHMACItem represents a response item for batch processing
 type batchResponseHMACItem struct {
 	// HMAC for the input present in the corresponding batch request item
 	HMAC string `json:"hmac,omitempty" mapstructure:"hmac"`
@@ -42,17 +41,17 @@ func (b *backend) pathHMAC() *framework.Path {
 	return &framework.Path{
 		Pattern: "hmac/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The key to use for the HMAC function",
 			},
 
-			"input": &framework.FieldSchema{
+			"input": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded input data",
 			},
 
-			"algorithm": &framework.FieldSchema{
+			"algorithm": {
 				Type:    framework.TypeString,
 				Default: "sha2-256",
 				Description: `Algorithm to use (POST body parameter). Valid values are:
@@ -65,12 +64,12 @@ func (b *backend) pathHMAC() *framework.Path {
 Defaults to "sha2-256".`,
 			},
 
-			"urlalgorithm": &framework.FieldSchema{
+			"urlalgorithm": {
 				Type:        framework.TypeString,
 				Description: `Algorithm to use (POST URL parameter)`,
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for generating the HMAC.
 Must be 0 (for latest) or a value greater than or equal
@@ -147,7 +146,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -184,7 +183,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 			continue
 		}
 
-		var hf = hmac.New(hashAlg, key)
+		hf := hmac.New(hashAlg, key)
 		hf.Write(input)
 		retBytes := hf.Sum(nil)
 
@@ -218,7 +217,6 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	name := d.Get("name").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
@@ -254,7 +252,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -349,7 +347,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 			continue
 		}
 
-		var hf = hmac.New(hashAlg, key)
+		hf := hmac.New(hashAlg, key)
 		hf.Write(input)
 		retBytes := hf.Sum(nil)
 		response[i].Valid = hmac.Equal(retBytes, verBytes)

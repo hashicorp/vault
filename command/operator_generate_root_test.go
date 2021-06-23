@@ -231,7 +231,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		t.Parallel()
 
 		pgpKey := "keybase:hashicorp"
-		pgpFingerprint := "91a6e7f85d05c65630bef18951852d87348ffc4c"
+		pgpFingerprint := "c874011f0ab405110d02105534365d9472d7468f"
 
 		client, closer := testVaultServer(t)
 		defer closer()

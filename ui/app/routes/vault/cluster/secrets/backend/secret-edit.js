@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
-import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
@@ -95,6 +95,7 @@ export default Route.extend(UnloadModelRoute, {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
+      database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
@@ -128,7 +129,7 @@ export default Route.extend(UnloadModelRoute, {
     // if it didn't fail the server read, and the version is not attached to the metadata,
     // this should 404
     if (!version && secretModel.failedServerRead !== true) {
-      let error = new DS.AdapterError();
+      let error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }
@@ -227,6 +228,9 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);
     }
+    if (modelType === 'database/role') {
+      secret = secret.replace('role/', '');
+    }
     let secretModel;
 
     let capabilities = this.capabilities(secret, modelType);
@@ -259,6 +263,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     const preferAdvancedEdit =
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
     const backendType = this.backendType();
     model.secret.setProperties({ backend });
@@ -297,6 +302,7 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let { mode, model } = this.controller;
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();

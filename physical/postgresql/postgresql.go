@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	log "github.com/hashicorp/go-hclog"
@@ -43,8 +42,10 @@ var _ physical.Backend = (*PostgreSQLBackend)(nil)
 // With distinction using central postgres clock, hereby avoiding
 // possible issues with multiple clocks
 //
-var _ physical.HABackend = (*PostgreSQLBackend)(nil)
-var _ physical.Lock = (*PostgreSQLLock)(nil)
+var (
+	_ physical.HABackend = (*PostgreSQLBackend)(nil)
+	_ physical.Lock      = (*PostgreSQLLock)(nil)
+)
 
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.
@@ -106,7 +107,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -120,7 +121,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if maxIdleConnsIsSet {
 		maxIdleConns, err = strconv.Atoi(maxIdleConnsStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_idle_connections parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnsStr)
@@ -130,7 +131,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to connect to postgres: {{err}}", err)
+		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 
@@ -142,7 +143,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	var upsertAvailable bool
 	upsertAvailableQuery := "SELECT current_setting('server_version_num')::int >= 90500"
 	if err := db.QueryRow(upsertAvailableQuery).Scan(&upsertAvailable); err != nil {
-		return nil, errwrap.Wrapf("failed to check for native upsert: {{err}}", err)
+		return nil, fmt.Errorf("failed to check for native upsert: %w", err)
 	}
 
 	if !upsertAvailable && conf["ha_enabled"] == "true" {
@@ -311,7 +312,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
 		keys = append(keys, key)

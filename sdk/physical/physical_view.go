@@ -6,9 +6,7 @@ import (
 	"strings"
 )
 
-var (
-	ErrRelativePath = errors.New("relative paths not supported")
-)
+var ErrRelativePath = errors.New("relative paths not supported")
 
 // View represents a prefixed view of a physical backend
 type View struct {
@@ -48,9 +46,7 @@ func (v *View) Get(ctx context.Context, key string) (*Entry, error) {
 	if entry == nil {
 		return nil, nil
 	}
-	if entry != nil {
-		entry.Key = v.truncateKey(entry.Key)
-	}
+	entry.Key = v.truncateKey(entry.Key)
 
 	return &Entry{
 		Key:   entry.Key,

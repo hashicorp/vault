@@ -80,12 +80,14 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 		}
 
 		for {
-			if backend.AppliedIndex() >= 2 {
+			if backend.raft.AppliedIndex() >= 2 {
 				break
 			}
 		}
 
 	}
+
+	backend.DisableAutopilot()
 
 	return backend, raftDir
 }
@@ -156,7 +158,7 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 		return fmt.Errorf("configs did not match: %+v != %+v", config1, config2)
 	}
 
-	return compareDBs(t, fsm1.db, fsm2.db, false)
+	return compareDBs(t, fsm1.getDB(), fsm2.getDB(), false)
 }
 
 func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
@@ -182,7 +184,6 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 
 		return nil
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +258,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	rand.Read(value)
 
 	txns := []*physical.TxnEntry{
-		&physical.TxnEntry{
+		{
 			Operation: physical.PutOperation,
 			Entry: &physical.Entry{
 				Key:   "foo",
@@ -333,6 +334,44 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 	compareFSMs(t, raft1.fsm, raft3.fsm)
 }
 
+func TestRaft_GetOfflineConfig(t *testing.T) {
+	// Create 3 raft nodes
+	raft1, dir1 := getRaft(t, true, true)
+	raft2, dir2 := getRaft(t, false, true)
+	raft3, dir3 := getRaft(t, false, true)
+	defer os.RemoveAll(dir1)
+	defer os.RemoveAll(dir2)
+	defer os.RemoveAll(dir3)
+
+	// Add them all to the cluster
+	addPeer(t, raft1, raft2)
+	addPeer(t, raft1, raft3)
+
+	// Add some data into the FSM
+	physical.ExerciseBackend(t, raft1)
+
+	time.Sleep(10 * time.Second)
+
+	// Spin down the raft cluster and check that GetConfigurationOffline
+	// returns 3 voters
+	raft3.TeardownCluster(nil)
+	raft2.TeardownCluster(nil)
+	raft1.TeardownCluster(nil)
+
+	conf, err := raft1.GetConfigurationOffline()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conf.Servers) != 3 {
+		t.Fatalf("three raft nodes existed but we only see %d", len(conf.Servers))
+	}
+	for _, s := range conf.Servers {
+		if s.Voter != true {
+			t.Fatalf("one of the nodes is not a voter")
+		}
+	}
+}
+
 func TestRaft_Recovery(t *testing.T) {
 	// Create 4 raft nodes
 	raft1, dir1 := getRaft(t, true, true)
@@ -389,15 +428,15 @@ func TestRaft_Recovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -497,7 +536,6 @@ func TestRaft_Backend_Performance(t *testing.T) {
 	if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
 		t.Fatalf("bad config: %v", localConfig)
 	}
-
 }
 
 func BenchmarkDB_Puts(b *testing.B) {

@@ -1,3 +1,3 @@
-import TransformBase from './transform-edit-base';
+import TransformationEdit from './transformation-edit';
 
-export default TransformBase.extend({});
+export default TransformationEdit.extend({});

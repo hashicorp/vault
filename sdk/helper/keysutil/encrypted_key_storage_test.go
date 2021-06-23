@@ -234,7 +234,6 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 	if data != nil {
 		t.Fatal("data should be nil")
 	}
-
 }
 
 func BenchmarkEncrytedKeyStorage_List(b *testing.B) {

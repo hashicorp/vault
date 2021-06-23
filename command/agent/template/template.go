@@ -7,8 +7,12 @@ package template
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"strings"
+
+	"go.uber.org/atomic"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctlogging "github.com/hashicorp/consul-template/logging"
@@ -23,10 +27,10 @@ import (
 type ServerConfig struct {
 	Logger hclog.Logger
 	// Client        *api.Client
-	VaultConf     *config.Vault
-	ExitAfterAuth bool
+	AgentConfig *config.Config
 
-	Namespace string
+	ExitAfterAuth bool
+	Namespace     string
 
 	// LogLevel is needed to set the internal Consul Template Runner's log level
 	// to match the log level of Vault Agent. The internal Runner creates it's own
@@ -45,17 +49,20 @@ type Server struct {
 	config *ServerConfig
 
 	// runner is the consul-template runner
-	runner *manager.Runner
+	runner        *manager.Runner
+	runnerStarted *atomic.Bool
 
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
 
-	// lookupMap is alist of templates indexed by their consul-template ID. This
+	// lookupMap is a list of templates indexed by their consul-template ID. This
 	// is used to ensure all Vault templates have been rendered before returning
 	// from the runner in the event we're using exit after auth.
 	lookupMap map[string][]*ctconfig.TemplateConfig
 
-	DoneCh        chan struct{}
+	DoneCh  chan struct{}
+	stopped *atomic.Bool
+
 	logger        hclog.Logger
 	exitAfterAuth bool
 }
@@ -64,6 +71,9 @@ type Server struct {
 func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
 		DoneCh:        make(chan struct{}),
+		stopped:       atomic.NewBool(false),
+		runnerStarted: atomic.NewBool(false),
+
 		logger:        conf.Logger,
 		config:        conf,
 		exitAfterAuth: conf.ExitAfterAuth,
@@ -74,23 +84,23 @@ func NewServer(conf *ServerConfig) *Server {
 // Run kicks off the internal Consul Template runner, and listens for changes to
 // the token from the AuthHandler. If Done() is called on the context, shut down
 // the Runner and return
-func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) {
-	latestToken := new(string)
-	ts.logger.Info("starting template server")
-	// defer the closing of the DoneCh
-	defer func() {
-		ts.logger.Info("template server stopped")
-		close(ts.DoneCh)
-	}()
-
+func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ctconfig.TemplateConfig) error {
 	if incoming == nil {
-		panic("incoming channel is nil")
+		return errors.New("template server: incoming channel is nil")
 	}
 
-	// If there are no templates, return
+	latestToken := new(string)
+	ts.logger.Info("starting template server")
+
+	defer func() {
+		ts.logger.Info("template server stopped")
+	}()
+
+	// If there are no templates, we wait for context cancellation and then return
 	if len(templates) == 0 {
 		ts.logger.Info("no templates found")
-		return
+		<-ctx.Done()
+		return nil
 	}
 
 	// construct a consul template vault config based the agents vault
@@ -98,15 +108,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
-		ts.logger.Error("template server failed to generate runner config", "error", runnerConfigErr)
-		return
+		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
 	var err error
 	ts.runner, err = manager.NewRunner(runnerConfig, false)
 	if err != nil {
-		ts.logger.Error("template server failed to create", "error", err)
-		return
+		return fmt.Errorf("template server failed to create: %w", err)
 	}
 
 	// Build the lookup map using the id mapping from the Template runner. This is
@@ -130,11 +138,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		select {
 		case <-ctx.Done():
 			ts.runner.Stop()
-			return
+			return nil
 
 		case token := <-incoming:
 			if token != *latestToken {
 				ts.logger.Info("template server received new token")
+
+				// If the runner was previously started and we intend to exit
+				// after auth, do not restart the runner if a new token is
+				// received.
+				if ts.exitAfterAuth && ts.runnerStarted.Load() {
+					ts.logger.Info("template server not restarting with new token with exit_after_auth set to true")
+					continue
+				}
+
 				ts.runner.Stop()
 				*latestToken = token
 				ctv := ctconfig.Config{
@@ -142,6 +159,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 						Token: latestToken,
 					},
 				}
+
 				runnerConfig = runnerConfig.Merge(&ctv)
 				var runnerErr error
 				ts.runner, runnerErr = manager.NewRunner(runnerConfig, false)
@@ -149,17 +167,26 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 					ts.logger.Error("template server failed with new Vault token", "error", runnerErr)
 					continue
 				}
+				ts.runnerStarted.CAS(false, true)
 				go ts.runner.Start()
 			}
+
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
+
+			// Return after stopping the runner if exit on retry failure was
+			// specified
+			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+				return fmt.Errorf("template server: %w", err)
+			}
+
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
-				ts.logger.Error("template server failed to create", "error", err)
-				return
+				return fmt.Errorf("template server failed to create: %w", err)
 			}
 			go ts.runner.Start()
+
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			events := ts.runner.RenderEvents()
@@ -185,9 +212,15 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				// return. The deferred closing of the DoneCh will allow agent to
 				// continue with closing down
 				ts.runner.Stop()
-				return
+				return nil
 			}
 		}
+	}
+}
+
+func (ts *Server) Stop() {
+	if ts.stopped.CAS(false, true) {
+		close(ts.DoneCh)
 	}
 }
 
@@ -201,7 +234,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// Always set these to ensure nothing is picked up from the environment
 	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
 	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.VaultConf.Address
+	conf.Vault.Address = &sc.AgentConfig.Vault.Address
 
 	if sc.Namespace != "" {
 		conf.Vault.Namespace = &sc.Namespace
@@ -217,17 +250,69 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		ServerName: pointerutil.StringPtr(""),
 	}
 
-	if strings.HasPrefix(sc.VaultConf.Address, "https") || sc.VaultConf.CACert != "" {
-		skipVerify := sc.VaultConf.TLSSkipVerify
+	// The cache does its own retry management based on sc.AgentConfig.Retry,
+	// so we only want to set this up for templating if we're not routing
+	// templating through the cache.  We do need to assign something to Retry
+	// though or it will use its default of 12 retries.
+	var attempts int
+	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
+		attempts = sc.AgentConfig.Vault.Retry.NumRetries
+	}
+
+	// Use the cache if available or fallback to the Vault server values.
+	// For now we're only routing templating through the cache when persistence
+	// is enabled. The templating engine and the cache have some inconsistencies
+	// that need to be fixed for 1.7x/1.8
+	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
+		attempts = 0
+
+		// If we don't want exit on template retry failure (i.e. unlimited
+		// retries), let consul-template handle retry and backoff logic.
+		//
+		// Note: This is a fixed value (12) that ends up being a multiplier to
+		// retry.num_retires (i.e. 12 * N total retries per runner restart).
+		// Since we are performing retries indefinitely this base number helps
+		// prevent agent from spamming Vault if retry.num_retries is set to a
+		// low value by forcing exponential backoff to be high towards the end
+		// of retries during the process.
+		if sc.AgentConfig.TemplateConfig != nil && !sc.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+			attempts = ctconfig.DefaultRetryAttempts
+		}
+
+		scheme := "unix://"
+		if sc.AgentConfig.Listeners[0].Type == "tcp" {
+			scheme = "https://"
+			if sc.AgentConfig.Listeners[0].TLSDisable {
+				scheme = "http://"
+			}
+		}
+		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
+		conf.Vault.Address = &address
+
+		// Skip verification if its using the cache because they're part of the same agent.
+		if scheme == "https://" {
+			if sc.AgentConfig.Listeners[0].TLSRequireAndVerifyClientCert {
+				return nil, errors.New("template server cannot use local cache when mTLS is enabled")
+			}
+			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
+		}
+	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
+		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify
 		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled: pointerutil.BoolPtr(true),
-			Verify:  &verify,
-			Cert:    &sc.VaultConf.ClientCert,
-			Key:     &sc.VaultConf.ClientKey,
-			CaCert:  &sc.VaultConf.CACert,
-			CaPath:  &sc.VaultConf.CAPath,
+			Enabled:    pointerutil.BoolPtr(true),
+			Verify:     &verify,
+			Cert:       &sc.AgentConfig.Vault.ClientCert,
+			Key:        &sc.AgentConfig.Vault.ClientKey,
+			CaCert:     &sc.AgentConfig.Vault.CACert,
+			CaPath:     &sc.AgentConfig.Vault.CAPath,
+			ServerName: &sc.AgentConfig.Vault.TLSServerName,
 		}
+	}
+	enabled := attempts > 0
+	conf.Vault.Retry = &ctconfig.RetryConfig{
+		Attempts: &attempts,
+		Enabled:  &enabled,
 	}
 
 	conf.Finalize()

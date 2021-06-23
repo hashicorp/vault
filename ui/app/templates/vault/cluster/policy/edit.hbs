@@ -2,10 +2,10 @@
   <p.top>
     <nav class="breadcrumb">
       <li>
-        {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
+        <LinkTo @route="vault.cluster.policies" @model={{policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
           {{uppercase policyType}} policies
-        {{/link-to}}
+        </LinkTo>
       </li>
     </nav>
   </p.top>
@@ -45,23 +45,19 @@
 {{/if}}
 <form {{action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
-    {{message-error model=model}}
+    <MessageError @model={{model}} />
     <NamespaceReminder @mode="edit" @noun="policy" />
-    <label for="policy" class="is-label">Policy</label>
     <div class="field">
-      {{ivy-codemirror
-        value=model.policy
-        valueUpdated=(action (mut model.policy))
-        options=(hash
-          lineNumbers=true
-          tabSize=2
+      <JsonEditor
+        @title="Policy"
+        @value={{model.policy}} 
+        @valueUpdated={{action (mut model.policy)}} 
+        @options={{hash
           mode='ruby'
-          theme='hashi'
           extraKeys=(hash
             Shift-Enter=(action "savePolicy" model)
           )
-        )
-      }}
+        }} />
       <div class="box is-shadowless is-fullwidth has-short-padding">
         <p class="help-text has-text-grey-dark is-size-7">
           You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field
@@ -86,9 +82,9 @@
           </div>
         {{/if}}
         <div class="control">
-          {{#link-to "vault.cluster.policy.show" model.id replace=true class="button"}}
+          <LinkTo @route="vault.cluster.policy.show" @model={{model.id}} @replace={{true}} class="button">
             Cancel
-          {{/link-to}}
+          </LinkTo>
         </div>
       </div>
     </div>

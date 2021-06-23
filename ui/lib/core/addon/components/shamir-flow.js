@@ -31,7 +31,7 @@ export default Component.extend(DEFAULTS, {
 
   init() {
     this._super(...arguments);
-    if (this.get('fetchOnInit')) {
+    if (this.fetchOnInit) {
       this.attemptProgress();
     }
   },
@@ -42,6 +42,7 @@ export default Component.extend(DEFAULTS, {
   },
 
   onUpdate() {},
+  onLicenseError() {},
   onShamirSuccess() {},
   // can be overridden w/an attr
   isComplete(data) {
@@ -88,6 +89,10 @@ export default Component.extend(DEFAULTS, {
     if (e.httpStatus === 400) {
       this.set('errors', e.errors);
     } else {
+      // if licensing error, trigger parent method to handle
+      if (e.httpStatus === 500 && e.errors?.join(' ').includes('licensing is in an invalid state')) {
+        this.onLicenseError();
+      }
       throw e;
     }
   },
@@ -104,13 +109,14 @@ export default Component.extend(DEFAULTS, {
         return 'providePGPKey';
       }
     }
+    return '';
   }),
 
   extractData(data) {
-    const isGenerate = this.get('generateAction');
-    const hasStarted = this.get('started');
-    const usePGP = this.get('generateWithPGP');
-    const nonce = this.get('nonce');
+    const isGenerate = this.generateAction;
+    const hasStarted = this.started;
+    const usePGP = this.generateWithPGP;
+    const nonce = this.nonce;
 
     if (!isGenerate || hasStarted) {
       if (nonce) {
@@ -132,10 +138,10 @@ export default Component.extend(DEFAULTS, {
 
   attemptProgress(data) {
     const checkStatus = data ? false : true;
-    let action = this.get('action');
+    let action = this.action;
     action = action && camelize(action);
     this.set('loading', true);
-    const adapter = this.get('store').adapterFor('cluster');
+    const adapter = this.store.adapterFor('cluster');
     const method = adapter[action];
 
     method
@@ -170,7 +176,7 @@ export default Component.extend(DEFAULTS, {
     },
 
     savePGPKey() {
-      if (this.get('pgp_key')) {
+      if (this.pgp_key) {
         this.set('haveSavedPGPKey', true);
       }
     },

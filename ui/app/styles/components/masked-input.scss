@@ -1,11 +1,10 @@
+.masked-font {
+  color: $ui-gray-300;
+}
+
 .masked-input {
   display: flex;
   align-items: center;
-}
-
-.masked-input.masked.display-only,
-.masked-input:not(.masked) {
-  align-items: start;
 }
 
 .has-label .masked-input {
@@ -67,7 +66,6 @@
     height: auto;
     line-height: 1rem;
     min-width: $spacing-l;
-    z-index: 100;
     border: 0;
     box-shadow: none;
     color: $grey-light;
@@ -89,10 +87,6 @@
 
 .masked-input.masked .masked-value {
   color: $grey-light;
-}
-
-.masked-input:not(.masked) .masked-input-toggle {
-  color: $blue;
 }
 
 .masked-input .input:focus + .masked-input-toggle {

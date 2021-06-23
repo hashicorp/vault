@@ -28,17 +28,19 @@ export default Component.extend({
   secondIconType: null,
   progressBar: null,
   yieldWithoutColumn: false,
+  marginless: false,
   classNameBindings: ['containerClass'],
 
-  containerClass: computed('type', function() {
-    return 'message ' + messageTypes([this.get('type')]).class;
+  containerClass: computed('type', 'marginless', function() {
+    const base = this.marginless ? 'message message-marginless ' : 'message ';
+    return base + messageTypes([this.type]).class;
   }),
 
   alertType: computed('type', function() {
-    return messageTypes([this.get('type')]);
+    return messageTypes([this.type]);
   }),
 
   secondAlertType: computed('secondIconType', function() {
-    return messageTypes([this.get('secondIconType')]);
+    return messageTypes([this.secondIconType]);
   }),
 });

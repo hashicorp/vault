@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.13
+go 1.16
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
@@ -47,6 +47,8 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/common v0.9.1
 	github.com/ryanuber/go-glob v1.0.0
+	github.com/stretchr/testify v1.5.1
+	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980

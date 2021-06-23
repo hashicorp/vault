@@ -16,7 +16,7 @@ export default function NotFound() {
   }, [])
 
   return (
-    <div id="p-404">
+    <main id="p-404">
       <h1>Page Not Found</h1>
       <p>
         We&lsquo;re sorry but we can&lsquo;t find the page you&lsquo;re looking
@@ -27,6 +27,6 @@ export default function NotFound() {
           <a>Back to Home</a>
         </Link>
       </p>
-    </div>
+    </main>
   )
 }

@@ -96,7 +96,7 @@ func TLSConfig(
 				}
 			}
 		}
-		return nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
+		return nil, nil, fmt.Errorf("error loading TLS cert: %w", err)
 	}
 
 PASSPHRASECORRECT:
@@ -111,10 +111,23 @@ PASSPHRASECORRECT:
 		l.TLSMinVersion = "tls12"
 	}
 
+	if l.TLSMaxVersion == "" {
+		l.TLSMaxVersion = "tls13"
+	}
+
 	var ok bool
 	tlsConf.MinVersion, ok = tlsutil.TLSLookup[l.TLSMinVersion]
 	if !ok {
 		return nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMinVersion)
+	}
+
+	tlsConf.MaxVersion, ok = tlsutil.TLSLookup[l.TLSMaxVersion]
+	if !ok {
+		return nil, nil, fmt.Errorf("'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMaxVersion)
+	}
+
+	if tlsConf.MaxVersion < tlsConf.MinVersion {
+		return nil, nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
 	if len(l.TLSCipherSuites) > 0 {
@@ -129,7 +142,7 @@ PASSPHRASECORRECT:
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
-					return nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+					return nil, nil, fmt.Errorf("invalid value for 'tls_cipher_suites': %w", err)
 				}
 				badCiphers = append(badCiphers, cipherStr)
 			}
@@ -154,7 +167,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 			caPool := x509.NewCertPool()
 			data, err := ioutil.ReadFile(l.TLSClientCAFile)
 			if err != nil {
-				return nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
+				return nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {

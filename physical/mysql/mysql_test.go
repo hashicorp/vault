@@ -59,6 +59,7 @@ func TestMySQLPlaintextCatch(t *testing.T) {
 		t.Fatalf("No warning of plaintext credentials occurred")
 	}
 }
+
 func TestMySQLBackend(t *testing.T) {
 	address := os.Getenv("MYSQL_ADDR")
 	if address == "" {
@@ -88,8 +89,8 @@ func TestMySQLBackend(t *testing.T) {
 		"username":                     username,
 		"password":                     password,
 		"plaintext_connection_allowed": "true",
+		"max_connection_lifetime":      "1",
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -162,7 +163,7 @@ func TestMySQLHABackend(t *testing.T) {
 // https://github.com/hashicorp/vault/issues/8203 and patched in
 // https://github.com/hashicorp/vault/pull/8229
 func TestMySQLHABackend_LockFailPanic(t *testing.T) {
-	cleanup, connURL := mysqlhelper.PrepareMySQLTestContainer(t, false, "secret")
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
 
 	cfg, err := mysql.ParseDSN(connURL)
 	if err != nil {
@@ -232,9 +233,8 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 		t.Fatalf("lock 2: %v", err)
 	}
 
-	// Cancel attempt in 50 msec
 	stopCh := make(chan struct{})
-	time.AfterFunc(3*time.Second, func() {
+	time.AfterFunc(10*time.Second, func() {
 		close(stopCh)
 	})
 
@@ -255,14 +255,13 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	// trigger the panic shown in https://github.com/hashicorp/vault/issues/8203
 	cleanup()
 
-	// Cancel attempt in 50 msec
 	stopCh2 := make(chan struct{})
-	time.AfterFunc(3*time.Second, func() {
+	time.AfterFunc(10*time.Second, func() {
 		close(stopCh2)
 	})
 	leaderCh2, err = lock2.Lock(stopCh2)
 	if err == nil {
-		t.Fatalf("expected error, got none")
+		t.Fatalf("expected error, got none, leaderCh2=%v", leaderCh2)
 	}
 }
 

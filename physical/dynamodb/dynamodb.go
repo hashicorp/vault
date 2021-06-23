@@ -2,6 +2,7 @@ package dynamodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -21,12 +22,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
+
+	"github.com/cenkalti/backoff/v3"
 )
 
 const (
@@ -70,9 +72,11 @@ const (
 )
 
 // Verify DynamoDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*DynamoDBBackend)(nil)
-var _ physical.HABackend = (*DynamoDBBackend)(nil)
-var _ physical.Lock = (*DynamoDBLock)(nil)
+var (
+	_ physical.Backend   = (*DynamoDBBackend)(nil)
+	_ physical.HABackend = (*DynamoDBBackend)(nil)
+	_ physical.Lock      = (*DynamoDBLock)(nil)
+)
 
 // DynamoDBBackend is a physical backend that stores data in
 // a DynamoDB table. It can be run in high-availability mode
@@ -174,7 +178,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
 	}
-	var dynamodbMaxRetry = aws.UseServiceDefaultRetries
+	dynamodbMaxRetry := aws.UseServiceDefaultRetries
 	if dynamodbMaxRetryString != "" {
 		var err error
 		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)
@@ -187,6 +191,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		AccessKey:    conf["access_key"],
 		SecretKey:    conf["secret_key"],
 		SessionToken: conf["session_token"],
+		Logger:       logger,
 	}
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
@@ -207,7 +212,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 
 	awsSession, err := session.NewSession(awsConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("Could not establish AWS session: {{err}}", err)
+		return nil, fmt.Errorf("Could not establish AWS session: %w", err)
 	}
 
 	client := dynamodb.New(awsSession)
@@ -227,7 +232,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -254,7 +259,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 	}
 	item, err := dynamodbattribute.MarshalMap(record)
 	if err != nil {
-		return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
+		return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 	}
 	requests := []*dynamodb.WriteRequest{{
 		PutRequest: &dynamodb.PutRequest{
@@ -269,7 +274,7 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		}
 		item, err := dynamodbattribute.MarshalMap(record)
 		if err != nil {
-			return errwrap.Wrapf("could not convert prefix record to DynamoDB item: {{err}}", err)
+			return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 		}
 		requests = append(requests, &dynamodb.WriteRequest{
 			PutRequest: &dynamodb.PutRequest{
@@ -496,15 +501,40 @@ func (d *DynamoDBBackend) HAEnabled() bool {
 func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) error {
 	for len(requests) > 0 {
 		batchSize := int(math.Min(float64(len(requests)), 25))
-		batch := requests[:batchSize]
+		batch := map[string][]*dynamodb.WriteRequest{d.table: requests[:batchSize]}
 		requests = requests[batchSize:]
 
+		var err error
+
 		d.permitPool.Acquire()
-		_, err := d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
-			RequestItems: map[string][]*dynamodb.WriteRequest{
-				d.table: batch,
-			},
-		})
+
+		boff := backoff.NewExponentialBackOff()
+		boff.MaxElapsedTime = 600 * time.Second
+
+		for len(batch) > 0 {
+			var output *dynamodb.BatchWriteItemOutput
+			output, err = d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
+				RequestItems: batch,
+			})
+
+			if err != nil {
+				break
+			}
+
+			if len(output.UnprocessedItems) == 0 {
+				break
+			} else {
+				duration := boff.NextBackOff()
+				if duration != backoff.Stop {
+					batch = output.UnprocessedItems
+					time.Sleep(duration)
+				} else {
+					err = errors.New("dynamodb: timeout handling UnproccessedItems")
+					break
+				}
+			}
+		}
+
 		d.permitPool.Release()
 		if err != nil {
 			return err

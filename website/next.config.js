@@ -1,27 +1,17 @@
 const withHashicorp = require('@hashicorp/nextjs-scripts')
-const path = require('path')
+const redirects = require('./redirects.next')
 
 module.exports = withHashicorp({
-  defaultLayout: true,
-  transpileModules: ['is-absolute-url', '@hashicorp/react-mega-nav'],
-  mdx: { resolveIncludes: path.join(__dirname, 'pages') },
+  transpileModules: ['@hashicorp/versioned-docs'],
 })({
-  experimental: {
-    modern: true,
-    rewrites: () => [
-      {
-        source: '/api/:path*',
-        destination: '/api-docs/:path*',
-      },
-    ],
-    redirects: () => [
-      {
-        source: '/intro',
-        destination: '/intro/getting-started',
-        permanent: false,
-      },
-    ],
-  },
+  svgo: { plugins: [{ removeViewBox: false }] },
+  rewrites: () => [
+    {
+      source: '/api/:path*',
+      destination: '/api-docs/:path*',
+    },
+  ],
+  redirects: () => redirects,
   env: {
     HASHI_ENV: process.env.HASHI_ENV || 'development',
     SEGMENT_WRITE_KEY: 'OdSFDq9PfujQpmkZf03dFpcUlywme4sC',

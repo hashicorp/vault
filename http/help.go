@@ -3,7 +3,6 @@ package http
 import (
 	"net/http"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -34,19 +33,12 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
-	req, err := requestAuth(core, r, &logical.Request{
+	req := &logical.Request{
 		Operation:  logical.HelpOperation,
 		Path:       path,
 		Connection: getConnection(r),
-	})
-	if err != nil {
-		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-			respondError(w, http.StatusForbidden, nil)
-			return
-		}
-		respondError(w, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err))
-		return
 	}
+	requestAuth(r, req)
 
 	resp, err := core.HandleRequest(r.Context(), req)
 	if err != nil {

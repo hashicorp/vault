@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
@@ -40,7 +42,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 			},
 		},
 	}
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -62,14 +64,17 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsdAddr:              "bar",
-				StatsiteAddr:            "foo",
-				DisableHostname:         false,
-				DogStatsDAddr:           "127.0.0.1:7254",
-				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
-				PrometheusRetentionTime: 30 * time.Second,
-				UsageGaugePeriod:        5 * time.Minute,
-				MaximumGaugeCardinality: 125,
+				StatsdAddr:                  "bar",
+				StatsiteAddr:                "foo",
+				DisableHostname:             false,
+				DogStatsDAddr:               "127.0.0.1:7254",
+				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime:     30 * time.Second,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     125,
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  168,
+				LeaseMetricsNameSpaceLabels: false,
 			},
 
 			DisableMlock: true,
@@ -142,10 +147,12 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		APIAddr:     "top_level_api_addr",
 		ClusterAddr: "top_level_cluster_addr",
 	}
+	addExpectedEntConfig(expected, []string{})
+
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -190,6 +197,9 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				CirconusBrokerID:                   "0",
 				CirconusBrokerSelectTag:            "dc:sfo",
 				PrometheusRetentionTime:            30 * time.Second,
+				LeaseMetricsEpsilon:                time.Hour,
+				NumLeaseMetricsTimeBuckets:         168,
+				LeaseMetricsNameSpaceLabels:        false,
 			},
 		},
 
@@ -226,18 +236,20 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 		DisableSealWrap:    true,
 		DisableSealWrapRaw: true,
 	}
+	addExpectedEntConfig(expected, []string{"http"})
+
 	if entropy != nil {
 		expected.Entropy = entropy
 	}
-	config.Listeners[0].RawConfig = nil
-	config.Listeners[1].RawConfig = nil
+
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
 }
 
 func testParseEntropy(t *testing.T, oss bool) {
-	var tests = []struct {
+	tests := []struct {
 		inConfig   string
 		outErr     error
 		outEntropy configutil.Entropy
@@ -247,7 +259,7 @@ func testParseEntropy(t *testing.T, oss bool) {
 				mode = "augmentation"
 				}`,
 			outErr:     nil,
-			outEntropy: configutil.Entropy{configutil.EntropyAugmentation},
+			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
 		},
 		{
 			inConfig: `entropy "seal" {
@@ -345,7 +357,7 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 		EnableUIRaw:     true,
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -367,15 +379,18 @@ func testLoadConfigFile(t *testing.T) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsdAddr:              "bar",
-				StatsiteAddr:            "foo",
-				DisableHostname:         false,
-				UsageGaugePeriod:        5 * time.Minute,
-				MaximumGaugeCardinality: 100,
-				DogStatsDAddr:           "127.0.0.1:7254",
-				DogStatsDTags:           []string{"tag_1:val_1", "tag_2:val_2"},
-				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
-				MetricsPrefix:           "myprefix",
+				StatsdAddr:                  "bar",
+				StatsiteAddr:                "foo",
+				DisableHostname:             false,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     100,
+				DogStatsDAddr:               "127.0.0.1:7254",
+				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
+				MetricsPrefix:               "myprefix",
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  168,
+				LeaseMetricsNameSpaceLabels: false,
 			},
 
 			DisableMlock: true,
@@ -428,10 +443,69 @@ func testLoadConfigFile(t *testing.T) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		EnableResponseHeaderHostname:      true,
+		EnableResponseHeaderHostnameRaw:   true,
+		EnableResponseHeaderRaftNodeID:    true,
+		EnableResponseHeaderRaftNodeIDRaw: true,
+
+		LicensePath: "/path/to/license",
 	}
-	config.Listeners[0].RawConfig = nil
+
+	addExpectedEntConfig(expected, []string{})
+
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func testUnknownFieldValidation(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := []configutil.ConfigError{
+		{
+			Problem: "unknown or unsupported field bad_value found in configuration",
+			Position: token.Pos{
+				Filename: "./test-fixtures/config.hcl",
+				Offset:   583,
+				Line:     34,
+				Column:   5,
+			},
+		},
+	}
+	errors := config.Validate("./test-fixtures/config.hcl")
+
+	for _, er1 := range errors {
+		found := false
+		if strings.Contains(er1.String(), "sentinel") {
+			//This happens on OSS, and is fine
+			continue
+		}
+		for _, ex := range expected {
+			// TODO: Only test the string, pos may change
+			if ex.Problem == er1.Problem && reflect.DeepEqual(ex.Position, er1.Position) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("found unexpected error: %v", er1.String())
+		}
+	}
+	for _, ex := range expected {
+		found := false
+		for _, er1 := range errors {
+			if ex.Problem == er1.Problem && reflect.DeepEqual(ex.Position, er1.Position) {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("could not find expected error: %v", ex.String())
+		}
 	}
 }
 
@@ -470,6 +544,9 @@ func testLoadConfigFile_json(t *testing.T) {
 				CirconusBrokerID:                   "",
 				CirconusBrokerSelectTag:            "",
 				PrometheusRetentionTime:            configutil.PrometheusDefaultRetentionTime,
+				LeaseMetricsEpsilon:                time.Hour,
+				NumLeaseMetricsTimeBuckets:         168,
+				LeaseMetricsNameSpaceLabels:        false,
 			},
 
 			PidFile:     "./pidfile",
@@ -506,7 +583,10 @@ func testLoadConfigFile_json(t *testing.T) {
 		DisableSealWrap:      true,
 		DisableSealWrapRaw:   true,
 	}
-	config.Listeners[0].RawConfig = nil
+
+	addExpectedEntConfig(expected, []string{})
+
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -530,12 +610,15 @@ func testLoadConfigDir(t *testing.T) {
 			},
 
 			Telemetry: &configutil.Telemetry{
-				StatsiteAddr:            "qux",
-				StatsdAddr:              "baz",
-				DisableHostname:         true,
-				UsageGaugePeriod:        5 * time.Minute,
-				MaximumGaugeCardinality: 100,
-				PrometheusRetentionTime: configutil.PrometheusDefaultRetentionTime,
+				StatsiteAddr:                "qux",
+				StatsdAddr:                  "baz",
+				DisableHostname:             true,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     100,
+				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  168,
+				LeaseMetricsNameSpaceLabels: false,
 			},
 			ClusterName: "testcluster",
 		},
@@ -564,7 +647,10 @@ func testLoadConfigDir(t *testing.T) {
 		MaxLeaseTTL:     10 * time.Hour,
 		DefaultLeaseTTL: 10 * time.Hour,
 	}
-	config.Listeners[0].RawConfig = nil
+
+	addExpectedEntConfig(expected, []string{"http"})
+
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -578,28 +664,31 @@ func testConfig_Sanitized(t *testing.T) {
 	sanitizedConfig := config.Sanitized()
 
 	expected := map[string]interface{}{
-		"api_addr":                     "top_level_api_addr",
-		"cache_size":                   0,
-		"cluster_addr":                 "top_level_cluster_addr",
-		"cluster_cipher_suites":        "",
-		"cluster_name":                 "testcluster",
-		"default_lease_ttl":            10 * time.Hour,
-		"default_max_request_duration": 0 * time.Second,
-		"disable_cache":                true,
-		"disable_clustering":           false,
-		"disable_indexing":             false,
-		"disable_mlock":                true,
-		"disable_performance_standby":  false,
-		"disable_printable_check":      false,
-		"disable_sealwrap":             true,
-		"raw_storage_endpoint":         true,
-		"disable_sentinel_trace":       true,
-		"enable_ui":                    true,
+		"api_addr":                            "top_level_api_addr",
+		"cache_size":                          0,
+		"cluster_addr":                        "top_level_cluster_addr",
+		"cluster_cipher_suites":               "",
+		"cluster_name":                        "testcluster",
+		"default_lease_ttl":                   10 * time.Hour,
+		"default_max_request_duration":        0 * time.Second,
+		"disable_cache":                       true,
+		"disable_clustering":                  false,
+		"disable_indexing":                    false,
+		"disable_mlock":                       true,
+		"disable_performance_standby":         false,
+		"disable_printable_check":             false,
+		"disable_sealwrap":                    true,
+		"raw_storage_endpoint":                true,
+		"disable_sentinel_trace":              true,
+		"enable_ui":                           true,
+		"enable_response_header_hostname":     false,
+		"enable_response_header_raft_node_id": false,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
 			"redirect_addr":      "top_level_api_addr",
-			"type":               "consul"},
+			"type":               "consul",
+		},
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
@@ -654,10 +743,16 @@ func testConfig_Sanitized(t *testing.T) {
 			"stackdriver_project_id":                 "",
 			"stackdriver_debug_logs":                 false,
 			"statsd_address":                         "bar",
-			"statsite_address":                       ""},
+			"statsite_address":                       "",
+			"lease_metrics_epsilon":                  time.Hour,
+			"num_lease_metrics_buckets":              168,
+			"add_lease_metrics_namespace_labels":     false,
+		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	addExpectedEntSanitizedConfig(expected, []string{"http"})
+
+	config.Prune()
 	if diff := deep.Equal(sanitizedConfig, expected); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
@@ -673,8 +768,15 @@ listener "tcp" {
 	tls_key_file = "./certs/server.key"
 	tls_client_ca_file = "./certs/rootca.crt"
 	tls_min_version = "tls12"
+	tls_max_version = "tls13"
 	tls_require_and_verify_client_cert = true
 	tls_disable_client_certs = true
+    telemetry {
+      unauthenticated_metrics_access = true
+    }
+    profiling {
+      unauthenticated_pprof_access = true
+    }
 }`))
 
 	config := Config{
@@ -703,13 +805,20 @@ listener "tcp" {
 					TLSKeyFile:                    "./certs/server.key",
 					TLSClientCAFile:               "./certs/rootca.crt",
 					TLSMinVersion:                 "tls12",
+					TLSMaxVersion:                 "tls13",
 					TLSRequireAndVerifyClientCert: true,
 					TLSDisableClientCerts:         true,
+					Telemetry: configutil.ListenerTelemetry{
+						UnauthenticatedMetricsAccess: true,
+					},
+					Profiling: configutil.ListenerProfiling{
+						UnauthenticatedPProfAccess: true,
+					},
 				},
 			},
 		},
 	}
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -735,7 +844,7 @@ func testParseSeals(t *testing.T) {
 				},
 			},
 			Seals: []*configutil.KMS{
-				&configutil.KMS{
+				{
 					Type:    "pkcs11",
 					Purpose: []string{"many", "purposes"},
 					Config: map[string]string{
@@ -750,7 +859,7 @@ func testParseSeals(t *testing.T) {
 						"generate_key":           "true",
 					},
 				},
-				&configutil.KMS{
+				{
 					Type:     "pkcs11",
 					Purpose:  []string{"single"},
 					Disabled: true,
@@ -769,5 +878,129 @@ func testParseSeals(t *testing.T) {
 			},
 		},
 	}
+	config.Prune()
 	require.Equal(t, config, expected)
+}
+
+func testLoadConfigFileLeaseMetrics(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config5.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:443",
+				},
+			},
+
+			Telemetry: &configutil.Telemetry{
+				StatsdAddr:                  "bar",
+				StatsiteAddr:                "foo",
+				DisableHostname:             false,
+				UsageGaugePeriod:            5 * time.Minute,
+				MaximumGaugeCardinality:     100,
+				DogStatsDAddr:               "127.0.0.1:7254",
+				DogStatsDTags:               []string{"tag_1:val_1", "tag_2:val_2"},
+				PrometheusRetentionTime:     configutil.PrometheusDefaultRetentionTime,
+				MetricsPrefix:               "myprefix",
+				LeaseMetricsEpsilon:         time.Hour,
+				NumLeaseMetricsTimeBuckets:  2,
+				LeaseMetricsNameSpaceLabels: true,
+			},
+
+			DisableMlock: true,
+
+			Entropy: nil,
+
+			PidFile: "./pidfile",
+
+			ClusterName: "testcluster",
+		},
+
+		Storage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "foo",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
+		HAStorage: &Storage{
+			Type:         "consul",
+			RedirectAddr: "snafu",
+			Config: map[string]string{
+				"bar": "baz",
+			},
+			DisableClustering: true,
+		},
+
+		ServiceRegistration: &ServiceRegistration{
+			Type: "consul",
+			Config: map[string]string{
+				"foo": "bar",
+			},
+		},
+
+		DisableCache:             true,
+		DisableCacheRaw:          true,
+		DisablePrintableCheckRaw: true,
+		DisablePrintableCheck:    true,
+		EnableUI:                 true,
+		EnableUIRaw:              true,
+
+		EnableRawEndpoint:    true,
+		EnableRawEndpointRaw: true,
+
+		DisableSealWrap:    true,
+		DisableSealWrapRaw: true,
+
+		MaxLeaseTTL:        10 * time.Hour,
+		MaxLeaseTTLRaw:     "10h",
+		DefaultLeaseTTL:    10 * time.Hour,
+		DefaultLeaseTTLRaw: "10h",
+	}
+
+	addExpectedEntConfig(expected, []string{})
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func testConfigRaftAutopilot(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/raft_autopilot.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	autopilotConfig := `[{"cleanup_dead_servers":true,"last_contact_threshold":"500ms","max_trailing_logs":250,"min_quorum":3,"server_stabilization_time":"10s"}]`
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1:8200",
+				},
+			},
+			DisableMlock: true,
+		},
+
+		Storage: &Storage{
+			Type: "raft",
+			Config: map[string]string{
+				"path":      "/storage/path/raft",
+				"node_id":   "raft1",
+				"autopilot": autopilotConfig,
+			},
+		},
+	}
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
 }

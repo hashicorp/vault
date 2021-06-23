@@ -13,13 +13,14 @@
 # config contains packagespec config for this repo.
 config:
   # product-repo is important to CI providers.
-  product-repo:          git@github.com:hashicorp/vault.git
-  release-repo:          git@github.com:hashicorp/vault-release.git
+  product-repo:          https://github.com/hashicorp/vault.git
+  release-repo:          https://github.com/hashicorp/vault-release.git
   # product-id is used by external systems to identify this product.
   # It can be any unique name, but a golang import path is ideal.
   product-id:            github.com/hashicorp/vault
   circleci-project-slug: gh/hashicorp/vault
   circleci-host:         circleci.com
+  on-publish:            create-github-release
 
 # inputs are a set of environment variables that may affect the set of bytes produced
 # for a given package. Note that a package is a zip file containing the binary, so
@@ -37,7 +38,7 @@ inputs:
     PRODUCT_VERSION: 0.0.0-snapshot
 
     # GO_VERSION is the version of the Go toolchain to use to compile this package.
-    GO_VERSION: 1.14.7
+    GO_VERSION: 1.16.5
 
     # YARN_VERSION is the version of Yarn to install for the UI layer.
     YARN_VERSION: 1.19.1-1
@@ -82,6 +83,7 @@ inputs:
 #
 # NOTE: You MUST NOT use single quotes in the build command, because at present we do no escaping.
 build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/hashicorp/vault/sdk/version;
+  GO111MODULE=on
   go build -v
     -tags ui
     -ldflags "
@@ -101,7 +103,6 @@ build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/has
 # The fully expanded set of packages are written to packages.lock. That file
 # is a useful data source for building CI/CD pipelines.
 packages:
-  - inputs: { GOOS: darwin, GOARCH: 386 }
   - inputs: { GOOS: darwin, GOARCH: amd64 }
   - inputs: { GOOS: freebsd, GOARCH: 386 }
   - inputs: { GOOS: freebsd, GOARCH: amd64 }
@@ -133,16 +134,6 @@ meta:
     # with the CI system's naming conventions.
     BUILD_JOB_NAME: >-
       {{.GOOS}}_{{.GOARCH}}_package
-
-    # POST_PROCESSORS names post processors we may apply to packages
-    # later. It is a space separated list of words, with each word
-    # naming a post-processor to run. These post-processors are not run
-    # during a build, and the code to run them is not contained in this repo.
-    # These post processors are run in the order they are specified in.
-    POST_PROCESSORS: '
-      {{- if and (eq .GOOS "darwin") (eq .GOARCH "amd64")}}apple-notarize {{end -}}
-      {{- if and (eq .GOOS "windows") (eq .GOARCH "amd64")}}microsoft-notarize {{end -}}
-      av-scan'
 
     # BUNDLE_NAME is used in archive filenames, as well as by downstream processes.
     BUNDLE_NAME: "vault_{{.PRODUCT_VERSION}}"
@@ -247,33 +238,18 @@ layers:
   - name: build-ui
     source-include: ui/
     dockerfile: |-
-      RUN cd ui && yarn run build
+      RUN { while true; do sleep 30; echo keepalive; done; } & cd ui && yarn --verbose run build
   - name: build-static-assets
     source-include: Makefile
     dockerfile: |-
       RUN go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
       RUN mkdir -p http && mv bindata_assetfs.go http/
       RUN goimports -w http/bindata_assetfs.go
-  # Up to now, the layers do not vary between packages. This means the layers above
-  # can be built prior to package builds in order to warm the cache and speed up
-  # builds.
-  #
-  # warm-go-build-vendor-cache does vary based on GOOS, GOARCH and CGO_ENABLED though.
-  # This means we should cache this in CI per package build.
-  - name: warm-go-build-vendor-cache
-    source-include: vendor/
-    dockerfile: |-
-      ENV GOOS={{.GOOS}}
-      ENV GOARCH={{.GOARCH}}
-      ENV CGO_ENABLED={{.CGO_ENABLED}}
-      # Try to build vendored packages. We first filter out packages which report
-      # errors in 'go list', because trying to run go build ./vendor/... fails early
-      # if we include them. We also don't care about the exit code here, because
-      # some of the vendored packages may fail to build, but this won't necessarily
-      # mean that the final package will fail to build, and we will still get a
-      # usefully warmed cache.
-      RUN go list -f '{{"{{.ImportPath}}{{if or .Error .DepsErrors}} ERROR{{end}}"}}' ./vendor/... | grep -v ERROR | xargs go build -v || true
+  - name: go-modules
+    source-include: "go.mod go.sum */go.mod */go.sum"
+    dockerfile: |
+      ENV GO111MODULE=on
+      RUN go mod download
   # The final layer must contain all the source code we've not yet included.
   - name: copy-source
-    source-include: .
-    source-exclude: vendor/ ui/
+    source-include: "*.go"

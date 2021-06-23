@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
@@ -52,6 +51,7 @@ func (e extendedSystemViewImpl) ForwardGenericRequest(ctx context.Context, req *
 	// Forward the request if allowed
 	if couldForward(e.core) {
 		ctx = namespace.ContextWithNamespace(ctx, e.mountEntry.Namespace())
+		ctx = logical.IndexStateContext(ctx, &logical.WALState{})
 		ctx = context.WithValue(ctx, ctxKeyForwardedRequestMountAccessor{}, e.mountEntry.Accessor)
 		return forward(ctx, e.core, req)
 	}
@@ -218,7 +218,7 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, plugin
 		return nil, err
 	}
 	if r == nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("{{err}}: %s", name), ErrPluginNotFound)
+		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, name)
 	}
 
 	return r, nil
@@ -336,11 +336,11 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	// Ensure there's a timeout on the context of some sort
 	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
 		var cancel func()
-		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 	}
 
-	policyCfg, err := retrievePasswordPolicy(ctx, d.core.systemBarrierView, policyName)
+	policyCfg, err := d.retrievePasswordPolicy(ctx, policyName)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve password policy: %w", err)
 	}

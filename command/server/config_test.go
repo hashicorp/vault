@@ -1,5 +1,3 @@
-// +build !enterprise
-
 package server
 
 import (
@@ -10,16 +8,8 @@ func TestLoadConfigFile(t *testing.T) {
 	testLoadConfigFile(t)
 }
 
-func TestLoadConfigFile_topLevel(t *testing.T) {
-	testLoadConfigFile_topLevel(t, nil)
-}
-
 func TestLoadConfigFile_json(t *testing.T) {
 	testLoadConfigFile_json(t)
-}
-
-func TestLoadConfigFile_json2(t *testing.T) {
-	testLoadConfigFile_json2(t, nil)
 }
 
 func TestLoadConfigFileIntegerAndBooleanValues(t *testing.T) {
@@ -28,6 +18,10 @@ func TestLoadConfigFileIntegerAndBooleanValues(t *testing.T) {
 
 func TestLoadConfigFileIntegerAndBooleanValuesJson(t *testing.T) {
 	testLoadConfigFileIntegerAndBooleanValuesJson(t)
+}
+
+func TestLoadConfigFileWithLeaseMetricTelemetry(t *testing.T) {
+	testLoadConfigFileLeaseMetrics(t)
 }
 
 func TestLoadConfigDir(t *testing.T) {
@@ -42,14 +36,14 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
-func TestParseEntropy(t *testing.T) {
-	testParseEntropy(t, true)
-}
-
 func TestConfigRaftRetryJoin(t *testing.T) {
 	testConfigRaftRetryJoin(t)
 }
 
 func TestParseSeals(t *testing.T) {
 	testParseSeals(t)
+}
+
+func TestUnknownFieldValidation(t *testing.T) {
+	testUnknownFieldValidation(t)
 }

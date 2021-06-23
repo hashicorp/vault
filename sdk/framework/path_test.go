@@ -94,5 +94,4 @@ func TestPath_Regex(t *testing.T) {
 			t.Fatal(diff)
 		}
 	}
-
 }

@@ -28,15 +28,15 @@ func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "export/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
 		Fields: map[string]*framework.FieldSchema{
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:        framework.TypeString,
 				Description: "Type of key to export (encryption-key, signing-key, hmac-key)",
 			},
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
-			"version": &framework.FieldSchema{
+			"version": {
 				Type:        framework.TypeString,
 				Description: "Version of the key",
 			},

@@ -1,7 +1,7 @@
-# Multi-stage builder to avoid polluting users environment with wrong 
-# architecture binaries.  Since this binary is used in an alpine container, 
+# Multi-stage builder to avoid polluting users environment with wrong
+# architecture binaries.  Since this binary is used in an alpine container,
 # we're explicitly compiling for 'linux/amd64'
-ARG VERSION=1.13.10
+ARG VERSION=1.16.5
 
 FROM golang:${VERSION} AS builder
 
@@ -12,11 +12,11 @@ WORKDIR /go/src/github.com/hashicorp/vault
 COPY . .
 
 RUN make bootstrap \
-  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS='$BUILD_TAGS' VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
+  && CGO_ENABLED=$CGO_ENABLED BUILD_TAGS="${BUILD_TAGS}" VAULT_DEV_BUILD=1 XC_OSARCH='linux/amd64' sh -c "'./scripts/build.sh'"
 
 # Docker Image
 
-FROM alpine:3.10
+FROM alpine:3.13
 
 # Create a vault user and group first so the IDs get set the same way,
 # even as the rest of this may change over time.

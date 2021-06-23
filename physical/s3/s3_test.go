@@ -29,7 +29,9 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 		t.Skip()
 	}
 
-	credsConfig := &awsutil.CredentialsConfig{}
+	logger := logging.NewVaultLogger(log.Debug)
+
+	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
@@ -60,7 +62,7 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	}
 	s3conn := s3.New(sess)
 
-	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	bucket := fmt.Sprintf("vault-s3-testacc-%d", randInt)
 
 	_, err = s3conn.CreateBucket(&s3.CreateBucketInput{
@@ -93,8 +95,6 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 			t.Fatalf("err: %s", err)
 		}
 	}()
-
-	logger := logging.NewVaultLogger(log.Debug)
 
 	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewS3Backend(map[string]string{

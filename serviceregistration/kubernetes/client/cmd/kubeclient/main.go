@@ -30,10 +30,12 @@ import (
 	"github.com/hashicorp/vault/serviceregistration/kubernetes/client"
 )
 
-var callToMake string
-var patchesToAdd string
-var namespace string
-var podName string
+var (
+	callToMake   string
+	patchesToAdd string
+	namespace    string
+	podName      string
+)
 
 func init() {
 	flag.StringVar(&callToMake, "call", "", `the call to make: 'get-pod' or 'patch-pod'`)

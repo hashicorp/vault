@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -526,7 +528,6 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatalf("allowed changing resolve_aws_unique_ids from true to false")
 	}
-
 }
 
 func TestAwsEc2_RoleCrud(t *testing.T) {
@@ -813,7 +814,6 @@ func TestRoleEntryUpgradeV(t *testing.T) {
 }
 
 func TestRoleInitialize(t *testing.T) {
-
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -968,7 +968,6 @@ func TestRoleInitialize(t *testing.T) {
 }
 
 func TestAwsVersion(t *testing.T) {
-
 	before := awsVersion{
 		Version: 42,
 	}
@@ -1009,7 +1008,8 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	}
 
 	// Ensure aws credentials are available locally for testing.
-	credsConfig := &awsutil.CredentialsConfig{}
+	logger := logging.NewVaultLogger(hclog.Debug)
+	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
 		t.Fatal(err)

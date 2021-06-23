@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 )
@@ -273,7 +273,6 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 			conn, err := pq.ParseURL(connURL)
-
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -358,7 +357,6 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 			conn, err := pq.ParseURL(connURL)
-
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -413,7 +411,6 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 			conn, err := pq.ParseURL(connURL)
-
 			if err != nil {
 				t.Fatal(err)
 			}

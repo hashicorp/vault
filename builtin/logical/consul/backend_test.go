@@ -38,12 +38,12 @@ func testBackendConfigAccess(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
 	defer cleanup()
 
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
 	}
 
 	confReq := &logical.Request{
@@ -103,11 +103,12 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
 	defer cleanup()
+
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
 	}
 
 	req := &logical.Request{
@@ -197,7 +198,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-
 }
 
 func testBackendRenewRevoke14(t *testing.T, version string) {
@@ -208,11 +208,12 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
 	defer cleanup()
+
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
 	}
 
 	req := &logical.Request{
@@ -317,11 +318,12 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, "")
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "")
 	defer cleanup()
+
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
 	}
 
 	req := &logical.Request{
@@ -459,11 +461,12 @@ func testBackendManagement(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
 	defer cleanup()
+
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -503,11 +506,12 @@ func testBackendBasic(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL, connToken := consul.PrepareTestContainer(t, version)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version)
 	defer cleanup()
+
 	connData := map[string]interface{}{
-		"address": connURL,
-		"token":   connToken,
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{

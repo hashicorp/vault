@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVListCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVListCommand)(nil)
+var (
+	_ cli.Command             = (*KVListCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVListCommand)(nil)
+)
 
 type KVListCommand struct {
 	*BaseCommand
@@ -73,7 +75,14 @@ func (c *KVListCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
+	// Append trailing slash
+	path := args[0]
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	// Sanitize path
+	path = sanitizePath(path)
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())

@@ -11,6 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -93,6 +94,13 @@ const (
 	// ConfigPath is the physical location where the quota configuration is
 	// persisted.
 	ConfigPath = StoragePrefix + "config"
+
+	// DefaultRateLimitExemptPathsToggle is the path to a toggle that allows us to
+	// determine if a Vault operator explicitly modified the exempt paths set for
+	// rate limit resource quotas. Specifically, when this toggle is false, we can
+	// infer a Vault node is operating with an initial default set and on a subsequent
+	// update to that set, we should not overwrite it on Setup.
+	DefaultRateLimitExemptPathsToggle = StoragePrefix + "default_rate_limit_exempt_paths_toggle"
 )
 
 var (
@@ -104,6 +112,16 @@ var (
 	// rate limit quota being exceeded.
 	ErrRateLimitQuotaExceeded = errors.New("rate limit quota exceeded")
 )
+
+var defaultExemptPaths = []string{
+	"/v1/sys/generate-recovery-token/attempt",
+	"/v1/sys/generate-recovery-token/update",
+	"/v1/sys/generate-root/attempt",
+	"/v1/sys/generate-root/update",
+	"/v1/sys/health",
+	"/v1/sys/seal-status",
+	"/v1/sys/unseal",
+}
 
 // Access provides information to reach back to the quota checker.
 type Access interface {
@@ -136,6 +154,8 @@ type Manager struct {
 
 	// config containing operator preferences and quota behaviors
 	config *Config
+
+	rateLimitPathManager *pathmanager.PathManager
 
 	storage logical.Storage
 	ctx     context.Context
@@ -192,6 +212,11 @@ type Config struct {
 	// EnableRateLimitResponseHeaders dictates if rate limit quota HTTP headers
 	// should be added to responses.
 	EnableRateLimitResponseHeaders bool `json:"enable_rate_limit_response_headers"`
+
+	// RateLimitExemptPaths defines the set of exempt paths used for all rate limit
+	// quotas. Any request path that exists in this set is exempt from rate limiting.
+	// If the set is empty, no paths are exempt.
+	RateLimitExemptPaths []string `json:"rate_limit_exempt_paths"`
 }
 
 // Request contains information required by the quota manager to query and
@@ -223,11 +248,12 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	}
 
 	manager := &Manager{
-		db:         db,
-		logger:     logger,
-		metricSink: ms,
-		config:     new(Config),
-		lock:       new(sync.RWMutex),
+		db:                   db,
+		logger:               logger,
+		metricSink:           ms,
+		rateLimitPathManager: pathmanager.New(),
+		config:               new(Config),
+		lock:                 new(sync.RWMutex),
 	}
 
 	manager.init(walkFunc)
@@ -235,14 +261,16 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	return manager, nil
 }
 
-// SetQuota adds a new quota rule to the db.
+// SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
-// setQuotaLocked should be called with the manager's lock held
+// setQuotaLocked adds or updates a quota rule, modifying the db as well as
+// any runtime elements such as goroutines.
+// It should be called with the write lock held.
 func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
 	if qType == TypeLeaseCount.String() {
 		m.setIsPerfStandby(quota)
@@ -251,13 +279,17 @@ func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota,
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	raw, err := txn.First(qType, "id", quota.quotaID())
+	raw, err := txn.First(qType, indexID, quota.quotaID())
 	if err != nil {
 		return err
 	}
 
 	// If there already exists an entry in the db, remove that first.
 	if raw != nil {
+		quota := raw.(Quota)
+		if err := quota.close(); err != nil {
+			return err
+		}
 		err = txn.Delete(qType, raw)
 		if err != nil {
 			return err
@@ -371,6 +403,7 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 		quotas = append(quotas, raw.(Quota))
 	}
 	if len(quotas) > 1 {
+		m.logger.Debug("conflicting quotas in QuotaByFactors", "matching_quotas", quotas)
 		return nil, fmt.Errorf("conflicting quota definitions detected")
 	}
 	if len(quotas) == 0 {
@@ -420,6 +453,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 			quotas = append(quotas, quota)
 		}
 		if len(quotas) > 1 {
+			m.logger.Debug("conflicting quotas in queryQuota", "matching_quotas", quotas, "args", args)
 			return nil, fmt.Errorf("conflicting quota definitions detected")
 		}
 		if len(quotas) == 0 {
@@ -534,25 +568,85 @@ func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 // SetEnableRateLimitAuditLogging updates the operator preference regarding the
 // audit logging behavior.
 func (m *Manager) SetEnableRateLimitAuditLogging(val bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.setEnableRateLimitAuditLoggingLocked(val)
+}
+
+func (m *Manager) setEnableRateLimitAuditLoggingLocked(val bool) {
 	m.config.EnableRateLimitAuditLogging = val
 }
 
 // SetEnableRateLimitResponseHeaders updates the operator preference regarding
 // the rate limit quota HTTP header behavior.
 func (m *Manager) SetEnableRateLimitResponseHeaders(val bool) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.setEnableRateLimitResponseHeadersLocked(val)
+}
+
+func (m *Manager) setEnableRateLimitResponseHeadersLocked(val bool) {
 	m.config.EnableRateLimitResponseHeaders = val
+}
+
+// SetRateLimitExemptPaths updates the rate limit exempt paths in the Manager's
+// configuration in addition to updating the path manager. Every call to
+// SetRateLimitExemptPaths will wipe out the existing path manager and set the
+// paths based on the provided argument.
+func (m *Manager) SetRateLimitExemptPaths(vals []string) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.setRateLimitExemptPathsLocked(vals)
+}
+
+func (m *Manager) setRateLimitExemptPathsLocked(vals []string) {
+	if vals == nil {
+		vals = []string{}
+	}
+	m.config.RateLimitExemptPaths = vals
+	m.rateLimitPathManager = pathmanager.New()
+	m.rateLimitPathManager.AddPaths(vals)
 }
 
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	return m.config.EnableRateLimitAuditLogging
 }
 
 // RateLimitResponseHeadersEnabled returns if the quota configuration allows for
 // rate limit quota HTTP headers to be added to responses.
 func (m *Manager) RateLimitResponseHeadersEnabled() bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
 	return m.config.EnableRateLimitResponseHeaders
+}
+
+// RateLimitExemptPaths returns the list of exempt paths from all rate limit
+// resource quotas from the Manager's configuration.
+func (m *Manager) RateLimitExemptPaths() []string {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	return m.config.RateLimitExemptPaths
+}
+
+// RateLimitPathExempt returns a boolean dictating if a given path is exempt from
+// any rate limit quota. If not rate limit path manager is defined, false is
+// returned.
+func (m *Manager) RateLimitPathExempt(path string) bool {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if m.rateLimitPathManager == nil {
+		return false
+	}
+
+	return m.rateLimitPathManager.HasPath(path)
 }
 
 // Config returns the operator preferences in the quota manager
@@ -565,19 +659,27 @@ func (m *Manager) Reset() error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	var err error
-	m.db, err = memdb.NewMemDB(dbSchema())
+	err := m.resetCache()
 	if err != nil {
 		return err
 	}
-
 	m.storage = nil
 	m.ctx = nil
 
 	return m.entManager.Reset()
 }
 
-// dbSchema creates a DB schema for holding all the quota rules. It creates a
+// Must be called with the lock held
+func (m *Manager) resetCache() error {
+	db, err := memdb.NewMemDB(dbSchema())
+	if err != nil {
+		return err
+	}
+	m.db = db
+	return nil
+}
+
+// dbSchema creates a DB schema for holding all the quota rules. It creates
 // table for each supported type of quota.
 func dbSchema() *memdb.DBSchema {
 	schema := &memdb.DBSchema{
@@ -658,6 +760,7 @@ func (m *Manager) Invalidate(key string) {
 
 		m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+		m.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
 
 	default:
 		splitKeys := strings.Split(key, "/")
@@ -667,6 +770,11 @@ func (m *Manager) Invalidate(key string) {
 		}
 		qType := splitKeys[0]
 		name := splitKeys[1]
+
+		if qType == TypeLeaseCount.String() && m.isDRSecondary {
+			// lease count invalidation not supported on DR Secondary
+			return
+		}
 
 		// Read quota rule from storage
 		quota, err := Load(m.ctx, m.storage, qType, name)
@@ -741,13 +849,14 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 
 // Setup loads the quota configuration and all the quota rules into the
 // quota manager.
-func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby bool) error {
+func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby, isDRSecondary bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	m.storage = storage
 	m.ctx = ctx
 	m.isPerfStandby = isPerfStandby
+	m.isDRSecondary = isDRSecondary
 
 	// Load the quota configuration from storage and load it into the quota
 	// manager.
@@ -755,29 +864,65 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 	if err != nil {
 		return err
 	}
-	m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 
-	// Load the quota rules for all supported types from storage and load it in
-	// the quota manager.
-	for _, qType := range quotaTypes() {
-		names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+qType+"/"))
-		if err != nil {
-			return nil
+	entry, err := storage.Get(ctx, DefaultRateLimitExemptPathsToggle)
+	if err != nil {
+		return err
+	}
+
+	// Determine if we need to set the default set of exempt paths for rate limit
+	// resource quotas. We use a default set introduced in 1.5 when the toggle
+	// entry does not exist in storage or is false. The toggle is flipped , i.e.
+	// set to true when SetRateLimitExemptPaths is called during a config update.
+	var toggle bool
+	if entry != nil {
+		if err := entry.DecodeJSON(&toggle); err != nil {
+			return err
 		}
-		for _, name := range names {
-			quota, err := Load(ctx, m.storage, qType, name)
-			if err != nil {
-				return err
-			}
+	}
 
-			if quota == nil {
-				continue
-			}
+	exemptPaths := defaultExemptPaths
+	if toggle {
+		exemptPaths = config.RateLimitExemptPaths
+	}
 
-			err = m.setQuotaLocked(ctx, qType, quota, true)
-			if err != nil {
-				return err
-			}
+	m.setEnableRateLimitAuditLoggingLocked(config.EnableRateLimitAuditLogging)
+	m.setEnableRateLimitResponseHeadersLocked(config.EnableRateLimitResponseHeaders)
+	m.setRateLimitExemptPathsLocked(exemptPaths)
+	if err = m.resetCache(); err != nil {
+		return err
+	}
+
+	for _, qType := range quotaTypes() {
+		m.setupQuotaType(ctx, storage, qType)
+	}
+
+	return nil
+}
+
+func (m *Manager) setupQuotaType(ctx context.Context, storage logical.Storage, quotaType string) error {
+	if quotaType == TypeLeaseCount.String() && m.isDRSecondary {
+		m.logger.Trace("lease count quotas are not processed on DR Secondaries")
+		return nil
+	}
+
+	names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+quotaType+"/"))
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		quota, err := Load(ctx, m.storage, quotaType, name)
+		if err != nil {
+			return err
+		}
+
+		if quota == nil {
+			continue
+		}
+
+		err = m.setQuotaLocked(ctx, quotaType, quota, true)
+		if err != nil {
+			return err
 		}
 	}
 

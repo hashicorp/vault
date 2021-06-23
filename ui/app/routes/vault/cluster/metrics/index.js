@@ -1,26 +1,55 @@
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import { hash } from 'rsvp';
+import { getTime } from 'date-fns';
+import { parseDateString } from 'vault/helpers/parse-date-string';
+
+const getActivityParams = ({ start, end }) => {
+  // Expects MM-yyyy format
+  // TODO: minStart, maxEnd
+  let params = {};
+  if (start) {
+    let startDate = parseDateString(start);
+    if (startDate) {
+      // TODO: Replace with formatRFC3339 when date-fns is updated
+      // converts to milliseconds, divide by 1000 to get epoch
+      params.start_time = getTime(startDate) / 1000;
+    }
+  }
+  if (end) {
+    let endDate = parseDateString(end);
+    if (endDate) {
+      // TODO: Replace with formatRFC3339 when date-fns is updated
+      params.end_time = getTime(endDate) / 1000;
+    }
+  }
+  return params;
+};
 
 export default Route.extend(ClusterRoute, {
-  model() {
-    let totalEntities = this.store.queryRecord('metrics/entity', {}).then(response => {
-      return response.entities.total;
-    });
+  queryParams: {
+    start: {
+      refreshModel: true,
+    },
+    end: {
+      refreshModel: true,
+    },
+  },
 
-    let httpsRequests = this.store.queryRecord('metrics/http-requests', {}).then(response => {
-      let reverseArray = response.counters.reverse();
-      return reverseArray;
+  model(params) {
+    let config = this.store.queryRecord('metrics/config', {}).catch(e => {
+      console.debug(e);
+      // swallowing error so activity can show if no config permissions
+      return {};
     });
-
-    let totalTokens = this.store.queryRecord('metrics/token', {}).then(response => {
-      return response.service_tokens.total;
-    });
+    const activityParams = getActivityParams(params);
+    let activity = this.store.queryRecord('metrics/activity', activityParams);
 
     return hash({
-      totalEntities,
-      httpsRequests,
-      totalTokens,
+      queryStart: params.start,
+      queryEnd: params.end,
+      activity,
+      config,
     });
   },
 });
