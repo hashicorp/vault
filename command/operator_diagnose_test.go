@@ -321,14 +321,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 		},
 		{
-			"diagnose_seal_transit_ok",
+			"diagnose_seal_transit_tls_check_fail",
 			[]string{
-				"-config", "./command/server/test-fixtures/diagnose_seal_trasit_tls_check.hcl",
+				"-config", "./server/test-fixtures/diagnose_seal_trasit_tls_check.hcl",
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "transit-tls-checks",
-					Status: diagnose.ErrorStatus,
+					Name:    "seal-transit-tls-checks",
+					Status:  diagnose.ErrorStatus,
+					Message: "Found at least one intermediate cert in a root CA cert",
 				},
 			},
 		},
