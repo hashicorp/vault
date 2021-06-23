@@ -353,7 +353,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		//t.Logf("%#v", *secret)
+		// t.Logf("%#v", *secret)
 		var resp logical.Response
 		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &resp); err != nil {
 			t.Fatal(err)

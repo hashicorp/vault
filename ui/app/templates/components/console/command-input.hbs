@@ -5,11 +5,11 @@
     <Chevron />
   {{/if}}
   <input onkeyup={{action 'handleKeyUp'}} value={{value}} autocomplete="off" spellcheck="false" />
-  {{#tool-tip horizontalPosition="auto-right" verticalPosition=(if isFullscreen "above" "below") as |d|}}
-    {{#d.trigger tagName="button" type="button" class=(concat "button is-compact" (if isFullscreen " active")) click=(action "fullscreen") data-test-tool-tip-trigger=true}}
+  <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if isFullscreen "above" "below"}} as |d|>
+    <d.trigger @tagName="button" @type="button" @class={{concat "button is-compact" (if isFullscreen " active")}} @click={{action "fullscreen"}} @data-test-tool-tip-trigger={{true}}>
     <Icon @size="l" @glyph={{if isFullscreen "expand-less" "expand-more"}} aria-label={{if isFullscreen "Minimize" "Maximize"}} />
-    {{/d.trigger}}
-    {{#d.content class="tool-tip"}}
+    </d.trigger>
+    <d.content @class="tool-tip">
       <div class="box">
         {{#if isFullscreen}}
         Minimize
@@ -17,7 +17,7 @@
         Maximize
         {{/if}}
       </div>
-    {{/d.content}}
-  {{/tool-tip}}
+    </d.content>
+  </ToolTip>
 </div>
 <NamespaceReminder @class="console-reminder" @mode="execute" @noun="command" />

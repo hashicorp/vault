@@ -1,0 +1,8 @@
+### Transform Storage Upgrades Fixed
+
+The Transform Secrets Engine storage upgrade introduced in 1.6.0 introduced
+malformed configuration for transformations configured earlier than 1.6.0,
+resulting in an error using these transformations if Vault is restarted
+after the upgrade.  This issue exists on Vault 1.6.0 through 1.6.3, and is fixed
+in Vault 1.6.4 and 1.7.0. Transformations configured on 1.6.0 or higher are 
+unaffected.

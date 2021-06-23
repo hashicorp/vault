@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
@@ -132,7 +131,6 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
-
 	}
 	defer func() {
 		tx.Rollback()
@@ -438,7 +436,7 @@ $$;`)
 
 	// again, here, we do not stop on error, as we want to remove as
 	// many permissions as possible right now
-	var lastStmtError *multierror.Error //error
+	var lastStmtError *multierror.Error // error
 	for _, query := range revocationStmts {
 		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = multierror.Append(lastStmtError, err)
@@ -447,10 +445,10 @@ $$;`)
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return dbplugin.DeleteUserResponse{}, errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("could not generate revocation statements for all rows: %w", rows.Err())
 	}
 	if lastStmtError != nil {
-		return dbplugin.DeleteUserResponse{}, errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
+		return dbplugin.DeleteUserResponse{}, fmt.Errorf("could not perform all revocation statements: %w", lastStmtError)
 	}
 
 	// Drop this user

@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -635,6 +636,11 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest: []BatchRequestItem{},
 		},
 		{
+			name: "src_key_version_invalid-number-dest",
+			src:  []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "key_version": json.Number("1.1")}},
+			dest: []BatchRequestItem{},
+		},
+		{
 			name: "src_nonce-dest",
 			src:  []interface{}{map[string]interface{}{"nonce": "dGVzdGNvbnRleHQ="}},
 			dest: []BatchRequestItem{},
@@ -679,6 +685,11 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 				map[string]interface{}{"context": "2", "key_version": "666"},
 				map[string]interface{}{"context": "3", "key_version": "1337"},
 			},
+			dest: []BatchRequestItem{},
+		},
+		{
+			name: "src_plaintext-nil-nonce",
+			src:  []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "nonce": "null"}},
 			dest: []BatchRequestItem{},
 		},
 	}

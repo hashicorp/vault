@@ -3,13 +3,17 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
@@ -192,6 +196,64 @@ func TestClientRedirect(t *testing.T) {
 	}
 }
 
+func TestDefaulRetryPolicy(t *testing.T) {
+	cases := map[string]struct {
+		resp      *http.Response
+		err       error
+		expect    bool
+		expectErr error
+	}{
+		"retry on error": {
+			err:    fmt.Errorf("error"),
+			expect: true,
+		},
+		"don't retry connection failures": {
+			err: &url.Error{
+				Err: x509.UnknownAuthorityError{},
+			},
+		},
+		"don't retry on 200": {
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"don't retry on 4xx": {
+			resp: &http.Response{
+				StatusCode: http.StatusBadRequest,
+			},
+		},
+		"don't retry on 501": {
+			resp: &http.Response{
+				StatusCode: http.StatusNotImplemented,
+			},
+		},
+		"retry on 500": {
+			resp: &http.Response{
+				StatusCode: http.StatusInternalServerError,
+			},
+			expect: true,
+		},
+		"retry on 5xx": {
+			resp: &http.Response{
+				StatusCode: http.StatusGatewayTimeout,
+			},
+			expect: true,
+		},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			retry, err := DefaultRetryPolicy(context.Background(), test.resp, test.err)
+			if retry != test.expect {
+				t.Fatalf("expected to retry request: '%t', but actual result was: '%t'", test.expect, retry)
+			}
+			if err != test.expectErr {
+				t.Fatalf("expected error from retry policy: '%s', but actual result was: '%s'", err, test.expectErr)
+			}
+		})
+	}
+}
+
 func TestClientEnvSettings(t *testing.T) {
 	cwd, _ := os.Getwd()
 	oldCACert := os.Getenv(EnvVaultCACert)
@@ -308,8 +370,8 @@ func TestParsingRateOnly(t *testing.T) {
 }
 
 func TestParsingErrorCase(t *testing.T) {
-	var incorrectFormat = "foobar"
-	var _, _, err = parseRateLimit(incorrectFormat)
+	incorrectFormat := "foobar"
+	_, _, err := parseRateLimit(incorrectFormat)
 	if err == nil {
 		t.Error("Expected error, found no error")
 	}
@@ -365,6 +427,8 @@ func TestClone(t *testing.T) {
 		return true, nil
 	}
 	client1.SetCheckRetry(checkRetry)
+
+	client1.SetLogger(hclog.NewNullLogger())
 
 	client1.SetLimiter(5.0, 10)
 	client1.SetMaxRetries(5)

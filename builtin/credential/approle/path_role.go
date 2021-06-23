@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -110,58 +109,58 @@ func rolePaths(b *backend) []*framework.Path {
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role_name"),
 		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
+			"role_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-			"bind_secret_id": &framework.FieldSchema{
+			"bind_secret_id": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
 			},
 
-			"bound_cidr_list": &framework.FieldSchema{
+			"bound_cidr_list": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `Use "secret_id_bound_cidrs" instead.`,
 				Deprecated:  true,
 			},
 
-			"secret_id_bound_cidrs": &framework.FieldSchema{
+			"secret_id_bound_cidrs": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenutil.DeprecationText("token_policies"),
 				Deprecated:  true,
 			},
 
-			"secret_id_num_uses": &framework.FieldSchema{
+			"secret_id_num_uses": {
 				Type: framework.TypeInt,
 				Description: `Number of times a SecretID can access the role, after which the SecretID
 will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
 			},
 
-			"secret_id_ttl": &framework.FieldSchema{
+			"secret_id_ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in seconds after which the issued SecretID should expire. Defaults
 to 0, meaning no expiration.`,
 			},
 
-			"period": &framework.FieldSchema{
+			"period": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_period"),
 				Deprecated:  true,
 			},
 
-			"role_id": &framework.FieldSchema{
+			"role_id": {
 				Type:        framework.TypeString,
 				Description: "Identifier of the role. Defaults to a UUID.",
 			},
 
-			"local_secret_ids": &framework.FieldSchema{
+			"local_secret_ids": {
 				Type: framework.TypeBool,
 				Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
@@ -182,7 +181,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 
 	return []*framework.Path{
 		p,
-		&framework.Path{
+		{
 			Pattern: "role/?",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -190,10 +189,10 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
@@ -204,19 +203,19 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-local-secret-ids"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-local-secret-ids"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/policies$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"policies": &framework.FieldSchema{
+				"policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: tokenutil.DeprecationText("token_policies"),
 					Deprecated:  true,
 				},
-				"token_policies": &framework.FieldSchema{
+				"token_policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: defTokenFields["token_policies"].Description,
 				},
@@ -229,14 +228,14 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-policies"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-policies"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bound-cidr-list$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"bound_cidr_list": &framework.FieldSchema{
+				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
@@ -250,14 +249,14 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bound-cidr-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-bound-cidr-list"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-bound-cidrs$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_bound_cidrs": &framework.FieldSchema{
+				"secret_id_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
@@ -271,14 +270,14 @@ IP addresses which can perform the login operation.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-bound-cidrs$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
@@ -291,14 +290,14 @@ IP addresses which can perform the login operation.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["token-bound-cidrs"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["token-bound-cidrs"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bind-secret-id$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"bind_secret_id": &framework.FieldSchema{
+				"bind_secret_id": {
 					Type:        framework.TypeBool,
 					Default:     true,
 					Description: "Impose secret_id to be presented when logging in using this role.",
@@ -312,14 +311,14 @@ IP addresses which can perform the login operation.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bind-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-bind-secret-id"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-num-uses$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_num_uses": &framework.FieldSchema{
+				"secret_id_num_uses": {
 					Type:        framework.TypeInt,
 					Description: "Number of times a SecretID can access the role, after which the SecretID will expire.",
 				},
@@ -332,14 +331,14 @@ IP addresses which can perform the login operation.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-num-uses"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-num-uses"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-ttl$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_ttl": &framework.FieldSchema{
+				"secret_id_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
 to 0, meaning no expiration.`,
@@ -353,19 +352,19 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-ttl"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/period$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"period": &framework.FieldSchema{
+				"period": {
 					Type:        framework.TypeDurationSecond,
 					Description: tokenutil.DeprecationText("token_period"),
 					Deprecated:  true,
 				},
-				"token_period": &framework.FieldSchema{
+				"token_period": {
 					Type:        framework.TypeDurationSecond,
 					Description: defTokenFields["token_period"].Description,
 				},
@@ -378,14 +377,14 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-period"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-period"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-num-uses$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_num_uses": &framework.FieldSchema{
+				"token_num_uses": {
 					Type:        framework.TypeInt,
 					Description: defTokenFields["token_num_uses"].Description,
 				},
@@ -398,14 +397,14 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-num-uses"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-num-uses"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-ttl$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_ttl": &framework.FieldSchema{
+				"token_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: defTokenFields["token_ttl"].Description,
 				},
@@ -418,14 +417,14 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-ttl"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-max-ttl$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_max_ttl": &framework.FieldSchema{
+				"token_max_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: defTokenFields["token_max_ttl"].Description,
 				},
@@ -438,14 +437,14 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-max-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-max-ttl"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/role-id$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"role_id": &framework.FieldSchema{
+				"role_id": {
 					Type:        framework.TypeString,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
@@ -457,26 +456,26 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-id"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"metadata": &framework.FieldSchema{
+				"metadata": {
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing the metadata in key value pairs.`,
 				},
-				"cidr_list": &framework.FieldSchema{
+				"cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: defTokenFields["token_bound_cidrs"].Description,
 				},
@@ -488,14 +487,14 @@ the role.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/lookup/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id": &framework.FieldSchema{
+				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
 				},
@@ -506,14 +505,14 @@ the role.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-lookup"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-lookup"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/destroy/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id": &framework.FieldSchema{
+				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
 				},
@@ -525,14 +524,14 @@ the role.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-destroy"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-destroy"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/lookup/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_accessor": &framework.FieldSchema{
+				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
 				},
@@ -543,14 +542,14 @@ the role.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/destroy/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_accessor": &framework.FieldSchema{
+				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
 				},
@@ -562,30 +561,30 @@ the role.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/custom-secret-id$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id": &framework.FieldSchema{
+				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID to be attached to the role.",
 				},
-				"metadata": &framework.FieldSchema{
+				"metadata": {
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing metadata in key value pairs.`,
 				},
-				"cidr_list": &framework.FieldSchema{
+				"cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
@@ -654,7 +653,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	// Listing works one level at a time. Get the first level of data
@@ -750,7 +749,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// Check if the index from the role_id to role already exists
 	roleIDIndex, err := b.roleIDEntry(ctx, s, role.RoleID)
 	if err != nil {
-		return errwrap.Wrapf("failed to read role_id index: {{err}}", err)
+		return fmt.Errorf("failed to read role_id index: %w", err)
 	}
 
 	// If the entry exists, make sure that it belongs to the current role
@@ -762,7 +761,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
 		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
-			return errwrap.Wrapf("failed to delete previous role ID index: {{err}}", err)
+			return fmt.Errorf("failed to delete previous role ID index: %w", err)
 		}
 	}
 
@@ -870,7 +869,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	case role == nil && req.Operation == logical.CreateOperation:
 		hmacKey, err := uuid.GenerateUUID()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to create role_id: {{err}}", err)
+			return nil, fmt.Errorf("failed to create role_id: %w", err)
 		}
 		role = &roleStorageEntry{
 			name:              strings.ToLower(roleName),
@@ -918,7 +917,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	} else if req.Operation == logical.CreateOperation {
 		roleID, err := uuid.GenerateUUID()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to generate role_id: {{err}}", err)
+			return nil, fmt.Errorf("failed to generate role_id: %w", err)
 		}
 		role.RoleID = roleID
 	}
@@ -939,7 +938,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if len(role.SecretIDBoundCIDRs) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(role.SecretIDBoundCIDRs)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate CIDR blocks: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("invalid CIDR blocks"), nil
@@ -1064,7 +1063,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 			})
 			if err != nil {
 				lockRelease()
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to create secondary index for role_id %q: {{err}}", role.RoleID), err)
+				return nil, fmt.Errorf("failed to create secondary index for role_id %q: %w", role.RoleID, err)
 			}
 			resp.AddWarning("Role identifier was missing an index back to role name. A new index has been added. Please report this observation.")
 		}
@@ -1096,12 +1095,12 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 
 	// Just before the role is deleted, remove all the SecretIDs issued as part of the role.
 	if err = b.flushRoleSecrets(ctx, req.Storage, role.name, role.HMACKey, role.SecretIDPrefix); err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to invalidate the secrets belonging to role %q: {{err}}", role.name), err)
+		return nil, fmt.Errorf("failed to invalidate the secrets belonging to role %q: %w", role.name, err)
 	}
 
 	// Delete the reverse mapping from RoleID to the role
 	if err = b.roleIDEntryDelete(ctx, req.Storage, role.RoleID); err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to delete the mapping from RoleID to role %q: {{err}}", role.name), err)
+		return nil, fmt.Errorf("failed to delete the mapping from RoleID to role %q: %w", role.name, err)
 	}
 
 	// After deleting the SecretIDs and the RoleID, delete the role itself
@@ -1140,13 +1139,13 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 	// Create the HMAC of the secret ID using the per-role HMAC key
 	secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of secret_id: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of secret_id: %w", err)
 	}
 
 	// Create the HMAC of the roleName using the per-role HMAC key
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	// Create the index at which the secret_id would've been stored
@@ -1168,11 +1167,11 @@ func (b *backend) pathRoleSecretIDLookupUpdate(ctx context.Context, req *logical
 	// entry, revoke the secret ID immediately
 	accessorEntry, err := b.secretIDAccessorEntry(ctx, req.Storage, secretIDEntry.SecretIDAccessor, role.SecretIDPrefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to read secret ID accessor entry: %w", err)
 	}
 	if accessorEntry == nil {
 		if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
+			return nil, fmt.Errorf("error deleting secret ID %q from storage: %w", secretIDHMAC, err)
 		}
 		return logical.ErrorResponse("invalid secret id"), nil
 	}
@@ -1225,12 +1224,12 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 
 	secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of secret_id: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of secret_id: %w", err)
 	}
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
@@ -1254,7 +1253,7 @@ func (b *backend) pathRoleSecretIDDestroyUpdateDelete(ctx context.Context, req *
 
 	// Delete the storage entry that corresponds to the SecretID
 	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-		return nil, errwrap.Wrapf("failed to delete secret_id: {{err}}", err)
+		return nil, fmt.Errorf("failed to delete secret_id: %w", err)
 	}
 
 	return nil, nil
@@ -1299,7 +1298,7 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	secretLock := b.secretIDLock(accessorEntry.SecretIDHMAC)
@@ -1352,7 +1351,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create HMAC of role_name: {{err}}", err)
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
 	}
 
 	entryIndex := fmt.Sprintf("%s%s/%s", role.SecretIDPrefix, roleNameHMAC, accessorEntry.SecretIDHMAC)
@@ -1368,7 +1367,7 @@ func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(ctx context.Contex
 
 	// Delete the storage entry that corresponds to the SecretID
 	if err := req.Storage.Delete(ctx, entryIndex); err != nil {
-		return nil, errwrap.Wrapf("failed to delete secret_id: {{err}}", err)
+		return nil, fmt.Errorf("failed to delete secret_id: %w", err)
 	}
 
 	return nil, nil
@@ -1418,7 +1417,7 @@ func (b *backend) pathRoleBoundCIDRUpdateCommon(ctx context.Context, req *logica
 		}
 		valid, err := cidrutil.ValidateCIDRListSlice(cidrs)
 		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err).Error()), nil
+			return logical.ErrorResponse(fmt.Errorf("failed to validate CIDR blocks: %w", err).Error()), nil
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
@@ -1428,7 +1427,7 @@ func (b *backend) pathRoleBoundCIDRUpdateCommon(ctx context.Context, req *logica
 	} else if cidrsIfc, ok := data.GetOk("token_bound_cidrs"); ok {
 		cidrs, err := parseutil.ParseAddrs(cidrsIfc.([]string))
 		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("failed to parse token_bound_cidrs: {{err}}", err).Error()), nil
+			return logical.ErrorResponse(fmt.Errorf("failed to parse token_bound_cidrs: %w", err).Error()), nil
 		}
 		role.TokenBoundCIDRs = cidrs
 	}
@@ -2271,7 +2270,7 @@ func (b *backend) pathRoleTokenMaxTTLDelete(ctx context.Context, req *logical.Re
 func (b *backend) pathRoleSecretIDUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	secretID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to generate secret_id: {{err}}", err)
+		return nil, fmt.Errorf("failed to generate secret_id: %w", err)
 	}
 	return b.handleRoleSecretIDCommon(ctx, req, data, secretID)
 }
@@ -2312,7 +2311,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	if len(secretIDCIDRs) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(secretIDCIDRs)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate CIDR blocks: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate CIDR blocks: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
@@ -2327,7 +2326,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	if len(secretIDTokenCIDRs) != 0 {
 		valid, err := cidrutil.ValidateCIDRListSlice(secretIDTokenCIDRs)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to validate token CIDR blocks: {{err}}", err)
+			return nil, fmt.Errorf("failed to validate token CIDR blocks: %w", err)
 		}
 		if !valid {
 			return logical.ErrorResponse("failed to validate token CIDR blocks"), nil
@@ -2355,15 +2354,18 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	}
 
 	if secretIDStorage, err = b.registerSecretIDEntry(ctx, req.Storage, role.name, secretID, role.HMACKey, role.SecretIDPrefix, secretIDStorage); err != nil {
-		return nil, errwrap.Wrapf("failed to store secret_id: {{err}}", err)
+		return nil, fmt.Errorf("failed to store secret_id: %w", err)
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
+			"secret_id_ttl":      int64(b.deriveSecretIDTTL(secretIDStorage.SecretIDTTL).Seconds()),
 		},
-	}, nil
+	}
+
+	return resp, nil
 }
 
 func (b *backend) roleIDLock(roleID string) *locksutil.LockEntry {
@@ -2510,11 +2512,13 @@ that are generated against the role using 'role/<role_name>/secret-id' or
 	"role-secret-id-lookup": {
 		"Read the properties of an issued secret_id",
 		`This endpoint is used to read the properties of a secret_id associated to a
-role.`},
+role.`,
+	},
 	"role-secret-id-destroy": {
 		"Invalidate an issued secret_id",
 		`This endpoint is used to delete the properties of a secret_id associated to a
-role.`},
+role.`,
+	},
 	"role-secret-id-accessor-lookup": {
 		"Read an issued secret_id, using its accessor",
 		`This is particularly useful to lookup the non-expiring 'secret_id's.

@@ -61,7 +61,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 		return nil, nil, nil
 	}
 
-	//c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
+	// c.logger.Debug("entity set on the token", "entity_id", te.EntityID)
 
 	// Fetch the entity
 	entity, err := c.identityStore.MemDBEntityByID(entityID, false)
@@ -83,7 +83,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 
 	policies := make(map[string][]string)
 	if entity != nil {
-		//c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
+		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
 		if len(entity.Policies) != 0 {
@@ -419,18 +419,17 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
+		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
-	ctx = namespace.ContextWithNamespace(ctx, ns)
 
-	resp, err = c.handleCancelableRequest(ctx, ns, req)
+	resp, err = c.handleCancelableRequest(namespace.ContextWithNamespace(ctx, ns), req)
 
 	req.SetTokenEntry(nil)
 	cancel()
 	return resp, err
 }
 
-func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namespace, req *logical.Request) (resp *logical.Response, err error) {
+func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -443,15 +442,149 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
-	err = waitForReplicationState(ctx, c, req)
+	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
+	}
+
+	// Decrement the wait group when our request is done
+	if waitGroup != nil {
+		defer waitGroup.Done()
+	}
+
+	if c.MissingRequiredState(req.RequiredState(), c.perfStandby) {
+		return nil, logical.ErrMissingRequiredState
+	}
+
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Always forward requests that are using a limited use count token.
+	if c.perfStandby && req.ClientTokenRemainingUses > 0 {
+		// Prevent forwarding on local-only requests.
+		return nil, logical.ErrPerfStandbyPleaseForward
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
+	}
+
+	// req.Path will be relative by this point. The prefix check is first
+	// to fail faster if we're not in this situation since it's a hot path
+	switch {
+	case strings.HasPrefix(req.Path, "sys/wrapping/"), strings.HasPrefix(req.Path, "auth/token/"):
+		// Get the token ns info; if we match the paths below we want to
+		// swap in the token context (but keep the relative path)
+		te := req.TokenEntry()
+		newCtx := ctx
+		if te != nil {
+			ns, err := NamespaceByID(ctx, te.NamespaceID, c)
+			if err != nil {
+				c.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
+				return nil, err
+			}
+			if ns != nil {
+				newCtx = namespace.ContextWithNamespace(ctx, ns)
+			}
+		}
+		switch req.Path {
+		// Route the token wrapping request to its respective sys NS
+		case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
+			ctx = newCtx
+			// A lookup on a token that is about to expire returns nil, which means by the
+			// time we can validate a wrapping token lookup will return nil since it will
+			// be revoked after the call. So we have to do the validation here.
+			valid, err := c.validateWrappingToken(ctx, req)
+			if err != nil {
+				return nil, fmt.Errorf("error validating wrapping token: %w", err)
+			}
+			if !valid {
+				return nil, consts.ErrInvalidWrappingToken
+			}
+
+		// The -self paths have no meaning outside of the token NS, so
+		// requests for these paths always go to the token NS
+		case "auth/token/lookup-self", "auth/token/renew-self", "auth/token/revoke-self":
+			ctx = newCtx
+
+		// For the following operations, we can set the proper namespace context
+		// using the token's embedded nsID if a relative path was provided.
+		// The operation will still be gated by ACLs, which are checked later.
+		case "auth/token/lookup", "auth/token/renew", "auth/token/revoke", "auth/token/revoke-orphan":
+			token, ok := req.Data["token"]
+			// If the token is not present (e.g. a bad request), break out and let the backend
+			// handle the error
+			if !ok {
+				// If this is a token lookup request and if the token is not
+				// explicitly provided, it will use the client token so we simply set
+				// the context to the client token's context.
+				if req.Path == "auth/token/lookup" {
+					ctx = newCtx
+				}
+				break
+			}
+			_, nsID := namespace.SplitIDFromString(token.(string))
+			if nsID != "" {
+				ns, err := NamespaceByID(ctx, nsID, c)
+				if err != nil {
+					c.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
+					return nil, err
+				}
+				if ns != nil {
+					ctx = namespace.ContextWithNamespace(ctx, ns)
+				}
+			}
+		}
+
+	// The following relative sys/leases/ paths handles re-routing requests
+	// to the proper namespace using the lease ID on applicable paths.
+	case strings.HasPrefix(req.Path, "sys/leases/"):
+		switch req.Path {
+		// For the following operations, we can set the proper namespace context
+		// using the lease's embedded nsID if a relative path was provided.
+		// The operation will still be gated by ACLs, which are checked later.
+		case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
+			leaseID, ok := req.Data["lease_id"]
+			// If lease ID is not present, break out and let the backend handle the error
+			if !ok {
+				break
+			}
+			_, nsID := namespace.SplitIDFromString(leaseID.(string))
+			if nsID != "" {
+				ns, err := NamespaceByID(ctx, nsID, c)
+				if err != nil {
+					c.Logger().Warn("error looking up namespace from the lease's namespace ID", "error", err)
+					return nil, err
+				}
+				if ns != nil {
+					ctx = namespace.ContextWithNamespace(ctx, ns)
+				}
+			}
+		}
+
+	// Prevent any metrics requests to be forwarded from a standby node.
+	// Instead, we return an error since we cannot be sure if we have an
+	// active token store to validate the provided token.
+	case strings.HasPrefix(req.Path, "sys/metrics"):
+		if c.standby && !c.perfStandby {
+			return nil, ErrCannotForwardLocalOnly
+		}
+	}
+
+	ns, err = namespace.FromContext(ctx)
+	if err != nil {
+		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
 	}
 
 	if !hasNamespaces(c) && ns.Path != "" {
 		return nil, logical.CodedError(403, "namespaces feature not enabled")
 	}
 
+	walState := &logical.WALState{}
+	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
 	if c.router.LoginPath(ctx, req.Path) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
@@ -557,6 +690,26 @@ func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namesp
 				return nil, ErrInternalError
 			}
 		}
+	}
+
+	if walState.LocalIndex != 0 || walState.ReplicatedIndex != 0 {
+		walState.ClusterID = c.clusterID.Load()
+		if walState.LocalIndex == 0 {
+			if c.perfStandby {
+				walState.LocalIndex = LastRemoteWAL(c)
+			} else {
+				walState.LocalIndex = LastWAL(c)
+			}
+		}
+		if walState.ReplicatedIndex == 0 {
+			if c.perfStandby {
+				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+			} else {
+				walState.ReplicatedIndex = LastRemoteWAL(c)
+			}
+		}
+
+		req.SetResponseState(walState)
 	}
 
 	return
@@ -717,7 +870,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
-		c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+		c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 		retErr = multierror.Append(retErr, quotaErr)
 		return nil, auth, retErr
 	}
@@ -727,7 +880,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			c.logger.Trace("request rejected due to lease count quota violation", "request_path", req.Path)
 		}
 
-		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrLeaseCountQuotaExceeded))
+		retErr = multierror.Append(retErr, fmt.Errorf("request path %q: %w", req.Path, quotas.ErrLeaseCountQuotaExceeded))
 		return nil, auth, retErr
 	}
 
@@ -1115,7 +1268,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		})
 
 		if quotaErr != nil {
-			c.logger.Error("failed to apply quota", "path", req.Path, "error", err)
+			c.logger.Error("failed to apply quota", "path", req.Path, "error", quotaErr)
 			retErr = multierror.Append(retErr, quotaErr)
 			return
 		}
@@ -1125,7 +1278,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				c.logger.Trace("request rejected due to lease count quota violation", "request_path", req.Path)
 			}
 
-			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrLeaseCountQuotaExceeded))
+			retErr = multierror.Append(retErr, fmt.Errorf("request path %q: %w", req.Path, quotas.ErrLeaseCountQuotaExceeded))
 			return
 		}
 
@@ -1176,7 +1329,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			auth.EntityID = entity.ID
-			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases)
+			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases, req.MountAccessor)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -1339,5 +1492,37 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		}
 	}
 
+	return nil
+}
+
+// PopulateTokenEntry looks up req.ClientToken in the token store and uses
+// it to set other fields in req.  Does nothing if ClientToken is empty
+// or a JWT token, or for service tokens that don't exist in the token store.
+// Should be called with read stateLock held.
+func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) error {
+	if req.ClientToken == "" {
+		return nil
+	}
+
+	// Also attach the accessor if we have it. This doesn't fail if it
+	// doesn't exist because the request may be to an unauthenticated
+	// endpoint/login endpoint where a bad current token doesn't matter, or
+	// a token from a Vault version pre-accessors. We ignore errors for
+	// JWTs.
+	token := req.ClientToken
+	te, err := c.LookupToken(ctx, token)
+	if err != nil {
+		dotCount := strings.Count(token, ".")
+		// If we have two dots but the second char is a dot it's a vault
+		// token of the form s.SOMETHING.nsid, not a JWT
+		if dotCount != 2 || (dotCount == 2 && token[1] == '.') {
+			return fmt.Errorf("error performing token check: %w", err)
+		}
+	}
+	if err == nil && te != nil {
+		req.ClientTokenAccessor = te.Accessor
+		req.ClientTokenRemainingUses = te.NumUses
+		req.SetTokenEntry(te)
+	}
 	return nil
 }

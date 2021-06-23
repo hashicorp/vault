@@ -41,6 +41,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
+	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
@@ -74,6 +75,11 @@ const (
 	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
+	// EnvVaultLicense is an env var used in Vault Enterprise to provide a license blob
+	EnvVaultLicense = "VAULT_LICENSE"
+	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
+	// path to a license file on disk
+	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -84,11 +90,11 @@ const (
 	// flagnameCAPath is the flag used in the base command to read in the CA
 	// cert path.
 	flagNameCAPath = "ca-path"
-	//flagNameClientCert is the flag used in the base command to read in the
-	//client key
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client key
 	flagNameClientKey = "client-key"
-	//flagNameClientCert is the flag used in the base command to read in the
-	//client cert
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client cert
 	flagNameClientCert = "client-cert"
 	// flagNameTLSSkipVerify is the flag used in the base command to read in
 	// the option to ignore TLS certificate verification.
@@ -132,6 +138,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"aerospike":              physAerospike.NewAerospikeBackend,
 		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
@@ -165,6 +172,8 @@ var (
 		"consul":     csr.NewServiceRegistration,
 		"kubernetes": ksr.NewServiceRegistration,
 	}
+
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
 )
 
 // Commands is the mapping of all the available commands.
@@ -284,6 +293,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease revoke": func() (cli.Command, error) {
 			return &LeaseRevokeCommand{
 				BaseCommand: getBaseCommand(),
@@ -330,6 +344,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator generate-root": func() (cli.Command, error) {
 			return &OperatorGenerateRootCommand{
 				BaseCommand: getBaseCommand(),
@@ -354,6 +373,21 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator raft": func() (cli.Command, error) {
 			return &OperatorRaftCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot state": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotStateCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -404,6 +438,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator step-down": func() (cli.Command, error) {
 			return &OperatorStepDownCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator usage": func() (cli.Command, error) {
+			return &OperatorUsageCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -679,6 +718,17 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 			}, nil
 		},
 	}
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		Commands["operator diagnose"] = func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		}
+	}
+
+	initCommandsEnt(ui, serverCmdUi, runOpts)
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

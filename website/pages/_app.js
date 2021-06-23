@@ -12,13 +12,15 @@ import ProductSubnav from 'components/subnav'
 import HashiStackMenu from '@hashicorp/react-hashi-stack-menu'
 import Footer from 'components/footer'
 import Error from './_error'
+import AlertBanner from '@hashicorp/react-alert-banner'
+import alertBannerData, { ALERT_BANNER_ACTIVE } from '../data/alert-banner'
 
 NProgress({ Router })
 const { ConsentManager, openConsentManager } = createConsentManager({
   preset: 'oss',
 })
 
-function App({ Component, pageProps }) {
+export default function App({ Component, pageProps }) {
   useAnchorLinkAnalytics()
 
   return (
@@ -31,31 +33,30 @@ function App({ Component, pageProps }) {
         image="https://www.vaultproject.io/img/og-image.png"
         icon={[
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
             type: 'image/png',
             sizes: '16x16',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
             type: 'image/png',
             sizes: '32x32',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
             type: 'image/png',
             sizes: '96x96',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
             type: 'image/png',
             sizes: '192x192',
           },
         ]}
       />
+      {ALERT_BANNER_ACTIVE && (
+        <AlertBanner {...alertBannerData} product="vault" />
+      )}
       <HashiStackMenu />
       <ProductSubnav />
       <Component {...pageProps} />
@@ -64,21 +65,3 @@ function App({ Component, pageProps }) {
     </ErrorBoundary>
   )
 }
-
-App.getInitialProps = async ({ Component, ctx }) => {
-  let pageProps = {}
-
-  if (Component.getInitialProps) {
-    pageProps = await Component.getInitialProps(ctx)
-  } else if (Component.isMDXComponent) {
-    // fix for https://github.com/mdx-js/mdx/issues/382
-    const mdxLayoutComponent = Component({}).props.originalType
-    if (mdxLayoutComponent.getInitialProps) {
-      pageProps = await mdxLayoutComponent.getInitialProps(ctx)
-    }
-  }
-
-  return { pageProps }
-}
-
-export default App

@@ -136,7 +136,6 @@ func TestRaft_Snapshot_Loading(t *testing.T) {
 	if !bytes.Equal(computed1, computed3) {
 		t.Fatal("hashes did not match")
 	}
-
 }
 
 func TestRaft_Snapshot_Index(t *testing.T) {
@@ -350,7 +349,7 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 		t.Fatal(peers)
 	}
 
-	// Shutdown raft1
+	// Finalize raft1
 	if err := raft1.TeardownCluster(nil); err != nil {
 		t.Fatal(err)
 	}
@@ -590,7 +589,7 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(parent, logger)
+	fsm, err := NewFSM(parent, "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -655,7 +654,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(parent, logger)
+	fsm, err := NewFSM(parent, "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +752,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatal("expected snapshot installer object")
 	}
 
-	newFSM, err := NewFSM(filepath.Dir(installer.Filename()), logger)
+	newFSM, err := NewFSM(filepath.Dir(installer.Filename()), "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -812,7 +811,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 
 		// Close/Reopen the db and make sure we still match
 		fsm.Close()
-		fsm, err = NewFSM(parent, logger)
+		fsm, err = NewFSM(parent, "", logger)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -892,7 +891,7 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	if err = os.Chmod(dir2, 000); err != nil {
+	if err = os.Chmod(dir2, 0o00); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	defer os.Chmod(dir2, 777) // Set perms back for delete

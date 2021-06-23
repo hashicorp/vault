@@ -11,7 +11,7 @@ func pathMFAConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `mfa_config`,
 		Fields: map[string]*framework.FieldSchema{
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:        framework.TypeString,
 				Description: "Enables MFA with given backend (available: duo)",
 			},

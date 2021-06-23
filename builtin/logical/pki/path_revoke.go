@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -16,7 +15,7 @@ func pathRevoke(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke`,
 		Fields: map[string]*framework.FieldSchema{
-			"serial_number": &framework.FieldSchema{
+			"serial_number": {
 				Type: framework.TypeString,
 				Description: `Certificate serial number, in colon- or
 hyphen-separated octal`,
@@ -74,7 +73,7 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, d
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
 	case errutil.InternalError:
-		return nil, errwrap.Wrapf("error encountered during CRL building: {{err}}", crlErr)
+		return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 	default:
 		return &logical.Response{
 			Data: map[string]interface{}{

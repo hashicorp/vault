@@ -1,3 +1,4 @@
+/* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
 import Helper from '@ember/component/helper';
@@ -26,11 +27,10 @@ export function hasFeature(featureName, features) {
 
 export default Helper.extend({
   version: service(),
-  /* eslint-disable-next-line ember/no-observers */
   onFeaturesChange: observer('version.features.[]', function() {
     this.recompute();
   }),
   compute([featureName]) {
-    return hasFeature(featureName, this.get('version.features'));
+    return hasFeature(featureName, this.version.features);
   },
 });

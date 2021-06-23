@@ -1,68 +1,50 @@
-import Hero from '@hashicorp/react-hero'
+import HomepageHero from 'components/homepage-hero'
 import SectionHeader from '@hashicorp/react-section-header'
 import UseCases from '@hashicorp/react-use-cases'
-import TextAndContent from '@hashicorp/react-text-and-content'
+import TextSplits from '@hashicorp/react-text-splits'
 import Button from '@hashicorp/react-button'
-
 import BeforeAfterDiagram from '../../components/before-after-diagram'
+import HcpCalloutSection from 'components/hcp-callout-section'
+//  Imports below are used in getStaticProps only
+import RAW_CONTENT from './content.json'
+import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
-export default function Homepage() {
+export async function getStaticProps() {
+  const content = await highlightData(RAW_CONTENT)
+  content.beforeAfterDiagram = await processBeforeAfterDiagramProps(
+    content.beforeAfterDiagram
+  )
+  return { props: { content } }
+}
+
+export default function Homepage({ content }) {
   return (
-    <div id="page-home">
+    <main id="page-home">
       <div className="g-section-block page-wrap">
-        {/* Hero */}
-        <Hero
-          data={{
-            backgroundImage: {
-              alt: null,
-              size: 55617,
-              url:
-                'https://www.datocms-assets.com/2885/1539894412-vault-bg.jpg',
-              width: 3196
+        <HomepageHero
+          uiVideo="https://www.datocms-assets.com/2885/1543956852-vault-v1-0-ui-opt.mp4"
+          cliVideo="https://www.datocms-assets.com/2885/1543956847-vault-v1-0-cli-opt.mp4"
+          title="Manage Secrets and Protect Sensitive Data"
+          description="Secure, store and tightly control access to tokens, passwords, certificates, encryption keys for protecting secrets and other sensitive data using a UI, CLI, or HTTP API."
+          buttons={[
+            {
+              external: false,
+              title: 'Try Cloud',
+              url: 'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
             },
-            backgroundTheme: 'light',
-            buttons: [
-              {
-                external: false,
-                title: 'Download',
-                url: 'https://www.vaultproject.io/downloads'
-              },
-              {
-                external: false,
-                title: 'Get Started with Vault',
-                url: 'https://www.vaultproject.io/intro/getting-started'
-              }
-            ],
-            centered: false,
-            description:
-              'Secure, store and tightly control access to tokens, passwords, certificates, encryption keys for protecting secrets and other sensitive data using a UI, CLI, or HTTP API.',
-            theme: 'vault-gray',
-            title: 'Manage Secrets and Protect Sensitive Data',
-            videos: [
-              {
-                name: 'UI',
-                playbackRate: 2,
-                src: [
-                  {
-                    srcType: 'mp4',
-                    url:
-                      'https://www.datocms-assets.com/2885/1543956852-vault-v1-0-ui-opt.mp4'
-                  }
-                ]
-              },
-              {
-                name: 'CLI',
-                playbackRate: 2,
-                src: [
-                  {
-                    srcType: 'mp4',
-                    url:
-                      'https://www.datocms-assets.com/2885/1543956847-vault-v1-0-cli-opt.mp4'
-                  }
-                ]
-              }
-            ]
-          }}
+            {
+              external: false,
+              title: 'Download CLI',
+              url: 'https://www.vaultproject.io/downloads',
+            },
+            {
+              type: 'inbound',
+              title: 'Get Started with Vault',
+              url: 'https://www.vaultproject.io/intro/getting-started',
+              theme: { variant: 'tertiary' },
+            },
+          ]}
         />
 
         {/* Text Section */}
@@ -78,33 +60,17 @@ export default function Homepage() {
 
         <section className="g-container before-after">
           <BeforeAfterDiagram
+            {...content.beforeAfterDiagram}
             beforeImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1579635889-static-infrastructure.svg',
-              format: 'svg'
+              alt: 'Static database graphic',
+              format: 'png',
+              url: require('./img/vault_static_isometric@2x.png'),
             }}
-            beforeHeadline="Static Infrastructure"
-            beforeContent={`Datacenters with inherently high-trust networks with clear network perimeters.
-
-#### Traditional Approach
-
-- High trust networks
-- A clear network perimeter
-- Security enforced by IP Address`}
             afterImage={{
-              url:
-                'https://www.datocms-assets.com/2885/1579635892-dynamic-infrastructure.svg',
-              format: 'svg'
+              alt: 'Dynamic VM and database graphic',
+              format: 'png',
+              url: require('./img/vault_dynamic_isometric@2x.png'),
             }}
-            afterHeadline="Dynamic Infrastructure"
-            afterContent={`Multiple clouds and private datacenters without a clear network perimeter.
-
-#### Vault Approach
-
-
-- Low-trust networks in public clouds
-- Unknown network perimeter across clouds
-- Security enforced by Identity`}
           />
         </section>
 
@@ -113,140 +79,78 @@ export default function Homepage() {
         <section>
           <div className="g-container">
             <UseCases
-              theme="vault"
+              product="vault"
               items={[
                 {
                   title: 'Secrets Management',
                   description:
-                    'Audit access, automatically Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
+                    'Centrally store, access, and deploy secrets across applications, systems, and infrastructure',
                   image: {
-                    alt: null,
+                    alt: 'Key icon',
                     format: 'png',
-                    url:
-                      'https://www.datocms-assets.com/2885/1575422126-secrets.png'
+                    url: require('./img/use-cases/secrets-management.svg?url'),
                   },
                   link: {
                     external: false,
                     title: 'Learn more',
-                    url: '/use-cases/secrets-management'
-                  }
+                    url: '/use-cases/secrets-management',
+                  },
                 },
                 {
                   title: 'Data Encryption',
                   description:
                     'Keep secrets and application data secure with one centralized workflow to encrypt data in flight and at rest',
                   image: {
-                    alt: null,
+                    alt: 'Lock icon',
                     format: 'png',
-                    url:
-                      'https://www.datocms-assets.com/2885/1575422166-encryption.png'
+                    url: require('./img/use-cases/data_encryption.svg?url'),
                   },
                   link: {
                     external: false,
                     title: 'Learn more',
-                    url: '/use-cases/data-encryption'
-                  }
+                    url: '/use-cases/data-encryption',
+                  },
                 },
                 {
                   title: 'Identity-based Access',
                   description:
                     'Authenticate and access different clouds, systems, and endpoints using trusted identities',
                   image: {
-                    alt: null,
+                    alt: 'Access badge icon',
                     format: 'png',
-                    url:
-                      'https://www.datocms-assets.com/2885/1575422201-identity.png'
+                    url: require('./img/use-cases/identity-based-access.svg?url'),
                   },
                   link: {
                     external: false,
                     title: 'Learn more',
-                    url: '/use-cases/identity-based-access'
-                  }
-                }
+                    url: '/use-cases/identity-based-access',
+                  },
+                },
               ]}
             />
           </div>
         </section>
+
+        <HcpCalloutSection
+          id="cloud-offerings"
+          title="HCP Vault"
+          chin="Available on AWS"
+          description="HCP Vault provides all of the power and security of Vault, without the complexity and overhead of managing it yourself. Access Vault’s best-in-class secrets management and encryption capabilities instantly and onboard applications and teams easily."
+          image={require('./img/hcp_vault.svg?url')}
+          links={[
+            {
+              text: 'Learn More',
+              url: 'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
+            },
+          ]}
+        />
+
         {/* Principles / Text & Content Blocks */}
-
-        <section className="g-container">
-          <SectionHeader headline="Vault Principles" />
-
-          <TextAndContent
-            data={{
-              text: `### API-driven
-
-Use policy to codify, protect, and automate access to secrets`,
-              content: {
-                __typename: 'SbcCodeBlockRecord',
-                chrome: true,
-                code: `$ curl \n
-    --header "X-Vault-Token: ..." \n
-    --request POST \n
-    --data @payload.json \n
-    https://127.0.0.1:8200/v1/secret/config`
-              }
-            }}
-          />
-
-          <div className="g-text-and-content reverse">
-            <div className="text">
-              <div>
-                <h3>Identity Plugins</h3>
-                <p>Seamlessly integrate any trusted identity provider</p>
-              </div>
-            </div>
-            <div className="content logo-grid">
-              <ul className="g-logo-grid large">
-                {[
-                  'https://www.datocms-assets.com/2885/1510033601-aws_logo_rgb_fullcolor.svg',
-                  'https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg',
-                  'https://www.datocms-assets.com/2885/1513617132-google-cloud.svg',
-                  'https://www.datocms-assets.com/2885/1556657783-oktalogo.svg',
-                  'https://www.datocms-assets.com/2885/1539817287-cf.svg',
-                  'https://www.datocms-assets.com/2885/1506527326-color.svg',
-                  'https://www.datocms-assets.com/2885/1506540149-black.svg',
-                  'https://www.datocms-assets.com/2885/1539876682-k8s.svg',
-                  'https://www.datocms-assets.com/2885/1506535057-black.svg'
-                ].map(logo => (
-                  <li key={logo}>
-                    <img src={logo} alt="company logo" />
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <section className="no-section-spacing">
+          <div className="g-grid-container">
+            <SectionHeader headline="Vault Principles" />
           </div>
-
-          <div className="g-text-and-content">
-            <div className="text">
-              <div>
-                <h3>Extend and integrate</h3>
-                <p>
-                  Securely manage secrets and access through a centralized
-                  workflow
-                </p>
-              </div>
-            </div>
-            <div className="content logo-grid">
-              <ul className="g-logo-grid large">
-                {[
-                  'https://www.datocms-assets.com/2885/1506540090-color.svg',
-                  'https://www.datocms-assets.com/2885/1506540114-color.svg',
-                  'https://www.datocms-assets.com/2885/1506527176-color.svg',
-                  'https://www.datocms-assets.com/2885/1510033601-aws_logo_rgb_fullcolor.svg',
-                  'https://www.datocms-assets.com/2885/1506540175-color.svg',
-                  'https://www.datocms-assets.com/2885/1508434209-consul_primarylogo_fullcolor.svg',
-                  'https://www.datocms-assets.com/2885/1539817686-microsoft-sql-server.svg',
-                  'https://www.datocms-assets.com/2885/1539818112-postgresql.svg',
-                  'https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg'
-                ].map(logo => (
-                  <li key={logo}>
-                    <img src={logo} alt="company logo" />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <TextSplits textSplits={content.principles} />
         </section>
 
         <section className="g-container">
@@ -257,11 +161,13 @@ Use policy to codify, protect, and automate access to secrets`,
           <div className="button-container">
             <Button
               title="Learn More"
+              label="Learn more — Vault pricing tiers"
               url="https://www.hashicorp.com/products/vault/enterprise"
+              theme={{ brand: 'vault' }}
             />
           </div>
         </section>
       </div>
-    </div>
+    </main>
   )
 }

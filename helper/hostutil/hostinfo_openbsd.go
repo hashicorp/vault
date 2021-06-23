@@ -20,3 +20,7 @@ type HostInfo struct {
 func CollectHostInfo(ctx context.Context) (*HostInfo, error) {
 	return nil, fmt.Errorf("host info not supported on this platform")
 }
+
+func CollectHostMemory(ctx context.Context) (*VirtualMemoryStat, error) {
+	return nil, fmt.Errorf("host info not supported on this platform")
+}

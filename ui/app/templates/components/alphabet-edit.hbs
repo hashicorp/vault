@@ -1,12 +1,12 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=(hash display=model.id id=model.idForNav)
-      path="vault.cluster.secrets.backend.list"
-      mode=mode
-      root=root
-      showCurrent=true
-    }}
+    <KeyValueHeader
+      @baseKey={{hash display=model.id id=model.idForNav}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{mode}}
+      @root={{root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
@@ -26,6 +26,7 @@
     <ToolbarActions>
       {{#if capabilities.canDelete}}
         <button
+          type="button"
           class="toolbar-link"
           onclick={{action "delete"}}
           data-test-transformation-alphabet-delete
@@ -50,7 +51,7 @@
 {{#if (or (eq mode 'edit') (eq mode 'create'))}}
 <form onsubmit={{action "createOrUpdate" mode}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error model=model}}
+    <MessageError @model={{model}} />
     <NamespaceReminder @mode={{mode}} @noun="transform alphabet" />
     {{#each model.attrs as |attr|}}
       {{#if (and (eq attr.name 'name') (eq mode 'edit')) }}
@@ -93,36 +94,26 @@
           Save
         {{/if}}
       </button>
-      {{#secret-link
-        mode=(if (eq mode "create") "list" "show")
-        class="button"
-        secret=(concat model.idPrefix model.id)
-      }}
+      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{concat model.idPrefix model.id}}>
         Cancel
-      {{/secret-link}}
+      </SecretLink>
     </div>
   </div>
 </form>
 {{else}}
   {{#if model.displayErrors}}
     <div class="has-top-margin-s">
-      {{message-error model=model}}
+      <MessageError @model={{model}} />
     </div>
   {{/if}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each model.attrs as |attr|}}
       {{#if (eq attr.type "object")}}
-        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
       {{else if (eq attr.type "array")}}
-        {{info-table-row
-          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-          value=(get model attr.name)
-          type=attr.type
-          isLink=(eq attr.name 'transformations')
-          viewAll="transformations"
-        }}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} @isLink={{eq attr.name "transformations"}} @viewAll="transformations" />
       {{else}}
-        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
       {{/if}}
     {{/each}}
   </div>

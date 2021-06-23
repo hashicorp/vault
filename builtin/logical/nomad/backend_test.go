@@ -103,7 +103,6 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 			Token:      nomadToken,
 		}, nil
 	})
-
 	if err != nil {
 		t.Fatalf("Could not start docker Nomad: %s", err)
 	}

@@ -62,10 +62,11 @@ func TestNewUser(t *testing.T) {
 	defer cleanup()
 
 	type testCase struct {
-		req           dbplugin.NewUserRequest
-		usernameRegex string
-		expectErr     bool
-		assertUser    func(t testing.TB, connURL, username, password string)
+		usernameTemplate string
+		req              dbplugin.NewUserRequest
+		usernameRegex    string
+		expectErr        bool
+		assertUser       func(t testing.TB, connURL, username, password string)
 	}
 
 	tests := map[string]testCase{
@@ -99,6 +100,23 @@ func TestNewUser(t *testing.T) {
 			expectErr:     false,
 			assertUser:    assertCredsExist,
 		},
+		"custom username template": {
+			usernameTemplate: "{{random 10}}_{{.RoleName}}.{{.DisplayName | sha256}}",
+			req: dbplugin.NewUserRequest{
+				UsernameConfig: dbplugin.UsernameMetadata{
+					DisplayName: "tokenwithlotsofextracharactershere",
+					RoleName:    "myrolenamewithlotsofextracharacters",
+				},
+				Statements: dbplugin.Statements{
+					Commands: []string{testMSSQLRole},
+				},
+				Password:   "AG4qagho-dsvZ",
+				Expiration: time.Now().Add(1 * time.Second),
+			},
+			usernameRegex: "^[a-zA-Z0-9]{10}_myrolenamewithlotsofextracharacters.80d15d22dba29ddbd4994f8009b5ff7b17922c267eb49fb805a9488bd55d11f9$",
+			expectErr:     false,
+			assertUser:    assertCredsExist,
+		},
 	}
 
 	for name, test := range tests {
@@ -110,7 +128,8 @@ func TestNewUser(t *testing.T) {
 
 			initReq := dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
-					"connection_url": connURL,
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
 				},
 				VerifyConnection: true,
 			}

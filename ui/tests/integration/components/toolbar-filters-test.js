@@ -10,7 +10,7 @@ module('Integration | Component | toolbar-filters', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<ToolbarFilters>These are the toolbar filters</ToolbarFilters>`);
 
-    assert.equal(this.element.textContent.trim(), 'These are the toolbar filters');
+    assert.dom(this.element).hasText('These are the toolbar filters');
     assert.ok(isPresent('.toolbar-filters'));
   });
 });

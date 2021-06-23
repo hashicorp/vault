@@ -9,11 +9,9 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/errwrap"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/mitchellh/mapstructure"
@@ -28,6 +26,7 @@ type cassandraConnectionProducer struct {
 	Password           string      `json:"password" structs:"password" mapstructure:"password"`
 	TLS                bool        `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS        bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	TLSServerName      string      `json:"tls_server_name" structs:"tls_server_name" mapstructure:"tls_server_name"`
 	ProtocolVersion    int         `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeoutRaw  interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
 	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
@@ -40,9 +39,7 @@ type cassandraConnectionProducer struct {
 
 	connectTimeout  time.Duration
 	socketKeepAlive time.Duration
-	certificate     string
-	privateKey      string
-	issuingCA       string
+	sslOpts         *gocql.SslOptions
 	rawConfig       map[string]interface{}
 
 	Initialized bool
@@ -51,7 +48,7 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -59,7 +56,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 
 	err := mapstructure.WeakDecode(req.Config, c)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, err
+		return err
 	}
 
 	if c.ConnectTimeoutRaw == nil {
@@ -67,7 +64,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return fmt.Errorf("invalid connect_timeout: %w", err)
 	}
 
 	if c.SocketKeepAliveRaw == nil {
@@ -75,48 +72,56 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 	c.socketKeepAlive, err = parseutil.ParseDurationSecond(c.SocketKeepAliveRaw)
 	if err != nil {
-		return dbplugin.InitializeResponse{}, errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
+		return fmt.Errorf("invalid socket_keep_alive: %w", err)
 	}
 
 	switch {
 	case len(c.Hosts) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("hosts cannot be empty")
+		return fmt.Errorf("hosts cannot be empty")
 	case len(c.Username) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
+		return fmt.Errorf("username cannot be empty")
 	case len(c.Password) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
+		return fmt.Errorf("password cannot be empty")
+	case len(c.PemJSON) > 0 && len(c.PemBundle) > 0:
+		return fmt.Errorf("cannot specify both pem_json and pem_bundle")
 	}
 
-	var certBundle *certutil.CertBundle
-	var parsedCertBundle *certutil.ParsedCertBundle
+	var tlsMinVersion uint16 = tls.VersionTLS12
+	if c.TLSMinVersion != "" {
+		ver, exists := tlsutil.TLSLookup[c.TLSMinVersion]
+		if !exists {
+			return fmt.Errorf("unrecognized TLS version [%s]", c.TLSMinVersion)
+		}
+		tlsMinVersion = ver
+	}
+
 	switch {
 	case len(c.PemJSON) != 0:
-		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
+		cfg, err := jsonBundleToTLSConfig(c.PemJSON, tlsMinVersion, c.TLSServerName, c.InsecureTLS)
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return fmt.Errorf("failed to parse pem_json: %w", err)
 		}
-		certBundle, err = parsedCertBundle.ToCertBundle()
-		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+		c.sslOpts = &gocql.SslOptions{
+			Config:                 cfg,
+			EnableHostVerification: !cfg.InsecureSkipVerify,
 		}
-		c.certificate = certBundle.Certificate
-		c.privateKey = certBundle.PrivateKey
-		c.issuingCA = certBundle.IssuingCA
 		c.TLS = true
 
 	case len(c.PemBundle) != 0:
-		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
+		cfg, err := pemBundleToTLSConfig(c.PemBundle, tlsMinVersion, c.TLSServerName, c.InsecureTLS)
 		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return fmt.Errorf("failed to parse pem_bundle: %w", err)
 		}
-		certBundle, err = parsedCertBundle.ToCertBundle()
-		if err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+		c.sslOpts = &gocql.SslOptions{
+			Config:                 cfg,
+			EnableHostVerification: !cfg.InsecureSkipVerify,
 		}
-		c.certificate = certBundle.Certificate
-		c.privateKey = certBundle.PrivateKey
-		c.issuingCA = certBundle.IssuingCA
 		c.TLS = true
+
+	case c.InsecureTLS:
+		c.sslOpts = &gocql.SslOptions{
+			EnableHostVerification: !c.InsecureTLS,
+		}
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -125,15 +130,11 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 
 	if req.VerifyConnection {
 		if _, err := c.Connection(ctx); err != nil {
-			return dbplugin.InitializeResponse{}, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return fmt.Errorf("error verifying connection: %w", err)
 		}
 	}
 
-	resp := dbplugin.InitializeResponse{
-		Config: req.Config,
-	}
-
-	return resp, nil
+	return nil
 }
 
 func (c *cassandraConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
@@ -189,50 +190,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 	clusterConfig.Timeout = c.connectTimeout
 	clusterConfig.SocketKeepalive = c.socketKeepAlive
-	if c.TLS {
-		var tlsConfig *tls.Config
-		if len(c.certificate) > 0 || len(c.issuingCA) > 0 {
-			if len(c.certificate) > 0 && len(c.privateKey) == 0 {
-				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
-			}
-
-			certBundle := &certutil.CertBundle{}
-			if len(c.certificate) > 0 {
-				certBundle.Certificate = c.certificate
-				certBundle.PrivateKey = c.privateKey
-			}
-			if len(c.issuingCA) > 0 {
-				certBundle.IssuingCA = c.issuingCA
-			}
-
-			parsedCertBundle, err := certBundle.ToParsedCertBundle()
-			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
-			}
-
-			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
-			if err != nil || tlsConfig == nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
-			}
-			tlsConfig.InsecureSkipVerify = c.InsecureTLS
-
-			if c.TLSMinVersion != "" {
-				var ok bool
-				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[c.TLSMinVersion]
-				if !ok {
-					return nil, fmt.Errorf("invalid 'tls_min_version' in config")
-				}
-			} else {
-				// MinVersion was not being set earlier. Reset it to
-				// zero to gracefully handle upgrades.
-				tlsConfig.MinVersion = 0
-			}
-		}
-
-		clusterConfig.SslOpts = &gocql.SslOptions{
-			Config: tlsConfig,
-		}
-	}
+	clusterConfig.SslOpts = c.sslOpts
 
 	if c.LocalDatacenter != "" {
 		clusterConfig.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(c.LocalDatacenter)
@@ -240,7 +198,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
+		return nil, fmt.Errorf("error creating session: %w", err)
 	}
 
 	if c.Consistency != "" {
@@ -262,11 +220,11 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 
 			if rowNum < 1 {
 				session.Close()
-				return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+				return nil, fmt.Errorf("error validating connection info: No role create permissions found, previous error: %w", err)
 			}
 		} else if err != nil {
 			session.Close()
-			return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
+			return nil, fmt.Errorf("error validating connection info: %w", err)
 		}
 	}
 

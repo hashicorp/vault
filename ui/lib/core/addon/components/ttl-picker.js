@@ -2,7 +2,7 @@ import { typeOf } from '@ember/utils';
 import EmberError from '@ember/error';
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
-import Duration from 'Duration.js';
+import Duration from '@icholy/duration';
 import layout from '../templates/components/ttl-picker';
 
 const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';
@@ -63,8 +63,8 @@ export default Component.extend({
     return time * toSeconds[unit];
   },
 
-  TTL: computed('time', 'unit', function() {
-    let { time, unit, outputSeconds } = this.getProperties('time', 'unit', 'outputSeconds');
+  TTL: computed('outputSeconds', 'time', 'unit', function() {
+    let { time, unit, outputSeconds } = this;
     //convert to hours
     if (unit === 'd') {
       time = time * 24;

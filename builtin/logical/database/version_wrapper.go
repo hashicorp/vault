@@ -152,7 +152,7 @@ func (d databaseVersionWrapper) changePasswordLegacy(ctx context.Context, userna
 	err = d.changeUserPasswordLegacy(ctx, username, passwordChange)
 
 	// If changing the root user's password but SetCredentials is unimplemented, fall back to RotateRootCredentials
-	if isRootUser && status.Code(err) == codes.Unimplemented {
+	if isRootUser && (err == v4.ErrPluginStaticUnsupported || status.Code(err) == codes.Unimplemented) {
 		saveConfig, err = d.changeRootUserPasswordLegacy(ctx, passwordChange)
 		if err != nil {
 			return nil, err
@@ -237,9 +237,7 @@ type passwordGenerator interface {
 	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
 }
 
-var (
-	defaultPasswordGenerator = random.DefaultStringGenerator
-)
+var defaultPasswordGenerator = random.DefaultStringGenerator
 
 // GeneratePassword either from the v4 database or by using the provided password policy. If using a v5 database
 // and no password policy is specified, this will have a reasonable default password generator.

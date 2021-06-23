@@ -4,7 +4,7 @@
   </div>
 
   {{#unless navDrawerOpen}}
-  <button class="navbar-drawer-toggle is-hidden-tablet" {{action "toggleNavDrawer"}}>
+  <button type="button" class="navbar-drawer-toggle is-hidden-tablet" {{action "toggleNavDrawer"}}>
       <Icon @glyph="more-vertical" /> Menu
     </button>
   {{/unless}}
@@ -36,4 +36,4 @@
 
   <div class="navbar-drawer-overlay{{if navDrawerOpen ' is-active'}}" onclick={{action "toggleNavDrawer" (not navDrawerOpen)}}></div>
 </nav>
-{{console/ui-panel isFullscreen=consoleFullscreen}}
+<Console::UiPanel @isFullscreen={{consoleFullscreen}} />

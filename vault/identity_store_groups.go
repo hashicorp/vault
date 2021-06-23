@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -120,6 +119,11 @@ func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
 			return i.pathGroupIDUpdate()(ctx, req, d)
 		}
 
+		_, ok = d.GetOk("name")
+		if ok {
+			return i.pathGroupNameUpdate()(ctx, req, d)
+		}
+
 		i.groupLock.Lock()
 		defer i.groupLock.Unlock()
 
@@ -212,16 +216,13 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return nil, err
 		}
 
-		// If this is a new group and if there already exists a group by this
-		// name, error out. If the name of an existing group is about to be
-		// modified into something which is already tied to a different group,
-		// error out.
+		// If no existing group has this name, go ahead with the creation or rename.
+		// If there is a group, it must match the group passed in; groupByName
+		// should not be modified as it's in memdb.
 		switch {
 		case groupByName == nil:
 			// Allowed
-		case group.ID == "":
-			group = groupByName
-		case group.ID != "" && groupByName.ID != group.ID:
+		case groupByName.ID != group.ID:
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
 		group.Name = groupName
@@ -476,7 +477,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 
 	iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
+		return nil, fmt.Errorf("failed to lookup groups using namespace ID: %w", err)
 	}
 
 	var keys []string

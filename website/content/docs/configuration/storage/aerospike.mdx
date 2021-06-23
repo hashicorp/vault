@@ -1,0 +1,65 @@
+---
+layout: docs
+page_title: Aerospike - Storage Backends - Configuration
+description: |-
+  The Aerospike storage backend is used to persist Vault's data in an Aerospike
+  cluster.
+---
+
+# Aerospike Storage Backend
+
+The Aerospike storage backend is used to persist Vault's data in an
+[Aerospike][aerospike] cluster.
+
+- **No High Availability** – the Aerospike backend does not support high
+  availability.
+
+- **Community Supported** – the Aerospike storage backend is supported by the
+  community. While it has undergone review by HashiCorp employees, they may not
+  be as knowledgeable about the technology. If you encounter problems with them,
+  you may be referred to the original author.
+
+```hcl
+storage "aerospike" {
+  hostname = "localhost"
+  port = "3000"
+  namespace = "test"
+  set = "vault"
+  username = "admin"
+  password = "admin"
+}
+```
+
+## `aerospike` Parameters
+
+- `hostname` `(string: "127.0.0.1")` – Specifies the Aerospike seed hostname.
+
+- `port` `(string: "3000")` – Specifies the Aerospike seed port.
+
+- `hostlist` `(string: "")` – Aerospike host list, a comma separated list of potential hosts to seed the cluster.
+
+- `namespace` `(string: "test")` – Specifies the Aerospike storage namespace.
+
+- `set` `(string: "")` – Specifies the Aerospike storage set.
+
+- `username` `(string: "")` – Specifies the user used to authenticate with Aerospike
+  cluster. Access Control is available only in Aerospike Server Enterprise Edition.
+  Leave empty for clusters running without restricted access.
+
+- `password` `(string: "")` – Specifies the password used to authenticate with Aerospike
+  cluster. Access Control is available only in Aerospike Server Enterprise Edition.
+  Leave empty for clusters running without restricted access.
+
+- `cluster_name` `(string: "")` - Specifies the expected Aerospike cluster name. If set, server nodes must return this cluster ID in order to
+  join the client's view of the cluster. Should only be set when connecting to servers that
+  support the "cluster-name" info command. (v3.10+)
+
+- `auth_mode` `(string: "INTERNAL")` - Specifies the authentication mode when user/password is defined (INTERNAL/EXTERNAL).
+
+- `timeout` `(int: 30000)` - Initial host connection timeout duration in milliseconds.
+
+- `idle_timeout` `(int: 55000)` - Connection idle timeout in milliseconds. Every time a connection is used, its idle
+  deadline will be extended by this duration. When this deadline is reached,
+  the connection will be closed and discarded from the connection pool.
+
+[aerospike]: https://www.aerospike.com/

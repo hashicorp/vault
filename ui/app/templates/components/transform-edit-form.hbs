@@ -1,8 +1,7 @@
 <form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error model=model}}
-    {{!-- TODO: figure out what this ?? --}}
-    {{!-- <NamespaceReminder @mode={{mode}} @noun="SSH role" /> --}}
+    <MessageError @model={{model}} />
+    <NamespaceReminder @mode={{mode}} @noun="transformation" />
     {{#each model.transformFieldAttrs as |attr|}}
       {{#if (or (eq attr.name 'name') (eq attr.name 'type')) }}
         <label for="{{attr.name}}" class="is-label">
@@ -48,13 +47,9 @@
           Save
         {{/if}}
       </button>
-      {{#secret-link
-        mode=(if (eq mode "create") "list" "show")
-        class="button"
-        secret=model.id
-      }}
+      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{model.id}}>
         Cancel
-      {{/secret-link}}
+      </SecretLink>
     </div>
   </div>
 </form>

@@ -1,8 +1,8 @@
 /**
  * @module PricingMetricsDates
  * PricingMetricsDates components are used on the Pricing Metrics page to handle queries related to pricing metrics.
- * This component assumes that query parameters (as in, from route params) are being passed in with the format MM-YYYY,
- * while the inputs expect a format of MM/YYYY.
+ * This component assumes that query parameters (as in, from route params) are being passed in with the format MM-yyyy,
+ * while the inputs expect a format of MM/yyyy.
  *
  * @example
  * ```js
@@ -10,12 +10,12 @@
  * ```
  * @param {object} resultStart - resultStart is the start date of the metrics returned. Should be a valid date string that the built-in Date() fn can parse
  * @param {object} resultEnd - resultEnd is the end date of the metrics returned. Should be a valid date string that the built-in Date() fn can parse
- * @param {string} [queryStart] - queryStart is the route param (formatted MM-YYYY) that the result will be measured against for showing discrepancy warning
- * @param {string} [queryEnd] - queryEnd is the route param (formatted MM-YYYY) that the result will be measured against for showing discrepancy warning
+ * @param {string} [queryStart] - queryStart is the route param (formatted MM-yyyy) that the result will be measured against for showing discrepancy warning
+ * @param {string} [queryEnd] - queryEnd is the route param (formatted MM-yyyy) that the result will be measured against for showing discrepancy warning
  * @param {number} [defaultSpan=12] - setting for default time between start and end input dates
  * @param {number} [retentionMonths=24] - setting for the retention months, which informs valid dates to query by
  */
-import { computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import {
@@ -69,7 +69,9 @@ export default Component.extend({
     }
   }),
 
-  showResultsWarning: computed('resultStart', 'resultEnd', function() {
+  // We don't want the warning to show when inputs are being updated before query is made
+  /* eslint-disable-next-line ember/require-computed-property-dependencies */
+  showResultsWarning: computed('resultEnd', 'resultStart', function() {
     if (!this.queryStart || !this.queryEnd || !this.resultStart || !this.resultEnd) {
       return false;
     }
@@ -96,12 +98,12 @@ export default Component.extend({
     return false;
   }),
 
-  error: computed('end', 'start', function() {
+  error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function() {
     if (!this.startDate) {
-      return 'Start date is invalid. Please use format MM/YYYY';
+      return 'Start date is invalid. Please use format MM/yyyy';
     }
     if (!this.endDate) {
-      return 'End date is invalid. Please use format MM/YYYY';
+      return 'End date is invalid. Please use format MM/yyyy';
     }
     if (isBefore(this.endDate, this.startDate)) {
       return 'Start date is after end date';
@@ -112,7 +114,7 @@ export default Component.extend({
     }
     const earliestRetained = startOfMonth(subMonths(lastMonthAvailable, this.retentionMonths));
     if (isBefore(this.startDate, earliestRetained)) {
-      return `No data retained before ${format(earliestRetained, 'MM/YYYY')} due to your settings`;
+      return `No data retained before ${format(earliestRetained, 'MM/yyyy')} due to your settings`;
     }
 
     return null;
@@ -128,24 +130,24 @@ export default Component.extend({
       initialEnd = parseDateString(this.queryEnd, '-');
     } else {
       // if query isn't passed in, set it so that showResultsWarning works
-      this.queryEnd = format(initialEnd, 'MM-YYYY');
+      this.queryEnd = format(initialEnd, 'MM-yyyy');
     }
     initialStart = subMonths(initialEnd, this.defaultSpan);
     if (this.queryStart) {
       initialStart = parseDateString(this.queryStart, '-');
     } else {
       // if query isn't passed in, set it so that showResultsWarning works
-      this.queryStart = format(initialStart, 'MM-YYYY');
+      this.queryStart = format(initialStart, 'MM-yyyy');
     }
 
-    this.start = format(initialStart, 'MM/YYYY');
-    this.end = format(initialEnd, 'MM/YYYY');
+    set(this, 'start', format(initialStart, 'MM/yyyy'));
+    set(this, 'end', format(initialEnd, 'MM/yyyy'));
   },
 
   actions: {
     handleQuery() {
-      const start = format(this.startDate, 'MM-YYYY');
-      const end = format(this.endDate, 'MM-YYYY');
+      const start = format(this.startDate, 'MM-yyyy');
+      const end = format(this.endDate, 'MM-yyyy');
       this.router.transitionTo('vault.cluster.metrics', {
         queryParams: {
           start,

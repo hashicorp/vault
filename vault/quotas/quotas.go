@@ -261,14 +261,16 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	return manager, nil
 }
 
-// SetQuota adds a new quota rule to the db.
+// SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
-// setQuotaLocked should be called with the manager's lock held
+// setQuotaLocked adds or updates a quota rule, modifying the db as well as
+// any runtime elements such as goroutines.
+// It should be called with the write lock held.
 func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
 	if qType == TypeLeaseCount.String() {
 		m.setIsPerfStandby(quota)
@@ -277,13 +279,17 @@ func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota,
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	raw, err := txn.First(qType, "id", quota.quotaID())
+	raw, err := txn.First(qType, indexID, quota.quotaID())
 	if err != nil {
 		return err
 	}
 
 	// If there already exists an entry in the db, remove that first.
 	if raw != nil {
+		quota := raw.(Quota)
+		if err := quota.close(); err != nil {
+			return err
+		}
 		err = txn.Delete(qType, raw)
 		if err != nil {
 			return err
@@ -397,6 +403,7 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 		quotas = append(quotas, raw.(Quota))
 	}
 	if len(quotas) > 1 {
+		m.logger.Debug("conflicting quotas in QuotaByFactors", "matching_quotas", quotas)
 		return nil, fmt.Errorf("conflicting quota definitions detected")
 	}
 	if len(quotas) == 0 {
@@ -446,6 +453,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 			quotas = append(quotas, quota)
 		}
 		if len(quotas) > 1 {
+			m.logger.Debug("conflicting quotas in queryQuota", "matching_quotas", quotas, "args", args)
 			return nil, fmt.Errorf("conflicting quota definitions detected")
 		}
 		if len(quotas) == 0 {
@@ -763,6 +771,11 @@ func (m *Manager) Invalidate(key string) {
 		qType := splitKeys[0]
 		name := splitKeys[1]
 
+		if qType == TypeLeaseCount.String() && m.isDRSecondary {
+			// lease count invalidation not supported on DR Secondary
+			return
+		}
+
 		// Read quota rule from storage
 		quota, err := Load(m.ctx, m.storage, qType, name)
 		if err != nil {
@@ -836,13 +849,14 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 
 // Setup loads the quota configuration and all the quota rules into the
 // quota manager.
-func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby bool) error {
+func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby, isDRSecondary bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	m.storage = storage
 	m.ctx = ctx
 	m.isPerfStandby = isPerfStandby
+	m.isDRSecondary = isDRSecondary
 
 	// Load the quota configuration from storage and load it into the quota
 	// manager.
@@ -879,27 +893,36 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 		return err
 	}
 
-	// Load the quota rules for all supported types from storage and load it in
-	// the quota manager.
 	for _, qType := range quotaTypes() {
-		names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+qType+"/"))
+		m.setupQuotaType(ctx, storage, qType)
+	}
+
+	return nil
+}
+
+func (m *Manager) setupQuotaType(ctx context.Context, storage logical.Storage, quotaType string) error {
+	if quotaType == TypeLeaseCount.String() && m.isDRSecondary {
+		m.logger.Trace("lease count quotas are not processed on DR Secondaries")
+		return nil
+	}
+
+	names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+quotaType+"/"))
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		quota, err := Load(ctx, m.storage, quotaType, name)
 		if err != nil {
-			return nil
+			return err
 		}
-		for _, name := range names {
-			quota, err := Load(ctx, m.storage, qType, name)
-			if err != nil {
-				return err
-			}
 
-			if quota == nil {
-				continue
-			}
+		if quota == nil {
+			continue
+		}
 
-			err = m.setQuotaLocked(ctx, qType, quota, true)
-			if err != nil {
-				return err
-			}
+		err = m.setQuotaLocked(ctx, quotaType, quota, true)
+		if err != nil {
+			return err
 		}
 	}
 
