@@ -266,6 +266,11 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			return nil
 		})
 
+		// Return from top-level span when backend is nil
+		if backend == nil {
+			return fmt.Errorf("Diagnose could not initialize storage backend.")
+		}
+
 		// Check for raft quorum status
 		if config.Storage.Type == storageTypeRaft {
 			path := os.Getenv(raft.EnvVaultRaftPath)
@@ -420,10 +425,6 @@ SEALFAIL:
 			return diagnose.SpotError(ctx, "init-randreader", err)
 		}
 		diagnose.SpotOk(ctx, "init-randreader", "")
-
-		if backend == nil {
-			return fmt.Errorf(BackendUninitializedErr)
-		}
 		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return nil
 	}); err != nil {
@@ -432,9 +433,6 @@ SEALFAIL:
 
 	var disableClustering bool
 	diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
-		if backend == nil {
-			return fmt.Errorf(BackendUninitializedErr)
-		}
 		diagnose.Test(ctx, "create-ha-storage-backend", func(ctx context.Context) error {
 			// Initialize the separate HA storage backend, if it exists
 			disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
