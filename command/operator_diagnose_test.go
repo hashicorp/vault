@@ -481,6 +481,7 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 
 	// Remove raft file if it exists
 	os.Remove("./server/test-fixtures/vault.db")
+	os.RemoveAll("./server/test-fixtures/raft")
 
 	return nil
 }
