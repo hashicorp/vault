@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -254,7 +253,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	fmt.Printf("resp is:\n%#v", resp)
+	// fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -532,6 +531,9 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
@@ -561,7 +563,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 
 	cyclePeriod := 2 * time.Second
 
-	var testSets = []struct {
+	testSets := []struct {
 		namedKey  *namedKey
 		testCases []struct {
 			cycle         int
@@ -695,6 +697,9 @@ func TestOIDC_Config(t *testing.T) {
 				"issuer": iss,
 			},
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if resp == nil || !resp.IsError() {
 			t.Fatalf("Expected issuer %q to fail but it succeeded.", iss)
 		}
@@ -719,7 +724,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": keyName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -748,7 +753,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": keyName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -779,7 +784,7 @@ func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": roleName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -808,7 +813,7 @@ func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": roleName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -1013,9 +1018,9 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 func TestOIDC_Flush(t *testing.T) {
 	c := newOIDCCache()
 	ns := []*namespace.Namespace{
-		noNamespace, //ns[0] is nilNamespace
-		&namespace.Namespace{ID: "ns1"},
-		&namespace.Namespace{ID: "ns2"},
+		noNamespace, // ns[0] is nilNamespace
+		{ID: "ns1"},
+		{ID: "ns2"},
 	}
 
 	// populateNs populates cache by ns with some data

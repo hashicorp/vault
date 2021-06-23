@@ -14,10 +14,10 @@
           <nav class="breadcrumb">
             <ul class="is-grouped-split">
               <li>
-                {{#link-to "vault.cluster.secrets.backends" }}
+                <LinkTo @route="vault.cluster.secrets.backends">
                   <span class="sep"/>
                   Go back
-                {{/link-to}}
+                </LinkTo>
               </li>
               <li>
                 <LearnLink @path="/vault/operations/ops-disaster-recovery" @class="has-text-grey">

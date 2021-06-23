@@ -98,6 +98,12 @@
 .has-short-padding {
   padding: 0.25rem 1.25rem;
 }
+.has-tall-padding {
+  padding: 2.25rem;
+}
+.has-top-bottom-margin {
+  margin: 1.25rem 0rem;
+}
 
 .is-sideless.has-short-padding {
   padding: 0.25rem 1.25rem;
@@ -159,8 +165,24 @@
 .has-bottom-margin-l {
   margin-bottom: $spacing-l;
 }
+.has-bottom-margin-xl {
+  margin-bottom: $spacing-xl;
+}
+.has-bottom-margin-xxl {
+  margin-bottom: $spacing-xxl;
+}
+.has-top-margin-s {
+  margin-top: $spacing-s;
+}
+.has-top-margin-l {
+  margin-top: $spacing-l;
+}
 .has-top-margin-xl {
   margin-top: $spacing-xl;
+}
+.has-border-bottom-light {
+  border-radius: 0;
+  border-bottom: 1px solid $grey-light;
 }
 .has-border-danger {
   border: 1px solid $danger;

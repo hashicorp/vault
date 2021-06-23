@@ -1,10 +1,9 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import generatePage from 'vault/tests/pages/secrets/backend/pki/generate-cert';
-import showPage from 'vault/tests/pages/secrets/backend/pki/show';
 import configPage from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
@@ -39,37 +38,57 @@ elRplAzrMF4=
     const path = `pki-${new Date().getTime()}`;
     const roleName = 'role';
     await enablePage.enable('pki', path);
+    await settled();
     await configPage.visit({ backend: path }).form.generateCA();
+    await settled();
     await editPage.visitRoot({ backend: path });
+    await settled();
     await editPage.createRole('role', 'example.com');
+    await settled();
     await generatePage.visit({ backend: path, id: roleName, action });
+    await settled();
     return path;
   };
 
   test('it issues a cert', async function(assert) {
     await setup(assert);
-
+    await settled();
     await generatePage.issueCert('foo');
-    assert.ok(generatePage.hasCert, 'displays the cert');
-
+    await settled();
+    let countMaskedFonts = document.querySelectorAll('.masked-font').length;
+    assert.equal(countMaskedFonts, 3); // certificate, issuing ca, and private key
+    let firstUnMaskButton = document.querySelectorAll('.masked-input-toggle')[0];
+    await click(firstUnMaskButton);
+    assert.dom('.masked-value').hasTextContaining('-----BEGIN CERTIFICATE-----');
+    await settled();
     await generatePage.back();
+    await settled();
     assert.notOk(generatePage.commonNameValue, 'the form is cleared');
   });
 
   test('it signs a csr', async function(assert) {
     await setup(assert, 'sign');
+    await settled();
     await generatePage.sign('common', CSR);
-    assert.ok(generatePage.hasCert, 'displays the cert');
+    await settled();
+    let firstUnMaskButton = document.querySelectorAll('.masked-input-toggle')[0];
+    await click(firstUnMaskButton);
+    assert.dom('.masked-value').hasTextContaining('-----BEGIN CERTIFICATE-----');
   });
 
   test('it views a cert', async function(assert) {
     const path = await setup(assert);
     await generatePage.issueCert('foo');
+    await settled();
     await listPage.visitRoot({ backend: path, tab: 'certs' });
+    await settled();
     assert.ok(listPage.secrets.length > 0, 'lists certs');
 
     await listPage.secrets.objectAt(0).click();
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');
-    assert.ok(showPage.hasCert, 'shows the cert');
+    let firstUnMaskButton = document.querySelectorAll('.masked-input-toggle')[0];
+    await click(firstUnMaskButton);
+    assert.dom('.masked-value').hasTextContaining('-----BEGIN CERTIFICATE-----');
   });
 });

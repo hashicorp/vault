@@ -1,5 +1,5 @@
-<LinkTo
-  @params={{array "vault.cluster.secrets" (query-params namespace=this.normalizedNamespace)}}
+<a
+  href={{this.namespaceLink}}
   class={{concat "is-block " class}}
   data-test-namespace-link={{this.normalizedNamespace}}
   >
@@ -15,4 +15,4 @@
       </span>
     </div>
   {{/if}}
-</LinkTo>
+</a>

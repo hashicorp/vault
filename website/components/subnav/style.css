@@ -1,4 +1,4 @@
-@import '~@hashicorp/react-subnav/dist/style.css';
+@import '~@hashicorp/react-subnav/style.css';
 
 /* limit the inner width of the navigation to match the site layout */
 

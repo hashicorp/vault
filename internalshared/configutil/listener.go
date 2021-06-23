@@ -17,13 +17,21 @@ import (
 )
 
 type ListenerTelemetry struct {
-	UnauthenticatedMetricsAccess    bool        `hcl:"-"`
-	UnauthenticatedMetricsAccessRaw interface{} `hcl:"unauthenticated_metrics_access"`
+	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedMetricsAccess    bool         `hcl:"-"`
+	UnauthenticatedMetricsAccessRaw interface{}  `hcl:"unauthenticated_metrics_access,alias:UnauthenticatedMetricsAccess"`
+}
+
+type ListenerProfiling struct {
+	UnusedKeys                    UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedPProfAccess    bool         `hcl:"-"`
+	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
 }
 
 // Listener is the listener configuration for the server.
 type Listener struct {
-	RawConfig map[string]interface{}
+	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
+	RawConfig  map[string]interface{}
 
 	Type       string
 	Purpose    []string    `hcl:"-"`
@@ -43,6 +51,7 @@ type Listener struct {
 	TLSCertFile                      string      `hcl:"tls_cert_file"`
 	TLSKeyFile                       string      `hcl:"tls_key_file"`
 	TLSMinVersion                    string      `hcl:"tls_min_version"`
+	TLSMaxVersion                    string      `hcl:"tls_max_version"`
 	TLSCipherSuites                  []uint16    `hcl:"-"`
 	TLSCipherSuitesRaw               string      `hcl:"tls_cipher_suites"`
 	TLSPreferServerCipherSuites      bool        `hcl:"-"`
@@ -64,22 +73,23 @@ type Listener struct {
 
 	ProxyProtocolBehavior           string                        `hcl:"proxy_protocol_behavior"`
 	ProxyProtocolAuthorizedAddrs    []*sockaddr.SockAddrMarshaler `hcl:"-"`
-	ProxyProtocolAuthorizedAddrsRaw interface{}                   `hcl:"proxy_protocol_authorized_addrs"`
+	ProxyProtocolAuthorizedAddrsRaw interface{}                   `hcl:"proxy_protocol_authorized_addrs,alias:ProxyProtocolAuthorizedAddrs"`
 
 	XForwardedForAuthorizedAddrs        []*sockaddr.SockAddrMarshaler `hcl:"-"`
-	XForwardedForAuthorizedAddrsRaw     interface{}                   `hcl:"x_forwarded_for_authorized_addrs"`
+	XForwardedForAuthorizedAddrsRaw     interface{}                   `hcl:"x_forwarded_for_authorized_addrs,alias:XForwardedForAuthorizedAddrs"`
 	XForwardedForHopSkips               int64                         `hcl:"-"`
-	XForwardedForHopSkipsRaw            interface{}                   `hcl:"x_forwarded_for_hop_skips"`
+	XForwardedForHopSkipsRaw            interface{}                   `hcl:"x_forwarded_for_hop_skips,alias:XForwardedForHopSkips"`
 	XForwardedForRejectNotPresent       bool                          `hcl:"-"`
-	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present"`
+	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
 	XForwardedForRejectNotAuthorized    bool                          `hcl:"-"`
-	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized"`
+	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
 
 	SocketMode  string `hcl:"socket_mode"`
 	SocketUser  string `hcl:"socket_user"`
 	SocketGroup string `hcl:"socket_group"`
 
 	Telemetry ListenerTelemetry `hcl:"telemetry"`
+	Profiling ListenerProfiling `hcl:"profiling"`
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
@@ -88,11 +98,16 @@ type Listener struct {
 	CorsEnabled           bool        `hcl:"-"`
 	CorsAllowedOrigins    []string    `hcl:"cors_allowed_origins"`
 	CorsAllowedHeaders    []string    `hcl:"-"`
-	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers"`
+	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers,alias:cors_allowed_headers"`
 }
 
 func (l *Listener) GoString() string {
 	return fmt.Sprintf("*%#v", *l)
+}
+
+func (l *Listener) Validate(path string) []ConfigError {
+	results := append(ValidateUnusedFields(l.UnusedKeys, path), ValidateUnusedFields(l.Telemetry.UnusedKeys, path)...)
+	return append(results, ValidateUnusedFields(l.Profiling.UnusedKeys, path)...)
 }
 
 func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
@@ -145,10 +160,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			if l.MaxRequestSizeRaw != nil {
 				if l.MaxRequestSize, err = parseutil.ParseInt(l.MaxRequestSizeRaw); err != nil {
 					return multierror.Prefix(fmt.Errorf("error parsing max_request_size: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				if l.MaxRequestSize < 0 {
-					return multierror.Prefix(errors.New("max_request_size cannot be negative"), fmt.Sprintf("listeners.%d", i))
 				}
 
 				l.MaxRequestSizeRaw = nil
@@ -315,6 +326,17 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
+			}
+		}
+
+		// Profiling
+		{
+			if l.Profiling.UnauthenticatedPProfAccessRaw != nil {
+				if l.Profiling.UnauthenticatedPProfAccess, err = parseutil.ParseBool(l.Profiling.UnauthenticatedPProfAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for profiling.unauthenticated_pprof_access: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.Profiling.UnauthenticatedPProfAccessRaw = nil
 			}
 		}
 

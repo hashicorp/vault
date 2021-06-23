@@ -6,7 +6,7 @@ import { withKnobs, text } from '@storybook/addon-knobs';
 const onChange = value => alert(`New value is "${value}"`);
 const models = ['identity/groups'];
 
-storiesOf('SearchSelect/', module)
+storiesOf('SearchSelect', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs({ escapeHTML: false }))
   .add(

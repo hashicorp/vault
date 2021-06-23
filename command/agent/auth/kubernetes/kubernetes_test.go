@@ -91,7 +91,6 @@ func TestKubernetesAuth_basic(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // jwt for default service account

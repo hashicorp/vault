@@ -10,7 +10,6 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
@@ -24,8 +23,10 @@ import (
 )
 
 // Verify Backend satisfies the correct interfaces
-var _ physical.Backend = (*Backend)(nil)
-var _ physical.Transactional = (*Backend)(nil)
+var (
+	_ physical.Backend       = (*Backend)(nil)
+	_ physical.Transactional = (*Backend)(nil)
+)
 
 const (
 	// envDatabase is the name of the environment variable to search for the
@@ -79,18 +80,26 @@ type Backend struct {
 	// table is the name of the table in the database.
 	table string
 
+	// client is the API client and permitPool is the allowed concurrent uses of
+	// the client.
+	client     *spanner.Client
+	permitPool *physical.PermitPool
+
 	// haTable is the name of the table to use for HA in the database.
 	haTable string
 
 	// haEnabled indicates if high availability is enabled. Default: true.
 	haEnabled bool
 
-	// client is the underlying API client for talking to spanner.
-	client *spanner.Client
+	// haClient is the API client. This is managed separately from the main client
+	// because a flood of requests should not block refreshing the TTLs on the
+	// lock.
+	//
+	// This value will be nil if haEnabled is false.
+	haClient *spanner.Client
 
-	// logger and permitPool are internal constructs.
-	logger     log.Logger
-	permitPool *physical.PermitPool
+	// logger is the internal logger.
+	logger log.Logger
 }
 
 // NewBackend creates a new Google Spanner storage backend with the given
@@ -127,6 +136,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	// HA configuration
+	haClient := (*spanner.Client)(nil)
 	haEnabled := false
 	haEnabledStr := os.Getenv(envHAEnabled)
 	if haEnabledStr == "" {
@@ -136,14 +146,25 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		var err error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse HA enabled: %w", err)
+		}
+	}
+	if haEnabled {
+		logger.Debug("creating HA client")
+		var err error
+		ctx := context.Background()
+		haClient, err = spanner.NewClient(ctx, database,
+			option.WithUserAgent(useragent.String()),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HA client: %w", err)
 		}
 	}
 
 	// Max parallel
 	maxParallel, err := extractInt(c["max_parallel"])
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse max_parallel: %w", err)
 	}
 
 	logger.Debug("configuration",
@@ -153,25 +174,27 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		"haTable", haTable,
 		"maxParallel", maxParallel,
 	)
-	logger.Debug("creating client")
 
+	logger.Debug("creating client")
 	ctx := context.Background()
 	client, err := spanner.NewClient(ctx, database,
 		option.WithUserAgent(useragent.String()),
 	)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create spanner client: {{err}}", err)
+		return nil, fmt.Errorf("failed to create spanner client: %w", err)
 	}
 
 	return &Backend{
-		database:  database,
-		table:     table,
-		haEnabled: haEnabled,
-		haTable:   haTable,
-
+		database:   database,
+		table:      table,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
-		logger:     logger,
+
+		haEnabled: haEnabled,
+		haTable:   haTable,
+		haClient:  haClient,
+
+		logger: logger,
 	}, nil
 }
 
@@ -189,7 +212,7 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		"Value": entry.Value,
 	})
 	if _, err := b.client.Apply(ctx, []*spanner.Mutation{m}); err != nil {
-		return errwrap.Wrapf("failed to put data: {{err}}", err)
+		return fmt.Errorf("failed to put data: %w", err)
 	}
 	return nil
 }
@@ -208,12 +231,12 @@ func (b *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
+		return nil, fmt.Errorf("failed to read value for %q: %w", key, err)
 	}
 
 	var value []byte
 	if err := row.Column(0, &value); err != nil {
-		return nil, errwrap.Wrapf("failed to decode value into bytes: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode value into bytes: %w", err)
 	}
 
 	return &physical.Entry{
@@ -233,7 +256,7 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	// Delete
 	m := spanner.Delete(b.table, spanner.Key{key})
 	if _, err := b.client.Apply(ctx, []*spanner.Mutation{m}); err != nil {
-		return errwrap.Wrapf("failed to delete key: {{err}}", err)
+		return fmt.Errorf("failed to delete key: %w", err)
 	}
 
 	return nil
@@ -267,12 +290,12 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			break
 		}
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read row: {{err}}", err)
+			return nil, fmt.Errorf("failed to read row: %w", err)
 		}
 
 		var key string
 		if err := row.Column(0, &key); err != nil {
-			return nil, errwrap.Wrapf("failed to decode key into string: {{err}}", err)
+			return nil, fmt.Errorf("failed to decode key into string: %w", err)
 		}
 
 		// The results will include the full prefix (folder) and any deeply-nested
@@ -327,7 +350,7 @@ func (b *Backend) Transaction(ctx context.Context, txns []*physical.TxnEntry) er
 
 	// Transactivate!
 	if _, err := b.client.Apply(ctx, ms); err != nil {
-		return errwrap.Wrapf("failed to commit transaction: {{err}}", err)
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

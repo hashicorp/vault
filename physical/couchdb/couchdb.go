@@ -14,7 +14,6 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -28,9 +27,11 @@ type CouchDBBackend struct {
 }
 
 // Verify CouchDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*CouchDBBackend)(nil)
-var _ physical.PseudoTransactional = (*CouchDBBackend)(nil)
-var _ physical.PseudoTransactional = (*TransactionalCouchDBBackend)(nil)
+var (
+	_ physical.Backend             = (*CouchDBBackend)(nil)
+	_ physical.PseudoTransactional = (*CouchDBBackend)(nil)
+	_ physical.PseudoTransactional = (*TransactionalCouchDBBackend)(nil)
+)
 
 type couchDBClient struct {
 	endpoint string
@@ -177,7 +178,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)

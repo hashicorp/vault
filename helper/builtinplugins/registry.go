@@ -10,8 +10,19 @@ import (
 	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
+	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	dbSnowflake "github.com/hashicorp/vault-plugin-database-snowflake"
+	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
+	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
+	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
+	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
+	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
+	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
@@ -21,26 +32,6 @@ import (
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
-	dbHana "github.com/hashicorp/vault/plugins/database/hana"
-	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
-	dbMongo "github.com/hashicorp/vault/plugins/database/mongodb"
-	dbMssql "github.com/hashicorp/vault/plugins/database/mssql"
-	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
-	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
-	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/logical"
-
-	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
-	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
-	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
-	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
-	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
-	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
-	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
@@ -54,6 +45,16 @@ import (
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
 	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
+	dbCass "github.com/hashicorp/vault/plugins/database/cassandra"
+	dbHana "github.com/hashicorp/vault/plugins/database/hana"
+	dbInflux "github.com/hashicorp/vault/plugins/database/influxdb"
+	dbMongo "github.com/hashicorp/vault/plugins/database/mongodb"
+	dbMssql "github.com/hashicorp/vault/plugins/database/mssql"
+	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
+	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
+	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Registry is inherently thread-safe because it's immutable.
@@ -93,20 +94,22 @@ func newRegistry() *registry {
 		databasePlugins: map[string]BuiltinFactory{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
-			"mysql-database-plugin":        dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen),
-			"mysql-aurora-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
-			"mysql-rds-database-plugin":    dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
-			"mysql-legacy-database-plugin": dbMysql.New(credsutil.NoneLength, dbMysql.LegacyMetadataLen, dbMysql.LegacyUsernameLen),
+			"mysql-database-plugin":        dbMysql.New(dbMysql.DefaultUserNameTemplate),
+			"mysql-aurora-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			"mysql-rds-database-plugin":    dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
+			"mysql-legacy-database-plugin": dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate),
 
-			"postgresql-database-plugin":    dbPostgres.New,
-			"redshift-database-plugin":      dbRedshift.New(true),
-			"mssql-database-plugin":         dbMssql.New,
 			"cassandra-database-plugin":     dbCass.New,
-			"mongodb-database-plugin":       dbMongo.New,
-			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
+			"couchbase-database-plugin":     dbCouchbase.New,
+			"elasticsearch-database-plugin": dbElastic.New,
 			"hana-database-plugin":          dbHana.New,
 			"influxdb-database-plugin":      dbInflux.New,
-			"elasticsearch-database-plugin": dbElastic.New,
+			"mongodb-database-plugin":       dbMongo.New,
+			"mongodbatlas-database-plugin":  dbMongoAtlas.New,
+			"mssql-database-plugin":         dbMssql.New,
+			"postgresql-database-plugin":    dbPostgres.New,
+			"redshift-database-plugin":      dbRedshift.New,
+			"snowflake-database-plugin":     dbSnowflake.New,
 		},
 		logicalBackends: map[string]logical.Factory{
 			"ad":           logicalAd.Factory,
@@ -128,6 +131,7 @@ func newRegistry() *registry {
 			"postgresql":   logicalPostgres.Factory, // Deprecated
 			"rabbitmq":     logicalRabbit.Factory,
 			"ssh":          logicalSsh.Factory,
+			"terraform":    logicalTerraform.Factory,
 			"totp":         logicalTotp.Factory,
 			"transit":      logicalTransit.Factory,
 		},

@@ -31,8 +31,10 @@ type TransactionalErrorInjector struct {
 }
 
 // Verify ErrorInjector satisfies the correct interfaces
-var _ Backend = (*ErrorInjector)(nil)
-var _ Transactional = (*TransactionalErrorInjector)(nil)
+var (
+	_ Backend       = (*ErrorInjector)(nil)
+	_ Transactional = (*TransactionalErrorInjector)(nil)
+)
 
 // NewErrorInjector returns a wrapped physical backend to inject error
 func NewErrorInjector(b Backend, errorPercent int, logger log.Logger) *ErrorInjector {

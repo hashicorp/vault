@@ -1,0 +1,13 @@
+executor: go-machine
+steps:
+  - setup-go
+  - checkout
+  - go_test:
+      log_dir: "/tmp/testlogs"
+      save_cache: true
+  - store_artifacts:
+      path: test-results
+  - store_test_results:
+      path: test-results
+  - store_artifacts:
+      path: "/tmp/testlogs"

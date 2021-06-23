@@ -55,18 +55,6 @@ var (
 		}
 	}
 
-	pathLicenseRead = func(b *SystemBackend) framework.OperationFunc {
-		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-			return nil, nil
-		}
-	}
-
-	pathLicenseUpdate = func(b *SystemBackend) framework.OperationFunc {
-		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-			return nil, nil
-		}
-	}
-
 	entPaths = func(b *SystemBackend) []*framework.Path {
 		return []*framework.Path{
 			{
@@ -84,7 +72,17 @@ var (
 			},
 		}
 	}
-
+	handleGlobalPluginReload = func(context.Context, *Core, string, string, []string) error {
+		return nil
+	}
+	handleSetupPluginReload = func(*Core) error {
+		return nil
+	}
+	handleLicenseReload = func(b *SystemBackend) framework.OperationFunc {
+		return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+			return nil, nil
+		}
+	}
 	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
 

@@ -5,14 +5,15 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync/atomic"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
+
+	"github.com/golang/protobuf/proto"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/packet"
@@ -127,15 +128,8 @@ func (d *defaultSeal) BarrierType() string {
 }
 
 func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
-	isLegacy, err := d.LegacySeal()
-	if err != nil {
-		if d.core != nil && d.core.logger != nil {
-			d.core.logger.Error("no seal config found, can't determine if legacy or new-style shamir")
-		}
-		return seal.StoredKeysInvalid
-	}
 	switch {
-	case isLegacy:
+	case d.LegacySeal():
 		return seal.StoredKeysNotSupported
 	default:
 		return seal.StoredKeysSupportedShamirMaster
@@ -147,30 +141,22 @@ func (d *defaultSeal) RecoveryKeySupported() bool {
 }
 
 func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
-	isLegacy, err := d.LegacySeal()
-	if err != nil {
-		return err
-	}
-	if isLegacy {
+	if d.LegacySeal() {
 		return fmt.Errorf("stored keys are not supported")
 	}
 	return writeStoredKeys(ctx, d.core.physical, d.access, keys)
 }
 
-func (d *defaultSeal) LegacySeal() (bool, error) {
+func (d *defaultSeal) LegacySeal() bool {
 	cfg := d.config.Load().(*SealConfig)
 	if cfg == nil {
-		return false, fmt.Errorf("no seal config found, can't determine if legacy or new-style shamir")
+		return false
 	}
-	return cfg.StoredShares == 0, nil
+	return cfg.StoredShares == 0
 }
 
 func (d *defaultSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	isLegacy, err := d.LegacySeal()
-	if err != nil {
-		return nil, err
-	}
-	if isLegacy {
+	if d.LegacySeal() {
 		return nil, fmt.Errorf("stored keys are not supported")
 	}
 	keys, err := readStoredKeys(ctx, d.core.physical, d.access)
@@ -191,7 +177,7 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	pe, err := d.core.physical.Get(ctx, barrierSealConfigPath)
 	if err != nil {
 		d.core.logger.Error("failed to read seal configuration", "error", err)
-		return nil, errwrap.Wrapf("failed to check seal configuration: {{err}}", err)
+		return nil, fmt.Errorf("failed to check seal configuration: %w", err)
 	}
 
 	// If the seal configuration is missing, we are not initialized
@@ -205,7 +191,7 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	// Decode the barrier entry
 	if err := jsonutil.DecodeJSON(pe.Value, &conf); err != nil {
 		d.core.logger.Error("failed to decode seal configuration", "error", err)
-		return nil, errwrap.Wrapf("failed to decode seal configuration: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode seal configuration: %w", err)
 	}
 
 	switch conf.Type {
@@ -221,10 +207,10 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	// Check for a valid seal configuration
 	if err := conf.Validate(); err != nil {
 		d.core.logger.Error("invalid seal configuration", "error", err)
-		return nil, errwrap.Wrapf("seal validation failed: {{err}}", err)
+		return nil, fmt.Errorf("seal validation failed: %w", err)
 	}
 
-	d.config.Store(&conf)
+	d.SetCachedBarrierConfig(&conf)
 	return conf.Clone(), nil
 }
 
@@ -252,7 +238,7 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 	// Encode the seal configuration
 	buf, err := json.Marshal(config)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode seal configuration: {{err}}", err)
+		return fmt.Errorf("failed to encode seal configuration: %w", err)
 	}
 
 	// Store the seal configuration
@@ -263,10 +249,10 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 
 	if err := d.core.physical.Put(ctx, pe); err != nil {
 		d.core.logger.Error("failed to write seal configuration", "error", err)
-		return errwrap.Wrapf("failed to write seal configuration: {{err}}", err)
+		return fmt.Errorf("failed to write seal configuration: %w", err)
 	}
 
-	d.config.Store(config.Clone())
+	d.SetCachedBarrierConfig(config.Clone())
 
 	return nil
 }
@@ -383,11 +369,11 @@ func (s *SealConfig) Validate() error {
 		for _, keystring := range s.PGPKeys {
 			data, err := base64.StdEncoding.DecodeString(keystring)
 			if err != nil {
-				return errwrap.Wrapf("error decoding given PGP key: {{err}}", err)
+				return fmt.Errorf("error decoding given PGP key: %w", err)
 			}
 			_, err = openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(data)))
 			if err != nil {
-				return errwrap.Wrapf("error parsing given PGP key: {{err}}", err)
+				return fmt.Errorf("error parsing given PGP key: %w", err)
 			}
 		}
 	}
@@ -416,6 +402,36 @@ func (s *SealConfig) Clone() *SealConfig {
 	return ret
 }
 
+type ErrEncrypt struct {
+	Err error
+}
+
+var _ error = &ErrEncrypt{}
+
+func (e *ErrEncrypt) Error() string {
+	return e.Err.Error()
+}
+
+func (e *ErrEncrypt) Is(target error) bool {
+	_, ok := target.(*ErrEncrypt)
+	return ok || errors.Is(e.Err, target)
+}
+
+type ErrDecrypt struct {
+	Err error
+}
+
+var _ error = &ErrDecrypt{}
+
+func (e *ErrDecrypt) Error() string {
+	return e.Err.Error()
+}
+
+func (e *ErrDecrypt) Is(target error) bool {
+	_, ok := target.(*ErrDecrypt)
+	return ok || errors.Is(e.Err, target)
+}
+
 func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte) error {
 	if keys == nil {
 		return fmt.Errorf("keys were nil")
@@ -426,18 +442,18 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 
 	buf, err := json.Marshal(keys)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode keys for storage: {{err}}", err)
+		return fmt.Errorf("failed to encode keys for storage: %w", err)
 	}
 
 	// Encrypt and marshal the keys
 	blobInfo, err := encryptor.Encrypt(ctx, buf, nil)
 	if err != nil {
-		return errwrap.Wrapf("failed to encrypt keys for storage: {{err}}", err)
+		return &ErrEncrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
 	}
 
 	value, err := proto.Marshal(blobInfo)
 	if err != nil {
-		return errwrap.Wrapf("failed to marshal value for storage: {{err}}", err)
+		return fmt.Errorf("failed to marshal value for storage: %w", err)
 	}
 
 	// Store the seal configuration.
@@ -447,7 +463,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 	}
 
 	if err := storage.Put(ctx, pe); err != nil {
-		return errwrap.Wrapf("failed to write keys to storage: {{err}}", err)
+		return fmt.Errorf("failed to write keys to storage: %w", err)
 	}
 
 	return nil
@@ -456,7 +472,7 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *s
 func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access) ([][]byte, error) {
 	pe, err := storage.Get(ctx, StoredBarrierKeysPath)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to fetch stored keys: {{err}}", err)
+		return nil, fmt.Errorf("failed to fetch stored keys: %w", err)
 	}
 
 	// This is not strictly an error; we may not have any stored keys, for
@@ -467,12 +483,12 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 
 	blobInfo := &wrapping.EncryptedBlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
+		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
 	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
+		return nil, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)}
 	}
 
 	// Decode the barrier entry

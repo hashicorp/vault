@@ -8,7 +8,7 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array 'vault.cluster.settings.auth.enable'}}>
+    <ToolbarLink @type="add" @params={{array 'vault.cluster.settings.auth.enable'}} data-test-auth-enable>
       Enable new method
     </ToolbarLink>
   </ToolbarActions>
@@ -50,20 +50,20 @@
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            {{#popup-menu name="auth-backend-nav"}}
+            <PopupMenu @name="auth-backend-nav">
               <Confirm as |c|>
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    {{#link-to "vault.cluster.access.method.section" method.id "configuration"}}
+                    <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
                       View configuration
-                    {{/link-to}}
+                    </LinkTo>
                   </li>
                   {{#if method.canEdit}}
                     <li>
-                      {{#link-to "vault.cluster.settings.auth.configure" method.id}}
+                      <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
                         Edit configuration
-                      {{/link-to}}
+                      </LinkTo>
                     </li>
                   {{/if}}
 
@@ -81,7 +81,7 @@
                 </ul>
               </nav>
               </Confirm>
-            {{/popup-menu}}
+            </PopupMenu>
           </div>
         </div>
       </div>
@@ -119,20 +119,20 @@
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            {{#popup-menu name="auth-backend-nav"}}
+            <PopupMenu @name="auth-backend-nav">
               <Confirm as |c|>
                 <nav class="menu">
                   <ul class="menu-list">
                     <li>
-                      {{#link-to "vault.cluster.access.method.section" method.id "configuration"}}
+                      <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
                         View configuration
-                      {{/link-to}}
+                      </LinkTo>
                     </li>
                     {{#if method.canEdit}}
                       <li>
-                        {{#link-to "vault.cluster.settings.auth.configure" method.id}}
+                        <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
                           Edit configuration
-                        {{/link-to}}
+                        </LinkTo>
                       </li>
                     {{/if}}
 
@@ -147,7 +147,7 @@
                   </ul>
                 </nav>
               </Confirm>
-            {{/popup-menu}}
+            </PopupMenu>
           </div>
         </div>
       </div>

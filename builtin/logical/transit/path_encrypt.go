@@ -3,9 +3,10 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"reflect"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -37,18 +38,14 @@ type BatchRequestItem struct {
 	DecodedNonce []byte
 }
 
-// BatchResponseItem represents a response item for batch processing
-type BatchResponseItem struct {
+// EncryptBatchResponseItem represents a response item for batch processing
+type EncryptBatchResponseItem struct {
 	// Ciphertext for the plaintext present in the corresponding batch
 	// request item
 	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
 
 	// KeyVersion defines the key version used to encrypt plaintext.
 	KeyVersion int `json:"key_version,omitempty" structs:"key_version" mapstructure:"key_version"`
-
-	// Plaintext for the ciphertext present in the corresponding batch
-	// request item
-	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
@@ -158,7 +155,8 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["context"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Context = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
@@ -166,13 +164,15 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["ciphertext"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Ciphertext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
 			}
 		}
 
+		// don't allow "null" to be passed in for the plaintext value
 		if v, has := item["plaintext"]; has {
 			if casted, ok := v.(string); ok {
 				(*dst)[i].Plaintext = casted
@@ -182,7 +182,8 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["nonce"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Nonce = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T'", i, item["nonce"]))
@@ -190,8 +191,17 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["key_version"]; has {
-			if casted, ok := v.(int); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(int); ok {
 				(*dst)[i].KeyVersion = casted
+			} else if js, ok := v.(json.Number); ok {
+				// https://github.com/hashicorp/vault/issues/10232
+				// Because API server parses json request with UseNumber=true, logical.Request.Data can include json.Number for a number field.
+				if casted, err := js.Int64(); err == nil {
+					(*dst)[i].KeyVersion = int(casted)
+				} else {
+					errs.Errors = append(errs.Errors, fmt.Sprintf(`error decoding %T into [%d].key_version: strconv.ParseInt: parsing "%s": invalid syntax`, v, i, v))
+				}
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
 			}
@@ -229,7 +239,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if batchInputRaw != nil {
 		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -250,7 +260,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	// Before processing the batch request items, get the policy. If the

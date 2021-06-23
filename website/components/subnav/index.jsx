@@ -1,5 +1,5 @@
 import Subnav from '@hashicorp/react-subnav'
-import menuItems from '../../data/subnav'
+import menuItems from 'data/subnav'
 import { useRouter } from 'next/router'
 
 export default function ProductSubnav() {
@@ -7,21 +7,27 @@ export default function ProductSubnav() {
 
   return (
     <Subnav
+      hideGithubStars={true}
       titleLink={{
         text: 'vault',
-        url: '/'
+        url: '/',
       }}
       ctaLinks={[
         {
           text: 'GitHub',
-          url: 'https://www.github.com/hashicorp/vault'
+          url: 'https://www.github.com/hashicorp/vault',
+        },
+        {
+          text: 'Try Cloud',
+          url:
+            'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=top_nav',
         },
         {
           text: 'Download',
-          url: '/downloads'
-        }
+          url: '/downloads',
+        },
       ]}
-      currentPath={router.pathname}
+      currentPath={router.asPath}
       menuItems={menuItems}
       menuItemsAlign="right"
       constrainWidth

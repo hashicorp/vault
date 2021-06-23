@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -22,6 +21,8 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	FoundKeys  []string                `hcl:",decodedFields"`
 	entConfig
 
 	*configutil.SharedConfig `hcl:"-"`
@@ -41,30 +42,57 @@ type Config struct {
 	EnableUIRaw interface{} `hcl:"ui"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
-	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
+	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl,alias:MaxLeaseTTL"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
-	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
+	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
 	EnableRawEndpoint    bool        `hcl:"-"`
-	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
 
 	APIAddr              string      `hcl:"api_addr"`
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
-	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+	DisableClusteringRaw interface{} `hcl:"disable_clustering,alias:DisableClustering"`
 
 	DisablePerformanceStandby    bool        `hcl:"-"`
-	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby,alias:DisablePerformanceStandby"`
 
 	DisableSealWrap    bool        `hcl:"-"`
-	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap,alias:DisableSealWrap"`
 
 	DisableIndexing    bool        `hcl:"-"`
-	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing,alias:DisableIndexing"`
+
+	DisableSentinelTrace    bool        `hcl:"-"`
+	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace,alias:DisableSentinelTrace"`
+
+	EnableResponseHeaderHostname    bool        `hcl:"-"`
+	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
+
+	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
+	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
+
+	License     string `hcl:"-"`
+	LicensePath string `hcl:"license_path"`
+}
+
+const (
+	sectionSeal = "Seal"
+)
+
+func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
+	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
+	if c.Telemetry != nil {
+		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
+		for _, l := range c.Listeners {
+			results = append(results, l.Validate(sourceFilePath)...)
+		}
+	}
+	return results
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -89,11 +117,11 @@ enable_raw_endpoint = true
 storage "%s" {
 }
 
-enable_ui = true
+ui = true
 `
 
 	hclStr = fmt.Sprintf(hclStr, storageType)
-	parsed, err := ParseConfig(hclStr)
+	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing dev config: %w", err)
 	}
@@ -102,6 +130,7 @@ enable_ui = true
 
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
+	UnusedKeys        []string `hcl:",unusedKeys"`
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -166,6 +195,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableCache = c.DisableCache
 	if c2.DisableCache {
 		result.DisableCache = c2.DisableCache
+	}
+
+	result.DisableSentinelTrace = c.DisableSentinelTrace
+	if c2.DisableSentinelTrace {
+		result.DisableSentinelTrace = c2.DisableSentinelTrace
 	}
 
 	result.DisablePrintableCheck = c.DisablePrintableCheck
@@ -237,6 +271,21 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableIndexing = c2.DisableIndexing
 	}
 
+	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
+	if c2.EnableResponseHeaderHostname {
+		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
+	}
+
+	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
+	if c2.EnableResponseHeaderRaftNodeID {
+		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
+	result.LicensePath = c.LicensePath
+	if c2.LicensePath != "" {
+		result.LicensePath = c2.LicensePath
+	}
+
 	// Use values from top-level configuration for storage if set
 	if storage := result.Storage; storage != nil {
 		if result.APIAddr != "" {
@@ -261,6 +310,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 			haStorage.DisableClustering = result.DisableClustering
 		}
 	}
+
+	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	return result
 }
@@ -304,7 +355,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	conf, err := ParseConfig(string(d))
+	conf, err := ParseConfig(string(d), path)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +363,7 @@ func LoadConfigFile(path string) (*Config, error) {
 	return conf, nil
 }
 
-func ParseConfig(d string) (*Config, error) {
+func ParseConfig(d, source string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -372,6 +423,12 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.DisableSentinelTraceRaw != nil {
+		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
 			return nil, err
@@ -390,6 +447,18 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.EnableResponseHeaderHostnameRaw != nil {
+		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
+		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -397,39 +466,53 @@ func ParseConfig(d string) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "storage")
 		if err := ParseStorage(result, o, "storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
 	} else {
+		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "ha_storage")
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'ha_storage': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
+			delete(result.UnusedKeys, "ha_backend")
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'ha_backend': {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
 
 	// Parse service discovery
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'service_registration': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
 	}
 
 	entConfig := &(result.entConfig)
 	if err := entConfig.parseConfig(list); err != nil {
-		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
+		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
+	}
+
+	// Remove all unused keys from Config that were satisfied by SharedConfig.
+	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, nil, append(result.FoundKeys, sharedConfig.FoundKeys...))
+	// Assign file info
+	for _, v := range result.UnusedKeys {
+		for _, p := range v {
+			p.Filename = source
+		}
 	}
 
 	return result, nil
@@ -488,7 +571,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 	for _, f := range files {
 		config, err := LoadConfigFile(f)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
 		}
 
 		if result == nil {
@@ -702,6 +785,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 	sharedResult := c.SharedConfig.Sanitized()
 	result := map[string]interface{}{
 		"cache_size":              c.CacheSize,
+		"disable_sentinel_trace":  c.DisableSentinelTrace,
 		"disable_cache":           c.DisableCache,
 		"disable_printable_check": c.DisablePrintableCheck,
 
@@ -725,6 +809,10 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sealwrap": c.DisableSealWrap,
 
 		"disable_indexing": c.DisableIndexing,
+
+		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
+
+		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -760,5 +848,25 @@ func (c *Config) Sanitized() map[string]interface{} {
 		result["service_registration"] = sanitizedServiceRegistration
 	}
 
+	entConfigResult := c.entConfig.Sanitized()
+	for k, v := range entConfigResult {
+		result[k] = v
+	}
+
 	return result
+}
+
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+		l.UnusedKeys = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
 }

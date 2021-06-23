@@ -1,10 +1,8 @@
+import { attr } from '@ember-data/model';
 import { and } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import Certificate from './pki-certificate';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-
-const { attr } = DS;
 
 export default Certificate.extend({
   DISPLAY_FIELDS: computed(function() {
@@ -44,8 +42,8 @@ export default Certificate.extend({
   }),
 
   fieldDefinition: computed('caType', 'uploadPemBundle', function() {
-    const type = this.get('caType');
-    const isUpload = this.get('uploadPemBundle');
+    const type = this.caType;
+    const isUpload = this.uploadPemBundle;
     let groups = [{ default: ['caType', 'uploadPemBundle'] }];
     if (isUpload) {
       groups[0].default.push('pemBundle');
@@ -145,6 +143,7 @@ export default Certificate.extend({
   csr: attr('string', {
     editType: 'textarea',
     label: 'CSR',
+    masked: true,
   }),
   expiration: attr(),
 

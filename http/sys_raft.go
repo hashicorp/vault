@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -63,13 +64,22 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
+		tlsConfig.ServerName = req.LeaderTLSServerName
+	}
+
+	if req.AutoJoinScheme != "" && (req.AutoJoinScheme != "http" && req.AutoJoinScheme != "https") {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme))
+		return
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
-			LeaderAPIAddr: req.LeaderAPIAddr,
-			TLSConfig:     tlsConfig,
-			Retry:         req.Retry,
+			AutoJoin:       req.AutoJoin,
+			AutoJoinScheme: req.AutoJoinScheme,
+			AutoJoinPort:   req.AutoJoinPort,
+			LeaderAPIAddr:  req.LeaderAPIAddr,
+			TLSConfig:      tlsConfig,
+			Retry:          req.Retry,
 		},
 	}
 
@@ -90,10 +100,14 @@ type JoinResponse struct {
 }
 
 type JoinRequest struct {
-	LeaderAPIAddr    string `json:"leader_api_addr"`
-	LeaderCACert     string `json:"leader_ca_cert"`
-	LeaderClientCert string `json:"leader_client_cert"`
-	LeaderClientKey  string `json:"leader_client_key"`
-	Retry            bool   `json:"retry"`
-	NonVoter         bool   `json:"non_voter"`
+	AutoJoin            string `json:"auto_join"`
+	AutoJoinScheme      string `json:"auto_join_scheme"`
+	AutoJoinPort        uint   `json:"auto_join_port"`
+	LeaderAPIAddr       string `json:"leader_api_addr"`
+	LeaderCACert        string `json:"leader_ca_cert"`
+	LeaderClientCert    string `json:"leader_client_cert"`
+	LeaderClientKey     string `json:"leader_client_key"`
+	LeaderTLSServerName string `json:"leader_tls_servername"`
+	Retry               bool   `json:"retry"`
+	NonVoter            bool   `json:"non_voter"`
 }

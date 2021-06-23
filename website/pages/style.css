@@ -1,46 +1,36 @@
 /* Global Component Styles */
-@import '~@hashicorp/react-global-styles/style.css';
-@import '~@hashicorp/react-global-styles/custom-properties/color.css';
-@import '~@hashicorp/react-global-styles/custom-properties/font.css';
-@import '~@hashicorp/react-global-styles/_temporary-to-remove/layout.css';
-@import '~@hashicorp/nextjs-scripts/prism/style.css';
+@import '~@hashicorp/mktg-global-styles/style.css';
+@import '~@hashicorp/mktg-global-styles/_temporary-to-remove/layout.css';
+@import '~@hashicorp/mktg-global-styles/_temporary-to-remove/tables.css';
 
 :root {
-  --highlight-color: var(--brand);
+  --highlight-color: var(--brand-link);
 }
 
-@import '~@hashicorp/react-button/dist/style.css';
-@import '~@hashicorp/react-consent-manager/dist/style.css';
-@import '~@hashicorp/react-hero/dist/style.css';
-@import '~@hashicorp/react-section-header/dist/style.css';
-@import '~@hashicorp/react-use-cases/dist/style.css';
-@import '~@hashicorp/react-logo-grid/dist/style.css';
-@import '~@hashicorp/react-product-downloader/dist/style.css';
-@import '~@hashicorp/react-vertical-text-block-list/dist/style.css';
-@import '~@hashicorp/react-docs-sidenav/dist/style.css';
-@import '~@hashicorp/react-case-study-slider/dist/style.css';
-@import '~@hashicorp/react-content/dist/style.css';
-@import '~@hashicorp/react-text-and-content/dist/style.css';
-@import '~@hashicorp/react-code-block/dist/style.css';
-@import '~@hashicorp/react-consent-manager/dist/style.css';
-@import '~@hashicorp/react-toggle/dist/style.css';
-@import '~@hashicorp/react-docs-page/dist/style.css';
-@import '~@hashicorp/react-tabs/dist/style.css';
-@import '~@hashicorp/react-enterprise-alert/dist/style.css';
+@import '~@hashicorp/react-consent-manager/style.css';
+@import '~@hashicorp/react-toggle/style.css';
+@import '~@hashicorp/react-alert-banner/style.css';
+@import '~@hashicorp/react-button/styles/index.css';
+@import '~@hashicorp/react-content/style.css';
+@import '~@hashicorp/react-docs-page/style.css';
+@import '~@hashicorp/react-enterprise-alert/style.css';
+@import '~@hashicorp/react-featured-slider/style.css';
+@import '~@hashicorp/react-hero/style.css';
+@import '~@hashicorp/react-logo-grid/style.css';
+@import '~@hashicorp/react-tabs/style.css';
+@import '~@hashicorp/react-text-split/style.css';
+@import '~@hashicorp/react-use-cases/style.css';
+@import '~@hashicorp/react-vertical-text-block-list/style.css';
 
 /* Global Components - Transpiled */
-@import '~@hashicorp/react-mega-nav/style.css';
 
 /* Local Components */
-@import '../components/before-after-diagram/style.css';
-@import '../components/use-case-cta-section/style.css';
-@import '../components/subnav/style.css';
 @import '../components/footer/style.css';
-@import '../components/tabs/style.css';
+@import '../components/subnav/style.css';
+@import '../components/use-case-cta-section/style.css';
 
 /* Pages */
 @import './not-found/style.css';
-@import './downloads/style.css';
 @import './community/style.css';
 @import './use-cases/style.css';
 
@@ -68,16 +58,16 @@
 .g-section-block section {
   padding-top: 96px;
   padding-bottom: 96px;
-}
 
-.g-section-block section > .g-section-header + *,
-.g-section-block section > .g-container > .g-section-header + * {
-  margin-top: 72px;
-}
+  & > .g-section-header + *,
+  & > .g-container > .g-section-header + * {
+    margin-top: 72px;
+  }
 
-.g-section-block section > * + *,
-.g-section-block section > .g-container > * + * {
-  margin-top: 96px;
+  &:not(.no-section-spacing) > * + *,
+  & > .g-container > * + * {
+    margin-top: 96px;
+  }
 }
 
 .g-section-block .button-container {
@@ -103,86 +93,11 @@
   color: white;
 }
 
-/* Web Fonts */
-@font-face {
-  font-family: 'klavika-web';
-  src: url('/fonts/klavika/medium.woff2') format('woff2'),
-    url('/fonts/klavika/medium.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
+/** DEBT: short term patch until the branding changes roll out. Remove this with this PR — https://github.com/hashicorp/vault/pull/11118 **/
+.g-content {
+  --brand-text: var(--vagrant) !important;
 }
-
-/* Display Font (Gilmer) */
-@font-face {
-  font-family: 'gilmer-web';
-  src: url('/fonts/gilmer/light.woff2') format('woff2'),
-    url('/fonts/gilmer/light.woff') format('woff');
-  font-weight: 300;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'gilmer-web';
-  src: url('/fonts/gilmer/regular.woff2') format('woff2'),
-    url('/fonts/gilmer/regular.woff') format('woff');
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'gilmer-web';
-  src: url('/fonts/gilmer/medium.woff2') format('woff2'),
-    url('/fonts/gilmer/medium.woff') format('woff');
-  font-weight: 500;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'gilmer-web';
-  src: url('/fonts/gilmer/bold.woff2') format('woff2'),
-    url('/fonts/gilmer/bold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-}
-
-/* Body Font (Metro) */
-@font-face {
-  font-family: 'metro-web';
-  src: url('/fonts/metro-sans/book.woff2') format('woff2'),
-    url('/fonts/metro-sans/book.woff') format('woff');
-  font-weight: 300;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'metro-web';
-  src: url('/fonts/metro-sans/regular.woff2') format('woff2'),
-    url('/fonts/metro-sans/regular.woff') format('woff');
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'metro-web';
-  src: url('/fonts/metro-sans/semi-bold.woff2') format('woff2'),
-    url('/fonts/metro-sans/semi-bold.woff') format('woff');
-  font-weight: 600;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'metro-web';
-  src: url('/fonts/metro-sans/bold.woff2') format('woff2'),
-    url('/fonts/metro-sans/bold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-}
-
-/* Code Font (Deja Vu) */
-@font-face {
-  font-family: 'dejavu-sans-mono-web';
-  src: url('/fonts/dejavu/mono.woff2') format('woff2'),
-    url('/fonts/dejavu/mono.woff') format('woff');
-  font-style: normal;
-  font-weight: 400;
+.g-docs-sidenav {
+  --brand: var(--vagrant) !important;
+  --brand-text: var(--vagrant) !important;
 }

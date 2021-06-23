@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -16,7 +16,7 @@ import (
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "roles/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -26,7 +26,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathRoleHelpSyn,
 			HelpDescription: pathRoleHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-roles/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -41,7 +41,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern:        "roles/" + framework.GenericNameRegex("name"),
 			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -56,7 +56,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathRoleHelpDesc,
 		},
 
-		&framework.Path{
+		{
 			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
@@ -462,11 +462,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	if ok {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
-		if rotationPeriodSeconds < queueTickSeconds {
+		if rotationPeriodSeconds < defaultQueueTickSeconds {
 			// If rotation frequency is specified, and this is an update, the value
-			// must be at least that of the constant queueTickSeconds (5 seconds at
+			// must be at least that of the queue tick interval (5 seconds at
 			// time of writing), otherwise we wont be able to rotate in time
-			return logical.ErrorResponse(fmt.Sprintf("rotation_period must be %d seconds or more", queueTickSeconds)), nil
+			return logical.ErrorResponse(fmt.Sprintf("rotation_period must be %d seconds or more", defaultQueueTickSeconds)), nil
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 	}
@@ -522,11 +522,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 }
 
 type roleEntry struct {
-	DBName        string              `json:"db_name"`
-	Statements    dbplugin.Statements `json:"statements"`
-	DefaultTTL    time.Duration       `json:"default_ttl"`
-	MaxTTL        time.Duration       `json:"max_ttl"`
-	StaticAccount *staticAccount      `json:"static_account" mapstructure:"static_account"`
+	DBName        string         `json:"db_name"`
+	Statements    v4.Statements  `json:"statements"`
+	DefaultTTL    time.Duration  `json:"default_ttl"`
+	MaxTTL        time.Duration  `json:"max_ttl"`
+	StaticAccount *staticAccount `json:"static_account" mapstructure:"static_account"`
 }
 
 type staticAccount struct {

@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -71,7 +70,7 @@ func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 
 	// Decode the cluster information
 	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
-		return nil, errwrap.Wrapf("failed to decode cluster details: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode cluster details: %w", err)
 	}
 
 	// Set in config file
@@ -136,7 +135,7 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 	cert, err := x509.ParseCertificate(adv.ClusterCert)
 	if err != nil {
 		c.logger.Error("failed parsing local cluster certificate", "error", err)
-		return errwrap.Wrapf("error parsing local cluster certificate: {{err}}", err)
+		return fmt.Errorf("error parsing local cluster certificate: %w", err)
 	}
 
 	c.localClusterParsedCert.Store(cert)
@@ -247,13 +246,13 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey).Public(), c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey))
 			if err != nil {
 				c.logger.Error("error generating self-signed cert", "error", err)
-				return errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
+				return fmt.Errorf("unable to generate local cluster certificate: %w", err)
 			}
 
 			parsedCert, err := x509.ParseCertificate(certBytes)
 			if err != nil {
 				c.logger.Error("error parsing self-signed cert", "error", err)
-				return errwrap.Wrapf("error parsing generated certificate: {{err}}", err)
+				return fmt.Errorf("error parsing generated certificate: %w", err)
 			}
 
 			c.localClusterCert.Store(certBytes)
@@ -280,6 +279,18 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		}
 	}
 
+	c.clusterID.Store(cluster.ID)
+	return nil
+}
+
+func (c *Core) loadCluster(ctx context.Context) error {
+	cluster, err := c.Cluster(ctx)
+	if err != nil {
+		c.logger.Error("failed to get cluster details", "error", err)
+		return err
+	}
+
+	c.clusterID.Store(cluster.ID)
 	return nil
 }
 
@@ -311,7 +322,10 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, c.logger.Named("cluster-listener.tcp"))
 	}
 
-	c.clusterListener.Store(cluster.NewListener(networkLayer, c.clusterCipherSuites, c.logger.Named("cluster-listener")))
+	c.clusterListener.Store(cluster.NewListener(networkLayer,
+		c.clusterCipherSuites,
+		c.logger.Named("cluster-listener"),
+		5*c.clusterHeartbeatInterval))
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {

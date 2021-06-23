@@ -40,17 +40,17 @@ export default Component.extend({
   emptyData: '{\n}',
 
   modelForType() {
-    const type = this.get('options');
+    const type = this.options;
     if (type) {
       return type.model;
     }
     // if we don't have a mode for that type then redirect them back to the backend list
-    this.get('router').transitionTo('vault.cluster.secrets.backend.list-root', this.get('backendPath'));
+    this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.backendPath);
   },
 
   options: computed('action', 'backendType', function() {
-    const action = this.get('action') || 'creds';
-    return MODEL_TYPES[`${this.get('backendType')}-${action}`];
+    const action = this.action || 'creds';
+    return MODEL_TYPES[`${this.backendType}-${action}`];
   }),
 
   init() {
@@ -59,25 +59,21 @@ export default Component.extend({
   },
 
   didReceiveAttrs() {
-    if (this.get('wizard.featureState') === 'displayRole') {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'CONTINUE',
-        this.get('backendType')
-      );
+    if (this.wizard.featureState === 'displayRole') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
     }
   },
 
   willDestroy() {
-    this.get('model').unloadRecord();
+    this.model.unloadRecord();
     this._super(...arguments);
   },
 
   createOrReplaceModel() {
     const modelType = this.modelForType();
-    const model = this.get('model');
-    const roleName = this.get('roleName');
-    const backendPath = this.get('backendPath');
+    const model = this.model;
+    const roleName = this.roleName;
+    const backendPath = this.backendPath;
     if (!modelType) {
       return;
     }
@@ -91,23 +87,19 @@ export default Component.extend({
       },
       id: `${backendPath}-${roleName}`,
     };
-    const newModel = this.get('store').createRecord(modelType, attrs);
+    const newModel = this.store.createRecord(modelType, attrs);
     this.set('model', newModel);
   },
 
   actions: {
     create() {
-      let model = this.get('model');
+      let model = this.model;
       this.set('loading', true);
       this.model
         .save()
         .catch(() => {
-          if (this.get('wizard.featureState') === 'credentials') {
-            this.get('wizard').transitionFeatureMachine(
-              this.get('wizard.featureState'),
-              'ERROR',
-              this.get('backendType')
-            );
+          if (this.wizard.featureState === 'credentials') {
+            this.wizard.transitionFeatureMachine(this.wizard.featureState, 'ERROR', this.backendType);
           }
         })
         .finally(() => {
@@ -121,7 +113,7 @@ export default Component.extend({
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        set(this.get('model'), attr, JSON.parse(val));
+        set(this.model, attr, JSON.parse(val));
       }
     },
 

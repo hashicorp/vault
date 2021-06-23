@@ -32,6 +32,16 @@ func StrListContains(haystack []string, needle string) bool {
 	return false
 }
 
+// StrListContainsCaseInsensitive looks for a string in a list of strings.
+func StrListContainsCaseInsensitive(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if strings.EqualFold(item, needle) {
+			return true
+		}
+	}
+	return false
+}
+
 // StrListSubset checks if a given list is a subset
 // of another set
 func StrListSubset(super, sub []string) bool {
@@ -444,4 +454,27 @@ func Difference(a, b []string, lowercase bool) []string {
 	}
 	sort.Strings(items)
 	return items
+}
+
+// GetString attempts to retrieve a value from the provided map and assert that it is a string. If the key does not
+// exist in the map, this will return an empty string. If the key exists, but the value is not a string type, this will
+// return an error. If no map or key is provied, this will return an error
+func GetString(m map[string]interface{}, key string) (string, error) {
+	if m == nil {
+		return "", fmt.Errorf("missing map")
+	}
+	if key == "" {
+		return "", fmt.Errorf("missing key")
+	}
+
+	rawVal, ok := m[key]
+	if !ok {
+		return "", nil
+	}
+
+	str, ok := rawVal.(string)
+	if !ok {
+		return "", fmt.Errorf("invalid value at %s: is a %T", key, rawVal)
+	}
+	return str, nil
 }

@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -30,6 +31,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -225,7 +227,7 @@ func TestBackend_Roles(t *testing.T) {
 			testCase := logicaltest.TestCase{
 				LogicalBackend: b,
 				Steps: []logicaltest.TestStep{
-					logicaltest.TestStep{
+					{
 						Operation: logical.UpdateOperation,
 						Path:      "config/ca",
 						Data: map[string]interface{}{
@@ -395,7 +397,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	})))
 
 	ret := []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -410,7 +412,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "config/urls",
 			Data: map[string]interface{}{
@@ -420,7 +422,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.ReadOperation,
 			Path:      "config/urls",
 			Check: func(resp *logical.Response) error {
@@ -441,7 +443,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -462,7 +464,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -504,7 +506,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 
 		// Same as above but exclude adding to sans
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -581,7 +583,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	})))
 
 	ret := []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -591,7 +593,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -602,12 +604,12 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			ErrorOk: true,
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.DeleteOperation,
 			Path:      "root",
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -617,7 +619,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -731,9 +733,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	// Adds tests with the currently configured issue/role information
 	addTests := func(testCheck logicaltest.TestCheckFunc) {
 		stepCount++
-		//t.Logf("test step %d\nrole vals: %#v\n", stepCount, roleVals)
+		// t.Logf("test step %d\nrole vals: %#v\n", stepCount, roleVals)
 		stepCount++
-		//t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
+		// t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
 		roleTestStep.Data = roleVals.ToResponseData()
 		roleTestStep.Data["generate_lease"] = false
 		ret = append(ret, roleTestStep)
@@ -1026,7 +1028,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
 		rsaKeyBits := []int{2048, 4096}
 		ecKeyBits := []int{224, 256, 384, 521}
-		var plan = csrPlan{errorOk: errorOk}
+		plan := csrPlan{errorOk: errorOk}
 
 		var testBitSize int
 		switch keyType {
@@ -1196,9 +1198,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
-	funcs := []interface{}{addCnTests, getCnCheck, getCountryCheck, getLocalityCheck, getNotBeforeCheck,
+	funcs := []interface{}{
+		addCnTests, getCnCheck, getCountryCheck, getLocalityCheck, getNotBeforeCheck,
 		getOrganizationCheck, getOuCheck, getPostalCodeCheck, getRandCsr, getStreetAddressCheck,
-		getProvinceCheck}
+		getProvinceCheck,
+	}
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		t.Logf("funcs=%d", len(funcs))
 	}
@@ -1266,7 +1270,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.OU = []string{"foo"}
 		addTests(getOuCheck(roleVals))
 
-		roleVals.OU = []string{"foo", "bar"}
+		roleVals.OU = []string{"bar", "foo"}
 		addTests(getOuCheck(roleVals))
 	}
 	// Organization tests
@@ -2439,8 +2443,10 @@ func TestBackend_OID_SANs(t *testing.T) {
 	// Valid for both
 	oid1, type1, val1 := "1.3.6.1.4.1.311.20.2.3", "utf8", "devops@nope.com"
 	oid2, type2, val2 := "1.3.6.1.4.1.311.20.2.4", "utf-8", "d234e@foobar.com"
-	otherNames := []string{fmt.Sprintf("%s;%s:%s", oid1, type1, val1),
-		fmt.Sprintf("%s;%s:%s", oid2, type2, val2)}
+	otherNames := []string{
+		fmt.Sprintf("%s;%s:%s", oid1, type1, val1),
+		fmt.Sprintf("%s;%s:%s", oid2, type2, val2),
+	}
 	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
@@ -2718,6 +2724,135 @@ func TestBackend_URI_SANs(t *testing.T) {
 			cert.URIs)
 	}
 }
+
+func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Write test policy for userpass auth method.
+	err := client.Sys().PutPolicy("test", `
+   path "pki/*" {  
+     capabilities = ["update"]
+   }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable userpass auth method.
+	if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure test role for userpass.
+	if _, err := client.Logical().Write("auth/userpass/users/userpassname", map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Login userpass for test role and keep client token.
+	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Mount PKI.
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate internal CA.
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write role PKI.
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+		"allowed_domains": []string{
+			"foobar.com", "zipzap.com", "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"foo.{{identity.entity.aliases." + userpassAccessor + ".name}}.example.com",
+		},
+		"allowed_domains_template": true,
+		"allow_bare_domains":       true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with userpassToken.
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate for foobar.com to verify allowed_domain_templae doesnt break plain domains.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate for unknown userpassname.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "unknownuserpassname"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	// Issue certificate for foo.userpassname.domain.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foo.userpassname.example.com"})
+	if err != nil {
+		t.Fatal("expected error")
+	}
+
+	// Set allowed_domains_template to false.
+	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+		"allowed_domains_template": false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue certificate with userpassToken.
+	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -2787,6 +2922,181 @@ func setCerts() {
 		Bytes: caBytes,
 	}
 	rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+}
+
+func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
+	// Enable PKI secret engine
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	var err error
+
+	// Mount /pki as a root CA
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set the cluster's certificate as the root CA in /pki
+	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
+	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+		"pem_bundle": pemBundleRootCA,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Mount /pki2 to operate as an intermediate CA
+	err = client.Sys().Mount("pki2", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a CSR for the intermediate CA
+	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateCSR := secret.Data["csr"].(string)
+
+	// Sign the intermediate CSR using /pki
+	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+		"permitted_dns_domains": ".myvault.com",
+		"csr":                   intermediateCSR,
+		"ttl":                   "10s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	intermediateCertSerial := secret.Data["serial_number"].(string)
+	intermediateCASerialColon := strings.ReplaceAll(strings.ToLower(intermediateCertSerial), ":", "-")
+
+	// Get the intermediate cert after signing
+	secret, err = client.Logical().Read("pki/cert/" + intermediateCASerialColon)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || len(secret.Data) == 0 || len(secret.Data["certificate"].(string)) == 0 {
+		t.Fatal("expected certificate information from read operation")
+	}
+
+	// Issue a revoke on on /pki
+	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": intermediateCertSerial,
+	})
+
+	// Revoke adds a fixed 2s buffer, so we sleep for a bit longer to ensure
+	// the revocation time is past the current time.
+	time.Sleep(3 * time.Second)
+
+	// Issue a tidy on /pki
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_cert_store":    true,
+		"tidy_revoked_certs": true,
+		"safety_buffer":      "1s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sleep a bit to make sure we're past the safety buffer
+	time.Sleep(2 * time.Second)
+
+	// Get CRL and ensure the tidied cert is still in the list after the tidy
+	// operation since it's not past the NotAfter (ttl) value yet.
+	req := client.NewRequest("GET", "/v1/pki/crl")
+	resp, err := client.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	crlBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(crlBytes) == 0 {
+		t.Fatalf("expected CRL in response body")
+	}
+
+	crl, err := x509.ParseDERCRL(crlBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	revokedCerts := crl.TBSCertList.RevokedCertificates
+	if len(revokedCerts) == 0 {
+		t.Fatal("expected CRL to be non-empty")
+	}
+
+	sn := certutil.GetHexFormatted(revokedCerts[0].SerialNumber.Bytes(), ":")
+	if sn != intermediateCertSerial {
+		t.Fatalf("expected: %v, got: %v", intermediateCertSerial, sn)
+	}
+
+	// Wait for cert to expire
+	time.Sleep(10 * time.Second)
+
+	// Issue a tidy on /pki
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_cert_store":    true,
+		"tidy_revoked_certs": true,
+		"safety_buffer":      "1s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sleep a bit to make sure we're past the safety buffer
+	time.Sleep(2 * time.Second)
+
+	req = client.NewRequest("GET", "/v1/pki/crl")
+	resp, err = client.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	crlBytes, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(crlBytes) == 0 {
+		t.Fatalf("expected CRL in response body")
+	}
+
+	crl, err = x509.ParseDERCRL(crlBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	revokedCerts = crl.TBSCertList.RevokedCertificates
+	if len(revokedCerts) != 0 {
+		t.Fatal("expected CRL to be empty")
+	}
 }
 
 var (

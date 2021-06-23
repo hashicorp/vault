@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -13,32 +14,34 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
 
 const (
-	PrometheusDefaultRetentionTime = 24 * time.Hour
-	UsageGaugeDefaultPeriod        = 10 * time.Minute
-	MaximumGaugeCardinalityDefault = 500
+	PrometheusDefaultRetentionTime    = 24 * time.Hour
+	UsageGaugeDefaultPeriod           = 10 * time.Minute
+	MaximumGaugeCardinalityDefault    = 500
+	LeaseMetricsEpsilonDefault        = time.Hour
+	NumLeaseMetricsTimeBucketsDefault = 168
 )
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
+	FoundKeys    []string     `hcl:",decodedFields"`
+	UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
+	StatsiteAddr string       `hcl:"statsite_address"`
+	StatsdAddr   string       `hcl:"statsd_address"`
 
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
 	UsageGaugePeriod    time.Duration
-	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
+	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period,alias:UsageGaugePeriod"`
 
 	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 
@@ -137,6 +140,20 @@ type Telemetry struct {
 	StackdriverNamespace string `hcl:"stackdriver_namespace"`
 	// StackdriverDebugLogs will write additional stackdriver related debug logs to stderr.
 	StackdriverDebugLogs bool `hcl:"stackdriver_debug_logs"`
+
+	// How often metrics for lease expiry will be aggregated
+	LeaseMetricsEpsilon    time.Duration
+	LeaseMetricsEpsilonRaw interface{} `hcl:"lease_metrics_epsilon"`
+
+	// Number of buckets by time that will be used in lease aggregation
+	NumLeaseMetricsTimeBuckets int `hcl:"num_lease_metrics_buckets"`
+
+	// Whether or not telemetry should add labels for namespaces
+	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
+}
+
+func (t *Telemetry) Validate(source string) []ConfigError {
+	return ValidateUnusedFields(t.UnusedKeys, source)
 }
 
 func (t *Telemetry) GoString() string {
@@ -150,11 +167,6 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 
 	// Get our one item
 	item := list.Items[0]
-
-	var t Telemetry
-	if err := hcl.DecodeObject(&t, item.Val); err != nil {
-		return multierror.Prefix(err, "telemetry:")
-	}
 
 	if result.Telemetry == nil {
 		result.Telemetry = &Telemetry{}
@@ -190,6 +202,24 @@ func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 
 	if result.Telemetry.MaximumGaugeCardinality == 0 {
 		result.Telemetry.MaximumGaugeCardinality = MaximumGaugeCardinalityDefault
+	}
+
+	if result.Telemetry.LeaseMetricsEpsilonRaw != nil {
+		if result.Telemetry.LeaseMetricsEpsilonRaw == "none" {
+			result.Telemetry.LeaseMetricsEpsilonRaw = 0
+		} else {
+			var err error
+			if result.Telemetry.LeaseMetricsEpsilon, err = parseutil.ParseDurationSecond(result.Telemetry.LeaseMetricsEpsilonRaw); err != nil {
+				return err
+			}
+			result.Telemetry.LeaseMetricsEpsilonRaw = nil
+		}
+	} else {
+		result.Telemetry.LeaseMetricsEpsilon = LeaseMetricsEpsilonDefault
+	}
+
+	if result.Telemetry.NumLeaseMetricsTimeBuckets == 0 {
+		result.Telemetry.NumLeaseMetricsTimeBuckets = NumLeaseMetricsTimeBucketsDefault
 	}
 
 	return nil
@@ -311,7 +341,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, nil, false, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
@@ -345,7 +375,6 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	}
 	fanout = append(fanout, inm)
 	globalMetrics, err := metrics.NewGlobal(metricsConf, fanout)
-
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -355,6 +384,9 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper := metricsutil.NewClusterMetricSink(opts.ClusterName, globalMetrics)
 	wrapper.MaxGaugeCardinality = opts.Config.MaximumGaugeCardinality
 	wrapper.GaugeInterval = opts.Config.UsageGaugePeriod
+	wrapper.TelemetryConsts.LeaseMetricsEpsilon = opts.Config.LeaseMetricsEpsilon
+	wrapper.TelemetryConsts.LeaseMetricsNameSpaceLabels = opts.Config.LeaseMetricsNameSpaceLabels
+	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
 
 	return inm, wrapper, prometheusEnabled, nil
 }

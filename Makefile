@@ -2,8 +2,6 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-export RELEASE_GPG_KEY_FINGERPRINT := 91A6 E7F8 5D05 C656 30BE  F189 5185 2D87 348F FC4C
-
 TEST?=$$($(GO_CMD) list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
@@ -13,13 +11,13 @@ EXTERNAL_TOOLS_CI=\
 	github.com/elazarl/go-bindata-assetfs/... \
 	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
-	golang.org/x/tools/cmd/goimports 
+	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.13.7
+GO_VERSION_MIN=1.16.5
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -51,6 +49,14 @@ dev-ui-mem: BUILD_TAGS+=memprofiler
 dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
+
+# Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
+# The resulting image is tagged "vault:dev".
+docker-dev: prep
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
+
+docker-dev-ui: prep
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep
@@ -114,16 +120,7 @@ ci-lint:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@$(GO_CMD) generate $($(GO_CMD) list ./... | grep -v /vendor/)
-	@# Remove old (now broken) husky git hooks.
-	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm -f
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
-
-.PHONY: ci-config
-ci-config:
-	@$(MAKE) -C .circleci ci-config
-.PHONY: ci-verify
-ci-verify:
-	@$(MAKE) -C .circleci ci-verify
 
 # bootstrap the build by downloading additional tools needed to build
 ci-bootstrap:
@@ -139,7 +136,7 @@ bootstrap: ci-bootstrap
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
 update-plugins:
-	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
+	grep vault-plugin- go.mod | cut -d ' ' -f 1 | while read -r P; do echo "Updating $P..."; go get -v "$P"; done
 
 static-assets-dir:
 	@mkdir -p ./pkg/web_ui
@@ -188,13 +185,14 @@ ember-dist-dev:
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
 static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets
 
 proto:
 	protoc vault/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc vault/activity/activity_log.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
@@ -202,16 +200,17 @@ proto:
 	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/database/dbplugin/v5/proto/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go 
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 
 fmtcheck:
 	@true
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	goimports -w $(GOFMT_FILES)
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
@@ -245,38 +244,21 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-# GPG_KEY_VARS sets FPR to the fingerprint with no spaces and GIT_GPG_KEY_ID to a git compatible gpg key id.
-define GPG_KEY_VARS
-	FPR=$$(echo "$(RELEASE_GPG_KEY_FINGERPRINT)" | sed 's/ //g') && GIT_GPG_KEY_ID="0x$$(printf $$FPR | tail -c 16)"
-endef
+# Tell packagespec where to write its CircleCI config.
+PACKAGESPEC_CIRCLECI_CONFIG := .circleci/config/@build-release.yml
 
-define FAIL_IF_GPG_KEY_MISSING
-	@$(GPG_KEY_VARS) && echo "Checking for key '$$FPR' (git key id: $$GIT_GPG_KEY_ID)"; \
-	gpg --list-secret-keys "$$FPR" >/dev/null 2>&1 || { \
-		echo "ERROR: Secret GPG key missing: $$FPR"; \
-		exit 1; \
-	}
-endef
+# Tell packagespec to re-run 'make ci-config' whenever updating its own CI config.
+PACKAGESPEC_HOOK_POST_CI_CONFIG := $(MAKE) ci-config
 
-define FAIL_IF_UNCOMMITTED_CHANGES
-	@{ git diff --exit-code && git diff --cached --exit-code; } >/dev/null 2>&1 || { \
-		echo "ERROR: Uncommitted changes detected."; \
-		exit 1; \
-	}
-endef
+.PHONY: ci-config
+ci-config:
+	@$(MAKE) -C .circleci ci-config
+.PHONY: ci-verify
+ci-verify:
+	@$(MAKE) -C .circleci ci-verify
 
-stage-commit:
-	$(FAIL_IF_GPG_KEY_MISSING)
-	$(FAIL_IF_UNCOMMITTED_CHANGES)
-	@[ -n "$(STAGE_VERSION)" ] || { echo "You must set STAGE_VERSION to the version in semver-like format."; exit 1; }
-	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: stage v$(STAGE_VERSION)' 
-
-publish-commit:
-	$(FAIL_IF_GPG_KEY_MISSING)
-	$(FAIL_IF_UNCOMMITTED_CHANGES)
-	@[ -n "$(PUBLISH_VERSION)" ] || { echo "You must set PUBLISH_VERSION to the version in semver-like format."; exit 1; }
-	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: publish v$(PUBLISH_VERSION)'
-
-.PHONY: bin default prep test vet ci-bootstrap bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
+
+-include packagespec.mk

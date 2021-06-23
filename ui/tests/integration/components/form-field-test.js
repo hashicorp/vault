@@ -1,7 +1,7 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
@@ -32,8 +32,8 @@ module('Integration | Component | form field', function(hooks) {
 
   test('it renders', async function(assert) {
     let model = EmberObject.create({});
-    this.set('attr', { name: 'foo' });
-    this.set('model', model);
+    this.attr = { name: 'foo' };
+    this.model = model;
     await render(hbs`{{form-field attr=attr model=model}}`);
 
     assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
@@ -85,6 +85,13 @@ module('Integration | Component | form field', function(hooks) {
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
+  test('it renders: string as json with clear button', async function(assert) {
+    await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
+    assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
+    assert.ok(component.hasJSONEditor, 'renders the json editor');
+    assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
+  });
+
   test('it renders: editType textarea', async function(assert) {
     let [model, spy] = await setup.call(
       this,
@@ -102,6 +109,11 @@ module('Integration | Component | form field', function(hooks) {
   test('it renders: editType file', async function(assert) {
     await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
     assert.ok(component.hasTextFile, 'renders the text-file component');
+    await click('[data-test-text-toggle="true"]');
+    await fillIn('[data-test-text-file-textarea="true"]', 'hello world');
+    assert.dom('[data-test-text-file-textarea="true"]').hasClass('masked-font');
+    await click('[data-test-button]');
+    assert.dom('[data-test-text-file-textarea="true"]').doesNotHaveClass('masked-font');
   });
 
   test('it renders: editType ttl', async function(assert) {

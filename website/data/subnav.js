@@ -1,5 +1,5 @@
 export default [
-  { text: 'Overview', url: '/intro/getting-started' },
+  { text: 'Overview', url: '/' },
   {
     text: 'Use Cases',
     submenu: [
@@ -16,7 +16,7 @@ export default [
     url: 'https://www.hashicorp.com/products/vault/enterprise',
   },
   'divider',
-  { text: 'Learn', url: 'https://learn.hashicorp.com/vault' },
+  { text: 'Tutorials', url: 'https://learn.hashicorp.com/vault' },
   { text: 'Docs', url: '/docs' },
   { text: 'API', url: '/api-docs' },
   { text: 'Community', url: '/community' },

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -23,16 +24,14 @@ path "/auth/token/lookup" {
 `
 )
 
-var (
-	coreConfig = &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": pki.Factory,
-		},
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}
-)
+var coreConfig = &vault.CoreConfig{
+	LogicalBackends: map[string]logical.Factory{
+		"pki": pki.Factory,
+	},
+	CredentialBackends: map[string]logical.Factory{
+		"userpass": userpass.Factory,
+	},
+}
 
 func setupMounts(t *testing.T, client *api.Client) {
 	t.Helper()
@@ -77,7 +76,6 @@ func setupMounts(t *testing.T, client *api.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func teardownMounts(t *testing.T, client *api.Client) {
@@ -124,6 +122,129 @@ func waitForRemovalOrTimeout(c *api.Client, path string, tick, to time.Duration)
 			}
 		}
 	}
+}
+
+func TestQuotas_RateLimit_DupName(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// create a rate limit quota w/ 'secret' path
+	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "secret",
+	})
+	require.NoError(t, err)
+
+	s, err := client.Logical().Read("sys/quotas/rate-limit/secret-rlq")
+	require.NoError(t, err)
+	require.NotEmpty(t, s.Data)
+
+	// create a rate limit quota w/ empty path (same name)
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "",
+	})
+	require.NoError(t, err)
+
+	// list again and verify that only 1 item is returned
+	s, err = client.Logical().List("sys/quotas/rate-limit")
+	require.NoError(t, err)
+
+	require.Len(t, s.Data, 1, "incorrect number of quotas")
+}
+
+func TestQuotas_RateLimit_DupPath(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+	// create a global rate limit quota
+	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+		"rate": 10,
+		"path": "",
+	})
+	require.NoError(t, err)
+
+	// create a rate limit quota w/ 'secret' path
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "secret",
+	})
+	require.NoError(t, err)
+
+	s, err := client.Logical().Read("sys/quotas/rate-limit/secret-rlq")
+	require.NoError(t, err)
+	require.NotEmpty(t, s.Data)
+
+	// create a rate limit quota w/ empty path (same name)
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+		"rate": 7.7,
+		"path": "",
+	})
+
+	if err == nil {
+		t.Fatal("Duplicated paths were accepted")
+	}
+}
+
+func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
+		"rate": 7.7,
+	})
+	require.NoError(t, err)
+
+	// ensure exempt paths are not empty by default
+	resp, err := client.Logical().Read("sys/quotas/config")
+	require.NoError(t, err)
+	require.NotEmpty(t, resp.Data["rate_limit_exempt_paths"].([]interface{}), "expected no exempt paths by default")
+
+	reqFunc := func(numSuccess, numFail *atomic.Int32) {
+		_, err := client.Logical().Read("sys/quotas/rate-limit/rlq")
+
+		if err != nil {
+			numFail.Add(1)
+		} else {
+			numSuccess.Add(1)
+		}
+	}
+
+	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
+	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
+	want := int32(ideal + 1)
+	require.NotZerof(t, numFail, "expected some requests to fail; numSuccess: %d, elapsed: %d", numSuccess, elapsed)
+	require.Lessf(t, numSuccess, want, "too many successful requests;numSuccess: %d, numFail: %d, elapsed: %d", want, numSuccess, numFail, elapsed)
+
+	// allow time (1s) for rate limit to refill before updating the quota config
+	time.Sleep(time.Second)
+
+	_, err = client.Logical().Write("sys/quotas/config", map[string]interface{}{
+		"rate_limit_exempt_paths": []string{"sys/quotas/rate-limit"},
+	})
+	require.NoError(t, err)
+
+	// all requests should success
+	numSuccess, numFail, _ = testRPS(reqFunc, 5*time.Second)
+	require.NotZero(t, numSuccess)
+	require.Zero(t, numFail)
 }
 
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
@@ -177,9 +298,8 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	// ⌈7.7⌉*2 requests in the span of roughly a second -- 8 initially, followed
 	// by a refill rate of 7.7 per-second.
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  7.7,
-		"burst": 8,
-		"path":  "pki/",
+		"rate": 7.7,
+		"path": "pki/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +307,7 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 
 	// ensure there were some failed requests
@@ -202,9 +322,8 @@ func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  1000.0,
-		"burst": 3000,
-		"path":  "pki/",
+		"rate": 10000.0,
+		"path": "pki/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -257,9 +376,8 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 
 	// create a root rate limit quota
 	_, err = client.Logical().Write("sys/quotas/rate-limit/root-rlq", map[string]interface{}{
-		"name":  "root-rlq",
-		"rate":  14.7,
-		"burst": 15,
+		"name": "root-rlq",
+		"rate": 14.7,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -267,10 +385,9 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 
 	// create a mount rate limit quota with a lower RPS than the root rate limit quota
 	_, err = client.Logical().Write("sys/quotas/rate-limit/mount-rlq", map[string]interface{}{
-		"name":  "mount-rlq",
-		"rate":  7.7,
-		"burst": 8,
-		"path":  "pki/",
+		"name": "mount-rlq",
+		"rate": 7.7,
+		"path": "pki/",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -290,7 +407,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	// ensure mount rate limit quota takes precedence over root rate limit quota
 	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 
 	// ensure there were some failed requests
@@ -333,8 +450,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	// ⌈7.7⌉*2 requests in the span of roughly a second -- 8 initially, followed
 	// by a refill rate of 7.7 per-second.
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  7.7,
-		"burst": 8,
+		"rate": 7.7,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -352,7 +468,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 
 	numSuccess, numFail, elapsed := testRPS(reqFunc, 5*time.Second)
 
-	// evaluate the ideal RPS as (burst + (RPS * totalSeconds))
+	// evaluate the ideal RPS as (ceil(RPS) + (RPS * totalSeconds))
 	ideal := 8 + (7.7 * float64(elapsed) / float64(time.Second))
 
 	// ensure there were some failed requests
@@ -370,8 +486,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 
 	// update the rate limit quota with a high RPS such that no requests should fail
 	_, err = client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
-		"rate":  1000.0,
-		"burst": 3000,
+		"rate": 10000.0,
 	})
 	if err != nil {
 		t.Fatal(err)

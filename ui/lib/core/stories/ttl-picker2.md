@@ -21,6 +21,7 @@ TtlPicker2 components are used to enable and select time to live values. Use thi
 | recalculationTimeout | <code>Number</code>   | <code>5000</code>                                             | This is the time, in milliseconds, that `recalculateSeconds` will be be true after time is updated                               |
 | initialValue         | <code>String</code>   | <code></code>                                                 | This is the value set initially (particularly from a string like '30h')                                                          |
 | initialEnabled       | <code>Boolean</code>  | <code></code>                                                 | Set this value if you want the toggle on when component is mounted                                                               |
+| changeOnInit         | <code>Boolean</code>  | <code>false</code>                                            | set this value if you'd like the passed onChange function to be called on component initialization                               |
 
 **Example**
 

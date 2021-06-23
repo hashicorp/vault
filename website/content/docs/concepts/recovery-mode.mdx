@@ -1,0 +1,48 @@
+---
+layout: docs
+page_title: Recovery Mode
+description: Recovery mode allows for doing surgery on a Vault that won't start.
+---
+
+# Recovery Mode
+
+Vault can be started using the `-recovery` flag to bring it up in Recovery Mode.
+
+In recovery mode, Vault:
+
+- is automatically unsealed once a recovery token is issued
+- apart from recovery token operations, only supports the `sys/raw` endpoint
+- `raw` requests must be authenticated using a recovery token
+- won't form clusters or handle requests forwarded by standbys
+
+## Recovery tokens
+
+Recovery tokens are issued in much the same way as root tokens are generated:
+the API is basically the same, only using a different endpoint. Unlike root
+tokens, the recovery token is not persisted, so if Vault is restarted into
+recovery mode a new one must be generated.
+
+Only a single recovery token can be generated. If lost, restart Vault and
+generate a new one.
+
+## Raw requests
+
+Requests can be issued to `sys/raw` in just the same way as in regular Vault
+server mode. The only difference is that in recovery mode, `X-Vault-Token`
+must contain a recovery token instead of a service or batch token.
+
+## Raft rejoin
+
+Raft integrated storage is the immediate motivation for recovery mode. With
+other backends it was always possible to delete data directly from a storage
+backend, but that's impractical with a Raft backend. That said, recovery mode
+works with any backend.
+
+In order to bring the Vault server up reliably, using any node's raft data,
+recovery mode Vault automatically resizes the cluster to size 1. This means
+that after having used recovery mode, part of the procedure for returning to
+active service must include rejoining the raft cluster.
+
+If Raft is used exclusively for `ha_storage`, recovery mode will not allow for
+changes to the Raft data but instead allow for modification of the underlying
+physical data that is associated with Vault's storage backend.

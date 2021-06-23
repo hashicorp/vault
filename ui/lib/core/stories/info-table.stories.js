@@ -5,7 +5,7 @@ import notes from './info-table.md';
 
 const ITEMS = ['https://127.0.0.1:8201', 'hello', 3];
 
-storiesOf('InfoTable/', module)
+storiesOf('InfoTable/InfoTable', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs({ escapeHTML: false }))
   .add(

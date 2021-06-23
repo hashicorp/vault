@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -45,13 +46,13 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		}
 
 		// Get the Database object
-		db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+		dbi, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
 			return nil, err
 		}
 
-		db.RLock()
-		defer db.RUnlock()
+		dbi.RLock()
+		defer dbi.RUnlock()
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
 		ttl, _, err := framework.CalculateTTL(b.System(), req.Secret.Increment, role.DefaultTTL, 0, role.MaxTTL, 0, req.Secret.IssueTime)
@@ -63,9 +64,19 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			// Adding a small buffer since the TTL will be calculated again after this call
 			// to ensure the database credential does not expire before the lease
 			expireTime = expireTime.Add(5 * time.Second)
-			err := db.RenewUser(ctx, role.Statements, username, expireTime)
+
+			updateReq := v5.UpdateUserRequest{
+				Username: username,
+				Expiration: &v5.ChangeExpiration{
+					NewExpiration: expireTime,
+					Statements: v5.Statements{
+						Commands: role.Statements.Renewal,
+					},
+				},
+			}
+			_, err := dbi.database.UpdateUser(ctx, updateReq, false)
 			if err != nil {
-				b.CloseIfShutdown(db, err)
+				b.CloseIfShutdown(dbi, err)
 				return nil, err
 			}
 		}
@@ -93,7 +104,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		}
 
 		var dbName string
-		var statements dbplugin.Statements
+		var statements v4.Statements
 
 		role, err := b.Role(ctx, req.Storage, roleNameRaw.(string))
 		if err != nil {
@@ -103,41 +114,49 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			dbName = role.DBName
 			statements = role.Statements
 		} else {
-			if dbNameRaw, ok := req.Secret.InternalData["db_name"]; !ok {
+			dbNameRaw, ok := req.Secret.InternalData["db_name"]
+			if !ok {
 				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation db name data", req.Secret.InternalData["role"])
-			} else {
-				dbName = dbNameRaw.(string)
 			}
-			if statementsRaw, ok := req.Secret.InternalData["revocation_statements"]; !ok {
+			dbName = dbNameRaw.(string)
+
+			statementsRaw, ok := req.Secret.InternalData["revocation_statements"]
+			if !ok {
 				return nil, fmt.Errorf("error during revoke: could not find role with name %q or embedded revocation statement data", req.Secret.InternalData["role"])
-			} else {
-				// If we don't actually have any statements, because none were
-				// set in the role, we'll end up with an empty one and the
-				// default for the db type will be attempted
-				if statementsRaw != nil {
-					statementsSlice, ok := statementsRaw.([]interface{})
-					if !ok {
-						return nil, fmt.Errorf("error during revoke: could not find role with name %q and embedded reovcation data could not be read", req.Secret.InternalData["role"])
-					} else {
-						for _, v := range statementsSlice {
-							statements.Revocation = append(statements.Revocation, v.(string))
-						}
-					}
+			}
+
+			// If we don't actually have any statements, because none were
+			// set in the role, we'll end up with an empty one and the
+			// default for the db type will be attempted
+			if statementsRaw != nil {
+				statementsSlice, ok := statementsRaw.([]interface{})
+				if !ok {
+					return nil, fmt.Errorf("error during revoke: could not find role with name %q and embedded reovcation data could not be read", req.Secret.InternalData["role"])
+				}
+				for _, v := range statementsSlice {
+					statements.Revocation = append(statements.Revocation, v.(string))
 				}
 			}
 		}
 
 		// Get our connection
-		db, err := b.GetConnection(ctx, req.Storage, dbName)
+		dbi, err := b.GetConnection(ctx, req.Storage, dbName)
 		if err != nil {
 			return nil, err
 		}
 
-		db.RLock()
-		defer db.RUnlock()
+		dbi.RLock()
+		defer dbi.RUnlock()
 
-		if err := db.RevokeUser(ctx, statements, username); err != nil {
-			b.CloseIfShutdown(db, err)
+		deleteReq := v5.DeleteUserRequest{
+			Username: username,
+			Statements: v5.Statements{
+				Commands: statements.Revocation,
+			},
+		}
+		_, err = dbi.database.DeleteUser(ctx, deleteReq)
+		if err != nil {
+			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
 		return resp, nil

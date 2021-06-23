@@ -38,9 +38,9 @@ func (d *FieldData) Validate() error {
 		}
 
 		switch schema.Type {
-		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+		case TypeBool, TypeInt, TypeInt64, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 			TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat:
+			TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return errwrap.Wrapf(fmt.Sprintf("error converting input %v for field %q: {{err}}", value, field), err)
@@ -131,9 +131,9 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
+	case TypeBool, TypeInt, TypeInt64, TypeMap, TypeDurationSecond, TypeSignedDurationSecond, TypeString,
 		TypeLowerCaseString, TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice,
-		TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat:
+		TypeKVPairs, TypeCommaIntSlice, TypeHeader, TypeFloat, TypeTime:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -157,6 +157,13 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeInt:
 		var result int
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, false, err
+		}
+		return result, true, nil
+
+	case TypeInt64:
+		var result int64
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, false, err
 		}
@@ -220,6 +227,19 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return nil, false, fmt.Errorf("cannot provide negative value '%d'", result)
 		}
 		return result, true, nil
+
+	case TypeTime:
+		switch inp := raw.(type) {
+		case nil:
+			// Handle nil interface{} as a non-error case
+			return nil, false, nil
+		default:
+			time, err := parseutil.ParseAbsoluteTime(inp)
+			if err != nil {
+				return nil, false, err
+			}
+			return time.UTC(), true, nil
+		}
 
 	case TypeCommaIntSlice:
 		var result []int

@@ -57,7 +57,8 @@ Vagrantfile
 
 dist/*
 
-tags
+# ignore ctags
+./tags
 
 # Editor backups
 *~
@@ -105,3 +106,6 @@ website/.cache
 website/assets/node_modules
 website/assets/public
 website/components/node_modules
+
+.buildcache/
+.releaser/

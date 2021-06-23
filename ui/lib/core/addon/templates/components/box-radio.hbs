@@ -1,0 +1,64 @@
+{{#if @disabled}}
+<div class="box-radio-spacing">
+  <ToolTip
+    @verticalPosition="above"
+    @horizontalPosition="center"
+    as |T|>
+    <T.trigger @tabindex="-1">
+      <label
+        for={{@type}}
+        class="box-radio is-disabled is-marginless"
+        data-test-mount-type-radio
+        data-test-mount-type={{@type}}
+      >
+        <Icon
+          @glyph={{@glyph}}
+          @size="xl"
+          class="has-text-grey-light"
+        />
+        {{@displayName}}
+        <RadioButton
+          @value={{@type}}
+          @radioClass="radio"
+          @groupValue={{@groupValue}}
+          @changed={{@onRadioChange}}
+          @name={{@groupName}}
+          @radioId={{@type}}
+          @disabled={{@disabled}}
+        />
+      </label>
+    </T.trigger>
+    <T.content @class="tool-tip">
+      <div class="box">
+        {{@tooltipMessage}}
+      </div>
+    </T.content>
+  </ToolTip>
+</div>
+{{else}}
+<div class="box-radio-spacing">
+  <label
+    for={{@type}}
+    class="box-radio is-marginless
+    {{if (eq @groupValue @type) " is-selected"}}"
+    data-test-mount-type-radio
+    data-test-mount-type={{@type}}
+  >
+    <Icon
+      @glyph={{@glyph}}
+      @size="xl"
+      class="has-text-grey-light"
+    />
+    {{@displayName}}
+    <RadioButton
+      @value={{@type}}
+      @radioClass="radio"
+      @groupValue={{@mountType}}
+      @changed={{@onRadioChange}}
+      @name={{@groupName}}
+      @radioId={{@type}}
+      @disabled={{@disabled}}
+      />
+  </label>
+  </div>
+{{/if}}

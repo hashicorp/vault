@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, text } from '@storybook/addon-knobs';
 import notes from './empty-state.md';
 
-storiesOf('EmptyState/', module)
+storiesOf('EmptyState', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs({ escapeHTML: false }))
   .add(

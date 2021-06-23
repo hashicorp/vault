@@ -92,13 +92,9 @@ div > .ember-power-select-options {
 .search-select-list-item {
   align-items: center;
   display: flex;
-  margin: 0 $spacing-m;
   padding: $spacing-xxs;
   justify-content: space-between;
-
-  &:not(:last-child) {
-    border-bottom: $light-border;
-  }
+  border-bottom: $light-border;
 
   .control .button {
     color: $grey-light;

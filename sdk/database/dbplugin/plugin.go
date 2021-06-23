@@ -67,11 +67,6 @@ type Database interface {
 	// Close attempts to close the underlying database connection that was
 	// established by the backend.
 	Close() error
-
-	// DEPRECATED: Will be removed in a future plugin version bump.
-	// Initialize is a backwards-compatible implementation that simply calls
-	// Init, dropping the saveConfig, and returning the err.
-	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database
@@ -151,8 +146,10 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-var _ plugin.Plugin = &GRPCDatabasePlugin{}
-var _ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
+var (
+	_ plugin.Plugin     = &GRPCDatabasePlugin{}
+	_ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
+)
 
 // GRPCDatabasePlugin is the plugin.Plugin implementation that only supports GRPC
 // transport

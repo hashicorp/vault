@@ -4,7 +4,7 @@ import notes from './alert-banner.md';
 import { withKnobs, object } from '@storybook/addon-knobs';
 import { MESSAGE_TYPES } from '../addon/helpers/message-types.js';
 
-storiesOf('Alerts/AlertBanner/', module)
+storiesOf('Alerts/AlertBanner', module)
   .addParameters({ options: { showPanel: false } })
   .addDecorator(
     withKnobs({

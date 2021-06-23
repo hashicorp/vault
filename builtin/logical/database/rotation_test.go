@@ -2,13 +2,12 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
-
-	"database/sql"
 
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -506,6 +505,8 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
+	t.Skip("temporarily disabled due to intermittent failures")
+
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -661,6 +662,8 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 
 // Helper to assert the number of WAL entries is what we expect
 func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
+	t.Helper()
+
 	var count int
 	ctx := context.Background()
 	keys, err := framework.ListWAL(ctx, s)
@@ -772,6 +775,9 @@ func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
+	// Change background task interval to 1s to give more margin
+	// for it to successfully run during the sleeps below.
+	config.Config[queueTickIntervalKey] = "1"
 
 	// Rotation ticker starts running in Factory call
 	b, err := Factory(context.Background(), config)

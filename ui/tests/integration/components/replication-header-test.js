@@ -17,7 +17,7 @@ const DATA = {
 const TITLE = 'Disaster Recovery';
 const SECONDARY_ID = '123abc';
 
-module('Integration | Enterprise | Component | replication-header', function(hooks) {
+module('Integration | Component | replication-header', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {

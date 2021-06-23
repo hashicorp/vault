@@ -1,0 +1,88 @@
+---
+layout: docs
+page_title: Vault CSI Provider Configurations
+description: This section documents the configurables for the Vault CSI Provider.
+---
+
+# Command line arguments
+
+The following command line arguments are supported by the Vault CSI provider.
+If installing via the helm chart, they can be set using e.g.
+`--set "csi.extraArgs={-debug=true}"`.
+
+- `-debug` `(bool: false)` - Set to true to enable debug level logging.
+
+- `-endpoint` `(string: "/tmp/vault.sock")` - Path to unix socket on which the
+  provider will listen for gRPC calls from the driver.
+
+- `-health-addr` `(string: ":8080")` - (v0.3.0+) The address of the HTTP listener
+  for reporting health.
+
+- `-health_addr` `(string: "")` - Deprecated, please use -health-addr. Slated
+  for removal in 0.5.0.
+
+- `-vault-addr` `(string: "https://127.0.0.1:8200")` - (v0.3.0+) Default address
+  for connecting to Vault. Can be overridden per Secret Provider Class object.
+
+- `-vault-mount` `(string: "kubernetes")` - (v0.3.0+) Default Vault mount path
+  for Kubernetes authentication. Can be overridden per Secret Provider Class
+  object.
+
+- `-version` `(bool: false)` - prints the version information
+
+- `-write-secrets` `(bool: true)` - (v0.3.0+) Write secrets directly to
+  filesystem (true), or send secrets to CSI driver in gRPC response (false).
+  Setting to false requires Secrets Store CSI Driver v0.0.21+. This flag will
+  default to false from v0.4.0, and setting it to false will be required when
+  using Secrets Store CSI Driver v0.0.24+.
+
+
+# Secret Provider Class Configurations
+
+The following parameters are supported by the Vault provider:
+
+- `roleName` `(string: "")` - Name of the role to be used during login with Vault.
+
+- `vaultAddress` `(string: "")` - The address of the Vault server.
+
+- `vaultNamespace` `(string: "")` - The Vault [namespace](/docs/enterprise/namespaces) to use.
+
+- `vaultSkipTLSVerify` `(string: "false")` - When set to true, skips verification of the Vault server
+  certificiate. Setting this to true is not recommended for production.
+
+- `vaultCACertPath` `(string: "")` - The path on disk where the Vault CA certificate can be found
+  when verifying the Vault server certificate.
+
+- `vaultCADirectory` `(string: "")` - The directory on disk where the Vault CA certificate can be found
+  when verifying the Vault server certificate.
+
+- `vaultTLSClientCertPath` `(string: "")` - The path on disk where the client certificate can be found
+  for mTLS communications with Vault.
+
+- `vaultTLSClientKeyPath` `(string: "")` - The path on disk where the client key can be found
+  for mTLS communications with Vault.
+
+- `vaultTLSServerName` `(string: "")` - The name to use as the SNI host when connecting via TLS.
+
+- `vaultKubernetesMountPath` `(string: "kubernetes")` - The name of the auth mount used for login.
+  At this time only the Kubernetes auth method is supported.
+
+- `objects` `(array)` - An array of secrets to retrieve from Vault.
+
+  - `objectName` `(string: "")` - The alias of the object which can be referenced within the secret provider class and
+  the name of the secret file.
+
+  - `method` `(string: "GET")` - The type of HTTP request. Supported values include "GET" and "PUT".
+
+  - `secretPath` `(string: "")` - The path in Vault where the secret is located.
+
+  - `secretKey` `(string: "")` - The key in the Vault secret to extract. If omitted, the whole response from Vault will be written as JSON.
+
+  - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary
+    for different secret engines. For example:
+
+    ```yaml
+    secretArgs:
+      common_name: 'test.example.com'
+      ttl: '24h'
+    ```

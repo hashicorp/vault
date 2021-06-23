@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import { withKnobs, text, boolean } from '@storybook/addon-knobs';
 import notes from './confirm-action.md';
 
-storiesOf('ConfirmAction/', module)
+storiesOf('Confirm/ConfirmAction', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(
     withKnobs({

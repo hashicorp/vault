@@ -39,12 +39,10 @@ func NewOASDocument() *OASDocument {
 // If a document has been decoded from JSON or received from a plugin, it will be as a map[string]interface{}
 // and needs special handling beyond the default mapstructure decoding.
 func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
-
 	// The Responses map uses integer keys (the response code), but once translated into JSON
 	// (e.g. during the plugin transport) these become strings. mapstructure will not coerce these back
 	// to integers without a custom decode hook.
 	decodeHook := func(src reflect.Type, tgt reflect.Type, inputRaw interface{}) (interface{}, error) {
-
 		// Only alter data if:
 		//  1. going from string to int
 		//  2. string represent an int in status code range (100-599)
@@ -165,7 +163,7 @@ type OASSchema struct {
 	Default    interface{}   `json:"default,omitempty"`
 	Example    interface{}   `json:"example,omitempty"`
 	Deprecated bool          `json:"deprecated,omitempty"`
-	//DisplayName      string             `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
+	// DisplayName      string             `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
 	DisplayValue     interface{}        `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
 	DisplaySensitive bool               `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
 	DisplayGroup     string             `json:"x-vault-displayGroup,omitempty" mapstructure:"x-vault-displayGroup,omitempty"`
@@ -192,15 +190,17 @@ var OASStdRespNoContent = &OASResponse{
 // Both "(leases/)?renew" and "(/(?P<name>.+))?" formats are detected
 var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
 
-var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)             // Capture required parameters, e.g. "(?P<name>regex)"
-var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)                     // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)                     // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-var cleanCharsRe = regexp.MustCompile("[()^$?]")                     // Set of regex characters that will be stripped during cleaning
-var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)                    // Path suffix patterns that will be stripped during cleaning
-var wsRe = regexp.MustCompile(`\s+`)                                 // Match whitespace, to be compressed during cleaning
-var altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
-var altFieldsRe = regexp.MustCompile(`\w+(\|\w+)+`)                  // Match an options set, e.g. "a|b|c"
-var nonWordRe = regexp.MustCompile(`[^\w]+`)                         // Match a sequence of non-word characters
+var (
+	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)   // Capture required parameters, e.g. "(?P<name>regex)"
+	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)          // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                 // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+	cleanCharsRe     = regexp.MustCompile("[()^$?]")                 // Set of regex characters that will be stripped during cleaning
+	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                 // Path suffix patterns that will be stripped during cleaning
+	wsRe             = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
+	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
+	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
+	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
+)
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, doc *OASDocument) error {
@@ -256,6 +256,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 		for name, field := range pathFields {
 			location := "path"
 			required := true
+
+			if field == nil {
+				continue
+			}
 
 			if field.Query {
 				location = "query"
@@ -572,6 +576,12 @@ func convertType(t FieldType) schemaType {
 	case TypeCommaIntSlice:
 		ret.baseType = "array"
 		ret.items = "integer"
+	case TypeTime:
+		ret.baseType = "string"
+		ret.format = "date-time"
+	case TypeFloat:
+		ret.baseType = "number"
+		ret.format = "float"
 	default:
 		log.L().Warn("error parsing field type", "type", t)
 		ret.format = "unknown"

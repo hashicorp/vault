@@ -2,7 +2,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './vault-logo-spinner.md';
 
-storiesOf('Loading/VaultLogoSpinner/', module)
+storiesOf('VaultLogoSpinner', module)
   .addParameters({ options: { showPanel: true } })
   .add(
     `VaultLogoSpinner`,

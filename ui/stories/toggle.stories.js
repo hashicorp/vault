@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './toggle.md';
 import { withKnobs, text, boolean, select } from '@storybook/addon-knobs';
 
-storiesOf('Toggle/', module)
+storiesOf('Toggle', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

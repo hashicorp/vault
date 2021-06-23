@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './alert-inline.md';
 import { MESSAGE_TYPES } from '../addon/helpers/message-types.js';
 
-storiesOf('Alerts/AlertInline/', module)
+storiesOf('Alerts/AlertInline', module)
   .addParameters({ options: { showPanel: false } })
   .add(
     'AlertInline',

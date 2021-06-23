@@ -26,12 +26,12 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		PathMap: framework.PathMap{
 			Name: "app-id",
 			Schema: map[string]*framework.FieldSchema{
-				"display_name": &framework.FieldSchema{
+				"display_name": {
 					Type:        framework.TypeString,
 					Description: "A name to map to this app ID for logs.",
 				},
 
-				"value": &framework.FieldSchema{
+				"value": {
 					Type:        framework.TypeString,
 					Description: "Policies for the app ID.",
 				},
@@ -43,12 +43,12 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	b.MapUserId = &framework.PathMap{
 		Name: "user-id",
 		Schema: map[string]*framework.FieldSchema{
-			"cidr_block": &framework.FieldSchema{
+			"cidr_block": {
 				Type:        framework.TypeString,
 				Description: "If not blank, restricts auth by this CIDR block",
 			},
 
-			"value": &framework.FieldSchema{
+			"value": {
 				Type:        framework.TypeString,
 				Description: "App IDs that this user associates with.",
 			},

@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -178,10 +177,10 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
-func validateNames(data *inputBundle, names []string) string {
+func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
 		sanitizedName := name
-		emailDomain := name
+		emailDomain := sanitizedName
 		isEmail := false
 		isWildcard := false
 
@@ -191,8 +190,8 @@ func validateNames(data *inputBundle, names []string) string {
 		// ends up being problematic for users, I guess that could be separated
 		// into dns_names and email_names in the future to be explicit, but I
 		// don't think this is likely.
-		if strings.Contains(name, "@") {
-			splitEmail := strings.Split(name, "@")
+		if strings.Contains(sanitizedName, "@") {
+			splitEmail := strings.Split(sanitizedName, "@")
 			if len(splitEmail) != 2 {
 				return name
 			}
@@ -241,7 +240,7 @@ func validateNames(data *inputBundle, names []string) string {
 		// 1) If a role allows a certain class of base (localhost, token
 		// display name, role-configured domains), perform further tests
 		//
-		// 2) If there is a perfect match on either the name itself or it's an
+		// 2) If there is a perfect match on either the sanitized name or it's an
 		// email address with a perfect match on the hostname portion, allow it
 		//
 		// 3) If subdomains are allowed, we check based on the sanitized name;
@@ -254,8 +253,8 @@ func validateNames(data *inputBundle, names []string) string {
 		// Variances are noted in-line
 
 		if data.role.AllowLocalhost {
-			if name == "localhost" ||
-				name == "localdomain" ||
+			if sanitizedName == "localhost" ||
+				sanitizedName == "localdomain" ||
 				(isEmail && emailDomain == "localhost") ||
 				(isEmail && emailDomain == "localdomain") {
 				continue
@@ -314,18 +313,30 @@ func validateNames(data *inputBundle, names []string) string {
 					continue
 				}
 
+				if data.role.AllowedDomainsTemplate {
+					isTemplate, _ := framework.ValidateIdentityTemplate(currDomain)
+					if isTemplate && data.req.EntityID != "" {
+						tmpCurrDomain, err := framework.PopulateIdentityTemplate(currDomain, data.req.EntityID, b.System())
+						if err != nil {
+							continue
+						}
+
+						currDomain = tmpCurrDomain
+					}
+				}
+
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if data.role.AllowBareDomains &&
-					(name == currDomain ||
-						(isEmail && emailDomain == currDomain)) {
+					(strings.EqualFold(sanitizedName, currDomain) ||
+						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
 					valid = true
 					break
 				}
 
 				if data.role.AllowSubdomains {
 					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
-						(isWildcard && sanitizedName == currDomain) {
+						(isWildcard && strings.EqualFold(sanitizedName, currDomain)) {
 						valid = true
 						break
 					}
@@ -333,11 +344,12 @@ func validateNames(data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, name) {
+					glob.Glob(currDomain, sanitizedName) {
 					valid = true
 					break
 				}
 			}
+
 			if valid {
 				continue
 			}
@@ -361,7 +373,7 @@ func validateOtherSANs(data *inputBundle, requested map[string][]string) (string
 
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
-		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
+		return "", "", fmt.Errorf("error parsing role's allowed SANs: %w", err)
 	}
 	for oid, names := range requested {
 		for _, name := range names {
@@ -669,7 +681,7 @@ func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]otherNameUtf8, err
 			var other otherNameRaw
 			_, err := asn1.UnmarshalWithParams(data, &other, "tag:0")
 			if err != nil {
-				return errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
+				return fmt.Errorf("could not parse requested other SAN: %w", err)
 			}
 			val, err := other.extractUTF8String()
 			if err != nil {
@@ -790,7 +802,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr == nil || !data.role.UseCSRSANs {
 			cnAltRaw, ok := data.apiData.GetOk("alt_names")
 			if ok {
-				cnAlt := strutil.ParseDedupLowercaseAndSortStrings(cnAltRaw.(string), ",")
+				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
 				for _, v := range cnAlt {
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
@@ -816,7 +828,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
 		if cn != "" {
-			badName := validateNames(data, []string{cn})
+			badName := validateNames(b, data, []string{cn})
 			if len(badName) != 0 {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"common name %s not allowed by this role", badName)}
@@ -832,13 +844,13 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 
 		// Check for bad email and/or DNS names
-		badName := validateNames(data, dnsNames)
+		badName := validateNames(b, data, dnsNames)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"subject alternate name %s not allowed by this role", badName)}
 		}
 
-		badName = validateNames(data, emailAddresses)
+		badName = validateNames(b, data, emailAddresses)
 		if len(badName) != 0 {
 			return nil, errutil.UserError{Err: fmt.Sprintf(
 				"email address %s not allowed by this role", badName)}
@@ -858,7 +870,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	if data.role.UseCSRSANs && csr != nil && len(csr.Extensions) > 0 {
 		others, err := getOtherSANsFromX509Extensions(csr.Extensions)
 		if err != nil {
-			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+			return nil, errutil.UserError{Err: fmt.Errorf("could not parse requested other SAN: %w", err).Error()}
 		}
 		for _, other := range others {
 			otherSANsInput = append(otherSANsInput, other.String())
@@ -867,7 +879,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	if len(otherSANsInput) > 0 {
 		requested, err := parseOtherSANs(otherSANsInput)
 		if err != nil {
-			return nil, errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+			return nil, errutil.UserError{Err: fmt.Errorf("could not parse requested other SAN: %w", err).Error()}
 		}
 		badOID, badName, err := validateOtherSANs(data, requested)
 		switch {
@@ -919,8 +931,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr != nil && data.role.UseCSRSANs {
 			if len(csr.URIs) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+					return nil, errutil.UserError{
+						Err: fmt.Sprintf(
+							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
 					}
 				}
 
@@ -936,8 +949,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					}
 
 					if !valid {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
 						}
 					}
 
@@ -948,8 +962,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			uriAlt := data.apiData.Get("uri_sans").([]string)
 			if len(uriAlt) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+					return nil, errutil.UserError{
+						Err: fmt.Sprintf(
+							"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
 					}
 				}
 
@@ -964,15 +979,17 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					}
 
 					if !valid {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via the API which are not valid for this role"),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"URI Subject Alternative Names were provided via the API which are not valid for this role"),
 						}
 					}
 
 					parsedURI, err := url.Parse(uri)
 					if parsedURI == nil || err != nil {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+						return nil, errutil.UserError{
+							Err: fmt.Sprintf(
+								"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
 						}
 					}
 
@@ -987,13 +1004,13 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	subject := pkix.Name{
 		CommonName:         cn,
 		SerialNumber:       ridSerialNumber,
-		Country:            strutil.RemoveDuplicates(data.role.Country, false),
-		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
+		Country:            strutil.RemoveDuplicatesStable(data.role.Country, false),
+		Organization:       strutil.RemoveDuplicatesStable(data.role.Organization, false),
 		OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
-		Locality:           strutil.RemoveDuplicates(data.role.Locality, false),
-		Province:           strutil.RemoveDuplicates(data.role.Province, false),
-		StreetAddress:      strutil.RemoveDuplicates(data.role.StreetAddress, false),
-		PostalCode:         strutil.RemoveDuplicates(data.role.PostalCode, false),
+		Locality:           strutil.RemoveDuplicatesStable(data.role.Locality, false),
+		Province:           strutil.RemoveDuplicatesStable(data.role.Province, false),
+		StreetAddress:      strutil.RemoveDuplicatesStable(data.role.StreetAddress, false),
+		PostalCode:         strutil.RemoveDuplicatesStable(data.role.PostalCode, false),
 	}
 
 	// Get the TTL and verify it against the max allowed
@@ -1115,7 +1132,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	if block == nil {
 		keyData, err = base64.StdEncoding.DecodeString(priv)
 		if err != nil {
-			return errwrap.Wrapf("error converting response to pkcs8: error decoding original value: {{err}}", err)
+			return fmt.Errorf("error converting response to pkcs8: error decoding original value: %w", err)
 		}
 	} else {
 		keyData = block.Bytes
@@ -1131,12 +1148,12 @@ func convertRespToPKCS8(resp *logical.Response) error {
 		return fmt.Errorf("unknown private key type %q", privKeyType)
 	}
 	if err != nil {
-		return errwrap.Wrapf("error converting response to pkcs8: error parsing previous key: {{err}}", err)
+		return fmt.Errorf("error converting response to pkcs8: error parsing previous key: %w", err)
 	}
 
 	keyData, err = x509.MarshalPKCS8PrivateKey(signer)
 	if err != nil {
-		return errwrap.Wrapf("error converting response to pkcs8: error marshaling pkcs8 key: {{err}}", err)
+		return fmt.Errorf("error converting response to pkcs8: error marshaling pkcs8 key: %w", err)
 	}
 
 	if pemUsed {

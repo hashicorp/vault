@@ -3,27 +3,28 @@ package ssh
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/logical"
+
 	"golang.org/x/crypto/ssh"
 
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"strings"
-
-	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	"github.com/hashicorp/vault/sdk/logical"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
 
 const (
@@ -105,55 +106,62 @@ SeKWrUkryx46LVf6NMhkyYmRqCEjBwfOozzezi5WbiJy6nn54GQt
 -----END RSA PRIVATE KEY-----
 `
 
+	testCAPublicKeyEd25519 = `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO1S6g5Bib7vT8eoFnvTl3dZSjOQL/GkH1nkRcDS9++a ca
+`
+
+	testCAPrivateKeyEd25519 = `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACDtUuoOQYm+70/HqBZ705d3WUozkC/xpB9Z5EXA0vfvmgAAAIhfRuszX0br
+MwAAAAtzc2gtZWQyNTUxOQAAACDtUuoOQYm+70/HqBZ705d3WUozkC/xpB9Z5EXA0vfvmg
+AAAEBQYa029SP/7AGPFQLmzwOc9eCoOZuwCq3iIf2C6fj9j+1S6g5Bib7vT8eoFnvTl3dZ
+SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
+-----END OPENSSH PRIVATE KEY-----
+`
+
 	// testPublicKeyInstall is the public key that is installed in the
 	// admin account's authorized_keys
 	testPublicKeyInstall = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT"
 
-	dockerImageTagSupportsRSA   = "8.1_p1-r0-ls20"
-	dockerImageTagSupportsNoRSA = "8.3_p1-r0-ls21"
+	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
+	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
+
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if tag == "" {
-		tag = dockerImageTagSupportsNoRSA
+		tag = dockerImageTagSupportsNoRSA1
 	}
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "linuxserver/openssh-server",
-		Tag:        tag,
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ContainerName: "openssh",
+		ImageRepo:     "linuxserver/openssh-server",
+		ImageTag:      tag,
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
 			"PUBLIC_KEY=" + testPublicKeyInstall,
 			"SUDO_ACCESS=true",
 			"USER_NAME=vaultssh",
 		},
-		ExposedPorts: []string{"2222/tcp"},
+		Ports: []string{"2222/tcp"},
 	})
 	if err != nil {
 		t.Fatalf("Could not start local ssh docker container: %s", err)
 	}
 
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		ipaddr, err := net.ResolveIPAddr("ip", host)
+		if err != nil {
+			return nil, err
+		}
+		sshAddress := fmt.Sprintf("%s:%d", ipaddr.String(), port)
 
-	sshAddress := fmt.Sprintf("127.0.0.1:%s", resource.GetPort("2222/tcp"))
+		signer, err := ssh.ParsePrivateKey([]byte(testSharedPrivateKey))
+		if err != nil {
+			return nil, err
+		}
 
-	// exponential backoff-retry
-	pool.MaxWait = 10 * time.Second
-	if err = pool.Retry(func() error {
 		// Install util-linux for non-busybox flock that supports timeout option
-		return testSSH(t, "vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
-			set -e; 
+		err = testSSH("vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
+			set -e;
 			sudo ln -s /config /home/vaultssh
 			sudo apk add util-linux;
 			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
@@ -161,15 +169,19 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 			kill -HUP $(cat /config/sshd.pid)
 			echo "%s" | sudo tee /config/ssh_host_keys/trusted-user-ca-keys.pem
 		`, caPublicKeyPEM))
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to SSH docker container: %s", err)
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	return cleanup, sshAddress
+		return docker.NewServiceHostPort(ipaddr.String(), port), nil
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker ssh server: %s", err)
+	}
+	return svc.Cleanup, svc.Config.Address()
 }
 
-func testSSH(t *testing.T, user, host string, auth ssh.AuthMethod, command string) error {
+func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 	client, err := ssh.Dial("tcp", host, &ssh.ClientConfig{
 		User:            user,
 		Auth:            []ssh.AuthMethod{auth},
@@ -188,7 +200,7 @@ func testSSH(t *testing.T, user, host string, auth ssh.AuthMethod, command strin
 	defer session.Close()
 	err = session.Run(command)
 	if err != nil {
-		t.Logf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
+		return fmt.Errorf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
 	}
 	return err
 }
@@ -420,7 +432,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 		"key":          testKeyName,
 		"admin_user":   testAdminUser,
 		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
+		"cidr_list":    host + "/32",
 		"port":         port,
 	}
 	data := map[string]interface{}{
@@ -526,7 +538,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 	testOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
 		"default_user": testUserName,
-		"cidr_list":    testCIDRList,
+		"cidr_list":    host + "/32",
 		"port":         port,
 	}
 	data := map[string]interface{}{
@@ -669,29 +681,89 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 
 func TestSSHBackend_CA(t *testing.T) {
 	testCases := []struct {
-		name        string
-		tag         string
-		algoSigner  string
-		expectError bool
+		name         string
+		tag          string
+		caPublicKey  string
+		caPrivateKey string
+		algoSigner   string
+		expectError  bool
 	}{
-		{"defaultSignerSSHDSupport", dockerImageTagSupportsRSA, "", false},
-		{"rsaSignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSA, false},
-		{"rsa2SignerSSHDSupport", dockerImageTagSupportsRSA, ssh.SigAlgoRSASHA2256, false},
-		{"rsa2SignerNoSSHDSupport", dockerImageTagSupportsNoRSA, ssh.SigAlgoRSASHA2256, false},
-		{"defaultSignerNoSSHDSupport", dockerImageTagSupportsNoRSA, "", true},
+		{
+			"RSAKey_EmptyAlgoSigner_ImageSupportsRSA1",
+			dockerImageTagSupportsRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			"",
+			false,
+		},
+		{
+			"RSAKey_EmptyAlgoSigner_ImageSupportsNoRSA1",
+			dockerImageTagSupportsNoRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			"",
+			true,
+		},
+		{
+			"RSAKey_RSA1AlgoSigner_ImageSupportsRSA1",
+			dockerImageTagSupportsRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			ssh.SigAlgoRSA,
+			false,
+		},
+		{
+			"RSAKey_RSASHA2256AlgoSigner_ImageSupportsRSA1",
+			dockerImageTagSupportsRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			ssh.SigAlgoRSASHA2256,
+			false,
+		},
+		{
+			"RSAKey_RSASHA2256AlgoSigner_ImageSupportsNoRSA1",
+			dockerImageTagSupportsNoRSA1,
+			testCAPublicKey,
+			testCAPrivateKey,
+			ssh.SigAlgoRSASHA2256,
+			false,
+		},
+		{
+			"ed25519Key_EmptyAlgoSigner_ImageSupportsRSA1",
+			dockerImageTagSupportsRSA1,
+			testCAPublicKeyEd25519,
+			testCAPrivateKeyEd25519,
+			"",
+			false,
+		},
+		{
+			"ed25519Key_EmptyAlgoSigner_ImageSupportsNoRSA1",
+			dockerImageTagSupportsNoRSA1,
+			testCAPublicKeyEd25519,
+			testCAPrivateKeyEd25519,
+			"",
+			false,
+		},
+		{
+			"ed25519Key_RSA1AlgoSigner_ImageSupportsRSA1",
+			dockerImageTagSupportsRSA1,
+			testCAPublicKeyEd25519,
+			testCAPrivateKeyEd25519,
+			ssh.SigAlgoRSA,
+			true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			testSSHBackend_CA(t, tc.tag, tc.algoSigner, tc.expectError)
+			testSSHBackend_CA(t, tc.tag, tc.caPublicKey, tc.caPrivateKey, tc.algoSigner, tc.expectError)
 		})
 	}
 }
 
-func testSSHBackend_CA(t *testing.T, dockerImageTag, algorithmSigner string, expectError bool) {
-	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, testCAPublicKey)
+func testSSHBackend_CA(t *testing.T, dockerImageTag, caPublicKey, caPrivateKey, algorithmSigner string, expectError bool) {
+	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, caPublicKey)
 	defer cleanup()
-
 	config := logical.TestBackendConfig()
 
 	b, err := Factory(context.Background(), config)
@@ -747,9 +819,9 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(caPublicKey, caPrivateKey),
 			testRoleWrite(t, "testcarole", roleOptions),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testcarole",
 				ErrorOk:   expectError,
@@ -759,6 +831,10 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 				},
 
 				Check: func(resp *logical.Response) error {
+					// Tolerate nil response if an error was expected
+					if expectError && resp == nil {
+						return nil
+					}
 
 					signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
 					if signedKey == "" {
@@ -779,7 +855,7 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 						return err
 					}
 
-					err = testSSH(t, testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
 					if expectError && err == nil {
 						return fmt.Errorf("expected error but got none")
 					}
@@ -796,8 +872,127 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 	logicaltest.Test(t, testCase)
 }
 
-func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
+func TestSSHBackend_CAUpgradeAlgorithmSigner(t *testing.T) {
+	cleanup, sshAddress := prepareTestContainer(t, dockerImageTagSupportsRSA1, testCAPublicKey)
+	defer cleanup()
+	config := logical.TestBackendConfig()
 
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testKeyToSignPrivate := `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAQEAwn1V2xd/EgJXIY53fBTtc20k/ajekqQngvkpFSwNHW63XNEQK8Ll
+FOCyGXoje9DUGxnYs3F/ohfsBBWkLNfU7fiENdSJL1pbkAgJ+2uhV9sLZjvYhikrXWoyJX
+LDKfY12LjpcBS2HeLMT04laZ/xSJrOBEJHGzHyr2wUO0NUQUQPUODAFhnHKgvvA4Uu79UY
+gcdThF4w83+EAnE4JzBZMKPMjzy4u1C0R/LoD8DuapHwX6NGWdEUvUZZ+XRcIWeCOvR0ne
+qGBRH35k1Mv7k65d7kkE0uvM5Z36erw3tdoszxPYf7AKnO1DpeU2uwMcym6xNwfwynKjhL
+qL/Mgi4uRwAAA8iAsY0zgLGNMwAAAAdzc2gtcnNhAAABAQDCfVXbF38SAlchjnd8FO1zbS
+T9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11Ikv
+WluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbB
+Q7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5q
+kfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/
+sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5HAAAAAwEAAQAAAQABns2yT5XNbpuPOgKg
+1APObGBchKWmDxwNKUpAVOefEScR7OP3mV4TOHQDZlMZWvoJZ8O4av+nOA/NUOjXPs0VVn
+azhBvIezY8EvUSVSk49Cg6J9F7/KfR1WqpiTU7CkQUlCXNuz5xLUyKdJo3MQ/vjOqeenbh
+MR9Wes4IWF1BVe4VOD6lxRsjwuIieIgmScW28FFh2rgsEfO2spzZ3AWOGExw+ih757hFz5
+4A2fhsQXP8m3r8m7iiqcjTLWXdxTUk4zot2kZEjbI4Avk0BL+wVeFq6f/y+G+g5edqSo7j
+uuSgzbUQtA9PMnGxhrhU2Ob7n3VGdya7WbGZkaKP8zJhAAAAgQC3bJurmOSLIi3KVhp7lD
+/FfxwXHwVBFALCgq7EyNlkTz6RDoMFM4eOTRMDvsgWxT+bSB8R8eg1sfgY8rkHOuvTAVI5
+3oEYco3H7NWE9X8Zt0lyhO1uaE49EENNSQ8hY7R3UIw5becyI+7ZZxs9HkBgCQCZzSjzA+
+SIyAoMKM261AAAAIEA+PCkcDRp3J0PaoiuetXSlWZ5WjP3CtwT2xrvEX9x+ZsDgXCDYQ5T
+osxvEKOGSfIrHUUhzZbFGvqWyfrziPe9ypJrtCM7RJT/fApBXnbWFcDZzWamkQvohst+0w
+XHYCmNoJ6/Y+roLv3pzyFUmqRNcrQaohex7TZmsvHJT513UakAAACBAMgBXxH8DyNYdniX
+mIXEto4GqMh4rXdNwCghfpyWdJE6vCyDt7g7bYMq7AQ2ynSKRtQDT/ZgQNfSbilUq3iXz7
+xNZn5U9ndwFs90VmEpBup/PmhfX+Gwt5hQZLbkKZcgQ9XrhSKdMxVm1yy/fk0U457enlz5
+cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
+-----END OPENSSH PRIVATE KEY-----
+`
+	testKeyToSignPublic := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCfVXbF38SAlchjnd8FO1zbST9qN6SpCeC+SkVLA0dbrdc0RArwuUU4LIZeiN70NQbGdizcX+iF+wEFaQs19Tt+IQ11IkvWluQCAn7a6FX2wtmO9iGKStdajIlcsMp9jXYuOlwFLYd4sxPTiVpn/FIms4EQkcbMfKvbBQ7Q1RBRA9Q4MAWGccqC+8DhS7v1RiBx1OEXjDzf4QCcTgnMFkwo8yPPLi7ULRH8ugPwO5qkfBfo0ZZ0RS9Rln5dFwhZ4I69HSd6oYFEffmTUy/uTrl3uSQTS68zlnfp6vDe12izPE9h/sAqc7UOl5Ta7AxzKbrE3B/DKcqOEuov8yCLi5H `
+
+	// Old role entries between 1.4.3 and 1.5.2 had algorithm_signer default to
+	// ssh-rsa if not provided.
+	roleOptionsOldEntry := map[string]interface{}{
+		"allow_user_certificates": true,
+		"allowed_users":           "*",
+		"default_extensions": []map[string]string{
+			{
+				"permit-pty": "",
+			},
+		},
+		"key_type":         "ca",
+		"default_user":     testUserName,
+		"ttl":              "30m0s",
+		"algorithm_signer": ssh.SigAlgoRSA,
+	}
+
+	// Upgrade entry by overwriting algorithm_signer with an empty value
+	roleOptionsUpgradedEntry := map[string]interface{}{
+		"allow_user_certificates": true,
+		"allowed_users":           "*",
+		"default_extensions": []map[string]string{
+			{
+				"permit-pty": "",
+			},
+		},
+		"key_type":         "ca",
+		"default_user":     testUserName,
+		"ttl":              "30m0s",
+		"algorithm_signer": "",
+	}
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+			testRoleWrite(t, "testcarole", roleOptionsOldEntry),
+			testRoleWrite(t, "testcarole", roleOptionsUpgradedEntry),
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/testcarole",
+				ErrorOk:   false,
+				Data: map[string]interface{}{
+					"public_key":       testKeyToSignPublic,
+					"valid_principals": testUserName,
+				},
+
+				Check: func(resp *logical.Response) error {
+					signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
+					if signedKey == "" {
+						return errors.New("no signed key in response")
+					}
+
+					privKey, err := ssh.ParsePrivateKey([]byte(testKeyToSignPrivate))
+					if err != nil {
+						return fmt.Errorf("error parsing private key: %v", err)
+					}
+
+					parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+					if err != nil {
+						return fmt.Errorf("error parsing signed key: %v", err)
+					}
+					certSigner, err := ssh.NewCertSigner(parsedKey.(*ssh.Certificate), privKey)
+					if err != nil {
+						return err
+					}
+
+					err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+					if err != nil {
+						return err
+					}
+
+					return nil
+				},
+			},
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	config := logical.TestBackendConfig()
 
 	b, err := Factory(context.Background(), config)
@@ -808,15 +1003,14 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
-			logicaltest.TestStep{
+			{
 				Operation:       logical.ReadOperation,
 				Path:            "public_key",
 				Unauthenticated: true,
 
 				Check: func(resp *logical.Response) error {
-
 					key := string(resp.Data["http_raw_body"].([]byte))
 
 					if key != testCAPublicKey {
@@ -833,7 +1027,6 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 }
 
 func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
-
 	config := logical.TestBackendConfig()
 
 	b, err := Factory(context.Background(), config)
@@ -845,7 +1038,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Check: func(resp *logical.Response) error {
@@ -857,13 +1050,12 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 				},
 			},
 
-			logicaltest.TestStep{
+			{
 				Operation:       logical.ReadOperation,
 				Path:            "public_key",
 				Unauthenticated: true,
 
 				Check: func(resp *logical.Response) error {
-
 					key := string(resp.Data["http_raw_body"].([]byte))
 
 					if key == "" {
@@ -893,7 +1085,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
@@ -936,7 +1128,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                 "ca",
@@ -983,7 +1175,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 			createRoleStep("weakkey", map[string]interface{}{
 				"key_type":                "ca",
 				"allow_user_certificates": true,
@@ -991,7 +1183,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 					"rsa": json.Number(strconv.FormatInt(4096, 10)),
 				},
 			}),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/weakkey",
 				Data: map[string]interface{}{
@@ -1013,7 +1205,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				},
 			}),
 			// Pass with 2048 key
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
@@ -1021,7 +1213,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				},
 			},
 			// Fail with 4096 key
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/stdkey",
 				Data: map[string]interface{}{
@@ -1052,7 +1244,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("customrole", map[string]interface{}{
 				"key_type":                 "ca",
@@ -1101,14 +1293,14 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			configCaStep(),
+			configCaStep(testCAPublicKey, testCAPrivateKey),
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
 				"allow_user_key_ids":      false,
 				"allow_user_certificates": true,
 			}),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testing",
 				Data: map[string]interface{}{
@@ -1129,13 +1321,259 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
-func configCaStep() logicaltest.TestStep {
+func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Write SSH role.
+	_, err = client.Logical().Write("ssh/roles/test", map[string]interface{}{
+		"key_type":                    "ca",
+		"allowed_extensions":          "login@zipzap.com",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"default_extensions_template": true,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+
+	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
+	client.SetToken(userpassToken)
+	resp, err := client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey := resp.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defaultExtensionPermissions := map[string]string{
+		"login@foobar.com": testUserName,
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating enabled, and user-provided extensions
+	// The certificate should only have the user-provided extensions, and no templated extensions
+	userProvidedExtensionPermissions := map[string]string{
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey = resp.Data["signed_key"].(string)
+	key, _ = base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err = ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, userProvidedExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating enabled, and invalid user-provided extensions - it should fail
+	invalidUserProvidedExtensionPermissions := map[string]string{
+		"login@foobar.com": "{{identity.entity.metadata}}",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": invalidUserProvidedExtensionPermissions,
+	})
+	if err == nil {
+		t.Fatal("expected an error while attempting to sign a key with invalid permissions")
+	}
+}
+
+func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Write SSH role to test with any extension. We also provide a templated default extension,
+	// to verify that it's not actually being evaluated
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+		"key_type":                    "ca",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"default_extensions_template": false,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+
+// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
+	client.SetToken(userpassToken)
+	defaultExtensionPermissions := map[string]string{
+		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err := client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": defaultExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey := resp.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating disabled, and user-provided extensions
+	client.SetToken(userpassToken)
+	userProvidedAnyExtensionPermissions := map[string]string{
+		"login@foobar.com": "not_userpassname",
+		"login@zipzap.com": "some_other_user_name",
+	}
+	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedAnyExtensionPermissions,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedKey = resp.Data["signed_key"].(string)
+	key, _ = base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+
+	parsedKey, err = ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, userProvidedAnyExtensionPermissions, 16*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	client := cluster.Cores[0].Client
+
+	// Write test policy for userpass auth method.
+	err := client.Sys().PutPolicy("test", `
+   path "ssh/*" {
+     capabilities = ["update"]
+   }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable userpass auth method.
+	if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure test role for userpass.
+	if _, err := client.Logical().Write("auth/userpass/users/"+userIdentity, map[string]interface{}{
+		"password": "test",
+		"policies": "test",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Login userpass for test role and keep client token.
+	secret, err := client.Logical().Write("auth/userpass/login/"+userIdentity, map[string]interface{}{
+		"password": "test",
+	})
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	userpassToken := secret.Auth.ClientToken
+
+	// Mount SSH.
+	err = client.Sys().Mount("ssh", &api.MountInput{
+		Type: "ssh",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure SSH CA.
+	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
+		"public_key":  testCAPublicKey,
+		"private_key": testCAPrivateKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return cluster, userpassToken
+}
+
+func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/ca",
 		Data: map[string]interface{}{
-			"public_key":  testCAPublicKey,
-			"private_key": testCAPrivateKey,
+			"public_key":  caPublicKey,
+			"private_key": caPrivateKey,
 		},
 	}
 }
@@ -1159,7 +1597,6 @@ func signCertificateStep(
 		Data:      requestParameters,
 
 		Check: func(resp *logical.Response) error {
-
 			serialNumber := resp.Data["serial_number"].(string)
 			if serialNumber == "" {
 				return errors.New("no serial number in response")
@@ -1203,7 +1640,7 @@ func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, v
 
 	actualTTL := time.Unix(int64(cert.ValidBefore), 0).Add(-30 * time.Second).Sub(time.Unix(int64(cert.ValidAfter), 0))
 	if actualTTL != ttl {
-		return fmt.Errorf("incorrect ttl: expected: %v, actualL %v", ttl, actualTTL)
+		return fmt.Errorf("incorrect ttl: expected: %v, actual %v", ttl, actualTTL)
 	}
 
 	if !reflect.DeepEqual(cert.ValidPrincipals, validPrincipals) {
@@ -1449,7 +1886,7 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 				if err != nil {
 					return fmt.Errorf("generated key is invalid")
 				}
-				if err := testSSH(t, data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
+				if err := testSSH(data["username"].(string), address, ssh.PublicKeys(privKey), "date"); err != nil {
 					return fmt.Errorf("unable to SSH with new key (%s): %w", d.Key, err)
 				}
 			} else {

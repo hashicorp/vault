@@ -18,7 +18,7 @@ const REPLICATION_DETAILS = {
   },
 };
 
-module('Integration | Enterprise | Component | replication-summary-card', function(hooks) {
+module('Integration | Component | replication-summary-card', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {

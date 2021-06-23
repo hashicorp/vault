@@ -1,8 +1,8 @@
+import RESTSerializer from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.RESTSerializer.extend({
+export default RESTSerializer.extend({
   primaryKey: 'name',
 
   keyForAttribute: function(attr) {
@@ -17,11 +17,16 @@ export default DS.RESTSerializer.extend({
     assign(payload, payload.data);
     delete payload.data;
     // timestamps for these two are in seconds...
-    if (payload.type === 'aes256-gcm96' || payload.type === 'chacha20-poly1305') {
+    if (
+      payload.type === 'aes256-gcm96' ||
+      payload.type === 'chacha20-poly1305' ||
+      payload.type === 'aes128-gcm96'
+    ) {
       for (let version in payload.keys) {
         payload.keys[version] = payload.keys[version] * 1000;
       }
     }
+    payload.id = payload.name;
     return [payload];
   },
 
@@ -51,7 +56,8 @@ export default DS.RESTSerializer.extend({
         deletion_allowed,
       };
     } else {
-      return this._super(...arguments);
+      snapshot.id = snapshot.attr('name');
+      return this._super(snapshot, requestType);
     }
   },
 });

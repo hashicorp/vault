@@ -1,0 +1,200 @@
+---
+layout: api
+page_title: /sys/replication - HTTP API
+description: >-
+  The '/sys/replication' endpoint focuses on managing general operations in
+  Vault Enterprise replication
+---
+
+# `/sys/replication`
+
+~> **Enterprise Only** – These endpoints require Vault Enterprise.
+
+## Attempt Recovery
+
+This endpoint attempts recovery if replication is in an adverse state. For
+example: an error has caused replication to stop syncing.
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `POST` | `/sys/replication/recover` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/recover
+```
+
+### Sample Response
+
+```json
+{
+  "warnings": ["..."]
+}
+```
+
+## Reindex Replication
+
+This endpoint reindexes the local data storage. This can cause a very long delay
+depending on the number and size of objects in the data store.
+
+**This endpoint requires 'sudo' capability.**
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `POST` | `/sys/replication/reindex` |
+
+### Parameters
+
+- `diff` `(bool: false)` – Enables a slower re-indexing which will perform a key
+  level check to diagnose issues. Defaults false.
+
+- `force` `(bool: false)` – Forces a complete re-indexing which only scans data
+  available in the storage. Defaults false.
+
+- `skip_flush` `(bool: false)` – Skips the tree flushing stage of the reindex
+  process. This setting can be used to reduce the amount of time the tree is locked
+  during a reindex process. If this node is killed before the full tree has been
+  asynchronously flushed the reindex may not have applied fully and a new reindex
+  may need to be done. Shutting down this node cleanly will cause the tree to be
+  flushed prior to shutdown. Defaults false.
+
+### Sample Payload
+
+```json
+{}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/reindex
+```
+
+### Sample Response
+
+```json
+{
+  "warnings": ["..."]
+}
+```
+
+## Check Status
+
+This endpoint print information about the status of replication (mode,
+sync progress, etc).
+
+This is an unauthenticated endpoint.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/sys/replication/status` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/status
+```
+
+### Sample Response
+
+The printed status of the replication environment. As an example, for a
+performance primary and DR primary node, it will look something like:
+
+```json
+{
+  "data": {
+    "dr": {
+      "cluster_id": "f2c21cb5-523f-617b-20ac-c913d9154ba6",
+      "known_secondaries": ["3"],
+      "last_wal": 291,
+      "merkle_root": "38543b95d44132138003939addbaf94125ec184e",
+      "mode": "primary",
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49264",
+          "cluster_address": "https://127.0.0.1:49267",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:47-07:00",
+          "node_id": "3"
+        }
+      ]
+    },
+    "performance": {
+      "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
+      "known_secondaries": ["2"],
+      "last_wal": 291,
+      "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "mode": "primary",
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49253",
+          "cluster_address": "https://127.0.0.1:49256",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:46-07:00",
+          "node_id": "2"
+        }
+      ]
+    }
+  }
+}
+```
+
+Possible values for `connection_status` are `connected` or `disconnected`. `last_heartbeat` is the timestamp of the
+last time this node exchanged heartbeats with another node.
+
+### Sample Response from Performance Secondary & DR Primary
+
+The printed status of the replication environment. As an example, for a
+performance secondary and DR primary node, it will look something like:
+
+```json
+{
+  "data": {
+    "dr": {
+      "cluster_id": "e4bfa800-002e-7b6d-14c2-617855ece02f",
+      "known_secondaries": ["4"],
+      "last_wal": 455,
+      "merkle_root": "cdcf796619240ce19dd8af30fa700f64c8006e3d",
+      "mode": "primary",
+      "primary_cluster_addr": "",
+      "secondaries": [
+        {
+          "api_address": "https://127.0.0.1:49277",
+          "cluster_address": "https://127.0.0.1:49281",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:46-07:00",
+          "node_id": "4"
+        }
+      ]
+    },
+    "performance": {
+      "cluster_id": "1598d434-dfec-1f48-f019-3d22a8075bf9",
+      "known_primary_cluster_addrs": ["https://127.0.0.1:8201"],
+      "last_remote_wal": 291,
+      "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "mode": "secondary",
+      "primaries": [
+        {
+          "api_address": "https://127.0.0.1:49244",
+          "cluster_address": "https://127.0.0.1:8201",
+          "connection_status": "connected",
+          "last_heartbeat": "2020-06-10T15:40:46-07:00"
+        }
+      ],
+      "primary_cluster_addr": "https://127.0.0.1:8201",
+      "secondary_id": "2",
+      "state": "stream-wals"
+    }
+  }
+}
+```

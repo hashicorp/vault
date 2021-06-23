@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -125,7 +124,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			if !ok {
 				clonedPerms, err := pc.Permissions.Clone()
 				if err != nil {
-					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
+					return nil, fmt.Errorf("error cloning ACL permissions: %w", err)
 				}
 				switch {
 				case pc.HasSegmentWildcards:
@@ -247,7 +246,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				existingPerms.MFAMethods = strutil.RemoveDuplicates(existingPerms.MFAMethods, false)
 			}
 
-			// No need to dedupe this list since any authorization can satisfy any factor
+			// No need to dedupe this list since any authorization can satisfy any factor, so long as
+			// the factor matches the specified permission requested.
 			if pc.Permissions.ControlGroup != nil {
 				if len(pc.Permissions.ControlGroup.Factors) > 0 {
 					if existingPerms.ControlGroup == nil {
@@ -681,7 +681,7 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {
-			//logger.Warn("token is root, skipping checks")
+			// logger.Warn("token is root, skipping checks")
 			ret.Allowed = true
 			return ret
 		}

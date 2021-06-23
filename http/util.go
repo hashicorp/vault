@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
 )
@@ -27,6 +27,8 @@ var (
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
 
 	nonVotersAllowed = false
+
+	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
 )
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
@@ -36,33 +38,57 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		req := w.(*LogicalResponseWriter).request
+
+		// We don't want to do buildLogicalRequestNoAuth here because, if the
+		// request gets allowed by the quota, the same function will get called
+		// again, which is not desired.
+		path, status, err := buildLogicalPath(r)
+		if err != nil || status != 0 {
+			respondError(w, status, err)
+			return
+		}
+
 		quotaResp, err := core.ApplyRateLimitQuota(&quotas.Request{
 			Type:          quotas.TypeRateLimit,
-			Path:          req.Path,
-			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+			Path:          path,
+			MountPath:     strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path),
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})
 		if err != nil {
-			core.Logger().Error("failed to apply quota", "path", req.Path, "error", err)
+			core.Logger().Error("failed to apply quota", "path", path, "error", err)
 			respondError(w, http.StatusUnprocessableEntity, err)
 			return
 		}
 
+		if core.RateLimitResponseHeadersEnabled() {
+			for h, v := range quotaResp.Headers {
+				w.Header().Set(h, v)
+			}
+		}
+
 		if !quotaResp.Allowed {
-			quotaErr := errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", req.Path), quotas.ErrRateLimitQuotaExceeded)
+			quotaErr := fmt.Errorf("request path %q: %w", path, quotas.ErrRateLimitQuotaExceeded)
 			respondError(w, http.StatusTooManyRequests, quotaErr)
 
 			if core.Logger().IsTrace() {
-				core.Logger().Trace("request rejected due to lease count quota violation", "request_path", req.Path)
+				core.Logger().Trace("request rejected due to rate limit quota violation", "request_path", path)
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {
-				_ = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
+				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+				if err != nil || status != 0 {
+					respondError(w, status, err)
+					return
+				}
+
+				err = core.AuditLogger().AuditRequest(r.Context(), &logical.LogInput{
 					Request:  req,
 					OuterErr: quotaErr,
 				})
+				if err != nil {
+					core.Logger().Warn("failed to audit log request rejection caused by rate limit quota violation", "error", err)
+				}
 			}
 
 			return

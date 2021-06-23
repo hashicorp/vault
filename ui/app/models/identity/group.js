@@ -1,16 +1,14 @@
+import { belongsTo, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import IdentityModel from './_base';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
-
-const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
   formFields: computed('type', function() {
     let fields = ['name', 'type', 'policies', 'metadata'];
-    if (this.get('type') === 'internal') {
+    if (this.type === 'internal') {
       return fields.concat(['memberGroupIds', 'memberEntityIds']);
     }
     return fields;
@@ -65,9 +63,9 @@ export default IdentityModel.extend({
     'memberGroupIds',
     'memberGroupIds.[]',
     function() {
-      let { memberEntityIds, memberGroupIds } = this.getProperties('memberEntityIds', 'memberGroupIds');
-      let numEntities = (memberEntityIds && memberEntityIds.get('length')) || 0;
-      let numGroups = (memberGroupIds && memberGroupIds.get('length')) || 0;
+      let { memberEntityIds, memberGroupIds } = this;
+      let numEntities = (memberEntityIds && memberEntityIds.length) || 0;
+      let numGroups = (memberGroupIds && memberGroupIds.length) || 0;
       return numEntities + numGroups > 0;
     }
   ),
@@ -79,12 +77,12 @@ export default IdentityModel.extend({
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
   canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function() {
-    let type = this.get('type');
-    let alias = this.get('alias');
+    let type = this.type;
+    let alias = this.alias;
     // internal groups can't have aliases, and external groups can only have one
     if (type === 'internal' || alias) {
       return false;
     }
-    return this.get('aliasPath.canCreate');
+    return this.aliasPath.canCreate;
   }),
 });

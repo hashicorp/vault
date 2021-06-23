@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
-import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
@@ -17,7 +17,7 @@ export default Route.extend(UnloadModelRoute, {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     return backend;
   },
-  capabilities(secret) {
+  capabilities(secret, modelType) {
     const backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.engineType;
@@ -28,10 +28,36 @@ export default Route.extend(UnloadModelRoute, {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
+    } else if (modelType.startsWith('transform/')) {
+      path = this.buildTransformPath(backend, secret, modelType);
     } else {
       path = backend + '/' + secret;
     }
     return this.store.findRecord('capabilities', path);
+  },
+
+  buildTransformPath(backend, secret, modelType) {
+    let noun = modelType.split('/')[1];
+    return `${backend}/${noun}/${secret}`;
+  },
+
+  modelTypeForTransform(secretName) {
+    if (!secretName) return 'transform';
+    if (secretName.startsWith('role/')) {
+      return 'transform/role';
+    }
+    if (secretName.startsWith('template/')) {
+      return 'transform/template';
+    }
+    if (secretName.startsWith('alphabet/')) {
+      return 'transform/alphabet';
+    }
+    return 'transform'; // TODO: transform/transformation;
+  },
+
+  transformSecretName(secret, modelType) {
+    const noun = modelType.split('/')[1];
+    return secret.replace(`${noun}/`, '');
   },
 
   backendType() {
@@ -69,8 +95,10 @@ export default Route.extend(UnloadModelRoute, {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
+      database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
+      transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
       pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
       cubbyhole: 'secret',
@@ -101,7 +129,7 @@ export default Route.extend(UnloadModelRoute, {
     // if it didn't fail the server read, and the version is not attached to the metadata,
     // this should 404
     if (!version && secretModel.failedServerRead !== true) {
-      let error = new DS.AdapterError();
+      let error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }
@@ -191,16 +219,21 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let modelType = this.modelType(backend, secret);
-
     if (!secret) {
       secret = '\u0020';
     }
     if (modelType === 'pki-certificate') {
       secret = secret.replace('cert/', '');
     }
+    if (modelType.startsWith('transform/')) {
+      secret = this.transformSecretName(secret, modelType);
+    }
+    if (modelType === 'database/role') {
+      secret = secret.replace('role/', '');
+    }
     let secretModel;
 
-    let capabilities = this.capabilities(secret);
+    let capabilities = this.capabilities(secret, modelType);
     try {
       secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
     } catch (err) {
@@ -230,6 +263,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     const preferAdvancedEdit =
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
     const backendType = this.backendType();
     model.secret.setProperties({ backend });
@@ -268,6 +302,7 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let { mode, model } = this.controller;
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();

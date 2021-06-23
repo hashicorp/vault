@@ -1,8 +1,11 @@
 import { helper } from '@ember/component/helper';
-import { distanceInWordsToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 export function dateFromNow([date], options = {}) {
-  return distanceInWordsToNow(date, options);
+  // check first if string. If it is, it could be ISO format or UTC, either way create a new date object
+  // otherwise it's a number or object and just return
+  let newDate = typeof date === 'string' ? new Date(date) : date;
+  return formatDistanceToNow(newDate, { ...options });
 }
 
 export default helper(dateFromNow);

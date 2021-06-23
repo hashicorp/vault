@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/mapstructure"
@@ -108,7 +109,6 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 			for i, nameIfc := range pluginsIfc {
 				name, ok := nameIfc.(string)
 				if !ok {
-
 				}
 				plugins[i] = name
 			}
@@ -232,15 +232,19 @@ type ReloadPluginInput struct {
 
 	// Mounts is the array of string mount paths of the plugin backends to reload
 	Mounts []string `json:"mounts"`
+
+	// Scope is the scope of the plugin reload
+	Scope string `json:"scope"`
 }
 
-// ReloadPlugin reloads mounted plugin backends
-func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
+// ReloadPlugin reloads mounted plugin backends, possibly returning
+// reloadId for a cluster scoped reload
+func (c *Sys) ReloadPlugin(i *ReloadPluginInput) (string, error) {
 	path := "/v1/sys/plugins/reload/backend"
 	req := c.c.NewRequest(http.MethodPut, path)
 
 	if err := req.SetJSONBody(i); err != nil {
-		return err
+		return "", err
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -248,10 +252,76 @@ func (c *Sys) ReloadPlugin(i *ReloadPluginInput) error {
 
 	resp, err := c.c.RawRequestWithContext(ctx, req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
-	return err
+
+	if i.Scope == "global" {
+		// Get the reload id
+		secret, parseErr := ParseSecret(resp.Body)
+		if parseErr != nil {
+			return "", parseErr
+		}
+		if _, ok := secret.Data["reload_id"]; ok {
+			return secret.Data["reload_id"].(string), nil
+		}
+	}
+	return "", err
+}
+
+// ReloadStatus is the status of an individual node's plugin reload
+type ReloadStatus struct {
+	Timestamp time.Time `json:"timestamp" mapstructure:"timestamp"`
+	Error     string    `json:"error" mapstructure:"error"`
+}
+
+// ReloadStatusResponse is the combined response of all known completed plugin reloads
+type ReloadStatusResponse struct {
+	ReloadID string                   `mapstructure:"reload_id"`
+	Results  map[string]*ReloadStatus `mapstructure:"results"`
+}
+
+// ReloadPluginStatusInput is used as input to the ReloadStatusPlugin function.
+type ReloadPluginStatusInput struct {
+	// ReloadID is the ID of the reload operation
+	ReloadID string `json:"reload_id"`
+}
+
+// ReloadPluginStatus retrieves the status of a reload operation
+func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*ReloadStatusResponse, error) {
+	path := "/v1/sys/plugins/reload/backend/status"
+	req := c.c.NewRequest(http.MethodGet, path)
+	req.Params.Add("reload_id", reloadStatusInput.ReloadID)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	resp, err := c.c.RawRequestWithContext(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp != nil {
+		secret, parseErr := ParseSecret(resp.Body)
+		if parseErr != nil {
+			return nil, err
+		}
+
+		var r ReloadStatusResponse
+		d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
+			Result:     &r,
+		})
+		if err != nil {
+			return nil, err
+		}
+		err = d.Decode(secret.Data)
+		if err != nil {
+			return nil, err
+		}
+		return &r, nil
+	}
+	return nil, nil
 }
 
 // catalogPathByType is a helper to construct the proper API path by plugin type

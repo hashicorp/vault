@@ -245,26 +245,34 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 func TestSystemBackend_Plugin_continueOnError(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
 		t.Run("sha256_mismatch", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeLogical, true, consts.PluginTypeSecrets)
+			testPlugin_continueOnError(t, logical.TypeLogical, true, "mock-plugin", consts.PluginTypeSecrets)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeLogical, false, consts.PluginTypeSecrets)
+			testPlugin_continueOnError(t, logical.TypeLogical, false, "mock-plugin", consts.PluginTypeSecrets)
 		})
 	})
 
 	t.Run("auth", func(t *testing.T) {
 		t.Run("sha256_mismatch", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeCredential, true, consts.PluginTypeCredential)
+			testPlugin_continueOnError(t, logical.TypeCredential, true, "mock-plugin", consts.PluginTypeCredential)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeCredential, false, consts.PluginTypeCredential)
+			testPlugin_continueOnError(t, logical.TypeCredential, false, "mock-plugin", consts.PluginTypeCredential)
+		})
+
+		t.Run("sha256_mismatch", func(t *testing.T) {
+			testPlugin_continueOnError(t, logical.TypeCredential, true, "oidc", consts.PluginTypeCredential)
+		})
+
+		t.Run("missing_plugin", func(t *testing.T) {
+			testPlugin_continueOnError(t, logical.TypeCredential, false, "oidc", consts.PluginTypeCredential)
 		})
 	})
 }
 
-func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatch bool, pluginType consts.PluginType) {
+func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatch bool, mountPoint string, pluginType consts.PluginType) {
 	cluster := testSystemBackendMock(t, 1, 1, btype)
 	defer cluster.Cleanup()
 
@@ -283,9 +291,22 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		t.Fatal("invalid command")
 	}
 
+	// Mount credential type plugins
+	switch btype {
+	case logical.TypeCredential:
+		vault.TestAddTestPlugin(t, core.Core, mountPoint, consts.PluginTypeCredential, "TestBackend_PluginMainCredentials", []string{}, cluster.TempDir)
+		_, err = core.Client.Logical().Write(fmt.Sprintf("sys/auth/%s", mountPoint), map[string]interface{}{
+			"type": "mock-plugin",
+		})
+		if err != nil {
+			t.Fatalf("err:%v", err)
+		}
+
+	}
+
 	// Trigger a sha256 mismatch or missing plugin error
 	if mismatch {
-		req = logical.TestRequest(t, logical.UpdateOperation, "sys/plugins/catalog/database/mock-plugin")
+		req = logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("sys/plugins/catalog/%s/mock-plugin", pluginType))
 		req.Data = map[string]interface{}{
 			"sha256":  "d17bd7334758e53e6fbab15745d2520765c06e296f2ce8e25b7919effa0ac216",
 			"command": filepath.Base(command),
@@ -467,8 +488,11 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp == nil {
 		t.Fatalf("bad: %v", resp)
+	}
+	if resp.Data["reload_id"] == nil {
+		t.Fatal("no reload_id in response")
 	}
 
 	for i := 0; i < 2; i++ {

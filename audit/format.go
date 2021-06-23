@@ -10,7 +10,6 @@ import (
 
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -48,7 +47,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 	salt, err := f.Salt(ctx)
 	if err != nil {
-		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+		return fmt.Errorf("error fetching salt: %w", err)
 	}
 
 	// Set these to the input values at first
@@ -159,7 +158,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 	salt, err := f.Salt(ctx)
 	if err != nil {
-		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+		return fmt.Errorf("error fetching salt: %w", err)
 	}
 
 	// Set these to the input values at first
@@ -433,4 +432,26 @@ func parseVaultTokenFromJWT(token string) *string {
 	}
 
 	return &claims.ID
+}
+
+// Create a formatter not backed by a persistent salt.
+func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
+	temporarySalt := func(ctx context.Context) (*salt.Salt, error) {
+		return salt.NewNonpersistentSalt(), nil
+	}
+	ret := &AuditFormatter{}
+
+	switch format {
+	case "jsonx":
+		ret.AuditFormatWriter = &JSONxFormatWriter{
+			Prefix:   prefix,
+			SaltFunc: temporarySalt,
+		}
+	default:
+		ret.AuditFormatWriter = &JSONFormatWriter{
+			Prefix:   prefix,
+			SaltFunc: temporarySalt,
+		}
+	}
+	return ret
 }

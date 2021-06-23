@@ -3,10 +3,12 @@ package vault
 import (
 	"context"
 	"strings"
+	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
@@ -16,9 +18,17 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 		{
 			Pattern: "quotas/config$",
 			Fields: map[string]*framework.FieldSchema{
+				"rate_limit_exempt_paths": {
+					Type:        framework.TypeStringSlice,
+					Description: "Specifies the list of exempt paths from all rate limit quotas. If empty no paths will be exempt.",
+				},
 				"enable_rate_limit_audit_logging": {
 					Type:        framework.TypeBool,
 					Description: "If set, starts audit logging of requests that get rejected due to rate limit quota rule violations.",
+				},
+				"enable_rate_limit_response_headers": {
+					Type:        framework.TypeBool,
+					Description: "If set, additional rate limit quota HTTP headers will be added to responses.",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -61,17 +71,17 @@ namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 				},
 				"rate": {
 					Type: framework.TypeFloat,
-					Description: `The rate at which allowed requests are refilled per second by the quota rule.
-Internally, a token-bucket algorithm is used which has a size of 'burst', initially full. The quota
-limits requests to 'rate' per-second, with a maximum burst size of 'burst'. Each request takes a single
-token from this bucket. The 'rate' must be positive.`,
+					Description: `The maximum number of requests in a given interval to be allowed by the quota rule.
+The 'rate' must be positive.`,
 				},
-				"burst": {
-					Type: framework.TypeInt,
-					Description: `The maximum number of requests at any given second to be allowed by the quota
-rule. There is a one-to-one mapping between requests and tokens in the rate limit quota. A client
-may perform up to 'burst' requests at once, at which they they may invoke additional requests at
-'rate' per-second.`,
+				"interval": {
+					Type:        framework.TypeDurationSecond,
+					Description: "The duration to enforce rate limiting for (default '1s').",
+				},
+				"block_interval": {
+					Type: framework.TypeDurationSecond,
+					Description: `If set, when a client reaches a rate limit threshold, the client will be prohibited
+from any further requests until after the 'block_interval' has elapsed.`,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -97,7 +107,10 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
+
 		config.EnableRateLimitAuditLogging = d.Get("enable_rate_limit_audit_logging").(bool)
+		config.EnableRateLimitResponseHeaders = d.Get("enable_rate_limit_response_headers").(bool)
+		config.RateLimitExemptPaths = d.Get("rate_limit_exempt_paths").([]string)
 
 		entry, err := logical.StorageEntryJSON(quotas.ConfigPath, config)
 		if err != nil {
@@ -107,7 +120,18 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 			return nil, err
 		}
 
+		entry, err = logical.StorageEntryJSON(quotas.DefaultRateLimitExemptPathsToggle, true)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+
 		b.Core.quotaManager.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
+		b.Core.quotaManager.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+		b.Core.quotaManager.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
+
 		return nil, nil
 	}
 }
@@ -117,7 +141,9 @@ func (b *SystemBackend) handleQuotasConfigRead() framework.OperationFunc {
 		config := b.Core.quotaManager.Config()
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"enable_rate_limit_audit_logging": config.EnableRateLimitAuditLogging,
+				"enable_rate_limit_audit_logging":    config.EnableRateLimitAuditLogging,
+				"enable_rate_limit_response_headers": config.EnableRateLimitResponseHeaders,
+				"rate_limit_exempt_paths":            config.RateLimitExemptPaths,
 			},
 		}, nil
 	}
@@ -144,9 +170,14 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("'rate' is invalid"), nil
 		}
 
-		burst := d.Get("burst").(int)
-		if burst < int(rate) {
-			return logical.ErrorResponse("'burst' must be greater than or equal to 'rate' as an integer value"), nil
+		interval := time.Second * time.Duration(d.Get("interval").(int))
+		if interval == 0 {
+			interval = time.Second
+		}
+
+		blockInterval := time.Second * time.Duration(d.Get("block_interval").(int))
+		if blockInterval < 0 {
+			return logical.ErrorResponse("'block' is invalid"), nil
 		}
 
 		mountPath := sanitizePath(d.Get("path").(string))
@@ -161,26 +192,36 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
 		}
-
-		// Disallow duplicate quotas with same precedence and similar
-		// properties.
-		quota, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
+		// Disallow creation of new quota that has properties similar to an
+		// existing quota.
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
 		if err != nil {
 			return nil, err
 		}
-		if quota != nil && quota.QuotaName() != name {
-			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quota.QuotaName()), nil
+		if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
+			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
+		}
+
+		// If a quota already exists, fetch and update it.
+		quota, err := b.Core.quotaManager.QuotaByName(qType, name)
+		if err != nil {
+			return nil, err
 		}
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, burst)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
+			// Re-inserting the already indexed object in memdb might cause problems.
+			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
+			rlq = rlq.Clone()
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate
-			rlq.Burst = burst
+			rlq.Interval = interval
+			rlq.BlockInterval = blockInterval
+			quota = rlq
 		}
 
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)
@@ -221,11 +262,12 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		}
 
 		data := map[string]interface{}{
-			"type":  qType,
-			"name":  rlq.Name,
-			"path":  nsPath + rlq.MountPath,
-			"rate":  rlq.Rate,
-			"burst": rlq.Burst,
+			"type":           qType,
+			"name":           rlq.Name,
+			"path":           nsPath + rlq.MountPath,
+			"rate":           rlq.Rate,
+			"interval":       int(rlq.Interval.Seconds()),
+			"block_interval": int(rlq.BlockInterval.Seconds()),
 		}
 
 		return &logical.Response{
@@ -259,11 +301,10 @@ var quotasHelp = map[string][2]string{
 	"rate-limit": {
 		`Get, create or update rate limit resource quota for an optional namespace or
 mount.`,
-		`A rate limit quota will enforce rate limiting using a token bucket algorithm. A
+		`A rate limit quota will enforce API rate limiting in a specified interval. A
 rate limit quota can be created at the root level or defined on a namespace or
 mount by specifying a 'path'. The rate limiter is applied to each unique client
-IP address. A client may invoke 'burst' requests at any given second, after
-which they may invoke additional requests at 'rate' per-second.`,
+IP address.`,
 	},
 	"rate-limit-list": {
 		"Lists the names of all the rate limit quotas.",

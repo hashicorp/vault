@@ -2,7 +2,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './message.md';
 
-storiesOf('Confirm/Message/', module)
+storiesOf('Confirm/Message', module)
   .addParameters({ options: { showPanel: true } })
   .add(
     `Message`,

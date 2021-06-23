@@ -3,15 +3,19 @@ package testhelpers
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/url"
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
@@ -194,14 +198,17 @@ func AttemptUnsealCore(c *vault.TestCluster, core *vault.TestClusterCore) error 
 }
 
 func EnsureStableActiveNode(t testing.T, cluster *vault.TestCluster) {
+	t.Helper()
 	deriveStableActiveCore(t, cluster)
 }
 
 func DeriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	t.Helper()
 	return deriveStableActiveCore(t, cluster)
 }
 
 func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	t.Helper()
 	activeCore := DeriveActiveCore(t, cluster)
 	minDuration := time.NewTimer(3 * time.Second)
 
@@ -230,7 +237,8 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
-	for i := 0; i < 10; i++ {
+	t.Helper()
+	for i := 0; i < 20; i++ {
 		for _, core := range cluster.Cores {
 			leaderResp, err := core.Client.Sys().Leader()
 			if err != nil {
@@ -247,6 +255,7 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 }
 
 func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestClusterCore {
+	t.Helper()
 	cores := make([]*vault.TestClusterCore, 0, 2)
 	for _, core := range cluster.Cores {
 		leaderResp, err := core.Client.Sys().Leader()
@@ -278,6 +287,25 @@ func WaitForNCoresUnsealed(t testing.T, cluster *vault.TestCluster, n int) {
 	}
 
 	t.Fatalf("%d cores were not unsealed", n)
+}
+
+func SealCores(t testing.T, cluster *vault.TestCluster) {
+	t.Helper()
+	for _, core := range cluster.Cores {
+		if err := core.Shutdown(); err != nil {
+			t.Fatal(err)
+		}
+		timeout := time.Now().Add(3 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("timeout waiting for core to seal")
+			}
+			if core.Sealed() {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 }
 
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
@@ -346,7 +374,7 @@ func RekeyCluster(t testing.T, cluster *vault.TestCluster, recovery bool) [][]by
 	}
 
 	var statusResp *api.RekeyUpdateResponse
-	var keys = cluster.BarrierKeys
+	keys := cluster.BarrierKeys
 	if cluster.Cores[0].Core.SealAccess().RecoveryKeySupported() {
 		keys = cluster.RecoveryKeys
 	}
@@ -412,7 +440,6 @@ func (p *TestRaftServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftlib
 }
 
 func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
-
 	addressProvider := &TestRaftServerAddressProvider{Cluster: cluster}
 
 	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
@@ -428,7 +455,7 @@ func RaftClusterJoinNodes(t testing.T, cluster *vault.TestCluster) {
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
-		&raft.LeaderJoinInfo{
+		{
 			LeaderAPIAddr: leader.Client.Address(),
 			TLSConfig:     leader.TLSConfig,
 		},
@@ -470,7 +497,6 @@ func (p *HardcodedServerAddressProvider) ServerAddr(id raftlib.ServerID) (raftli
 // NewHardcodedServerAddressProvider is a convenience function that makes a
 // ServerAddressProvider from a given cluster address base port.
 func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.ServerAddressProvider {
-
 	entries := make(map[raftlib.ServerID]raftlib.ServerAddress)
 
 	for i := 0; i < numCores; i++ {
@@ -488,7 +514,6 @@ func NewHardcodedServerAddressProvider(numCores, baseClusterPort int) raftlib.Se
 // the correct number of servers, having the correct NodeIDs, and exactly one
 // leader.
 func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
-
 	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
 	ctx := namespace.RootContext(context.Background())
 	config, err := backend.GetConfiguration(ctx)
@@ -518,9 +543,27 @@ func VerifyRaftConfiguration(core *vault.TestClusterCore, numCores int) error {
 	return nil
 }
 
+func RaftAppliedIndex(core *vault.TestClusterCore) uint64 {
+	return core.UnderlyingRawStorage.(*raft.RaftBackend).AppliedIndex()
+}
+
+func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
+	t.Helper()
+
+	backend := core.UnderlyingRawStorage.(*raft.RaftBackend)
+	for i := 0; i < 30; i++ {
+		if backend.AppliedIndex() >= index {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not apply index")
+}
+
 // AwaitLeader waits for one of the cluster's nodes to become leader.
 func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
-
 	timeout := time.Now().Add(30 * time.Second)
 	for {
 		if time.Now().After(timeout) {
@@ -532,10 +575,7 @@ func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
 				continue
 			}
 
-			isLeader, _, _, err := core.Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
+			isLeader, _, _, _ := core.Leader()
 			if isLeader {
 				return i, nil
 			}
@@ -581,4 +621,80 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	}()
 
 	return stopCh
+}
+
+func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
+	t.Helper()
+
+	resp, err := client.Logical().Read("sys/storage/raft/configuration")
+	if err != nil {
+		t.Fatalf("error reading raft config: %v", err)
+	}
+
+	if resp == nil || resp.Data == nil {
+		t.Fatal("missing response data")
+	}
+
+	config, ok := resp.Data["config"].(map[string]interface{})
+	if !ok {
+		t.Fatal("missing config in response data")
+	}
+
+	servers, ok := config["servers"].([]interface{})
+	if !ok {
+		t.Fatal("missing servers in response data config")
+	}
+
+	// Iterate through the servers and remove the node found in the response
+	// from the expected collection
+	for _, s := range servers {
+		server := s.(map[string]interface{})
+		delete(expected, server["node_id"].(string))
+	}
+
+	// If the collection is non-empty, it means that the peer was not found in
+	// the response.
+	if len(expected) != 0 {
+		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+	}
+}
+
+func TestMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
+		clusterSink.GaugeInterval = gaugeInterval
+		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
+	}
+}
+
+func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) (*SysMetricsJSON, error) {
+	r := client.NewRequest("GET", "/v1/sys/metrics")
+	if !unauth {
+		r.Headers.Set("X-Vault-Token", cluster.RootToken)
+	}
+	var data SysMetricsJSON
+	resp, err := client.RawRequestWithContext(context.Background(), r)
+	if err != nil {
+		return nil, err
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Response.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err := json.Unmarshal(bodyBytes, &data); err != nil {
+		return nil, errors.New("failed to unmarshal:" + err.Error())
+	}
+	return &data, nil
+}
+
+type SysMetricsJSON struct {
+	Gauges []GaugeJSON `json:"Gauges"`
+}
+
+type GaugeJSON struct {
+	Name   string                 `json:"Name"`
+	Value  int                    `json:"Value"`
+	Labels map[string]interface{} `json:"Labels"`
 }

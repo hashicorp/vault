@@ -42,7 +42,8 @@ type Entropy struct {
 
 // KMS contains KMS configuration for the server
 type KMS struct {
-	Type string
+	UnusedKeys []string `hcl:",unusedKeys"`
+	Type       string
 	// Purpose can be used to allow a string-based specification of what this
 	// KMS is designated for, in situations where we want to allow more than
 	// one KMS to be specified
@@ -99,11 +100,11 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
-			if vs, ok := v.(string); ok {
-				strMap[k] = vs
-			} else {
-				return multierror.Prefix(fmt.Errorf("unable to parse 'purpose' in kms type %q: value could not be parsed as string", key), fmt.Sprintf("%s.%s:", blockName, key))
+			s, err := parseutil.ParseString(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
+			strMap[k] = s
 		}
 
 		seal := &KMS{
@@ -145,13 +146,13 @@ func ParseKMSes(d string) ([]*KMS, error) {
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'kms': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'kms': %w", err)
 		}
 	}
 

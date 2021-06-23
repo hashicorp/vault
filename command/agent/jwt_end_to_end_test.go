@@ -56,6 +56,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	_, err = client.Logical().Write("auth/jwt/config", map[string]interface{}{
 		"bound_issuer":           "https://team-vault.auth0.com/",
 		"jwt_validation_pubkeys": TestECDSAPubKey,
+		"jwt_supported_algs":     "ES256",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -115,17 +116,13 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(dhpath, mPubKey, 0600); err != nil {
+	if err := ioutil.WriteFile(dhpath, mPubKey, 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote dh param file", "path", dhpath)
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	am, err := agentjwt.NewJWTAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.jwt"),
@@ -148,16 +145,26 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		ahConfig.WrapTTL = 10 * time.Second
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	config := &sink.SinkConfig{
-		Logger: logger.Named("sink.file"),
-		AAD:    "foobar",
-		DHType: "curve25519",
-		DHPath: dhpath,
+		Logger:    logger.Named("sink.file"),
+		AAD:       "foobar",
+		DHType:    "curve25519",
+		DHPath:    dhpath,
+		DeriveKey: true,
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -175,13 +182,25 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
 	defer func() {
-		<-ss.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Check that no jwt file exists
 	_, err = os.Lstat(in)
@@ -206,7 +225,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 
 	// Get a token
 	jwtToken, _ := GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
@@ -231,7 +250,11 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 					continue
 				}
 
-				aesKey, err := dhutil.GenerateSharedKey(pri, resp.Curve25519PublicKey)
+				shared, err := dhutil.GenerateSharedSecret(pri, resp.Curve25519PublicKey)
+				if err != nil {
+					t.Fatal(err)
+				}
+				aesKey, err := dhutil.DeriveSharedKey(shared, pub, resp.Curve25519PublicKey)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -313,7 +336,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	// Get another token to test the backend pushing the need to authenticate
 	// to the handler
 	jwtToken, _ = GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

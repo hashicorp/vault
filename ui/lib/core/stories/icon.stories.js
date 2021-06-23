@@ -4,7 +4,7 @@ import notes from './icon.md';
 import icons from '../../../node_modules/@hashicorp/structure-icons/dist/index.js';
 import { withKnobs, select } from '@storybook/addon-knobs';
 
-storiesOf('Icon/', module)
+storiesOf('Icon', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(

@@ -20,17 +20,30 @@ let secretModel = (store, backend, key) => {
   return secret;
 };
 
+const transformModel = queryParams => {
+  let modelType = 'transform';
+  if (!queryParams || !queryParams.itemType) return modelType;
+
+  return `${modelType}/${queryParams.itemType}`;
+};
+
 export default EditBase.extend({
   wizard: service(),
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    const modelType = this.modelType(backend);
+    let modelType = this.modelType(backend);
     if (modelType === 'role-ssh') {
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
+    if (modelType === 'transform') {
+      modelType = transformModel(transition.to.queryParams);
+    }
+    if (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role') {
+      modelType = 'database/role';
+    }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
-      if (this.get('wizard.featureState') === 'details' && this.get('wizard.componentState') === 'transit') {
-        this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', 'transit');
+      if (this.wizard.featureState === 'details' && this.wizard.componentState === 'transit') {
+        this.wizard.transitionFeatureMachine('details', 'CONTINUE', 'transit');
       }
       return this.store.createRecord(modelType);
     }

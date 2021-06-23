@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	oktanew "github.com/okta/okta-sdk-golang/okta"
+	oktanew "github.com/okta/okta-sdk-golang/v2/okta"
 )
 
 const (
@@ -25,53 +25,53 @@ func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "Use org_name instead.",
 				Deprecated:  true,
 			},
-			"org_name": &framework.FieldSchema{
+			"org_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the organization to be used in the Okta API.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Organization Name",
 				},
 			},
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Use api_token instead.",
 				Deprecated:  true,
 			},
-			"api_token": &framework.FieldSchema{
+			"api_token": {
 				Type:        framework.TypeString,
 				Description: "Okta API key.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "API Token",
 				},
 			},
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type:        framework.TypeString,
 				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Base URL",
 				},
 			},
-			"production": &framework.FieldSchema{
+			"production": {
 				Type:        framework.TypeBool,
 				Description: `Use base_url instead.`,
 				Deprecated:  true,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
-			"bypass_okta_mfa": &framework.FieldSchema{
+			"bypass_okta_mfa": {
 				Type:        framework.TypeBool,
 				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -269,17 +269,18 @@ func (b *backend) pathConfigExistenceCheck(ctx context.Context, req *logical.Req
 }
 
 type oktaShim interface {
-	Client() *oktanew.Client
+	Client() (*oktanew.Client, context.Context)
 	NewRequest(method string, url string, body interface{}) (*http.Request, error)
 	Do(req *http.Request, v interface{}) (interface{}, error)
 }
 
 type oktaShimNew struct {
 	client *oktanew.Client
+	ctx    context.Context
 }
 
-func (new *oktaShimNew) Client() *oktanew.Client {
-	return new.client
+func (new *oktaShimNew) Client() (*oktanew.Client, context.Context) {
+	return new.client, new.ctx
 }
 
 func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
@@ -290,15 +291,15 @@ func (new *oktaShimNew) NewRequest(method string, url string, body interface{}) 
 }
 
 func (new *oktaShimNew) Do(req *http.Request, v interface{}) (interface{}, error) {
-	return new.client.GetRequestExecutor().Do(req, v)
+	return new.client.GetRequestExecutor().Do(new.ctx, req, v)
 }
 
 type oktaShimOld struct {
 	client *oktaold.Client
 }
 
-func (new *oktaShimOld) Client() *oktanew.Client {
-	return nil
+func (new *oktaShimOld) Client() (*oktanew.Client, context.Context) {
+	return nil, nil
 }
 
 func (new *oktaShimOld) NewRequest(method string, url string, body interface{}) (*http.Request, error) {
@@ -310,7 +311,7 @@ func (new *oktaShimOld) Do(req *http.Request, v interface{}) (interface{}, error
 }
 
 // OktaClient creates a basic okta client connection
-func (c *ConfigEntry) OktaClient() (oktaShim, error) {
+func (c *ConfigEntry) OktaClient(ctx context.Context) (oktaShim, error) {
 	baseURL := defaultBaseURL
 	if c.Production != nil {
 		if !*c.Production {
@@ -322,13 +323,13 @@ func (c *ConfigEntry) OktaClient() (oktaShim, error) {
 	}
 
 	if c.Token != "" {
-		client, err := oktanew.NewClient(context.Background(),
+		ctx, client, err := oktanew.NewClient(ctx,
 			oktanew.WithOrgUrl("https://"+c.Org+"."+baseURL),
 			oktanew.WithToken(c.Token))
 		if err != nil {
 			return nil, err
 		}
-		return &oktaShimNew{client}, nil
+		return &oktaShimNew{client, ctx}, nil
 	}
 	client, err := oktaold.NewClientWithDomain(cleanhttp.DefaultClient(), c.Org, baseURL, "")
 	if err != nil {

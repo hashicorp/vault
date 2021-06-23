@@ -11,15 +11,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	// protectedPaths cannot be accessed via the raw APIs.
-	// This is both for security and to prevent disrupting Vault.
-	protectedPaths = []string{
-		keyringPath,
-		// Changing the cluster info path can change the cluster ID which can be disruptive
-		coreLocalClusterInfoPath,
-	}
-)
+// protectedPaths cannot be accessed via the raw APIs.
+// This is both for security and to prevent disrupting Vault.
+var protectedPaths = []string{
+	keyringPath,
+	// Changing the cluster info path can change the cluster ID which can be disruptive
+	coreLocalClusterInfoPath,
+}
 
 type RawBackend struct {
 	*framework.Backend
@@ -179,14 +177,14 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 
 func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: prefix + "(raw/?$|raw/(?P<path>.+))",
 
 			Fields: map[string]*framework.FieldSchema{
-				"path": &framework.FieldSchema{
+				"path": {
 					Type: framework.TypeString,
 				},
-				"value": &framework.FieldSchema{
+				"value": {
 					Type: framework.TypeString,
 				},
 			},

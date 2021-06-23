@@ -12,12 +12,12 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.get('authMethods').perform();
+    this.authMethods.perform();
   },
 
   authMethods: task(function*() {
-    let methods = yield this.get('store').findAll('auth-method');
-    if (!this.get('value')) {
+    let methods = yield this.store.findAll('auth-method');
+    if (!this.value) {
       this.set('value', methods.get('firstObject.accessor'));
     }
     return methods;
@@ -25,7 +25,7 @@ export default Component.extend({
 
   actions: {
     change(value) {
-      this.get('onChange')(value);
+      this.onChange(value);
     },
   },
 });

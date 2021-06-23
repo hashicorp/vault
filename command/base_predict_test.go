@@ -353,6 +353,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"cert",
 				"cf",
 				"consul",
+				"couchbase-database-plugin",
 				"elasticsearch-database-plugin",
 				"gcp",
 				"gcpkms",
@@ -361,6 +362,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"influxdb-database-plugin",
 				"jwt",
 				"kerberos",
+				"keymgmt",
 				"kmip",
 				"kubernetes",
 				"kv",
@@ -388,7 +390,9 @@ func TestPredict_Plugins(t *testing.T) {
 				"rabbitmq",
 				"radius",
 				"redshift-database-plugin",
+				"snowflake-database-plugin",
 				"ssh",
+				"terraform",
 				"totp",
 				"transform",
 				"transit",
@@ -408,6 +412,14 @@ func TestPredict_Plugins(t *testing.T) {
 
 				act := p.plugins()
 
+				if !strutil.StrListContains(act, "keymgmt") {
+					for i, v := range tc.exp {
+						if v == "keymgmt" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !strutil.StrListContains(act, "kmip") {
 					for i, v := range tc.exp {
 						if v == "kmip" {
