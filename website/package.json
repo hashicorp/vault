@@ -27,7 +27,7 @@
     "@hashicorp/react-tabs": "6.0.1",
     "@hashicorp/react-text-split": "3.2.0",
     "@hashicorp/react-text-splits": "3.2.2",
-    "@hashicorp/react-use-cases": "3.0.2",
+    "@hashicorp/react-use-cases": "3.0.3-alpha.6",
     "@hashicorp/react-vertical-text-block-list": "6.0.2",
     "next": "10.2.2",
     "next-mdx-remote": "3.0.2",
