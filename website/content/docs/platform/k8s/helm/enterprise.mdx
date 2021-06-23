@@ -52,23 +52,36 @@ kubectl exec -ti vault-0 -- vault license get
 
 To update the autoloaded license in Vault, you may do the following:
 
-- Delete and recreate the secret
-
-  Use the name specified in chart option [`server.enterpriseLicense.secretName`](/docs/platform/k8s/helm/configuration#secretname-1). Updating the existing secret will work as well.
+- Update your license secret with the new license data
 
 ```shell
-kubectl delete secret vault-ent-license
-secret=$(cat new-license.hclic)
-kubectl create secret generic vault-ent-license --from-literal="license=${secret}"
+new_secret=$(base64 < ./new-license.hclic | tr -d '\n')
+
+cat > patch-license.yaml <<EOF
+data:
+  license: ${new_secret}
+EOF
+
+kubectl patch secret vault-ent-license --patch "$(cat patch-license.yaml)"
 ```
 
 - Wait until [`vault license inspect`](/docs/commands/license/inspect) shows the updated license
+
+  Since the `inspect` command is reading the license file from the mounted secret, this tells you when the updated secret has been propagated to the mount on the Vault pod.
 
 ```shell
 kubectl exec vault-0 -- vault license inspect
 ```
 
-- Reload Vault's config by issuing an HUP signal
+- Reload Vault's license config
+
+  You may use the [`sys/config/reload/license` API endpoint](/api-docs/system/config-reload#reload-license-file):
+
+```shell
+kubectl exec vault-0 -- vault write -f sys/config/reload/license
+```
+
+  Or you may issue an HUP signal directly to Vault:
 
 ```shell
 kubectl exec vault-0 -- pkill -HUP vault
