@@ -242,6 +242,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 		return nil
 	})
+	if config == nil {
+		return fmt.Errorf("No vault server configuration found.")
+	}
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
