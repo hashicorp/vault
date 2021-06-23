@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
+)
+
+const (
+	defaultUserNameTemplate = `{{ printf "%s-%s" (.DisplayName) (uuid) }}`
 )
 
 func pathCreds(b *backend) *framework.Path {
@@ -46,17 +50,31 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
 
-	// Ensure username is unique
-	uuidVal, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, err
-	}
-	username := fmt.Sprintf("%s-%s", req.DisplayName, uuidVal)
-
 	config, err := readConfig(ctx, req.Storage)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read configuration: %w", err)
 	}
+
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+
+	um := UsernameMetadata{
+		DisplayName: req.DisplayName,
+		RoleName:    name,
+	}
+
+	username, err := up.Generate(um)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate username: %w", err)
+	}
+	fmt.Printf("username: %s\n", username)
 
 	password, err := b.generatePassword(ctx, config.PasswordPolicy)
 	if err != nil {
@@ -187,6 +205,12 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 
 func isIn200s(respStatus int) bool {
 	return respStatus >= 200 && respStatus < 300
+}
+
+// UsernameMetadata is metadata the database plugin can use to generate a username
+type UsernameMetadata struct {
+	DisplayName string
+	RoleName    string
 }
 
 const pathRoleCreateReadHelpSyn = `

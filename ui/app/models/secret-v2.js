@@ -11,12 +11,12 @@ const Validations = buildValidations({
     validator('number', {
       allowString: false,
       integer: true,
-      message: 'Maximum versions must be a number',
+      message: 'Maximum versions must be a number.',
     }),
     validator('length', {
       min: 1,
       max: 16,
-      message: 'You cannot go over 16 characters',
+      message: 'You cannot go over 16 characters.',
     }),
   ],
 });
