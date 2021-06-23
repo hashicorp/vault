@@ -9,7 +9,7 @@ listener "tcp" {
 }
 
 storage "raft" {
-  path = "./server/test-fixtures/raft_storage_file.db"
+  path = "./server/test-fixtures/"
   node_id = "raft_node_1"
 }
 cluster_addr = "http://127.0.0.1:8201"

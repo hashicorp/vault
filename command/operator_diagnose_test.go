@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -176,12 +177,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			[]*diagnose.Result{
 				{
 					Name:   "storage",
-					Status: diagnose.ErrorStatus,
+					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:    "create-storage-backend",
-							Status:  diagnose.ErrorStatus,
-							Message: "failed to open bolt file",
+							Name:   "create-storage-backend",
+							Status: diagnose.OkStatus,
 						},
 						{
 							Name:    "raft folder permission checks",
@@ -190,8 +190,8 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:    "raft quorum",
-							Status:  diagnose.ErrorStatus,
-							Message: "could not determine quorum status",
+							Status:  diagnose.WarningStatus,
+							Message: "even number of voters found",
 						},
 					},
 				},
@@ -378,6 +378,26 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 			},
 		},
+		{
+			"diagnose_raft_no_folder_backend",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_raft_no_bolt_folder.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:    "storage",
+					Status:  diagnose.ErrorStatus,
+					Message: "Diagnose could not initialize storage backend.",
+					Children: []*diagnose.Result{
+						{
+							Name:    "create-storage-backend",
+							Status:  diagnose.ErrorStatus,
+							Message: "no such file or directory",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
@@ -458,6 +478,9 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	if len(exp.Children) > 0 {
 		return compareResults(exp.Children, act.Children)
 	}
+
+	// Remove raft file if it exists
+	os.Remove("./server/test-fixtures/vault.db")
 
 	return nil
 }

@@ -266,8 +266,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			return nil
 		})
 
-		// Return from top-level span when backend is nil
 		if backend == nil {
+			diagnose.Fail(ctx, "Diagnose could not initialize storage backend.")
+			span.End()
 			return fmt.Errorf("Diagnose could not initialize storage backend.")
 		}
 
@@ -347,6 +348,11 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}
 		return nil
 	})
+
+	// Return from top-level span when backend is nil
+	if backend == nil {
+		return fmt.Errorf("Diagnose could not initialize storage backend.")
+	}
 
 	var configSR sr.ServiceRegistration
 	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
