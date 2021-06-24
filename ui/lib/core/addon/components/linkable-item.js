@@ -14,20 +14,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/linkable-item';
 import { setComponentTemplate } from '@ember/component';
-import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 
-class LinkableItemComponent extends Component {
-  //track height
-  //open vs close text
-
-  @tracked
-  isOpen = false;
-
-  @action
-  toggleOpen() {
-    this.isOpen = !this.isOpen;
-  }
-}
+class LinkableItemComponent extends Component {}
 
 export default setComponentTemplate(layout, LinkableItemComponent);
