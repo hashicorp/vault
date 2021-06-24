@@ -23,6 +23,7 @@ save_go_mod_cache:
           - /go/pkg/mod
 refresh_go_mod_cache:
   steps:
+    - restore_go_mod_cache
     - run:
         name: go mod download
         command: |

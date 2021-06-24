@@ -30,4 +30,3 @@ steps:
 
         echo "$ go version"
         go version
-  - restore_go_mod_cache
