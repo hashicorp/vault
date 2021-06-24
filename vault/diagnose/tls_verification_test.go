@@ -178,7 +178,7 @@ func TestTLSMultiKeys(t *testing.T) {
 	}
 }
 
-// TestTLSMultiCerts verifies that a unique error message is thrown when a cert is specified twice.
+// TestTLSCertAsKey verifies that a unique error message is thrown when a cert is specified twice.
 func TestTLSCertAsKey(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
@@ -240,6 +240,7 @@ func TestTLSNoRoot(t *testing.T) {
 		},
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
+
 	if errs != nil {
 		t.Fatalf("server certificate without root certificate is insecure, but still valid")
 	}
@@ -262,7 +263,7 @@ func TestTLSInvalidMinVersion(t *testing.T) {
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
 	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on invalid 'tls_min_version' should fail")
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(minVersionError, "0").Error()) {
 		t.Fatalf("Bad error message: %s", errs[0])
@@ -286,7 +287,7 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 	}
 	_, errs := ListenerChecks(context.Background(), listeners)
 	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on fake certificate should fail")
+		t.Fatalf("TLS Config check on invalid 'tls_max_version' should fail")
 	}
 	if !strings.Contains(errs[0].Error(), fmt.Errorf(maxVersionError, "0").Error()) {
 		t.Fatalf("Bad error message: %s", errs[0])
@@ -507,6 +508,7 @@ func TestTLSMultipleRootInClietCACert(t *testing.T) {
 	}
 }
 
+// TestTLSSelfSignedCerts tests invalid self-signed cert as TLSClientCAFile
 func TestTLSSelfSignedCert(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{

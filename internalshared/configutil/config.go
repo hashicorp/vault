@@ -2,12 +2,12 @@ package configutil
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/hcl/token"
 	"io/ioutil"
 	"time"
 
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
