@@ -34,15 +34,15 @@ func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]st
 		listenerID := l.Address
 
 		if l.TLSDisable {
-			Warn(ctx, fmt.Sprintf("listener at address: %s has error %s. ", listenerID, "TLS is disabled in a Listener config stanza"))
+			Warn(ctx, fmt.Sprintf("listener at address: %s has error: TLS is disabled in a Listener config stanza.", listenerID))
 			continue
 		}
 		if l.TLSDisableClientCerts {
-			Warn(ctx, fmt.Sprintf("listener at address: %s has error %s. ", listenerID, "TLS for a listener is turned on without requiring client certs"))
+			Warn(ctx, fmt.Sprintf("listener at address: %s has error: TLS for a listener is turned on without requiring client certs.", listenerID))
 
 		}
 		status, warning := TLSMutualExclusionCertCheck(l)
-		if status != 0 {
+		if status == 1 {
 			Warn(ctx, warning)
 		}
 
