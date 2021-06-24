@@ -1,9 +1,5 @@
 description: Ensures nothing obvious is broken for faster failures.
-docker:
-  - image: circleci/buildpack-deps
-shell: /usr/bin/env bash -euo pipefail
-environment:
-  CCI_VERSION: 0.1.5691
+executor: go-machine
 steps:
   - checkout
   - run:
