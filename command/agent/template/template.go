@@ -241,7 +241,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	}
 
 	if sc.AgentConfig.TemplateConfig != nil && sc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
-		conf.Vault.StaticSecretRenderInt = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
+		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
 	}
 
 	conf.Vault.SSL = &ctconfig.SSLConfig{
