@@ -971,7 +971,7 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
-              -e GOPROXY="" \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -1208,7 +1208,7 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
-              -e GOPROXY="" \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -1696,7 +1696,7 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
-              -e GOPROXY="" \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               testcontainer \
               gotestsum --format=short-verbose \
@@ -2316,7 +2316,7 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
-              -e GOPROXY="" \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               testcontainer \
               gotestsum --format=short-verbose \
