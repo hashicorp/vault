@@ -387,6 +387,52 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 
+	diagnose.Test(ctx, "seal-transit-tls-checks", func(ctx context.Context) error {
+		var checkSealTransit bool
+		for _, seal := range config.Seals {
+			if seal.Type == "transit" {
+				checkSealTransit = true
+
+				tlsSkipVerify, _ := seal.Config["tls_skip_verify"]
+				if tlsSkipVerify == "true" {
+					diagnose.Warn(ctx, "TLS verification is Skipped! Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
+					return nil
+				}
+
+				// Checking tls_client_cert and tls_client_key
+				tlsClientCert, ok := seal.Config["tls_client_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_cert in the config")
+					return nil
+				}
+				tlsClientKey, ok := seal.Config["tls_client_key"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_key in the config")
+					return nil
+				}
+				_, err := diagnose.TLSFileChecks(tlsClientCert, tlsClientKey)
+				if err != nil {
+					return fmt.Errorf("TLS file check failed for tls_client_cert and tls_client_key with the following error: %w", err)
+				}
+
+				// checking tls_ca_cert
+				tlsCACert, ok := seal.Config["tls_ca_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Mising tls_ca_cert in the config")
+					return nil
+				}
+				_, err = diagnose.TLSCAFileCheck(tlsCACert)
+				if err != nil {
+					return fmt.Errorf("TLS file check failed for tls_ca_cert with the following error: %w", err)
+				}
+			}
+		}
+		if !checkSealTransit {
+			diagnose.Skipped(ctx, "No transit seal found!")
+		}
+		return nil
+	})
+
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
 	var seals []vault.Seal
 	var sealConfigError error
