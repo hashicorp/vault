@@ -12,13 +12,13 @@ restore_go_mod_cache:
   steps:
     - restore_cache:
         keys:
-          - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          - v1-{{checksum "go.sum"}}
+          - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          - v1.1-{{checksum "go.sum"}}
 save_go_mod_cache:
   steps:
     - save_cache:
-        key: v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         paths:
           - /go/pkg/mod
 refresh_go_mod_cache:
@@ -30,4 +30,14 @@ refresh_go_mod_cache:
           go mod download
           ( cd sdk && go mod download; )
           ( cd api && go mod download; )
+    - run:
+        name: Verify downloading modules did not modify any files
+        command: |
+          git diff --exit-code || {
+            echo "Files modified:"
+            git diff --name-only
+            echo "Contents:"
+            git diff
+            exit 1
+          }
     - save_go_mod_cache
