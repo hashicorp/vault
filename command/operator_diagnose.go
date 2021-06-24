@@ -426,7 +426,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 SEALFAIL:
 	sealspan.End()
 	var coreConfig vault.CoreConfig
-	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
+	diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
@@ -436,9 +436,7 @@ SEALFAIL:
 		diagnose.SpotOk(ctx, "init-randreader", "")
 		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
+	})
 
 	var disableClustering bool
 	diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
@@ -514,6 +512,9 @@ SEALFAIL:
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener
 		var status int
+
+		diagnose.ListenerChecks(ctx, config.Listeners)
+
 		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
 			status, listeners, _, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
 			if status != 0 {
@@ -531,32 +532,7 @@ SEALFAIL:
 			}
 		}
 
-		defer c.cleanupGuard.Do(listenerCloseFunc)
-
-		listenerTLSContext, listenerTLSSpan := diagnose.StartSpan(ctx, "check-listener-tls")
-		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-		for _, ln := range lns {
-			if ln.Config.TLSDisable {
-				diagnose.Warn(listenerTLSContext, "TLS is disabled in a Listener config stanza.")
-				continue
-			}
-			if ln.Config.TLSDisableClientCerts {
-				diagnose.Warn(listenerTLSContext, "TLS for a listener is turned on without requiring client certs.")
-
-			}
-			err = diagnose.TLSMutualExclusionCertCheck(ln.Config)
-			if err != nil {
-				diagnose.Warn(listenerTLSContext, fmt.Sprintf("TLSDisableClientCerts and TLSRequireAndVerifyClientCert should not both be set. %s", err))
-			}
-
-			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-				Listener: ln.Listener,
-				Config:   ln.Config,
-			})
-		}
-		diagnose.ListenerChecks(listenerTLSContext, sanitizedListeners)
-
-		listenerTLSSpan.End()
+		c.cleanupGuard.Do(listenerCloseFunc)
 
 		return nil
 	})

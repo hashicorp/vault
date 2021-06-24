@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"io"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 
 	wordwrap "github.com/mitchellh/go-wordwrap"
 	"go.opentelemetry.io/otel/codes"
@@ -318,22 +319,20 @@ func (r *Result) StringWrapped(wrapLimit int) string {
 func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 	indent(sb, depth)
 	var prelude string
-	if len(r.Warnings) == 0 {
-		switch r.Status {
-		case OkStatus:
-			prelude = status_ok
-		case WarningStatus:
-			prelude = status_warn
-		case ErrorStatus:
-			prelude = status_failed
-		case SkippedStatus:
-			prelude = status_skipped
-		}
-		prelude = prelude + r.Name
+	switch r.Status {
+	case OkStatus:
+		prelude = status_ok
+	case WarningStatus:
+		prelude = status_warn
+	case ErrorStatus:
+		prelude = status_failed
+	case SkippedStatus:
+		prelude = status_skipped
+	}
+	prelude = prelude + r.Name
 
-		if r.Message != "" {
-			prelude = prelude + ": " + r.Message
-		}
+	if r.Message != "" {
+		prelude = prelude + ": " + r.Message
 	}
 	warnings := r.Warnings
 	if r.Message == "" && len(warnings) > 0 {
@@ -343,6 +342,7 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 			warnings = warnings[1:]
 		}
 	}
+
 	writeWrapped(sb, prelude, depth+1, limit)
 	for _, w := range warnings {
 		sb.WriteRune('\n')
