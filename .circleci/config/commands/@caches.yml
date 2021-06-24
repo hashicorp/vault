@@ -8,13 +8,20 @@ save_yarn_cache:
         key: *YARN_LOCK_CACHE_KEY
         paths:
           - ui/node_modules
-restore_go_mod_cache:
+# allows restoring go mod caches by incomplete prefix. This is useful when re-generating
+# cache, but not when running builds and tests that require an exact match.
+restore_go_mod_cache_permissive:
   steps:
     - restore_cache:
         keys:
           - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
           - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
           - v1.1-{{checksum "go.sum"}}
+restore_go_mod_cache:
+  steps:
+    - restore_cache:
+        keys:
+          - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
 save_go_mod_cache:
   steps:
     - save_cache:
@@ -23,7 +30,7 @@ save_go_mod_cache:
           - /go/pkg/mod
 refresh_go_mod_cache:
   steps:
-    - restore_go_mod_cache
+    - restore_go_mod_cache_permissive
     - run:
         name: go mod download
         command: |

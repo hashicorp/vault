@@ -737,8 +737,6 @@ jobs:
     - restore_cache:
         keys:
         - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}
     - attach_workspace:
         at: .
     - run:
@@ -884,8 +882,6 @@ jobs:
     - restore_cache:
         keys:
         - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}
     - run:
         command: |
           set -x
@@ -1124,8 +1120,6 @@ jobs:
     - restore_cache:
         keys:
         - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}
     - run:
         command: |
           set -x
@@ -1614,8 +1608,6 @@ jobs:
     - restore_cache:
         keys:
         - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}
     - run:
         command: |
           set -x
@@ -2235,8 +2227,6 @@ jobs:
     - restore_cache:
         keys:
         - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}
     - run:
         command: |
           set -x
