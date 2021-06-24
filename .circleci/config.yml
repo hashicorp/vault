@@ -726,7 +726,7 @@ jobs:
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
-          echo "export GOPROXY=" >> "$BASH_ENV"
+          echo "export GOPROXY=file:///go/pkg/mod/cache/download" >> "$BASH_ENV"
           echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
