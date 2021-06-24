@@ -252,16 +252,18 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
-			return fmt.Errorf("no storage stanza found in config")
+			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the configuration documentation: https://www.vaultproject.io/docs/configuration#parameters")
+			return fmt.Errorf("No storage stanza in Vault Server Configuration.")
 		}
 
-		diagnose.Test(ctx, "Create storage backend", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Create Storage Backend", func(ctx context.Context) error {
 			b, err := server.setupStorage(config)
 			if err != nil {
 				return err
 			}
 			if b == nil {
-				return fmt.Errorf("storage backend was initialized to nil")
+				diagnose.Advise(ctx, "To learn how to specify a storage backend, see the configuration documentation: https://www.vaultproject.io/docs/configuration#parameters")
+				return fmt.Errorf("Storage backend could not be initialized.")
 			}
 			backend = &b
 			return nil
@@ -273,7 +275,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			if path == "" {
 				path, ok := config.Storage.Config["path"]
 				if !ok {
-					diagnose.SpotError(ctx, "raft folder permission checks", fmt.Errorf("storage file path is required"))
+					diagnose.SpotError(ctx, "Raft Folder Permission Checks", fmt.Errorf("Storage folder path is required."))
 				}
 				diagnose.RaftFileChecks(ctx, path)
 			}
@@ -286,7 +288,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Consul storage checks
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "test-storage-tls-consul", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Test Consul TLS Information", func(ctx context.Context) error {
 				err := physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
 					return err
