@@ -1014,6 +1014,11 @@ func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, err
 	config := &RaftConfigurationResponse{
 		Index: state.Index,
 	}
+
+	if configuration == nil || configuration.Servers == nil {
+		return config, nil
+	}
+
 	for _, server := range configuration.Servers {
 		entry := &RaftServer{
 			NodeID:  server.Id,
