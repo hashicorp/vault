@@ -2129,10 +2129,10 @@ jobs:
     - checkout
     - run:
         command: |
-          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
+          export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
           mkdir -p $CCI_PATH
-          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
-          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
+          NAME=circleci-cli_${CIRCLECI_CLI_VERSION}_${ARCH}
+          URL=$BASE/v${CIRCLECI_CLI_VERSION}/${NAME}.tar.gz
           curl -sSL $URL \
             | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
           # Add circleci to the path for subsequent steps.
