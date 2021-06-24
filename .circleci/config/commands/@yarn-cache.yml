@@ -33,7 +33,7 @@ refresh_go_mod_cache:
     - run:
         name: Verify downloading modules did not modify any files
         command: |
-          git diff --no-pager --exit-code || {
+          git --no-pager diff --exit-code || {
             echo "ERROR: Files modified by go mod download, see above."
             exit 1
           }
