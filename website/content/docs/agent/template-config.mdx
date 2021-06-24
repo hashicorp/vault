@@ -52,3 +52,8 @@ The top level `template_config` block has the following configuration entries:
 - `exit_on_retry_failure` `(bool: false)` - This option configures Vault Agent
 to exit after it has exhausted its number of template retry attempts due to
 failures.
+
+`default_lease_duration` `(string or integer: 5m)` - If specified, configures
+  how often Vault Agent Template should fetch non-leased secrets such as KV v2.
+  This setting will not change how often Vault Agent Templating renders leased
+  secrets.
