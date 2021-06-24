@@ -735,9 +735,9 @@ jobs:
         working_directory: ~/
     - restore_cache:
         keys:
-        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
-        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
-        - v1-{{checksum go.sum}}
+        - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1-{{checksum "go.sum"}}
     - checkout
     - attach_workspace:
         at: .
@@ -2123,9 +2123,9 @@ jobs:
         working_directory: ~/
     - restore_cache:
         keys:
-        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
-        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
-        - v1-{{checksum go.sum}}
+        - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1-{{checksum "go.sum"}}
     - checkout
     - run:
         command: |
@@ -2155,7 +2155,7 @@ jobs:
           ( cd api && go mod download; )
         name: go mod download
     - save_cache:
-        key: v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+        key: v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         paths:
         - /go/pkg/mod
     environment:

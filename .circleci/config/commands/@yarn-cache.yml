@@ -12,13 +12,13 @@ restore_go_mod_cache:
   steps:
     - restore_cache:
         keys:
-          - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
-          - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
-          - v1-{{checksum go.sum}}
+          - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          - v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          - v1-{{checksum "go.sum"}}
 save_go_mod_cache:
   steps:
     - save_cache:
-        key: v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+        key: v1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         paths:
           - /go/pkg/mod
 refresh_go_mod_cache:
