@@ -1,26 +1,51 @@
-<div class="list-item-row linkable-item">
+{{#if @disabled }}
+<div class="linkable-item is-no-underline">
   <div class="linkable-item-content">
-    <div class="has-text-black has-text-weight-semibold">{{@title}}</div>
-     <code class="has-text-grey is-size-8">
+      {{yield (hash content=(component 'linkable-item/content'))}}
+  </div>
+  <div class="linkable-item-menu">
+    {{yield (hash menu=(component 'linkable-item/menu'))}}
+  </div>
+</div>
+{{else}}
+<LinkTo class="list-item-row is-no-underline" @route={{@link.route}} @model={{@link.model}} class="has-text-black has-text-weight-semibold" data-test-secret-path={{true}}>   
+  <div class="linkable-item">
+  <div class="linkable-item-content">
+    <ToolTip @horizontalPosition="left" as |T|>
+      <T.trigger>
+        <Icon
+          @glyph={{@glyph}}
+          @size="l"
+          class="has-text-grey-light"
+        />
+      </T.trigger>
+      <T.content @class="tool-tip">
+        <div class="box">
+          {{@glyphText}}
+        </div>
+      </T.content>
+    </ToolTip>
+    <div class="has-text-black has-text-weight-semibold">
+      {{#if @link}}
+      <LinkTo @route={{@link.route}} @model={{@link.model}} class="has-text-black has-text-weight-semibold" data-test-secret-path={{true}}>
+        {{@title}}
+      </LinkTo>
+      {{else}}
+        {{@title}}
+      {{/if}}
+    </div>
+      <code class="has-text-grey is-size-8">
         {{@accessor}}
       </code>
       <ReadMore>
         {{@description}}
       </ReadMore>
+      {{yield (hash content=(component 'linkable-item/content'))}}
   </div>
   <div class="linkable-item-menu">
-    <PopupMenu name="engine-menu">
-      <Confirm as |c|>
-        <nav class="menu">
-          <ul class="menu-list">
-            <li class="action">
-              {{#link-to "vault.cluster.secrets"}}
-                TODO: CHANGE
-              {{/link-to}}
-            </li>
-          </ul>
-        </nav>
-      </Confirm>
-    </PopupMenu>
+    {{yield (hash menu=(component 'linkable-item/menu'))}}
   </div>
-</div>
+  </div>
+</LinkTo>
+
+{{/if}}
