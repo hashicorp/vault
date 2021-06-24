@@ -27,9 +27,9 @@ refresh_go_mod_cache:
     - run:
         name: go mod download
         command: |
-          go mod download
-          ( cd sdk && go mod download; )
-          ( cd api && go mod download; )
+          go mod download -json
+          ( cd sdk && go mod download -json; )
+          ( cd api && go mod download -json; )
     - run:
         name: Verify downloading modules did not modify any files
         command: |

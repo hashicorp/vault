@@ -2183,9 +2183,9 @@ jobs:
         - v1.1-{{checksum "go.sum"}}
     - run:
         command: |
-          go mod download
-          ( cd sdk && go mod download; )
-          ( cd api && go mod download; )
+          go mod download -json
+          ( cd sdk && go mod download -json; )
+          ( cd api && go mod download -json; )
         name: go mod download
     - run:
         command: |
