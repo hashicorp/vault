@@ -8,3 +8,25 @@ save_yarn_cache:
         key: *YARN_LOCK_CACHE_KEY
         paths:
           - ui/node_modules
+restore_go_mod_cache:
+  steps:
+    - restore_cache:
+        keys:
+          - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+          - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
+          - v1-{{checksum go.sum}}
+save_go_mod_cache:
+  steps:
+    - save_cache:
+        key: v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+        paths:
+          - /go/pkg/mod
+refresh_go_mod_cache:
+  steps:
+    - run:
+        name: go mod download
+        command: |
+          go mod download
+          ( cd sdk && go mod download; )
+          ( cd api && go mod download; )
+    - save_go_mod_cache

@@ -726,11 +726,18 @@ jobs:
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
           go version
         name: Setup Go
         working_directory: ~/
+    - restore_cache:
+        keys:
+        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
+        - v1-{{checksum go.sum}}
     - checkout
     - attach_workspace:
         at: .
@@ -2119,6 +2126,40 @@ jobs:
         name: Install CircleCI CLI
     - run:
         command: make ci-verify
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
+    - restore_cache:
+        keys:
+        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+        - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
+        - v1-{{checksum go.sum}}
+    - run:
+        command: |
+          go mod download
+          ( cd sdk && go mod download; )
+          ( cd api && go mod download; )
+        name: go mod download
+    - save_cache:
+        key: v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
+        paths:
+        - /go/pkg/mod
   test-go-race-remote-docker:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster

@@ -1,6 +1,15 @@
 ---
 description: >
   Ensure the right version of Go is installed and set GOPATH to $HOME/go.
+parameters:
+  GOPROXY:
+    description: >
+      Set GOPROXY. By default this is empty meaning you have to have all modules pre-downloaded.
+    type: string
+    default: ""
+  GOPRIVATE:
+    type: string
+    default: github.com/hashicorp/*
 steps:
   - run:
       working_directory: ~/
@@ -16,6 +25,9 @@ steps:
         mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
         echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
         echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+        echo "export GOPROXY=<<parameters.GOPROXY>>" >> "$BASH_ENV"
+        echo "export GOPRIVATE=<<parameters.GOPRIVATE>>" >> "$BASH_ENV"
 
         echo "$ go version"
         go version
+  - restore_go_mod_cache
