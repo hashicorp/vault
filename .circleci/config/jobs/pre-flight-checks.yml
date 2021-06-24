@@ -1,6 +1,9 @@
 description: Ensures nothing obvious is broken for faster failures.
 executor: go-machine
 steps:
+  # Setup Go enabling the proxy for downloading modules.
+  - setup-go:
+      GOPROXY: https://proxy.golang.org,direct
   - checkout
   - run:
       name: Install CircleCI CLI
@@ -22,7 +25,4 @@ steps:
         which circleci
         circleci version
   - run: make ci-verify
-  # Setup Go enabling the proxy for downloading modules.
-  - setup-go:
-      GOPROXY: https://proxy.golang.org,direct
   - refresh_go_mod_cache

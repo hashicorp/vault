@@ -2102,28 +2102,6 @@ jobs:
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
-    - checkout
-    - run:
-        command: |
-          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
-          mkdir -p $CCI_PATH
-          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
-          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
-          curl -sSL $URL \
-            | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
-          # Add circleci to the path for subsequent steps.
-          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
-          # Done, print some debug info.
-          set -x
-          . $BASH_ENV
-          which circleci
-          circleci version
-        environment:
-          ARCH: linux_amd64
-          BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
-        name: Install CircleCI CLI
-    - run:
-        command: make ci-verify
     - run:
         command: |
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
@@ -2148,6 +2126,28 @@ jobs:
         - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}-{{checksum api/go.sum}}
         - v1-{{checksum go.sum}}-{{checksum sdk/go.sum}}
         - v1-{{checksum go.sum}}
+    - checkout
+    - run:
+        command: |
+          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
+          mkdir -p $CCI_PATH
+          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
+          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
+          curl -sSL $URL \
+            | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
+          # Add circleci to the path for subsequent steps.
+          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
+          # Done, print some debug info.
+          set -x
+          . $BASH_ENV
+          which circleci
+          circleci version
+        environment:
+          ARCH: linux_amd64
+          BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
+        name: Install CircleCI CLI
+    - run:
+        command: make ci-verify
     - run:
         command: |
           go mod download
