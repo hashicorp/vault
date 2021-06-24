@@ -119,9 +119,9 @@ type Sink struct {
 
 // TemplateConfig defines global behaviors around template
 type TemplateConfig struct {
-	ExitOnRetryFailure      bool          `hcl:"exit_on_retry_failure"`
-	DefaultLeaseDurationRaw interface{}   `hcl:"default_lease_duration"`
-	DefaultLeaseDuration    time.Duration `hcl:"-"`
+	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
+	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
+	StaticSecretRenderInt    time.Duration `hcl:"-"`
 }
 
 func NewConfig() *Config {
@@ -587,12 +587,12 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	result.TemplateConfig = &cfg
 
-	if result.TemplateConfig.DefaultLeaseDurationRaw != nil {
+	if result.TemplateConfig.StaticSecretRenderIntRaw != nil {
 		var err error
-		if result.TemplateConfig.DefaultLeaseDuration, err = parseutil.ParseDurationSecond(result.TemplateConfig.DefaultLeaseDurationRaw); err != nil {
+		if result.TemplateConfig.StaticSecretRenderInt, err = parseutil.ParseDurationSecond(result.TemplateConfig.StaticSecretRenderIntRaw); err != nil {
 			return err
 		}
-		result.TemplateConfig.DefaultLeaseDurationRaw = nil
+		result.TemplateConfig.StaticSecretRenderIntRaw = nil
 	}
 
 	return nil
