@@ -118,6 +118,10 @@ type ExpirationManager struct {
 	// manual intervention). We retain a subset of the lease info in memory
 	irrevocable sync.Map
 
+	// 	Track count for metrics reporting
+	// 	Mutations to this value should be under pendingLock
+	irrevocableLeaseCount int
+
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
 	// unbounded growth.
@@ -539,6 +543,7 @@ func (m *ExpirationManager) invalidate(key string) {
 
 				if _, ok := m.irrevocable.Load(leaseID); ok {
 					m.irrevocable.Delete(leaseID)
+					m.irrevocableLeaseCount--
 
 					m.leaseCount--
 					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
@@ -884,8 +889,10 @@ func (m *ExpirationManager) Stop() error {
 	m.uniquePolicies = make(map[string][]string)
 	m.irrevocable.Range(func(key, _ interface{}) bool {
 		m.irrevocable.Delete(key)
+		m.irrevocableLeaseCount--
 		return true
 	})
+	m.irrevocableLeaseCount = 0
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -1018,6 +1025,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	m.removeFromPending(ctx, leaseID, true)
 	m.nonexpiring.Delete(leaseID)
 	m.irrevocable.Delete(leaseID)
+	m.irrevocableLeaseCount--
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1812,6 +1820,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 		m.removeFromPending(m.quitContext, le.LeaseID, false)
 		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+		m.irrevocableLeaseCount++
 	} else {
 		// Create entry if it does not exist or reset if it does
 		if leaseInPending {
@@ -2295,16 +2304,19 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 
 // emitMetrics is invoked periodically to emit statistics
 func (m *ExpirationManager) emitMetrics() {
-	// All updates of this value are with the pendingLock held.
+	// All updates of these values are with the pendingLock held.
 	m.pendingLock.RLock()
-	num := m.leaseCount
+	allLeases := m.leaseCount
+	irrevocableLeases := m.irrevocableLeaseCount
 	m.pendingLock.RUnlock()
 
-	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
+	metrics.SetGauge([]string{"expire", "num_leases"}, float32(allLeases))
+
+	metrics.SetGauge([]string{"expire", "num_irrevocable_leases"}, float32(irrevocableLeases))
 	// Check if lease count is greater than the threshold
-	if num > maxLeaseThreshold {
+	if allLeases > maxLeaseThreshold {
 		if atomic.LoadUint32(m.leaseCheckCounter) > 59 {
-			m.logger.Warn("lease count exceeds warning lease threshold", "have", num, "threshold", maxLeaseThreshold)
+			m.logger.Warn("lease count exceeds warning lease threshold", "have", allLeases, "threshold", maxLeaseThreshold)
 			atomic.StoreUint32(m.leaseCheckCounter, 0)
 		} else {
 			atomic.AddUint32(m.leaseCheckCounter, 1)
@@ -2472,6 +2484,7 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.persistEntry(ctx, le)
 
 	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	m.irrevocableLeaseCount++
 	m.removeFromPending(ctx, le.LeaseID, false)
 	m.nonexpiring.Delete(le.LeaseID)
 }
