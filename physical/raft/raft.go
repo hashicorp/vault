@@ -1015,7 +1015,7 @@ func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, err
 		Index: state.Index,
 	}
 
-	if config.Servers == nil {
+	if configuration.Servers == nil {
 		return config, nil
 	}
 
