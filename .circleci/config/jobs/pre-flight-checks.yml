@@ -25,4 +25,5 @@ steps:
         which circleci
         circleci version
   - run: make ci-verify
+  - configure-git
   - refresh_go_mod_cache
