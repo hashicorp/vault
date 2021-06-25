@@ -4,12 +4,11 @@ description: >
 parameters:
   GOPROXY:
     description: >
-      Set GOPROXY. By default this is set to the local go module cache, meaning you have to have
-      all modules pre-downloaded.
+      Set GOPROXY. By default this is set to "off" meaning you have to have all modules pre-downloaded.
     type: string
     default: "off"
   GOPRIVATE:
-
+    description: Set GOPRIVATE, defaults to github.com/hashicorp/*
     type: string
     default: github.com/hashicorp/*
 steps:

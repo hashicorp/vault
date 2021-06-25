@@ -1,4 +1,4 @@
-description: Ensures nothing obvious is broken for faster failures.
+description: Ensure nothing obvious is broken, and pre-cache Go modules.
 executor: go-machine
 steps:
   # Setup Go enabling the proxy for downloading modules.
