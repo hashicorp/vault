@@ -258,6 +258,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - run:
         command: |
           cd ui
@@ -266,6 +267,7 @@ jobs:
         name: Install UI dependencies
     - save_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Save yarn cache
         paths:
         - ui/node_modules
   build-common-layers:
@@ -585,6 +587,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
@@ -701,6 +704,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
@@ -737,6 +741,7 @@ jobs:
     - restore_cache:
         keys:
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - attach_workspace:
         at: .
     - run:
@@ -882,6 +887,7 @@ jobs:
     - restore_cache:
         keys:
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -1120,6 +1126,7 @@ jobs:
     - restore_cache:
         keys:
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -1608,6 +1615,7 @@ jobs:
     - restore_cache:
         keys:
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -2179,6 +2187,7 @@ jobs:
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
         - v1.2-{{checksum "go.sum"}}
+        name: Restore closest matching go modules cache
     - run:
         command: |
           go mod download -json
@@ -2194,6 +2203,7 @@ jobs:
         name: Verify downloading modules did not modify any files
     - save_cache:
         key: v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Save go modules cache
         paths:
         - /go/pkg/mod
     environment:
@@ -2233,6 +2243,7 @@ jobs:
     - restore_cache:
         keys:
         - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x

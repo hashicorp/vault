@@ -1,10 +1,12 @@
 restore_yarn_cache:
   steps:
     - restore_cache:
+        name: Restore yarn cache
         key: &YARN_LOCK_CACHE_KEY yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
 save_yarn_cache:
   steps:
     - save_cache:
+        name: Save yarn cache
         key: *YARN_LOCK_CACHE_KEY
         paths:
           - ui/node_modules
@@ -13,6 +15,7 @@ save_yarn_cache:
 restore_go_mod_cache_permissive:
   steps:
     - restore_cache:
+        name: Restore closest matching go modules cache
         keys:
           - &gocachekey v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
           -             v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
@@ -20,11 +23,13 @@ restore_go_mod_cache_permissive:
 restore_go_mod_cache:
   steps:
     - restore_cache:
+        name: Restore exact go modules cache
         keys:
           - *gocachekey
 save_go_mod_cache:
   steps:
     - save_cache:
+        name: Save go modules cache
         key: *gocachekey
         paths:
           - /go/pkg/mod
