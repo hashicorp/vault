@@ -14,9 +14,9 @@ restore_go_mod_cache_permissive:
   steps:
     - restore_cache:
         keys:
-          - &gocachekey v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.1-{{checksum "go.sum"}}
+          - &gocachekey v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.2-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:

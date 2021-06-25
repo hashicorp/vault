@@ -736,7 +736,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
     - attach_workspace:
         at: .
     - run:
@@ -881,7 +881,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
     - run:
         command: |
           set -x
@@ -1119,7 +1119,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
     - run:
         command: |
           set -x
@@ -1607,7 +1607,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
     - run:
         command: |
           set -x
@@ -2176,9 +2176,9 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.1-{{checksum "go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}
     - run:
         command: |
           go mod download -json
@@ -2193,7 +2193,7 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         paths:
         - /go/pkg/mod
     environment:
@@ -2232,7 +2232,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.1-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
     - run:
         command: |
           set -x
