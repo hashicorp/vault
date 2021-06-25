@@ -57,7 +57,7 @@
                 </LinkTo>
               </li>
             {{/if}}
-            {{#if @item.canRotateRoleCredentials}}
+            {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue 'static'))}}
               <li class="action">
                 <button type="button" class="link" {{on "click" (fn this.rotateRoleCred @item.id)}}>
                   Rotate credentials
