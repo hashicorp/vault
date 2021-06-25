@@ -57,6 +57,13 @@
                 </LinkTo>
               </li>
             {{/if}}
+            {{#if @item.canRotateRoleCredentials}}
+              <li class="action">
+                <button type="button" class="link" {{on "click" (fn this.rotateRoleCred @item.id)}}>
+                  Rotate credentials
+                </button>
+              </li>
+            {{/if}}
             {{#if @item.canRotateRoot}}
               <li class="action">
                 <button type="button" class="link" {{on "click" (fn this.rotateRootCred @item.id)}}>
