@@ -12,6 +12,8 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -387,6 +389,52 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 
+	diagnose.Test(ctx, "seal-transit-tls-checks", func(ctx context.Context) error {
+		var checkSealTransit bool
+		for _, seal := range config.Seals {
+			if seal.Type == "transit" {
+				checkSealTransit = true
+
+				tlsSkipVerify, _ := seal.Config["tls_skip_verify"]
+				if tlsSkipVerify == "true" {
+					diagnose.Warn(ctx, "TLS verification is Skipped! Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
+					return nil
+				}
+
+				// Checking tls_client_cert and tls_client_key
+				tlsClientCert, ok := seal.Config["tls_client_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_cert in the config")
+					return nil
+				}
+				tlsClientKey, ok := seal.Config["tls_client_key"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_key in the config")
+					return nil
+				}
+				_, err := diagnose.TLSFileChecks(tlsClientCert, tlsClientKey)
+				if err != nil {
+					return fmt.Errorf("TLS file check failed for tls_client_cert and tls_client_key with the following error: %w", err)
+				}
+
+				// checking tls_ca_cert
+				tlsCACert, ok := seal.Config["tls_ca_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Mising tls_ca_cert in the config")
+					return nil
+				}
+				_, err = diagnose.TLSCAFileCheck(tlsCACert)
+				if err != nil {
+					return fmt.Errorf("TLS file check failed for tls_ca_cert with the following error: %w", err)
+				}
+			}
+		}
+		if !checkSealTransit {
+			diagnose.Skipped(ctx, "No transit seal found!")
+		}
+		return nil
+	})
+
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
 	var seals []vault.Seal
 	var sealConfigError error
@@ -485,6 +533,8 @@ SEALFAIL:
 	}
 	diagnose.SpotOk(ctx, "find-cluster-addr", "")
 
+	var vaultCore *vault.Core
+
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
@@ -493,7 +543,7 @@ SEALFAIL:
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
 		}
-		_, newCoreError = vault.CreateCore(&coreConfig)
+		core, newCoreError := vault.CreateCore(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
 				return fmt.Errorf("Error initializing core: %s", newCoreError)
@@ -501,9 +551,32 @@ SEALFAIL:
 			diagnose.Warn(ctx, wrapAtLength(
 				"WARNING! A non-fatal error occurred during initialization. Please "+
 					"check the logs for more information."))
+		} else {
+			vaultCore = core
 		}
 		return nil
 	})
+
+	if vaultCore == nil {
+		return fmt.Errorf("Diagnose could not initialize the vault core from the vault server configuration.")
+	}
+
+	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "autoloaded license")
+	// If we are not in enterprise, return from the check
+	if !constants.IsEnterprise {
+		diagnose.Skipped(licenseCtx, "License check will not run on OSS Vault.")
+	} else {
+		// Load License from environment variables. These take precedence over the
+		// configured license.
+		if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
+			coreConfig.LicensePath = envLicensePath
+		}
+		if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
+			coreConfig.License = envLicense
+		}
+		vault.DiagnoseCheckLicense(licenseCtx, vaultCore, coreConfig)
+	}
+	licenseSpan.End()
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
