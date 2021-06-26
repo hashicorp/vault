@@ -574,25 +574,29 @@ func ParseAddress(address string, config *Config) (*url.URL, error) {
 
 	if strings.HasPrefix(address, "unix://") {
 		socket := strings.TrimPrefix(address, "unix://")
-		transport := config.HttpClient.Transport.(*http.Transport)
-		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
-			return net.Dial("unix", socket)
-		}
+		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			}
 
-		// Since the address points to a unix domain socket, the scheme in the
-		// *URL would be set to `unix`. The *URL in the client is expected to
-		// be pointing to the protocol used in the application layer and not to
-		// the transport layer. Hence, setting the fields accordingly.
-		u.Scheme = "http"
-		u.Host = socket
-		u.Path = ""
+			// Since the address points to a unix domain socket, the scheme in the
+			// *URL would be set to `unix`. The *URL in the client is expected to
+			// be pointing to the protocol used in the application layer and not to
+			// the transport layer. Hence, setting the fields accordingly.
+			u.Scheme = "http"
+			u.Host = socket
+			u.Path = ""
+		} else {
+			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+		}
 	} else {
-		transport := config.HttpClient.Transport.(*http.Transport)
-		transport.DialContext = (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).DialContext
+		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext
+		}
 	}
 
 	return u, nil

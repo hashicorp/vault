@@ -441,6 +441,20 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 	}
 }
 
+func TestClientNonTransportRoundTripperUnixAddress(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
+	}
+
+	_, err := NewClient(&Config{
+		HttpClient: client,
+		Address:    "unix:///var/run/vault.sock",
+	})
+	if err == nil {
+		t.Fatal("bad: expected error got nil")
+	}
+}
+
 func TestClone(t *testing.T) {
 	type fields struct{}
 	tests := []struct {
