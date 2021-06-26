@@ -1101,8 +1101,8 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer c.modifyLock.RUnlock()
 
 	config := c.config
-	config.modifyLock.RLock()
-	defer config.modifyLock.RUnlock()
+	config.modifyLock.Lock()
+	defer config.modifyLock.Unlock()
 
 	newConfig := &Config{
 		Address:        config.Address,
