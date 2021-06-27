@@ -80,6 +80,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 			"canonical_id":   groupID,
 			"mount_accessor": accessor,
 		})
+		require.NoError(t, err)
 
 		// Create a user in Vault
 		_, err = client.Logical().Write("auth/"+path+"/users/hermes conrad", map[string]interface{}{
@@ -129,6 +130,7 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	secret, err = client.Logical().Write("auth/ldap/login/hermes conrad", map[string]interface{}{
 		"password": "hermes",
 	})
+	require.NoError(t, err)
 
 	secret, err = client.Logical().Read("identity/group/id/" + groupID1)
 	require.NoError(t, err)
