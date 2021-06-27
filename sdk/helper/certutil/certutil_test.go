@@ -36,6 +36,10 @@ func TestCertBundleConversion(t *testing.T) {
 		refreshECCertBundleWithChain(),
 		refreshEC8CertBundle(),
 		refreshEC8CertBundleWithChain(),
+		refreshEd25519CertBundle(),
+		refreshEd25519CertBundleWithChain(),
+		refreshEd255198CertBundle(),
+		refreshEd255198CertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -181,11 +185,11 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		}
 	case privEd25519KeyPem:
 		if pcbut.PrivateKeyType != Ed25519PrivateKey {
-			return fmt.Errorf("parsed bundle has wrong private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
+			return fmt.Errorf("parsed bundle has wrong private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
 	case privEd255198KeyPem:
 		if pcbut.PrivateKeyType != Ed25519PrivateKey {
-			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
+			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
 	default:
 		return fmt.Errorf("parsed bundle has unknown private key type")
@@ -230,7 +234,7 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 			return fmt.Errorf("bundle private key does not match")
 		}
 	case Ed25519PrivateKey:
-		if cb.PrivateKey != privEd25519KeyPem && cb.PrivateKey != privEC8KeyPem {
+		if cb.PrivateKey != privEd25519KeyPem && cb.PrivateKey != privEd255198KeyPem {
 			return fmt.Errorf("bundle private key does not match")
 		}
 	default:
@@ -257,6 +261,7 @@ func TestCSRBundleConversion(t *testing.T) {
 	csrbuts := []*CSRBundle{
 		refreshRSACSRBundle(),
 		refreshECCSRBundle(),
+		refreshEd25519CSRBundle(),
 	}
 
 	for _, csrbut := range csrbuts {
@@ -346,7 +351,7 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 			return fmt.Errorf("bundle has wrong private key type")
 		}
 		if csrb.PrivateKey != privEd25519KeyPem {
-			return fmt.Errorf("bundle ec private key does not match")
+			return fmt.Errorf("bundle ed25519 private key does not match")
 		}
 	default:
 		return fmt.Errorf("bundle has unknown private key type")
@@ -497,6 +502,46 @@ func refreshECCertBundleWithChain() *CertBundle {
 	ret := refreshECCertBundle()
 	ret.CAChain = issuingCaChainPem
 	return ret
+}
+
+func refreshEd25519CertBundle() *CertBundle {
+	initTest.Do(setCerts)
+	return &CertBundle{
+		Certificate: certEd25519Pem,
+		PrivateKey:  privEd25519KeyPem,
+		CAChain:     []string{issuingCaChainPem[0]},
+	}
+}
+
+func refreshEd255198CertBundle() *CertBundle {
+	initTest.Do(setCerts)
+	return &CertBundle{
+		Certificate: certEd25519Pem,
+		PrivateKey:  privEd255198KeyPem,
+		CAChain:     []string{issuingCaChainPem[0]},
+	}
+}
+
+func refreshEd255198CertBundleWithChain() *CertBundle {
+	initTest.Do(setCerts)
+	ret := refreshEd255198CertBundle()
+	ret.CAChain = issuingCaChainPem
+	return ret
+}
+
+func refreshEd25519CertBundleWithChain() *CertBundle {
+	initTest.Do(setCerts)
+	ret := refreshEd25519CertBundle()
+	ret.CAChain = issuingCaChainPem
+	return ret
+}
+
+func refreshEd25519CSRBundle() *CSRBundle {
+	initTest.Do(setCerts)
+	return &CSRBundle{
+		CSR:        csrEd25519Pem,
+		PrivateKey: privEd25519KeyPem,
+	}
 }
 
 func refreshRSACSRBundle() *CSRBundle {
