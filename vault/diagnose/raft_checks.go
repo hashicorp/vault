@@ -16,44 +16,46 @@ const owner = "owner"
 const group = "group"
 const other = "other"
 
+const ownershipTestName = "Raft Folder Ownership Checks"
+const permissionsTestName = "Raft Folder Permission Checks"
+const raftQuorumTestName = "Raft Quorum Checks"
+
 func RaftFileChecks(ctx context.Context, path string) {
 
 	// Note: Stat does not return information about the symlink itself, in the case where we are dealing with one.
 	info, err := os.Stat(path)
 	if err != nil {
-		SpotError(ctx, "raft folder permission checks", fmt.Errorf("error computing file permissions: %w", err))
+		SpotError(ctx, permissionsTestName, fmt.Errorf("Error computing file permissions: %w.", err))
 	}
 
 	if !IsDir(info) {
-		SpotError(ctx, "raft folder ownership checks", fmt.Errorf("error: path does not point to folder"))
+		SpotError(ctx, ownershipTestName, fmt.Errorf("Error: Raft storage path variable does not point to a folder."))
 	}
 
 	if !HasDB(path) {
-		SpotWarn(ctx, "raft folder ownership checks", "boltDB file has not been created")
+		SpotWarn(ctx, ownershipTestName, "Raft boltDB file has not been created")
 	}
 
 	hasOnlyOwnerRW, errs := CheckFilePerms(info)
-	if errs != nil {
-		for _, err := range errs {
-			switch {
-			case strings.Contains(err, FileIsSymlinkWarning) || strings.Contains(err, FileTooPermissiveWarning):
-				SpotWarn(ctx, "raft folder permission checks", err)
-			case strings.Contains(err, FilePermissionsMissingWarning):
-				SpotError(ctx, "raft folder permission checks", errors.New(err))
-			}
+	for _, err := range errs {
+		switch {
+		case strings.Contains(err, FileIsSymlinkWarning) || strings.Contains(err, FileTooPermissiveWarning):
+			SpotWarn(ctx, permissionsTestName, err)
+		case strings.Contains(err, FilePermissionsMissingWarning):
+			SpotError(ctx, permissionsTestName, errors.New(err))
 		}
 	}
 	ownedByRoot := IsOwnedByRoot(info)
 	requiresRoot := ownedByRoot && hasOnlyOwnerRW
 	if requiresRoot {
-		SpotWarn(ctx, "raft folder ownership checks", "raft backend files owned by root and only accessible as root or with overpermissive file perms. This prevents Vault from running as a non-privileged user")
+		SpotWarn(ctx, ownershipTestName, "raft backend files owned by root and only accessible as root or with overpermissive file perms. This prevents Vault from running as a non-privileged user")
 		Advise(ctx, "Please change raft path permissions to allow for non-root access.")
 	}
 
 	if runtime.GOOS == "windows" {
-		SpotWarn(ctx, "raft folder permission checks", "Diagnose cannot determine if vault needs to run as root to open boltDB file. Please check these permissions manually.")
+		SpotWarn(ctx, permissionsTestName, "Diagnose cannot determine if vault needs to run as root to open boltDB file. Please check these permissions manually.")
 	} else if errs == nil && !requiresRoot {
-		SpotOk(ctx, "raft folder permission checks", "boltDB file has correct set of permissions")
+		SpotOk(ctx, permissionsTestName, "boltDB file has correct set of permissions")
 	}
 }
 
@@ -64,7 +66,7 @@ func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) st
 	var err error
 	conf, err = b.GetConfigurationOffline()
 	if err != nil {
-		SpotError(ctx, "raft quorum", fmt.Errorf("error retrieving server configuration: %w", err))
+		SpotError(ctx, raftQuorumTestName, fmt.Errorf("error retrieving server configuration: %w", err))
 		return fmt.Sprintf("error retrieving server configuration: %s", err.Error())
 	}
 	voterCount := 0
@@ -75,22 +77,22 @@ func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) st
 	}
 	if voterCount == 1 {
 		nonHAWarning := "warning: only one server node found. Vault is not running in high availability mode"
-		SpotWarn(ctx, "raft quorum", nonHAWarning)
+		SpotWarn(ctx, raftQuorumTestName, nonHAWarning)
 		return nonHAWarning
 	}
 	var warnMsg string
 	if voterCount%2 == 0 {
 		warnMsg = fmt.Sprintf("error: even number of voters found: %d", voterCount)
-		SpotWarn(ctx, "raft quorum", warnMsg)
+		SpotWarn(ctx, raftQuorumTestName, warnMsg)
 		return warnMsg
 	}
 	if voterCount > 7 {
 		warnMsg = fmt.Sprintf("very large cluster detected: %d voters", voterCount)
-		SpotWarn(ctx, "raft quorum", warnMsg)
+		SpotWarn(ctx, raftQuorumTestName, warnMsg)
 		return warnMsg
 	}
 
 	okMsg := fmt.Sprintf("voter quorum exists: %d voters", voterCount)
-	SpotOk(ctx, "raft quorum", okMsg)
+	SpotOk(ctx, raftQuorumTestName, okMsg)
 	return okMsg
 }

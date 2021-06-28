@@ -37,9 +37,9 @@ import (
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
-const CoreUninitializedErr = "diagnose cannot attempt this step because core could not be initialized"
-const BackendUninitializedErr = "diagnose cannot attempt this step because backend could not be initialized"
-const CoreConfigUninitializedErr = "diagnose cannot attempt this step because core config could not be set"
+const CoreUninitializedErr = "Diagnose cannot attempt this step because core could not be initialized."
+const BackendUninitializedErr = "Diagnose cannot attempt this step because backend could not be initialized."
+const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
 
 var (
 	_ cli.Command             = (*OperatorDiagnoseCommand)(nil)
@@ -175,7 +175,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 	if c.flagFormat == "json" {
 		resultsJS, err := json.MarshalIndent(results, "", "  ")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error marshalling results: %v", err)
+			fmt.Fprintf(os.Stderr, "Error marshalling results: %v.", err)
 			return 4
 		}
 		c.UI.Output(string(resultsJS))
@@ -257,7 +257,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
-			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the configuration documentation: https://www.vaultproject.io/docs/configuration#parameters")
+			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the vault server configuration documentation.")
 			return fmt.Errorf("No storage stanza in Vault Server Configuration.")
 		}
 
@@ -267,7 +267,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return err
 			}
 			if b == nil {
-				diagnose.Advise(ctx, "To learn how to specify a storage backend, see the configuration documentation: https://www.vaultproject.io/docs/configuration#parameters")
+				diagnose.Advise(ctx, "To learn how to specify a storage backend, see the vault server configuration documentation.")
 				return fmt.Errorf("Storage backend could not be initialized.")
 			}
 			backend = &b
@@ -290,16 +290,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				}
 				diagnose.RaftFileChecks(ctx, path)
 			}
-			if backend != nil {
-				diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
-			} else {
-				diagnose.SpotError(ctx, "raft quorum", fmt.Errorf("could not determine quorum status without initialized backend"))
-			}
+			diagnose.RaftStorageQuorum(ctx, (*backend).(*raft.RaftBackend))
 		}
 
 		// Consul storage checks
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "Test Consul TLS Information", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Consul TLS Checks", func(ctx context.Context) error {
 				err := physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
 					return err
@@ -307,7 +303,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return nil
 			})
 
-			diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Consul Storage Direct Server Access", func(ctx context.Context) error {
 				dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
@@ -318,7 +314,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Attempt to use storage backend
 		if !c.skipEndEnd && config.Storage.Type != storageTypeRaft {
-			diagnose.Test(ctx, "test-access-storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+			diagnose.Test(ctx, "Access Storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 				maxDurationCrudOperation := "write"
 				maxDuration := time.Duration(0)
 				uuidSuffix, err := uuid.GenerateUUID()
@@ -349,7 +345,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				}
 
 				if maxDuration > time.Duration(0) {
-					diagnose.Warn(ctx, diagnose.LatencyWarning+fmt.Sprintf("duration: %s, ", maxDuration)+fmt.Sprintf("operation: %s", maxDurationCrudOperation))
+					diagnose.Warn(ctx, diagnose.LatencyWarning+fmt.Sprintf("duration: %s, operation: %s", maxDuration, maxDurationCrudOperation))
 				}
 				return nil
 			}))
@@ -363,14 +359,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	var configSR sr.ServiceRegistration
-	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Service Discovery", func(ctx context.Context) error {
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
-			diagnose.Skipped(ctx, "no service registration configured")
+			diagnose.Skipped(ctx, "No Service Registration configured.")
 			return nil
 		}
 		srConfig := config.ServiceRegistration.Config
 
-		diagnose.Test(ctx, "test-serviceregistration-tls-consul", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Consul Service Discovery TLS Checks", func(ctx context.Context) error {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
 			err := srconsul.SetupSecureTLS(ctx, api.DefaultConfig(), srConfig, server.logger, true)
@@ -381,7 +377,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		})
 
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-			diagnose.Test(ctx, "test-consul-direct-access-service-discovery", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Consul Service Discovery Direct Server Access Checks", func(ctx context.Context) error {
 				dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
@@ -392,53 +388,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 
-	diagnose.Test(ctx, "seal-transit-tls-checks", func(ctx context.Context) error {
-		var checkSealTransit bool
-		for _, seal := range config.Seals {
-			if seal.Type == "transit" {
-				checkSealTransit = true
-
-				tlsSkipVerify, _ := seal.Config["tls_skip_verify"]
-				if tlsSkipVerify == "true" {
-					diagnose.Warn(ctx, "TLS verification is Skipped! Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
-					return nil
-				}
-
-				// Checking tls_client_cert and tls_client_key
-				tlsClientCert, ok := seal.Config["tls_client_cert"]
-				if !ok {
-					diagnose.Warn(ctx, "Missing tls_client_cert in the config")
-					return nil
-				}
-				tlsClientKey, ok := seal.Config["tls_client_key"]
-				if !ok {
-					diagnose.Warn(ctx, "Missing tls_client_key in the config")
-					return nil
-				}
-				_, err := diagnose.TLSFileChecks(tlsClientCert, tlsClientKey)
-				if err != nil {
-					return fmt.Errorf("TLS file check failed for tls_client_cert and tls_client_key with the following error: %w", err)
-				}
-
-				// checking tls_ca_cert
-				tlsCACert, ok := seal.Config["tls_ca_cert"]
-				if !ok {
-					diagnose.Warn(ctx, "Mising tls_ca_cert in the config")
-					return nil
-				}
-				_, err = diagnose.TLSCAFileCheck(tlsCACert)
-				if err != nil {
-					return fmt.Errorf("TLS file check failed for tls_ca_cert with the following error: %w", err)
-				}
-			}
-		}
-		if !checkSealTransit {
-			diagnose.Skipped(ctx, "No transit seal found!")
-		}
-		return nil
-	})
-
-	sealcontext, sealspan := diagnose.StartSpan(ctx, "create-seal")
+	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
 	var seals []vault.Seal
 	var sealConfigError error
 
@@ -446,11 +396,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	// Check error here
 	if err != nil {
-		diagnose.Fail(sealcontext, err.Error())
+		diagnose.Advise(ctx, "For assistance configuring the seal stanza, see the documentation.")
+		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
 		goto SEALFAIL
 	}
 	if sealConfigError != nil {
-		diagnose.Fail(sealcontext, "seal could not be configured: seals may already be initialized")
+		diagnose.Fail(sealcontext, "Seal could not be configured: seals may already be initialized.")
 		goto SEALFAIL
 	}
 
@@ -459,10 +410,11 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
 				sealType := (*seal).BarrierType()
-				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "finalize-seal-"+sealType)
+				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, sealType+"Seal Finalization")
 				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
-					diagnose.Fail(finalizeSealContext, "error finalizing seal")
+					diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
+					diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in used; therefore, finalizing the seal timed out.")
 					finalizeSealSpan.End()
 				}
 				finalizeSealSpan.End()
@@ -471,27 +423,75 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	if barrierSeal == nil {
-		diagnose.Fail(sealcontext, "could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated")
+		diagnose.Fail(sealcontext, "Could not create barrier seal. No error was generated, but it is likely that the seal stanza is misconfigured.")
 	}
 
 SEALFAIL:
 	sealspan.End()
+
+	diagnose.Test(ctx, "Transit Seal TLS Checks", func(ctx context.Context) error {
+		var checkSealTransit bool
+		for _, seal := range config.Seals {
+			if seal.Type == "transit" {
+				checkSealTransit = true
+
+				tlsSkipVerify, _ := seal.Config["tls_skip_verify"]
+				if tlsSkipVerify == "true" {
+					diagnose.Warn(ctx, "TLS verification is skipped. Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
+					return nil
+				}
+
+				// Checking tls_client_cert and tls_client_key
+				tlsClientCert, ok := seal.Config["tls_client_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_cert in the seal configuration.")
+					return nil
+				}
+				tlsClientKey, ok := seal.Config["tls_client_key"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_key in the seal configuration.")
+					return nil
+				}
+				_, err := diagnose.TLSFileChecks(tlsClientCert, tlsClientKey)
+				if err != nil {
+					return fmt.Errorf("The TLS certificate and key configured through the tls_client_cert and tls_client_key fields of the transit seal configuration are invalid: %w.", err)
+				}
+
+				// checking tls_ca_cert
+				tlsCACert, ok := seal.Config["tls_ca_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Mising tls_ca_cert in the seal configuration.")
+					return nil
+				}
+				_, err = diagnose.TLSCAFileCheck(tlsCACert)
+				if err != nil {
+					return fmt.Errorf("The TLS CA certificate configured through the tls_ca_cert field of the transit seal configuration is invalid: %w.", err)
+				}
+			}
+		}
+		if !checkSealTransit {
+			diagnose.Skipped(ctx, "No transit seal found in seal configuration.")
+		}
+		return nil
+	})
+
 	var coreConfig vault.CoreConfig
-	diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Create Core Configuration", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
+		randReaderTestName := "Initialize Randomness for Core"
 		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
 		if err != nil {
-			return diagnose.SpotError(ctx, "init-randreader", err)
+			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
 		}
-		diagnose.SpotOk(ctx, "init-randreader", "")
+		diagnose.SpotOk(ctx, randReaderTestName, "")
 		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return nil
 	})
 
 	var disableClustering bool
-	diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
-		diagnose.Test(ctx, "create-ha-storage-backend", func(ctx context.Context) error {
+	diagnose.Test(ctx, "HA Storage", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Create HA Storage Backend", func(ctx context.Context) error {
 			// Initialize the separate HA storage backend, if it exists
 			disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
 			if err != nil {
@@ -500,9 +500,9 @@ SEALFAIL:
 			return nil
 		})
 
-		diagnose.Test(ctx, "test-consul-direct-access-storage", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Consul HA Storage Direct Server Access", func(ctx context.Context) error {
 			if config.HAStorage == nil {
-				diagnose.Skipped(ctx, "no HA storage configured")
+				diagnose.Skipped(ctx, "No HA storage stanza is configured.")
 			} else {
 				dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
 				if dirAccess != "" {
@@ -512,7 +512,7 @@ SEALFAIL:
 			return nil
 		})
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "test-ha-storage-tls-consul", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Consul TLS Checks", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
 					return err
@@ -526,22 +526,23 @@ SEALFAIL:
 	// Determine the redirect address from environment variables
 	err = determineRedirectAddr(server, &coreConfig, config)
 	if err != nil {
-		return diagnose.SpotError(ctx, "determine-redirect", err)
+		return diagnose.SpotError(ctx, "Determine Redirect Address", fmt.Errorf("Redirect Address could not be determined: %w.", err))
 	}
-	diagnose.SpotOk(ctx, "determine-redirect", "")
+	diagnose.SpotOk(ctx, "Determine Redirect Address", "")
 
 	err = findClusterAddress(server, &coreConfig, config, disableClustering)
 	if err != nil {
-		return diagnose.SpotError(ctx, "find-cluster-addr", err)
+		diagnose.Advise(ctx, "Please check that the API and Cluster addresses are different, and that the API, Cluster and Redirect addresses have both a host and port.")
+		return diagnose.SpotError(ctx, "Cluster Address Checks", fmt.Errorf("Cluster Address could not be determined or was invalid: %w.", err))
 	}
-	diagnose.SpotOk(ctx, "find-cluster-addr", "")
+	diagnose.SpotOk(ctx, "Cluster Address Checks", "Cluster address is logically valid and can be found.")
 
 	var vaultCore *vault.Core
 
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
-	diagnose.Test(ctx, "init-core", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Core Creation Checks", func(ctx context.Context) error {
 		var newCoreError error
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
@@ -549,11 +550,10 @@ SEALFAIL:
 		core, newCoreError := vault.CreateCore(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
-				return fmt.Errorf("Error initializing core: %s", newCoreError)
+				return fmt.Errorf("Error initializing core: %s.", newCoreError)
 			}
 			diagnose.Warn(ctx, wrapAtLength(
-				"WARNING! A non-fatal error occurred during initialization. Please "+
-					"check the logs for more information."))
+				"A non-fatal error occurred during initialization. Please check the logs for more information."))
 		} else {
 			vaultCore = core
 		}
@@ -564,7 +564,7 @@ SEALFAIL:
 		return fmt.Errorf("Diagnose could not initialize the vault core from the vault server configuration.")
 	}
 
-	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "autoloaded license")
+	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "Autoloaded License Checks")
 	// If we are not in enterprise, return from the check
 	if !constants.IsEnterprise {
 		diagnose.Skipped(licenseCtx, "License check will not run on OSS Vault.")
@@ -582,7 +582,7 @@ SEALFAIL:
 	licenseSpan.End()
 
 	var lns []listenerutil.Listener
-	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Start Listeners", func(ctx context.Context) error {
 		disableClustering := config.HAStorage != nil && config.HAStorage.DisableClustering
 		infoKeys := make([]string, 0, 10)
 		info := make(map[string]string)
@@ -591,7 +591,7 @@ SEALFAIL:
 
 		diagnose.ListenerChecks(ctx, config.Listeners)
 
-		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Create Listeners", func(ctx context.Context) error {
 			status, listeners, _, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
 			if status != 0 {
 				return err
@@ -617,18 +617,18 @@ SEALFAIL:
 
 	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
 	// decrypt a mock value. It will not call runUnseal.
-	diagnose.Test(ctx, "unseal", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+	diagnose.Test(ctx, "Barrier Encryption Checks", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 		if barrierWrapper == nil {
-			return fmt.Errorf("Diagnose could not create a barrier seal object")
+			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
 		barrierUUID, err := uuid.GenerateUUID()
 		if err != nil {
-			return fmt.Errorf("Diagnose could not create unique UUID for unsealing")
+			return fmt.Errorf("Diagnose could not create unique UUID for unsealing.")
 		}
 		barrierEncValue := "diagnose-" + barrierUUID
 		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
 		if err != nil {
-			return fmt.Errorf("Error encrypting with seal barrier: %w", err)
+			return fmt.Errorf("Error encrypting with seal barrier: %w.", err)
 		}
 		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
 		if err != nil {
@@ -636,7 +636,7 @@ SEALFAIL:
 
 		}
 		if string(plaintext) != barrierEncValue {
-			return fmt.Errorf("barrier returned incorrect decrypted value for mock data")
+			return fmt.Errorf("Barrier returned incorrect decrypted value for mock data.")
 		}
 		return nil
 	}))

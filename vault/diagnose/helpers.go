@@ -225,7 +225,7 @@ func WithTimeout(d time.Duration, f testFunction) testFunction {
 		go func() { rch <- f(ctx) }()
 		select {
 		case <-t.C:
-			return fmt.Errorf("timed out after %s", d.String())
+			return fmt.Errorf("Timeout after %s.", d.String())
 		case err := <-rch:
 			return err
 		}
