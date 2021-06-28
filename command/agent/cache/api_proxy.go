@@ -119,6 +119,10 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	}
 	client.SetToken(req.Token)
 
+	// Derive and set a logger for the client
+	clientLogger := ap.logger.Named("client")
+	client.SetLogger(clientLogger)
+
 	// http.Transport will transparently request gzip and decompress the response, but only if
 	// the client doesn't manually set the header. Removing any Accept-Encoding header allows the
 	// transparent compression to occur.

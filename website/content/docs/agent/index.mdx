@@ -55,6 +55,8 @@ These are the currently-available general configuration option:
 
 - `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
 
+- `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
+
 ### vault Stanza
 
 There can at most be one top level `vault` block and it has the following
@@ -94,11 +96,16 @@ configuration entries:
 
 #### retry Stanza
 
-The `vault` stanza may contain a `retry` stanza that controls how failing
-Vault requests are handled, whether these requests are issued in order to render
+The `vault` stanza may contain a `retry` stanza that controls how failing Vault
+requests are handled, whether these requests are issued in order to render
 templates, or are proxied requests coming from the proxy cache subsystem.
 Auto-auth, however, has its own notion of retrying and is not affected by this
 section.
+
+For requests from the templating engine, Agent will reset its retry counter and
+perform retries again once all retries are exhausted. This means that templating
+will retry on failures indefinitely unless `exit_after_retry_failure` from the
+[`template_config`][template-config] stanza is set to `true`.
 
 Here are the options for the `retry` stanza:
 
@@ -114,7 +121,13 @@ result codes: any 50x code except 501 ("not implemented"), as well as 412
 stale read due to eventual consistency. Requests coming from the template
 subsystem are retried regardless of the failure.
 
-Second, the backoff algorithm used to set the time between retries differs for
+Second, templating retries may be performed by both the templating engine _and_
+the cache proxy if Agent [persistent
+cache][persistent-cache] is enabled. This is due to the
+fact that templating requests go through the cache proxy when persistence is
+enabled.
+
+Third, the backoff algorithm used to set the time between retries differs for
 the template and cache subsystems. This is a technical limitation we hope
 to address in the future.
 
@@ -198,7 +211,9 @@ template {
 [vault]: /docs/agent#vault-stanza
 [autoauth]: /docs/agent/autoauth
 [caching]: /docs/agent/caching
+[persistent-cache]: /docs/agent/caching/persistent-caches
 [template]: /docs/agent/template
+[template-config]: /docs/agent/template-config
 [listener]: /docs/agent#listener-stanza
 [listener_main]: /docs/configuration/listener/tcp
 [winsvc]: /docs/agent/winsvc

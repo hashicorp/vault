@@ -11,7 +11,7 @@ const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 const Validations = buildValidations({
   path: validator('presence', {
     presence: true,
-    message: "Path can't be blank",
+    message: "Path can't be blank.",
   }),
 });
 

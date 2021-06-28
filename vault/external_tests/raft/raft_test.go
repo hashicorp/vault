@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
@@ -570,7 +571,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 		},
 	}
 
-	if testhelpers.IsEnterprise {
+	if constants.IsEnterprise {
 		tCases = append(tCases, []testCase{
 			{
 				Name:               "rekey-with-perf-standby",
@@ -764,7 +765,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 		},
 	}
 
-	if testhelpers.IsEnterprise {
+	if constants.IsEnterprise {
 		tCases = append(tCases, []testCase{
 			{
 				Name:               "rekey-with-perf-standby",

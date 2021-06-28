@@ -12,6 +12,8 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -243,6 +245,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		diagnose.Success(ctx, "Vault configuration syntax is ok.")
 		return nil
 	})
+	if config == nil {
+		return fmt.Errorf("No vault server configuration found.")
+	}
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
@@ -268,6 +273,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			backend = &b
 			return nil
 		})
+
+		if backend == nil {
+			diagnose.Fail(ctx, "Diagnose could not initialize storage backend.")
+			span.End()
+			return fmt.Errorf("Diagnose could not initialize storage backend.")
+		}
 
 		// Check for raft quorum status
 		if config.Storage.Type == storageTypeRaft {
@@ -346,6 +357,11 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 
+	// Return from top-level span when backend is nil
+	if backend == nil {
+		return fmt.Errorf("Diagnose could not initialize storage backend.")
+	}
+
 	var configSR sr.ServiceRegistration
 	diagnose.Test(ctx, "service-discovery", func(ctx context.Context) error {
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
@@ -372,6 +388,52 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				}
 				return nil
 			})
+		}
+		return nil
+	})
+
+	diagnose.Test(ctx, "seal-transit-tls-checks", func(ctx context.Context) error {
+		var checkSealTransit bool
+		for _, seal := range config.Seals {
+			if seal.Type == "transit" {
+				checkSealTransit = true
+
+				tlsSkipVerify, _ := seal.Config["tls_skip_verify"]
+				if tlsSkipVerify == "true" {
+					diagnose.Warn(ctx, "TLS verification is Skipped! Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
+					return nil
+				}
+
+				// Checking tls_client_cert and tls_client_key
+				tlsClientCert, ok := seal.Config["tls_client_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_cert in the config")
+					return nil
+				}
+				tlsClientKey, ok := seal.Config["tls_client_key"]
+				if !ok {
+					diagnose.Warn(ctx, "Missing tls_client_key in the config")
+					return nil
+				}
+				_, err := diagnose.TLSFileChecks(tlsClientCert, tlsClientKey)
+				if err != nil {
+					return fmt.Errorf("TLS file check failed for tls_client_cert and tls_client_key with the following error: %w", err)
+				}
+
+				// checking tls_ca_cert
+				tlsCACert, ok := seal.Config["tls_ca_cert"]
+				if !ok {
+					diagnose.Warn(ctx, "Mising tls_ca_cert in the config")
+					return nil
+				}
+				_, err = diagnose.TLSCAFileCheck(tlsCACert)
+				if err != nil {
+					return fmt.Errorf("TLS file check failed for tls_ca_cert with the following error: %w", err)
+				}
+			}
+		}
+		if !checkSealTransit {
+			diagnose.Skipped(ctx, "No transit seal found!")
 		}
 		return nil
 	})
@@ -415,7 +477,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 SEALFAIL:
 	sealspan.End()
 	var coreConfig vault.CoreConfig
-	if err := diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
+	diagnose.Test(ctx, "setup-core", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
@@ -423,21 +485,12 @@ SEALFAIL:
 			return diagnose.SpotError(ctx, "init-randreader", err)
 		}
 		diagnose.SpotOk(ctx, "init-randreader", "")
-
-		if backend == nil {
-			return fmt.Errorf(BackendUninitializedErr)
-		}
 		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return nil
-	}); err != nil {
-		diagnose.Error(ctx, err)
-	}
+	})
 
 	var disableClustering bool
 	diagnose.Test(ctx, "setup-ha-storage", func(ctx context.Context) error {
-		if backend == nil {
-			return fmt.Errorf(BackendUninitializedErr)
-		}
 		diagnose.Test(ctx, "create-ha-storage-backend", func(ctx context.Context) error {
 			// Initialize the separate HA storage backend, if it exists
 			disableClustering, err = initHaBackend(server, config, &coreConfig, *backend)
@@ -483,6 +536,8 @@ SEALFAIL:
 	}
 	diagnose.SpotOk(ctx, "find-cluster-addr", "")
 
+	var vaultCore *vault.Core
+
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
@@ -491,7 +546,7 @@ SEALFAIL:
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
 		}
-		_, newCoreError = vault.CreateCore(&coreConfig)
+		core, newCoreError := vault.CreateCore(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
 				return fmt.Errorf("Error initializing core: %s", newCoreError)
@@ -499,9 +554,32 @@ SEALFAIL:
 			diagnose.Warn(ctx, wrapAtLength(
 				"WARNING! A non-fatal error occurred during initialization. Please "+
 					"check the logs for more information."))
+		} else {
+			vaultCore = core
 		}
 		return nil
 	})
+
+	if vaultCore == nil {
+		return fmt.Errorf("Diagnose could not initialize the vault core from the vault server configuration.")
+	}
+
+	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "autoloaded license")
+	// If we are not in enterprise, return from the check
+	if !constants.IsEnterprise {
+		diagnose.Skipped(licenseCtx, "License check will not run on OSS Vault.")
+	} else {
+		// Load License from environment variables. These take precedence over the
+		// configured license.
+		if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
+			coreConfig.LicensePath = envLicensePath
+		}
+		if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
+			coreConfig.License = envLicense
+		}
+		vault.DiagnoseCheckLicense(licenseCtx, vaultCore, coreConfig)
+	}
+	licenseSpan.End()
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
@@ -510,6 +588,9 @@ SEALFAIL:
 		info := make(map[string]string)
 		var listeners []listenerutil.Listener
 		var status int
+
+		diagnose.ListenerChecks(ctx, config.Listeners)
+
 		diagnose.Test(ctx, "create-listeners", func(ctx context.Context) error {
 			status, listeners, _, err = server.InitListeners(config, disableClustering, &infoKeys, &info)
 			if status != 0 {
@@ -527,27 +608,7 @@ SEALFAIL:
 			}
 		}
 
-		defer c.cleanupGuard.Do(listenerCloseFunc)
-
-		listenerTLSContext, listenerTLSSpan := diagnose.StartSpan(ctx, "check-listener-tls")
-		sanitizedListeners := make([]listenerutil.Listener, 0, len(config.Listeners))
-		for _, ln := range lns {
-			if ln.Config.TLSDisable {
-				diagnose.Warn(listenerTLSContext, "TLS is disabled in a Listener config stanza.")
-				continue
-			}
-			if ln.Config.TLSDisableClientCerts {
-				diagnose.Warn(listenerTLSContext, "TLS for a listener is turned on without requiring client certs.")
-			}
-
-			sanitizedListeners = append(sanitizedListeners, listenerutil.Listener{
-				Listener: ln.Listener,
-				Config:   ln.Config,
-			})
-		}
-		diagnose.ListenerChecks(listenerTLSContext, sanitizedListeners)
-
-		listenerTLSSpan.End()
+		c.cleanupGuard.Do(listenerCloseFunc)
 
 		return nil
 	})

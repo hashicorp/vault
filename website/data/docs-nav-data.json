@@ -482,6 +482,23 @@
         ]
       },
       {
+        "title": "<code>license</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/license"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/license/get"
+          },
+          {
+            "title": "<code>inspect</code>",
+            "path": "commands/license/inspect"
+          }
+        ]
+      },
+      {
         "title": "<code>list</code>",
         "path": "commands/list"
       },
@@ -807,6 +824,10 @@
       {
         "title": "Templates",
         "path": "agent/template"
+      },
+      {
+        "title": "Template Config",
+        "path": "agent/template-config"
       },
       {
         "title": "Windows service",
@@ -1613,6 +1634,10 @@
           {
             "title": "Overview",
             "path": "enterprise/license"
+          },
+          {
+            "title": "Autoloading",
+            "path": "enterprise/license/autoloading"
           },
           {
             "title": "FAQs",

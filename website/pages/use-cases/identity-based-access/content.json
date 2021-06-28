@@ -1,12 +1,14 @@
 {
   "beforeAfterDiagram": {
     "beforeImage": {
-      "url": "/img/use-cases/identity-based-access/identity-based-access-challenge.png"
+      "url": "/img/use-cases/identity-based-access/identity-based-access-challenge.png",
+      "alt": "Grpahic — different identity icons around cloud tool icons"
     },
     "beforeHeadline": "The Challenge",
     "beforeContent": "With the proliferation of different clouds, services, and systems all with their own identity providers, organizations need a way to manage identity sprawl",
     "afterImage": {
-      "url": "/img/use-cases/identity-based-access/identity-based-access-solution.png"
+      "url": "/img/use-cases/identity-based-access/identity-based-access-solution.png",
+      "alt": "Graphic — organized idenetiy icons in boxes outline with vault icon"
     },
     "afterHeadline": "The Solution",
     "afterContent": "Vault merges identities across providers and uses a unified ACL system to broker access to systems and secrets"
@@ -20,35 +22,35 @@
       "logoGrid": [
         {
           "url": "https://www.datocms-assets.com/2885/1566919170-aws.svg",
-          "alt": "AWS"
+          "alt": "AWS logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg",
-          "alt": "Microsoft Azure"
+          "alt": "Microsoft Azure logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1513617132-google-cloud.svg",
-          "alt": "Google Cloud"
+          "alt": "Google Cloud logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1540418681-kubernetes.png",
-          "alt": "Kubernetes"
+          "alt": "Kubernetes logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1619808232-nomad-logomark-color.svg",
-          "alt": "Nomad"
+          "alt": "Nomad logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1556657783-oktalogo.svg",
-          "alt": "Okta"
+          "alt": "Okta logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1608658344-pivotalcf.png",
-          "alt": "PivotalCF"
+          "alt": "PivotalCF logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1506540149-black.svg",
-          "alt": "SSH"
+          "alt": "SSH logo"
         },
         {
           "url": "https://www.datocms-assets.com/2885/1608143270-ellipsis.png",
@@ -63,7 +65,8 @@
         "textSide": "right"
       },
       "image": {
-        "url": "/img/use-cases/identity-based-access/entities.png"
+        "url": "/img/use-cases/identity-based-access/entities.png",
+        "alt": "Vault UI showing entity entries"
       }
     },
     {
@@ -72,7 +75,8 @@
         "content": "Require multiple Identity Entities or members of Identity Groups to authorize an requested action."
       },
       "image": {
-        "url": "/img/use-cases/identity-based-access/control-groups.png"
+        "url": "/img/use-cases/identity-based-access/control-groups.png",
+        "alt": "'Control Groups' UI prompting authorization"
       }
     },
     {
@@ -93,7 +97,8 @@
         "textSide": "right"
       },
       "image": {
-        "url": "/img/use-cases/identity-based-access/admin.png"
+        "url": "/img/use-cases/identity-based-access/admin.png",
+        "alt": "Vault UI showing admin members entries"
       }
     },
     {
