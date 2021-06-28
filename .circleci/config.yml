@@ -948,10 +948,6 @@ jobs:
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
-          # Download modules so we can copy them to testcontainer. This is easier than
-          # setting up testcontainer to be able to auth to GitHub to download them.
-          go mod download
-
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
@@ -1207,10 +1203,6 @@ jobs:
           # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
-
-          # Download modules so we can copy them to testcontainer. This is easier than
-          # setting up testcontainer to be able to auth to GitHub to download them.
-          go mod download
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -1718,10 +1710,6 @@ jobs:
           # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
-
-          # Download modules so we can copy them to testcontainer. This is easier than
-          # setting up testcontainer to be able to auth to GitHub to download them.
-          go mod download
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -2369,10 +2357,6 @@ jobs:
           # an externally supplied license can opt-in to using it.
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
-
-          # Download modules so we can copy them to testcontainer. This is easier than
-          # setting up testcontainer to be able to auth to GitHub to download them.
-          go mod download
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
