@@ -225,26 +225,18 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     let secret = this.model;
     let secretData = this.modelForData;
     let isV2 = this.isV2;
-    let key = secretData.get('path') || secret.id;
-
+    let key = secretData.get('path') || secret.id; // ARG TODO this is the problem
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
-
-    if (this.mode === 'create') {
-      key = JSON.stringify({
-        backend: secret.backend,
-        id: key,
-      });
-    }
-
+    secret.set('path', key);
     return secretData
       .save()
       .then(() => {
         if (!secretData.isError) {
           if (isV2) {
-            secret.set('id', key);
+            secret.set('id', key); // don't think this works
           }
           if (isV2 && Object.keys(secret.changedAttributes()).length) {
             // save secret metadata
@@ -349,9 +341,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
-      let model = this.modelForData;
-      let arraySecretKeys = Object.keys(model.secretData);
-      if (type === 'create' && isBlank(model.path || model.id)) {
+      let modelForData = this.modelForData;
+      // ARG TODO need this otherwise path will be blank on validation
+      modelForData.set('path', this.model.path);
+      let arraySecretKeys = Object.keys(modelForData.secretData);
+      if (type === 'create' && isBlank(modelForData.path || modelForData.id)) {
         this.checkValidation('path', '');
         return;
       }
@@ -359,7 +353,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.checkValidation('key', '');
         return;
       }
-
+      console.log('here1');
       this.persistKey(key => {
         let secretKey;
         try {

@@ -30,7 +30,11 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
+    // ARG TODO problem is here the id is the id and i need path
     let { backend, id } = query;
+    if (id.includes(`${backend}-`)) {
+      id = id.replace(`${backend}-`, '');
+    }
     return this.ajax(this._url(backend, id), 'GET').then(resp => {
       resp.id = id;
       resp.backend = backend;

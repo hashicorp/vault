@@ -22,6 +22,7 @@ const Validations = buildValidations({
 });
 
 export default Model.extend(KeyMixin, Validations, {
+  path: attr('string'),
   failedServerRead: attr('boolean'),
   engine: belongsTo('secret-engine', { async: false }),
   engineId: attr('string'),
