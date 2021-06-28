@@ -21,8 +21,9 @@ parameters:
   arch:
     type: string
     # Only supported for use_docker=false, and only other value allowed is 386
-    default: amd64
+    default: amd64 # must be 386 or amd64
 steps:
+  - configure-git
   - run:
       name: Compute test cache key
       command: |
@@ -34,6 +35,8 @@ steps:
   - run:
       name: Run Go tests
       no_output_timeout: 60m
+      environment:
+        GOPRIVATE: 'github.com/hashicorp/*'
       command: |
         set -x
 
@@ -103,9 +106,17 @@ steps:
             TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
           fi
 
+
+
           # Start a docker testcontainer to run the tests in
-          docker run -d -e TEST_DOCKER_NETWORK_ID \
-            -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+          docker run -d \
+            -e TEST_DOCKER_NETWORK_ID \
+            -e GOPRIVATE \
+            -e DOCKER_CERT_PATH \
+            -e DOCKER_HOST \
+            -e DOCKER_MACHINE_NAME \
+            -e DOCKER_TLS_VERIFY \
+            -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
             --network vaulttest --name \
             testcontainer << parameters.go_image >> \
@@ -124,18 +135,20 @@ steps:
           docker exec -w /go/src/github.com/hashicorp/vault/ \
             -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
             -e GOCACHE=/tmp/gocache \
+            -e GO_TAGS \
             -e GOPROXY="off" \
             -e VAULT_LICENSE_CI \
+            -e GOARCH=<< parameters.arch >> \
             testcontainer \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
               -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              << parameters.extra_flags >> \
-              ${package_names}
+                -timeout=60m \
+                -parallel=20 \
+                << parameters.extra_flags >> \
+                ${package_names}
         else
           GOARCH=<< parameters.arch >> \
             GOCACHE=<< parameters.cache_dir >> \

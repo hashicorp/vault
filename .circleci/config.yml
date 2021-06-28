@@ -877,6 +877,12 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 18.09.3
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -956,9 +962,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -977,18 +991,20 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1002,6 +1018,8 @@ jobs:
                  \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
@@ -1116,6 +1134,12 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -1194,9 +1218,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -1215,18 +1247,20 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1240,6 +1274,8 @@ jobs:
                 -race \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1605,6 +1641,12 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -1683,9 +1725,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -1704,18 +1754,20 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1729,6 +1781,8 @@ jobs:
                  \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -2233,6 +2287,12 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 18.09.3
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -2312,9 +2372,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -2333,18 +2401,20 @@ jobs:
             docker exec -w /go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
               -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -2358,6 +2428,8 @@ jobs:
                 -race \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
