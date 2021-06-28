@@ -34,7 +34,7 @@ class ReadMoreComponent extends Component {
 
   @action
   toggleOpen(e) {
-    e.preventDefault();
+    console.log(e);
     this.isOpen = !this.isOpen;
   }
 }

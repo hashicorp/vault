@@ -1,11 +1,15 @@
 {{#if @disabled }}
-<div class="list-item-row linkable-item is-no-underline">
-  {{yield (hash content=(component 'linkable-item/content'))}}
-  {{yield (hash menu=(component 'linkable-item/menu'))}}
-</div>
-{{else}}     
-<LinkTo class="list-item-row linkable-item is-no-underline" @route={{@link.route}} @model={{@link.model}} class="has-text-black has-text-weight-semibold" data-test-secret-path={{true}}>
-  {{yield (hash content=(component 'linkable-item/content'))}}
-  {{yield (hash menu=(component 'linkable-item/menu'))}}
-</LinkTo>
+  <div class="list-item-row linkable-item is-no-underline">
+    {{yield (hash content=(component 'linkable-item/content'))}}
+    {{yield (hash menu=(component 'linkable-item/menu'))}}
+  </div>
+{{else}} 
+    <LinkedBlock 
+      @params={{array @link.route @link.model}} 
+      class="list-item-row linkable-item is-no-underline" 
+      data-test-auth-backend-link={{@link.model}}
+    >
+      {{yield (hash content=(component 'linkable-item/content'))}}
+      {{yield (hash menu=(component 'linkable-item/menu'))}}
+  </LinkedBlock>
 {{/if}}
