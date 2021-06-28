@@ -12,11 +12,13 @@
     grid-column-end: span 1;
   }
 }
+
 .linkable-item-seemore {
   grid-column: 2;
   grid-row: 1;
   align-self: baseline;
 }
+
 .linkable-item-menu {
   box-sizing: border-box;
   grid-column: 3;
