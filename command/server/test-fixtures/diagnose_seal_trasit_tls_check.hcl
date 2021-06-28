@@ -9,7 +9,19 @@ listener "tcp" {
 }
 
 backend "consul" {
-    address = "127.0.0.1:1025"
+    address = "127.0.0.1:8500"
+    foo = "bar"
+    advertise_addr = "foo"
+}
+
+seal "transit" {
+
+  // TLS Configuration
+  tls_ca_cert        = "./../vault/diagnose/test-fixtures/chain.crt.pem"
+  tls_client_cert    = "./../vault/diagnose/test-fixtures/goodcertwithroot.pem"
+  tls_client_key     = "./../vault/diagnose//test-fixtures/goodkey.pem"
+  tls_server_name    = "vault"
+  tls_skip_verify    = "false"
 }
 
 ha_backend "consul" {
