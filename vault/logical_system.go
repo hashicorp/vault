@@ -106,6 +106,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-force/*",
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
+				"leases",
+				"leases/",
 			},
 
 			Unauthenticated: []string{
@@ -4787,6 +4789,6 @@ This path responds to the following HTTP methods.
 	},
 	"list-leases": {
 		"List leases associated with this Vault cluster",
-		"List leases associated with this Vault cluster",
+		"Requires sudo capability. List leases associated with this Vault cluster",
 	},
 }
