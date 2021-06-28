@@ -3,6 +3,7 @@ package certutil
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -36,8 +37,6 @@ func TestCertBundleConversion(t *testing.T) {
 		refreshECCertBundleWithChain(),
 		refreshEC8CertBundle(),
 		refreshEC8CertBundleWithChain(),
-		refreshEd25519CertBundle(),
-		refreshEd25519CertBundleWithChain(),
 		refreshEd255198CertBundle(),
 		refreshEd255198CertBundleWithChain(),
 	}
@@ -79,6 +78,8 @@ func BenchmarkCertBundleParsing(b *testing.B) {
 			refreshECCertBundleWithChain(),
 			refreshEC8CertBundle(),
 			refreshEC8CertBundleWithChain(),
+			refreshEd255198CertBundle(),
+			refreshEd255198CertBundleWithChain(),
 		}
 
 		for i, cbut := range cbuts {
@@ -107,6 +108,8 @@ func TestCertBundleParsing(t *testing.T) {
 		refreshECCertBundleWithChain(),
 		refreshEC8CertBundle(),
 		refreshEC8CertBundleWithChain(),
+		refreshEd255198CertBundle(),
+		refreshEd255198CertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -183,10 +186,6 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		if pcbut.PrivateKeyType != ECPrivateKey {
 			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
-	case privEd25519KeyPem:
-		if pcbut.PrivateKeyType != Ed25519PrivateKey {
-			return fmt.Errorf("parsed bundle has wrong private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
-		}
 	case privEd255198KeyPem:
 		if pcbut.PrivateKeyType != Ed25519PrivateKey {
 			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
@@ -234,7 +233,7 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 			return fmt.Errorf("bundle private key does not match")
 		}
 	case Ed25519PrivateKey:
-		if cb.PrivateKey != privEd25519KeyPem && cb.PrivateKey != privEd255198KeyPem {
+		if cb.PrivateKey != privEd255198KeyPem {
 			return fmt.Errorf("bundle private key does not match")
 		}
 	default:
@@ -311,7 +310,7 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		if pcsrbut.PrivateKeyType != ECPrivateKey {
 			return fmt.Errorf("parsed bundle has wrong private key type")
 		}
-	case privEd25519KeyPem:
+	case privEd255198KeyPem:
 		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
 			return fmt.Errorf("parsed bundle has wrong private key type")
 		}
@@ -350,7 +349,7 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
 			return fmt.Errorf("bundle has wrong private key type")
 		}
-		if csrb.PrivateKey != privEd25519KeyPem {
+		if csrb.PrivateKey != privEd255198KeyPem {
 			return fmt.Errorf("bundle ed25519 private key does not match")
 		}
 	default:
@@ -504,14 +503,14 @@ func refreshECCertBundleWithChain() *CertBundle {
 	return ret
 }
 
-func refreshEd25519CertBundle() *CertBundle {
-	initTest.Do(setCerts)
-	return &CertBundle{
-		Certificate: certEd25519Pem,
-		PrivateKey:  privEd25519KeyPem,
-		CAChain:     []string{issuingCaChainPem[0]},
-	}
-}
+// func refreshEd25519CertBundle() *CertBundle {
+// 	initTest.Do(setCerts)
+// 	return &CertBundle{
+// 		Certificate: certEd25519Pem,
+// 		PrivateKey:  privEd25519KeyPem,
+// 		CAChain:     []string{issuingCaChainPem[0]},
+// 	}
+// }
 
 func refreshEd255198CertBundle() *CertBundle {
 	initTest.Do(setCerts)
@@ -529,18 +528,11 @@ func refreshEd255198CertBundleWithChain() *CertBundle {
 	return ret
 }
 
-func refreshEd25519CertBundleWithChain() *CertBundle {
-	initTest.Do(setCerts)
-	ret := refreshEd25519CertBundle()
-	ret.CAChain = issuingCaChainPem
-	return ret
-}
-
 func refreshEd25519CSRBundle() *CSRBundle {
 	initTest.Do(setCerts)
 	return &CSRBundle{
 		CSR:        csrEd25519Pem,
-		PrivateKey: privEd25519KeyPem,
+		PrivateKey: privEd255198KeyPem,
 	}
 }
 
@@ -782,6 +774,66 @@ func setCerts() {
 		privRSA8KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 	}
 
+	// Ed25519 generation
+	{
+		pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			panic(err)
+		}
+		subjKeyID, err := GetSubjKeyID(privkey)
+		if err != nil {
+			panic(err)
+		}
+		certTemplate := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "localhost",
+			},
+			SubjectKeyId: subjKeyID,
+			DNSNames:     []string{"localhost"},
+			ExtKeyUsage: []x509.ExtKeyUsage{
+				x509.ExtKeyUsageServerAuth,
+				x509.ExtKeyUsageClientAuth,
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+			SerialNumber: big.NewInt(mathrand.Int63()),
+			NotBefore:    time.Now().Add(-30 * time.Second),
+			NotAfter:     time.Now().Add(262980 * time.Hour),
+		}
+		csrTemplate := &x509.CertificateRequest{
+			Subject: pkix.Name{
+				CommonName: "localhost",
+			},
+			DNSNames: []string{"localhost"},
+		}
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privkey)
+		if err != nil {
+			panic(err)
+		}
+		csrPEMBlock := &pem.Block{
+			Type:  "CERTIFICATE REQUEST",
+			Bytes: csrBytes,
+		}
+		csrEd25519Pem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
+		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, pubkey, intKey)
+		if err != nil {
+			panic(err)
+		}
+		certPEMBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: certBytes,
+		}
+		certEd25519Pem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+		marshaledKey, err := x509.MarshalPKCS8PrivateKey(privkey)
+		if err != nil {
+			panic(err)
+		}
+		keyPEMBlock := &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: marshaledKey,
+		}
+		privEd255198KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+	}
+
 	issuingCaChainPem = []string{intCertPEM, caCertPEM}
 }
 
@@ -792,7 +844,6 @@ var (
 	csrRSAPem          string
 	certRSAPem         string
 	privEd255198KeyPem string
-	privEd25519KeyPem  string
 	csrEd25519Pem      string
 	certEd25519Pem     string
 	privECKeyPem       string
