@@ -1,18 +1,19 @@
-<div {{did-insert this.calculateOverflow}} 
-    {{did-update this.calculateOverflow}} 
-    class="has-text-grey overflow-ellipsis {{if this.isOpen "" "is-closed"}} ">
-    <span 
-    class="description-block">
-    {{yield}}</span>
+<div class="has-text-grey has-font-weight-normal overflow-ellipsis {{if this.isOpen "" "is-closed"}} "
+    {{did-insert this.calculateOverflow}} 
+    {{did-update this.calculateOverflow}}>
+    <span class="description-block">
+        {{yield}}
+    </span>
     {{#if this.hasOverflow}}
-    <div class="linkable-item-seemore">
-        <button {{on "click" this.toggleOpen}} class="link link-plain">
-            {{#if this.isOpen}}
-            See Less
-            {{else}}
-            See More
-            {{/if}}
-        </button>
-    </div>
+        <div class="linkable-item-seemore">
+            <button {{on "click" this.toggleOpen}} class="link link-plain">
+                {{#if this.isOpen}}
+                See Less
+                {{else}}
+                See More
+                {{/if}}
+            </button>
+        </div>
     {{/if}}
 </div>
+

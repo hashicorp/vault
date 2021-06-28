@@ -1,3 +1,37 @@
 <div class="linkable-item-content">
+    <div data-test-secret-path class="has-text-grey"> 
+        <ToolTip @horizontalPosition="left" as |T|>
+            <T.trigger>
+                <Icon
+                    @glyph={{@glyph}}
+                    @size="l"
+                    class="has-text-grey-light"
+                />
+            </T.trigger>
+            <T.content @class="tool-tip">
+                <div class="box">
+                    {{@glyphText}}
+                </div>
+            </T.content>
+        </ToolTip>
+            {{#if @link}}
+                <LinkTo @route={{@link.route}} @model={{@link.model}} class="has-text-black has-text-weight-semibold" data-test-secret-path={{true}}>
+                    {{@title}}
+                </LinkTo>
+            {{else}}
+                {{@title}}
+            {{/if}}
+    </div> 
+    <code class="has-text-grey is-size-8">
+        {{#if (eq backend.options.version 2)}}
+            v2
+        {{/if}}
+    </code>
+    <code class="has-text-grey is-size-8">
+        {{@accessor}}
+    </code>
+    <ReadMore>
+        {{@description}}
+    </ReadMore>
     {{yield}}
 </div>

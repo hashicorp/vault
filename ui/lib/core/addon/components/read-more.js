@@ -33,7 +33,8 @@ class ReadMoreComponent extends Component {
   hasOverflow = false;
 
   @action
-  toggleOpen() {
+  toggleOpen(e) {
+    e.preventDefault();
     this.isOpen = !this.isOpen;
   }
 }
