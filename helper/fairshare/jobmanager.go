@@ -244,7 +244,7 @@ func (j *JobManager) incrementWorkerCount(queueID string) {
 
 	j.workerCount[queueID]++
 	if j.metricSink != nil {
-		j.metricSink.IncrCounterWithLabels([]string{"expire", "queue_workers"}, 1, []metrics.Label{{"queue_id", queueID}})
+		j.metricSink.IncrCounterWithLabels([]string{j.name, "job_manager", "workers"}, 1, []metrics.Label{{"queue_id", queueID}})
 	}
 }
 
