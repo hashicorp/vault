@@ -37,7 +37,6 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
         return body;
       });
     }
-    // ARG here
     payload.path = payload.id; // set path to id
     payload.id = `${payload.backend}-${payload.id}`; // ARG HERE this is how you set the id on secret-v2 model
     payload.data.path = payload.path;

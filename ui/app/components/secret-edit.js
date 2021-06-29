@@ -64,7 +64,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   init() {
     this._super(...arguments);
-    let secrets = this.model.secretData;
+    let secrets = this.model.secretData; // this creates an undefined on model
     if (!secrets && this.model.selectedVersion) {
       this.set('isV2', true);
       secrets = this.model.belongsTo('selectedVersion').value().secretData;
@@ -80,11 +80,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
-
     if (this.mode === 'edit') {
       this.send('addRow');
     }
-
     this.set('validationMessages', {
       path: '',
       key: '',
@@ -110,14 +108,15 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       }
       let backend = context.isV2 ? context.get('model.engine.id') : context.model.backend;
       let id = context.model.id;
-      let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      let urlPath = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
-        id: path,
+        id: urlPath,
       };
     },
     'isV2',
     'model',
     'model.id',
+    'model.path',
     'mode'
   ),
   canDelete: alias('updatePath.canDelete'),
@@ -132,7 +131,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let backend = context.get('model.engine.id');
       let id = context.model.id;
       return {
-        id: `${backend}/metadata/${id}`,
+        id: `${backend}/metadata/${id}`, // ARG TODO return to this, could now be wrong, but not seeing failure
       };
     },
     'isV2',
@@ -237,13 +236,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       .then(() => {
         if (!secretData.isError) {
           if (isV2) {
-            if (this.type === 'create') {
+            if (this.mode === 'create') {
               secret.set('id', key);
             }
           }
           if (isV2 && Object.keys(secret.changedAttributes()).length) {
             // save secret metadata
-            console.log(secret, 'secret for saving');
             secret
               .save()
               .then(() => {

@@ -30,12 +30,10 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
-    // ARG TODO problem is here the id is the id and i need path
+    // ARG TODO problem is here the id is the id and i need path -> START HERE TMRW!
     let { backend, id } = query;
-    // if (id.includes(`${backend}-`)) {
-    //   id = id.replace(`${backend}-`, '');
-    // }
     return this.ajax(this._url(backend, id), 'GET').then(resp => {
+      // ARG TODO this is wonky.
       resp.id = id;
       resp.backend = backend;
       return resp;
@@ -49,6 +47,7 @@ export default ApplicationAdapter.extend({
   },
 
   urlForUpdateRecord(store, type, snapshot) {
+    console.log('urlForUpdateRecord', type);
     return this.detailURL(snapshot);
   },
   urlForCreateRecord(modelName, snapshot) {
