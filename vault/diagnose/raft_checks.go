@@ -33,7 +33,7 @@ func RaftFileChecks(ctx context.Context, path string) {
 	}
 
 	if !HasDB(path) {
-		SpotWarn(ctx, ownershipTestName, "Raft boltDB file has not been created")
+		SpotWarn(ctx, ownershipTestName, "Raft boltDB file has not been created.")
 	}
 
 	hasOnlyOwnerRW, errs := CheckFilePerms(info)
@@ -48,14 +48,14 @@ func RaftFileChecks(ctx context.Context, path string) {
 	ownedByRoot := IsOwnedByRoot(info)
 	requiresRoot := ownedByRoot && hasOnlyOwnerRW
 	if requiresRoot {
-		SpotWarn(ctx, ownershipTestName, "raft backend files owned by root and only accessible as root or with overpermissive file perms. This prevents Vault from running as a non-privileged user")
+		SpotWarn(ctx, ownershipTestName, "Raft backend files are owned by root and are only accessible as root or with overpermissive file permissions. This prevents Vault from running as a non-privileged user.")
 		Advise(ctx, "Please change raft path permissions to allow for non-root access.")
 	}
 
 	if runtime.GOOS == "windows" {
 		SpotWarn(ctx, permissionsTestName, "Diagnose cannot determine if vault needs to run as root to open boltDB file. Please check these permissions manually.")
 	} else if errs == nil && !requiresRoot {
-		SpotOk(ctx, permissionsTestName, "boltDB file has correct set of permissions")
+		SpotOk(ctx, permissionsTestName, "Raft BoltDB file has correct set of permissions.")
 	}
 }
 
@@ -66,8 +66,8 @@ func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) st
 	var err error
 	conf, err = b.GetConfigurationOffline()
 	if err != nil {
-		SpotError(ctx, raftQuorumTestName, fmt.Errorf("error retrieving server configuration: %w", err))
-		return fmt.Sprintf("error retrieving server configuration: %s", err.Error())
+		SpotError(ctx, raftQuorumTestName, fmt.Errorf("Error retrieving server configuration: %w.", err))
+		return fmt.Sprintf("Error retrieving server configuration: %s.", err.Error())
 	}
 	voterCount := 0
 	for _, s := range conf.Servers {
@@ -76,23 +76,23 @@ func RaftStorageQuorum(ctx context.Context, b RaftConfigurableStorageBackend) st
 		}
 	}
 	if voterCount == 1 {
-		nonHAWarning := "warning: only one server node found. Vault is not running in high availability mode"
+		nonHAWarning := "Only one server node found. Vault is not running in high availability mode."
 		SpotWarn(ctx, raftQuorumTestName, nonHAWarning)
 		return nonHAWarning
 	}
 	var warnMsg string
 	if voterCount%2 == 0 {
-		warnMsg = fmt.Sprintf("error: even number of voters found: %d", voterCount)
+		warnMsg = fmt.Sprintf("%d voters found. Please ensure that Vault has access to an odd number of voter nodes.", voterCount)
 		SpotWarn(ctx, raftQuorumTestName, warnMsg)
 		return warnMsg
 	}
 	if voterCount > 7 {
-		warnMsg = fmt.Sprintf("very large cluster detected: %d voters", voterCount)
+		warnMsg = fmt.Sprintf("Very large cluster detected: %d voters found. ", voterCount)
 		SpotWarn(ctx, raftQuorumTestName, warnMsg)
 		return warnMsg
 	}
 
-	okMsg := fmt.Sprintf("voter quorum exists: %d voters", voterCount)
+	okMsg := fmt.Sprintf("Voter quorum exists: %d voters.", voterCount)
 	SpotOk(ctx, raftQuorumTestName, okMsg)
 	return okMsg
 }

@@ -410,7 +410,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
 				sealType := (*seal).BarrierType()
-				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, sealType+"Seal Finalization")
+				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, sealType+" Seal Finalization")
 				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
 					diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
@@ -463,7 +463,12 @@ SEALFAIL:
 					diagnose.Warn(ctx, "Mising tls_ca_cert in the seal configuration.")
 					return nil
 				}
-				_, err = diagnose.TLSCAFileCheck(tlsCACert)
+				warnings, err := diagnose.TLSCAFileCheck(tlsCACert)
+				if len(warnings) != 0 {
+					for _, warning := range warnings {
+						diagnose.Warn(ctx, warning)
+					}
+				}
 				if err != nil {
 					return fmt.Errorf("The TLS CA certificate configured through the tls_ca_cert field of the transit seal configuration is invalid: %w.", err)
 				}
@@ -643,11 +648,13 @@ SEALFAIL:
 
 	// The following block contains static checks that are run during the
 	// startHttpServers portion of server run. In other words, they are static
-	// checks during resource creation.
-	diagnose.Test(ctx, "start-servers", func(ctx context.Context) error {
+	// checks during resource creation. Currently there is nothing important in this
+	// diagnose check. For now it is a placeholder for any checks that will be done
+	// before server run.
+	diagnose.Test(ctx, "Server Runtime Checks", func(ctx context.Context) error {
 		for _, ln := range lns {
 			if ln.Config == nil {
-				return fmt.Errorf("Found nil listener config after parsing")
+				return fmt.Errorf("Found no listener config after parsing the Vault configuration.")
 			}
 		}
 		return nil

@@ -313,7 +313,7 @@ func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 		return nil, fmt.Errorf("No root certificate found in CA certificate file.")
 	}
 	if len(rootCerts) > 1 {
-		warningsSlc = append(warningsSlc, fmt.Sprintf("Found multiple root certificates in CA Certificaate file instead of just one."))
+		warningsSlc = append(warningsSlc, fmt.Sprintf("Found multiple root certificates in CA Certificate file instead of just one."))
 	}
 
 	// Checking for Self-Signed cert and return an explicit error about it.
@@ -333,10 +333,10 @@ func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 	var warnings []string
 	// Check for TLS Warnings
 	warnings, err = TLSFileWarningChecks(leafCerts, interCerts, rootCerts)
-	warningsSlc = append(warningsSlc, warnings...)
-	for i, warning := range warningsSlc {
-		warningsSlc[i] = strings.Replace(warning, "leaf", "root", -1)
+	for i, warning := range warnings {
+		warnings[i] = strings.Replace(warning, "leaf", "root", -1)
 	}
+	warningsSlc = append(warningsSlc, warnings...)
 	if err != nil {
 		return warningsSlc, err
 	}

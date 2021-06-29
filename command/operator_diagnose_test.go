@@ -41,130 +41,130 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "Parse configuration",
+					Name:   "Parse Configuration",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
+					Name:   "Start Listeners",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-listeners",
+							Name:   "Create Listeners",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "check-listener-tls",
+							Name:   "Listener TLS Checks",
 							Status: diagnose.WarningStatus,
 							Warnings: []string{
-								"TLS is disabled in a Listener config stanza.",
+								"TLS is disabled in a listener config stanza.",
 							},
 						},
 					},
 				},
 				{
-					Name:   "storage",
+					Name:   "Storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-storage-backend",
+							Name:   "Create Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-storage-tls-consul",
+							Name:   "Consul TLS Checks",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-consul-direct-access-storage",
+							Name:   "Consul Storage Direct Server Access",
 							Status: diagnose.OkStatus,
 						},
 					},
 				},
 				{
-					Name:   "service-discovery",
+					Name:   "Service Discovery",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "test-serviceregistration-tls-consul",
+							Name:   "Consul Service Discovery TLS Checks",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-consul-direct-access-service-discovery",
+							Name:   "Consul Service Discovery Direct Server Access Checks",
 							Status: diagnose.OkStatus,
 						},
 					},
 				},
 				{
-					Name:   "create-seal",
+					Name:   "Create Vault Server Configuration Seals",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "setup-core",
+					Name:   "Create Core Configuration",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "init-randreader",
+							Name:   "Initialize Randomness for Core",
 							Status: diagnose.OkStatus,
 						},
 					},
 				},
 				{
-					Name:   "setup-ha-storage",
+					Name:   "HA Storage",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-ha-storage-backend",
+							Name:   "Create HA Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-consul-direct-access-storage",
+							Name:   "Consul HA Storage Direct Server Access",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-ha-storage-tls-consul",
+							Name:   "Consul TLS Checks",
 							Status: diagnose.OkStatus,
 						},
 					},
 				},
 				{
-					Name:   "determine-redirect",
+					Name:   "Determine Redirect Address",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "find-cluster-addr",
+					Name:   "Cluster Address Checks",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-core",
+					Name:   "Core Creation Checks",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "init-listeners",
+					Name:   "Start Listeners",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-listeners",
+							Name:   "Create Listeners",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "check-listener-tls",
+							Name:   "Listener TLS Checks",
 							Status: diagnose.WarningStatus,
 							Warnings: []string{
-								"TLS is disabled in a Listener config stanza.",
+								"TLS is disabled in a listener config stanza.",
 							},
 						},
 					},
 				},
 				{
-					Name:    "unseal",
+					Name:    "Barrier Encryption Checks",
 					Status:  diagnose.ErrorStatus,
 					Message: "Diagnose could not create a barrier seal object",
 				},
 				{
-					Name:   "start-servers",
+					Name:   "Server Runtime Checks",
 					Status: diagnose.OkStatus,
 				},
 				{
-					Name:   "finalize-seal-shamir",
+					Name:   "shamir Seal Finalization",
 					Status: diagnose.OkStatus,
 				},
 			},
@@ -176,22 +176,22 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "storage",
+					Name:   "Storage",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-storage-backend",
+							Name:   "Create Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:    "raft folder permission checks",
+							Name:    "Raft Folder Permission Checks",
 							Status:  diagnose.WarningStatus,
 							Message: "too many permissions",
 						},
 						{
-							Name:    "raft quorum",
+							Name:    "Raft Quorum Checks",
 							Status:  diagnose.WarningStatus,
-							Message: "even number of voters found",
+							Message: "0 voters found",
 						},
 					},
 				},
@@ -204,9 +204,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:    "storage",
+					Name:    "Storage",
 					Status:  diagnose.ErrorStatus,
-					Message: "no storage stanza found in config",
+					Message: "No storage stanza in Vault Server Configuration.",
 				},
 			},
 		},
@@ -217,15 +217,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "init-listeners",
+					Name:   "Start Listeners",
 					Status: diagnose.OkStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-listeners",
+							Name:   "Create Listeners",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "check-listener-tls",
+							Name:   "Listener TLS Checks",
 							Status: diagnose.OkStatus,
 						},
 					},
@@ -239,15 +239,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "storage",
+					Name:   "Storage",
 					Status: diagnose.ErrorStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-storage-backend",
+							Name:   "Create Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:    "test-storage-tls-consul",
+							Name:    "Consul TLS Checks",
 							Status:  diagnose.ErrorStatus,
 							Message: "certificate has expired or is not yet valid",
 							Warnings: []string{
@@ -255,7 +255,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 						{
-							Name:   "test-consul-direct-access-storage",
+							Name:   "Consul Storage Direct Server Access",
 							Status: diagnose.OkStatus,
 						},
 					},
@@ -269,43 +269,43 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "storage",
+					Name:   "Storage",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-storage-backend",
+							Name:   "Create Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-storage-tls-consul",
+							Name:   "Consul TLS Checks",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-consul-direct-access-storage",
+							Name:   "Consul Storage Direct Server Access",
 							Status: diagnose.WarningStatus,
 							Warnings: []string{
-								"consul storage does not connect to local agent, but directly to server",
+								"Consul storage does not connect to local agent, but directly to server.",
 							},
 						},
 					},
 				},
 				{
-					Name:   "setup-ha-storage",
+					Name:   "HA Storage",
 					Status: diagnose.ErrorStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-ha-storage-backend",
+							Name:   "Create HA Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-consul-direct-access-storage",
+							Name:   "Consul HA Storage Direct Server Access",
 							Status: diagnose.WarningStatus,
 							Warnings: []string{
-								"consul storage does not connect to local agent, but directly to server",
+								"Consul storage does not connect to local agent, but directly to server.",
 							},
 						},
 						{
-							Name:    "test-ha-storage-tls-consul",
+							Name:    "Consul TLS Checks",
 							Status:  diagnose.ErrorStatus,
 							Message: "certificate has expired or is not yet valid",
 							Warnings: []string{
@@ -315,7 +315,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					},
 				},
 				{
-					Name:   "find-cluster-addr",
+					Name:   "Cluster Address Checks",
 					Status: diagnose.ErrorStatus,
 				},
 			},
@@ -323,13 +323,15 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_seal_transit_tls_check_fail",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_seal_trasit_tls_check.hcl",
+				"-config", "./server/test-fixtures/diagnose_seal_transit_tls_check.hcl",
 			},
 			[]*diagnose.Result{
 				{
-					Name:    "seal-transit-tls-checks",
-					Status:  diagnose.ErrorStatus,
-					Message: "Found at least one intermediate cert in a root CA cert",
+					Name:   "Transit Seal TLS Checks",
+					Status: diagnose.WarningStatus,
+					Warnings: []string{
+						"Found at least one intermediate certificate in the CA certificate file.",
+					},
 				},
 			},
 		},
@@ -340,11 +342,11 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "service-discovery",
+					Name:   "Service Discovery",
 					Status: diagnose.ErrorStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:    "test-serviceregistration-tls-consul",
+							Name:    "Consul Service Discovery TLS Checks",
 							Status:  diagnose.ErrorStatus,
 							Message: "certificate has expired or is not yet valid",
 							Warnings: []string{
@@ -352,7 +354,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 							},
 						},
 						{
-							Name:   "test-consul-direct-access-service-discovery",
+							Name:   "Consul Service Discovery Direct Server Access Checks",
 							Status: diagnose.WarningStatus,
 							Warnings: []string{
 								diagnose.DirAccessErr,
@@ -369,19 +371,19 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:   "storage",
+					Name:   "Storage",
 					Status: diagnose.WarningStatus,
 					Children: []*diagnose.Result{
 						{
-							Name:   "create-storage-backend",
+							Name:   "Create Storage Backend",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-storage-tls-consul",
+							Name:   "Consul TLS Checks",
 							Status: diagnose.OkStatus,
 						},
 						{
-							Name:   "test-consul-direct-access-storage",
+							Name:   "Consul Storage Direct Server Access",
 							Status: diagnose.WarningStatus,
 							Warnings: []string{
 								diagnose.DirAccessErr,
@@ -398,12 +400,12 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 			[]*diagnose.Result{
 				{
-					Name:    "storage",
+					Name:    "Storage",
 					Status:  diagnose.ErrorStatus,
 					Message: "Diagnose could not initialize storage backend.",
 					Children: []*diagnose.Result{
 						{
-							Name:    "create-storage-backend",
+							Name:    "Create Storage Backend",
 							Status:  diagnose.ErrorStatus,
 							Message: "no such file or directory",
 						},

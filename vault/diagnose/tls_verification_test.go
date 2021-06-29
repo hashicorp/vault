@@ -53,7 +53,7 @@ func TestTLSFakeCert(t *testing.T) {
 	if len(errs) != 1 {
 		t.Fatalf("more than one error returned: %+v", errs)
 	}
-	if !strings.Contains(errs[0].Error(), "could not decode cert") {
+	if !strings.Contains(errs[0].Error(), "Could not decode certificate") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
@@ -379,7 +379,7 @@ func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
 	if status == 0 {
 		t.Fatalf("TLS config check should have failed when both 'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are true")
 	}
-	if !strings.Contains(err, "the tls_disable_client_certs and tls_require_and_verify_client_cert fields in the "+
+	if !strings.Contains(err, "The tls_disable_client_certs and tls_require_and_verify_client_cert fields in the "+
 		"listener stanza of the vault server config are mutually exclusive fields") {
 		t.Fatalf("Bad error message: %s", err)
 	}
@@ -424,11 +424,18 @@ func TestTLSLeafCertInClientCAFile(t *testing.T) {
 			TLSDisableClientCerts:         false,
 		},
 	}
-	_, errs := ListenerChecks(context.Background(), listeners)
+	warnings, errs := ListenerChecks(context.Background(), listeners)
+	fmt.Println(warnings)
 	if errs == nil || len(errs) != 1 {
-		t.Fatalf("TLS Config check on bad ClientCAFile certificate should fail")
+		t.Fatalf("TLS Config check on bad ClientCAFile certificate should fail once")
 	}
-	if !strings.Contains(errs[0].Error(), "Found at least one leafCert in a root CA cert.") {
+	if warnings == nil || len(warnings) != 1 {
+		t.Fatalf("TLS Config check on bad ClientCAFile certificate should warn once")
+	}
+	if !strings.Contains(warnings[0], "Found at least one leaf certificate in the CA certificate file.") {
+		t.Fatalf("Bad error message: %s", warnings[0])
+	}
+	if !strings.Contains(errs[0].Error(), "signed by unknown authority") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
@@ -452,7 +459,7 @@ func TestTLSNoRootInClientCAFile(t *testing.T) {
 	if errs == nil {
 		t.Fatalf("TLS Config check on bad ClientCAFile certificate should fail")
 	}
-	if !strings.Contains(errs[0].Error(), "No root cert found!") {
+	if !strings.Contains(errs[0].Error(), " No root certificate found") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
@@ -472,12 +479,12 @@ func TestTLSIntermediateCertInClientCAFile(t *testing.T) {
 			TLSDisableClientCerts:         false,
 		},
 	}
-	_, errs := ListenerChecks(context.Background(), listeners)
-	if errs == nil || len(errs) != 1 {
+	warnings, _ := ListenerChecks(context.Background(), listeners)
+	if warnings == nil || len(warnings) != 1 {
 		t.Fatalf("TLS Config check on bad ClientCAFile certificate should fail")
 	}
-	if !strings.Contains(errs[0].Error(), "Found at least one intermediate cert in a root CA cert.") {
-		t.Fatalf("Bad error message: %s", errs[0])
+	if !strings.Contains(warnings[0], "Found at least one intermediate certificate in the CA certificate file.") {
+		t.Fatalf("Bad error message: %s", warnings[0])
 	}
 }
 
@@ -503,7 +510,7 @@ func TestTLSMultipleRootInClietCACert(t *testing.T) {
 	if warnings == nil {
 		t.Fatalf("TLS Config check on valid but bad certificate should warn")
 	}
-	if !strings.Contains(warnings[0], "Found Multiple rootCerts instead of just one!") {
+	if !strings.Contains(warnings[0], "Found multiple root certificates in CA Certificate file instead of just one.") {
 		t.Fatalf("Bad warning: %s", warnings[0])
 	}
 }
@@ -527,7 +534,7 @@ func TestTLSSelfSignedCert(t *testing.T) {
 	if errs == nil {
 		t.Fatalf("Self-signed certificate is insecure")
 	}
-	if !strings.Contains(errs[0].Error(), "No root cert found!") {
+	if !strings.Contains(errs[0].Error(), "No root certificate found") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
