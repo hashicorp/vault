@@ -2828,7 +2828,11 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	}
 
 	irrevocableErr := fmt.Errorf("test irrevocable error")
+
+	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, loadedLE, irrevocableErr)
+	irrevocableLeaseCount := exp.irrevocableLeaseCount
+	exp.pendingLock.Unlock()
 
 	if !loadedLE.isIrrevocable() {
 		t.Fatalf("irrevocable lease is not irrevocable and should be")
@@ -2839,10 +2843,6 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	if _, ok := exp.irrevocable.Load(leaseID); !ok {
 		t.Fatalf("irrevocable lease not included in irrevocable map")
 	}
-
-	exp.pendingLock.Lock()
-	irrevocableLeaseCount := exp.irrevocableLeaseCount
-	exp.pendingLock.Unlock()
 
 	if irrevocableLeaseCount != 1 {
 		t.Fatalf("expected 1 irrevocable lease, found %d", irrevocableLeaseCount)
@@ -2905,7 +2905,9 @@ func TestExpiration_FetchLeaseTimesIrrevocable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error loading lease: %v", err)
 	}
+	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	exp.pendingLock.Unlock()
 
 	irrevocableLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
 	if err != nil {
@@ -2942,7 +2944,10 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 		t.Fatalf("error loading non irrevocable lease: %v", err)
 	}
 
+	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	exp.pendingLock.Unlock()
+
 	err = c.stopExpiration()
 	if err != nil {
 		t.Fatalf("error stopping expiration manager: %v", err)
