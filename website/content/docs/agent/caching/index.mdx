@@ -200,6 +200,17 @@ The top level `cache` block has the following configuration entries:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 
+The following two `cache` options are only useful when talking to a Vault
+Enterprise cluster, and are documented as part of its
+[Eventual Consistency](/docs/enterprise/consistency#vault-agent-and-consistency-headers)
+page.
+
+- `enforce_consistency` `(string: "never")` - Set to one of `"always"`
+  or `"never"`.
+
+- `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
+   or `"forward-active_node"`.
+
 ### Configuration (Persist)
 
 These are common configuration values that live within the `persist` block:
