@@ -225,7 +225,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     let secret = this.model;
     let secretData = this.modelForData;
     let isV2 = this.isV2;
-    let key = secretData.get('path') || secret.id; // ARG TODO this is the problem
+    let key = secret.get('path') || secret.id;
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
@@ -353,7 +353,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.checkValidation('key', '');
         return;
       }
-      console.log('here1');
       this.persistKey(key => {
         let secretKey;
         try {

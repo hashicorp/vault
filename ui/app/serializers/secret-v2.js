@@ -33,18 +33,18 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
       payload.data.versions = Object.keys(payload.data.versions).map(version => {
         let body = payload.data.versions[version];
         body.version = version;
-        body.path = payload.id;
         body.id = JSON.stringify([payload.backend, payload.id, version]);
-        payload.path = payload.id;
-        payload.id = `${payload.backend}-${payload.id}`; // ARG HERE this is how you set the id on secret-v2 model
         return body;
       });
     }
     // ARG here
+    payload.path = payload.id; // set path to id
+    payload.id = `${payload.backend}-${payload.id}`; // ARG HERE this is how you set the id on secret-v2 model
     payload.data.path = payload.path;
-
     payload.data.id = payload.id;
+
     payload.data.engine_id = payload.backend;
+    console.log('🎖🎖🎖🎖', payload.path, payload.id);
     return requestType === 'queryRecord' ? payload.data : [payload.data];
   },
   // serializeHasMany() {
