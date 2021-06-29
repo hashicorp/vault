@@ -1,3 +1,0 @@
-```release-note:feature
-secrets/database/mongodbatlas: Add ability to customize dynamic usernames
-```
