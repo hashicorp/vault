@@ -14,6 +14,7 @@ import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { dasherize, capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
+import buildValidations from 'vault/utils/build-api-validators';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -291,6 +292,11 @@ export default Service.extend({
       }
       newModel.reopenClass({ merged: true });
       owner.unregister(modelName);
+
+      if (newModel.proto().fieldGroups) {
+        let validations = buildValidations(newModel.proto().fieldGroups);
+        newModel = newModel.extend(validations);
+      }
       owner.register(modelName, newModel);
     });
   },
