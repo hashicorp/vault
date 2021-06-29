@@ -44,7 +44,6 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     payload.data.id = payload.id;
 
     payload.data.engine_id = payload.backend;
-    console.log('🎖🎖🎖🎖', payload.path, payload.id);
     return requestType === 'queryRecord' ? payload.data : [payload.data];
   },
   // serializeHasMany() {

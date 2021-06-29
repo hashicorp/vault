@@ -56,6 +56,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   hasLintError: false,
   isV2: false,
+  type: null,
 
   // cp-validation related properties
   validationMessages: null,
@@ -236,10 +237,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       .then(() => {
         if (!secretData.isError) {
           if (isV2) {
-            secret.set('id', key); // don't think this works
+            if (this.type === 'create') {
+              secret.set('id', key);
+            }
           }
           if (isV2 && Object.keys(secret.changedAttributes()).length) {
             // save secret metadata
+            console.log(secret, 'secret for saving');
             secret
               .save()
               .then(() => {
@@ -340,6 +344,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     },
 
     createOrUpdateKey(type, event) {
+      this.set('type', type);
       event.preventDefault();
       let modelForData = this.modelForData;
       // ARG TODO need this otherwise path will be blank on validation
