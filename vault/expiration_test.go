@@ -3070,14 +3070,19 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 			ns:   namespace.RootNamespace,
 		},
 	}
-	pathToMount := mountNoopBackends(t, c, backends)
+	pathToMount, err := mountNoopBackends(c, backends)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	exp := c.expiration
 
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
 		for _, backend := range backends {
-			addIrrevocableLease(t, exp, backend.path, namespace.RootNamespace)
+			if _, err := c.AddIrrevocableLease(namespace.RootContext(nil), backend.path); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 
@@ -3133,7 +3138,10 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 			ns:   namespace.RootNamespace,
 		},
 	}
-	pathToMount := mountNoopBackends(t, c, backends)
+	pathToMount, err := mountNoopBackends(c, backends)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	exp := c.expiration
 
@@ -3141,7 +3149,10 @@ func TestExpiration_listIrrevocableLeases(t *testing.T) {
 	expectedPerMount := 10
 	for i := 0; i < expectedPerMount; i++ {
 		for _, backend := range backends {
-			le := addIrrevocableLease(t, exp, backend.path, namespace.RootNamespace)
+			le, err := c.AddIrrevocableLease(namespace.RootContext(nil), backend.path)
+			if err != nil {
+				t.Fatal(err)
+			}
 			expectedLeases = append(expectedLeases, &basicLeaseTestInfo{
 				id:     le.id,
 				mount:  pathToMount[backend.path],
@@ -3203,7 +3214,9 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 
 	expectedNumLeases := MaxIrrevocableLeasesToReturn + 10
 	for i := 0; i < expectedNumLeases; i++ {
-		addIrrevocableLease(t, exp, "foo/", namespace.RootNamespace)
+		if _, err := c.AddIrrevocableLease(namespace.RootContext(nil), "foo/"); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	dataRaw, warn, err := exp.listIrrevocableLeases(namespace.RootContext(nil), false, false, MaxIrrevocableLeasesToReturn)
