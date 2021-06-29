@@ -4,21 +4,6 @@
   gap: 1em 1em;
 }
 
-.linkable-item-content {
-  grid-column-start: 1;
-  grid-column-end: span 2;
-  grid-row: 1;
-  &.truncated {
-    grid-column-end: span 1;
-  }
-}
-
-.linkable-item-seemore {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: baseline;
-}
-
 .linkable-item-menu {
   box-sizing: border-box;
   grid-column: 3;
@@ -33,8 +18,4 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-}
-
-.has-font-weight-normal {
-  font-weight: $font-weight-normal;
 }
