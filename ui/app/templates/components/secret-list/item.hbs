@@ -4,9 +4,9 @@
     (if @item.isFolder "list" "show")
     (unless @item.id "-root")
   )
-  @item.id
+  @item.path
   class="list-item-row"
-  data-test-secret-link=@item.id
+  data-test-secret-link=@item.path
   encode=true
   queryParams=(secret-query-params @backendModel.type)
 }}

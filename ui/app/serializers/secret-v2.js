@@ -14,8 +14,9 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
         // secrets don't have an id in the response, so we need to concat the full
         // path of the secret here - the id in the payload is added
         // in the adapter after making the request
-        let fullSecretPath = payload.id ? payload.id + secret : secret;
-
+        // let fullSecretPath = payload.id ? payload.id + secret : secret; // for list
+        // ARG TODO come back to
+        let fullSecretPath = `${payload.backend}-${secret}`;
         // if there is no path, it's a "top level" secret, so add
         // a unicode space for the id
         // https://github.com/hashicorp/vault/issues/3348
@@ -24,6 +25,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
         }
         return {
           id: fullSecretPath,
+          path: secret, // id or secret ARG TODO for kv1
           engine_id: payload.backend,
         };
       });
