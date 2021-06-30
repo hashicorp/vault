@@ -2183,6 +2183,9 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
+
+	atomic.StoreUint64(c.counters.requests, 0)
+
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
 	}
