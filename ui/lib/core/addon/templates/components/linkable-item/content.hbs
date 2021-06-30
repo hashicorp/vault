@@ -1,5 +1,5 @@
-<div class="linkable-item-content">
-    <div data-test-secret-path class="has-text-grey"> 
+<div class="linkable-item-content" data-test-linkable-item-content ...attributes>
+    <div class="has-text-grey"> 
         <ToolTip @horizontalPosition="left" as |T|>
             <T.trigger>
                 <Icon
@@ -15,11 +15,16 @@
             </T.content>
         </ToolTip>
             {{#if @link}}
-                <LinkTo @route={{@link.route}} @model={{@link.model}} class="has-text-black has-text-weight-semibold" data-test-secret-path={{true}}>
+                <LinkTo
+                  @route={{@link.route}}
+                  @model={{@link.model}}
+                  class="has-text-black has-text-weight-semibold"
+                  data-test-secret-path={{true}}
+                >
                     {{@title}}
                 </LinkTo>
             {{else}}
-                {{@title}}
+                <span data-test-secret-path={{true}}>{{@title}}</span>
             {{/if}}
     </div> 
     <code class="has-text-grey is-size-8">

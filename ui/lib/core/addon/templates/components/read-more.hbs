@@ -5,7 +5,7 @@
         {{yield}}
     </span>
     {{#if this.hasOverflow}}
-        <div class="linkable-item-seemore">
+        <div class="linkable-item-seemore" data-test-readmore-toggle>
             <button {{on "click" this.toggleOpen}} class="link link-plain">
                 {{#if this.isOpen}}
                 See Less

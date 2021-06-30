@@ -1,14 +1,12 @@
 /**
  * @module LinkableItem
- * LinkableItem components are used to...
+ * LinkableItem components are used to show information on the left with a menu on the right, aligned vertically centered. If passed a link, the block will be clickable
  *
  * @example
  * ```js
- * <LinkableItem @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path" as |Li| />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {object} [link] - link should have route and model
  */
 
 import Component from '@glimmer/component';

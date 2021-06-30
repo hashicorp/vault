@@ -1,14 +1,11 @@
 /**
  * @module ReadMore
- * ReadMore components are used to...
+ * ReadMore components are used to wrap long text that we'd like to show as one line initially with the option to expand and read. Text which is shorter than the surrounding div will not truncate or show the See More button.
  *
  * @example
  * ```js
- * <ReadMore @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <ReadMore>My super long text goes in here</ReadMore>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
  */
 
 import Component from '@glimmer/component';
@@ -21,6 +18,7 @@ class ReadMoreComponent extends Component {
   @action
   calculateOverflow(e) {
     const spanText = e.querySelector('.description-block');
+    console.log(spanText, e.offsetWidth);
     if (spanText.offsetWidth > e.offsetWidth) {
       this.hasOverflow = true;
     }

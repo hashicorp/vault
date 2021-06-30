@@ -2,7 +2,7 @@ import { create, visitable, collection, clickable, text } from 'ember-cli-page-o
 import uiPanel from 'vault/tests/pages/components/console/ui-panel';
 
 export default create({
-  console: uiPanel,
+  // console: uiPanel,
   consoleToggle: clickable('[data-test-console-toggle]'),
   visit: visitable('/vault/secrets'),
   rows: collection('[data-test-secret-backend-row]', {
