@@ -30,10 +30,8 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
-    // ARG TODO problem is here the id is the id and i need path -> START HERE TMRW!
     let { backend, id } = query;
     return this.ajax(this._url(backend, id), 'GET').then(resp => {
-      // ARG TODO this is wonky.
       resp.id = id;
       resp.backend = backend;
       return resp;
@@ -42,12 +40,16 @@ export default ApplicationAdapter.extend({
 
   detailURL(snapshot) {
     let backend = snapshot.belongsTo('engine', { id: true }) || snapshot.attr('engineId');
-    let { id } = snapshot;
-    return this._url(backend, id);
+    let { path } = snapshot; // ARG TODO changed from id to path
+
+    // ARG TODO not sure this is okay but current fix for issue with saving max_versions on create new version
+    if (!path) {
+      path = snapshot._attributes.path;
+    }
+    return this._url(backend, path);
   },
 
   urlForUpdateRecord(store, type, snapshot) {
-    console.log('urlForUpdateRecord', type);
     return this.detailURL(snapshot);
   },
   urlForCreateRecord(modelName, snapshot) {

@@ -55,11 +55,9 @@ export default ApplicationAdapter.extend({
   },
 
   createRecord(store, modelName, snapshot) {
-    console.log('create Record in secret v2 versions');
     let backend = snapshot.belongsTo('secret').belongsTo('engine').id;
     let path = snapshot.attr('path');
     return this._super(...arguments).then(resp => {
-      // ARG TODO this is likely going to be wrong, because now the id should be a concate.
       resp.id = JSON.stringify([backend, path, resp.version]);
       return resp;
     });

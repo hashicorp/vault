@@ -20,7 +20,6 @@ export default ApplicationSerializer.extend({
     let secret = snapshot.belongsTo('secret'); // ARG TODO this is the error, it returns undefined or null or blank but only when changing the maxVersions. Likely because ID is not being set on teh secret-v2-version
     if (!secret) {
       console.log('!!!!! Failure !!!!!', snapshot); // THIS IS WHERE THE ERROR IS.
-      debugger;
       return;
     }
     // if both models failed to read from the server, we need to write without CAS
