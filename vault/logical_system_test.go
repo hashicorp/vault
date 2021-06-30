@@ -58,7 +58,6 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/lookup/*",
 		"storage/raft/snapshot-auto/config/*",
 		"leases",
-		"leases/",
 	}
 
 	b := testSystemBackend(t)
