@@ -119,7 +119,7 @@ type ExpirationManager struct {
 	irrevocable sync.Map
 
 	// Track count for metrics reporting
-	// Mutations to this value should be under pendingLock
+	// This value is protected by pendingLock
 	irrevocableLeaseCount int
 
 	// The uniquePolicies map holds policy sets, so they can
@@ -1823,6 +1823,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		m.removeFromPending(m.quitContext, le.LeaseID, false)
 		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 
+		// Increment count if the lease was not present in the irrevocable map
+		// prior to being added to it above
 		if !leaseInIrrevocable {
 			m.irrevocableLeaseCount++
 		}
