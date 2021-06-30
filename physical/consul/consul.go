@@ -214,7 +214,7 @@ func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string
 		logger.Debug("configured TLS")
 	} else {
 		if isDiagnose {
-			diagnose.Warn(ctx, "HTTPS is not used, Skipping TLS verification!")
+			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification!")
 		}
 	}
 	return nil
