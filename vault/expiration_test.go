@@ -2831,7 +2831,6 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 
 	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, loadedLE, irrevocableErr)
-	irrevocableLeaseCount := exp.irrevocableLeaseCount
 	exp.pendingLock.Unlock()
 
 	if !loadedLE.isIrrevocable() {
@@ -2843,6 +2842,10 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	if _, ok := exp.irrevocable.Load(leaseID); !ok {
 		t.Fatalf("irrevocable lease not included in irrevocable map")
 	}
+
+	exp.pendingLock.RLock()
+	irrevocableLeaseCount := exp.irrevocableLeaseCount
+	exp.pendingLock.RUnlock()
 
 	if irrevocableLeaseCount != 1 {
 		t.Fatalf("expected 1 irrevocable lease, found %d", irrevocableLeaseCount)
@@ -2957,9 +2960,9 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 		t.Error("expiration manager irrevocable cache should be cleared on stop")
 	}
 
-	exp.pendingLock.Lock()
+	exp.pendingLock.RLock()
 	irrevocableLeaseCount := exp.irrevocableLeaseCount
-	exp.pendingLock.Unlock()
+	exp.pendingLock.RUnlock()
 
 	if irrevocableLeaseCount != 0 {
 		t.Errorf("expected 0 leases, found %d", irrevocableLeaseCount)
@@ -3107,9 +3110,9 @@ func TestExpiration_getIrrevocableLeaseCounts(t *testing.T) {
 		t.Fatalf("error getting irrevocable lease counts: %v", err)
 	}
 
-	exp.pendingLock.Lock()
+	exp.pendingLock.RLock()
 	irrevocableLeaseCount := exp.irrevocableLeaseCount
-	exp.pendingLock.Unlock()
+	exp.pendingLock.RUnlock()
 
 	if irrevocableLeaseCount != len(backends)*expectedPerMount {
 		t.Fatalf("incorrect lease counts. expected %d got %d", len(backends)*expectedPerMount, irrevocableLeaseCount)

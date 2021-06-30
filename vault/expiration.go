@@ -1023,8 +1023,12 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	m.pendingLock.Lock()
 	m.removeFromPending(ctx, leaseID, true)
 	m.nonexpiring.Delete(leaseID)
+
+	_, leaseInIrrevocable := m.irrevocable.Load(le.LeaseID)
 	m.irrevocable.Delete(leaseID)
-	m.irrevocableLeaseCount--
+	if leaseInIrrevocable {
+		m.irrevocableLeaseCount--
+	}
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1820,7 +1824,6 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		m.removeFromPending(m.quitContext, le.LeaseID, false)
 		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
 
-		// Only increment this counter if the lease was not in the irrevocable map before
 		if !leaseInIrrevocable {
 			m.irrevocableLeaseCount++
 		}
@@ -2460,7 +2463,8 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 }
 
 // Marks a pending lease as irrevocable. Because the lease is being moved from
-// pending to irrevocable, no total lease count metrics/quotas updates are needed
+// pending to irrevocable, no total lease count metrics/quotas updates are needed.
+// However, irrevocable lease count will need to be incremented
 // note: must be called with pending lock held
 func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseEntry, err error) {
 	if le == nil {
