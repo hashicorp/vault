@@ -243,9 +243,6 @@ func (j *JobManager) incrementWorkerCount(queueID string) {
 	defer j.l.Unlock()
 
 	j.workerCount[queueID]++
-	if j.metricSink != nil {
-		j.metricSink.IncrCounterWithLabels([]string{j.name, "job_manager", "workers"}, 1, []metrics.Label{{"queue_id", queueID}})
-	}
 }
 
 // decrement the worker count for this queue
