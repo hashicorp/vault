@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins/ad: Added rotate-role endpoint for manual service account password rotations
+```

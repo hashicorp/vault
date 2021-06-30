@@ -12,6 +12,8 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -531,6 +533,8 @@ SEALFAIL:
 	}
 	diagnose.SpotOk(ctx, "find-cluster-addr", "")
 
+	var vaultCore *vault.Core
+
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
@@ -539,7 +543,7 @@ SEALFAIL:
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
 		}
-		_, newCoreError = vault.CreateCore(&coreConfig)
+		core, newCoreError := vault.CreateCore(&coreConfig)
 		if newCoreError != nil {
 			if vault.IsFatalError(newCoreError) {
 				return fmt.Errorf("Error initializing core: %s", newCoreError)
@@ -547,9 +551,32 @@ SEALFAIL:
 			diagnose.Warn(ctx, wrapAtLength(
 				"WARNING! A non-fatal error occurred during initialization. Please "+
 					"check the logs for more information."))
+		} else {
+			vaultCore = core
 		}
 		return nil
 	})
+
+	if vaultCore == nil {
+		return fmt.Errorf("Diagnose could not initialize the vault core from the vault server configuration.")
+	}
+
+	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "autoloaded license")
+	// If we are not in enterprise, return from the check
+	if !constants.IsEnterprise {
+		diagnose.Skipped(licenseCtx, "License check will not run on OSS Vault.")
+	} else {
+		// Load License from environment variables. These take precedence over the
+		// configured license.
+		if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
+			coreConfig.LicensePath = envLicensePath
+		}
+		if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
+			coreConfig.License = envLicense
+		}
+		vault.DiagnoseCheckLicense(licenseCtx, vaultCore, coreConfig)
+	}
+	licenseSpan.End()
 
 	var lns []listenerutil.Listener
 	diagnose.Test(ctx, "init-listeners", func(ctx context.Context) error {
