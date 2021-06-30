@@ -1024,9 +1024,8 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	m.removeFromPending(ctx, leaseID, true)
 	m.nonexpiring.Delete(leaseID)
 
-	_, leaseInIrrevocable := m.irrevocable.Load(le.LeaseID)
-	m.irrevocable.Delete(leaseID)
-	if leaseInIrrevocable {
+	if _, ok := m.irrevocable.Load(le.LeaseID); ok {
+		m.irrevocable.Delete(leaseID)
 		m.irrevocableLeaseCount--
 	}
 	m.pendingLock.Unlock()
