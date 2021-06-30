@@ -56,7 +56,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   hasLintError: false,
   isV2: false,
-  type: null,
 
   // cp-validation related properties
   validationMessages: null,
@@ -64,7 +63,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   init() {
     this._super(...arguments);
-    let secrets = this.model.secretData; // this creates an undefined on model
+    let secrets = this.model.secretData;
     if (!secrets && this.model.selectedVersion) {
       this.set('isV2', true);
       secrets = this.model.belongsTo('selectedVersion').value().secretData;
@@ -80,9 +79,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
+
     if (this.mode === 'edit') {
       this.send('addRow');
     }
+
     this.set('validationMessages', {
       path: '',
       key: '',
@@ -129,9 +130,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         return;
       }
       let backend = context.get('model.engine.id');
-      let id = context.model.id;
+      let path = context.model.path;
       return {
-        id: `${backend}/metadata/${id}`, // ARG TODO return to this, could now be wrong, but not seeing failure
+        id: `${backend}/metadata/${path}`,
       };
     },
     'isV2',
@@ -225,6 +226,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     let secret = this.model;
     let secretData = this.modelForData;
     let isV2 = this.isV2;
+    // secret is the model, and the template is saving the path on the model
     let key = secret.get('path') || secret.id;
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
@@ -237,6 +239,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         if (!secretData.isError) {
           if (isV2) {
             if (this.mode === 'create') {
+              // ARG TODO this could be the issue, I need to set the path and then the adapter needs to be able to find that
               secret.set('id', key);
             }
           }
@@ -342,7 +345,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     },
 
     createOrUpdateKey(type, event) {
-      this.set('type', type);
       event.preventDefault();
       let modelForData = this.modelForData;
       // ARG TODO need this otherwise path will be blank on validation
@@ -356,6 +358,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.checkValidation('key', '');
         return;
       }
+
       this.persistKey(key => {
         let secretKey;
         try {
