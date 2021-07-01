@@ -31,12 +31,7 @@
             <span data-test-secret-path>{{@title}}</span>
         {{/if}}
       {{/if}}
-    </div> 
-    {{#if (eq backend.options.version 2)}}
-      <code class="has-text-grey is-size-8">
-        v2
-      </code>
-    {{/if}}
+    </div>
     {{#if @accessor}}
       <code class="has-text-grey is-size-8" data-test-linkable-item-accessor>
         {{@accessor}}

@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <ReadMore>My super long text goes in here</ReadMore>
+ * <ReadMore>My <em>super</em> long text goes in here</ReadMore>
  * ```
  */
 
@@ -18,7 +18,6 @@ class ReadMoreComponent extends Component {
   @action
   calculateOverflow(e) {
     const spanText = e.querySelector('.description-block');
-    console.log(spanText, e.offsetWidth);
     if (spanText.offsetWidth > e.offsetWidth) {
       this.hasOverflow = true;
     }
