@@ -1,8 +1,11 @@
 <div class="has-text-grey has-font-weight-normal overflow-ellipsis {{if this.isOpen "" "is-closed"}} "
-    {{did-insert this.calculateOverflow}} 
-    {{did-update this.calculateOverflow}}>
-    <span class="description-block">
-        {{yield}}
+  ...attributes
+  {{did-insert this.calculateOverflow}} 
+  {{did-update this.calculateOverflow}}
+  data-test-read-more
+>
+    <span class="description-block" data-test-readmore-content>
+      {{yield}}
     </span>
     {{#if this.hasOverflow}}
         <div class="linkable-item-seemore" data-test-readmore-toggle>

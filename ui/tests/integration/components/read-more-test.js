@@ -9,24 +9,42 @@ module('Integration | Component | read-more', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<ReadMore />`);
     assert.equal(this.element.textContent.trim(), '');
-
+  });
+  test('it can toggle open and closed when text is longer than parent', async function(assert) {
     this.set(
       'description',
-      'My super long template block text My super long template block text My super long template block text My super long template block text My super long template block text '
+      'My super long template block text dignissim dictum sem, ut varius ligula lacinia quis.'
     );
-    // Template block usage:
     await render(hbs`
-      <div style="width: 50px">
+      <div style="width: 150px">
         <ReadMore>
-          {{description}}
+          {{this.description}}
         </ReadMore>
       </div>
     `);
-
-    assert.equal(this.element.textContent.trim(), description);
+    assert.dom('[data-test-readmore-content]').includesText(this.description);
     assert.dom('[data-test-readmore-toggle]').exists('toggle exists');
-    assert.dom('[data-test-readmore-toggle]').hasText('See more', 'Toggle should have text to see more');
-    await click('[data-test-readmore-toggle]');
-    assert.dom('[data-test-readmore-toggle]').hasText('See less', 'Toggle should have text to see less');
+    assert.dom('[data-test-readmore-toggle]').hasText('See More', 'Toggle should have text to see more');
+    assert
+      .dom('.overflow-ellipsis.is-closed')
+      .exists('Overflow div has is-closed class when more text to show');
+    await click('[data-test-readmore-toggle] button');
+    assert.dom('.overflow-ellipsis').exists('Div with overflow class still exists');
+    assert.dom('.overflow-ellipsis.is-closed').doesNotExist('Div with overflow class no longer is-closed');
+    assert.dom('[data-test-readmore-toggle]').hasText('See Less', 'Toggle should have text to see less');
+  });
+
+  test('it does not show show more button if parent is wider than content', async function(assert) {
+    this.set('description', 'Hello');
+    await render(hbs`
+      <div style="width: 150px">
+        <ReadMore>
+          {{this.description}}
+        </ReadMore>
+      </div>
+    `);
+    assert.dom('[data-test-readmore-content]').includesText(this.description);
+    assert.dom('[data-test-readmore-toggle]').doesNotExist('toggle exists');
+    assert.dom('.overflow-ellipsis').exists('Overflow div exists');
   });
 });
