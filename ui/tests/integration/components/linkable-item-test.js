@@ -7,39 +7,37 @@ module('Integration | Component | linkable-item', function(hooks) {
   setupRenderingTest(hooks);
 
   test('it renders anything passed in', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
-
     await render(hbs`<LinkableItem />`);
-    assert.equal(this.element.textContent.trim(), '');
+    assert.equal(this.element.textContent.trim(), '', 'No content rendered');
 
-    // Template block usage:
     await render(hbs`
       <LinkableItem as |Li|>
         <Li.content>
           stuff here
         </Li.content>
-        <Li.Menu>
+        <Li.menu>
           menu
-        </Li.Menu>
+        </Li.menu>
       </LinkableItem>
     `);
-
     assert.dom('[data-test-linkable-item-content]').hasText('stuff here');
     assert.dom('[data-test-linkable-item-menu]').hasText('menu');
   });
 
-  test('it is not wrapped in a linked block if no link is passed', async function(assert) {
+  test('it is not wrapped in a linked block if disabled is true', async function(assert) {
     await render(hbs`
-      <LinkableItem as |Li|>
+      <LinkableItem @disabled={{true}} as |Li|>
         <Li.content>
           stuff here
         </Li.content>
       </LinkableItem>
     `);
-
     assert.dom('.list-item-row').exists('List item row exists');
     assert.dom('.list-item-row.linked-block').doesNotExist('Does not render linked block');
+    assert.dom('[data-test-secret-path]').doesNotExist('Title is not rendered');
+    assert.dom('[data-test-linkable-item-accessor]').doesNotExist('Accessor is not rendered');
+    assert.dom('[data-test-linkable-item-accessor]').doesNotExist('Accessor is not rendered');
+    assert.dom('[data-test-linkable-item-glyph]').doesNotExist('Glyph is not rendered');
   });
 
   test('it is wrapped in a linked block if a link is passed', async function(assert) {
@@ -72,16 +70,14 @@ module('Integration | Component | linkable-item', function(hooks) {
           @description={{this.description}}
           @glyph={{this.glyph}}
           @glyphText={{this.glyphText}}
-          @title={{title}} 
+          @title={{this.title}}
         />
       </LinkableItem>
     `);
-
     assert.dom('.list-item-row').exists('List item row exists');
-    assert.dom('.list-item-row.linked-block').doesNotExist('Does not render linked block');
+    assert.dom('[data-test-secret-path]').hasText(this.title, 'Title is rendered');
+    assert.dom('[data-test-linkable-item-accessor]').hasText(this.accessor, 'Accessor is rendered');
+    assert.dom('[data-test-linkable-item-description]').hasText(this.description, 'Description is rendered');
+    assert.dom('[data-test-linkable-item-glyph]').exists('Glyph is rendered');
   });
-
-  // Optional case
-  // test('it shows title as glyph tooltip if no glyphtext provided', async function(assert) {
-  // });
 });
