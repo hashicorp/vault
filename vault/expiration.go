@@ -956,7 +956,6 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 	return nil
 }
 
-// TODO should context passed to revokeCommon contain the lease namespace?
 // should be run on a schedule. something like once a day, maybe once a week
 func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
 	m.irrevocable.Range(func(k, v interface{}) bool {
@@ -964,8 +963,21 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
 		le := v.(*leaseEntry)
 
 		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
-			ctxWithTimeout, _ := context.WithTimeout(m.core.activeContext, time.Minute)
-			if err := m.revokeCommon(ctxWithTimeout, leaseID, false, false); err != nil {
+			// if we get an error (or no namespace) note it, but continue attempting
+			// to revoke other leases
+			leaseNS, err := m.getNamespaceFromLeaseID(m.core.activeContext, leaseID)
+			if err != nil {
+				m.logger.Debug("could not get lease namespace from ID", "error", err)
+				return true
+			}
+			if leaseNS == nil {
+				m.logger.Debug("could not get lease namespace from ID: nil namespace")
+				return true
+			}
+
+			ctxWithNS := namespace.ContextWithNamespace(m.core.activeContext, leaseNS)
+			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
+			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
 				// on failure, force some delay to mitigate resource spike while
 				// this is running. if revocations succeed, we are okay with
 				// the higher resource consumption.
