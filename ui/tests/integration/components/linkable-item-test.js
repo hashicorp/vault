@@ -41,6 +41,7 @@ module('Integration | Component | linkable-item', function(hooks) {
     assert.dom('.list-item-row').exists('List item row exists');
     assert.dom('.list-item-row.linked-block').doesNotExist('Does not render linked block');
   });
+
   test('it is wrapped in a linked block if a link is passed', async function(assert) {
     await render(hbs`
       <LinkableItem @link={{hash route="vault" model="modelId"}} as |Li|>
@@ -57,7 +58,7 @@ module('Integration | Component | linkable-item', function(hooks) {
   });
 
   test('it renders standard attributes on content', async function(assert) {
-    this.set('title', 'Hello');
+    this.set('title', 'A Title');
     this.set('accessor', 'my accessor');
     this.set('description', 'my description');
     this.set('glyph', 'key');
@@ -67,14 +68,12 @@ module('Integration | Component | linkable-item', function(hooks) {
     await render(hbs`
       <LinkableItem data-test-example as |Li|>
         <Li.content
-          @accessor="my accessor"
-          @description="Description goes here
-          @glyphText={{backend.engineType}}
-          @glyph={{or (if (eq backend.engineType "kmip") "secrets" backend.engineType) "secrets"}}
+          @accessor={{this.accessor}}
+          @description={{this.description}}
+          @glyph={{this.glyph}}
+          @glyphText={{this.glyphText}}
           @title={{title}} 
-        >
-          stuff here
-        </Li.content>
+        />
       </LinkableItem>
     `);
 
