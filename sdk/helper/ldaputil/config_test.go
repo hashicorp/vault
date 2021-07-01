@@ -164,6 +164,6 @@ var jsonConfigDefault = []byte(`
   "use_token_groups": false,
   "use_pre111_group_cn_behavior": null,
   "request_timeout": 90,
-  "CaseSensitiveNames": false
+  "case_sensitive_names": false
 }
 `)
