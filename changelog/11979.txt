@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/gcs: Upgrade cloud.google.com/go/storage dependency to v1.16.0
+```
