@@ -943,6 +943,27 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 	return nil
 }
 
+// TODO should context passed to revokeCommon contain the lease namespace?
+// should be run on a schedule. something like once a day, maybe once a week
+func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		le := v.(*leaseEntry)
+
+		if le.ExpireTime.Add(7 * 24 * time.Hour).Before(time.Now()) {
+			// if the lease has expired at least a week ago, try again
+			if err := m.revokeCommon(context.Background(), leaseID, false, false); err != nil {
+				// on failure, force some delay to mitigate resource spike while
+				// this is running. if revocations succeed, we are okay with
+				// the higher resource consumption.
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+
+		return true
+	})
+}
+
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
 // during revocation and still remove entries/index/lease timers
 func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) error {
@@ -2516,7 +2537,6 @@ func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID s
 	return mountAccessor
 }
 
-// TODO SW if keep counts as a map, should update the RFC
 func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
 	requestNS, err := namespace.FromContext(ctx)
 	if err != nil {
