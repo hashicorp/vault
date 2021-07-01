@@ -963,9 +963,9 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
 		leaseID := k.(string)
 		le := v.(*leaseEntry)
 
-		if le.ExpireTime.Add(7 * 24 * time.Hour).Before(time.Now()) {
-			// if the lease has expired at least a week ago, try again
-			if err := m.revokeCommon(context.Background(), leaseID, false, false); err != nil {
+		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
+			ctxWithTimeout, _ := context.WithTimeout(m.core.activeContext, time.Minute)
+			if err := m.revokeCommon(ctxWithTimeout, leaseID, false, false); err != nil {
 				// on failure, force some delay to mitigate resource spike while
 				// this is running. if revocations succeed, we are okay with
 				// the higher resource consumption.
