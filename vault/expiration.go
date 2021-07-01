@@ -425,19 +425,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 	go exp.uniquePoliciesGc()
 
-	go func() {
-		t := time.NewTimer(24 * time.Hour)
-		for {
-			select {
-			case <-exp.quitCh:
-				return
-			case <-t.C:
-				exp.attemptIrrevocableLeasesRevoke()
-				t.Reset(24 * time.Hour)
-			}
-		}
-	}()
-
 	return exp
 }
 
@@ -467,6 +454,19 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 		}
 	}
 	go c.expiration.Restore(errorFunc)
+
+	go func() {
+		t := time.NewTimer(24 * time.Hour)
+		for {
+			select {
+			case <-c.expiration.quitCh:
+				return
+			case <-t.C:
+				c.expiration.attemptIrrevocableLeasesRevoke()
+				t.Reset(24 * time.Hour)
+			}
+		}
+	}()
 
 	return nil
 }
