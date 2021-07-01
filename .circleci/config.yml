@@ -751,7 +751,7 @@ jobs:
           mkdir ./pkg
 
           # Build dev binary
-          make ci-bootstrap dev
+          GOPROXY=file://$GOPATH/pkg/mod/cache/download make ci-bootstrap dev
         name: Build dev binary
     - persist_to_workspace:
         paths:

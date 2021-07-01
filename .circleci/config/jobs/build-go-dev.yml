@@ -13,7 +13,7 @@ steps:
         mkdir ./pkg
 
         # Build dev binary
-        make ci-bootstrap dev
+        GOPROXY=file://$GOPATH/pkg/mod/cache/download make ci-bootstrap dev
   - persist_to_workspace:
       root: .
       paths:
