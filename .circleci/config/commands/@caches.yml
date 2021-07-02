@@ -17,9 +17,9 @@ restore_go_mod_cache_permissive:
     - restore_cache:
         name: Restore closest matching go modules cache
         keys:
-          - &gocachekey v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.2-{{checksum "go.sum"}}
+          - &gocachekey v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.3-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:
@@ -39,6 +39,7 @@ refresh_go_mod_cache:
     - run:
         name: go mod download
         command: |
+          go list ./...
           go mod download -json
           ( cd sdk && go mod download -json; )
           ( cd api && go mod download -json; )
