@@ -1,12 +1,14 @@
 /**
  * @module LinkableItem
- * LinkableItem components are used to show information on the left with a menu on the right, aligned vertically centered. If passed a link, the block will be clickable
+ * LinkableItem components have two contextual components, a Content component used to show information on the left with a Menu component on the right, all aligned vertically centered. If passed a link, the block will be clickable.
  *
  * @example
  * ```js
- * <LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path" as |Li| />
+ * <LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path" as |Li|/>
  * ```
- * @param {object} [link] - link should have route and model
+ *
+ * @param {object} [link=null] - Link should have route and model
+ * @param {boolean} [disabled=false] - If no link then should be given a disabled attribute equal to true
  */
 
 import Component from '@glimmer/component';
