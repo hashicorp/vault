@@ -39,6 +39,9 @@ refresh_go_mod_cache:
     - run:
         name: go mod download
         command: |
+          # go list ./... forces downloading some additional versions of modules that 'go mod
+          # download' misses. We need this because we make use of go list itself during
+          # code generation in later builds that rely on this module cache.
           go list ./...
           go mod download -json
           ( cd sdk && go mod download -json; )
