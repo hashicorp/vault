@@ -13,7 +13,10 @@ steps:
         mkdir ./pkg
 
         # Build dev binary
-        make ci-bootstrap dev
+        make ci-bootstrap
+        make prep
+        mkdir -p bin/linux/amd64
+        go build -v -tags vault -o bin/linux/amd64/vault
   - persist_to_workspace:
       root: .
       paths:
