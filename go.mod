@@ -33,7 +33,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/containerd/containerd v1.4.3 // indirect
-	github.com/coreos/go-semver v0.2.0
+	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -52,10 +52,11 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
+	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/hashicorp/consul-template v0.26.0
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -153,8 +154,8 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
-	github.com/prometheus/client_golang v1.7.1
-	github.com/prometheus/common v0.11.1
+	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/common v0.26.0
 	github.com/rboyer/safeio v0.2.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
@@ -162,6 +163,8 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v3.21.5+incompatible
+	github.com/smartystreets/goconvey v1.6.4 // indirect
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
@@ -171,23 +174,24 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
+	go.etcd.io/etcd/client/pkg/v3 v3.5.0
+	go.etcd.io/etcd/client/v2 v2.305.0
+	go.etcd.io/etcd/client/v3 v3.5.0
 	go.mongodb.org/mongo-driver v1.4.6
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
-	go.uber.org/atomic v1.6.0
+	go.uber.org/atomic v1.7.0
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
-	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
+	golang.org/x/tools v0.1.2
 	google.golang.org/api v0.29.0
-	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/grpc v1.38.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1
