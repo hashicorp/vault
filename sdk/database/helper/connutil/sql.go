@@ -26,6 +26,8 @@ type SQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	SSLCert  				 string      `json:"sslcert" mapstructure:"sslcert" structs:"sslcert"`
+	SSLKey            	     string      `json:"sslkey" mapstructure:"sslkey" structs:"sslkey"`
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -66,6 +68,8 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
 		"username": url.PathEscape(c.Username),
 		"password": password,
+		"sslcert": url.QueryEscape(c.SSLCert),
+		"sslkey": url.QueryEscape(c.SSLKey),
 	})
 
 	if c.MaxOpenConnections == 0 {
