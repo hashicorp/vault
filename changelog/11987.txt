@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/database: the database secrets engine now supports connecting to a database with client certificates using a CA managed by Vault.
+```
