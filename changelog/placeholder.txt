@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/database/postgresql: lib/pq has been updated to v1.10.2 to support inline SSL certificates.
+```
