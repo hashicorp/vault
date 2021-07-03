@@ -573,6 +573,8 @@ func ParseAddress(address string, config *Config) (*url.URL, error) {
 	}
 
 	if strings.HasPrefix(address, "unix://") {
+		// When the address begins with unix://, always change the transport's
+		// DialContext (to match previous behaviour)
 		socket := strings.TrimPrefix(address, "unix://")
 		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
 			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
@@ -589,7 +591,10 @@ func ParseAddress(address string, config *Config) (*url.URL, error) {
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
 		}
-	} else {
+	} else if strings.HasPrefix(config.Address, "unix://") {
+		// When the address being set does not begin with unix:// but the previous
+		// address in the Config did, change the transport's DialContext back to
+		// use the default configuration that cleanhttp uses.
 		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
 			transport.DialContext = (&net.Dialer{
 				Timeout:   30 * time.Second,
@@ -637,8 +642,8 @@ func (c *Client) SetAddress(addr string) error {
 	defer c.modifyLock.Unlock()
 
 	c.config.modifyLock.Lock()
-	c.config.Address = addr
 	parsedAddr, err := ParseAddress(addr, c.config)
+	c.config.Address = addr
 	c.config.modifyLock.Unlock()
 	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
