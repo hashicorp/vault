@@ -209,6 +209,9 @@ func TestAppRole_LocalSecretIDImmutability(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error since local_secret_ids can't be overwritten")
 	}
