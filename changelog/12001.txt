@@ -1,0 +1,3 @@
+```release-note:deprecation
+secrets/gcp: Specifying TTLs via the `/config` path is deprecated and will be removed in a future release.
+```
