@@ -123,3 +123,9 @@ func mountNoopBackends(c *Core, backends []*backend) (map[string]string, error) 
 
 	return pathToMount, nil
 }
+
+func (c *Core) FetchLeaseCountToRevoke() int {
+	c.expiration.pendingLock.RLock()
+	defer c.expiration.pendingLock.RUnlock()
+	return c.expiration.leaseCount
+}
