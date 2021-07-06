@@ -18,9 +18,10 @@ module('Acceptance | alicloud/enable', function(hooks) {
     await settled();
     await mountSecrets.selectType('alicloud');
     await settled();
-    await mountSecrets.next().path(enginePath);
-    assert.equal(1, 1, 'yes ok');
-    await mountSecrets.submit();
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .submit();
     await settled();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
