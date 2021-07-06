@@ -455,11 +455,12 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	}
 	go c.expiration.Restore(errorFunc)
 
+	quit := c.expiration.quitCh
 	go func() {
 		t := time.NewTimer(24 * time.Hour)
 		for {
 			select {
-			case <-c.expiration.quitCh:
+			case <-quit:
 				return
 			case <-t.C:
 				c.expiration.attemptIrrevocableLeasesRevoke()
