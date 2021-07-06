@@ -39,11 +39,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
         return body;
       });
     }
-    console.log(
-      payload.id,
-      "I would honestly expect to this to come back as concatenated, but maybe that's the issue with secret-edit on save"
-    );
-    payload.path = payload.id; // ARG TODO: set path to id
+    payload.path = payload.id;
     payload.id = `${payload.backend}-${payload.id}`; // ARG TODO: this is how you set the id on secret-v2 model
     payload.data.path = payload.path;
     payload.data.id = payload.id;

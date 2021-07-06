@@ -243,7 +243,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
               secret.set('id', key);
             }
           }
-          if (isV2 && Object.keys(secret.changedAttributes()).length) {
+          // only save metadata when metadata attributes have changed
+          let metadataAttributes = ['maxVersions', 'casRequired'];
+          if (isV2 && Object.keys(secret.changedAttributes()).some(i => metadataAttributes.includes(i))) {
             // save secret metadata
             secret
               .save()

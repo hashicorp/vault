@@ -17,11 +17,7 @@ export default ApplicationSerializer.extend({
     return payload;
   },
   serialize(snapshot) {
-    let secret = snapshot.belongsTo('secret'); // ARG TODO returns undefined or null or blank but only when changing the maxVersions.
-    if (!secret) {
-      console.log('!!!!! Failure !!!!!', snapshot); // THIS IS WHERE THE ERROR IS.
-      return;
-    }
+    let secret = snapshot.belongsTo('secret');
     // if both models failed to read from the server, we need to write without CAS
     if (secret.record.failedServerRead && snapshot.record.failedServerRead) {
       return {
