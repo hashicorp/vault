@@ -1335,16 +1335,16 @@
                 "path": "platform/k8s/csi"
               },
               {
+                "title": "Installation",
+                "path": "platform/k8s/csi/installation"
+              },
+              {
                 "title": "Configurations",
                 "path": "platform/k8s/csi/configurations"
               },
               {
                 "title": "Examples",
                 "path": "platform/k8s/csi/examples"
-              },
-              {
-                "title": "Installation",
-                "path": "platform/k8s/csi/installation"
               }
             ]
           }
@@ -1360,6 +1360,23 @@
           {
             "title": "Running Vault",
             "path": "platform/aws-mp/run"
+          }
+        ]
+      },
+      {
+        "title": "ServiceNow",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/servicenow"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/servicenow/installation"
+          },
+          {
+            "title": "Configuration",
+            "path": "platform/servicenow/configuration"
           }
         ]
       }
