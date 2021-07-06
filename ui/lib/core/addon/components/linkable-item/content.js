@@ -11,7 +11,7 @@
  *    @glyphText="tooltip text"
  *    @glyph=glyph
  *    @title="title"
- * />
+ *  />
  * </LinkableItem>
  * ```
  * @param {string} accessor=null - formatted as HTML <code> tag

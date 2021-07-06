@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path" as |Li|/>
+ * <LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path" />
  * ```
  *
  * @param {object} [link=null] - Link should have route and model
