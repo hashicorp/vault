@@ -740,7 +740,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - attach_workspace:
         at: .
@@ -892,7 +892,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -1149,7 +1149,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -1656,7 +1656,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -2238,12 +2238,16 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.2-{{checksum "go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
+          # go list ./... forces downloading some additional versions of modules that 'go mod
+          # download' misses. We need this because we make use of go list itself during
+          # code generation in later builds that rely on this module cache.
+          go list ./...
           go mod download -json
           ( cd sdk && go mod download -json; )
           ( cd api && go mod download -json; )
@@ -2256,7 +2260,7 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
         - /go/pkg/mod
@@ -2302,7 +2306,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.2-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
