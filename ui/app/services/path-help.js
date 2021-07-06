@@ -281,22 +281,21 @@ export default Service.extend({
       // if our newModel doesn't have fieldGroups already
       // we need to create them
       try {
+        // Initialize prototype to access field groups
         let fieldGroups = newModel.proto().fieldGroups;
         if (!fieldGroups) {
           debug(`Constructing fieldGroups for ${backend}`);
           fieldGroups = this.getFieldGroups(newModel);
           newModel = newModel.extend({ fieldGroups });
+          // Build and add validations on model
+          let validations = buildValidations(fieldGroups);
+          newModel = newModel.extend(validations);
         }
       } catch (err) {
         // eat the error, fieldGroups is computed in the model definition
       }
       newModel.reopenClass({ merged: true });
       owner.unregister(modelName);
-
-      if (newModel.proto().fieldGroups) {
-        let validations = buildValidations(newModel.proto().fieldGroups);
-        newModel = newModel.extend(validations);
-      }
       owner.register(modelName, newModel);
     });
   },
