@@ -1,4 +1,4 @@
-import { currentRouteName, settled, pauseTest } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -13,16 +13,13 @@ export const testAliasCRUD = async function(name, itemType, assert) {
     await createItemPage.createItem(itemType, 'external');
     await settled();
   } else {
-    await pauseTest();
     await createItemPage.createItem(itemType);
-    await pauseTest();
     await settled();
   }
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
-  await pauseTest();
   await page.editForm.name(name).submit();
   await settled();
   assert.ok(

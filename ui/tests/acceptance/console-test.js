@@ -23,15 +23,12 @@ module('Acceptance | console', function(hooks) {
     await consoleComponent.toggle();
     await settled();
     let now = Date.now();
-    console.log(numEngines);
-    await this.pauseTest();
     for (let num of [1, 2, 3]) {
       let inputString = `write sys/mounts/${now + num} type=kv`;
       await consoleComponent.runCommands(inputString);
       await settled();
     }
     await consoleComponent.runCommands('refresh');
-    await this.pauseTest();
     await settled();
     assert.equal(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
   });
