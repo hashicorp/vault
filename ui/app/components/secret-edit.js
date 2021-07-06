@@ -146,6 +146,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
 
+  pathName: computed('model.id', function() {
+    if (!this.model.id) return;
+    let [backend, path] = JSON.parse(this.model.id);
+    return path;
+  }),
   modelForData: computed('isV2', 'model', function() {
     let { model } = this;
     if (!model) return null;

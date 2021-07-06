@@ -311,7 +311,8 @@ export default Route.extend(UnloadModelRoute, {
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here
       if (
-        (mode === 'edit' && (changedKeys.length && changedKeys[0] !== 'backend')) ||
+        (mode === 'edit' &&
+          (changedKeys.length && changedKeys[0] !== 'backend' && changedKeys[0] !== 'path')) ||
         (mode === 'edit' && version && Object.keys(version.changedAttributes()).length)
       ) {
         if (

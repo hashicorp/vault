@@ -342,6 +342,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // unable to reload page in test scenario so going to list and back to secret to confirm deletion
     let url = `/vault/secrets/${backend}/list`;
     await visit(url);
+    await this.pauseTest();
     await click('[data-test-secret-link="secret"]');
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');

@@ -11,7 +11,9 @@ export default ApplicationAdapter.extend({
   _url(backend, id, infix = 'data') {
     let url = `${this.buildURL()}/${encodePath(backend)}/${infix}/`;
     if (!isEmpty(id)) {
-      url = url + encodePath(id);
+      // ARG TODO do a conditional here
+      let [backend, path] = JSON.parse(id);
+      url = url + encodePath(path);
     }
     return url;
   },

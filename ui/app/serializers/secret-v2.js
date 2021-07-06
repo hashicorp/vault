@@ -16,7 +16,8 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
         // in the adapter after making the request
         // let fullSecretPath = payload.id ? payload.id + secret : secret; // for list
         // ARG TODO come back to
-        let fullSecretPath = `${payload.backend}-${secret}`;
+        let fullSecretPath = JSON.stringify([payload.backend, secret]);
+        // let fullSecretPath = `${payload.backend}-${secret}`;
         // if there is no path, it's a "top level" secret, so add
         // a unicode space for the id
         // https://github.com/hashicorp/vault/issues/3348
@@ -40,7 +41,8 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
       });
     }
     payload.path = payload.id;
-    payload.id = `${payload.backend}-${payload.id}`; // ARG TODO: this is how you set the id on secret-v2 model
+    payload.id = JSON.stringify([payload.backend, payload.id]);
+    // payload.id = `${payload.backend}-${payload.id}`; // ARG TODO: this is how you set the id on secret-v2 model
     payload.data.path = payload.path;
     payload.data.id = payload.id;
 
