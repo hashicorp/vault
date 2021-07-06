@@ -15,7 +15,6 @@ export default create({
   enable: async function(type, path) {
     await this.visit();
     await settled();
-    debugger;
     await this.mount(type, path);
     await settled();
   },

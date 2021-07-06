@@ -13,7 +13,9 @@ LinkableItem components have two contextual components, a Content component used
 **Example**
   
 ```js
-<LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path" />
+<LinkableItem @link={{hash route='vault.backends' model='my-backend-path'}} data-test-row="my-backend-path">
+// Use <LinkableItem.content> and <LinkableItem.menu> here 
+</LinkableItem>
 ```
 
 **See**

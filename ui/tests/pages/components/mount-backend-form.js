@@ -18,7 +18,6 @@ export default {
   }),
   type: fillable('[name="mount-type"]'),
   async selectType(type) {
-    debugger;
     return this.types.filterBy('id', type)[0].select();
   },
   async mount(type, path) {
