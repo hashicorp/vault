@@ -2183,6 +2183,12 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
+
+	// Zeros out the requests counter to avoid sending all requests for the month on stepdown
+	// when this runs on the active node. Unseal does the complementary operation of loading
+	// the counter from storage, so this operation should be a safe one.
+	atomic.StoreUint64(c.counters.requests, 0)
+
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
 	}

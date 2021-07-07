@@ -71,7 +71,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.SkippedStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
@@ -85,7 +85,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					Children: []*diagnose.Result{
 						{
 							Name:   "test-serviceregistration-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.SkippedStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-service-discovery",
@@ -121,7 +121,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-ha-storage-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.SkippedStatus,
 						},
 					},
 				},
@@ -278,7 +278,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.SkippedStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
@@ -378,7 +378,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 						},
 						{
 							Name:   "test-storage-tls-consul",
-							Status: diagnose.OkStatus,
+							Status: diagnose.SkippedStatus,
 						},
 						{
 							Name:   "test-consul-direct-access-storage",
