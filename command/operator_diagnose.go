@@ -37,8 +37,6 @@ import (
 
 const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
-const CoreUninitializedErr = "Diagnose cannot attempt this step because core could not be initialized."
-const BackendUninitializedErr = "Diagnose cannot attempt this step because backend could not be initialized."
 const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
 
 var (
@@ -237,10 +235,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		var configErrors []configutil.ConfigError
 		config, configErrors, err = server.parseConfig()
 		if err != nil {
-			return err
+			return fmt.Errorf("Could not parse configuration: %w.", err)
 		}
 		for _, ce := range configErrors {
-			diagnose.Warn(ctx, ce.String())
+			diagnose.Warn(ctx, diagnose.CapitalizeFirstLetter(ce.String())+".")
 		}
 		diagnose.Success(ctx, "Vault configuration syntax is ok.")
 		return nil
@@ -257,8 +255,8 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
-			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the vault server configuration documentation.")
-			return fmt.Errorf("No storage stanza in Vault Server Configuration.")
+			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the Vault server configuration documentation.")
+			return fmt.Errorf("No storage stanza in Vault server configuration.")
 		}
 
 		diagnose.Test(ctx, "Create Storage Backend", func(ctx context.Context) error {
@@ -267,7 +265,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return err
 			}
 			if b == nil {
-				diagnose.Advise(ctx, "To learn how to specify a storage backend, see the vault server configuration documentation.")
+				diagnose.Advise(ctx, "To learn how to specify a storage backend, see the Vault server configuration documentation.")
 				return fmt.Errorf("Storage backend could not be initialized.")
 			}
 			backend = &b
@@ -307,6 +305,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
+				}
+				if dirAccess == diagnose.DirAccessErr {
+					diagnose.Advise(ctx, diagnose.DirAccessAdvice)
 				}
 				return nil
 			})
@@ -361,7 +362,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var configSR sr.ServiceRegistration
 	diagnose.Test(ctx, "Service Discovery", func(ctx context.Context) error {
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
-			diagnose.Skipped(ctx, "No Service Registration configured.")
+			diagnose.Skipped(ctx, "No service registration configured.")
 			return nil
 		}
 		srConfig := config.ServiceRegistration.Config
@@ -382,6 +383,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
 				}
+				if dirAccess == diagnose.DirAccessErr {
+					diagnose.Advise(ctx, diagnose.DirAccessAdvice)
+				}
 				return nil
 			})
 		}
@@ -396,7 +400,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	// Check error here
 	if err != nil {
-		diagnose.Advise(ctx, "For assistance configuring the seal stanza, see the documentation.")
+		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
 		goto SEALFAIL
 	}
@@ -409,12 +413,12 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		for _, seal := range seals {
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
-				sealType := (*seal).BarrierType()
+				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType())
 				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, sealType+" Seal Finalization")
 				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
 					diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
-					diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in used; therefore, finalizing the seal timed out.")
+					diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in use; therefore, finalizing the seal timed out.")
 					finalizeSealSpan.End()
 				}
 				finalizeSealSpan.End()
@@ -423,7 +427,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	if barrierSeal == nil {
-		diagnose.Fail(sealcontext, "Could not create barrier seal. No error was generated, but it is likely that the seal stanza is misconfigured.")
+		diagnose.Fail(sealcontext, "Could not create barrier seal. No error was generated, but it is likely that the seal stanza is misconfigured. For guidance, see Vault's configuration documentation on the seal stanza.")
 	}
 
 SEALFAIL:
@@ -437,7 +441,7 @@ SEALFAIL:
 
 				tlsSkipVerify, _ := seal.Config["tls_skip_verify"]
 				if tlsSkipVerify == "true" {
-					diagnose.Warn(ctx, "TLS verification is skipped. Using this option is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
+					diagnose.Warn(ctx, "TLS verification is skipped. This is highly discouraged and decreases the security of data transmissions to and from the Vault server.")
 					return nil
 				}
 
@@ -460,7 +464,7 @@ SEALFAIL:
 				// checking tls_ca_cert
 				tlsCACert, ok := seal.Config["tls_ca_cert"]
 				if !ok {
-					diagnose.Warn(ctx, "Mising tls_ca_cert in the seal configuration.")
+					diagnose.Warn(ctx, "Missing tls_ca_cert in the seal configuration.")
 					return nil
 				}
 				warnings, err := diagnose.TLSCAFileCheck(tlsCACert)
@@ -512,6 +516,9 @@ SEALFAIL:
 				dirAccess := diagnose.ConsulDirectAccess(config.HAStorage.Config)
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
+				}
+				if dirAccess == diagnose.DirAccessErr {
+					diagnose.Advise(ctx, diagnose.DirAccessAdvice)
 				}
 			}
 			return nil
@@ -566,7 +573,7 @@ SEALFAIL:
 	})
 
 	if vaultCore == nil {
-		return fmt.Errorf("Diagnose could not initialize the vault core from the vault server configuration.")
+		return fmt.Errorf("Diagnose could not initialize the Vault core from the Vault server configuration.")
 	}
 
 	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "Autoloaded License Checks")

@@ -34,11 +34,11 @@ func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]st
 		listenerID := l.Address
 
 		if l.TLSDisable {
-			Warn(ctx, fmt.Sprintf("Listener at address %s : TLS is disabled in a listener config stanza.", listenerID))
+			Warn(ctx, fmt.Sprintf("Listener at address %s: TLS is disabled in a listener config stanza.", listenerID))
 			continue
 		}
 		if l.TLSDisableClientCerts {
-			Warn(ctx, fmt.Sprintf("Listener at address %s : TLS for a listener is turned on without requiring client certificates.", listenerID))
+			Warn(ctx, fmt.Sprintf("Listener at address %s: TLS for a listener is turned on without requiring client certificates.", listenerID))
 
 		}
 		status, warning := TLSMutualExclusionCertCheck(l)
@@ -55,13 +55,13 @@ func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]st
 		}
 		_, ok := tlsutil.TLSLookup[l.TLSMinVersion]
 		if !ok {
-			err := fmt.Errorf("Listener at address %s : %s.", listenerID, fmt.Sprintf(minVersionError, l.TLSMinVersion))
+			err := fmt.Errorf("Listener at address %s: %s.", listenerID, fmt.Sprintf(minVersionError, l.TLSMinVersion))
 			listenerErrors = append(listenerErrors, err)
 			Fail(ctx, err.Error())
 		}
 		_, ok = tlsutil.TLSLookup[l.TLSMaxVersion]
 		if !ok {
-			err := fmt.Errorf("Listener at address %s : %s.", listenerID, fmt.Sprintf(maxVersionError, l.TLSMaxVersion))
+			err := fmt.Errorf("Listener at address %s: %s.", listenerID, fmt.Sprintf(maxVersionError, l.TLSMaxVersion))
 			listenerErrors = append(listenerErrors, err)
 			Fail(ctx, err.Error())
 		}
@@ -154,7 +154,7 @@ func ParseTLSInformation(certFilePath string) ([]*x509.Certificate, []*x509.Cert
 	for _, certBlock := range certBlocks {
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
-			return leafCerts, interCerts, rootCerts, fmt.Errorf("A pem block does not parse to a certificate: %w.", err)
+			return leafCerts, interCerts, rootCerts, fmt.Errorf("A PEM block does not parse to a certificate: %w.", err)
 		}
 
 		// Detect if the certificate is a root, leaf, or intermediate
@@ -244,7 +244,7 @@ func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) 
 	var warnings []string
 	// add a warning for when there are more than one leaf certs
 	if len(leafCerts) > 1 {
-		warnings = append(warnings, fmt.Sprintf("More than one leaf certificate detected. Please ensure that there is one unique leaf certificate being supplied to vault in the vault server config file."))
+		warnings = append(warnings, fmt.Sprintf("More than one leaf certificate detected. Please ensure that there is one unique leaf certificate being supplied to Vault in the Vault server configuration file."))
 	}
 
 	for _, c := range leafCerts {
@@ -282,7 +282,7 @@ func TLSMutualExclusionCertCheck(l *configutil.Listener) (int, string) {
 
 	if l.TLSDisableClientCerts {
 		if l.TLSRequireAndVerifyClientCert {
-			return 1, "The tls_disable_client_certs and tls_require_and_verify_client_cert fields in the listener stanza of the vault server config are mutually exclusive fields. Please ensure they are not both set to true."
+			return 1, "The tls_disable_client_certs and tls_require_and_verify_client_cert fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true."
 		}
 	}
 	return 0, ""

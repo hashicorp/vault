@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -246,4 +247,16 @@ func Skippable(skipName string, f testFunction) testFunction {
 		}
 		return nil
 	}
+}
+
+// CapitalizeFirstLetter returns a string with the first letter capitalized
+func CapitalizeFirstLetter(msg string) string {
+	words := strings.Split(msg, " ")
+	if len(words) == 0 {
+		return ""
+	}
+	if len(words) > 1 {
+		return strings.Title(words[0]) + " " + strings.Join(words[1:], " ")
+	}
+	return strings.Title(words[0])
 }

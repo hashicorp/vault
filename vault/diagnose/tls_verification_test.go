@@ -173,7 +173,7 @@ func TestTLSMultiKeys(t *testing.T) {
 	if errs == nil || len(errs) != 1 {
 		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
-	if !strings.Contains(errs[0].Error(), "pem block does not parse to a certificate") {
+	if !strings.Contains(errs[0].Error(), "PEM block does not parse to a certificate") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }
@@ -380,7 +380,7 @@ func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
 		t.Fatalf("TLS config check should have failed when both 'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are true")
 	}
 	if !strings.Contains(err, "The tls_disable_client_certs and tls_require_and_verify_client_cert fields in the "+
-		"listener stanza of the vault server config are mutually exclusive fields") {
+		"listener stanza of the Vault server configuration are mutually exclusive fields") {
 		t.Fatalf("Bad error message: %s", err)
 	}
 }

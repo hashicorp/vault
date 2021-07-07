@@ -53,7 +53,7 @@ func RaftFileChecks(ctx context.Context, path string) {
 	}
 
 	if runtime.GOOS == "windows" {
-		SpotWarn(ctx, permissionsTestName, "Diagnose cannot determine if vault needs to run as root to open boltDB file. Please check these permissions manually.")
+		SpotWarn(ctx, permissionsTestName, "Diagnose cannot determine if Vault needs to run as root to open boltDB file. Please check these permissions manually.")
 	} else if errs == nil && !requiresRoot {
 		SpotOk(ctx, permissionsTestName, "Raft BoltDB file has correct set of permissions.")
 	}
