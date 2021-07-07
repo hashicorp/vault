@@ -1322,6 +1322,10 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	switch {
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
+		if ts.core.perfStandby {
+			return nil, fmt.Errorf("no lease entry found for token that ought to have one, possible eventual consistency issue")
+		}
+
 		tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, ts.core)
 		if err != nil {
 			return nil, err
