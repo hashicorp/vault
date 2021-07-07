@@ -250,12 +250,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       secretData.set(secretData.pathAttr, key);
     }
 
-    if (this.mode === 'create') {
-      key = JSON.stringify({
-        backend: secret.backend,
-        id: key,
-      });
-    }
     return secretData
       .save()
       .then(() => {
@@ -376,16 +370,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         this.checkValidation('key', '');
         return;
       }
-      this.persistKey(key => {
-        let secretKey;
-        try {
-          secretKey = JSON.parse(key).id;
-        } catch (error) {
-          secretKey = key;
-        }
-        // if you save a number for path and then try and create new version the catch does not work
-        secretKey = secretKey ? secretKey : key;
-        this.transitionToRoute(SHOW_ROUTE, secretKey);
+
+      this.persistKey(() => {
+        this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"path"
-	"testing"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -21,14 +20,18 @@ type basicLeaseTestInfo struct {
 
 // add an irrevocable lease for test purposes
 // returns the lease ID and expire time
-func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, ns *namespace.Namespace) *basicLeaseTestInfo {
-	t.Helper()
+func (c *Core) AddIrrevocableLease(ctx context.Context, pathPrefix string) (*basicLeaseTestInfo, error) {
+	exp := c.expiration
 
 	uuid, err := uuid.GenerateUUID()
 	if err != nil {
-		t.Fatalf("error generating uuid: %v", err)
+		return nil, fmt.Errorf("error generating uuid: %w", err)
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting namespace from context: %w", err)
+	}
 	if ns == nil {
 		ns = namespace.RootNamespace
 	}
@@ -49,28 +52,31 @@ func addIrrevocableLease(t *testing.T, m *ExpirationManager, pathPrefix string, 
 		RevokeErr:  "some error message",
 	}
 
-	m.pendingLock.Lock()
-	defer m.pendingLock.Unlock()
+	exp.pendingLock.Lock()
+	defer exp.pendingLock.Unlock()
 
-	if err := m.persistEntry(context.Background(), le); err != nil {
-		t.Fatalf("error persisting irrevocable lease: %v", err)
+	if err := exp.persistEntry(context.Background(), le); err != nil {
+		return nil, fmt.Errorf("error persisting irrevocable lease: %w", err)
 	}
 
-	m.updatePendingInternal(le)
+	exp.updatePendingInternal(le)
 
 	return &basicLeaseTestInfo{
 		id:     le.LeaseID,
 		expire: le.ExpireTime,
-	}
+	}, nil
 }
 
 // InjectIrrevocableLeases injects `count` irrevocable leases (currently to a
 // single mount).
 // It returns a map of the mount accessor to the number of leases stored there
-func (c *Core) InjectIrrevocableLeases(t *testing.T, ctx context.Context, count int) map[string]int {
+func (c *Core) InjectIrrevocableLeases(ctx context.Context, count int) (map[string]int, error) {
 	out := make(map[string]int)
 	for i := 0; i < count; i++ {
-		le := addIrrevocableLease(t, c.expiration, "foo/", namespace.RootNamespace)
+		le, err := c.AddIrrevocableLease(ctx, "foo/")
+		if err != nil {
+			return nil, err
+		}
 
 		mountAccessor := c.expiration.getLeaseMountAccessor(ctx, le.id)
 		if _, ok := out[mountAccessor]; !ok {
@@ -80,7 +86,7 @@ func (c *Core) InjectIrrevocableLeases(t *testing.T, ctx context.Context, count 
 		out[mountAccessor]++
 	}
 
-	return out
+	return out, nil
 }
 
 type backend struct {
@@ -89,9 +95,7 @@ type backend struct {
 }
 
 // set up multiple mounts, and return a mapping of the path to the mount accessor
-func mountNoopBackends(t *testing.T, c *Core, backends []*backend) map[string]string {
-	t.Helper()
-
+func mountNoopBackends(c *Core, backends []*backend) (map[string]string, error) {
 	// enable the noop backend
 	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
@@ -106,17 +110,22 @@ func mountNoopBackends(t *testing.T, c *Core, backends []*backend) map[string]st
 		}
 
 		nsCtx := namespace.ContextWithNamespace(context.Background(), backend.ns)
-		err := c.mount(nsCtx, me)
-		if err != nil {
-			t.Fatalf("err mounting backend %s: %v", backend.path, err)
+		if err := c.mount(nsCtx, me); err != nil {
+			return nil, fmt.Errorf("error mounting backend %s: %w", backend.path, err)
 		}
 
 		mount := c.router.MatchingMountEntry(nsCtx, backend.path)
 		if mount == nil {
-			t.Fatalf("couldn't find mount for path %s", backend.path)
+			return nil, fmt.Errorf("couldn't find mount for path %s", backend.path)
 		}
 		pathToMount[backend.path] = mount.Accessor
 	}
 
-	return pathToMount
+	return pathToMount, nil
+}
+
+func (c *Core) FetchLeaseCountToRevoke() int {
+	c.expiration.pendingLock.RLock()
+	defer c.expiration.pendingLock.RUnlock()
+	return c.expiration.leaseCount
 }

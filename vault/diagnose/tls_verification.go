@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
@@ -21,16 +20,31 @@ const maxVersionError = "'tls_max_version' value %q not supported, please specif
 
 // ListenerChecks diagnoses warnings and the first encountered error for the listener
 // configuration stanzas.
-func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]string, []error) {
+func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]string, []error) {
+	testName := "check-listener-tls"
+	ctx, span := StartSpan(ctx, testName)
+	defer span.End()
 
 	// These aggregated warnings and errors are returned purely for testing purposes.
 	// The errors and warnings will report in this function itself.
 	var listenerWarnings []string
 	var listenerErrors []error
 
-	for _, listener := range listeners {
-		l := listener.Config
+	for _, l := range listeners {
 		listenerID := l.Address
+
+		if l.TLSDisable {
+			Warn(ctx, fmt.Sprintf("listener at address: %s has error: TLS is disabled in a Listener config stanza.", listenerID))
+			continue
+		}
+		if l.TLSDisableClientCerts {
+			Warn(ctx, fmt.Sprintf("listener at address: %s has error: TLS for a listener is turned on without requiring client certs.", listenerID))
+
+		}
+		status, warning := TLSMutualExclusionCertCheck(l)
+		if status == 1 {
+			Warn(ctx, warning)
+		}
 
 		// Perform the TLS version check for listeners.
 		if l.TLSMinVersion == "" {
@@ -43,13 +57,13 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 		if !ok {
 			err := fmt.Errorf("listener at address: %s has error %s: ", listenerID, fmt.Sprintf(minVersionError, l.TLSMinVersion))
 			listenerErrors = append(listenerErrors, err)
-			Error(ctx, err)
+			Fail(ctx, err.Error())
 		}
 		_, ok = tlsutil.TLSLookup[l.TLSMaxVersion]
 		if !ok {
 			err := fmt.Errorf("listener at address: %s has error %s: ", listenerID, fmt.Sprintf(maxVersionError, l.TLSMaxVersion))
 			listenerErrors = append(listenerErrors, err)
-			Error(ctx, err)
+			Fail(ctx, err.Error())
 		}
 
 		// Perform checks on the TLS Cryptographic Information.
@@ -59,7 +73,6 @@ func ListenerChecks(ctx context.Context, listeners []listenerutil.Listener) ([]s
 		// Perform checks on the Client CA Cert
 		warnings, err = TLSClientCAFileCheck(l)
 		listenerWarnings, listenerErrors = outputError(ctx, warnings, listenerWarnings, err, listenerErrors, listenerID)
-
 		// TODO: Use listenerutil.TLSConfig to warn on incorrect protocol specified
 		// Alternatively, use tlsutil.SetupTLSConfig.
 	}
@@ -75,14 +88,25 @@ func outputError(ctx context.Context, newWarnings, listenerWarnings []string, ne
 	if newErr != nil {
 		errMsg := listenerID + ": " + newErr.Error()
 		listenerErrors = append(listenerErrors, fmt.Errorf(errMsg))
-		Error(ctx, fmt.Errorf(errMsg))
-
+		Fail(ctx, errMsg)
 	}
 	return listenerWarnings, listenerErrors
 }
 
 // TLSFileChecks returns an error and warnings after checking TLS information
 func TLSFileChecks(certpath, keypath string) ([]string, error) {
+	warnings, err := TLSCertCheck(certpath)
+	if err != nil {
+		return warnings, err
+	}
+
+	// Utilize the native TLS Loading mechanism to ensure we have missed no errors
+	_, err = tls.LoadX509KeyPair(certpath, keypath)
+	return warnings, err
+}
+
+// TLSCertCheck returns an error and warning after checking TLS information on the given cert
+func TLSCertCheck(certpath string) ([]string, error) {
 	// Parse TLS Certs from the certpath
 	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(certpath)
 	if err != nil {
@@ -99,9 +123,6 @@ func TLSFileChecks(certpath, keypath string) ([]string, error) {
 	if err = TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
 		return warnings, err
 	}
-
-	// Utilize the native TLS Loading mechanism to ensure we have missed no errors
-	_, err = tls.LoadX509KeyPair(certpath, keypath)
 	return warnings, err
 }
 
@@ -221,10 +242,9 @@ func TLSErrorChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) error 
 // and root certificates provided.
 func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) ([]string, error) {
 	var warnings []string
-
 	// add a warning for when there are more than one leaf certs
 	if len(leafCerts) > 1 {
-		warnings = append(warnings, "leafCerts contains more than one cert.")
+		warnings = append(warnings, fmt.Sprintf("More than one leaf certificate detected. Please ensure that there is one unique leaf certificate being supplied to vault in the vault server config file."))
 	}
 
 	for _, c := range leafCerts {
@@ -258,15 +278,14 @@ func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
 }
 
 // TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
-func TLSMutualExclusionCertCheck(l *configutil.Listener) error {
+func TLSMutualExclusionCertCheck(l *configutil.Listener) (int, string) {
 
 	if l.TLSDisableClientCerts {
 		if l.TLSRequireAndVerifyClientCert {
-			return fmt.Errorf("the tls_disable_client_certs and tls_require_and_verify_client_cert fields in the " +
-				"listener stanza of the vault server config are mutually exclusive fields. Please ensure they are not both set to true.")
+			return 1, "the tls_disable_client_certs and tls_require_and_verify_client_cert fields in the listener stanza of the vault server config are mutually exclusive fields. Please ensure they are not both set to true."
 		}
 	}
-	return nil
+	return 0, ""
 }
 
 // TLSClientCAFileCheck Checks the validity of a client CA file
@@ -277,11 +296,15 @@ func TLSClientCAFileCheck(l *configutil.Listener) ([]string, error) {
 	} else if !l.TLSRequireAndVerifyClientCert {
 		return nil, nil
 	}
+	return TLSCAFileCheck(l.TLSClientCAFile)
+}
 
+// TLSCAFileCheck checks the validity of a TLS CA file
+func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 	var warningsSlc []string
 
 	// Parse TLS Certs from the tls config
-	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(l.TLSClientCAFile)
+	leafCerts, interCerts, rootCerts, err := ParseTLSInformation(CAFilePath)
 	if err != nil {
 		return nil, err
 	}

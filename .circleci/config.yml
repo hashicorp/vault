@@ -19,49 +19,49 @@ jobs:
         command: mkdir -p .buildcache && echo "*" > .buildcache/.gitignore
         name: Ignore .buildcache
     - restore_cache:
-        key: package-39998658f2178f4fb653eee31527fd140c3b5928-{{checksum ".buildcache/cache-keys/package-39998658f2178f4fb653eee31527fd140c3b5928"}}
+        key: package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3-{{checksum ".buildcache/cache-keys/package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3"}}
         name: Restore package cache
     - restore_cache:
-        key: package-642e4d477dd27719eac606895e26b0130883aae2-{{checksum ".buildcache/cache-keys/package-642e4d477dd27719eac606895e26b0130883aae2"}}
+        key: package-61f4e059780eac8772bed584d10749860f2fdce1-{{checksum ".buildcache/cache-keys/package-61f4e059780eac8772bed584d10749860f2fdce1"}}
         name: Restore package cache
     - restore_cache:
-        key: package-646bcb196dcfc4aabbf48f40f5648cfc3563a4e5-{{checksum ".buildcache/cache-keys/package-646bcb196dcfc4aabbf48f40f5648cfc3563a4e5"}}
+        key: package-bd03584d8d32ac1e1f7de1668b832aa262230ac8-{{checksum ".buildcache/cache-keys/package-bd03584d8d32ac1e1f7de1668b832aa262230ac8"}}
         name: Restore package cache
     - restore_cache:
-        key: package-1a42776dabbf1343aac64231d6c8f3aa1ed7664d-{{checksum ".buildcache/cache-keys/package-1a42776dabbf1343aac64231d6c8f3aa1ed7664d"}}
+        key: package-d204843fb1747cfab81f261f9f60212fcba03071-{{checksum ".buildcache/cache-keys/package-d204843fb1747cfab81f261f9f60212fcba03071"}}
         name: Restore package cache
     - restore_cache:
-        key: package-74213373fdd8c53e3290c3534cada53d6de4a6b2-{{checksum ".buildcache/cache-keys/package-74213373fdd8c53e3290c3534cada53d6de4a6b2"}}
+        key: package-be5cf6e3b1bf6ea939bf493a80401d6004719ed3-{{checksum ".buildcache/cache-keys/package-be5cf6e3b1bf6ea939bf493a80401d6004719ed3"}}
         name: Restore package cache
     - restore_cache:
-        key: package-9cbcf6417f94b5cf20470c07ead655ee664f00c4-{{checksum ".buildcache/cache-keys/package-9cbcf6417f94b5cf20470c07ead655ee664f00c4"}}
+        key: package-70f1a54cf0661e75b3d78a9af00aee9139946691-{{checksum ".buildcache/cache-keys/package-70f1a54cf0661e75b3d78a9af00aee9139946691"}}
         name: Restore package cache
     - restore_cache:
-        key: package-1fa3fec3ff07c3a968797317223cbc4ddedab198-{{checksum ".buildcache/cache-keys/package-1fa3fec3ff07c3a968797317223cbc4ddedab198"}}
+        key: package-f8b8c13979983f5a79b7b2599c4acc1175f9916a-{{checksum ".buildcache/cache-keys/package-f8b8c13979983f5a79b7b2599c4acc1175f9916a"}}
         name: Restore package cache
     - restore_cache:
-        key: package-a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5-{{checksum ".buildcache/cache-keys/package-a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5"}}
+        key: package-732973165bdf4df83c6612289d316826d1a90698-{{checksum ".buildcache/cache-keys/package-732973165bdf4df83c6612289d316826d1a90698"}}
         name: Restore package cache
     - restore_cache:
-        key: package-c52792b8bedf47a29b3689084f45a53a57411846-{{checksum ".buildcache/cache-keys/package-c52792b8bedf47a29b3689084f45a53a57411846"}}
+        key: package-18f7d6483f142ba7e9d2ed8d6da257173a8fd946-{{checksum ".buildcache/cache-keys/package-18f7d6483f142ba7e9d2ed8d6da257173a8fd946"}}
         name: Restore package cache
     - restore_cache:
-        key: package-a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4-{{checksum ".buildcache/cache-keys/package-a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4"}}
+        key: package-12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6-{{checksum ".buildcache/cache-keys/package-12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6"}}
         name: Restore package cache
     - restore_cache:
-        key: package-10298d3601ad6a39f0ffad97850dbe766478025b-{{checksum ".buildcache/cache-keys/package-10298d3601ad6a39f0ffad97850dbe766478025b"}}
+        key: package-15f9dc49f0018b7fb74bc544d0a8c21bca09e482-{{checksum ".buildcache/cache-keys/package-15f9dc49f0018b7fb74bc544d0a8c21bca09e482"}}
         name: Restore package cache
     - restore_cache:
-        key: package-824d032c24f310993cde35ead2b8a1c0744275dd-{{checksum ".buildcache/cache-keys/package-824d032c24f310993cde35ead2b8a1c0744275dd"}}
+        key: package-d4b60f34c68584902ba78b12494c82543280540f-{{checksum ".buildcache/cache-keys/package-d4b60f34c68584902ba78b12494c82543280540f"}}
         name: Restore package cache
     - restore_cache:
-        key: package-23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134-{{checksum ".buildcache/cache-keys/package-23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134"}}
+        key: package-62c6f837e31ca2282043689938d38d86a095d92f-{{checksum ".buildcache/cache-keys/package-62c6f837e31ca2282043689938d38d86a095d92f"}}
         name: Restore package cache
     - restore_cache:
-        key: package-37731fbab35a66aeeae8b1b863b453343e7f5379-{{checksum ".buildcache/cache-keys/package-37731fbab35a66aeeae8b1b863b453343e7f5379"}}
+        key: package-9a5787f88f917e9d5e3e8e4e87bb49904b9fb443-{{checksum ".buildcache/cache-keys/package-9a5787f88f917e9d5e3e8e4e87bb49904b9fb443"}}
         name: Restore package cache
     - restore_cache:
-        key: package-2005942831e016fc66165a113afea773beb61803-{{checksum ".buildcache/cache-keys/package-2005942831e016fc66165a113afea773beb61803"}}
+        key: package-f9c04b6983662af4c2c142b479e371f5964caf09-{{checksum ".buildcache/cache-keys/package-f9c04b6983662af4c2c142b479e371f5964caf09"}}
         name: Restore package cache
     - run:
         command: make package-meta-all
@@ -73,20 +73,20 @@ jobs:
         command: ls -lahR .buildcache
         name: List Build Cache
     - run:
-        command: cp packages*.lock/pkgs.yml lockfile-ed3144463b95e13f.yml
+        command: cp packages*.lock/pkgs.yml lockfile-7d1b28ede60990fa.yml
         name: Update Lockfile Name
     - run:
-        command: tar -czf packages-ed3144463b95e13f.tar.gz .buildcache/packages lockfile-ed3144463b95e13f.yml
+        command: tar -czf packages-7d1b28ede60990fa.tar.gz .buildcache/packages lockfile-7d1b28ede60990fa.yml
         name: Create Raw Package Tarball
     - run:
-        command: tar -czf meta-ed3144463b95e13f.tar.gz .buildcache/packages/store/*.json lockfile-ed3144463b95e13f.yml
+        command: tar -czf meta-7d1b28ede60990fa.tar.gz .buildcache/packages/store/*.json lockfile-7d1b28ede60990fa.yml
         name: Create Metadata Tarball
     - store_artifacts:
-        path: lockfile-ed3144463b95e13f.yml
+        path: lockfile-7d1b28ede60990fa.yml
     - store_artifacts:
-        path: packages-ed3144463b95e13f.tar.gz
+        path: packages-7d1b28ede60990fa.tar.gz
     - store_artifacts:
-        path: meta-ed3144463b95e13f.tar.gz
+        path: meta-7d1b28ede60990fa.tar.gz
     - store_artifacts:
         path: .buildcache/packages
     environment:
@@ -101,7 +101,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 39998658f2178f4fb653eee31527fd140c3b5928
+    - PACKAGE_SPEC_ID: 2ffbc24c482a71c7f16a87ad5cc6c01038544fe3
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -115,7 +115,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-39998658f2178f4fb653eee31527fd140c3b5928-{{checksum ".buildcache/cache-keys/package-39998658f2178f4fb653eee31527fd140c3b5928"}}
+        key: package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3-{{checksum ".buildcache/cache-keys/package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3"}}
         name: Restore package cache
     - run:
         command: |2
@@ -167,7 +167,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-39998658f2178f4fb653eee31527fd140c3b5928-{{checksum ".buildcache/cache-keys/package-39998658f2178f4fb653eee31527fd140c3b5928"}}
+        key: package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3-{{checksum ".buildcache/cache-keys/package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -179,7 +179,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 37731fbab35a66aeeae8b1b863b453343e7f5379
+    - PACKAGE_SPEC_ID: 9a5787f88f917e9d5e3e8e4e87bb49904b9fb443
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -193,7 +193,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-37731fbab35a66aeeae8b1b863b453343e7f5379-{{checksum ".buildcache/cache-keys/package-37731fbab35a66aeeae8b1b863b453343e7f5379"}}
+        key: package-9a5787f88f917e9d5e3e8e4e87bb49904b9fb443-{{checksum ".buildcache/cache-keys/package-9a5787f88f917e9d5e3e8e4e87bb49904b9fb443"}}
         name: Restore package cache
     - run:
         command: |2
@@ -245,7 +245,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-37731fbab35a66aeeae8b1b863b453343e7f5379-{{checksum ".buildcache/cache-keys/package-37731fbab35a66aeeae8b1b863b453343e7f5379"}}
+        key: package-9a5787f88f917e9d5e3e8e4e87bb49904b9fb443-{{checksum ".buildcache/cache-keys/package-9a5787f88f917e9d5e3e8e4e87bb49904b9fb443"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -258,6 +258,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - run:
         command: |
           cd ui
@@ -266,6 +267,7 @@ jobs:
         name: Install UI dependencies
     - save_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Save yarn cache
         paths:
         - ui/node_modules
   build-common-layers:
@@ -491,7 +493,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5
+    - PACKAGE_SPEC_ID: 732973165bdf4df83c6612289d316826d1a90698
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -505,7 +507,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5-{{checksum ".buildcache/cache-keys/package-a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5"}}
+        key: package-732973165bdf4df83c6612289d316826d1a90698-{{checksum ".buildcache/cache-keys/package-732973165bdf4df83c6612289d316826d1a90698"}}
         name: Restore package cache
     - run:
         command: |2
@@ -557,7 +559,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5-{{checksum ".buildcache/cache-keys/package-a99ec4ee9999b1ce93a15fb86a7f0f34dfbe4ca5"}}
+        key: package-732973165bdf4df83c6612289d316826d1a90698-{{checksum ".buildcache/cache-keys/package-732973165bdf4df83c6612289d316826d1a90698"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -585,6 +587,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
@@ -621,7 +624,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 1fa3fec3ff07c3a968797317223cbc4ddedab198
+    - PACKAGE_SPEC_ID: f8b8c13979983f5a79b7b2599c4acc1175f9916a
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -635,7 +638,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-1fa3fec3ff07c3a968797317223cbc4ddedab198-{{checksum ".buildcache/cache-keys/package-1fa3fec3ff07c3a968797317223cbc4ddedab198"}}
+        key: package-f8b8c13979983f5a79b7b2599c4acc1175f9916a-{{checksum ".buildcache/cache-keys/package-f8b8c13979983f5a79b7b2599c4acc1175f9916a"}}
         name: Restore package cache
     - run:
         command: |2
@@ -687,7 +690,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-1fa3fec3ff07c3a968797317223cbc4ddedab198-{{checksum ".buildcache/cache-keys/package-1fa3fec3ff07c3a968797317223cbc4ddedab198"}}
+        key: package-f8b8c13979983f5a79b7b2599c4acc1175f9916a-{{checksum ".buildcache/cache-keys/package-f8b8c13979983f5a79b7b2599c4acc1175f9916a"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -701,6 +704,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
@@ -726,12 +730,18 @@ jobs:
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=off" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
           go version
         name: Setup Go
         working_directory: ~/
     - checkout
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - attach_workspace:
         at: .
     - run:
@@ -775,7 +785,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 74213373fdd8c53e3290c3534cada53d6de4a6b2
+    - PACKAGE_SPEC_ID: be5cf6e3b1bf6ea939bf493a80401d6004719ed3
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -789,7 +799,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-74213373fdd8c53e3290c3534cada53d6de4a6b2-{{checksum ".buildcache/cache-keys/package-74213373fdd8c53e3290c3534cada53d6de4a6b2"}}
+        key: package-be5cf6e3b1bf6ea939bf493a80401d6004719ed3-{{checksum ".buildcache/cache-keys/package-be5cf6e3b1bf6ea939bf493a80401d6004719ed3"}}
         name: Restore package cache
     - run:
         command: |2
@@ -841,7 +851,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-74213373fdd8c53e3290c3534cada53d6de4a6b2-{{checksum ".buildcache/cache-keys/package-74213373fdd8c53e3290c3534cada53d6de4a6b2"}}
+        key: package-be5cf6e3b1bf6ea939bf493a80401d6004719ed3-{{checksum ".buildcache/cache-keys/package-be5cf6e3b1bf6ea939bf493a80401d6004719ed3"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -867,6 +877,12 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 18.09.3
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -874,6 +890,10 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -942,9 +962,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -956,19 +984,27 @@ jobs:
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -982,6 +1018,8 @@ jobs:
                  \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
@@ -1007,7 +1045,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 642e4d477dd27719eac606895e26b0130883aae2
+    - PACKAGE_SPEC_ID: 61f4e059780eac8772bed584d10749860f2fdce1
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1021,7 +1059,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-642e4d477dd27719eac606895e26b0130883aae2-{{checksum ".buildcache/cache-keys/package-642e4d477dd27719eac606895e26b0130883aae2"}}
+        key: package-61f4e059780eac8772bed584d10749860f2fdce1-{{checksum ".buildcache/cache-keys/package-61f4e059780eac8772bed584d10749860f2fdce1"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1073,7 +1111,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-642e4d477dd27719eac606895e26b0130883aae2-{{checksum ".buildcache/cache-keys/package-642e4d477dd27719eac606895e26b0130883aae2"}}
+        key: package-61f4e059780eac8772bed584d10749860f2fdce1-{{checksum ".buildcache/cache-keys/package-61f4e059780eac8772bed584d10749860f2fdce1"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1096,6 +1134,12 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -1103,6 +1147,10 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -1170,9 +1218,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -1184,19 +1240,27 @@ jobs:
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1210,6 +1274,8 @@ jobs:
                 -race \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1229,7 +1295,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 646bcb196dcfc4aabbf48f40f5648cfc3563a4e5
+    - PACKAGE_SPEC_ID: bd03584d8d32ac1e1f7de1668b832aa262230ac8
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1243,7 +1309,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-646bcb196dcfc4aabbf48f40f5648cfc3563a4e5-{{checksum ".buildcache/cache-keys/package-646bcb196dcfc4aabbf48f40f5648cfc3563a4e5"}}
+        key: package-bd03584d8d32ac1e1f7de1668b832aa262230ac8-{{checksum ".buildcache/cache-keys/package-bd03584d8d32ac1e1f7de1668b832aa262230ac8"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1295,7 +1361,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-646bcb196dcfc4aabbf48f40f5648cfc3563a4e5-{{checksum ".buildcache/cache-keys/package-646bcb196dcfc4aabbf48f40f5648cfc3563a4e5"}}
+        key: package-bd03584d8d32ac1e1f7de1668b832aa262230ac8-{{checksum ".buildcache/cache-keys/package-bd03584d8d32ac1e1f7de1668b832aa262230ac8"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1307,7 +1373,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 10298d3601ad6a39f0ffad97850dbe766478025b
+    - PACKAGE_SPEC_ID: 15f9dc49f0018b7fb74bc544d0a8c21bca09e482
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1321,7 +1387,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-10298d3601ad6a39f0ffad97850dbe766478025b-{{checksum ".buildcache/cache-keys/package-10298d3601ad6a39f0ffad97850dbe766478025b"}}
+        key: package-15f9dc49f0018b7fb74bc544d0a8c21bca09e482-{{checksum ".buildcache/cache-keys/package-15f9dc49f0018b7fb74bc544d0a8c21bca09e482"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1373,7 +1439,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-10298d3601ad6a39f0ffad97850dbe766478025b-{{checksum ".buildcache/cache-keys/package-10298d3601ad6a39f0ffad97850dbe766478025b"}}
+        key: package-15f9dc49f0018b7fb74bc544d0a8c21bca09e482-{{checksum ".buildcache/cache-keys/package-15f9dc49f0018b7fb74bc544d0a8c21bca09e482"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1385,7 +1451,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 9cbcf6417f94b5cf20470c07ead655ee664f00c4
+    - PACKAGE_SPEC_ID: 70f1a54cf0661e75b3d78a9af00aee9139946691
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1399,7 +1465,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-9cbcf6417f94b5cf20470c07ead655ee664f00c4-{{checksum ".buildcache/cache-keys/package-9cbcf6417f94b5cf20470c07ead655ee664f00c4"}}
+        key: package-70f1a54cf0661e75b3d78a9af00aee9139946691-{{checksum ".buildcache/cache-keys/package-70f1a54cf0661e75b3d78a9af00aee9139946691"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1451,7 +1517,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-9cbcf6417f94b5cf20470c07ead655ee664f00c4-{{checksum ".buildcache/cache-keys/package-9cbcf6417f94b5cf20470c07ead655ee664f00c4"}}
+        key: package-70f1a54cf0661e75b3d78a9af00aee9139946691-{{checksum ".buildcache/cache-keys/package-70f1a54cf0661e75b3d78a9af00aee9139946691"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1486,7 +1552,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134
+    - PACKAGE_SPEC_ID: 62c6f837e31ca2282043689938d38d86a095d92f
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1500,7 +1566,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134-{{checksum ".buildcache/cache-keys/package-23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134"}}
+        key: package-62c6f837e31ca2282043689938d38d86a095d92f-{{checksum ".buildcache/cache-keys/package-62c6f837e31ca2282043689938d38d86a095d92f"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1552,7 +1618,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134-{{checksum ".buildcache/cache-keys/package-23d86aae4cb1bb2b49a81680f6b0d6bfe7cb9134"}}
+        key: package-62c6f837e31ca2282043689938d38d86a095d92f-{{checksum ".buildcache/cache-keys/package-62c6f837e31ca2282043689938d38d86a095d92f"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1575,6 +1641,12 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -1582,6 +1654,10 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -1649,9 +1725,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -1663,19 +1747,27 @@ jobs:
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                 \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1689,6 +1781,8 @@ jobs:
                  \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1708,7 +1802,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4
+    - PACKAGE_SPEC_ID: 12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1722,7 +1816,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4-{{checksum ".buildcache/cache-keys/package-a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4"}}
+        key: package-12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6-{{checksum ".buildcache/cache-keys/package-12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1774,7 +1868,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4-{{checksum ".buildcache/cache-keys/package-a3282b7b8be4ed83ef6f3e4474b68f16ea7192b4"}}
+        key: package-12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6-{{checksum ".buildcache/cache-keys/package-12ebb5f418e0bdd0f7fb1f503a0425e32befb2f6"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1786,7 +1880,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 824d032c24f310993cde35ead2b8a1c0744275dd
+    - PACKAGE_SPEC_ID: d4b60f34c68584902ba78b12494c82543280540f
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1800,7 +1894,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-824d032c24f310993cde35ead2b8a1c0744275dd-{{checksum ".buildcache/cache-keys/package-824d032c24f310993cde35ead2b8a1c0744275dd"}}
+        key: package-d4b60f34c68584902ba78b12494c82543280540f-{{checksum ".buildcache/cache-keys/package-d4b60f34c68584902ba78b12494c82543280540f"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1852,7 +1946,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-824d032c24f310993cde35ead2b8a1c0744275dd-{{checksum ".buildcache/cache-keys/package-824d032c24f310993cde35ead2b8a1c0744275dd"}}
+        key: package-d4b60f34c68584902ba78b12494c82543280540f-{{checksum ".buildcache/cache-keys/package-d4b60f34c68584902ba78b12494c82543280540f"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1864,7 +1958,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: c52792b8bedf47a29b3689084f45a53a57411846
+    - PACKAGE_SPEC_ID: 18f7d6483f142ba7e9d2ed8d6da257173a8fd946
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1878,7 +1972,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-c52792b8bedf47a29b3689084f45a53a57411846-{{checksum ".buildcache/cache-keys/package-c52792b8bedf47a29b3689084f45a53a57411846"}}
+        key: package-18f7d6483f142ba7e9d2ed8d6da257173a8fd946-{{checksum ".buildcache/cache-keys/package-18f7d6483f142ba7e9d2ed8d6da257173a8fd946"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1930,7 +2024,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-c52792b8bedf47a29b3689084f45a53a57411846-{{checksum ".buildcache/cache-keys/package-c52792b8bedf47a29b3689084f45a53a57411846"}}
+        key: package-18f7d6483f142ba7e9d2ed8d6da257173a8fd946-{{checksum ".buildcache/cache-keys/package-18f7d6483f142ba7e9d2ed8d6da257173a8fd946"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1942,7 +2036,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 1a42776dabbf1343aac64231d6c8f3aa1ed7664d
+    - PACKAGE_SPEC_ID: d204843fb1747cfab81f261f9f60212fcba03071
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -1956,7 +2050,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-1a42776dabbf1343aac64231d6c8f3aa1ed7664d-{{checksum ".buildcache/cache-keys/package-1a42776dabbf1343aac64231d6c8f3aa1ed7664d"}}
+        key: package-d204843fb1747cfab81f261f9f60212fcba03071-{{checksum ".buildcache/cache-keys/package-d204843fb1747cfab81f261f9f60212fcba03071"}}
         name: Restore package cache
     - run:
         command: |2
@@ -2008,7 +2102,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-1a42776dabbf1343aac64231d6c8f3aa1ed7664d-{{checksum ".buildcache/cache-keys/package-1a42776dabbf1343aac64231d6c8f3aa1ed7664d"}}
+        key: package-d204843fb1747cfab81f261f9f60212fcba03071-{{checksum ".buildcache/cache-keys/package-d204843fb1747cfab81f261f9f60212fcba03071"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -2020,7 +2114,7 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 2005942831e016fc66165a113afea773beb61803
+    - PACKAGE_SPEC_ID: f9c04b6983662af4c2c142b479e371f5964caf09
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
@@ -2034,7 +2128,7 @@ jobs:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-2005942831e016fc66165a113afea773beb61803-{{checksum ".buildcache/cache-keys/package-2005942831e016fc66165a113afea773beb61803"}}
+        key: package-f9c04b6983662af4c2c142b479e371f5964caf09-{{checksum ".buildcache/cache-keys/package-f9c04b6983662af4c2c142b479e371f5964caf09"}}
         name: Restore package cache
     - run:
         command: |2
@@ -2086,24 +2180,41 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-2005942831e016fc66165a113afea773beb61803-{{checksum ".buildcache/cache-keys/package-2005942831e016fc66165a113afea773beb61803"}}
+        key: package-f9c04b6983662af4c2c142b479e371f5964caf09-{{checksum ".buildcache/cache-keys/package-f9c04b6983662af4c2c142b479e371f5964caf09"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   pre-flight-checks:
-    docker:
-    - image: circleci/buildpack-deps
-    environment:
-    - CCI_VERSION: 0.1.5691
-    shell: /usr/bin/env bash -euo pipefail
+    machine: true
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /go/src/github.com/hashicorp/vault
     steps:
+    - run:
+        command: |
+          [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
+          # Install Go
+          curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+          rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+          GOPATH="/go"
+          mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
+          echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
+
+          echo "$ go version"
+          go version
+        name: Setup Go
+        working_directory: ~/
     - checkout
     - run:
         command: |
-          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
+          export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
           mkdir -p $CCI_PATH
-          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
-          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
+          NAME=circleci-cli_${CIRCLECI_CLI_VERSION}_${ARCH}
+          URL=$BASE/v${CIRCLECI_CLI_VERSION}/${NAME}.tar.gz
           curl -sSL $URL \
             | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
           # Add circleci to the path for subsequent steps.
@@ -2119,6 +2230,45 @@ jobs:
         name: Install CircleCI CLI
     - run:
         command: make ci-verify
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}
+        name: Restore closest matching go modules cache
+    - run:
+        command: |
+          # go list ./... forces downloading some additional versions of modules that 'go mod
+          # download' misses. We need this because we make use of go list itself during
+          # code generation in later builds that rely on this module cache.
+          go list ./...
+          go mod download -json
+          ( cd sdk && go mod download -json; )
+          ( cd api && go mod download -json; )
+        name: go mod download
+    - run:
+        command: |
+          git --no-pager diff --exit-code || {
+            echo "ERROR: Files modified by go mod download, see above."
+            exit 1
+          }
+        name: Verify downloading modules did not modify any files
+    - save_cache:
+        key: v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Save go modules cache
+        paths:
+        - /go/pkg/mod
+    environment:
+    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_TAGS: ''
+    - GO_VERSION: 1.16.5
+    - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster
@@ -2141,6 +2291,12 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 18.09.3
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
     - run:
         command: |
           TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
@@ -2148,6 +2304,10 @@ jobs:
     - restore_cache:
         keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
@@ -2216,9 +2376,17 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
               testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
@@ -2230,19 +2398,27 @@ jobs:
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
-              gotestsum --format=short-verbose \
-                --junitfile test-results/go-test/results.xml \
-                --jsonfile test-results/go-test/results.json \
-                -- \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
                 -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-                -timeout=60m \
-                -parallel=20 \
-                -race \
-                ${package_names}
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -2256,6 +2432,8 @@ jobs:
                 -race \
                 ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
@@ -2274,7 +2452,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
 workflows:
-  build-ed3144463b95e13f:
+  build-7d1b28ede60990fa:
     jobs:
     - build-common-layers
     - darwin_amd64_package:

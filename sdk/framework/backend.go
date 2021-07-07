@@ -61,9 +61,9 @@ type Backend struct {
 	// periodic timer of RollbackManager ticks. This can be used by
 	// backends to do anything it wishes to do periodically.
 	//
-	// PeriodicFunc can be invoked to, say to periodically delete stale
+	// PeriodicFunc can be invoked to, say periodically delete stale
 	// entries in backend's storage, while the backend is still being used.
-	// (Note the different of this action from what `Clean` does, which is
+	// (Note the difference between this action and `Clean`, which is
 	// invoked just before the backend is unmounted).
 	PeriodicFunc periodicFunc
 
@@ -80,7 +80,7 @@ type Backend struct {
 	// to the backend, if required.
 	Clean CleanupFunc
 
-	// Invalidate is called when a keys is modified if required
+	// Invalidate is called when a key is modified, if required.
 	Invalidate InvalidateFunc
 
 	// AuthRenew is the callback to call when a RenewRequest for an
@@ -88,7 +88,7 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
-	// Type is the logical.BackendType for the backend implementation
+	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
 	logger  log.Logger

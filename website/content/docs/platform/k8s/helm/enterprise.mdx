@@ -13,6 +13,8 @@ You can use this Helm chart to deploy Vault Enterprise by following a few extra 
 
 ## Vault Enterprise 1.8+
 
+### License Install
+
 First create a Kubernetes secret using the contents of your license file. For example, the following commands create a secret with the name `vault-ent-license` and key `license`:
 
 ```bash
@@ -44,6 +46,51 @@ Once the cluster is [initialized and unsealed](/docs/platform/k8s/helm/run), you
 
 ```shell
 kubectl exec -ti vault-0 -- vault license get
+```
+
+### License Update
+
+To update the autoloaded license in Vault, you may do the following:
+
+- Update your license secret with the new license data
+
+```shell
+new_secret=$(base64 < ./new-license.hclic | tr -d '\n')
+
+cat > patch-license.yaml <<EOF
+data:
+  license: ${new_secret}
+EOF
+
+kubectl patch secret vault-ent-license --patch "$(cat patch-license.yaml)"
+```
+
+- Wait until [`vault license inspect`](/docs/commands/license/inspect) shows the updated license
+
+  Since the `inspect` command is reading the license file from the mounted secret, this tells you when the updated secret has been propagated to the mount on the Vault pod.
+
+```shell
+kubectl exec vault-0 -- vault license inspect
+```
+
+- Reload Vault's license config
+
+  You may use the [`sys/config/reload/license` API endpoint](/api-docs/system/config-reload#reload-license-file):
+
+```shell
+kubectl exec vault-0 -- vault write -f sys/config/reload/license
+```
+
+  Or you may issue an HUP signal directly to Vault:
+
+```shell
+kubectl exec vault-0 -- pkill -HUP vault
+```
+
+- Verify that [`vault license get`](/docs/commands/license/get) shows the updated license
+
+```shell
+kubectl exec vault-0 -- vault license get
 ```
 
 ## Vault Enterprise prior to 1.8
