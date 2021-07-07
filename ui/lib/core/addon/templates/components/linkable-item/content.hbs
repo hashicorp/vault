@@ -1,47 +1,49 @@
 <div class="linkable-item-content" data-test-linkable-item-content ...attributes>
-    <div class="has-text-grey">
-      {{#if @glyph}}
-        <ToolTip @horizontalPosition="left" as |T|>
-          <T.trigger>
-            <Icon
-                @glyph={{@glyph}}
-                @size="l"
-                class="has-text-grey-light"
-                data-test-linkable-item-glyph
-            />
-          </T.trigger>
-          <T.content @class="tool-tip">
-            <div class="box">
-                {{or @glyphText @title}}
-            </div>
-          </T.content>
-        </ToolTip>
-      {{/if}}
-      {{#if @title}}
-        {{#if @link}}
-          <LinkTo
-            @route={{@link.route}}
-            @model={{@link.model}}
-            class="has-text-black has-text-weight-semibold"
-            data-test-secret-path
-          >
-              {{@title}}
-          </LinkTo>
-        {{else}}
-            <span data-test-secret-path>{{@title}}</span>
-        {{/if}}
-      {{/if}}
-    </div>
-    {{#if @accessor}}
-      <code class="has-text-grey is-size-8" data-test-linkable-item-accessor>
-        {{@accessor}}
-      </code>
+  <div class="has-text-grey">
+    {{#if @glyph}}
+      <ToolTip @horizontalPosition="left" as |T|>
+        <T.trigger>
+          <Icon
+            @glyph={{@glyph}}
+            @size="l"
+            class="has-text-grey-light"
+            data-test-linkable-item-glyph
+          />
+        </T.trigger>
+        <T.content @class="tool-tip">
+          <div class="box">
+            {{or @glyphText @title}}
+          </div>
+        </T.content>
+      </ToolTip>
     {{/if}}
 
-    {{#if @description}}
-      <ReadMore data-test-linkable-item-description>
-        {{@description}}
-      </ReadMore> 
+    {{#if @title}}
+      {{#if @link}}
+        <LinkTo
+          @route={{@link.route}}
+          @model={{@link.model}}
+          class="has-text-black has-text-weight-semibold"
+          data-test-secret-path
+          >
+          {{@title}}
+        </LinkTo>
+      {{else}}
+        <span data-test-secret-path>{{@title}}</span>
+      {{/if}}
     {{/if}}
-    {{yield}}
+  </div>
+  {{#if @accessor}}
+    <code class="has-text-grey is-size-8" data-test-linkable-item-accessor>
+      {{@accessor}}
+    </code>
+  {{/if}}
+
+  {{#if @description}}
+    <ReadMore data-test-linkable-item-description>
+      {{@description}}
+    </ReadMore> 
+  {{/if}}
+
+  {{yield}}
 </div>
