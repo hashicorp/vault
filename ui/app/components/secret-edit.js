@@ -247,7 +247,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     let key = secretData.get('path') || secret.id;
 
     if (key.startsWith('/')) {
-      g;
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
