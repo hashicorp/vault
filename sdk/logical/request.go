@@ -348,17 +348,17 @@ type Operation string
 const (
 	// The operations below are called per path
 	CreateOperation         Operation = "create"
-	ReadOperation                     = "read"
-	UpdateOperation                   = "update"
-	DeleteOperation                   = "delete"
-	ListOperation                     = "list"
-	HelpOperation                     = "help"
-	AliasLookaheadOperation           = "alias-lookahead"
+	ReadOperation           Operation = "read"
+	UpdateOperation         Operation = "update"
+	DeleteOperation         Operation = "delete"
+	ListOperation           Operation = "list"
+	HelpOperation           Operation = "help"
+	AliasLookaheadOperation Operation = "alias-lookahead"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
-	RenewOperation              = "renew"
-	RollbackOperation           = "rollback"
+	RenewOperation    Operation = "renew"
+	RollbackOperation Operation = "rollback"
 )
 
 type MFACreds map[string][]string
