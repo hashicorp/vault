@@ -1,0 +1,3 @@
+```release-note:bug
+auth/aws: Fix a bug where the Token TTL for AWS is not capped by Default Lease TTL.
+```
