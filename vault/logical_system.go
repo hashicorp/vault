@@ -186,12 +186,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
-	// If the node is in a DR secondary cluster, we need to allow the ability to
-	// remove a Raft peer without being authenticated by instead providing a DR
-	// operation token.
+	// If the node is in a DR secondary cluster, gate some raft operations by
+	// the DR operation token.
 	if core.IsDRSecondary() {
-		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/state")
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
