@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"log"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
@@ -150,6 +152,10 @@ type Telemetry struct {
 
 	// Whether or not telemetry should add labels for namespaces
 	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
+
+	// PrefixFilter is a list of filter rules to apply for allowing
+	// or blocking metrics by prefix.
+	PrefixFilter []string `hcl:"prefix_filter"`
 }
 
 func (t *Telemetry) Validate(source string) []ConfigError {
@@ -388,5 +394,29 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper.TelemetryConsts.LeaseMetricsNameSpaceLabels = opts.Config.LeaseMetricsNameSpaceLabels
 	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
 
+	// Parse the metric filters
+	telemetryAllowedPrefixes, telemetryBlockedPrefixes := parsePrefixFilter(opts.Config.PrefixFilter)
+
+	metrics.UpdateFilter(telemetryAllowedPrefixes, telemetryBlockedPrefixes)
 	return inm, wrapper, prometheusEnabled, nil
+}
+
+func parsePrefixFilter(prefixFilters []string) ([]string, []string) {
+	var telemetryAllowedPrefixes, telemetryBlockedPrefixes []string
+
+	for _, rule := range prefixFilters {
+		if rule == "" {
+			log.Print("Cannot have empty filter rule in prefix_filter")
+			continue
+		}
+		switch rule[0] {
+		case '+':
+			telemetryAllowedPrefixes = append(telemetryAllowedPrefixes, rule[1:])
+		case '-':
+			telemetryBlockedPrefixes = append(telemetryBlockedPrefixes, rule[1:])
+		default:
+			log.Printf("Filter rule must begin with either '+' or '-': %q", rule)
+		}
+	}
+	return telemetryAllowedPrefixes, telemetryBlockedPrefixes
 }
