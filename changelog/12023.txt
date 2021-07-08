@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/gcp: Adds ability to use existing service accounts for generation of service account keys and access tokens.
+```
