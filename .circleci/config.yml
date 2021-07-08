@@ -251,7 +251,7 @@ jobs:
         - .buildcache/packages/store
   install-ui-dependencies:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
@@ -565,7 +565,7 @@ jobs:
         - .buildcache/packages/store
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: xlarge
@@ -696,7 +696,7 @@ jobs:
         - .buildcache/packages/store
   test-ui-browserstack:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:12-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: xlarge
