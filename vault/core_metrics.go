@@ -323,7 +323,7 @@ func (c *Core) findKvMounts() []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
-		if entry.Type == "kv" {
+		if entry.Type == "kv" || entry.Type == "generic" {
 			version, ok := entry.Options["version"]
 			if !ok {
 				version = "1"
