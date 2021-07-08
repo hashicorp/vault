@@ -10,10 +10,10 @@ import (
 	"github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/lib/pq"
 )
 
@@ -31,6 +31,7 @@ ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
 	defaultRotateRootCredentialsSQL = `
 ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 `
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 63 | lowercase }}`
 )
 
 var _ dbplugin.Database = (*RedShift)(nil)
@@ -58,6 +59,8 @@ func newRedshift() *RedShift {
 
 type RedShift struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func (r *RedShift) secretValues() map[string]string {
@@ -76,6 +79,25 @@ func (r *RedShift) Initialize(ctx context.Context, req dbplugin.InitializeReques
 	conf, err := r.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
+	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	r.usernameProducer = up
+
+	_, err = r.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
 	return dbplugin.InitializeResponse{
@@ -105,15 +127,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 	r.Lock()
 	defer r.Unlock()
 
-	usernameOpts := []credsutil.UsernameOpt{
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 8),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 8),
-		credsutil.MaxLength(63),
-		credsutil.Separator("-"),
-		credsutil.ToLower(),
-	}
-
-	username, err := credsutil.GenerateUsername(usernameOpts...)
+	username, err := r.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
