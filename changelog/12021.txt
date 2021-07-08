@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Upgrade UI node dependency
+```
