@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
@@ -762,13 +763,109 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 
 	if resp.Data["ttl"].(int64) != 10 {
-		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
+		t.Fatalf("bad: ttl; expected: 10, actual: %d", resp.Data["ttl"])
 	}
 	if resp.Data["max_ttl"].(int64) != 20 {
-		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
+		t.Fatalf("bad: max_ttl; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
 	if resp.Data["period"].(int64) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
+	}
+}
+
+func TestAwsIam_RoleDurationSeconds(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"auth_type":               "iam",
+		"bound_iam_principal_arn": "arn:aws:iam::123456789012:role/testrole",
+		"resolve_aws_unique_ids":  false,
+		"ttl":                     "20m",
+		"max_ttl":                 "30m",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Path:      "role/testrole",
+		Data:      roleData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	// since default lease TTL for system is 24hr, Token TTL should not be capped
+	// since max lease TTL for system is 48hr, Token Max TTL should not be capped
+	if resp.Data["token_ttl"].(int64) != 1200 {
+		t.Fatalf("bad: token_ttl; expected: 1200, actual: %d", resp.Data["ttl"])
+	}
+	if resp.Data["max_ttl"].(int64) != 1800 {
+		t.Fatalf("bad: max_ttl; expected: 1800, actual: %d", resp.Data["max_ttl"])
+	}
+
+	// set default lease TTL to 10m; Token TTL should be capped at 10m
+	// set max lease TTL to 20m; Token Max TTL should be capped at 20m
+	config = &logical.BackendConfig{
+		Logger: logging.NewVaultLogger(hclog.Trace),
+
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: time.Minute * 10,
+			MaxLeaseTTLVal:     time.Minute * 20,
+		},
+		StorageView: &logical.InmemStorage{},
+	}
+
+	b, err = Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleReq.Operation = logical.CreateOperation
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	if resp.Data["token_ttl"].(int64) != 600 {
+		t.Fatalf("bad: token_ttl; expected: 600, actual: %d", resp.Data["ttl"])
+	}
+
+	if resp.Data["token_max_ttl"].(int64) != 1200 {
+		t.Fatalf("bad: token_max_ttl; expected: 1200, actual: %d", resp.Data["ttl"])
 	}
 }
 

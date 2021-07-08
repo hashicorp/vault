@@ -892,9 +892,11 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	defaultLeaseTTL := b.System().DefaultLeaseTTL()
 	systemMaxTTL := b.System().MaxLeaseTTL()
 	if roleEntry.TokenTTL > defaultLeaseTTL {
+		roleEntry.TokenTTL = defaultLeaseTTL
 		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time", roleEntry.TokenTTL/time.Second, defaultLeaseTTL/time.Second))
 	}
 	if roleEntry.TokenMaxTTL > systemMaxTTL {
+		roleEntry.TokenMaxTTL = systemMaxTTL
 		resp.AddWarning(fmt.Sprintf("Given max ttl of %d seconds greater than current mount/system default of %d seconds; max ttl will be capped at login time", roleEntry.TokenMaxTTL/time.Second, systemMaxTTL/time.Second))
 	}
 	if roleEntry.TokenMaxTTL != 0 && roleEntry.TokenMaxTTL < roleEntry.TokenTTL {
