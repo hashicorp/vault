@@ -153,6 +153,10 @@ type Telemetry struct {
 	// Whether or not telemetry should add labels for namespaces
 	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
 
+	// FilterDefault is the default for whether to allow a metric that's not
+	// covered by the prefix filter.
+	FilterDefault *bool `hcl:"filter_default"`
+
 	// PrefixFilter is a list of filter rules to apply for allowing
 	// or blocking metrics by prefix.
 	PrefixFilter []string `hcl:"prefix_filter"`
@@ -265,6 +269,9 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	metricsConf := metrics.DefaultConfig(opts.ServiceName)
 	metricsConf.EnableHostname = !opts.Config.DisableHostname
 	metricsConf.EnableHostnameLabel = opts.Config.EnableHostnameLabel
+	if opts.Config.FilterDefault != nil {
+		metricsConf.FilterDefault = *opts.Config.FilterDefault
+	}
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink

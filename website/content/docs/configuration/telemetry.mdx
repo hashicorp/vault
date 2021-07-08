@@ -51,6 +51,17 @@ The following options are available on all telemetry configurations.
 - `add_lease_metrics_namespace_labels` `(bool: false)` - If this value is set to true, then `vault.expire.leases.by_expiration`
   will break down expiring leases by both time and namespace. This parameter is disabled by default because enabling it can lead
   to a large-cardinality metric.
+- `filter_default` - This controls whether to allow metrics that have not been specified by the filter.
+  Defaults to `true`, which will allow all metrics when no filters are provided.
+  When set to `false` with no filters, no metrics will be sent.
+- `prefix_filter` `(string array: [])` - This is a list of filter rules to apply for allowing/blocking metrics by
+  prefix in the following format:
+  ```json
+  ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
+  ```
+  A leading "**+**" will enable any metrics with the given prefix, and a leading "**-**" will block them. 
+  If there is overlap between two rules, the more specific rule will take precedence. Blocking will take priority if the same prefix is listed multiple times.
+
 
 ### `statsite`
 
