@@ -24,12 +24,12 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
     vault write auth/approle/role/role1 bind_secret_id=true token_policies=demo
     ```
 
-  * To get the values required for files `/vault/config/roleID` and
-    `/vault/config/secretID` referenced in the config below, you could then run:
+  * To get the files required for the example Agent config below, you can then
+    run:
 
     ```bash
-    roleID=$(vault read -format json auth/approle/role/role1/role-id | jq -r '.data.role_id')
-    secretID=$(vault write -format json -f auth/approle/role/role1/secret-id | jq -r '.data.secret_id')
+    echo -n $(vault read -format json auth/approle/role/role1/role-id | jq -r '.data.role_id') > /path/to/roleID
+    echo -n $(vault write -format json -f auth/approle/role/role1/secret-id | jq -r '.data.secret_id') > /path/to/secretID
     ```
 
 * Create an `agent.hcl` config file. Your exact configuration may vary, but you
@@ -39,7 +39,9 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
   ```
   listener "tcp" {
     address = "127.0.0.1:8200"
-    tls_disable = true
+    tls_disable = false
+    tls_cert_file = "/path/to/cert.pem"
+    tls_key_file = "/path/to/key.pem"
   }
 
   cache {
@@ -54,8 +56,8 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
       method {
           type = "approle"
           config = {
-              role_id_file_path = "/vault/config/roleID"
-              secret_id_file_path = "/vault/config/secretID"
+              role_id_file_path = "/path/to/roleID"
+              secret_id_file_path = "/path/to/secretID"
           }
       }
   }
@@ -74,8 +76,9 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
 * Navigate to "MID server - Properties" -> New
   * Set Name: `mid.external_credentials.vault.address`, Value: Address of Vault
     Agent listener from previous step, e.g. `http://127.0.0.1:8200`
-  * **Optional:** Set another property `mid.external_credentials.vault.ca` if
-    using TLS between the MID server and Vault Agent
+  * **Optional:** Set the property `mid.external_credentials.vault.ca` to the
+    the trusted CA in PEM format if using TLS between the MID server and Vault
+    Agent with a self-signed certificate.
 
 ## Configuring discovery credentials
 
