@@ -61,7 +61,7 @@ require (
 	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
-	github.com/hashicorp/go-gcp-common v0.6.0
+	github.com/hashicorp/go-gcp-common v0.7.0
 	github.com/hashicorp/go-hclog v0.16.1
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
@@ -81,29 +81,29 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.3
 	github.com/hashicorp/serf v0.9.5 // indirect
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.8.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.7.2
-	github.com/hashicorp/vault-plugin-auth-centrify v0.8.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.8.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.9.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.9.4
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.3.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.9.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.7.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.3.0
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.9.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.8.0
+	github.com/hashicorp/vault-plugin-auth-centrify v0.9.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.9.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.10.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.4.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.2.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.10.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.9.1
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.1
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.8.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.3.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.2.0
 	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
 	github.com/hashicorp/vault/sdk v0.2.0
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
