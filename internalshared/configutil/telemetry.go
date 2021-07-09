@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
@@ -402,19 +401,22 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
 
 	// Parse the metric filters
-	telemetryAllowedPrefixes, telemetryBlockedPrefixes := parsePrefixFilter(opts.Config.PrefixFilter)
+	telemetryAllowedPrefixes, telemetryBlockedPrefixes, err := parsePrefixFilter(opts.Config.PrefixFilter)
+
+	if err != nil {
+		return nil, nil, false, err
+	}
 
 	metrics.UpdateFilter(telemetryAllowedPrefixes, telemetryBlockedPrefixes)
 	return inm, wrapper, prometheusEnabled, nil
 }
 
-func parsePrefixFilter(prefixFilters []string) ([]string, []string) {
+func parsePrefixFilter(prefixFilters []string) ([]string, []string, error) {
 	var telemetryAllowedPrefixes, telemetryBlockedPrefixes []string
 
 	for _, rule := range prefixFilters {
 		if rule == "" {
-			log.Print("Cannot have empty filter rule in prefix_filter")
-			continue
+			return nil, nil, fmt.Errorf("Cannot have empty filter rule in prefix_filter")
 		}
 		switch rule[0] {
 		case '+':
@@ -422,8 +424,8 @@ func parsePrefixFilter(prefixFilters []string) ([]string, []string) {
 		case '-':
 			telemetryBlockedPrefixes = append(telemetryBlockedPrefixes, rule[1:])
 		default:
-			log.Printf("Filter rule must begin with either '+' or '-': %q", rule)
+			return nil, nil, fmt.Errorf("Filter rule must begin with either '+' or '-': %q", rule)
 		}
 	}
-	return telemetryAllowedPrefixes, telemetryBlockedPrefixes
+	return telemetryAllowedPrefixes, telemetryBlockedPrefixes, nil
 }

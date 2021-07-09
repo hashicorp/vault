@@ -7,13 +7,46 @@ import (
 )
 
 func TestParsePrefixFilters(t *testing.T) {
-	prefixFilters := []string{"", "+vault.abc", "-vault.abc", "vault.abc"}
+	t.Parallel()
+	cases := []struct {
+		inputFilters            []string
+		expectedErrStr          string
+		expectedAllowedPrefixes []string
+		expectedBlockedPrefixes []string
+	}{
+		{
+			[]string{""},
+			"Cannot have empty filter rule in prefix_filter",
+			[]string(nil),
+			[]string(nil),
+		},
+		{
+			[]string{"vault.abc"},
+			"Filter rule must begin with either '+' or '-': \"vault.abc\"",
+			[]string(nil),
+			[]string(nil),
+		},
+		{
+			[]string{"+vault.abc", "-vault.bcd"},
+			"",
+			[]string{"vault.abc"},
+			[]string{"vault.bcd"},
+		},
+	}
+	t.Run("validate metric filter configs", func(t *testing.T) {
+		t.Parallel()
 
-	allowedPrefixes, blockedPrefixes := parsePrefixFilter(prefixFilters)
+		for _, tc := range cases {
 
-	assert.Equal(t, len(allowedPrefixes), 1)
-	assert.Equal(t, allowedPrefixes[0], prefixFilters[1][1:])
+			allowedPrefixes, blockedPrefixes, err := parsePrefixFilter(tc.inputFilters)
 
-	assert.Equal(t, len(blockedPrefixes), 1)
-	assert.Equal(t, blockedPrefixes[0], prefixFilters[2][1:])
+			if err != nil {
+				assert.EqualError(t, err, tc.expectedErrStr)
+			} else {
+				assert.Equal(t, tc.expectedAllowedPrefixes, allowedPrefixes)
+
+				assert.Equal(t, tc.expectedBlockedPrefixes, blockedPrefixes)
+			}
+		}
+	})
 }
