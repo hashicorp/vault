@@ -15,8 +15,9 @@ export default Route.extend(ModelBoundaryRoute, {
     return ['secret', 'secret-engine'];
   }),
 
-  beforeModel() {
-    let authType = this.auth.getAuthType();
+  async beforeModel() {
+    const authType = this.auth.getAuthType();
+    const baseUrl = window.location.origin;
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
@@ -24,6 +25,6 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
-    this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
+    location.assign(`${baseUrl}/ui/vault/auth?with=${authType}`);
   },
 });
