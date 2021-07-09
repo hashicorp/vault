@@ -44,6 +44,11 @@ type secretIDStorageEntry struct {
 	// The time representing the last time this storage entry was modified
 	LastUpdatedTime time.Time `json:"last_updated_time" mapstructure:"last_updated_time"`
 
+	// Alias that belongs to the SecretID, to identify the user of the secret id
+	// when registering the identity alias. The metadata of the latest authenticated
+	// secret ID with the same alias will win when using templates.
+	Alias string `json:"alias" mapstructure:"alias"`
+
 	// Metadata that belongs to the SecretID
 	Metadata map[string]string `json:"metadata" mapstructure:"metadata"`
 

@@ -463,10 +463,18 @@ to 0, meaning no expiration.`,
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
+				"alias": {
+					Type: framework.TypeString,
+					Description: `Label to be tied to the secret ID. This should be a string uniquely identifier the
+secret ID user, in the sense that different secret IDs with the same label are
+identified as the same identity alias.`,
+				},
 				"metadata": {
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
-formatted string containing the metadata in key value pairs.`,
+formatted string containing the metadata in key value pairs. If tokens of
+multiple secret IDs with the same alias coexist, the metadata of the latest
+authenticated secret ID will be used in templates for all those tokens.`,
 				},
 				"cidr_list": {
 					Type: framework.TypeCommaStringSlice,
@@ -572,10 +580,18 @@ the role.`,
 					Type:        framework.TypeString,
 					Description: "SecretID to be attached to the role.",
 				},
+				"alias": {
+					Type: framework.TypeString,
+					Description: `Label to be tied to the secret ID. This should be a string uniquely identifier the
+secret ID user, in the sense that different secret IDs with the same label are
+identified as the same identity alias.`,
+				},
 				"metadata": {
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
-formatted string containing metadata in key value pairs.`,
+formatted string containing the metadata in key value pairs. If tokens of
+multiple secret IDs with the same alias coexist, the metadata of the latest
+authenticated secret ID will be used in templates for all those tokens.`,
 				},
 				"cidr_list": {
 					Type: framework.TypeCommaStringSlice,
@@ -1193,6 +1209,7 @@ func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
 		"creation_time":      entry.CreationTime,
 		"expiration_time":    entry.ExpirationTime,
 		"last_updated_time":  entry.LastUpdatedTime,
+		"alias":              entry.Alias,
 		"metadata":           entry.Metadata,
 		"cidr_list":          entry.CIDRList,
 		"token_bound_cidrs":  entry.TokenBoundCIDRs,
@@ -2348,6 +2365,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	secretIDStorage := &secretIDStorageEntry{
 		SecretIDNumUses: role.SecretIDNumUses,
 		SecretIDTTL:     role.SecretIDTTL,
+		Alias:           data.Get("alias").(string),
 		Metadata:        make(map[string]string),
 		CIDRList:        secretIDCIDRs,
 		TokenBoundCIDRs: secretIDTokenCIDRs,
