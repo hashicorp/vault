@@ -1610,8 +1610,12 @@
             "path": "enterprise/license"
           },
           {
-            "title": "FAQs",
-            "path": "enterprise/license/faqs"
+            "title": "Autoloading",
+            "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "FAQ",
+            "path": "enterprise/license/faq"
           }
         ]
       },
