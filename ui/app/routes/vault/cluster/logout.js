@@ -15,7 +15,7 @@ export default Route.extend(ModelBoundaryRoute, {
     return ['secret', 'secret-engine'];
   }),
 
-  async beforeModel() {
+  beforeModel() {
     const authType = this.auth.getAuthType();
     const baseUrl = window.location.origin;
     this.auth.deleteCurrentToken();
