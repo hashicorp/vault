@@ -1,0 +1,3 @@
+```release-note:feature
+auth/approle: Adds ability to set identity aliases on secret_ids to distinguish different sets of metadata in templates.
+```
