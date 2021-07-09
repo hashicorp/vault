@@ -65,6 +65,8 @@ export default Component.extend({
    */
   attr: null,
 
+  mode: null,
+
   /*
    * @private
    * @param string
@@ -92,6 +94,11 @@ export default Component.extend({
    *
    */
   valuePath: or('attr.options.fieldValue', 'attr.name'),
+
+  isReadOnly: computed('attr.options.readOnly', 'mode', function() {
+    let readonly = this.attr.options ? this.attr.options.readOnly : false;
+    return readonly && this.mode === 'edit';
+  }),
 
   model: null,
 
