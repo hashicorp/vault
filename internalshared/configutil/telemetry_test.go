@@ -43,6 +43,7 @@ func TestParsePrefixFilters(t *testing.T) {
 			if err != nil {
 				assert.EqualError(t, err, tc.expectedErrStr)
 			} else {
+				assert.Equal(t, "", tc.expectedErrStr)
 				assert.Equal(t, tc.expectedAllowedPrefixes, allowedPrefixes)
 
 				assert.Equal(t, tc.expectedBlockedPrefixes, blockedPrefixes)
