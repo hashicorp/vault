@@ -37,8 +37,7 @@ uses that driver to interact with the database.
   connection string URLs, see the examples section below.
 
 - `table` `(string: "vault_kv_store")` – Specifies the name of the table in
-  which to write Vault data. This table must already exist (Vault will not
-  attempt to create it).
+  which to write Vault data. If this table does not exist Vault will attempt to create it.
 
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to CockroachDB.
