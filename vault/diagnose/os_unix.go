@@ -10,10 +10,10 @@ import (
 )
 
 func OSChecks(ctx context.Context) {
-	ctx, span := StartSpan(ctx, "Operating System")
+	ctx, span := StartSpan(ctx, "Check Operating System")
 	defer span.End()
 
-	fileLimitsName := "Open File Limits"
+	fileLimitsName := "Check Open File Limits"
 
 	var limit unix.Rlimit
 	if err := unix.Getrlimit(unix.RLIMIT_NOFILE, &limit); err != nil {
