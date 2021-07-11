@@ -26,7 +26,7 @@ partLoop:
 			}
 		}
 		usage, err := disk.Usage(partition.Mountpoint)
-		testName := "Disk Usage"
+		testName := "Check Disk Usage"
 		if err != nil {
 			Warn(ctx, fmt.Sprintf("Could not obtain partition usage for %s: %v.", partition.Mountpoint, err))
 		} else {

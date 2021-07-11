@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -154,9 +155,22 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
+	st, err := os.Stat(dbPath)
+	switch {
+	case err != nil && os.IsNotExist(err):
+	case err != nil:
+		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
+	default:
+		perms := st.Mode() & os.ModePerm
+		if perms&0o077 != 0 {
+			f.logger.Warn("raft FSM db file has wider permissions than needed",
+				"needed", os.FileMode(0o600), "existing", perms)
+		}
+	}
+
 	freelistType, noFreelistSync := freelistOptions()
 	start := time.Now()
-	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{
+	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{
 		Timeout:        1 * time.Second,
 		FreelistType:   freelistType,
 		NoFreelistSync: noFreelistSync,

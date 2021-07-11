@@ -202,9 +202,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
 
-      this.secretPaths.includes(value)
-        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
-        : set(this.validationMessages, name, '');
+      // only check duplicate on path not on the key
+      if (name === 'path') {
+        this.secretPaths?.includes(value)
+          ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
+          : set(this.validationMessages, name, '');
+      }
     }
     if (name === 'maxVersions') {
       // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
@@ -246,13 +249,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
-    }
-
-    if (this.mode === 'create') {
-      key = JSON.stringify({
-        backend: secret.backend,
-        id: key,
-      });
     }
 
     return secretData
@@ -376,14 +372,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         return;
       }
 
-      this.persistKey(key => {
-        let secretKey;
-        try {
-          secretKey = JSON.parse(key).id;
-        } catch (error) {
-          secretKey = key;
-        }
-        this.transitionToRoute(SHOW_ROUTE, secretKey);
+      this.persistKey(() => {
+        this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
 

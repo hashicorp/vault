@@ -251,7 +251,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var metricsHelper *metricsutil.MetricsHelper
 
 	var backend *physical.Backend
-	diagnose.Test(ctx, "Storage", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Check Storage", func(ctx context.Context) error {
 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
@@ -284,7 +284,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			if path == "" {
 				path, ok := config.Storage.Config["path"]
 				if !ok {
-					diagnose.SpotError(ctx, "Raft Folder Permission Checks", fmt.Errorf("Storage folder path is required."))
+					diagnose.SpotError(ctx, "Check Raft Folder Permissions", fmt.Errorf("Storage folder path is required."))
 				}
 				diagnose.RaftFileChecks(ctx, path)
 			}
@@ -293,7 +293,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Consul storage checks
 		if config.Storage != nil && config.Storage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "Consul TLS Checks", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Check Consul TLS", func(ctx context.Context) error {
 				err := physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.Storage.Config, server.logger, true)
 				if err != nil {
 					return err
@@ -301,7 +301,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				return nil
 			})
 
-			diagnose.Test(ctx, "Consul Storage Direct Server Access", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Check Consul Direct Storage Access", func(ctx context.Context) error {
 				dirAccess := diagnose.ConsulDirectAccess(config.Storage.Config)
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
@@ -315,7 +315,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// Attempt to use storage backend
 		if !c.skipEndEnd && config.Storage.Type != storageTypeRaft {
-			diagnose.Test(ctx, "Access Storage", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+			diagnose.Test(ctx, "Check Storage Access", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 				maxDurationCrudOperation := "write"
 				maxDuration := time.Duration(0)
 				uuidSuffix, err := uuid.GenerateUUID()
@@ -360,14 +360,14 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	}
 
 	var configSR sr.ServiceRegistration
-	diagnose.Test(ctx, "Service Discovery", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Check Service Discovery", func(ctx context.Context) error {
 		if config.ServiceRegistration == nil || config.ServiceRegistration.Config == nil {
 			diagnose.Skipped(ctx, "No service registration configured.")
 			return nil
 		}
 		srConfig := config.ServiceRegistration.Config
 
-		diagnose.Test(ctx, "Consul Service Discovery TLS Checks", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Check Consul Service Discovery TLS", func(ctx context.Context) error {
 			// SetupSecureTLS for service discovery uses the same cert and key to set up physical
 			// storage. See the consul package in physical for details.
 			err := srconsul.SetupSecureTLS(ctx, api.DefaultConfig(), srConfig, server.logger, true)
@@ -378,7 +378,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		})
 
 		if config.ServiceRegistration != nil && config.ServiceRegistration.Type == "consul" {
-			diagnose.Test(ctx, "Consul Service Discovery Direct Server Access Checks", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Check Consul Direct Service Discovery", func(ctx context.Context) error {
 				dirAccess := diagnose.ConsulDirectAccess(config.ServiceRegistration.Config)
 				if dirAccess != "" {
 					diagnose.Warn(ctx, dirAccess)
@@ -414,7 +414,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
 				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType())
-				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, sealType+" Seal Finalization")
+				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
 				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
 					diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
@@ -433,7 +433,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 SEALFAIL:
 	sealspan.End()
 
-	diagnose.Test(ctx, "Transit Seal TLS Checks", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Check Transit Seal TLS", func(ctx context.Context) error {
 		var checkSealTransit bool
 		for _, seal := range config.Seals {
 			if seal.Type == "transit" {
@@ -509,7 +509,7 @@ SEALFAIL:
 			return nil
 		})
 
-		diagnose.Test(ctx, "Consul HA Storage Direct Server Access", func(ctx context.Context) error {
+		diagnose.Test(ctx, "Check HA Consul Direct Storage Access", func(ctx context.Context) error {
 			if config.HAStorage == nil {
 				diagnose.Skipped(ctx, "No HA storage stanza is configured.")
 			} else {
@@ -524,7 +524,7 @@ SEALFAIL:
 			return nil
 		})
 		if config.HAStorage != nil && config.HAStorage.Type == storageTypeConsul {
-			diagnose.Test(ctx, "Consul TLS Checks", func(ctx context.Context) error {
+			diagnose.Test(ctx, "Check Consul TLS", func(ctx context.Context) error {
 				err = physconsul.SetupSecureTLS(ctx, api.DefaultConfig(), config.HAStorage.Config, server.logger, true)
 				if err != nil {
 					return err
@@ -545,16 +545,16 @@ SEALFAIL:
 	err = findClusterAddress(server, &coreConfig, config, disableClustering)
 	if err != nil {
 		diagnose.Advise(ctx, "Please check that the API and Cluster addresses are different, and that the API, Cluster and Redirect addresses have both a host and port.")
-		return diagnose.SpotError(ctx, "Cluster Address Checks", fmt.Errorf("Cluster Address could not be determined or was invalid: %w.", err))
+		return diagnose.SpotError(ctx, "Check Cluster Address", fmt.Errorf("Cluster Address could not be determined or was invalid: %w.", err))
 	}
-	diagnose.SpotOk(ctx, "Cluster Address Checks", "Cluster address is logically valid and can be found.")
+	diagnose.SpotOk(ctx, "Check Cluster Address", "Cluster address is logically valid and can be found.")
 
 	var vaultCore *vault.Core
 
 	// Run all the checks that are utilized when initializing a core object
 	// without actually calling core.Init. These are in the init-core section
 	// as they are runtime checks.
-	diagnose.Test(ctx, "Core Creation Checks", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Check Core Creation", func(ctx context.Context) error {
 		var newCoreError error
 		if coreConfig.RawConfig == nil {
 			return fmt.Errorf(CoreConfigUninitializedErr)
@@ -576,7 +576,7 @@ SEALFAIL:
 		return fmt.Errorf("Diagnose could not initialize the Vault core from the Vault server configuration.")
 	}
 
-	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "Autoloaded License Checks")
+	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "Check For Autoloaded License")
 	// If we are not in enterprise, return from the check
 	if !constants.IsEnterprise {
 		diagnose.Skipped(licenseCtx, "License check will not run on OSS Vault.")
@@ -629,7 +629,7 @@ SEALFAIL:
 
 	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
 	// decrypt a mock value. It will not call runUnseal.
-	diagnose.Test(ctx, "Barrier Encryption Checks", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+	diagnose.Test(ctx, "Check Barrier Encryption", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 		if barrierWrapper == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
@@ -658,7 +658,7 @@ SEALFAIL:
 	// checks during resource creation. Currently there is nothing important in this
 	// diagnose check. For now it is a placeholder for any checks that will be done
 	// before server run.
-	diagnose.Test(ctx, "Server Runtime Checks", func(ctx context.Context) error {
+	diagnose.Test(ctx, "Check Server Before Runtime", func(ctx context.Context) error {
 		for _, ln := range lns {
 			if ln.Config == nil {
 				return fmt.Errorf("Found no listener config after parsing the Vault configuration.")

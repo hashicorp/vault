@@ -16,9 +16,13 @@
         @mode={{if @item.isFolder "list" "show" }}
         @secret={{@item.id}}
         @queryParams={{if (eq @backendModel.type "transit") (query-params tab="actions") ""}}
-        @class="has-text-black has-text-weight-semibold"><Icon
-          @glyph={{if @item.isFolder 'folder-outline' 'file-outline' }}
-          @class="has-text-grey-light"/>{{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
+        @class="has-text-black has-text-weight-semibold">
+          {{#if (eq @backendModel.type "transit")}}
+            <Icon @glyph="key" @class="has-text-grey-light"/>
+          {{else}}
+            <Icon @glyph={{if @item.isFolder 'folder-outline' 'file-outline' }} @class="has-text-grey-light"/>
+          {{/if}}
+        {{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
       </SecretLink>
     </div>
     <div class="column has-text-right">

@@ -21,7 +21,7 @@ const maxVersionError = "'tls_max_version' value %q not supported, please specif
 // ListenerChecks diagnoses warnings and the first encountered error for the listener
 // configuration stanzas.
 func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]string, []error) {
-	testName := "Listener TLS Checks"
+	testName := "Check Listener TLS"
 	ctx, span := StartSpan(ctx, testName)
 	defer span.End()
 

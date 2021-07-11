@@ -16,9 +16,9 @@ const owner = "owner"
 const group = "group"
 const other = "other"
 
-const ownershipTestName = "Raft Folder Ownership Checks"
-const permissionsTestName = "Raft Folder Permission Checks"
-const raftQuorumTestName = "Raft Quorum Checks"
+const ownershipTestName = "Check Raft Folder Ownership"
+const permissionsTestName = "Check Raft Folder Permissions"
+const raftQuorumTestName = "Check For Raft Quorum"
 
 func RaftFileChecks(ctx context.Context, path string) {
 
