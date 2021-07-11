@@ -78,19 +78,19 @@ func TestRaftStorageQuorum(t *testing.T) {
 	m.raftServerQuorumType = 0
 	twoVoterCluster := RaftStorageQuorum(context.Background(), m)
 
-	if !strings.Contains(twoVoterCluster, "error") {
+	if !strings.Contains(twoVoterCluster, "Please ensure that Vault has access to an odd number of voter nodes.") {
 		t.Fatalf("two voter cluster yielded wrong error: %+s", twoVoterCluster)
 	}
 
 	m.raftServerQuorumType = 1
 	threeVoterCluster := RaftStorageQuorum(context.Background(), m)
-	if !strings.Contains(threeVoterCluster, "voter quorum exists") {
+	if !strings.Contains(threeVoterCluster, "Voter quorum exists") {
 		t.Fatalf("three voter cluster yielded incorrect error: %s", threeVoterCluster)
 	}
 
 	m.raftServerQuorumType = 2
 	threeNodeTwoVoterCluster := RaftStorageQuorum(context.Background(), m)
-	if !strings.Contains(threeNodeTwoVoterCluster, "error") {
+	if !strings.Contains(threeNodeTwoVoterCluster, "Please ensure that Vault has access to an odd number of voter nodes.") {
 		t.Fatalf("two voter cluster yielded wrong error: %+s", threeNodeTwoVoterCluster)
 	}
 
