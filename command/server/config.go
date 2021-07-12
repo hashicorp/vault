@@ -88,17 +88,10 @@ const (
 	sectionSeal = "Seal"
 )
 
-
 func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
 	if c.Telemetry != nil {
 		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
-	}
-	if c.Storage != nil {
-		results = append(results, c.Storage.Validate(sourceFilePath)...)
-	}
-	if c.HAStorage != nil {
-		results = append(results, c.HAStorage.Validate(sourceFilePath)...)
 	}
 	if c.ServiceRegistration != nil {
 		results = append(results, c.ServiceRegistration.Validate(sourceFilePath)...)
@@ -149,7 +142,6 @@ ui = true
 
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
-	UnusedKeys        configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -161,15 +153,11 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
-func (b *Storage) Validate(source string) []configutil.ConfigError {
-	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
-}
-
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
-	UnusedKeys        configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
-	Type   string
-	Config map[string]string
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	Type       string
+	Config     map[string]string
 }
 
 func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
