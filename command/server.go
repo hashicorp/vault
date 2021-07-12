@@ -1232,6 +1232,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	fmt.Printf("barrier seal is: %v\n", barrierSeal)
+	fmt.Printf("barrier wrapper is: %v\n", barrierWrapper)
+	fmt.Printf("seals is: %v\n", seals)
+
 	if barrierSeal == nil {
 		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
