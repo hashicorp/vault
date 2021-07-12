@@ -87,7 +87,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
     this.set('validationMessages', {
       path: '',
-      key: '',
       maxVersions: '',
     });
     // for validation, return array of path names already assigned
@@ -195,20 +194,18 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   },
 
   checkValidation(name, value) {
-    // because path and key are not on the model performing custom validations instead of cp-validations
-    if (name === 'path' || name === 'key') {
-      // no value indicates missing presence
+    if (name === 'path') {
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
-
-      // only check duplicate on path not on the key
-      if (name === 'path') {
-        this.secretPaths?.includes(value)
-          ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
-          : set(this.validationMessages, name, '');
-      }
     }
+    // check duplicate on path
+    if (name === 'path' && value) {
+      this.secretPaths?.includes(value)
+        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
+        : set(this.validationMessages, name, '');
+    }
+    // check maxVersions is a number
     if (name === 'maxVersions') {
       // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
       if (value) {
@@ -221,9 +218,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         set(this.validationMessages, name, '');
       }
     }
-
     let values = Object.values(this.validationMessages);
-
     this.set('validationErrorCount', values.filter(Boolean).length);
   },
 
@@ -362,13 +357,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     createOrUpdateKey(type, event) {
       event.preventDefault();
       let model = this.modelForData;
-      let arraySecretKeys = Object.keys(model.secretData);
       if (type === 'create' && isBlank(model.path || model.id)) {
         this.checkValidation('path', '');
-        return;
-      }
-      if (arraySecretKeys.includes('')) {
-        this.checkValidation('key', '');
         return;
       }
 
