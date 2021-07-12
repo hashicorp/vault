@@ -1,0 +1,23 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cron
+spec:
+  schedule: "1 1 */28 * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: renew-vault-lease
+            image: "<<Build the image>>"
+            env:
+            - name: RENEW_TOKEN                                 
+              value: ""                       
+            - name: INCREMENT_VALUE
+              value: "740h"
+            - name: ROOT_TOKEN
+              value: ""
+            - name: URL
+              value: "<<URL of vault>>"
+          restartPolicy: OnFailure
