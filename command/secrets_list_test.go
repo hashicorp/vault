@@ -45,6 +45,18 @@ func TestSecretsListCommand_Run(t *testing.T) {
 			"Default TTL",
 			0,
 		},
+		{
+            "valid_type",
+            []string{"-type=kv"},
+            "Path",
+            0,
+		},
+		{
+            "invalid_type",
+            []string{"-type=not-an-engine"},
+            "Invalid value for type: not-an-engine",
+            2,
+        },
 	}
 
 	t.Run("validations", func(t *testing.T) {

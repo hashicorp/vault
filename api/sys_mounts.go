@@ -36,6 +36,27 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 	return mounts, nil
 }
 
+func (c *Sys) ListMountsOfType(engineType string) (map[string]*MountOutput, error) {
+	mounts, err := c.ListMounts()
+
+	if err == nil && engineType != "" {
+	    filteredMounts := map[string]*MountOutput{}
+	    for key, value := range mounts {
+            if value.Type == engineType {
+                filteredMounts[key] = value
+            }
+        }
+
+        if len(filteredMounts) == 0 {
+            return nil, errors.New(fmt.Sprintf("Invalid value for type: %s", engineType))
+        }
+
+        return filteredMounts, err
+	}
+
+	return mounts, err
+}
+
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/mounts/%s", path))
 	if err := r.SetJSONBody(mountInfo); err != nil {
