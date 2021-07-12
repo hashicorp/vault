@@ -218,7 +218,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         set(this.validationMessages, name, '');
       }
     }
+
     let values = Object.values(this.validationMessages);
+
     this.set('validationErrorCount', values.filter(Boolean).length);
   },
 
