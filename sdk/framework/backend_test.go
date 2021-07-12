@@ -240,14 +240,17 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 		},
 	}
 
-	_, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-	if err == nil {
-		t.Fatalf("should have thrown a conversion error")
+	if resp.Data["error"] != "Field validation failed: error converting input 3false3 for field \"value\": cannot parse '' as bool: strconv.ParseBool: parsing \"3false3\": invalid syntax" {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 
