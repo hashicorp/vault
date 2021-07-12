@@ -120,6 +120,11 @@ settings. Like Vault, plugins support [the use of mlock when available](/docs/co
 plugin executable in your [plugins directory](/docs/internals/plugins#plugin-directory) must be
 given the ability to use the `mlock` syscall.
 
+### Plugin Upgrades
+
+Plugins may be updated by registering and reloading them. More details on the
+upgrade procedure can be found in [Upgrading Vault Plugins](/docs/upgrading/plugins).
+
 ### Troubleshooting
 
 #### Unrecognized remote plugin message
