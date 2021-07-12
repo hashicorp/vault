@@ -114,3 +114,20 @@ Upgrading installations of Vault which participate in [Enterprise Replication](/
 - Verify functionality of each secondary instance after upgrading
 - When satisfied with functionality of upgraded secondary instances, upgrade
   the primary instance
+
+Upgrades of multiple replicated clusters can be complicated. Here is an
+example.
+
+![Upgrading multiple replicated clusters](/img/vault-replication-upgrade.png)
+
+In the above scenario, the ideal upgrade procedure would be as follows,
+verifying functionality after each cluster upgrade.
+
+1. Upgrade Clusters B and D, using the HA upgrade process above. These clusters
+   have no downstream clusters, so they should be upgraded first, but the
+   ordering of B vs D does not matter.
+2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
+   Because Cluster C is a cluster, it should also use the HA upgrade process.
+3. Finally, upgrade Cluster A. All clusters downstream of A will already be
+   upgraded. It should be upgraded last, as it is a Performance Primary and a DR
+   Primary.
