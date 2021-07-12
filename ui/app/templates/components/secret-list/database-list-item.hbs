@@ -53,7 +53,7 @@
             {{#if @item.canGenerateCredentials}}
               <li class="action">
                 <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
-                  Generate credentials
+                  {{if (eq @item.type "static") "Get credentials" "Generate credentials"}}
                 </LinkTo>
               </li>
             {{/if}}
