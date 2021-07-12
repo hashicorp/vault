@@ -4,6 +4,10 @@ import { validator, buildValidations } from 'ember-cp-validations';
  * Add validation on dynamic form fields generated via open api spec
  * For fields grouped under default category, add the require/presence validator
  * @param {Array} fieldGroups
+ * fieldGroups param example:
+ * [ { default: [{name: 'username'}, {name: 'password'}] },
+ *   { Tokens: [{name: 'tokenBoundCidrs'}] }
+ * ]
  * @returns ember cp validation class
  */
 export default function initValidations(fieldGroups) {
