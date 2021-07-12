@@ -19,6 +19,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
+var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
+	return nil
+}
+
 // Config is the configuration for the vault server.
 type Config struct {
 	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -84,15 +88,30 @@ const (
 	sectionSeal = "Seal"
 )
 
+
 func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
 	if c.Telemetry != nil {
 		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
-		for _, l := range c.Listeners {
-			results = append(results, l.Validate(sourceFilePath)...)
-		}
 	}
+	if c.Storage != nil {
+		results = append(results, c.Storage.Validate(sourceFilePath)...)
+	}
+	if c.HAStorage != nil {
+		results = append(results, c.HAStorage.Validate(sourceFilePath)...)
+	}
+	if c.ServiceRegistration != nil {
+		results = append(results, c.ServiceRegistration.Validate(sourceFilePath)...)
+	}
+	for _, l := range c.Listeners {
+		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	results = append(results, c.validateEnt(sourceFilePath)...)
 	return results
+}
+
+func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
+	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
