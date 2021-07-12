@@ -73,13 +73,12 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', secretPath);
     await fillIn('[data-test-input="maxVersions"]', maxVersions);
-    await fillIn('[data-test-secret-key]', 'key');
     await click('[data-test-secret-save]');
     await settled();
     await click('[data-test-secret-edit="true"]');
     await settled();
-
-    let savedMaxVersions = document.querySelector('[data-test-input="maxVersions"]').value;
+    // convert to number for IE11 browserstack test
+    let savedMaxVersions = Number(document.querySelector('[data-test-input="maxVersions"]').value);
     assert.equal(
       maxVersions,
       savedMaxVersions,
