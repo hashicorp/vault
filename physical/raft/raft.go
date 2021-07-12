@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	raftwal "github.com/hashicorp/raft-wal"
+
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
@@ -150,6 +152,10 @@ type RaftBackend struct {
 	disableAutopilot bool
 
 	autopilotReconcileInterval time.Duration
+
+	walLogStore raftwal.FileWALLog
+	walArchiver *walArchiver
+	archivePath string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -349,6 +355,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var log raft.LogStore
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
+	var wallog raftwal.FileWALLog
+	var restoreCb localRestoreCallback
+	var rb *RaftBackend
+	var archivePath string
 
 	var devMode bool
 	if devMode {
@@ -364,19 +374,68 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		freelistType, noFreelistSync := freelistOptions()
-		raftOptions := raftboltdb.Options{
-			Path: filepath.Join(path, "raft.db"),
-			BoltOptions: &bolt.Options{
-				FreelistType:   freelistType,
-				NoFreelistSync: noFreelistSync,
-			},
+		var store raft.LogStore
+		switch conf["logstore"] {
+		case "raft-wal":
+			logsDir := filepath.Join(path, "logs")
+			logger.Trace("setting up raft-wal", "dir", logsDir, "nodeID", localID)
+			os.MkdirAll(logsDir, 0o755)
+			//if inpath := conf["seedlogs"]; inpath != "" {
+			//      if _, err := copyDir(logsDir, inpath); err != nil {
+			//              return nil, fmt.Errorf("error seeding raft-wal from %q: %v", inpath, err)
+			//      }
+			//}
+
+			s, err := raftwal.NewWAL(logsDir, raftwal.LogConfig{
+				NoSync:           false,
+				SegmentChunkSize: 16,
+				Logger:           logger.Named("raft-wal"),
+			})
+			if err != nil {
+				return nil, err
+			}
+			if lastindex := conf["lastindex"]; lastindex != "" {
+				//err := s.SetFirstIndex(1)
+				//if err != nil {
+				//      return nil, err
+				//}
+				l, err := strconv.ParseUint(conf["lastindex"], 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				s.SetLastIndex(l)
+			}
+			stable, store, wallog = s, s, s
+
+			restoreCb = func(index uint64) error {
+				rb.l.Lock()
+				defer rb.l.Unlock()
+
+				err := s.SetFirstIndex(index)
+				logger.Trace("restore callback", "index", index, "SetFirstIndexError", err)
+				return err
+			}
+
+			if conf["archive_path"] != "" {
+				archivePath = conf["archive_path"]
+			}
+
+		default:
+			// Create the backend raft store for logs and stable storage.
+			freelistType, noFreelistSync := freelistOptions()
+			raftOptions := raftboltdb.Options{
+				Path: filepath.Join(path, "raft.db"),
+				BoltOptions: &bolt.Options{
+					FreelistType:   freelistType,
+					NoFreelistSync: noFreelistSync,
+				},
+			}
+			s, err := raftboltdb.New(raftOptions)
+			if err != nil {
+				return nil, err
+			}
+			stable, store = s, s
 		}
-		store, err := raftboltdb.New(raftOptions)
-		if err != nil {
-			return nil, err
-		}
-		stable = store
 
 		// Wrap the store in a LogCache to improve performance.
 		cacheStore, err := raft.NewLogCache(raftLogCacheSize, store)
@@ -386,7 +445,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm, restoreCb)
 		if err != nil {
 			return nil, err
 		}
@@ -420,12 +479,13 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		reconcileInterval = interval
 	}
 
-	return &RaftBackend{
+	rb = &RaftBackend{
 		logger:                     logger,
 		fsm:                        fsm,
 		raftInitCh:                 make(chan struct{}),
 		conf:                       conf,
 		logStore:                   log,
+		walLogStore:                wallog,
 		stableStore:                stable,
 		snapStore:                  snap,
 		dataDir:                    path,
@@ -434,7 +494,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize:               maxEntrySize,
 		followerHeartbeatTicker:    time.NewTicker(time.Second),
 		autopilotReconcileInterval: reconcileInterval,
-	}, nil
+		archivePath:                archivePath,
+	}
+	return rb, nil
 }
 
 type snapshotStoreDelay struct {
@@ -478,7 +540,7 @@ func (b *RaftBackend) Close() error {
 		return err
 	}
 
-	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+	if err := b.stableStore.(io.Closer).Close(); err != nil {
 		return err
 	}
 
@@ -930,8 +992,11 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	return nil
 }
 
-// CommittedIndex returns the latest index committed to stable storage
-func (b *RaftBackend) CommittedIndex() uint64 {
+// LocalCommittedIndex returns the latest index committed to stable storage
+// locally.
+// This is not what the raft library means by "committed", which means
+// the index is present in the logs of all leaders (current & future).
+func (b *RaftBackend) LocalCommittedIndex() uint64 {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -940,6 +1005,18 @@ func (b *RaftBackend) CommittedIndex() uint64 {
 	}
 
 	return b.raft.LastIndex()
+}
+
+func (b *RaftBackend) GlobalCommittedIndex() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return 0
+	}
+
+	i, _ := strconv.ParseUint(b.raft.Stats()["commit_index"], 10, 64)
+	return i
 }
 
 // AppliedIndex returns the latest index applied to the FSM
@@ -1340,8 +1417,11 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if uint64(cmdSize) > b.maxEntrySize {
 		return fmt.Errorf("%s; got %d bytes, max: %d bytes", physical.ErrValueTooLarge, cmdSize, b.maxEntrySize)
 	}
+	return b.applyLogBytes(ctx, commandBytes)
+}
 
-	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(cmdSize))
+func (b *RaftBackend) applyLogBytes(ctx context.Context, commandBytes []byte) error {
+	defer metrics.AddSample([]string{"raft-storage", "entry_size"}, float32(len(commandBytes)))
 
 	var chunked bool
 	var applyFuture raft.ApplyFuture
@@ -1424,6 +1504,30 @@ func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
 
 func (b *RaftBackend) DesiredSuffrage() string {
 	return b.fsm.DesiredSuffrage()
+}
+
+func (b *RaftBackend) SetupWALArchiving(ctx context.Context) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	if b.walLogStore == nil {
+		b.logger.Info("not using wal log, so not setting up archiving")
+		return nil
+	}
+	if b.archivePath == "" {
+		b.logger.Info("no archive_path set, so not setting up archiving")
+		return nil
+	}
+
+	w, err := newWALArchiver(b.raft, b.walLogStore, b.logger.Named("walarc"), b.archivePath)
+	if err != nil {
+		return fmt.Errorf("cannot create WAL archiver: %w", err)
+	}
+
+	b.logger.Info("starting WAL archiver")
+	b.walArchiver = w
+	b.walArchiver.Start(ctx)
+	return nil
 }
 
 // RaftLock implements the physical Lock interface and enables HA for this
@@ -1606,4 +1710,127 @@ func freelistOptions() (bolt.FreelistType, bool) {
 	}
 
 	return freelistType, noFreelistSync
+}
+
+type walArchiver struct {
+	raft     *raft.Raft
+	logStore raftwal.FileWALLog
+	logger   log.Logger
+	// TODO this should be a command to run eventually
+	destPath string
+	// TODO we probably want to persist this
+	lastIndexArchived uint64
+}
+
+func newWALArchiver(raft *raft.Raft, logStore raftwal.FileWALLog, logger log.Logger, destPath string) (*walArchiver, error) {
+	if err := os.MkdirAll(destPath, 0o755); err != nil {
+		return nil, err
+	}
+	return &walArchiver{
+		raft:     raft,
+		logStore: logStore,
+		logger:   logger,
+		destPath: destPath,
+	}, nil
+}
+
+func (a walArchiver) Start(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				for a.archive() {
+					// Keep copying WALs until there's an error or there
+					// are none ready to backup
+				}
+			}
+		}
+	}()
+}
+
+// archive attempts to archive any archivable wal log segments.  To be eligible
+// a segment must be sealed (will not receive further log entries) and committed,
+// i.e. the last log index must be raft-committed.
+func (a *walArchiver) archive() bool {
+	comidx, _ := strconv.ParseUint(a.raft.Stats()["commit_index"], 10, 64)
+	if comidx <= a.lastIndexArchived {
+		a.logger.Trace("archive", "index", a.lastIndexArchived, "globcomidx", comidx)
+		return false
+	}
+
+	targetIndex := a.lastIndexArchived + 1
+	segfile, err := a.logStore.GetSealedLogPath(targetIndex)
+	if err != nil {
+		a.logger.Error("GetSealedLogPath", "target", targetIndex, "error", err)
+	}
+	a.logger.Trace("GetSealedLogPath", "target", targetIndex, "segfile", segfile)
+	if segfile == nil {
+		return false
+	}
+
+	upto := a.lastIndexArchived + uint64(segfile.LogCount)
+	a.logger.Trace("archive", "from", a.lastIndexArchived, "upto", upto, "globcomidx", comidx, "entryCount", segfile.LogCount)
+	if upto > comidx {
+		return false
+	}
+
+	a.logger.Info("archiving", "upto", upto)
+	dest := filepath.Join(a.destPath, filepath.Base(segfile.Path))
+	if err := CopyFileSync(dest, segfile.Path); err != nil {
+		a.logger.Error("error archiving %v: %w", segfile.Path, err)
+		return false
+	}
+
+	// TODO persist this
+	a.lastIndexArchived = upto
+	return true
+}
+
+func CopyFileSync(dest, src string) error {
+	from, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer from.Close()
+
+	to, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer to.Close()
+
+	_, err = io.Copy(to, from)
+	if err != nil {
+		return err
+	}
+	err = to.Sync()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CopyDir(dest, src string) ([]string, error) {
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return nil, err
+	}
+	ents, err := ioutil.ReadDir(src)
+	if err != nil {
+		return nil, err
+	}
+	var copied []string
+	for _, ent := range ents {
+		err = CopyFileSync(filepath.Join(dest, ent.Name()), filepath.Join(src, ent.Name()))
+		if err != nil {
+			return copied, err
+		}
+		copied = append(copied, ent.Name())
+	}
+
+	return copied, nil
 }
