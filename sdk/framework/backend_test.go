@@ -249,7 +249,7 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if resp.Data["error"] != "Field validation failed: error converting input 3false3 for field \"value\": cannot parse '' as bool: strconv.ParseBool: parsing \"3false3\": invalid syntax" {
+	if !strings.Contains(resp.Data["error"].(string), "Field validation failed") {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
