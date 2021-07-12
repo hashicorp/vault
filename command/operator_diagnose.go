@@ -640,7 +640,7 @@ SEALFAIL:
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
 		if barrierSeal.BarrierType() == wrapping.Shamir {
-			diagnose.Skipped(ctx, "Skipping barrier encryption for manual sealing, as Diagnose should not have access to unseal keys.")
+			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
 			return nil
 		}
 		barrierUUID, err := uuid.GenerateUUID()
