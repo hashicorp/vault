@@ -19,6 +19,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
+var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
+	return nil
+}
+
 // Config is the configuration for the vault server.
 type Config struct {
 	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -88,11 +92,19 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
 	if c.Telemetry != nil {
 		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
-		for _, l := range c.Listeners {
-			results = append(results, l.Validate(sourceFilePath)...)
-		}
 	}
+	if c.ServiceRegistration != nil {
+		results = append(results, c.ServiceRegistration.Validate(sourceFilePath)...)
+	}
+	for _, l := range c.Listeners {
+		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	results = append(results, c.validateEnt(sourceFilePath)...)
 	return results
+}
+
+func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
+	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -130,7 +142,6 @@ ui = true
 
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
-	UnusedKeys        []string `hcl:",unusedKeys"`
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -144,8 +155,13 @@ func (b *Storage) GoString() string {
 
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
-	Type   string
-	Config map[string]string
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	Type       string
+	Config     map[string]string
+}
+
+func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
 }
 
 func (b *ServiceRegistration) GoString() string {
