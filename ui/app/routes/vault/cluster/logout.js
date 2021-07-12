@@ -27,6 +27,11 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
-    location.assign(`${baseUrl}${path}`);
+    if (Ember.testing) {
+      // Don't redirect on the test
+      this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
+    } else {
+      location.assign(`${baseUrl}${path}`);
+    }
   },
 });
