@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -55,11 +56,11 @@ func TestMigration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
+		maxParallel := "10"
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to, maxParallel); err != nil {
 			t.Fatal(err)
 		}
 
@@ -92,6 +93,7 @@ func TestMigration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		maxParallel := "10"
 
 		const start = "m"
 
@@ -99,7 +101,7 @@ func TestMigration(t *testing.T) {
 			logger:    log.NewNullLogger(),
 			flagStart: start,
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to, maxParallel); err != nil {
 			t.Fatal(err)
 		}
 
@@ -204,9 +206,16 @@ storage_destination "dest_type2" {
 
 		l := randomLister{s}
 
-		var out []string
-		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
-			out = append(out, path)
+		type SafeAppend struct {
+			out []string
+			mux sync.Mutex
+		}
+		var outKeys = SafeAppend{}
+		maxParallel := "10"
+		dfsScan(context.Background(), l, maxParallel, func(ctx context.Context, path string) error {
+			outKeys.mux.Lock()
+			outKeys.out = append(outKeys.out, path)
+			outKeys.mux.Unlock()
 			return nil
 		})
 
@@ -218,8 +227,11 @@ storage_destination "dest_type2" {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
-		if !reflect.DeepEqual(keys, out) {
-			t.Fatalf("expected equal: %v, %v", keys, out)
+		outKeys.mux.Lock()
+		sort.Strings(outKeys.out)
+		outKeys.mux.Unlock()
+		if !reflect.DeepEqual(keys, outKeys.out) {
+			t.Fatalf("expected equal: %v, %v", keys, outKeys.out)
 		}
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,6 +46,7 @@ type migratorConfig struct {
 	StorageSource      *server.Storage `hcl:"-"`
 	StorageDestination *server.Storage `hcl:"-"`
 	ClusterAddr        string          `hcl:"cluster_addr"`
+	MaxParallel        string          `hcl:"max_parallel"`
 }
 
 func (c *OperatorMigrateCommand) Synopsis() string {
@@ -190,7 +192,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	doneCh := make(chan error)
 	go func() {
-		doneCh <- c.migrateAll(ctx, from, to)
+		doneCh <- c.migrateAll(ctx, from, to, config.MaxParallel)
 	}()
 
 	select {
@@ -206,8 +208,8 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 }
 
 // migrateAll copies all keys in lexicographic order.
-func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
-	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
+func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend, maxParallel string) error {
+	return dfsScan(ctx, from, maxParallel, func(ctx context.Context, path string) error {
 		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
 		}
@@ -346,8 +348,18 @@ func parseStorage(result *migratorConfig, list *ast.ObjectList, name string) err
 
 // dfsScan will invoke cb with every key from source.
 // Keys will be traversed in lexicographic, depth-first order.
-func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.Context, path string) error) error {
+func dfsScan(ctx context.Context, source physical.Backend, maxParallel string, cb func(ctx context.Context, path string) error) error {
+
 	dfs := []string{""}
+	if len(maxParallel) == 0 {
+		maxParallel = "1"
+	}
+
+	i, err := strconv.Atoi(maxParallel)
+	if err != nil {
+		return errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
+	}
+	permitPool := physical.NewPermitPool(i)
 
 	for l := len(dfs); l > 0; l = len(dfs) {
 		key := dfs[len(dfs)-1]
@@ -366,11 +378,16 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 				}
 			}
 		} else {
-			err := cb(ctx, key)
-			if err != nil {
-				return err
-			}
-
+			// Pooling
+			permitPool.Acquire()
+			go func() error {
+				defer permitPool.Release()
+				err := cb(ctx, key)
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
 			dfs = dfs[:len(dfs)-1]
 		}
 
@@ -379,6 +396,10 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 			return nil
 		default:
 		}
+	}
+	// Wait for all gorutines to finish
+	for 0 != permitPool.CurrentPermits() {
+		time.Sleep(time.Second)
 	}
 	return nil
 }
