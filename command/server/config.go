@@ -149,7 +149,7 @@ ui = true
 
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
-	UnusedKeys        []string `hcl:",unusedKeys"`
+	UnusedKeys        configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -161,10 +161,19 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
+func (b *Storage) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
+}
+
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
+	UnusedKeys        configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
 	Type   string
 	Config map[string]string
+}
+
+func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
 }
 
 func (b *ServiceRegistration) GoString() string {
