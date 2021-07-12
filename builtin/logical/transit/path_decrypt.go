@@ -27,7 +27,7 @@ func (b *backend) pathDecrypt() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 
 			"ciphertext": {
