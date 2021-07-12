@@ -155,9 +155,9 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 					},
 				},
 				{
-					Name:    "Check Barrier Encryption",
-					Status:  diagnose.ErrorStatus,
-					Message: "Diagnose could not create a barrier seal object",
+					Name:    "Check Autounseal Encryption",
+					Status:  diagnose.SkippedStatus,
+					Message: "Skipping barrier encryption",
 				},
 				{
 					Name:   "Check Server Before Runtime",

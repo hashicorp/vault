@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/term"
 
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/helper/constants"
 
 	"github.com/docker/docker/pkg/ioutils"
@@ -411,6 +412,11 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	if seals != nil {
 		for _, seal := range seals {
+			// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
+			// section.
+			if seal == nil {
+				continue
+			}
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
 				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType())
@@ -629,9 +635,13 @@ SEALFAIL:
 
 	// The unseal diagnose check will simply attempt to use the barrier to encrypt and
 	// decrypt a mock value. It will not call runUnseal.
-	diagnose.Test(ctx, "Check Barrier Encryption", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
-		if barrierWrapper == nil {
+	diagnose.Test(ctx, "Check Autounseal Encryption", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
+		if barrierSeal == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
+		}
+		if barrierSeal.BarrierType() == wrapping.Shamir {
+			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
+			return nil
 		}
 		barrierUUID, err := uuid.GenerateUUID()
 		if err != nil {
