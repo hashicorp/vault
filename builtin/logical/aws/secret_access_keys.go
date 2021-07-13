@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	secretAccessKeyType = "access_keys"
-	storageKey          = "config/connection"
+	secretAccessKeyType     = "access_keys"
+	storageKey              = "config/connection"
+	defaultUserNameTemplate = `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`
 )
 
 func secretAccessKeys(b *backend) *framework.Secret {
@@ -68,7 +69,6 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 		if err != nil {
 			return "", fmt.Sprintf("failed to generate username: %s", err)
 		}
-		fmt.Printf("username: %s\n", username)
 		if len(username) > 64 {
 			username = username[0:64]
 			warning = "the calling token display name/IAM policy name were truncated to fit into IAM username length limits"
@@ -261,7 +261,6 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	defaultUserNameTemplate := `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`
 	config, err := readConfig(ctx, s)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read configuration: %w", err)
