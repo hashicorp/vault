@@ -58,4 +58,17 @@ export default class DatabaseListItem extends Component {
         this.flashMessages.danger(e.errors);
       });
   }
+  @action
+  rotateRoleCred(id) {
+    const { backend } = this.args.item;
+    let adapter = this.store.adapterFor('database/credential');
+    adapter
+      .rotateRoleCredentials(backend, id)
+      .then(() => {
+        this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
+      })
+      .catch(e => {
+        this.flashMessages.danger(e.errors);
+      });
+  }
 }
