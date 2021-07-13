@@ -167,7 +167,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 		}
 	}
 	ctx := diagnose.Context(context.Background(), c.diagnose)
-	c.diagnose.SetSkipList(c.flagSkips)
+	c.diagnose.SkipFilters = c.flagSkips
 	err := c.offlineDiagnostics(ctx)
 
 	results := c.diagnose.Finalize(ctx)

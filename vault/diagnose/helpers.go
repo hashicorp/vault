@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -38,10 +39,10 @@ var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
 type testFunction func(context.Context) error
 
 type Session struct {
-	tc     *TelemetryCollector
-	tracer trace.Tracer
-	tp     *sdktrace.TracerProvider
-	skip   map[string]bool
+	tc          *TelemetryCollector
+	tracer      trace.Tracer
+	tp          *sdktrace.TracerProvider
+	SkipFilters []string
 }
 
 // New initializes a Diagnose tracing session.  In particular this wires a TelemetryCollector, which
@@ -60,21 +61,14 @@ func New(w io.Writer) *Session {
 		tp:     tp,
 		tc:     tc,
 		tracer: tracer,
-		skip:   make(map[string]bool),
 	}
 	return sess
 }
 
-func (s *Session) SetSkipList(ls []string) {
-	for _, e := range ls {
-		s.skip[e] = true
-	}
-}
-
-// IsSkipped returns true if skipName is present in the skip list.  Can be used in combination with Skip to mark a
-// span skipped and conditionally skip some logic.
-func (s *Session) IsSkipped(skipName string) bool {
-	return s.skip[skipName]
+// IsSkipped returns true if skipName is present in the SkipFilters list.  Can be used in combination with Skip to mark a
+// span skipped and conditionally skips some logic.
+func (s *Session) IsSkipped(spanName string) bool {
+	return strutil.StrListContainsCaseInsensitive(s.SkipFilters, spanName)
 }
 
 // Context returns a new context with a defined diagnose session
@@ -191,6 +185,12 @@ func addSpotCheckResult(ctx context.Context, eventName, checkName, message strin
 }
 
 func SpotCheck(ctx context.Context, checkName string, f func() error) error {
+	sess := CurrentSession(ctx)
+	if sess.IsSkipped(checkName) {
+		SpotSkipped(ctx, checkName, "skipped as requested")
+		return nil
+	}
+
 	err := f()
 	if err != nil {
 		SpotError(ctx, checkName, err)
@@ -206,6 +206,11 @@ func SpotCheck(ctx context.Context, checkName string, f func() error) error {
 func Test(ctx context.Context, spanName string, function testFunction, options ...trace.SpanOption) error {
 	ctx, span := StartSpan(ctx, spanName, options...)
 	defer span.End()
+	sess := CurrentSession(ctx)
+	if sess.IsSkipped(spanName) {
+		Skipped(ctx, "skipped as requested")
+		return nil
+	}
 
 	err := function(ctx)
 	if err != nil {
@@ -230,22 +235,6 @@ func WithTimeout(d time.Duration, f testFunction) testFunction {
 		case err := <-rch:
 			return err
 		}
-	}
-}
-
-// Skippable wraps a Test function with logic that will not run the test if the skipName
-// was in the session's skip list
-func Skippable(skipName string, f testFunction) testFunction {
-	return func(ctx context.Context) error {
-		session := CurrentSession(ctx)
-		if session != nil {
-			if !session.IsSkipped(skipName) {
-				return f(ctx)
-			} else {
-				Skipped(ctx, "skipped as requested")
-			}
-		}
-		return nil
 	}
 }
 
