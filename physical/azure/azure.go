@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kr/pretty"
+
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -25,7 +27,7 @@ const (
 	// MaxBlobSize at this time
 	MaxBlobSize = 1024 * 1024 * 4
 	// MaxListResults is the current default value, setting explicitly
-	MaxListResults = 5000
+	MaxListResults = 100
 )
 
 // AzureBackend is a physical backend that stores data
@@ -291,6 +293,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 				keys = strutil.AppendIfMissing(keys, key[:i+1])
 			}
 		}
+		a.logger.Debug("AzureBackendList", "marker", pretty.Sprint(marker), "nextmarker", pretty.Sprint(listBlob.NextMarker), "keys", keys)
 
 		marker = listBlob.NextMarker
 	}
