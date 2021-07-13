@@ -2922,10 +2922,15 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	if logLevel == log.NoLevel {
 		return logical.ErrorResponse("unknown log level"), nil
 	}
-	nw := w.ResponseWriter.(*logical.NamespaceResponseWriter)
-	flusher, ok := nw.ResponseWriter.(http.Flusher)
+
+	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
-		return logical.ErrorResponse("streaming not supported"), nil
+		// Casting the logical.ResponseWriter and try http.Flusher again
+		nw := w.ResponseWriter.(*logical.NamespaceResponseWriter)
+		flusher, ok = nw.ResponseWriter.(http.Flusher)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
 	}
 
 	isJson := b.Core.LogFormat() == "json"

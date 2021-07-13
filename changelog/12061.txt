@@ -1,0 +1,3 @@
+```release-note:bug
+namespace: show namespace in error message along side Code and URL
+```
