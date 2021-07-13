@@ -155,7 +155,17 @@ func AdjustErrorStatusCode(status *int, err error) {
 	}
 }
 
+type NamespaceResponseWriter struct {
+	http.ResponseWriter
+	NamespacePath string
+}
+
 func RespondError(w http.ResponseWriter, status int, err error) {
+	nw, ok := w.(*NamespaceResponseWriter)
+	if ok && nw.NamespacePath != "" && nw.NamespacePath != "root" {
+		nw.Header().Set("X-Vault-Namespace", nw.NamespacePath)
+	}
+
 	AdjustErrorStatusCode(&status, err)
 
 	w.Header().Set("Content-Type", "application/json")
