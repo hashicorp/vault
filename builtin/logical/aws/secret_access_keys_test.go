@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -38,5 +39,53 @@ func TestNormalizeDisplayName_NormNotRequired(t *testing.T) {
 				n,
 				normalizedName)
 		}
+	}
+}
+
+func TestGenUsername(t *testing.T) {
+
+	testUsername, warning := genUsername("name1", "policy1", "iam_user", `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`)
+	if warning != "" {
+		t.Fatalf(
+			"expected no warning; got %s",
+			warning,
+		)
+	}
+	if !strings.HasPrefix(testUsername, "vault-name1-policy1") {
+		t.Fatalf(
+			"expected return to match template, got %s",
+			testUsername,
+		)
+	}
+	// IAM usernames are capped at 64 characters
+	if len(testUsername) > 64 {
+		t.Fatalf(
+			"expected IAM username to be of length 64, got %d",
+			len(testUsername),
+		)
+	}
+
+	testUsername, warning = genUsername("name2", "policy2", "iam_user", `{{ printf "test-%s-%s-%s-%s" (.PolicyName) (.DisplayName) (unix_time) (random 20) | truncate 64 }}`)
+	if !strings.HasPrefix(testUsername, "test-policy2-name2") {
+		t.Fatalf(
+			"expected return to match template, got %s",
+			testUsername,
+		)
+	}
+
+	testUsername, warning = genUsername("name1", "policy1", "sts", "")
+	if strings.Contains(testUsername, "name1") || strings.Contains(testUsername, "policy1") {
+		t.Fatalf(
+			"expected sts username to not contain display name or policy name; got %s",
+			testUsername,
+		)
+	}
+	// STS usernames are capped at 64 characters
+	if len(testUsername) > 32 {
+		t.Fatalf(
+			"expected sts username to be under 32 chars; got %s of length %d",
+			testUsername,
+			len(testUsername),
+		)
 	}
 }
