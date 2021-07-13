@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -95,7 +94,7 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 	conf := map[string]string{
 		"path":                   raftDir,
 		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"performance_multiplier": "1",
 	}
 	for k, v := range extraConf {
 		val, ok := v.(string)
@@ -194,7 +193,6 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
 			testhelpers.RaftClusterJoinNodes(t, c)
-			time.Sleep(15 * time.Second)
 		}
 	}
 }
