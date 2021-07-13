@@ -63,7 +63,7 @@ require (
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.7.0
 	github.com/hashicorp/go-hclog v0.16.1
-	github.com/hashicorp/go-kms-wrapping v0.5.16
+	github.com/hashicorp/go-kms-wrapping v0.6.3-0.20210713203523-0d5dc3016597
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
@@ -104,7 +104,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.2.0
-	github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457
+	github.com/hashicorp/vault/api v1.1.0
 	github.com/hashicorp/vault/sdk v0.2.0
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
@@ -151,6 +151,7 @@ require (
 	github.com/sethvargo/go-limiter v0.3.0
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/stretchr/testify v1.7.0
+	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
