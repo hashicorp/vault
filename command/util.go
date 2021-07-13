@@ -90,11 +90,11 @@ func RawField(secret *api.Secret, field string) interface{} {
 // PrintRawField prints raw field from the secret.
 func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	var val interface{}
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
-		val = RawField(data.(*api.Secret), field)
+		val = RawField(data, field)
 	case map[string]interface{}:
-		val = data.(map[string]interface{})[field]
+		val = data[field]
 	}
 
 	if val == nil {

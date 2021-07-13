@@ -121,9 +121,9 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	testFunc := func(bkeys map[string][]string) {
 		var re *regexp.Regexp
 		if fingerprints {
-			re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value:\\s+(.*)")
+			re, err = regexp.Compile(`\s*Key\s+\d+\s+fingerprint:\s+([0-9a-fA-F]+);\s+value:\s+(.*)`)
 		} else {
-			re, err = regexp.Compile("\\s*Key\\s+\\d+:\\s+(.*)")
+			re, err = regexp.Compile(`\s*Key\s+\d+:\s+(.*)`)
 		}
 		if err != nil {
 			t.Fatalf("Error compiling regex: %s", err)

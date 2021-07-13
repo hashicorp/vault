@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -336,6 +335,7 @@ func (c *AgentCommand) Run(args []string) int {
 	// TemplateServer that periodically listen for ctx.Done() to fire and shut
 	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
@@ -880,7 +880,7 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
-				errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
+				fmt.Errorf("missing '%s' header", consts.RequestHeaderName))
 			return
 		}
 
@@ -927,7 +927,7 @@ func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
 	case flagEnvSet:
 		// Use value from env var
 		*fVar.Target = flagEnvValue != ""
-	case configVal == true:
+	case configVal:
 		// Use value from config
 		*fVar.Target = configVal
 	default:

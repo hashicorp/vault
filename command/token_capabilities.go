@@ -71,7 +71,7 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 	args = f.Args()
 	switch len(args) {
 	case 0:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1-2, got 0)"))
+		c.UI.Error("Not enough arguments (expected 1-2, got 0)")
 		return 1
 	case 1:
 		path = args[0]
@@ -99,7 +99,7 @@ func (c *TokenCapabilitiesCommand) Run(args []string) int {
 		return 2
 	}
 	if capabilities == nil {
-		c.UI.Error(fmt.Sprintf("No capabilities found"))
+		c.UI.Error("No capabilities found")
 		return 1
 	}
 

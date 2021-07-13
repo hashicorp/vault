@@ -782,7 +782,7 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
 
-	if f.noopRestore == true {
+	if f.noopRestore {
 		return nil
 	}
 

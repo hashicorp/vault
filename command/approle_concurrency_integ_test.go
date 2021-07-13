@@ -74,10 +74,12 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 				"secret_id": secretID,
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			if secret.Auth.ClientToken == "" {
-				t.Fatalf("expected a successful login")
+				t.Error("expected a successful login")
+				return
 			}
 		}()
 
