@@ -1,12 +1,14 @@
 // Package base62 provides utilities for working with base62 strings.
 // base62 strings will only contain characters: 0-9, a-z, A-Z
+//
+
+
 package base62
 
 import (
 	"crypto/rand"
-	"io"
-
 	uuid "github.com/hashicorp/go-uuid"
+	"io"
 )
 
 const (
