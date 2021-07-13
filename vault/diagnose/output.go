@@ -20,10 +20,10 @@ import (
 
 const (
 	status_unknown = "[      ] "
-	status_ok      = "\u001b[32m[  ok  ]\u001b[0m "
-	status_failed  = "\u001b[31m[failed]\u001b[0m "
-	status_warn    = "\u001b[33m[ warn ]\u001b[0m "
-	status_skipped = "\u001b[90m[ skip ]\u001b[0m "
+	status_ok      = "\u001b[32m[ success ]\u001b[0m "
+	status_failed  = "\u001b[31m[ failure ]\u001b[0m "
+	status_warn    = "\u001b[33m[ warning ]\u001b[0m "
+	status_skipped = "\u001b[90m[ skipped ]\u001b[0m "
 	same_line      = "\x0d"
 	ErrorStatus    = 2
 	WarningStatus  = 1
@@ -352,10 +352,10 @@ func (r *Result) write(sb *strings.Builder, depth int, limit int) {
 	}
 
 	if r.Advice != "" {
-		sb.WriteString("\n\n")
-		indent(sb, depth+1)
-		writeWrapped(sb, r.Advice, depth+1, limit)
+		advice := "\u001b[35m" + r.Advice + "\u001b[0m"
 		sb.WriteRune('\n')
+		indent(sb, depth+1)
+		writeWrapped(sb, advice, depth+1, limit)
 	}
 	sb.WriteRune('\n')
 	for _, c := range r.Children {
