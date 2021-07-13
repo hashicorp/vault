@@ -107,7 +107,7 @@ func makeCoffee(ctx context.Context) error {
 
 	SpotCheck(ctx, "pick-scone", pickScone)
 
-	Test(ctx, "dispose-grounds", Skippable("dispose-grounds", disposeGrounds))
+	Test(ctx, "dispose-grounds", disposeGrounds)
 	return nil
 }
 
