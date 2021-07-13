@@ -275,8 +275,6 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
 		envAgentAddress = v
-	} else if v := os.Getenv(EnvVaultAgentAddress); v != "" {
-		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
@@ -316,12 +314,6 @@ func (c *Config) ReadEnvironment() error {
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
-		}
-	} else if v := os.Getenv(EnvVaultInsecure); v != "" {
-		var err error
-		envInsecure, err = strconv.ParseBool(v)
-		if err != nil {
-			return fmt.Errorf("could not parse VAULT_INSECURE")
 		}
 	}
 	if v := os.Getenv(EnvVaultSRVLookup); v != "" {
@@ -446,25 +438,9 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
-	u, err := url.Parse(address)
+	u, err := ParseAddress(address, c)
 	if err != nil {
 		return nil, err
-	}
-
-	if strings.HasPrefix(address, "unix://") {
-		socket := strings.TrimPrefix(address, "unix://")
-		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
-			return net.Dial("unix", socket)
-		}
-
-		// Since the address points to a unix domain socket, the scheme in the
-		// *URL would be set to `unix`. The *URL in the client is expected to
-		// be pointing to the protocol used in the application layer and not to
-		// the transport layer. Hence, setting the fields accordingly.
-		u.Scheme = "http"
-		u.Host = socket
-		u.Path = ""
 	}
 
 	client := &Client{
@@ -485,6 +461,50 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	return client, nil
+}
+
+// ParseAddress transforms the provided address into a url.URL and handles
+// the case of Unix domain sockets by setting the DialContext in the
+// configuration's HttpClient.Transport.
+func ParseAddress(address string, config *Config) (*url.URL, error) {
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.HasPrefix(address, "unix://") {
+		// When the address begins with unix://, always change the transport's
+		// DialContext (to match previous behaviour)
+		socket := strings.TrimPrefix(address, "unix://")
+		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			}
+
+			// Since the address points to a unix domain socket, the scheme in the
+			// *URL would be set to `unix`. The *URL in the client is expected to
+			// be pointing to the protocol used in the application layer and not to
+			// the transport layer. Hence, setting the fields accordingly.
+			u.Scheme = "http"
+			u.Host = socket
+			u.Path = ""
+		} else {
+			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+		}
+	} else if strings.HasPrefix(config.Address, "unix://") {
+		// When the address being set does not begin with unix:// but the previous
+		// address in the Config did, change the transport's DialContext back to
+		// use the default configuration that cleanhttp uses.
+		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext
+		}
+	}
+
+	return u, nil
 }
 
 func (c *Client) CloneConfig() *Config {
@@ -519,14 +539,14 @@ func (c *Client) SetAddress(addr string) error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	parsedAddr, err := url.Parse(addr)
+	c.config.modifyLock.Lock()
+	parsedAddr, err := ParseAddress(addr, c.config)
+	c.config.Address = addr
+	c.config.modifyLock.Unlock()
 	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
-	c.config.modifyLock.Lock()
-	c.config.Address = addr
-	c.config.modifyLock.Unlock()
 	c.addr = parsedAddr
 	return nil
 }
@@ -822,8 +842,8 @@ func (c *Client) Clone() (*Client, error) {
 	defer c.modifyLock.RUnlock()
 
 	config := c.config
-	config.modifyLock.RLock()
-	defer config.modifyLock.RUnlock()
+	config.modifyLock.Lock()
+	defer config.modifyLock.Unlock()
 
 	newConfig := &Config{
 		Address:          config.Address,
