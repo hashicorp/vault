@@ -74,6 +74,8 @@ export default Component.extend({
         this.model.validate().then(({ validations }) => {
           this.set('isFormInvalid', !validations.isValid);
         });
+      } else {
+        this.set('isFormInvalid', false);
       }
     },
     deleteItem() {

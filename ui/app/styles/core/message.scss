@@ -132,6 +132,10 @@
   &.is-marginless {
     margin-bottom: 0;
   }
+
+  > p::first-letter {
+    text-transform: capitalize;
+  }
 }
 
 .has-text-highlight {

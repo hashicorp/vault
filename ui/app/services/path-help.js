@@ -288,8 +288,11 @@ export default Service.extend({
           fieldGroups = this.getFieldGroups(newModel);
           newModel = newModel.extend({ fieldGroups });
           // Build and add validations on model
-          let validations = buildValidations(fieldGroups);
-          newModel = newModel.extend(validations);
+          // NOTE: For initial phase, initialize validations only for user pass auth
+          if (backend === 'userpass') {
+            let validations = buildValidations(fieldGroups);
+            newModel = newModel.extend(validations);
+          }
         }
       } catch (err) {
         // eat the error, fieldGroups is computed in the model definition
