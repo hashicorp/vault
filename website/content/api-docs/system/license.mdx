@@ -99,6 +99,13 @@ Note that this is the legacy mechanism for providing a DR operation token. It is
 equally valid to provide the DR operation token in the `X-Vault-Token` header, as
 with a regular vault token.
 
+If you are using a batch `dr_operation_token`, note you will need to add the following to the token's policy
+
+```# Manage license for DR Secondary
+path "sys/replication/dr/secondary/license" {
+capabilities = ["create", "update"]
+}```
+
 ### Sample Payload
 
 ```json
