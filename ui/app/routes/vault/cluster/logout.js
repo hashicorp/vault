@@ -19,6 +19,7 @@ export default Route.extend(ModelBoundaryRoute, {
   beforeModel() {
     const authType = this.auth.getAuthType();
     const baseUrl = window.location.origin;
+    const ns = this.namespaceService.path;
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
@@ -30,7 +31,11 @@ export default Route.extend(ModelBoundaryRoute, {
       // Don't redirect on the test
       this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
     } else {
-      location.assign(`${baseUrl}/ui/vault/auth?with=${authType}`);
+      let params = `?with=${authType}`;
+      if (ns) {
+        params = `${params}&namespace=${ns}`;
+      }
+      location.assign(`${baseUrl}/ui/vault/auth${params}`);
     }
   },
 });
