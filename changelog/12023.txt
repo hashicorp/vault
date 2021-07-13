@@ -1,3 +1,8 @@
 ```release-note:feature
 secrets/gcp: Adds ability to use existing service accounts for generation of service account keys and access tokens.
 ```
+
+```release-note:deprecation
+secrets/gcp: Deprecated the `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets.
+Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
+```
