@@ -2,12 +2,118 @@ package approle
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func inc(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
+}
+func Hosts(cidr string) ([]string, error) {
+	ip, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, err
+	}
+
+	var ips []string
+	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
+		ips = append(ips, ip.String()+"/32")
+	}
+	// remove network address and broadcast address
+	return ips[1 : len(ips)-1], nil
+}
+func BenchmarkBoundCIDR32(b *testing.B) {
+	runAppRoleBoundCIDR("10.0.0.0/27", b)
+}
+func BenchmarkBoundCIDR64(b *testing.B) {
+	runAppRoleBoundCIDR("10.0.0.0/26", b)
+}
+func BenchmarkBoundCIDR256(b *testing.B) {
+	runAppRoleBoundCIDR("10.0.0.0/24", b)
+}
+func BenchmarkBoundCIDR1024(b *testing.B) {
+	runAppRoleBoundCIDR("10.0.0.0/22", b)
+}
+
+func BenchmarkBoundCIDR8192(b *testing.B) {
+	runAppRoleBoundCIDR("10.0.0.0/19", b)
+}
+
+func BenchmarkBoundCIDR65535(b *testing.B) {
+	runAppRoleBoundCIDR("10.0.0.0/16", b)
+}
+
+func runAppRoleBoundCIDR(cidr string, B *testing.B) {
+	var resp *logical.Response
+	var err error
+	var t *testing.T
+
+	b, s := createBackendWithStorage(t)
+	cidrs, _ := Hosts(cidr)
+	// Create a role with secret ID binding disabled and only bound cidr list
+	// enabled
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"bind_secret_id":        true,
+			"secret_id_bound_cidrs": cidrs,
+		},
+		Storage: s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Read the role ID
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	roleID := resp.Data["role_id"]
+
+	// Read the secret ID
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "role/testrole/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	secretID := resp.Data["secret_id"]
+	B.ResetTimer()
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+		Storage:    s,
+		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
+	})
+	// if err != nil || (resp != nil && resp.IsError()) {
+	// 	t.Fatalf("err:%v resp:%#v", err, resp)
+	// }
+	// if resp.Auth == nil {
+	// 	t.Fatal("expected login to succeed")
+	// }
+}
 func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	var resp *logical.Response
 	var err error
