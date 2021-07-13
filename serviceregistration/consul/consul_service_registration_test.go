@@ -422,6 +422,43 @@ func TestConsul_serviceTags(t *testing.T) {
 	}
 }
 
+func TestConsul_serviceMeta(t *testing.T) {
+	tests := []struct {
+		conf map[string]string
+		pass bool
+	}{
+		{
+			conf: map[string]string{},
+			pass: true,
+		},
+		{
+			conf: map[string]string{"service_meta": "true"},
+			pass: false,
+		},
+		{
+			conf: map[string]string{"service_meta": "[{\"key\":\"value\"}]"},
+			pass: true,
+		},
+	}
+
+	for _, test := range tests {
+		logger := logging.NewVaultLogger(log.Debug)
+
+		shutdownCh := make(chan struct{})
+		defer func() {
+			close(shutdownCh)
+		}()
+		_, err := NewServiceRegistration(test.conf, logger, sr.State{})
+		if err == nil && !test.pass {
+			t.Fatal("Expected Consul to fail with error")
+		}
+
+		if err != nil && test.pass {
+			t.Fatalf("Expected Consul to initialize: %v", err)
+		}
+	}
+}
+
 func TestConsul_setRedirectAddr(t *testing.T) {
 	tests := []struct {
 		addr string
