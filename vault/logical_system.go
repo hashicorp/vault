@@ -2922,8 +2922,8 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	if logLevel == log.NoLevel {
 		return logical.ErrorResponse("unknown log level"), nil
 	}
-
-	flusher, ok := w.ResponseWriter.(http.Flusher)
+	nw := w.ResponseWriter.(*logical.NamespaceResponseWriter)
+	flusher, ok := nw.ResponseWriter.(http.Flusher)
 	if !ok {
 		return logical.ErrorResponse("streaming not supported"), nil
 	}
