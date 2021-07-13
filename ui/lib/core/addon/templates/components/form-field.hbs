@@ -191,7 +191,18 @@
     @value={{or (get model valuePath) attr.options.defaultValue}}
     @allowCopy="true"
     @onChange={{action (action "setAndBroadcast" valuePath)}}
+    onkeyup={{action
+      (action "handleKeyUp" attr.name)
+      value="target.value"
+    }}
   />
+  {{#if (get validationMessages attr.name)}}
+    <AlertInline 
+      @type="danger" 
+      @message={{get validationMessages attr.name}} 
+      @paddingTop=true
+    />
+  {{/if}}
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}
@@ -251,6 +262,7 @@
       <input 
         data-test-input={{attr.name}}
         id={{attr.name}}
+        readonly={{isReadOnly}}
         autocomplete="off"
         spellcheck="false"
         value={{or (get model valuePath) attr.options.defaultValue}}
