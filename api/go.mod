@@ -6,6 +6,7 @@ replace github.com/hashicorp/vault/sdk => ../sdk
 
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/frankban/quicktest v1.13.0 // indirect
 	github.com/go-test/deep v1.0.2
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
