@@ -34,7 +34,7 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 	name := fmt.Sprintf("vault-test-%d", ts)
 	_ = os.Setenv("AZURE_BLOB_CONTAINER", name)
 
-	var cleanup func()
+	cleanup := func() {}
 	backendConf := map[string]string{
 		"container": name,
 	}
