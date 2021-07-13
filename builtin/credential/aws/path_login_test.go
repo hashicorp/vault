@@ -121,9 +121,110 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 	}
 }
 
-func TestBackend_validateVaultHeaderValue(t *testing.T) {
+func TestBackend_validateVaultGetRequestValues(t *testing.T) {
 	const canaryHeaderValue = "Vault-Server"
-	requestURL, err := url.Parse("https://sts.amazonaws.com/")
+
+	getHeadersMissing := http.Header{
+		"Host": []string{"Foo"},
+	}
+	getHeadersInvalid := http.Header{
+		"Host":            []string{"Foo"},
+		iamServerIdHeader: []string{"InvalidValue"},
+	}
+	getHeadersValid := http.Header{
+		"Host":            []string{"Foo"},
+		iamServerIdHeader: []string{canaryHeaderValue},
+	}
+	getQueryValid := url.Values(map[string][]string{
+		"X-Amz-Algorithm":     {"AWS4-HMAC-SHA256"},
+		"X-Amz-Credential":    {"AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request"},
+		"X-Amz-SignedHeaders": {"host;x-vault-aws-iam-server-id"},
+		"X-Amz-Signature":     {"5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"X-Amz-User-Agent":    {"aws-sdk-go-v2/1.2.0 os/linux lang/go/1.16 md/GOOS/linux md/GOARCH/amd64"},
+		"Action":              {"GetCallerIdentity"},
+		"Version":             {"2011-06-15"},
+	})
+	getQueryUnsigned := url.Values(map[string][]string{
+		"X-Amz-Algorithm":     {"AWS4-HMAC-SHA256"},
+		"X-Amz-Credential":    {"AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request"},
+		"X-Amz-SignedHeaders": {"host"},
+		"X-Amz-Signature":     {"5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"X-Amz-User-Agent":    {"aws-sdk-go-v2/1.2.0 os/linux lang/go/1.16 md/GOOS/linux md/GOARCH/amd64"},
+		"Action":              {"GetCallerIdentity"},
+		"Version":             {"2011-06-15"},
+	})
+	getQueryNoAction := url.Values(map[string][]string{
+		"X-Amz-Algorithm":     {"AWS4-HMAC-SHA256"},
+		"X-Amz-Credential":    {"AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request"},
+		"X-Amz-SignedHeaders": {"host;x-vault-aws-iam-server-id"},
+		"X-Amz-Signature":     {"5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"X-Amz-User-Agent":    {"aws-sdk-go-v2/1.2.0 os/linux lang/go/1.16 md/GOOS/linux md/GOARCH/amd64"},
+		"Version":             {"2011-06-15"},
+	})
+	getQueryInvalidAction := url.Values(map[string][]string{
+		"X-Amz-Algorithm":     {"AWS4-HMAC-SHA256"},
+		"X-Amz-Credential":    {"AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request"},
+		"X-Amz-SignedHeaders": {"host;x-vault-aws-iam-server-id"},
+		"X-Amz-Signature":     {"5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"X-Amz-User-Agent":    {"aws-sdk-go-v2/1.2.0 os/linux lang/go/1.16 md/GOOS/linux md/GOARCH/amd64"},
+		"Action":              {"GetSessionToken"},
+		"Version":             {"2011-06-15"},
+	})
+	validGetRequestURL, err := url.Parse("https://sts.amazonaws.com/?" + getQueryValid.Encode())
+	if err != nil {
+		t.Fatalf("error parsing test URL: %v", err)
+	}
+	unsignedGetRequestURL, err := url.Parse("https://sts.amazonaws.com/?" + getQueryUnsigned.Encode())
+	if err != nil {
+		t.Fatalf("error parsing test URL: %v", err)
+	}
+	noActionGetRequestURL, err := url.Parse("https://sts.amazonaws.com/?" + getQueryNoAction.Encode())
+	if err != nil {
+		t.Fatalf("error parsing test URL: %v", err)
+	}
+	invalidActionGetRequestURL, err := url.Parse("https://sts.amazonaws.com/?" + getQueryInvalidAction.Encode())
+	if err != nil {
+		t.Fatalf("error parsing test URL: %v", err)
+	}
+
+	err = validateVaultHeaderValue("GET", getHeadersMissing, validGetRequestURL, canaryHeaderValue)
+	if err == nil {
+		t.Error("validated GET request with missing Vault header")
+	}
+
+	err = validateVaultHeaderValue("GET", getHeadersInvalid, validGetRequestURL, canaryHeaderValue)
+	if err == nil {
+		t.Error("validated GET request with invalid Vault header value")
+	}
+
+	err = validateVaultHeaderValue("GET", getHeadersValid, unsignedGetRequestURL, canaryHeaderValue)
+	if err == nil {
+		t.Error("validated GET request with unsigned Vault header")
+	}
+
+	err = validateLoginIamRequestUrl("GET", noActionGetRequestURL)
+	if err == nil {
+		t.Error("validated GET request with no Action parameter")
+	}
+
+	err = validateLoginIamRequestUrl("GET", invalidActionGetRequestURL)
+	if err == nil {
+		t.Error("validated GET request with an invalid Action parameter")
+	}
+
+	err = validateLoginIamRequestUrl("GET", validGetRequestURL)
+	if err != nil {
+		t.Errorf("did NOT validate valid GET request: %v", err)
+	}
+	err = validateVaultHeaderValue("GET", getHeadersValid, validGetRequestURL, canaryHeaderValue)
+	if err != nil {
+		t.Errorf("did NOT validate valid GET request: %v", err)
+	}
+}
+
+func TestBackend_validateVaultPostRequestValues(t *testing.T) {
+	const canaryHeaderValue = "Vault-Server"
+	postRequestURL, err := url.Parse("https://sts.amazonaws.com/")
 	if err != nil {
 		t.Fatalf("error parsing test URL: %v", err)
 	}
@@ -146,34 +247,37 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-
 	postHeadersSplit := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
-	err = validateVaultHeaderValue(postHeadersMissing, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue("POST", postHeadersMissing, postRequestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with missing Vault header")
 	}
 
-	err = validateVaultHeaderValue(postHeadersInvalid, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue("POST", postHeadersInvalid, postRequestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with invalid Vault header value")
 	}
 
-	err = validateVaultHeaderValue(postHeadersUnsigned, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue("POST", postHeadersUnsigned, postRequestURL, canaryHeaderValue)
 	if err == nil {
 		t.Error("validated POST request with unsigned Vault header")
 	}
 
-	err = validateVaultHeaderValue(postHeadersValid, requestURL, canaryHeaderValue)
+	err = validateVaultHeaderValue("POST", postHeadersValid, postRequestURL, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request: %v", err)
 	}
 
-	err = validateVaultHeaderValue(postHeadersSplit, requestURL, canaryHeaderValue)
+	err = validateLoginIamRequestUrl("POST", postRequestURL)
+	if err != nil {
+		t.Errorf("did NOT validate valid POST request: %v", err)
+	}
+	err = validateVaultHeaderValue("POST", postHeadersSplit, postRequestURL, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request with split Authorization header: %v", err)
 	}
