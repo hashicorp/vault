@@ -53,6 +53,27 @@ func pathFetchCRL(b *backend) *framework.Path {
 	}
 }
 
+// Returns any valid (non-revoked) cert in raw format.
+func pathFetchValidRaw(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)/raw(/pem)?`,
+		Fields: map[string]*framework.FieldSchema{
+			"serial": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Certificate serial number, in colon- or
+hyphen-separated octal`,
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathFetchRead,
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
 // Returns any valid (non-revoked) cert. Since "ca" fits the pattern, this path
 // also handles returning the CA cert in a non-raw format.
 func pathFetchValid(b *backend) *framework.Path {
@@ -148,6 +169,12 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	case req.Path == "cert/crl":
 		serial = "crl"
 		pemType = "X509 CRL"
+	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
+		serial = data.Get("serial").(string)
+		contentType = "application/pkix-cert"
+		if strings.HasSuffix(req.Path, "/pem") {
+			pemType = "CERTIFICATE"
+		}
 	default:
 		serial = data.Get("serial").(string)
 		pemType = "CERTIFICATE"

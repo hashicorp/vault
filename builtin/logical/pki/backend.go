@@ -71,6 +71,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchCAChain(&b),
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
+			pathFetchValidRaw(&b),
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
 			pathRevoke(&b),
