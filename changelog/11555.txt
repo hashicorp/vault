@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database/mssql: Enable password rotation for contained users
+```
