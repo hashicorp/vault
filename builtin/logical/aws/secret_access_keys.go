@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,7 +18,10 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-const secretAccessKeyType = "access_keys"
+const (
+	secretAccessKeyType = "access_keys"
+	storageKey          = "config/connection"
+)
 
 func secretAccessKeys(b *backend) *framework.Secret {
 	return &framework.Secret{
@@ -43,26 +47,41 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
-func genUsername(displayName, policyName, userType string) (ret string, warning string) {
-	var midString string
+func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string) {
 
+	var username string
 	switch userType {
 	case "iam_user":
 		// IAM users are capped at 64 chars; this leaves, after the beginning and
 		// end added below, 42 chars to play with.
-		midString = fmt.Sprintf("%s-%s-",
-			normalizeDisplayName(displayName),
-			normalizeDisplayName(policyName))
-		if len(midString) > 42 {
-			midString = midString[0:42]
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", fmt.Sprintf("unable to initialize username template: %s", err)
+		}
+
+		um := UsernameMetadata{
+			DisplayName: normalizeDisplayName(displayName),
+			PolicyName:  normalizeDisplayName(policyName),
+		}
+
+		username, err = up.Generate(um)
+		if err != nil {
+			return "", fmt.Sprintf("failed to generate username: %s", err)
+		}
+		fmt.Printf("username: %s\n", username)
+		if len(username) > 64 {
+			username = username[0:64]
 			warning = "the calling token display name/IAM policy name were truncated to fit into IAM username length limits"
 		}
 	case "sts":
 		// Capped at 32 chars, which leaves only a couple of characters to play
 		// with, so don't insert display name or policy name at all
 	}
-
-	ret = fmt.Sprintf("vault-%s%d-%d", midString, time.Now().Unix(), rand.Int31n(10000))
+	if username != "" {
+		ret = username
+		return
+	}
+	ret = fmt.Sprintf("vault-%d-%d", time.Now().Unix(), rand.Int31n(10000))
 	return
 }
 
@@ -90,7 +109,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "sts")
+	username, usernameWarning := genUsername(displayName, policyName, "sts", "")
 
 	getTokenInput := &sts.GetFederationTokenInput{
 		Name:            aws.String(username),
@@ -167,7 +186,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 
 	roleSessionNameWarning := ""
 	if roleSessionName == "" {
-		roleSessionName, roleSessionNameWarning = genUsername(displayName, roleName, "iam_user")
+		roleSessionName, roleSessionNameWarning = genUsername(displayName, roleName, "iam_user", "")
 	} else {
 		roleSessionName = normalizeDisplayName(roleSessionName)
 		if len(roleSessionName) > 64 {
@@ -216,6 +235,22 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	return resp, nil
 }
 
+func readConfig(ctx context.Context, storage logical.Storage) (connectionConfig, error) {
+	entry, err := storage.Get(ctx, storageKey)
+	if err != nil {
+		return connectionConfig{}, err
+	}
+	if entry == nil {
+		return connectionConfig{}, nil
+	}
+
+	var connConfig connectionConfig
+	if err := entry.DecodeJSON(&connConfig); err != nil {
+		return connectionConfig{}, err
+	}
+	return connConfig, nil
+}
+
 func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
@@ -226,7 +261,18 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
+	defaultUserNameTemplate := `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	username, usernameWarning := genUsername(displayName, policyName, "iam_user", usernameTemplate)
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -434,4 +480,27 @@ func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
 		}
 	}
 	return retval
+}
+
+type UsernameMetadata struct {
+	DisplayName string
+	PolicyName  string
+}
+
+// connectionConfig contains the information required to make a connection to a AWS node
+type connectionConfig struct {
+	// URI of the AWS server
+	URI string `json:"connection_uri"`
+
+	// Username which has 'administrator' tag attached to it
+	Username string `json:"username"`
+
+	// Password for the Username
+	Password string `json:"password"`
+
+	// PasswordPolicy for generating passwords for dynamic credentials
+	PasswordPolicy string `json:"password_policy"`
+
+	// UsernameTemplate for storing the raw template in Vault's backing data store
+	UsernameTemplate string `json:"username_template"`
 }
