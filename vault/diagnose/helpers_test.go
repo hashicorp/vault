@@ -151,3 +151,18 @@ func disposeGrounds(_ context.Context) error {
 	//Done!
 	return nil
 }
+
+func TestCapitalizeFirstLetter(t *testing.T) {
+	s := "this is a test."
+	if CapitalizeFirstLetter(s) != "This is a test." {
+		t.Fatalf("first word of string was not capitalized: got %s", CapitalizeFirstLetter(s))
+	}
+	s = "this"
+	if CapitalizeFirstLetter(s) != "This" {
+		t.Fatalf("first word of string was not capitalized: got %s", CapitalizeFirstLetter(s))
+	}
+	s = "."
+	if CapitalizeFirstLetter(s) != "." {
+		t.Fatalf("String without letters was not unchanged: got %s", CapitalizeFirstLetter(s))
+	}
+}
