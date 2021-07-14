@@ -22,6 +22,9 @@ jobs:
         key: package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3-{{checksum ".buildcache/cache-keys/package-2ffbc24c482a71c7f16a87ad5cc6c01038544fe3"}}
         name: Restore package cache
     - restore_cache:
+        key: package-2ee966c5768e83a92093c0bc6a2fc6042afe4839-{{checksum ".buildcache/cache-keys/package-2ee966c5768e83a92093c0bc6a2fc6042afe4839"}}
+        name: Restore package cache
+    - restore_cache:
         key: package-61f4e059780eac8772bed584d10749860f2fdce1-{{checksum ".buildcache/cache-keys/package-61f4e059780eac8772bed584d10749860f2fdce1"}}
         name: Restore package cache
     - restore_cache:
@@ -73,20 +76,20 @@ jobs:
         command: ls -lahR .buildcache
         name: List Build Cache
     - run:
-        command: cp packages*.lock/pkgs.yml lockfile-7d1b28ede60990fa.yml
+        command: cp packages*.lock/pkgs.yml lockfile-e0096d0cd2ca1c5a.yml
         name: Update Lockfile Name
     - run:
-        command: tar -czf packages-7d1b28ede60990fa.tar.gz .buildcache/packages lockfile-7d1b28ede60990fa.yml
+        command: tar -czf packages-e0096d0cd2ca1c5a.tar.gz .buildcache/packages lockfile-e0096d0cd2ca1c5a.yml
         name: Create Raw Package Tarball
     - run:
-        command: tar -czf meta-7d1b28ede60990fa.tar.gz .buildcache/packages/store/*.json lockfile-7d1b28ede60990fa.yml
+        command: tar -czf meta-e0096d0cd2ca1c5a.tar.gz .buildcache/packages/store/*.json lockfile-e0096d0cd2ca1c5a.yml
         name: Create Metadata Tarball
     - store_artifacts:
-        path: lockfile-7d1b28ede60990fa.yml
+        path: lockfile-e0096d0cd2ca1c5a.yml
     - store_artifacts:
-        path: packages-7d1b28ede60990fa.tar.gz
+        path: packages-e0096d0cd2ca1c5a.tar.gz
     - store_artifacts:
-        path: meta-7d1b28ede60990fa.tar.gz
+        path: meta-e0096d0cd2ca1c5a.tar.gz
     - store_artifacts:
         path: .buildcache/packages
     environment:
@@ -108,7 +111,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -150,7 +153,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -171,6 +174,84 @@ jobs:
         name: Save package cache
         paths:
         - .buildcache/packages/store
+  darwin_arm64_package:
+    docker:
+    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
+    shell: /usr/bin/env bash -euo pipefail -c
+    environment:
+    - AUTO_INSTALL_TOOLS: 'YES'
+    - BUILDKIT_PROGRESS: plain
+    - PRODUCT_REVISION: ''
+    - PACKAGE_SPEC_ID: 2ee966c5768e83a92093c0bc6a2fc6042afe4839
+    steps:
+    - setup_remote_docker:
+        docker_layer_caching: false
+        version: 19.03.12
+    - add_ssh_keys:
+        fingerprints:
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+    - checkout:
+        path: .
+    - run:
+        command: make -C packages*.lock write-package-cache-key
+        name: Write package cache key
+    - restore_cache:
+        key: package-2ee966c5768e83a92093c0bc6a2fc6042afe4839-{{checksum ".buildcache/cache-keys/package-2ee966c5768e83a92093c0bc6a2fc6042afe4839"}}
+        name: Restore package cache
+    - run:
+        command: |2
+
+          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
+            echo "No package found, continuing with build."
+            exit 0
+          fi
+          echo "Package already cached, skipping build."
+          circleci-agent step halt
+        name: Check cache status
+    - run:
+        command: make -C packages*.lock write-builder-cache-keys
+        name: Write builder layer cache keys
+    - restore_cache:
+        key: copy-source_01bb_{{checksum ".buildcache/cache-keys/copy-source-01bb587fbaa40eee3270a2dfa7865a8e37dde482"}}
+        keys:
+        - go-modules_87d5_{{checksum ".buildcache/cache-keys/go-modules-87d5fe370bb634974f7b55a067206409c85d5947"}}
+        - build-static-assets_c9eb_{{checksum ".buildcache/cache-keys/build-static-assets-c9eb755a774c85539457676828158a137604f20d"}}
+        - build-ui_f5d8_{{checksum ".buildcache/cache-keys/build-ui-f5d8c1975b103bbe13e2841b5e8a5d1a11c96e78"}}
+        - ui-dependencies_ac8b_{{checksum ".buildcache/cache-keys/ui-dependencies-ac8be120c6d5a16da43fee57c2cecb19a70f8098"}}
+        - install-yarn_3ec0_{{checksum ".buildcache/cache-keys/install-yarn-3ec09455a50e67ce0e6b9f03e2cefa3e97333a5b"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
+        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
+        name: 'Restore Builder Image Cache: copy-source'
+    - run:
+        command: make -C packages*.lock load-builder-cache
+        name: Load whatever builder cache we have (if any) into the Docker daemon
+        no_output_timeout: 30m
+    - run:
+        command: |2-
+
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          eval "$(ssh-agent -s)"
+          if [ -f "$KEYFILE" ]; then
+            ssh-add "$KEYFILE"
+          else
+            echo "==> INFO: SSH key for github.com not found"
+            echo "    Attempts to access private repositories from within"
+            echo "    the build will fail, e.g. for private go modules, or"
+            echo "    attempts to directly clone private repositories."
+          fi
+
+          make -C packages*.lock package
+        name: Compile Package
+    - run:
+        command: ls -lahR .buildcache/packages
+        name: List packages
+    - save_cache:
+        key: package-2ee966c5768e83a92093c0bc6a2fc6042afe4839-{{checksum ".buildcache/cache-keys/package-2ee966c5768e83a92093c0bc6a2fc6042afe4839"}}
+        name: Save package cache
+        paths:
+        - .buildcache/packages/store
   windows_386_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -186,7 +267,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -228,7 +309,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -278,7 +359,7 @@ jobs:
     steps:
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -303,7 +384,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -319,7 +400,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -335,7 +416,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -351,7 +432,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -367,7 +448,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -383,7 +464,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -399,7 +480,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -415,7 +496,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -431,7 +512,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -447,7 +528,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -463,7 +544,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -500,7 +581,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -542,7 +623,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -631,7 +712,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -673,7 +754,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -792,7 +873,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -834,7 +915,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1052,7 +1133,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1094,7 +1175,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1302,7 +1383,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1344,7 +1425,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1380,7 +1461,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1422,7 +1503,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1458,7 +1539,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1500,7 +1581,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1559,7 +1640,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1601,7 +1682,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1809,7 +1890,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1851,7 +1932,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1887,7 +1968,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -1929,7 +2010,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1965,7 +2046,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -2007,7 +2088,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -2043,7 +2124,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -2085,7 +2166,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -2121,7 +2202,7 @@ jobs:
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
     - checkout:
         path: .
     - run:
@@ -2163,7 +2244,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -2452,7 +2533,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
 workflows:
-  build-7d1b28ede60990fa:
+  build-e0096d0cd2ca1c5a:
     jobs:
     - build-common-layers
     - darwin_amd64_package:
@@ -2461,6 +2542,7 @@ workflows:
     - bundle-releases:
         requires:
         - darwin_amd64_package
+        - darwin_arm64_package
         - freebsd_386_package
         - freebsd_amd64_package
         - freebsd_arm_package
@@ -2475,6 +2557,9 @@ workflows:
         - solaris_amd64_package
         - windows_386_package
         - windows_amd64_package
+    - darwin_arm64_package:
+        requires:
+        - build-common-layers
     - freebsd_386_package:
         requires:
         - build-common-layers
