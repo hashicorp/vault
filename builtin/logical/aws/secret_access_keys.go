@@ -193,11 +193,8 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return nil, fmt.Errorf("unable to read configuration: %w", err)
 	}
 
+	// Set as defaultUsernameTemplate if not provided
 	usernameTemplate := config.UsernameTemplate
-	if usernameTemplate == "" {
-		usernameTemplate = defaultUserNameTemplate
-	}
-
 	roleSessionNameWarning := ""
 	if roleSessionName == "" {
 		roleSessionName, roleSessionNameWarning = genUsername(displayName, roleName, "iam_user", usernameTemplate)
@@ -280,11 +277,8 @@ func (b *backend) secretAccessKeysCreate(
 		return nil, fmt.Errorf("unable to read configuration: %w", err)
 	}
 
+	// Set as defaultUsernameTemplate if not provided
 	usernameTemplate := config.UsernameTemplate
-	if usernameTemplate == "" {
-		usernameTemplate = defaultUserNameTemplate
-	}
-
 	username, usernameWarning := genUsername(displayName, policyName, "iam_user", usernameTemplate)
 
 	// Write to the WAL that this user will be created. We do this before
