@@ -124,7 +124,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('[data-test-popup-menu-trigger="version"]');
     await settled();
     await click('[data-test-version-history]');
-
+    await settled();
     assert
       .dom('[data-test-list-item-content]')
       .hasText('Version 1 Current', 'shows version one data on the version history as current');
@@ -132,9 +132,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await click('.linked-block');
     await settled();
-    let secret = document.querySelector('[data-test-masked-input]').innerText;
     await settled();
-    assert.equal(secret, 'bar', 'renders secret on the secret version show page');
+    assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
       `/vault/secrets/secret/show/${path}?version=1`,
