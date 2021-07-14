@@ -1,5 +1,6 @@
 import { assign } from '@ember/polyfills';
 import { assert } from '@ember/debug';
+import ControlGroupError from 'vault/lib/control-group-error';
 import ApplicationAdapter from '../application';
 import { allSettled } from 'rsvp';
 import { addToArray } from 'vault/helpers/add-to-array';
@@ -24,11 +25,31 @@ export default ApplicationAdapter.extend({
   },
 
   staticRoles(backend, id) {
-    return this.ajax(this.urlFor(backend, id, 'static'), 'GET', this.optionsForQuery(id));
+    return this.ajax(this.urlFor(backend, id, 'static'), 'GET', this.optionsForQuery(id)).then(resp => {
+      if (id) {
+        return {
+          ...resp,
+          type: 'static',
+          backend,
+          name: id,
+        };
+      }
+      return resp;
+    });
   },
 
   dynamicRoles(backend, id) {
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id));
+    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+      if (id) {
+        return {
+          ...resp,
+          type: 'dynamic',
+          backend,
+          name: id,
+        };
+      }
+      return resp;
+    });
   },
 
   optionsForQuery(id) {
@@ -50,28 +71,41 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     const { backend, id } = query;
-    const staticReq = this.staticRoles(backend, id);
-    const dynamicReq = this.dynamicRoles(backend, id);
 
-    return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      if (!staticResp.value && !dynamicResp.value) {
-        // Throw error, both reqs failed
-        throw dynamicResp.reason;
+    if (query.type === 'static') {
+      return this.staticRoles(backend, id);
+    } else if (query?.type === 'dynamic') {
+      return this.dynamicRoles(backend, id);
+    }
+    // if role type is not defined, try both
+    return allSettled([this.staticRoles(backend, id), this.dynamicRoles(backend, id)]).then(
+      ([staticResp, dynamicResp]) => {
+        if (staticResp.state === 'rejected' && dynamicResp.state === 'rejected') {
+          let reason = dynamicResp.reason;
+          if (staticResp.reason instanceof ControlGroupError) {
+            throw staticResp.reason;
+          }
+          if (reason?.httpStatus < staticResp.reason?.httpStatus) {
+            reason = staticResp.reason;
+          }
+          throw reason;
+        }
+        // Names are distinct across both types of role,
+        // so only one request should ever come back with value
+        let type = staticResp.value ? 'static' : 'dynamic';
+        let successful = staticResp.value || dynamicResp.value;
+        let resp = {
+          data: {},
+          backend,
+          name: id,
+          type,
+        };
+
+        resp.data = assign({}, resp.data, successful.data, { backend, type, secret: id });
+
+        return resp;
       }
-      // Names are distinct across both types of role,
-      // so only one request should ever come back with value
-      let type = staticResp.value ? 'static' : 'dynamic';
-      let successful = staticResp.value || dynamicResp.value;
-      let resp = {
-        data: {},
-        backend,
-        secret: id,
-      };
-
-      resp.data = assign({}, resp.data, successful.data, { backend, type, secret: id });
-
-      return resp;
-    });
+    );
   },
 
   query(store, type, query) {
