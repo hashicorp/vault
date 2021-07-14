@@ -114,6 +114,33 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');
   });
 
+  test('it navigates to version history and to a specific version', async function(assert) {
+    const path = `kv-path-${new Date().getTime()}`;
+    await listPage.visitRoot({ backend: 'secret' });
+    await settled();
+    await listPage.create();
+    await settled();
+    await editPage.createSecret(path, 'foo', 'bar');
+    await click('[data-test-popup-menu-trigger="version"]');
+    await settled();
+    await click('[data-test-version-history]');
+
+    assert
+      .dom('[data-test-list-item-content]')
+      .hasText('Version 1 Current', 'shows version one data on the version history as current');
+    assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
+
+    await click('.linked-block');
+    await settled();
+    let secret = document.querySelector('[data-test-masked-input]').innerText;
+    assert.equal(secret, 'bar', 'renders secret on the secret version show page');
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/secret/show/${path}?version=1`,
+      'redirects to the show page with queryParam version=1'
+    );
+  });
+
   test('version 1 performs the correct capabilities lookup', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'foo/bar';
@@ -188,6 +215,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'navigates to the ancestor created earlier'
     );
   });
+
   test('first level secrets redirect properly upon deletion', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'test';
