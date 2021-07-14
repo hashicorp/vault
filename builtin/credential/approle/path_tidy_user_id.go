@@ -147,6 +147,7 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			// ExpirationTime not being set indicates non-expiring SecretIDs
 			if !result.ExpirationTime.IsZero() && time.Now().After(result.ExpirationTime) {
 				logger.Trace("found expired secret ID")
+
 				// Clean up the accessor of the secret ID first
 				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 				if err != nil {

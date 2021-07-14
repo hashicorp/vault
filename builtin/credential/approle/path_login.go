@@ -45,10 +45,72 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 		return nil, fmt.Errorf("missing role_id")
 	}
 
+	// Look for the storage entry that maps the roleID to role
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if roleIDIndex == nil {
+		return logical.ErrorResponse("invalid role ID"), nil
+	}
+
+	roleName := roleIDIndex.Name
+
+	roleLock := b.roleLock(roleName)
+	roleLock.RLock()
+
+	role, err := b.roleEntry(ctx, req.Storage, roleName)
+	roleLock.RUnlock()
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse("invalid role ID"), nil
+	}
+
+	aliasName := roleID
+
+	if role.BindSecretID {
+		secretID := strings.TrimSpace(data.Get("secret_id").(string))
+		if secretID == "" {
+			return logical.ErrorResponse("missing secret_id"), nil
+		}
+
+		secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HMAC of secret_id: %w", err)
+		}
+
+		roleNameHMAC, err := createHMAC(role.HMACKey, role.name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HMAC of role_name: %w", err)
+		}
+
+		secretIDLock := b.secretIDLock(secretIDHMAC)
+		secretIDLock.RLock()
+
+		unlockFunc := secretIDLock.RUnlock
+		defer func() {
+			unlockFunc()
+		}()
+
+		entry, err := b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			return logical.ErrorResponse("invalid secret id"), nil
+		}
+
+		if entry.Alias != "" {
+			aliasName += ":" + entry.Alias
+		}
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
-				Name: roleID,
+				Name: aliasName,
 			},
 		},
 	}, nil
@@ -86,6 +148,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("invalid role ID"), nil
 	}
 
+	aliasName := roleID
 	metadata := make(map[string]string)
 	var entry *secretIDStorageEntry
 	if role.BindSecretID {
@@ -262,6 +325,10 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		}
 
 		metadata = entry.Metadata
+
+		if entry.Alias != "" {
+			aliasName += ":" + entry.Alias
+		}
 	}
 
 	if len(role.SecretIDBoundCIDRs) != 0 {
@@ -303,7 +370,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		},
 		Metadata: metadata,
 		Alias: &logical.Alias{
-			Name:     role.RoleID,
+			Name:     aliasName,
 			Metadata: metadata,
 		},
 	}

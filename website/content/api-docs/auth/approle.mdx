@@ -261,10 +261,18 @@ itself, and also to delete the SecretID from the AppRole.
 ### Parameters
 
 - `role_name` `(string: <required>)` - Name of the AppRole.
+- `alias` `(string: "")` - Label to be tied to the SecretID. When using multiple
+  SecretIDs with the same role_name and putting metadata to distinguish them in
+  policy templates, the label should be used to identify the SecretIDs of
+  different end users, e.g. by putting a hostname.
 - `metadata` `(string: "")` - Metadata to be tied to the SecretID. This should be
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
-  audit logs _in plaintext_.
+  audit logs _in plaintext_. Note that for a given alias, the metadata of the
+  latest authenticated SecretID will be used in templates using the
+  `identity.entity.aliases.<mount accessor>.metadata.<metadata key>` variable
+  for all tokens, also for tokens that where earlier acquired using another
+  SecretID with the same alias.
 - `cidr_list` `(array: [])` - Comma separated string or list of CIDR blocks
   enforcing secret IDs to be used from specific set of IP addresses. If
   `bound_cidr_list` is set on the role, then the list of CIDR blocks listed
@@ -277,6 +285,7 @@ itself, and also to delete the SecretID from the AppRole.
 
 ```json
 {
+  "alias": "production-server",
   "metadata": "{ \"tag1\": \"production\" }"
 }
 ```
@@ -490,10 +499,18 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
 
 - `role_name` `(string: <required>)` - Name of the AppRole.
 - `secret_id` `(string: <required>)` - SecretID to be attached to the Role.
+- `alias` `(string: "")` - Label to be tied to the SecretID. When using multiple
+  SecretIDs with the same role_name and putting metadata to distinguish them in
+  policy templates, the label should be used to identify the SecretIDs of
+  different end users, e.g. by putting a hostname.
 - `metadata` `(string: "")` - Metadata to be tied to the SecretID. This should be
   a JSON-formatted string containing the metadata in key-value pairs. This
   metadata will be set on tokens issued with this SecretID, and is logged in
-  audit logs _in plaintext_.
+  audit logs _in plaintext_. Note that for a given alias, the metadata of the
+  latest authenticated SecretID will be used in templates using the
+  `identity.entity.aliases.<mount accessor>.metadata.<metadata key>` variable
+  for all tokens, also for tokens that where earlier acquired using another
+  SecretID with the same alias.
 - `cidr_list` `(array: [])` - Comma separated string or list of CIDR blocks
   enforcing secret IDs to be used from specific set of IP addresses. If
   `bound_cidr_list` is set on the role, then the list of CIDR blocks listed
