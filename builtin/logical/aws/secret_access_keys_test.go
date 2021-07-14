@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNormalizeDisplayName_NormRequired(t *testing.T) {
@@ -54,12 +55,9 @@ func TestGenUsername(t *testing.T) {
 			warning,
 		)
 	}
-	if !strings.HasPrefix(testUsername, "vault-name1-policy1") {
-		t.Fatalf(
-			"expected return to match template, got %s",
-			testUsername,
-		)
-	}
+
+	expectedUsernameRegex := `^vault-name1-policy1-[0-9]+-[a-zA-Z0-9]+`
+	require.Regexp(t, expectedUsernameRegex, testUsername)
 	// IAM usernames are capped at 64 characters
 	if len(testUsername) > 64 {
 		t.Fatalf(
@@ -68,15 +66,11 @@ func TestGenUsername(t *testing.T) {
 		)
 	}
 
-	testUsername, warning = genUsername("name2", "policy2", "iam_user", `{{ printf "test-%s-%s-%s-%s" (.PolicyName) (.DisplayName) (unix_time) (random 20) | truncate 64 }}`)
-	if !strings.HasPrefix(testUsername, "test-policy2-name2") {
-		t.Fatalf(
-			"expected return to match template, got %s",
-			testUsername,
-		)
-	}
+	testUsername, warning = genUsername("name2", "policy2", "iam_user", `{{ printf "foo-%s-%s" (unix_time) (random 20) | truncate 64 }}`)
+	expectedUsernameRegex = `^foo-[0-9]+-[a-zA-Z0-9]+`
+	require.Regexp(t, expectedUsernameRegex, testUsername)
 
-	testUsername, warning = genUsername("name1", "policy1", "sts", "")
+	testUsername, warning = genUsername("name1", "policy1", "sts", defaultSTSTemplate)
 	if strings.Contains(testUsername, "name1") || strings.Contains(testUsername, "policy1") {
 		t.Fatalf(
 			"expected sts username to not contain display name or policy name; got %s",
