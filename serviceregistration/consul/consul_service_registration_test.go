@@ -50,7 +50,7 @@ func testConsulServiceRegistrationConfig(t *testing.T, conf *consulConf) *servic
 // TestConsul_ServiceRegistration tests whether consul ServiceRegistration works
 func TestConsul_ServiceRegistration(t *testing.T) {
 	// Prepare a docker-based consul instance
-	cleanup, config := consul.PrepareTestContainer(t, "")
+	cleanup, config := consul.PrepareTestContainer(t, "", true)
 	defer cleanup()
 
 	// Create a consul client

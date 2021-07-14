@@ -31,8 +31,9 @@ Consul tokens.
 
 - `scheme` `(string: "http")` – Specifies the URL scheme to use.
 
-- `token` `(string: <required>)` – Specifies the Consul ACL token to use. This
-  must be a management type token.
+- `token` `(string: "")` – Specifies the Consul ACL token to use. This
+  must be a management type token. If this is not provided, Vault will try to
+  bootstrap the ACL system of the Consul cluster.
 
 - `ca_cert` `(string: "")` - CA certificate to use when verifying Consul server certificate,
   must be x509 PEM encoded.
