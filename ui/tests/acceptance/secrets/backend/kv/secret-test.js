@@ -133,6 +133,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('.linked-block');
     await settled();
     let secret = document.querySelector('[data-test-masked-input]').innerText;
+    await settled();
     assert.equal(secret, 'bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
