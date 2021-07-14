@@ -8,6 +8,10 @@
         </div>
       {{/if}}
     </div>
+  {{else}}
+    <div class="column is-one-quarter">
+      <Icon @size="s" @glyph="minus-plain"/>
+    </div>
   {{/if}}
   <div class="column is-flex">
     {{#if (has-block)}}
