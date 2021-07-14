@@ -1,8 +1,11 @@
 package aws
 
 import (
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestNormalizeDisplayName_NormRequired(t *testing.T) {
@@ -86,6 +89,85 @@ func TestGenUsername(t *testing.T) {
 			"expected sts username to be under 32 chars; got %s of length %d",
 			testUsername,
 			len(testUsername),
+		)
+	}
+}
+
+func TestReadConfig(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b := Backend()
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+
+	testTemplate := ""
+	configData := map[string]interface{}{
+		"connection_uri":    "test_uri",
+		"username":          "guest",
+		"password":          "guest",
+		"username_template": testTemplate,
+	}
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/root",
+		Storage:   config.StorageView,
+		Data:      configData,
+	}
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
+	}
+	if resp != nil {
+		t.Fatal("expected a nil response")
+	}
+
+	configResult, err := readConfig(context.Background(), config.StorageView)
+
+	if err != nil {
+		t.Fatalf("expected err to be nil; got %s", err)
+	}
+
+	// No template provided, config set to defaultUsernameTemplate
+	if configResult.UsernameTemplate != defaultUserNameTemplate {
+		t.Fatalf(
+			"expected template %s; got %s",
+			defaultUserNameTemplate,
+			configResult.UsernameTemplate,
+		)
+	}
+
+	testTemplate = "`foo-{{ .DisplayName }}`"
+	configData["username_template"] = testTemplate
+
+	configReq = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/root",
+		Storage:   config.StorageView,
+		Data:      configData,
+	}
+
+	// Write new template to config
+	resp, err = b.HandleRequest(context.Background(), configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
+	}
+	if resp != nil {
+		t.Fatal("expected a nil response")
+	}
+
+	// Read updated config
+	configResult, err = readConfig(context.Background(), config.StorageView)
+
+	if err != nil {
+		t.Fatalf("expected err to be nil; got %s", err)
+	}
+
+	if configResult.UsernameTemplate != testTemplate {
+		t.Fatalf(
+			"expected template %s; got %s",
+			testTemplate,
+			configResult.UsernameTemplate,
 		)
 	}
 }

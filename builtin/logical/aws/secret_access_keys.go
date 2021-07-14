@@ -19,9 +19,8 @@ import (
 )
 
 const (
-	secretAccessKeyType     = "access_keys"
-	storageKey              = "config/connection"
-	defaultUserNameTemplate = `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`
+	secretAccessKeyType = "access_keys"
+	storageKey          = "config/root"
 )
 
 func secretAccessKeys(b *backend) *framework.Secret {
@@ -235,18 +234,18 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	return resp, nil
 }
 
-func readConfig(ctx context.Context, storage logical.Storage) (connectionConfig, error) {
+func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error) {
 	entry, err := storage.Get(ctx, storageKey)
 	if err != nil {
-		return connectionConfig{}, err
+		return rootConfig{}, err
 	}
 	if entry == nil {
-		return connectionConfig{}, nil
+		return rootConfig{}, nil
 	}
 
-	var connConfig connectionConfig
+	var connConfig rootConfig
 	if err := entry.DecodeJSON(&connConfig); err != nil {
-		return connectionConfig{}, err
+		return rootConfig{}, err
 	}
 	return connConfig, nil
 }
@@ -484,22 +483,4 @@ func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
 type UsernameMetadata struct {
 	DisplayName string
 	PolicyName  string
-}
-
-// connectionConfig contains the information required to make a connection to a AWS node
-type connectionConfig struct {
-	// URI of the AWS server
-	URI string `json:"connection_uri"`
-
-	// Username which has 'administrator' tag attached to it
-	Username string `json:"username"`
-
-	// Password for the Username
-	Password string `json:"password"`
-
-	// PasswordPolicy for generating passwords for dynamic credentials
-	PasswordPolicy string `json:"password_policy"`
-
-	// UsernameTemplate for storing the raw template in Vault's backing data store
-	UsernameTemplate string `json:"username_template"`
 }
