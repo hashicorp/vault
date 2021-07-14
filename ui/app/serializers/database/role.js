@@ -34,8 +34,8 @@ export default RESTSerializer.extend({
       revocation_statement = payload.data.revocation_statements[0];
     }
     return {
-      id: payload.secret,
-      name: payload.secret,
+      id: payload.name,
+      name: payload.name,
       backend: payload.backend,
       database,
       path,
