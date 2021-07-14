@@ -4,11 +4,11 @@ updates:
   directory: /
   schedule:
     interval: daily
-- package-ecosystem: github-actions
+- package-ecosystem: npm
   directory: /ui
   schedule:
     interval: daily
-- package-ecosystem: github-actions
+- package-ecosystem: npm
   directory: /website
   schedule:
     interval: daily
