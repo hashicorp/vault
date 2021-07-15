@@ -48,11 +48,11 @@ func TestNormalizeDisplayName_NormNotRequired(t *testing.T) {
 
 func TestGenUsername(t *testing.T) {
 
-	testUsername, warning := genUsername("name1", "policy1", "iam_user", `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`)
-	if warning != "" {
+	testUsername, err := genUsername("name1", "policy1", "iam_user", `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`)
+	if err != nil {
 		t.Fatalf(
-			"expected no warning; got %s",
-			warning,
+			"expected no err; got %s",
+			err,
 		)
 	}
 
@@ -66,11 +66,11 @@ func TestGenUsername(t *testing.T) {
 		)
 	}
 
-	testUsername, warning = genUsername("name2", "policy2", "iam_user", `{{ printf "foo-%s-%s" (unix_time) (random 20) | truncate 64 }}`)
+	testUsername, err = genUsername("name2", "policy2", "iam_user", `{{ printf "foo-%s-%s" (unix_time) (random 20) | truncate 64 }}`)
 	expectedUsernameRegex = `^foo-[0-9]+-[a-zA-Z0-9]+`
 	require.Regexp(t, expectedUsernameRegex, testUsername)
 
-	testUsername, warning = genUsername("name1", "policy1", "sts", defaultSTSTemplate)
+	testUsername, err = genUsername("name1", "policy1", "sts", defaultSTSTemplate)
 	if strings.Contains(testUsername, "name1") || strings.Contains(testUsername, "policy1") {
 		t.Fatalf(
 			"expected sts username to not contain display name or policy name; got %s",

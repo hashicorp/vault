@@ -47,7 +47,7 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
-func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string) {
+func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, err error) {
 
 	switch userType {
 	case "iam_user":
@@ -55,7 +55,7 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 		// end added below, 42 chars to play with.
 		up, err := template.NewTemplate(template.Template(usernameTemplate))
 		if err != nil {
-			return "", fmt.Sprintf("unable to initialize username template: %s", err)
+			return "", fmt.Errorf("unable to initialize username template: %w", err)
 		}
 
 		um := UsernameMetadata{
@@ -65,25 +65,25 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 
 		ret, err = up.Generate(um)
 		if err != nil {
-			return "", fmt.Sprintf("failed to generate username: %s", err)
+			return "", fmt.Errorf("failed to generate username: %w", err)
 		}
 		// To prevent template from exceeding IAM length limits
 		if len(ret) > 64 {
 			ret = ret[0:64]
-			warning = "the calling token display name/IAM policy name were truncated to fit into IAM username length limits"
+			// warning = "the calling token display name/IAM policy name were truncated to 64 characters to fit within IAM username length limits"
 		}
 	case "sts":
 		// Capped at 32 chars, which leaves only a couple of characters to play
 		// with, so don't insert display name or policy name at all
 		up, err := template.NewTemplate(template.Template(usernameTemplate))
 		if err != nil {
-			return "", fmt.Sprintf("unable to initialize username template: %s", err)
+			return "", fmt.Errorf("unable to initialize username template: %w", err)
 		}
 
 		um := UsernameMetadata{}
 		ret, err = up.Generate(um)
 		if err != nil {
-			return "", fmt.Sprintf("failed to generate username: %s", err)
+			return "", fmt.Errorf("failed to generate username: %w", err)
 		}
 	}
 	return
@@ -113,7 +113,10 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
+	username, usernameError := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
+	if usernameError != nil {
+		return logical.ErrorResponse("Error generating username: %s", err), nil
+	}
 
 	getTokenInput := &sts.GetFederationTokenInput{
 		Name:            aws.String(username),
@@ -155,10 +158,6 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	// STS are purposefully short-lived and aren't renewable
 	resp.Secret.Renewable = false
 
-	if usernameWarning != "" {
-		resp.AddWarning(usernameWarning)
-	}
-
 	return resp, nil
 }
 
@@ -195,9 +194,17 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 
 	// Set as defaultUsernameTemplate if not provided
 	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
 	roleSessionNameWarning := ""
+	var roleSessionNameError error
 	if roleSessionName == "" {
-		roleSessionName, roleSessionNameWarning = genUsername(displayName, roleName, "iam_user", usernameTemplate)
+		roleSessionName, roleSessionNameError = genUsername(displayName, roleName, "iam_user", usernameTemplate)
+		if roleSessionNameError != nil {
+			return logical.ErrorResponse("Error generating roleName: %s", roleSessionNameError), nil
+		}
 	} else {
 		roleSessionName = normalizeDisplayName(roleSessionName)
 		if len(roleSessionName) > 64 {
@@ -279,7 +286,15 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Set as defaultUsernameTemplate if not provided
 	usernameTemplate := config.UsernameTemplate
-	username, usernameWarning := genUsername(displayName, policyName, "iam_user", usernameTemplate)
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	username, usernameError := genUsername(displayName, policyName, "iam_user", usernameTemplate)
+
+	if usernameError != nil {
+		return logical.ErrorResponse("Error generating username: %s", usernameError), nil
+	}
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -402,10 +417,6 @@ func (b *backend) secretAccessKeysCreate(
 
 	resp.Secret.TTL = lease.Lease
 	resp.Secret.MaxTTL = lease.LeaseMax
-
-	if usernameWarning != "" {
-		resp.AddWarning(usernameWarning)
-	}
 
 	return resp, nil
 }
