@@ -350,10 +350,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			return
 		}
 
-		h.ServeHTTP(&logical.NamespaceResponseWriter{
-			ResponseWriter: w,
-			NamespacePath:  r.Header.Get("X-Vault-Namespace"),
-		}, r)
+		h.ServeHTTP(w, r)
 
 		cancelFunc()
 		return
