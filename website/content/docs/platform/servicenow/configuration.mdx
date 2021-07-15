@@ -11,7 +11,8 @@ The following [properties] are supported by the Vault Credential Resolver:
 - `mid.external_credentials.vault.address` `(string: "")` - Address of Vault Agent as resolveable by the MID server.
   For example, if Vault Agent is on the same server as the MID server it could be `https://127.0.0.1:8200`.
 
-- `mid.external_credentials.vault.ca` `(string: "")` - The CA certificate to trust for TLS in PEM format.
+- `mid.external_credentials.vault.ca` `(string: "")` - The CA certificate to trust for TLS in PEM format. If unset,
+  the system's trusted CAs will be used.
 
 - `mid.external_credentials.vault.tls_skip_verify` `(string: "")` - When set to true, skips verification of the Vault server
   TLS certificiate. Setting this to true is not recommended for production.
