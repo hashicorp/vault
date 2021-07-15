@@ -24,8 +24,8 @@ func OSChecks(ctx context.Context) {
 			min = limit.Max
 		}
 		if min <= 1024 {
-			SpotWarn(ctx, fileLimitsName, fmt.Sprintf("Open file limits are set to %d", min))
-			Advise(ctx, "These limits may be insufficient. We recommend raising the soft and hard limits to 1024768.")
+			SpotWarn(ctx, fileLimitsName, fmt.Sprintf("Open file limits are set to %d", min),
+				Advice("These limits may be insufficient. We recommend raising the soft and hard limits to 1024768."))
 		} else {
 			SpotOk(ctx, fileLimitsName, fmt.Sprintf("Open file limits are set to %d.", min))
 		}

@@ -210,6 +210,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  OkStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case spotCheckWarnEventName:
@@ -221,6 +222,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  WarningStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case spotCheckErrorEventName:
@@ -232,6 +234,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  ErrorStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case spotCheckSkippedEventName:
@@ -243,6 +246,7 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 							Status:  SkippedStatus,
 							Message: message,
 							Time:    e.Time,
+							Advice:  findAttribute(e, adviceKey),
 						})
 				}
 			case adviceEventName:
@@ -272,6 +276,15 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 		t.results[id] = r
 	}
 	return r
+}
+
+func findAttribute(e trace.Event, attr attribute.Key) string {
+	for _, a := range e.Attributes {
+		if a.Key == attr {
+			return a.Value.AsString()
+		}
+	}
+	return ""
 }
 
 func findAttributes(e trace.Event, attr1, attr2 attribute.Key) (string, string) {
