@@ -70,7 +70,10 @@ behavior. Autopilot gets initialized with the following default values.
 Performance secondary clusters have their own Autopilot configuration, managed
 independently of their primary.
 
-DR secondary clusters do not currently support Autopilot.
+DR secondary clusters will also their own Autopilot configuration (starting in
+Vault 1.8.0), managed independently of their primary. The [Autopilot
+API]((api/system/storage/raftautopilot) will be authorized via the DR Operation
+Tokens.
 
 ## Learn
 
