@@ -89,7 +89,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.10.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.4.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
@@ -126,7 +126,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.0
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/gox v1.0.1
-	github.com/mitchellh/mapstructure v1.3.3
+	github.com/mitchellh/mapstructure v1.4.1
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/morikuni/aec v1.0.0 // indirect
@@ -167,11 +167,11 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/atomic v1.6.0
 	go.uber.org/goleak v1.1.10
-	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
+	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 	google.golang.org/api v0.29.0

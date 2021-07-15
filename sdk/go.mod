@@ -20,6 +20,12 @@ require (
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/go-plugin v1.0.1
+	github.com/hashicorp/go-secure-stdlib/base62 v0.1.1
+	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.1
+	github.com/hashicorp/go-secure-stdlib/password v0.1.1
+	github.com/hashicorp/go-secure-stdlib/strutil v0.1.1
+	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.0
@@ -28,15 +34,14 @@ require (
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-testing-interface v1.0.0
-	github.com/mitchellh/mapstructure v1.3.2
+	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pierrec/lz4 v2.5.2+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
 )
