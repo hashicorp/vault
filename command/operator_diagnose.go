@@ -217,15 +217,17 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// TODO: other ServerCommand options?
 
-		logger:          log.NewInterceptLogger(nil),
+		logger: log.NewInterceptLogger(&log.LoggerOptions{
+			Level: log.Off,
+		}),
 		allLoggers:      []log.Logger{},
 		reloadFuncs:     &rloadFuncs,
 		reloadFuncsLock: new(sync.RWMutex),
 	}
-
 	ctx, span := diagnose.StartSpan(ctx, "Vault Diagnose")
 	defer span.End()
 
+	server.logger.Info("HI!")
 	// OS Specific checks
 	diagnose.OSChecks(ctx)
 
