@@ -332,7 +332,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
     await editPage.editSecret('bar', 'baz');
-
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
