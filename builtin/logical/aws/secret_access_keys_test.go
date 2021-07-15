@@ -87,7 +87,7 @@ func TestGenUsername(t *testing.T) {
 	}
 }
 
-func TestReadConfig(t *testing.T) {
+func TestReadConfig_DefaultTemplate(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b := Backend()
@@ -130,19 +130,30 @@ func TestReadConfig(t *testing.T) {
 			configResult.UsernameTemplate,
 		)
 	}
+}
 
-	testTemplate = "`foo-{{ .DisplayName }}`"
-	configData["username_template"] = testTemplate
+func TestReadConfig_CustomTemplate(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b := Backend()
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
 
-	configReq = &logical.Request{
+	testTemplate := "`foo-{{ .DisplayName }}`"
+	configData := map[string]interface{}{
+		"connection_uri":    "test_uri",
+		"username":          "guest",
+		"password":          "guest",
+		"username_template": testTemplate,
+	}
+	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/root",
 		Storage:   config.StorageView,
 		Data:      configData,
 	}
-
-	// Write new template to config
-	resp, err = b.HandleRequest(context.Background(), configReq)
+	resp, err := b.HandleRequest(context.Background(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
@@ -150,8 +161,7 @@ func TestReadConfig(t *testing.T) {
 		t.Fatal("expected a nil response")
 	}
 
-	// Read updated config
-	configResult, err = readConfig(context.Background(), config.StorageView)
+	configResult, err := readConfig(context.Background(), config.StorageView)
 
 	if err != nil {
 		t.Fatalf("expected err to be nil; got %s", err)
