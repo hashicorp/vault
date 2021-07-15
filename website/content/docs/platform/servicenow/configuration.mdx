@@ -4,7 +4,9 @@ page_title: Configure Vault ServiceNow Credential Resolver
 description: This section documents the configurables for the Vault ServiceNow Credential Resolver.
 ---
 
-# MID server properties
+# Configuring the Vault Credential Resolver
+
+## MID server properties
 
 The following [properties] are supported by the Vault Credential Resolver:
 
@@ -18,3 +20,61 @@ The following [properties] are supported by the Vault Credential Resolver:
   TLS certificiate. Setting this to true is not recommended for production.
 
 [properties]: https://docs.servicenow.com/bundle/quebec-servicenow-platform/page/product/mid-server/reference/r_MIDServerProperties.html#t_SetMIDServerProperties
+
+## Configuring discovery credentials
+
+### Creating a secret in Vault
+
+The credential resolver supports reading credentials from the following secret engines:
+
+* [Active Directory](/docs/secrets/ad)
+* [AWS](/docs/secrets/aws)
+* [K/V v1](/docs/secrets/kv-kv-v1)
+* [K/V v2](/docs/secrets/kv-kv-v2)
+
+When creating K/V secrets, you must use the following keys for each component
+to ensure it is correctly mapped to ServiceNow's credential fields:
+
+Key         | Description                            | Supported aliases
+------------|----------------------------------------|------------------
+username    | The username                           | access_key
+password    | The password                           | secret_key, current_password
+private_key | The private SSH key                    |
+passphrase  | The passphrase for the private SSH key |
+
+Most ServiceNow credential types will expect at least a username and either
+a password or a private key. To help surface errors early, the credential
+resolver validates that a username and password are present for:
+
+* aws
+* basic
+* jdbc
+* jms
+* ssh_password
+* vmware
+* windows
+
+And the credential resolver expects the following types to specify at least
+a username and a private key:
+
+* api_key
+* cfg_chef_credentials
+* infoblox
+* sn_cfg_ansible
+* sn_disco_certmgmt_certificate_ca
+* ssh_private_key
+
+### Consuming a secret from ServiceNow
+
+In the ServiceNow UI:
+
+* Navigate to "Discovery - Credentials" -> New
+  * Select a type from the list
+  * Tick "External credential store"
+  * Fill in a meaningful name
+  * Set "Credential ID" to the path in Vault where your secret is located, e.g.
+    for a KV v2 secret engine mounted at "secret", you might have a secret stored
+    under "ssh": `secret/data/ssh`. Check the [API docs](/api-docs/secret/) for
+    your secret engine if you are unsure of the path to use
+  * **Optional:** Click "Test credential" and select a MID server and a target
+    to test against to test everything is working

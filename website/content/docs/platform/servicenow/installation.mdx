@@ -81,15 +81,7 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
     the trusted CA in PEM format if using TLS between the MID server and Vault
     Agent with a self-signed certificate.
 
-## Configuring discovery credentials
+## Next steps
 
-* Navigate to "Discovery - Credentials" -> New
-  * Select a type from the list
-  * Tick "External credential store"
-  * Fill in a meaningful name
-  * Set "Credential ID" to the path in Vault where your secret is located, e.g.
-    for a KV v2 secret engine mounted at "secret", you might have a secret stored
-    under "ssh": `secret/data/ssh`. Check the [API docs](/api-docs/secret/) for
-    your secret engine if you are unsure of the path to use
-  * **Optional:** Click "Test credential" and select a MID server and a target
-    to test against to test everything is working
+See [configuration](/docs/platform/servicenow/configuration) for details on
+configuring the resolver and using credentials for discovery.

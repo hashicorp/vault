@@ -1377,6 +1377,10 @@
           {
             "title": "Configuration",
             "path": "platform/servicenow/configuration"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/servicenow/troubleshooting"
           }
         ]
       }
