@@ -9,12 +9,12 @@ import (
 	"time"
 
 	stdmysql "github.com/go-sql-driver/mysql"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/stretchr/testify/require"
 )
 
