@@ -224,10 +224,10 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		reloadFuncs:     &rloadFuncs,
 		reloadFuncsLock: new(sync.RWMutex),
 	}
+
 	ctx, span := diagnose.StartSpan(ctx, "Vault Diagnose")
 	defer span.End()
 
-	server.logger.Info("HI!")
 	// OS Specific checks
 	diagnose.OSChecks(ctx)
 
