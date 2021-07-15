@@ -18,12 +18,12 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	uuid "github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -152,7 +152,6 @@ func (c *OperatorDiagnoseCommand) Run(args []string) int {
 }
 
 func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
-
 	if len(c.flagConfigs) == 0 {
 		c.UI.Error("Must specify a configuration file using -config.")
 		return 3
@@ -253,7 +252,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	var backend *physical.Backend
 	diagnose.Test(ctx, "Check Storage", func(ctx context.Context) error {
-
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
 			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the Vault server configuration documentation.")
@@ -398,7 +396,6 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var sealConfigError error
 
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
-
 	// Check error here
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
@@ -655,7 +652,6 @@ SEALFAIL:
 		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
 		if err != nil {
 			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
-
 		}
 		if string(plaintext) != barrierEncValue {
 			return fmt.Errorf("Barrier returned incorrect decrypted value for mock data.")
