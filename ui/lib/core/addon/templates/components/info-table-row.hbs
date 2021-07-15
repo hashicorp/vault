@@ -1,19 +1,17 @@
 {{#if (or alwaysRender value)}}
-  {{#if label}}
-    <div class="column is-one-quarter">
+  <div class="column is-one-quarter" data-test-key>
+    {{#if label}}
       <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
       {{#if helperText}}
         <div>
           <span class="is-label helper-text has-text-grey">{{helperText}}</span>
         </div>
       {{/if}}
-    </div>
-  {{else}}
-    <div class="column is-one-quarter">
+    {{else}}
       <Icon @size="s" @glyph="minus-plain"/>
-    </div>
-  {{/if}}
-  <div class="column is-flex">
+    {{/if}}
+  </div>
+  <div class="column is-flex" data-test-value>
     {{#if (has-block)}}
       {{yield}}
     {{else if valueIsBoolean}}
