@@ -1,4 +1,0 @@
-```release-note:improvement
-KV2 API docs: Update the language on the KV2 API documentation to include missing payload data on Read Secret Metadata and 
-clarify language on cas parameter when creating or updating a secret.
-```
