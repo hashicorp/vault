@@ -404,7 +404,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 
 	// Check blob existence
 	blob := l.backend.container.NewBlobURL(l.key)
-	bProp, err := blob.GetProperties(context.Background(), azblob.BlobAccessConditions{})
+	bProp, err := blob.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
 		if stgErr, ok := err.(azblob.StorageError); ok {
 			if stgErr.ServiceCode() == azblob.ServiceCodeBlobNotFound {
