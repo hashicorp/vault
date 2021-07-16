@@ -17,7 +17,7 @@ export default RESTSerializer.extend({
       return roles;
     }
     let path = 'roles';
-    if (payload.data.type === 'static') {
+    if (payload.type === 'static') {
       path = 'static-roles';
     }
     let database = [];
@@ -33,7 +33,12 @@ export default RESTSerializer.extend({
     if (payload.data.revocation_statements) {
       revocation_statement = payload.data.revocation_statements[0];
     }
+    console.log({ payload });
     return {
+      id: payload.id,
+      backend: payload.backend,
+      name: payload.id,
+      type: payload.type,
       database,
       path,
       creation_statement,

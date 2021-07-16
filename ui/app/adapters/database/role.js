@@ -31,7 +31,6 @@ export default ApplicationAdapter.extend({
           ...resp,
           type: 'static',
           backend,
-          name: id,
           id,
         };
       }
@@ -46,7 +45,6 @@ export default ApplicationAdapter.extend({
           ...resp,
           type: 'dynamic',
           backend,
-          name: id,
           id,
         };
       }
@@ -89,9 +87,12 @@ export default ApplicationAdapter.extend({
         let successful = staticResp.value || dynamicResp.value;
         let resp = {
           data: {},
+          backend,
+          id,
+          type,
         };
 
-        resp.data = assign({}, successful.data, { backend, id, name: id, type });
+        resp.data = assign({}, successful.data);
 
         return resp;
       }
