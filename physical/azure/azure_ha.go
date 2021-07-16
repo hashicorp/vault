@@ -402,6 +402,11 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 	blob := l.backend.container.NewBlobURL(l.key)
 	bProp, err := blob.GetProperties(context.Background(), azblob.BlobAccessConditions{})
 	if err != nil {
+		if stgErr, ok := err.(azblob.StorageError); ok {
+			if stgErr.ServiceCode() == azblob.ServiceCodeBlobNotFound {
+				return nil, nil
+			}
+		}
 		if bProp != nil && bProp.StatusCode() == http.StatusNotFound {
 			return nil, nil
 		}
