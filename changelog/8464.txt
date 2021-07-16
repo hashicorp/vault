@@ -1,0 +1,5 @@
+Add ha support to the "azure" storage backend
+
+This implementation borrows heavily from the gcs HA implementation
+("./physical/gcs/gcs_ha.go"). The CAS mechanism is realized through
+Azure storage conditional access headers and ETag.
