@@ -32,6 +32,7 @@ export default ApplicationAdapter.extend({
           type: 'static',
           backend,
           name: id,
+          id,
         };
       }
       return resp;
@@ -46,6 +47,7 @@ export default ApplicationAdapter.extend({
           type: 'dynamic',
           backend,
           name: id,
+          id,
         };
       }
       return resp;
@@ -58,15 +60,6 @@ export default ApplicationAdapter.extend({
       data['list'] = true;
     }
     return { data };
-  },
-
-  fetchByQuery(store, query) {
-    const { backend, id } = query;
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
-      resp.id = id;
-      resp.backend = backend;
-      return resp;
-    });
   },
 
   queryRecord(store, type, query) {
@@ -96,12 +89,9 @@ export default ApplicationAdapter.extend({
         let successful = staticResp.value || dynamicResp.value;
         let resp = {
           data: {},
-          backend,
-          name: id,
-          type,
         };
 
-        resp.data = assign({}, resp.data, successful.data, { backend, type, secret: id });
+        resp.data = assign({}, successful.data, { backend, id, name: id, type });
 
         return resp;
       }
