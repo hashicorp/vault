@@ -55,10 +55,16 @@
                 </button>
               </li>
             {{/if}}
-            {{#if @item.canGenerateCredentials}}
+            {{#if (and (eq @item.type "dynamic") @item.canGenerateCredentials)}}
               <li class="action">
                 <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
-                  {{if (eq @item.type "static") "Get credentials" "Generate credentials"}}
+                  Generate credentials
+                </LinkTo>
+              </li>
+            {{else if (and (eq @item.type "static") @item.canGetCredentials)}}
+              <li class="action">
+                <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
+                  Get credentials
                 </LinkTo>
               </li>
             {{/if}}
