@@ -1,9 +1,11 @@
 package azure
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -383,11 +385,13 @@ func (l *Lock) writeLock() (bool, error) {
 		"lock": string(lockData),
 	})
 
-	if resp, err := blob.Upload(context.Background(), nil, headers, metadata, conds, azblob.DefaultAccessTier, nil); err != nil {
+	// blob.Upload needs a non-nil io.ReadSeeker, emptyLockFile satisfy that
+	emptyLockFile := io.NewSectionReader(&bytes.Reader{}, 0, 0)
+	if resp, err := blob.Upload(context.Background(), emptyLockFile, headers, metadata, conds, azblob.DefaultAccessTier, nil); err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusPreconditionFailed {
 			return false, nil
 		}
-		return false, err
+		return false, errwrap.Wrapf("write lock: blob.Upload: {{err}}", err)
 	}
 
 	return true, nil
