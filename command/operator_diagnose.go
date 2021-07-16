@@ -217,7 +217,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 		// TODO: other ServerCommand options?
 
-		logger:          log.NewInterceptLogger(nil),
+		logger: log.NewInterceptLogger(&log.LoggerOptions{
+			Level: log.Off,
+		}),
 		allLoggers:      []log.Logger{},
 		reloadFuncs:     &rloadFuncs,
 		reloadFuncsLock: new(sync.RWMutex),
@@ -550,8 +552,8 @@ SEALFAIL:
 
 	err = findClusterAddress(server, &coreConfig, config, disableClustering)
 	if err != nil {
-		diagnose.Advise(ctx, "Please check that the API and Cluster addresses are different, and that the API, Cluster and Redirect addresses have both a host and port.")
-		return diagnose.SpotError(ctx, "Check Cluster Address", fmt.Errorf("Cluster Address could not be determined or was invalid: %w.", err))
+		return diagnose.SpotError(ctx, "Check Cluster Address", fmt.Errorf("Cluster Address could not be determined or was invalid: %w.", err),
+			diagnose.Advice("Please check that the API and Cluster addresses are different, and that the API, Cluster and Redirect addresses have both a host and port."))
 	}
 	diagnose.SpotOk(ctx, "Check Cluster Address", "Cluster address is logically valid and can be found.")
 
