@@ -63,7 +63,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.7.0
-	github.com/hashicorp/go-hclog v0.16.1
+	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-kms-wrapping v0.5.16
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
@@ -113,7 +113,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.2.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20210715043003-e02ca8f6408e
+	github.com/hashicorp/vault-testing-stepwise v0.1.1
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/hashicorp/vault/sdk v0.2.1
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
@@ -177,7 +178,7 @@ require (
 	go.uber.org/atomic v1.6.0
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
