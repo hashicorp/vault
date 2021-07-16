@@ -33,7 +33,6 @@ export default RESTSerializer.extend({
     if (payload.data.revocation_statements) {
       revocation_statement = payload.data.revocation_statements[0];
     }
-    console.log({ payload });
     return {
       id: payload.id,
       backend: payload.backend,
