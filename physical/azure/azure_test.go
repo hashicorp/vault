@@ -97,9 +97,9 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 	defer cleanup()
 
 	// by default, azure returns 5000 results in a page, load up more than that
-	for i := 0; i < MaxListResults+10; i++ {
+	for i := 0; i < MaxListResults+100; i++ {
 		if err := backend.Put(context.Background(), &physical.Entry{
-			Key:   strconv.Itoa(i),
+			Key:   "foo" + strconv.Itoa(i),
 			Value: []byte(strconv.Itoa(i)),
 		}); err != nil {
 			t.Fatalf("err: %s", err)
@@ -111,8 +111,8 @@ func TestAzureBackend_ListPaging(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if len(results) != MaxListResults+10 {
-		t.Fatalf("expected %d, got %d, %v", MaxListResults+10, len(results), results)
+	if len(results) != MaxListResults+100 {
+		t.Fatalf("expected %d, got %d, %v", MaxListResults+100, len(results), results)
 	}
 }
 
