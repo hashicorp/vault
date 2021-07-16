@@ -199,7 +199,6 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		haEnabled:  haEnabled,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
-	fmt.Println("azure haEnabled", haEnabled)
 	return a, nil
 }
 
