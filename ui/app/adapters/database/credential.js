@@ -29,12 +29,12 @@ export default ApplicationAdapter.extend({
     return allSettled([this._staticCreds(backend, secret), this._dynamicCreds(backend, secret)]).then(
       ([staticResp, dynamicResp]) => {
         if (staticResp.state === 'rejected' && dynamicResp.state === 'rejected') {
-          let reason = dynamicResp.reason;
-          if (staticResp.reason instanceof ControlGroupError) {
-            throw staticResp.reason;
+          let reason = staticResp.reason;
+          if (dynamicResp.reason instanceof ControlGroupError) {
+            throw dynamicResp.reason;
           }
-          if (reason?.httpStatus < staticResp.reason?.httpStatus) {
-            reason = staticResp.reason;
+          if (reason?.httpStatus < dynamicResp.reason?.httpStatus) {
+            reason = dynamicResp.reason;
           }
           throw reason;
         }
