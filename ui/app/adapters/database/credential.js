@@ -21,6 +21,11 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { backend, secret } = query;
+    if (query.roleType === 'static') {
+      return this._staticCreds(backend, secret);
+    } else if (query.roleType === 'dynamic') {
+      return this._dynamicCreds(backend, secret);
+    }
     return allSettled([this._staticCreds(backend, secret), this._dynamicCreds(backend, secret)]).then(
       ([staticResp, dynamicResp]) => {
         if (staticResp.state === 'rejected' && dynamicResp.state === 'rejected') {
