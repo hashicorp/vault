@@ -28,6 +28,9 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -35,12 +38,9 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -1213,7 +1213,6 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
-
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
