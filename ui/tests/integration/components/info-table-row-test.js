@@ -70,4 +70,33 @@ module('Integration | Component | InfoTableItem', function(hooks) {
 
     assert.dom('[data-test-item="array"]').hasText('valueArray', 'Confirm link with item value exist');
   });
+
+  test('it renders a dash (-) if a label or value does not exist', async function(assert) {
+    this.set('label', '');
+    await render(hbs`<InfoTableRow
+      @value={{value}}
+      @label={{label}}
+    />`);
+
+    assert.dom('[data-test-value-div]').exists();
+    assert.dom('[data-test-label-div]').exists();
+    assert
+      .dom('div.column span')
+      .hasClass('hs-icon-s', 'Renders a minus-plain icon (-) when no label is passed in');
+
+    this.set('label', 'my label');
+    this.set('value', '');
+    await this.pauseTest();
+  });
 });
+
+// test('it renders', async function(assert) {
+//   await render(hbs`<InfoTableRow
+//       @value={{value}}
+//       @label={{label}}
+//     />`);
+
+//   assert.dom('[data-test-component="info-table-row"]').exists();
+//   let string = document.querySelector('code').textContent;
+//   assert.equal(string, VALUE, 'renders value as passed through');
+// });
