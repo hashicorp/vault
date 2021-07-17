@@ -17,6 +17,19 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
+type testFixtureConf struct {
+	haEnabled bool
+}
+
+type testFixtureOpt func(*testFixtureConf)
+
+// withHA enables HA for the testFixture.
+func withHA() testFixtureOpt {
+	return func(c *testFixtureConf) {
+		c.haEnabled = true
+	}
+}
+
 /// These tests run against an Azurite docker container, unless AZURE_ACCOUNT_NAME is given.
 /// Authentication options:
 /// - Use a static access key via AZURE_ACCOUNT_KEY
@@ -27,7 +40,7 @@ import (
 /// 2. A system-assigned oder user-assigned identity attached to the host running the test
 /// 3. A role assignment for a storage account with "Storage Blob Data Contributor" permissions
 
-func testFixture(t *testing.T) (*AzureBackend, func()) {
+func testFixture(t *testing.T, opts ...testFixtureOpt) (*AzureBackend, func()) {
 	t.Helper()
 
 	ts := time.Now().UnixNano()
@@ -57,6 +70,15 @@ func testFixture(t *testing.T) (*AzureBackend, func()) {
 				t.SkipNow()
 			}
 		}
+	}
+
+	conf := &testFixtureConf{}
+	for _, opt := range opts {
+		opt(conf)
+	}
+
+	if conf.haEnabled {
+		backendConf["ha_enabled"] = "true"
 	}
 
 	backend, err := NewAzureBackend(backendConf, logging.NewVaultLogger(log.Debug))

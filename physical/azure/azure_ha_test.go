@@ -7,11 +7,9 @@ import (
 )
 
 func TestAzureHABackend(t *testing.T) {
-	checkTestPreReqs(t)
-	backend1, cleanup1 := testFixture(t)
+	backend1, cleanup1 := testFixture(t, withHA())
 	defer cleanup1()
-	backend2, cleanup2 := testFixture(t)
+	backend2, cleanup2 := testFixture(t, withHA())
 	defer cleanup2()
-
 	physical.ExerciseHABackend(t, backend1, backend2)
 }
