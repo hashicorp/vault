@@ -12,10 +12,8 @@ import (
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/pkg/errors"
 )
 
 // Verify Backend satisfies the correct interfaces
@@ -107,7 +105,7 @@ func (b *AzureBackend) HAEnabled() bool {
 func (b *AzureBackend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errwrap.Wrapf("lock with: {{err}}", err)
+		return nil, fmt.Errorf("generating uuid: %w", err)
 	}
 	return &Lock{
 		backend:  b,
@@ -133,14 +131,14 @@ func (l *Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	if l.held {
-		return nil, errors.New("lock already held")
+		return nil, fmt.Errorf("lock already held")
 	}
 
 	// Attempt to lock - this function blocks until a lock is acquired or an error
 	// occurs.
 	acquired, err := l.attemptLock(stopCh)
 	if err != nil {
-		return nil, errwrap.Wrapf("lock: {{err}}", err)
+		return nil, fmt.Errorf("lock: %w", err)
 	}
 	if !acquired {
 		return nil, nil
@@ -185,7 +183,7 @@ func (l *Lock) Unlock() error {
 	ctx := context.Background()
 	r, err := l.get(ctx)
 	if err != nil {
-		return errwrap.Wrapf("failed to read lock for deletion: {{err}}", err)
+		return fmt.Errorf("reading lock before deletion: %w", err)
 	}
 	if r != nil && r.Identity == l.identity {
 		cond := azblob.BlobAccessConditions{
@@ -203,7 +201,7 @@ func (l *Lock) Unlock() error {
 					"unlock: preconditions failed (lock lost or lock not there?)")
 
 			} else {
-				return errwrap.Wrapf("failed to delete lock: {{err}}", err)
+				return fmt.Errorf("deleting lock: %w", err)
 			}
 		}
 	}
@@ -240,7 +238,7 @@ func (l *Lock) attemptLock(stopCh <-chan struct{}) (bool, error) {
 		// initial retry interval wait
 		acquired, err := l.writeLock()
 		if err != nil {
-			return false, errwrap.Wrapf("attempt lock: {{err}}", err)
+			return false, fmt.Errorf("attempting lock: %w", err)
 		}
 		if acquired {
 			return true, nil
@@ -349,7 +347,7 @@ func (l *Lock) writeLock() (bool, error) {
 	// Read the record
 	r, err := l.get(ctx)
 	if err != nil {
-		return false, errwrap.Wrapf("write lock: {{err}}", err)
+		return false, fmt.Errorf("write lock: %w", err)
 	}
 	if r != nil {
 		// If the key is empty or the identity is ours or the ttl expired, we can
@@ -372,7 +370,7 @@ func (l *Lock) writeLock() (bool, error) {
 		Timestamp: time.Now().UTC(),
 	})
 	if err != nil {
-		return false, errwrap.Wrapf("write lock: failed to encode JSON: {{err}}", err)
+		return false, fmt.Errorf("write lock: failed to encode JSON: %w", err)
 	}
 
 	// Write the object
@@ -391,7 +389,7 @@ func (l *Lock) writeLock() (bool, error) {
 		if resp != nil && resp.StatusCode() == http.StatusPreconditionFailed {
 			return false, nil
 		}
-		return false, errwrap.Wrapf("write lock: blob.Upload: {{err}}", err)
+		return false, fmt.Errorf("write lock: blob.Upload: %w", err)
 	}
 
 	return true, nil
@@ -414,8 +412,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 		if bProp != nil && bProp.StatusCode() == http.StatusNotFound {
 			return nil, nil
 		}
-		return nil, errwrap.Wrapf(fmt.Sprintf(
-			"failed to read blob properties for %q: {{err}}", l.key), err)
+		return nil, fmt.Errorf("failed to read blob properties for %q: %w", l.key, err)
 	}
 
 	var r LockRecord

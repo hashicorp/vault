@@ -176,7 +176,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		var err error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse HA enabled: %w", err)
 		}
 	}
 
