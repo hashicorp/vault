@@ -385,7 +385,7 @@ func (l *Lock) writeLock() (bool, error) {
 
 	// blob.Upload needs a non-nil io.ReadSeeker, emptyLockFile satisfy that
 	emptyLockFile := io.NewSectionReader(&bytes.Reader{}, 0, 0)
-	if resp, err := blob.Upload(context.Background(), emptyLockFile, headers, metadata, conds, azblob.DefaultAccessTier, nil); err != nil {
+	if resp, err := blob.Upload(ctx, emptyLockFile, headers, metadata, conds, azblob.DefaultAccessTier, nil); err != nil {
 		if resp != nil && resp.StatusCode() == http.StatusPreconditionFailed {
 			return false, nil
 		}
