@@ -6,7 +6,7 @@ description: Learn about the telemetry data available in Vault.
 
 # Telemetry
 
-The Vault server process collects various runtime metrics about the performance of different libraries and subsystems. These metrics are aggregated on a ten second interval and are retained for one minute in-memory.
+The Vault server process collects various runtime metrics about the performance of different libraries and subsystems. These metrics are aggregated on a ten second interval and are retained for one minute in-memory. In order to monitor Vault and collect durable metrics, Telemetry from Vault must be stored in metrics aggregation software.
 
 To view the raw data, you must send a signal to the Vault process: on Unix-style operating systems, this is `USR1` while on Windows it is `BREAK`. When the Vault process receives this signal it will dump the current telemetry information to the process's `stderr`.
 
@@ -49,9 +49,9 @@ The following is an example telemetry dump snippet:
 
 You'll note that log entries are prefixed with the metric type as follows:
 
-- **[C]** is a counter
-- **[G]** is a gauge
-- **[S]** is a summary
+- **[C]** is a counter. Counters are cumulative metrics that are incremented when some event occurs, and are reset at the end of reporting intervals. Vault retains counters and other metrics for one minute in-memory, so to see accurate and persistent counters over time an [aggregation solution][telemetry-stanza] must be configured.
+- **[G]** is a gauge. Gauges provide measurements of current values.
+- **[S]** is a summary. Summaries provide sample observations of values and can measure distributions of discrete events.
 
 The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals. Some high-cardinality gauges, like `vault.kv.secret.count`, are emitted every 10 minutes, or at an interval configured in the `telemetry` stanza.
 
