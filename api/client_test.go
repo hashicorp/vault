@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -409,63 +410,112 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	client1, err := NewClient(DefaultConfig())
-	if err != nil {
-		t.Fatalf("NewClient failed: %v", err)
+	type fields struct {
+		config  *Config
+		headers *http.Header
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name: "default",
+			fields: fields{
+				config: DefaultConfig(),
+			},
+		},
+		{
+			name: "cloneHeaders",
+			fields: fields{
+				config: &Config{
+					CloneHeaders: true,
+				},
+				headers: &http.Header{
+					"X-foo": []string{"bar"},
+					"X-baz": []string{"qux"},
+				},
+			},
+		},
 	}
 
-	// Set all of the things that we provide setter methods for, which modify config values
-	err = client1.SetAddress("http://example.com:8080")
-	if err != nil {
-		t.Fatalf("SetAddress failed: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client1, err := NewClient(tt.fields.config)
+			if err != nil {
+				t.Fatalf("NewClient failed: %v", err)
+			}
 
-	clientTimeout := time.Until(time.Now().AddDate(0, 0, 1))
-	client1.SetClientTimeout(clientTimeout)
+			// Set all of the things that we provide setter methods for, which modify config values
+			err = client1.SetAddress("http://example.com:8080")
+			if err != nil {
+				t.Fatalf("SetAddress failed: %v", err)
+			}
 
-	checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
-		return true, nil
-	}
-	client1.SetCheckRetry(checkRetry)
+			clientTimeout := time.Until(time.Now().AddDate(0, 0, 1))
+			client1.SetClientTimeout(clientTimeout)
 
-	client1.SetLogger(hclog.NewNullLogger())
+			checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+				return true, nil
+			}
+			client1.SetCheckRetry(checkRetry)
 
-	client1.SetLimiter(5.0, 10)
-	client1.SetMaxRetries(5)
-	client1.SetOutputCurlString(true)
-	client1.SetSRVLookup(true)
+			client1.SetLogger(hclog.NewNullLogger())
 
-	client2, err := client1.Clone()
-	if err != nil {
-		t.Fatalf("Clone failed: %v", err)
-	}
+			client1.SetLimiter(5.0, 10)
+			client1.SetMaxRetries(5)
+			client1.SetOutputCurlString(true)
+			client1.SetSRVLookup(true)
 
-	if client1.Address() != client2.Address() {
-		t.Fatalf("addresses don't match: %v vs %v", client1.Address(), client2.Address())
-	}
-	if client1.ClientTimeout() != client2.ClientTimeout() {
-		t.Fatalf("timeouts don't match: %v vs %v", client1.ClientTimeout(), client2.ClientTimeout())
-	}
-	if client1.CheckRetry() != nil && client2.CheckRetry() == nil {
-		t.Fatal("checkRetry functions don't match. client2 is nil.")
-	}
-	if (client1.Limiter() != nil && client2.Limiter() == nil) || (client1.Limiter() == nil && client2.Limiter() != nil) {
-		t.Fatalf("limiters don't match: %v vs %v", client1.Limiter(), client2.Limiter())
-	}
-	if client1.Limiter().Limit() != client2.Limiter().Limit() {
-		t.Fatalf("limiter limits don't match: %v vs %v", client1.Limiter().Limit(), client2.Limiter().Limit())
-	}
-	if client1.Limiter().Burst() != client2.Limiter().Burst() {
-		t.Fatalf("limiter bursts don't match: %v vs %v", client1.Limiter().Burst(), client2.Limiter().Burst())
-	}
-	if client1.MaxRetries() != client2.MaxRetries() {
-		t.Fatalf("maxRetries don't match: %v vs %v", client1.MaxRetries(), client2.MaxRetries())
-	}
-	if client1.OutputCurlString() != client2.OutputCurlString() {
-		t.Fatalf("outputCurlString doesn't match: %v vs %v", client1.OutputCurlString(), client2.OutputCurlString())
-	}
-	if client1.SRVLookup() != client2.SRVLookup() {
-		t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
+			if tt.fields.headers != nil {
+				client1.SetHeaders(*tt.fields.headers)
+			}
+
+			client2, err := client1.Clone()
+			if err != nil {
+				t.Fatalf("Clone failed: %v", err)
+			}
+
+			if client1.Address() != client2.Address() {
+				t.Fatalf("addresses don't match: %v vs %v", client1.Address(), client2.Address())
+			}
+			if client1.ClientTimeout() != client2.ClientTimeout() {
+				t.Fatalf("timeouts don't match: %v vs %v", client1.ClientTimeout(), client2.ClientTimeout())
+			}
+			if client1.CheckRetry() != nil && client2.CheckRetry() == nil {
+				t.Fatal("checkRetry functions don't match. client2 is nil.")
+			}
+			if (client1.Limiter() != nil && client2.Limiter() == nil) || (client1.Limiter() == nil && client2.Limiter() != nil) {
+				t.Fatalf("limiters don't match: %v vs %v", client1.Limiter(), client2.Limiter())
+			}
+			if client1.Limiter().Limit() != client2.Limiter().Limit() {
+				t.Fatalf("limiter limits don't match: %v vs %v", client1.Limiter().Limit(), client2.Limiter().Limit())
+			}
+			if client1.Limiter().Burst() != client2.Limiter().Burst() {
+				t.Fatalf("limiter bursts don't match: %v vs %v", client1.Limiter().Burst(), client2.Limiter().Burst())
+			}
+			if client1.MaxRetries() != client2.MaxRetries() {
+				t.Fatalf("maxRetries don't match: %v vs %v", client1.MaxRetries(), client2.MaxRetries())
+			}
+			if client1.OutputCurlString() != client2.OutputCurlString() {
+				t.Fatalf("outputCurlString doesn't match: %v vs %v", client1.OutputCurlString(), client2.OutputCurlString())
+			}
+			if client1.SRVLookup() != client2.SRVLookup() {
+				t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
+			}
+			if tt.fields.config.CloneHeaders {
+				if !reflect.DeepEqual(client1.Headers(), client2.Headers()) {
+					t.Fatalf("Headers() don't match: %v vs %v", client1.Headers(), client2.Headers())
+				}
+				if client1.config.CloneHeaders != client2.config.CloneHeaders {
+					t.Fatalf("config.CloneHeaders doesn't match: %v vs %v", client1.config.CloneHeaders, client2.config.CloneHeaders)
+				}
+				if tt.fields.headers != nil {
+					if !reflect.DeepEqual(*tt.fields.headers, client2.Headers()) {
+						t.Fatalf("expected headers %v, actual %v", *tt.fields.headers, client2.Headers())
+					}
+				}
+			}
+		})
 	}
 }
 
