@@ -413,23 +413,23 @@ func TestClone(t *testing.T) {
 	type fields struct {
 	}
 	tests := []struct {
-		name   string
+		name    string
 		config  *Config
 		headers *http.Header
 	}{
 		{
-			name: "default",
+			name:   "default",
 			config: DefaultConfig(),
 		},
 		{
 			name: "cloneHeaders",
-				config: &Config{
-					CloneHeaders: true,
-				},
-				headers: &http.Header{
-					"X-foo": []string{"bar"},
-					"X-baz": []string{"qux"},
-				},
+			config: &Config{
+				CloneHeaders: true,
+			},
+			headers: &http.Header{
+				"X-foo": []string{"bar"},
+				"X-baz": []string{"qux"},
+			},
 		},
 	}
 
