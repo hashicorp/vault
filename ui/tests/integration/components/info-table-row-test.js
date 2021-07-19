@@ -38,6 +38,8 @@ module('Integration | Component | InfoTableItem', function(hooks) {
   });
 
   test('it renders', async function(assert) {
+    this.set('alwaysRender', true);
+
     await render(hbs`<InfoTableRow
         @value={{value}}
         @label={{label}}
@@ -46,6 +48,9 @@ module('Integration | Component | InfoTableItem', function(hooks) {
     assert.dom('[data-test-component="info-table-row"]').exists();
     let string = document.querySelector('code').textContent;
     assert.equal(string, VALUE, 'renders value as passed through');
+
+    this.set('value', '');
+    assert.dom('[data-test-label-div]').doesNotExist('does not render if no value and alwaysRender is false');
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function(assert) {
@@ -71,32 +76,29 @@ module('Integration | Component | InfoTableItem', function(hooks) {
     assert.dom('[data-test-item="array"]').hasText('valueArray', 'Confirm link with item value exist');
   });
 
-  test('it renders a dash (-) if a label or value does not exist', async function(assert) {
+  test('it renders a dash (-) if a label and/or value do not exist', async function(assert) {
+    this.set('value', VALUE);
     this.set('label', '');
+    this.set('alwaysRender', true);
+
     await render(hbs`<InfoTableRow
       @value={{value}}
       @label={{label}}
+      @alwaysRender={{alwaysRender}}
     />`);
 
-    assert.dom('[data-test-value-div]').exists();
-    assert.dom('[data-test-label-div]').exists();
-    assert
-      .dom('div.column span')
-      .hasClass('hs-icon-s', 'Renders a minus-plain icon (-) when no label is passed in');
+    assert.dom('[data-test-label-div]').exists('renders label div');
+    assert.dom('[data-test-value-div]').exists('renders value div');
+    assert.dom('div.column span').hasClass('hs-icon-s', 'Renders a dash (-) for the label');
 
-    this.set('label', 'my label');
     this.set('value', '');
-    await this.pauseTest();
+    this.set('label', LABEL);
+
+    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for the value');
+
+    this.set('value', '');
+    this.set('label', '');
+    let dashCount = document.querySelectorAll('.hs-icon-s').length;
+    assert.equal(dashCount, 2, 'Renders dash (-) when both label and value do not exist');
   });
 });
-
-// test('it renders', async function(assert) {
-//   await render(hbs`<InfoTableRow
-//       @value={{value}}
-//       @label={{label}}
-//     />`);
-
-//   assert.dom('[data-test-component="info-table-row"]').exists();
-//   let string = document.querySelector('code').textContent;
-//   assert.equal(string, VALUE, 'renders value as passed through');
-// });

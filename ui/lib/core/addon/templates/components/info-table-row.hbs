@@ -3,7 +3,7 @@
     {{#if label}}
       <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
       {{#if helperText}}
-        <div>
+        <div> 
           <span class="is-label helper-text has-text-grey">{{helperText}}</span>
         </div>
       {{/if}}
@@ -13,11 +13,7 @@
   </div>
   <div class="column is-flex" data-test-value-div>
     {{#if (has-block)}}
-      {{#unless value}}
-        <Icon @size="s" @glyph="minus-plain"/>
-      {{else}}
-        {{yield}}
-      {{/unless}}
+      {{yield}}
     {{else if valueIsBoolean}}
       {{#if value}}
         <Icon
@@ -34,8 +30,11 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
-    {{else if (and (not value) (and alwaysRender defaultShown))}}
+    {{!-- alwaysRender is still true --}}
+    {{else if (and (not value) defaultShown)}}
       <span data-test-row-value="{{label}}">{{defaultShown}}</span>
+    {{else if (eq value "")}} 
+      <Icon @size="s" @glyph="minus-plain"/>
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray
