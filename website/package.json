@@ -7,10 +7,14 @@
     "@hashicorp/mktg-global-styles": "3.0.2",
     "@hashicorp/mktg-logos": "1.2.0",
     "@hashicorp/nextjs-scripts": "19.0.2",
+    "@hashicorp/platform-markdown-utils": "^0.1.0",
+    "@hashicorp/platform-runtime-error-monitoring": "^0.1.0",
+    "@hashicorp/platform-util": "^0.1.0",
     "@hashicorp/react-alert-banner": "6.1.1",
     "@hashicorp/react-button": "5.1.0",
     "@hashicorp/react-case-study-slider": "6.1.0",
     "@hashicorp/react-code-block": "4.1.2",
+    "@hashicorp/react-consent-manager": "^5.3.2",
     "@hashicorp/react-content": "7.0.1",
     "@hashicorp/react-docs-page": "13.4.0",
     "@hashicorp/react-featured-slider": "4.1.0",
@@ -37,6 +41,8 @@
     "tippy.js": "4.0.0"
   },
   "devDependencies": {
+    "@hashicorp/platform-cli": "^0.1.2",
+    "@hashicorp/platform-nextjs-plugin": "^0.1.0",
     "@types/react": "^17.0.11",
     "dart-linkcheck": "^2.0.15",
     "husky": "^4.3.8",
