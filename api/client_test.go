@@ -411,22 +411,18 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	type fields struct {
-		config  *Config
-		headers *http.Header
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		config  *Config
+		headers *http.Header
 	}{
 		{
 			name: "default",
-			fields: fields{
-				config: DefaultConfig(),
-			},
+			config: DefaultConfig(),
 		},
 		{
 			name: "cloneHeaders",
-			fields: fields{
 				config: &Config{
 					CloneHeaders: true,
 				},
@@ -434,13 +430,12 @@ func TestClone(t *testing.T) {
 					"X-foo": []string{"bar"},
 					"X-baz": []string{"qux"},
 				},
-			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client1, err := NewClient(tt.fields.config)
+			client1, err := NewClient(tt.config)
 			if err != nil {
 				t.Fatalf("NewClient failed: %v", err)
 			}
@@ -466,8 +461,8 @@ func TestClone(t *testing.T) {
 			client1.SetOutputCurlString(true)
 			client1.SetSRVLookup(true)
 
-			if tt.fields.headers != nil {
-				client1.SetHeaders(*tt.fields.headers)
+			if tt.headers != nil {
+				client1.SetHeaders(*tt.headers)
 			}
 
 			client2, err := client1.Clone()
@@ -502,16 +497,16 @@ func TestClone(t *testing.T) {
 			if client1.SRVLookup() != client2.SRVLookup() {
 				t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
 			}
-			if tt.fields.config.CloneHeaders {
+			if tt.config.CloneHeaders {
 				if !reflect.DeepEqual(client1.Headers(), client2.Headers()) {
 					t.Fatalf("Headers() don't match: %v vs %v", client1.Headers(), client2.Headers())
 				}
 				if client1.config.CloneHeaders != client2.config.CloneHeaders {
 					t.Fatalf("config.CloneHeaders doesn't match: %v vs %v", client1.config.CloneHeaders, client2.config.CloneHeaders)
 				}
-				if tt.fields.headers != nil {
-					if !reflect.DeepEqual(*tt.fields.headers, client2.Headers()) {
-						t.Fatalf("expected headers %v, actual %v", *tt.fields.headers, client2.Headers())
+				if tt.headers != nil {
+					if !reflect.DeepEqual(*tt.headers, client2.Headers()) {
+						t.Fatalf("expected headers %v, actual %v", *tt.headers, client2.Headers())
 					}
 				}
 			}
