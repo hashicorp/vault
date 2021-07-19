@@ -48,7 +48,7 @@ func TestNormalizeDisplayName_NormNotRequired(t *testing.T) {
 
 func TestGenUsername(t *testing.T) {
 
-	testUsername, err := genUsername("name1", "policy1", "iam_user", `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`)
+	testUsername, warning, err := genUsername("name1", "policy1", "iam_user", `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`)
 	if err != nil {
 		t.Fatalf(
 			"expected no err; got %s",
@@ -66,11 +66,21 @@ func TestGenUsername(t *testing.T) {
 		)
 	}
 
-	testUsername, err = genUsername("name2", "policy2", "iam_user", `{{ printf "foo-%s-%s" (unix_time) (random 20) | truncate 64 }}`)
-	expectedUsernameRegex = `^foo-[0-9]+-[a-zA-Z0-9]+`
-	require.Regexp(t, expectedUsernameRegex, testUsername)
+	testUsername, warning, err = genUsername(
+		"this---is---a---very---long---name",
+		"long------policy------name",
+		"iam_user",
+		`{{ printf "%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) }}`,
+	)
 
-	testUsername, err = genUsername("name1", "policy1", "sts", defaultSTSTemplate)
+	if warning == "" || !strings.Contains(warning, "calling token display name/IAM policy name were truncated to 64 characters") {
+		t.Fatalf("expected a truncate warning; received empty string")
+	}
+	if len(testUsername) != 64 {
+		t.Fatalf("expected a username cap at 64 chars; got length: %d", len(testUsername))
+	}
+
+	testUsername, warning, err = genUsername("name1", "policy1", "sts", defaultSTSTemplate)
 	if strings.Contains(testUsername, "name1") || strings.Contains(testUsername, "policy1") {
 		t.Fatalf(
 			"expected sts username to not contain display name or policy name; got %s",
