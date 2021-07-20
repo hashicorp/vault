@@ -1,0 +1,144 @@
+---
+layout: docs
+page_title: operator diagnose - Command
+description: |-
+  The "operator diagnose" command performs a set of checks using a provided
+  vault configuration file to report potential issues to the operator when vault
+  is in a bad state. 
+
+---
+
+# operator diagnose
+
+The operator diagnose command should be used primarily when vault is down or 
+partially inoperational. The command can be used safely regardless of the state 
+vault is in, but may return meaningless results for some of the test cases. 
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/docs/commands) included on all commands.
+
+### Output Options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+#### Output Layout (default)
+
+The operator diagnose command will output a set of lines in the CLI. 
+Each line will begin with a prefix in parenthesis. These are:. 
+
+- `[ success ]` - Denotes that the check was successful.
+- `[ warning ]` - Denotes that the check has passed, but that there may be potential
+issues to look into that may relate to the issues vault is experiencing. Diagnose warns 
+frequently. These warnings are meant to serve as starting points in the debugging process. 
+- `[ failure ]` - Denotes that the check has failed. Failures are critical issues in the eyes 
+of the diagnose command.
+
+In addition to these prefixed lines, there may be output lines that are not prefixed, but are 
+color-coded purple. These are advice lines from Diagnose, and are meant to offer general guidance 
+on how to go about fixing potential warnings or failures that may arise. 
+
+### Command Options
+
+- `-config` `(string; "")` - The path to the vault configuration file used by 
+the vault server on startup. 
+
+### Diagnose Checks
+
+The following section details the various checks that Diagnose runs. Check names in documentation
+will be separated by slashes to denote that they are nested, when applicable. For example, a check 
+documented as `A / B` will show up as `B` in the `operator diagnose` output, and will be nested
+(indented) under `A`. 
+
+If you encounter an error that is not listed in the `common errors` section of a particular check, 
+there is a high likelihood that either the error is thrown by a standard library and is 
+documented by a third party, or that the error is thrown by the vault server itself. 
+
+To account for the former case, links will be provided where possible in the checks below. 
+In the latter case, the vault logs on the server itself will have further insight, as the 
+error was caught by the server in addition to the diagnose command. 
+
+####  Vault Diagnose
+
+blurb
+
+#### Check Operating System
+
+blurb
+
+common errors
+
+#### Check Open File Limit
+
+blurb
+
+common errors
+
+
+#### Check Disk Usage
+
+blurb
+
+common errors
+
+#### Parse Configuration
+
+blurb
+
+common errors
+
+#### Check Storage
+
+blurb
+
+common errors
+
+#### Check Storage / Create Storage Backend
+
+#### Check Storage / Check Consul TLS
+
+#### Check Storage / Check Consul Direct Storage Access
+
+#### Check Storage / Check Storage Access
+
+#### Check Service Discovery
+
+#### Check Service Discovery / Check Consul Service Discovery TLS
+
+#### Check Service Discovery / Check Consul Direct Service Discovery
+
+#### Create Vault Server Configuration Seals
+
+#### Check Transit Seal TLS
+
+#### Create Core Configuration
+
+#### Create Core Configuration / Initialize Randomness for Core
+
+#### HA Storage
+
+This check and any nested checks will be the same as the `Check Storage` checks.
+The only difference is that the checks here will be run on whatever is specified in the 
+`ha_storage` section of the vault configuration, as opposed to the `storage` section. 
+
+#### Determine Redirect Address
+
+#### Check Cluster Address
+
+#### Check Core Creation
+
+#### Check For Autoloaded License
+
+#### Start Listeners
+
+#### Start Listeners / Check Listener TLS
+
+#### Start Listeners / Create Listeners
+
+#### Check Autounseal Encryption
+
+#### Check Server Before Runtime
+
