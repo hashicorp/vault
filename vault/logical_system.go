@@ -899,6 +899,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := augmentEnableAuthConfigMap(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {

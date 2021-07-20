@@ -107,6 +107,11 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			"-description", "The best kind of test",
 			"-default-lease-ttl", "30m",
 			"-max-lease-ttl", "1h",
+			"-audit-non-hmac-request-keys", "foo,bar",
+			"-audit-non-hmac-response-keys", "foo,bar",
+			"-passthrough-request-headers", "authorization,authentication",
+			"-passthrough-request-headers", "www-authentication",
+			"-allowed-response-headers", "authorization",
 			"-force-no-cache",
 			"pki",
 		})

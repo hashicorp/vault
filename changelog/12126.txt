@@ -1,3 +1,4 @@
 ```release-note:bug
-auth: Adding capability to use comma separated parameters for auth enable/tune
+auth/secret: Adding capability to use comma separated parameters for auth enable/tune
+auth/secret: Adding missing CLI parameters and updating website information accordingly
 ```
