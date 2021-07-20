@@ -219,3 +219,23 @@ $ curl \
     --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
 ```
+
+## Bootstrap an HA node
+
+When a node uses Raft exclusively for `ha_storage`, this endpoint is used to activate
+Raft.  It is analogous to using `sys/init` to initialize storage, in that it
+only needs to be done once per cluster, after which `vault operator raft join`
+is used to add more nodes to the Raft cluster.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `POST` | `/sys/storage/raft/bootstrap` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/storage/raft/bootstrap
+```
