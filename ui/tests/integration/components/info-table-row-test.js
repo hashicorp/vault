@@ -100,9 +100,6 @@ module('Integration | Component | InfoTableItem', function(hooks) {
   });
 
   test('block content overrides any passed in value content', async function(assert) {
-    this.set('value', VALUE);
-    this.set('label', LABEL);
-
     await render(hbs`<InfoTableRow
       @value={{value}}
       @label={{label}}
