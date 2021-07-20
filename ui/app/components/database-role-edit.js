@@ -49,8 +49,10 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   @action
-  generateCreds(roleId) {
-    this.router.transitionTo('vault.cluster.secrets.backend.credentials', roleId);
+  generateCreds(roleId, roleType = '') {
+    this.router.transitionTo('vault.cluster.secrets.backend.credentials', roleId, {
+      queryParams: { roleType },
+    });
   }
 
   @action
