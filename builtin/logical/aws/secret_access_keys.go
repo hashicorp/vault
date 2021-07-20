@@ -3,12 +3,12 @@ package aws
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"regexp"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,7 +17,11 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-const secretAccessKeyType = "access_keys"
+const (
+	secretAccessKeyType = "access_keys"
+	storageKey          = "config/root"
+	defaultSTSTemplate  = `{{ printf "vault-%d-%d" (unix_time) (random 20) | truncate 32 }}`
+)
 
 func secretAccessKeys(b *backend) *framework.Secret {
 	return &framework.Secret{
@@ -43,26 +47,45 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
-func genUsername(displayName, policyName, userType string) (ret string, warning string) {
-	var midString string
+func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string, err error) {
 
 	switch userType {
 	case "iam_user":
 		// IAM users are capped at 64 chars; this leaves, after the beginning and
 		// end added below, 42 chars to play with.
-		midString = fmt.Sprintf("%s-%s-",
-			normalizeDisplayName(displayName),
-			normalizeDisplayName(policyName))
-		if len(midString) > 42 {
-			midString = midString[0:42]
-			warning = "the calling token display name/IAM policy name were truncated to fit into IAM username length limits"
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+		}
+
+		um := UsernameMetadata{
+			DisplayName: normalizeDisplayName(displayName),
+			PolicyName:  normalizeDisplayName(policyName),
+		}
+
+		ret, err = up.Generate(um)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate username: %w", err)
+		}
+		// To prevent template from exceeding IAM length limits
+		if len(ret) > 64 {
+			ret = ret[0:64]
+			warning = "the calling token display name/IAM policy name were truncated to 64 characters to fit within IAM username length limits"
 		}
 	case "sts":
 		// Capped at 32 chars, which leaves only a couple of characters to play
 		// with, so don't insert display name or policy name at all
-	}
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+		}
 
-	ret = fmt.Sprintf("vault-%s%d-%d", midString, time.Now().Unix(), rand.Int31n(10000))
+		um := UsernameMetadata{}
+		ret, err = up.Generate(um)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate username: %w", err)
+		}
+	}
 	return
 }
 
@@ -90,7 +113,11 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "sts")
+	username, usernameWarning, usernameError := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
+	// Send a 400 to Framework.OperationFunc Handler
+	if usernameError != nil {
+		return nil, usernameError
+	}
 
 	getTokenInput := &sts.GetFederationTokenInput{
 		Name:            aws.String(username),
@@ -165,15 +192,27 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	// Set as defaultUsernameTemplate if not provided
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
 	roleSessionNameWarning := ""
+	var roleSessionNameError error
 	if roleSessionName == "" {
-		roleSessionName, roleSessionNameWarning = genUsername(displayName, roleName, "iam_user")
+		roleSessionName, roleSessionNameWarning, roleSessionNameError = genUsername(displayName, roleName, "iam_user", usernameTemplate)
+		// Send a 400 to Framework.OperationFunc Handler
+		if roleSessionNameError != nil {
+			return nil, roleSessionNameError
+		}
 	} else {
 		roleSessionName = normalizeDisplayName(roleSessionName)
-		if len(roleSessionName) > 64 {
-			roleSessionName = roleSessionName[0:64]
-			roleSessionNameWarning = "the role session name was truncated to 64 characters to fit within IAM session name length limits"
-		}
 	}
 
 	assumeRoleInput := &sts.AssumeRoleInput{
@@ -216,6 +255,22 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	return resp, nil
 }
 
+func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error) {
+	entry, err := storage.Get(ctx, storageKey)
+	if err != nil {
+		return rootConfig{}, err
+	}
+	if entry == nil {
+		return rootConfig{}, nil
+	}
+
+	var connConfig rootConfig
+	if err := entry.DecodeJSON(&connConfig); err != nil {
+		return rootConfig{}, err
+	}
+	return connConfig, nil
+}
+
 func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
@@ -226,7 +281,22 @@ func (b *backend) secretAccessKeysCreate(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	// Set as defaultUsernameTemplate if not provided
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	username, usernameWarning, usernameError := genUsername(displayName, policyName, "iam_user", usernameTemplate)
+	// Send a 400 to Framework.OperationFunc Handler
+	if usernameError != nil {
+		return nil, usernameError
+	}
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -434,4 +504,9 @@ func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
 		}
 	}
 	return retval
+}
+
+type UsernameMetadata struct {
+	DisplayName string
+	PolicyName  string
 }
