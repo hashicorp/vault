@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -1317,10 +1316,9 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
-func augmentTuneWriteParams(paramIn interface{}) ([]string, error) {
-	newVal := paramIn.([]string)
+func augmentTuneWriteParams(paramIn []string) ([]string, error) {
 	var outputSlice []string
-	for _, v := range newVal {
+	for _, v := range paramIn {
 		res, err := parseutil.ParseCommaStringSlice(v)
 		if err != nil {
 			return nil, err
@@ -1439,7 +1437,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
-		auditNonHMACRequestKeys, err := augmentTuneWriteParams(rawVal)
+		newVal := rawVal.([]string)
+		auditNonHMACRequestKeys, err := augmentTuneWriteParams(newVal)
 		if err != nil {
 			return handleError(err)
 		}
@@ -1467,7 +1466,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
-		auditNonHMACResponseKeys, err := augmentTuneWriteParams(rawVal)
+		newVal := rawVal.([]string)
+		auditNonHMACResponseKeys, err := augmentTuneWriteParams(newVal)
 		if err != nil {
 			return handleError(err)
 		}
@@ -1562,7 +1562,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
-		headers, err := augmentTuneWriteParams(rawVal)
+		newVal := rawVal.([]string)
+		headers, err := augmentTuneWriteParams(newVal)
 		if err != nil {
 			return handleError(err)
 		}
@@ -1590,7 +1591,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
-		headers, err := augmentTuneWriteParams(rawVal)
+		newVal := rawVal.([]string)
+		headers, err := augmentTuneWriteParams(newVal)
 		if err != nil {
 			return handleError(err)
 		}
@@ -1908,9 +1910,8 @@ func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
 		if raw, ok := configMap[paramName]; ok {
 			outputSlice := []string{}
 
-			rt := reflect.TypeOf(raw)
-			switch rt.Kind() {
-			case reflect.Slice:
+			switch raw.(type) {
+			case []interface{}:
 				rawNew := raw.([]interface{})
 				for _, rawVal := range rawNew {
 					rawValSt := rawVal.(string)
@@ -1920,7 +1921,7 @@ func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
 					}
 					outputSlice = append(outputSlice, res...)
 				}
-			case reflect.String:
+			case string:
 				rawNew := raw.(string)
 				res, err := parseutil.ParseCommaStringSlice(rawNew)
 				if err != nil {

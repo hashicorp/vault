@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -149,6 +150,19 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if exp := true; mountInfo.Config.ForceNoCache != exp {
 			t.Errorf("expected %t to be %t", mountInfo.Config.ForceNoCache, exp)
 		}
+		if exp := []string{"authorization", "authentication", "www-authentication"}; !reflect.DeepEqual(exp, mountInfo.Config.PassthroughRequestHeaders) {
+			t.Errorf("Failed to find expected values in PassthroughRequestHeaders")
+		}
+		if exp := []string{"authorization"}; !reflect.DeepEqual(exp, mountInfo.Config.AllowedResponseHeaders) {
+			t.Errorf("Failed to find expected values in AllowedResponseHeaders")
+		}
+		if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, mountInfo.Config.AuditNonHMACRequestKeys) {
+			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys")
+		}
+		if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, mountInfo.Config.AuditNonHMACResponseKeys) {
+			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys")
+		}
+
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {

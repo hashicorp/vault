@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -118,6 +119,18 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 		if exp := "The best kind of test"; authInfo.Description != exp {
 			t.Errorf("expected %q to be %q", authInfo.Description, exp)
+		}
+		if exp := []string{"authorization", "authentication", "www-authentication"}; !reflect.DeepEqual(exp, authInfo.Config.PassthroughRequestHeaders) {
+			t.Errorf("Failed to find expected values in PassthroughRequestHeaders")
+		}
+		if exp := []string{"authorization"}; !reflect.DeepEqual(exp, authInfo.Config.AllowedResponseHeaders) {
+			t.Errorf("Failed to find expected values in AllowedResponseHeaders")
+		}
+		if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, authInfo.Config.AuditNonHMACRequestKeys) {
+			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys")
+		}
+		if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, authInfo.Config.AuditNonHMACResponseKeys) {
+			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys")
 		}
 	})
 

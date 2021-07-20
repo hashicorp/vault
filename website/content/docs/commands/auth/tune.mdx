@@ -51,6 +51,9 @@ flags](/docs/commands) included on all commands.
 - `-description` `(string: "")` - Specifies the description of the mount.
   This overrides the current stored value, if any.
 
+- `-listing-visibility` `(string: "")` - The flag to toggle whether to show the
+  mount in the UI-specific listing endpoint.
+
 - `-max-lease-ttl` `(duration: "")` - The maximum lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally
   configured maximum lease TTL, or a previously configured value for the auth

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -202,6 +203,18 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			}
 			if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
+			}
+			if exp := []string{"authorization", "www-authentication"}; !reflect.DeepEqual(exp, mountInfo.Config.PassthroughRequestHeaders) {
+				t.Errorf("Failed to find expected values in PassthroughRequestHeaders")
+			}
+			if exp := []string{"authorization", "www-authentication"}; !reflect.DeepEqual(exp, mountInfo.Config.AllowedResponseHeaders) {
+				t.Errorf("Failed to find expected values in AllowedResponseHeaders")
+			}
+			if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, mountInfo.Config.AuditNonHMACRequestKeys) {
+				t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys")
+			}
+			if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, mountInfo.Config.AuditNonHMACResponseKeys) {
+				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys")
 			}
 		})
 
