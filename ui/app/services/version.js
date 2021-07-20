@@ -27,6 +27,7 @@ export default Service.extend({
 
   hasSentinel: hasFeature('Sentinel'),
   hasNamespaces: hasFeature('Namespaces'),
+  hasControlGroups: hasFeature('Control Groups'),
 
   isEnterprise: match('version', /\+.+$/),
 

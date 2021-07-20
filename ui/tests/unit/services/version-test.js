@@ -38,4 +38,11 @@ module('Unit | Service | version', function(hooks) {
     service.set('_features', ['DR Replication']);
     assert.equal(service.get('hasDRReplication'), true);
   });
+
+  test('hasControlGroups', function(assert) {
+    let service = this.owner.lookup('service:version');
+    assert.equal(service.get('hasControlGroups'), false);
+    service.set('_features', ['Control Groups']);
+    assert.equal(service.get('hasControlGroups'), true);
+  });
 });

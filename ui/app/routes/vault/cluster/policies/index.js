@@ -14,7 +14,10 @@ export default Route.extend(ClusterRoute, ListRoute, {
   },
 
   shouldReturnEmptyModel(policyType, version) {
-    return policyType !== 'acl' && (version.get('isOSS') || !version.get('hasSentinel'));
+    if (policyType === 'acl') {
+      return false;
+    }
+    return !version.hasSentinel;
   },
 
   model(params) {

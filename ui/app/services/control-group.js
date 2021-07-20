@@ -84,7 +84,7 @@ export default Service.extend({
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
     let creationPath = response && response?.wrap_info?.creation_path;
     if (
-      this.version.isOSS ||
+      !this.version.hasControlGroups ||
       wasWrapTTLRequested ||
       !response ||
       (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||
@@ -102,7 +102,7 @@ export default Service.extend({
     transitionTo.paramNames.map(name => {
       let param = transitionTo.params[name];
       if (param.length) {
-        // push on to the front of the array since were're started at the end
+        // push on to the front of the array since we started at the end
         returnedParams.unshift(param);
       }
     });

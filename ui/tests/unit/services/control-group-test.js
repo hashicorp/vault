@@ -46,8 +46,8 @@ module('Unit | Service | control group', function(hooks) {
 
   hooks.afterEach(function() {});
 
-  let isOSS = context => set(context, 'version.isOSS', true);
-  let isEnt = context => set(context, 'version.isOSS', false);
+  let isOSS = context => set(context, 'version.hasControlGroups', false);
+  let isEnt = context => set(context, 'version.hasControlGroups', true);
   let resolvesArgs = (assert, result, expectedArgs) => {
     return result.then((...args) => {
       return assert.deepEqual(args, expectedArgs, 'resolves with the passed args');
@@ -56,31 +56,31 @@ module('Unit | Service | control group', function(hooks) {
 
   [
     [
-      'it resolves isOSS:true, wrapTTL: true, response: has wrap_info',
+      'it resolves hasControlGroups:false, wrapTTL:true, response: has wrap_info',
       isOSS,
       [[{ one: 'two', three: 'four' }], { wrap_info: { token: 'foo', accessor: 'bar' } }, true],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it resolves isOSS:true, wrapTTL: false, response: has no wrap_info',
+      'it resolves hasControlGroups:false, wrapTTL:false, response: has no wrap_info',
       isOSS,
       [[{ one: 'two', three: 'four' }], { wrap_info: null }, false],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it resolves isOSS: false and wrapTTL:true response: has wrap_info',
+      'it resolves hasControlGroups:true and wrapTTL:true response: has wrap_info',
       isEnt,
       [[{ one: 'two', three: 'four' }], { wrap_info: { token: 'foo', accessor: 'bar' } }, true],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it resolves isOSS: false and wrapTTL:false response: has no wrap_info',
+      'it resolves hasControlGroups:true and wrapTTL:false response: has no wrap_info',
       isEnt,
       [[{ one: 'two', three: 'four' }], { wrap_info: null }, false],
       (assert, result) => resolvesArgs(assert, result, [{ one: 'two', three: 'four' }]),
     ],
     [
-      'it rejects isOSS: false, wrapTTL:false, response: has wrap_info',
+      'it rejects hasControlGroups:true, wrapTTL:false, response: has wrap_info',
       isEnt,
       [
         [{ one: 'two', three: 'four' }],
