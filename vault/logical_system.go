@@ -1920,6 +1920,8 @@ func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
 					return err
 				}
 				outputSlice = append(outputSlice, res...)
+			default:
+				return fmt.Errorf("Invalid input parameter type for %v", paramName)
 			}
 			configMap[paramName] = outputSlice
 		}
