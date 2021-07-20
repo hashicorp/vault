@@ -1,5 +1,6 @@
-import RSVP from 'rsvp';
+import { allSettled } from 'rsvp';
 import ApplicationAdapter from '../application';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -20,18 +21,20 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { backend, secret } = query;
-    return RSVP.allSettled([this._staticCreds(backend, secret), this._dynamicCreds(backend, secret)]).then(
+    if (query.roleType === 'static') {
+      return this._staticCreds(backend, secret);
+    } else if (query.roleType === 'dynamic') {
+      return this._dynamicCreds(backend, secret);
+    }
+    return allSettled([this._staticCreds(backend, secret), this._dynamicCreds(backend, secret)]).then(
       ([staticResp, dynamicResp]) => {
-        // If one comes back with wrapped response from control group, throw it
-        const accessor = staticResp.accessor || dynamicResp.accessor;
-        if (accessor) {
-          throw accessor;
-        }
-        // if neither has payload, throw reason with highest httpStatus
-        if (!staticResp.value && !dynamicResp.value) {
-          let reason = dynamicResp.reason;
-          if (reason?.httpStatus < staticResp.reason?.httpStatus) {
-            reason = staticResp.reason;
+        if (staticResp.state === 'rejected' && dynamicResp.state === 'rejected') {
+          let reason = staticResp.reason;
+          if (dynamicResp.reason instanceof ControlGroupError) {
+            throw dynamicResp.reason;
+          }
+          if (reason?.httpStatus < dynamicResp.reason?.httpStatus) {
+            reason = dynamicResp.reason;
           }
           throw reason;
         }
