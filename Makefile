@@ -42,7 +42,7 @@ dev-dynamic: prep
 # debug creates deoptimized binaries for debugging Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 debug: prep
-	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' GCFLAGS='"all=-N -l"' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' GCFLAGS="all=-N -l" VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # *-mem variants will enable memory profiling which will write snapshots of heap usage
 # to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
