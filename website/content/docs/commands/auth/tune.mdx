@@ -32,6 +32,9 @@ $ vault auth tune -audit-non-hmac-request-keys=value1 -audit-non-hmac-request-ke
 The following flags are available in addition to the [standard set of
 flags](/docs/commands) included on all commands.
 
+- `-allowed-response-headers` `(string: "")` - response header values that plugins
+  will be allowed to set.
+
 - `-audit-non-hmac-request-keys` `(string: "")` - Key that will not be HMAC'd
   by audit devices in the request data object. Note that multiple keys may be
   specified by providing this option multiple times, each time with 1 key.
@@ -45,7 +48,16 @@ flags](/docs/commands) included on all commands.
   configured default lease TTL, or a previously configured value for the auth
   method.
 
+- `-description` `(string: "")` - Specifies the description of the mount.
+  This overrides the current stored value, if any.
+
 - `-max-lease-ttl` `(duration: "")` - The maximum lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally
   configured maximum lease TTL, or a previously configured value for the auth
   method.
+
+- `-passthrough-request-headers` `(string: "")` - request header values that will
+  be sent to the plugin.
+
+- `-token-type` `(string: "") - Specifies the type of tokens that should be
+  returned by the mount.

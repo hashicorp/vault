@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -1309,6 +1310,19 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
+func augmentTuneWriteParams(paramIn interface{}) ([]string, error) {
+	newVal := paramIn.([]string)
+	var outputSlice []string
+	for _, v := range newVal {
+		res, err := parseutil.ParseCommaStringSlice(v)
+		if err != nil {
+			return nil, err
+		}
+		outputSlice = append(outputSlice, res...)
+	}
+	return outputSlice, nil
+}
+
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1418,13 +1432,15 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
-		auditNonHMACRequestKeys := rawVal.([]string)
+		auditNonHMACRequestKeys, err := augmentTuneWriteParams(rawVal)
+		if err != nil {
+			return handleError(err)
+		}
 
 		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
 		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
 
 		// Update the mount table
-		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1444,13 +1460,15 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
-		auditNonHMACResponseKeys := rawVal.([]string)
+		auditNonHMACResponseKeys, err := augmentTuneWriteParams(rawVal)
+		if err != nil {
+			return handleError(err)
+		}
 
 		oldVal := mountEntry.Config.AuditNonHMACResponseKeys
 		mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
 
 		// Update the mount table
-		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1537,13 +1555,15 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
-		headers := rawVal.([]string)
+		headers, err := augmentTuneWriteParams(rawVal)
+		if err != nil {
+			return handleError(err)
+		}
 
 		oldVal := mountEntry.Config.PassthroughRequestHeaders
 		mountEntry.Config.PassthroughRequestHeaders = headers
 
 		// Update the mount table
-		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1563,13 +1583,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
-		headers := rawVal.([]string)
-
+		headers, err := augmentTuneWriteParams(rawVal)
+		if err != nil {
+			return handleError(err)
+		}
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
 		// Update the mount table
-		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1869,6 +1890,43 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
+	configParamNameSlice := []string{
+		"audit_non_hmac_request_keys",
+		"audit_non_hmac_response_keys",
+		"passthrough_request_headers",
+		"allowed_response_headers",
+	}
+	for _, paramName := range configParamNameSlice {
+		if raw, ok := configMap[paramName]; ok {
+			outputSlice := []string{}
+
+			rt := reflect.TypeOf(raw)
+			switch rt.Kind() {
+			case reflect.Slice:
+				rawNew := raw.([]interface{})
+				for _, rawVal := range rawNew {
+					rawValSt := rawVal.(string)
+					res, err := parseutil.ParseCommaStringSlice(rawValSt)
+					if err != nil {
+						return err
+					}
+					outputSlice = append(outputSlice, res...)
+				}
+			case reflect.String:
+				rawNew := raw.(string)
+				res, err := parseutil.ParseCommaStringSlice(rawNew)
+				if err != nil {
+					return err
+				}
+				outputSlice = append(outputSlice, res...)
+			}
+			configMap[paramName] = outputSlice
+		}
+	}
+	return nil
+}
+
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1895,6 +1953,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := augmentEnableAuthConfigMap(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {

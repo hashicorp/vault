@@ -57,12 +57,27 @@ flags](/docs/commands) included on all commands.
   configured default lease TTL, or a previously configured value for the auth
   method.
 
+- `-passthrough-request-headers` `(string: "")` - request header values that will
+  be sent to the plugin.
+
+- `-allowed-response-headers` `(string: "")` - response header values that plugins
+  will be allowed to set.
+
 - `-description` `(string: "")` - Human-friendly description for the purpose of
   this auth method.
+
+- `-listing-visibility` `(string: "")` - The flag to toggle whether to show the
+  mount in the UI-specific listing endpoint.
 
 - `-local` `(bool: false)` - Mark the auth method as local-only. Local auth
   methods are not replicated nor removed by replication.
 
+- `-max-lease-ttl` `(string: "")` - The maximum lease duration, specified as
+  a string duration like "5s" or "30m".
+
 - `-path` `(string: "")` - Place where the auth method will be accessible. This
   must be unique across all auth methods. This defaults to the "type" of the
   auth method. The auth method will be accessible at `/auth/<path>`.
+
+- `-seal-wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
+  values stored by the mount to be wrapped by the seal's encryption capability.

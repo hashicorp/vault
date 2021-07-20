@@ -92,6 +92,9 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				"-max-lease-ttl", "1h",
 				"-audit-non-hmac-request-keys", "foo,bar",
 				"-audit-non-hmac-response-keys", "foo,bar",
+				"-passthrough-request-headers", "authorization",
+				"-passthrough-request-headers", "www-authentication",
+				"-allowed-response-headers", "authorization,www-authentication",
 				"-listing-visibility", "unauth",
 				"my-auth/",
 			})

@@ -86,6 +86,12 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		code := cmd.Run([]string{
 			"-path", "auth_integration/",
 			"-description", "The best kind of test",
+			"-audit-non-hmac-request-keys", "foo,bar",
+			"-audit-non-hmac-response-keys", "foo,bar",
+			"-passthrough-request-headers", "authorization,authentication",
+			"-passthrough-request-headers", "www-authentication",
+			"-allowed-response-headers", "authorization",
+			"-listing-visibility", "unauth",
 			"userpass",
 		})
 		if exp := 0; code != exp {
