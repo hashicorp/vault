@@ -141,6 +141,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		defer c.Close() // Defer closing of this connection as the deferal above closes the other defined connection
 	}
 
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
+	}
 	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil, nil
