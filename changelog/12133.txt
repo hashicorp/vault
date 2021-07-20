@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Changes relevant version checks from isOSS/isEnterprise to hasFeature
+```
