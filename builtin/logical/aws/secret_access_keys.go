@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -48,7 +48,6 @@ func secretAccessKeys(b *backend) *framework.Secret {
 }
 
 func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string, err error) {
-
 	switch userType {
 	case "iam_user":
 		// IAM users are capped at 64 chars; this leaves, after the beginning and

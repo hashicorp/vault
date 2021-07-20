@@ -8,10 +8,10 @@ require (
 	github.com/cenkalti/backoff/v3 v3.0.0
 	github.com/frankban/quicktest v1.13.0 // indirect
 	github.com/go-test/deep v1.0.2
-	github.com/hashicorp/errwrap v1.0.0
+	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-hclog v0.16.1
-	github.com/hashicorp/go-multierror v1.1.0
+	github.com/hashicorp/go-hclog v0.16.2
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.6.6
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.1
