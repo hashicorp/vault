@@ -79,21 +79,18 @@ module('Integration | Component | InfoTableItem', function(hooks) {
   test('it renders a dash (-) if a label and/or value do not exist', async function(assert) {
     this.set('value', VALUE);
     this.set('label', '');
-    this.set('alwaysRender', true);
 
     await render(hbs`<InfoTableRow
       @value={{value}}
       @label={{label}}
-      @alwaysRender={{alwaysRender}}
+      @alwaysRender={{true}}
     />`);
-
     assert.dom('[data-test-label-div]').exists('renders label div');
     assert.dom('[data-test-value-div]').exists('renders value div');
     assert.dom('div.column span').hasClass('hs-icon-s', 'Renders a dash (-) for the label');
 
     this.set('value', '');
     this.set('label', LABEL);
-
     assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for the value');
 
     this.set('value', '');
