@@ -54,7 +54,7 @@ module('Integration | Component | InfoTableItem', function(hooks) {
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function(assert) {
-    // This could be changed in the component so that it adds a link for any item type, but right it should only add a link if item type is an array.
+    // This could be changed in the component so that it adds a link for any item type, but right now it should only add a link if item type is an array.
     await render(hbs`<InfoTableRow
         @value={{value}}
         @label={{label}}
@@ -97,5 +97,20 @@ module('Integration | Component | InfoTableItem', function(hooks) {
     this.set('label', '');
     let dashCount = document.querySelectorAll('.hs-icon-s').length;
     assert.equal(dashCount, 2, 'Renders dash (-) when both label and value do not exist');
+  });
+
+  test('block content overrides any passed in value content', async function(assert) {
+    this.set('value', VALUE);
+    this.set('label', LABEL);
+
+    await render(hbs`<InfoTableRow
+      @value={{value}}
+      @label={{label}}
+      @alwaysRender={{true}}>
+      Block content is here 
+      </InfoTableRow>`);
+
+    let block = document.querySelector('[data-test-value-div]').textContent.trim();
+    assert.equal(block, 'Block content is here', 'renders block passed through');
   });
 });
