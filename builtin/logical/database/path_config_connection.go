@@ -349,7 +349,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		resp := &logical.Response{}
 
-		// This is a simple test to to check for passwords in the connection_url paramater. If one exists,
+		// This is a simple test to check for passwords in the connection_url paramater. If one exists,
 		// warn the user to use templated url string
 		if connURLRaw, ok := config.ConnectionDetails["connection_url"]; ok {
 			if connURL, err := url.Parse(connURLRaw.(string)); err == nil {
