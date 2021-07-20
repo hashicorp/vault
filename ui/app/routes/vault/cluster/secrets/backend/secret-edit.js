@@ -219,6 +219,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let modelType = this.modelType(backend, secret);
+    let type = params.type || '';
     if (!secret) {
       secret = '\u0020';
     }
@@ -235,7 +236,7 @@ export default Route.extend(UnloadModelRoute, {
 
     let capabilities = this.capabilities(secret, modelType);
     try {
-      secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
+      secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
     } catch (err) {
       // we've failed the read request, but if it's a kv-type backend, we want to
       // do additional checks of the capabilities
