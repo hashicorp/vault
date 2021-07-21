@@ -1318,7 +1318,7 @@ func TestParseAddressWithUnixSocket(t *testing.T) {
 	address := "unix:///var/run/vault.sock"
 	config := DefaultConfig()
 
-	u, err := ParseAddress(address, config)
+	u, err := config.ParseAddress(address)
 	if err != nil {
 		t.Fatal("Error not expected")
 	}

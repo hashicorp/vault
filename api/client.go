@@ -534,7 +534,7 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
-	u, err := ParseAddress(address, c)
+	u, err := c.ParseAddress(address)
 	if err != nil {
 		return nil, err
 	}
@@ -566,17 +566,20 @@ func NewClient(c *Config) (*Client, error) {
 // ParseAddress transforms the provided address into a url.URL and handles
 // the case of Unix domain sockets by setting the DialContext in the
 // configuration's HttpClient.Transport.
-func ParseAddress(address string, config *Config) (*url.URL, error) {
+func (c *Config) ParseAddress(address string) (*url.URL, error) {
 	u, err := url.Parse(address)
 	if err != nil {
 		return nil, err
 	}
 
+	c.Address = address
+
 	if strings.HasPrefix(address, "unix://") {
 		// When the address begins with unix://, always change the transport's
 		// DialContext (to match previous behaviour)
 		socket := strings.TrimPrefix(address, "unix://")
-		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
 			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
 				return net.Dial("unix", socket)
 			}
@@ -591,16 +594,13 @@ func ParseAddress(address string, config *Config) (*url.URL, error) {
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
 		}
-	} else if strings.HasPrefix(config.Address, "unix://") {
+	} else if strings.HasPrefix(c.Address, "unix://") {
 		// When the address being set does not begin with unix:// but the previous
 		// address in the Config did, change the transport's DialContext back to
 		// use the default configuration that cleanhttp uses.
-		if transport, ok := config.HttpClient.Transport.(*http.Transport); ok {
-			transport.DialContext = (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
-			}).DialContext
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = cleanhttp.DefaultPooledTransport().DialContext
 		}
 	}
 
@@ -641,10 +641,7 @@ func (c *Client) SetAddress(addr string) error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	c.config.modifyLock.Lock()
-	parsedAddr, err := ParseAddress(addr, c.config)
-	c.config.Address = addr
-	c.config.modifyLock.Unlock()
+	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
