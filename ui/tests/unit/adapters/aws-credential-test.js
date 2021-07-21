@@ -74,8 +74,6 @@ module('Unit | Adapter | aws credential', function(hooks) {
       let { method, url, requestBody } = this.server.handledRequests[0];
       assert.equal(url, '/v1/aws/creds/foo', `calls the correct url`);
       assert.equal(method, expectedMethod, `${description} uses the correct http verb: ${expectedMethod}`);
-      console.log({ requestBody });
-      console.log({ expectedRequestBody });
       assert.equal(requestBody, JSON.stringify(expectedRequestBody));
     });
   });
