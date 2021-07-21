@@ -1,0 +1,3 @@
+```release-note:changes
+core: License/EULA changes that ensure the presence of a valid HashiCorp license to start Vault. More information is available in the [Vault License FAQ](https://www.vaultproject.io/docs/enterprise/license/faqs)
+```
