@@ -84,7 +84,7 @@ export default Service.extend({
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
     let creationPath = response && response?.wrap_info?.creation_path;
     if (
-      this.version?.hasControlGroups ||
+      !this.version?.hasControlGroups ||
       wasWrapTTLRequested ||
       !response ||
       (creationPath && WRAPPED_RESPONSE_PATHS.includes(creationPath)) ||
