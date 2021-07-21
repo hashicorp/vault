@@ -39,19 +39,60 @@ var (
 
 // Logical is used to perform logical backend operations on Vault.
 type Logical struct {
-	c *Client
+	c *LogicalContext
 }
 
-// Logical is used to return the client for logical-backend API calls.
 func (c *Client) Logical() *Logical {
-	return &Logical{c: c}
+	return &Logical{c: c.LogCtx()}
 }
 
 func (c *Logical) Read(path string) (*Secret, error) {
-	return c.ReadWithData(path, nil)
+	return c.c.Read(context.Background(), path)
 }
 
 func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, error) {
+	return c.c.ReadWithData(context.Background(), path, data)
+}
+
+func (c *Logical) List(path string) (*Secret, error) {
+	return c.c.List(context.Background(), path)
+}
+
+func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
+	return c.c.Write(context.Background(), path, data)
+}
+
+func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
+	return c.c.WriteBytes(context.Background(), path, data)
+}
+
+func (c *Logical) Delete(path string) (*Secret, error) {
+	return c.c.Delete(context.Background(), path)
+}
+
+func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
+	return c.c.DeleteWithData(context.Background(), path, data)
+}
+
+func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
+	return c.c.Unwrap(context.Background(), wrappingToken)
+}
+
+// LogicalContext is used to perform logical backend operations on Vault with a
+// context argument.
+type LogicalContext struct {
+	c *Client
+}
+
+func (c *Client) LogCtx() *LogicalContext {
+	return &LogicalContext{c: c}
+}
+
+func (c *LogicalContext) Read(ctx context.Context, path string) (*Secret, error) {
+	return c.ReadWithData(ctx, path, nil)
+}
+
+func (c *LogicalContext) ReadWithData(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
 	r := c.c.NewRequest("GET", "/v1/"+path)
 
 	var values url.Values
@@ -68,7 +109,7 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 		r.Params = values
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -95,14 +136,14 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) List(path string) (*Secret, error) {
+func (c *LogicalContext) List(ctx context.Context, path string) (*Secret, error) {
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
 	r.Method = "GET"
 	r.Params.Set("list", "true")
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -129,24 +170,24 @@ func (c *Logical) List(path string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
+func (c *LogicalContext) Write(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	return c.write(path, r)
+	return c.write(ctx, path, r)
 }
 
-func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
+func (c *LogicalContext) WriteBytes(ctx context.Context, path string, data []byte) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	r.BodyBytes = data
 
-	return c.write(path, r)
+	return c.write(ctx, path, r)
 }
 
-func (c *Logical) write(path string, request *Request) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *LogicalContext) write(ctx context.Context, path string, request *Request) (*Secret, error) {
+	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, request)
 	if resp != nil {
@@ -172,11 +213,11 @@ func (c *Logical) write(path string, request *Request) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Delete(path string) (*Secret, error) {
-	return c.DeleteWithData(path, nil)
+func (c *LogicalContext) Delete(ctx context.Context, path string) (*Secret, error) {
+	return c.DeleteWithData(ctx, path, nil)
 }
 
-func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {
+func (c *LogicalContext) DeleteWithData(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
 	r := c.c.NewRequest("DELETE", "/v1/"+path)
 
 	var values url.Values
@@ -193,7 +234,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 		r.Params = values
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -219,7 +260,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
+func (c *LogicalContext) Unwrap(ctx context.Context, wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
@@ -236,7 +277,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if resp != nil {
@@ -273,7 +314,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 		c.c.SetToken(wrappingToken)
 	}
 
-	secret, err = c.Read(wrappedResponseLocation)
+	secret, err = c.Read(ctx, wrappedResponseLocation)
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("error reading %q: {{err}}", wrappedResponseLocation), err)
 	}
