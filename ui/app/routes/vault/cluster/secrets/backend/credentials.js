@@ -23,8 +23,8 @@ export default Route.extend({
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
-  getDatabaseCredential(backend, secret) {
-    return this.store.queryRecord('database/credential', { backend, secret }).catch(error => {
+  getDatabaseCredential(backend, secret, roleType = '') {
+    return this.store.queryRecord('database/credential', { backend, secret, roleType }).catch(error => {
       if (error instanceof ControlGroupError) {
         throw error;
       }
@@ -57,7 +57,7 @@ export default Route.extend({
     let roleType = params.roleType;
     let dbCred;
     if (backendType === 'database') {
-      dbCred = await this.getDatabaseCredential(backendPath, role);
+      dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
     }
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendModel.get('type'))) {
       return this.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
