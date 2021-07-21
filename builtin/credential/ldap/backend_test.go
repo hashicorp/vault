@@ -261,6 +261,17 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		if !reflect.DeepEqual(expected, resp.Auth.Policies) {
 			t.Fatalf("bad: policies: expected: %q, actual: %q", expected, resp.Auth.Policies)
 		}
+
+		switch caseSensitive {
+		case false:
+			if !(resp.Auth.Alias.Name == "hermes conrad") {
+				t.Fatalf("expected normalized username; got %s", resp.Auth.Alias.Name)
+			}
+		default:
+			if resp.Auth.Alias.Name == "hermes conrad" {
+				t.Fatalf("expected capitalized username; got normalized username")
+			}
+		}
 	}
 
 	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
