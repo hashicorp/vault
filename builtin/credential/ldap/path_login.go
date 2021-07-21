@@ -3,6 +3,7 @@ package ldap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -85,6 +86,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		}
 	} else {
 		resp = &logical.Response{}
+	}
+
+	// Confirm this behavior is expected
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
 	}
 
 	auth := &logical.Auth{
