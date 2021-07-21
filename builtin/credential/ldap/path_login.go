@@ -37,11 +37,22 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("auth method not configured"), nil
+	}
+
 	username := d.Get("username").(string)
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
 
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
+	}
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
