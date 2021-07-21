@@ -405,6 +405,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let url = `/vault/secrets/${backend}/list`;
     await visit(url);
     await click('[data-test-secret-link="secret"]');
+    await settled();
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
   });
