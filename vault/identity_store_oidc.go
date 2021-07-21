@@ -867,7 +867,7 @@ func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *log
 	return role != nil, nil
 }
 
-// handleOIDCCreateRole is used to create a new role or update an existing one
+// pathOIDCCreateUpdateRole is used to create a new role or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -936,6 +936,24 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.TokenTTL = time.Duration(ttl.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
 		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
+	}
+
+	// get the key referenced by this role
+	var key namedKey
+	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
+		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&key); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if role.TokenTTL > key.VerificationTTL {
+		return logical.ErrorResponse("a role's token_ttl cannot be longer than the verification_ttl of the key it references"), nil
 	}
 
 	if clientID, ok := d.GetOk("client_id"); ok {

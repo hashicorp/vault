@@ -113,6 +113,51 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDCRole_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDCRole_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": int64(60),
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role1" with a ttl longer than the
+	// verification_ttl -- should fail with error
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": int64(3600),
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+
+	// Read "test-role1"
+	respReadTestRole1, err3 := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	// Ensure that "test-role1" was not created
+	expectSuccess(t, respReadTestRole1, err3)
+	if respReadTestRole1 != nil {
+		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestRole1)
+	}
+	if respReadTestRole1 != nil {
+		t.Fatalf("Expected role to have been deleted but read response was:\n%#v", respReadTestRole1)
+	}
+}
+
 // TestOIDC_Path_OIDCRole tests the List operation for roles
 func TestOIDC_Path_OIDCRole(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -1100,6 +1145,7 @@ func expectSuccess(t *testing.T, resp *logical.Response, err error) {
 }
 
 func expectError(t *testing.T, resp *logical.Response, err error) {
+	t.Helper()
 	if err == nil {
 		if resp == nil || !resp.IsError() {
 			t.Fatalf("expected error but got success; error:\n%v\nresp: %#v", err, resp)
