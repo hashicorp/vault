@@ -20,6 +20,8 @@ import (
 	"time"
 	"unicode"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
@@ -3291,6 +3293,14 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 		hf = sha512.New384()
 	case "sha2-512":
 		hf = sha512.New()
+	case "sha3-224":
+		hf = sha3.New224()
+	case "sha3-256":
+		hf = sha3.New256()
+	case "sha3-384":
+		hf = sha3.New384()
+	case "sha3-512":
+		hf = sha3.New512()
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
 	}

@@ -60,6 +60,10 @@ func (b *backend) pathHMAC() *framework.Path {
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256".`,
 			},
