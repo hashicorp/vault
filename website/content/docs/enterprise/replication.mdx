@@ -99,7 +99,7 @@ keys will be replaced. Here seal/recovery configuration means the number of
 seal/recovery key fragments and the required threshold of those
 fragments.
 
-| Primary seal | Secondary seal (before) | Secondary Seal (after)                 | Secondary Recovery Key (after) | Impact on secondary of enabling replication                                 |
+| Primary Seal | Secondary Seal (before) | Secondary Seal (after)                 | Secondary Recovery Key (after) | Impact on Secondary of Enabling Replication                                 |
 |--------------|-------------------------|----------------------------------------|--------------------------------|-----------------------------------------------------------------------------|
 | Shamir       | Shamir                  | Primary's shamir config & unseal keys  | N/A                            | Seal config and unseal keys replaced with primary's                         |
 | Shamir       | Auto                    | Unchanged                              | Receives primary seal          | Seal recovery config and keys replaced with primary's seal config and keys  |
