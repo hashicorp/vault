@@ -10,7 +10,7 @@ go-machine:
   working_directory: /go/src/github.com/hashicorp/vault
 node:
   docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:14-buster
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /go/src/github.com/hashicorp/vault
 python:
