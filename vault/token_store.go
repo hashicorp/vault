@@ -878,8 +878,8 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 
-		// Update the activity log
-		if ts.activityLog != nil {
+		// Update the activity log in case the token has no entity
+		if ts.activityLog != nil && entry.EntityID == "" {
 			ts.activityLog.HandleTokenCreation(entry)
 		}
 
@@ -926,8 +926,8 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
-		// Update the activity log
-		if ts.activityLog != nil {
+		// Update the activity log in case the token has no entity
+		if ts.activityLog != nil && entry.EntityID == "" {
 			ts.activityLog.HandleTokenCreation(entry)
 		}
 
