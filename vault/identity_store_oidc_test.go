@@ -153,9 +153,6 @@ func TestOIDC_Path_OIDCRole_InvalidTokenTTL(t *testing.T) {
 	if respReadTestRole1 != nil {
 		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestRole1)
 	}
-	if respReadTestRole1 != nil {
-		t.Fatalf("Expected role to have been deleted but read response was:\n%#v", respReadTestRole1)
-	}
 }
 
 // TestOIDC_Path_OIDCRole tests the List operation for roles
@@ -378,7 +375,7 @@ func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// Delete test-key -- should succeed this time because no roles depend on test-key
+	// Delete test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.DeleteOperation,
