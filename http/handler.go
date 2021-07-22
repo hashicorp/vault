@@ -303,6 +303,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
 
+		// Setting the common http headers
+		httpHeaders, err := core.HttpHeaders()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if httpHeaders != nil {
+			for k := range httpHeaders {
+				v := httpHeaders.Get(k)
+				w.Header().Set(k, v)
+			}
+		}
+
 		// Start with the request context
 		ctx := r.Context()
 		var cancelFunc context.CancelFunc

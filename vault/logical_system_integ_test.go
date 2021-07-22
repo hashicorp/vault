@@ -301,7 +301,6 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 		if err != nil {
 			t.Fatalf("err:%v", err)
 		}
-
 	}
 
 	// Trigger a sha256 mismatch or missing plugin error

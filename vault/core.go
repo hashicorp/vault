@@ -462,6 +462,9 @@ type Core struct {
 	// uiConfig contains UI configuration
 	uiConfig *UIConfig
 
+	// HttpHeadersConfig contains Response Headers
+	httpHeadersConfig *HttpHeadersConfig
+
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
 
@@ -1012,6 +1015,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
+
+	var tlsDisabled bool
+	for _, l := range conf.RawConfig.Listeners {
+		if l.Type != "tcp" {
+			continue
+		}
+		tlsDisabled = l.TLSDisable
+	}
+	httpHeadersStoragePrefix := systemBarrierPrefix + "http-response"
+	c.httpHeadersConfig = NewHttpHeadersConfig(tlsDisabled, physical.NewView(c.physical, httpHeadersStoragePrefix), NewBarrierView(c.barrier, httpHeadersStoragePrefix))
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
@@ -1793,6 +1806,11 @@ func (c *Core) UIEnabled() bool {
 // UIHeaders returns configured UI headers
 func (c *Core) UIHeaders() (http.Header, error) {
 	return c.uiConfig.Headers(context.Background())
+}
+
+// HttpHeaders returns configured Response Headers
+func (c *Core) HttpHeaders() (http.Header, error) {
+	return c.httpHeadersConfig.Headers(context.Background())
 }
 
 // sealInternal is an internal method used to seal the vault.  It does not do

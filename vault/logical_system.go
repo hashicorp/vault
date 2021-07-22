@@ -99,6 +99,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"config/cors",
 				"config/auditing/*",
 				"config/ui/headers/*",
+				"config/http-response/headers/*",
 				"plugins/catalog/*",
 				"revoke-prefix/*",
 				"revoke-force/*",
@@ -2610,6 +2611,87 @@ func (b *SystemBackend) handleConfigUIHeadersDelete(ctx context.Context, req *lo
 	return nil, nil
 }
 
+// Common Response Headers configuration
+func (b *SystemBackend) handleHttpHeadersRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	header := data.Get("header").(string)
+	multivalue := data.Get("multivalue").(bool)
+
+	values, err := b.Core.httpHeadersConfig.GetHeader(ctx, header)
+	if err != nil {
+		return nil, err
+	}
+	if len(values) == 0 {
+		return nil, nil
+	}
+
+	// Return multiple values if specified
+	if multivalue {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"values": values,
+			},
+		}, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"value": values[0],
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleHttpHeadersList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	headers, err := b.Core.httpHeadersConfig.HeaderKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(headers) == 0 {
+		return nil, nil
+	}
+
+	return logical.ListResponse(headers), nil
+}
+
+func (b *SystemBackend) handleHttpHeadersUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	header := data.Get("header").(string)
+	values := data.Get("values").([]string)
+	if header == "" || len(values) == 0 {
+		return logical.ErrorResponse("header and values must be specified"), logical.ErrInvalidRequest
+	}
+
+	lowerHeader := strings.ToLower(header)
+	if strings.HasPrefix(lowerHeader, "x-vault-") {
+		return logical.ErrorResponse("X-Vault headers cannot be set"), logical.ErrInvalidRequest
+	}
+
+	// Translate the list of values to the valid header string
+	value := http.Header{}
+	for _, v := range values {
+		value.Add(header, v)
+	}
+	err := b.Core.httpHeadersConfig.SetHeader(ctx, header, value.Values(header))
+	if err != nil {
+		return nil, err
+	}
+
+	// Warn when overriding the CSP
+	resp := &logical.Response{}
+	if lowerHeader == "content-security-policy" {
+		resp.AddWarning("overriding default Content-Security-Policy which is secure by default, proceed with caution")
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handleHttpHeadersDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	header := data.Get("header").(string)
+	err := b.Core.httpHeadersConfig.DeleteHeader(ctx, header)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 // handleKeyStatus returns status information about the backend key
 func (b *SystemBackend) handleKeyStatus(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get the key info
@@ -4087,6 +4169,21 @@ This path responds to the following HTTP methods.
 
     LIST /
         List the headers configured for the UI.
+        `,
+	},
+	"config/http-response/headers": {
+		"Configures response headers for / and/or /v1/*.",
+		`
+This path responds to the following HTTP methods.
+    GET /<header>
+        Returns the header value.
+    POST /<header>
+        Sets the custom header value.
+    DELETE /<header>
+        Clears the custom header value.
+
+    LIST /
+        List the configured custom headers.
         `,
 	},
 	"init": {

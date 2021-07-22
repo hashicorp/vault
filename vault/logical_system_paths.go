@@ -128,6 +128,57 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "config/http-response/headers/" + framework.GenericNameRegex("header"),
+
+			Fields: map[string]*framework.FieldSchema{
+				"header": {
+					Type:        framework.TypeString,
+					Description: "The name of the header.",
+				},
+				"values": {
+					Type:        framework.TypeStringSlice,
+					Description: "The values to set the header.",
+				},
+				"multivalue": {
+					Type:        framework.TypeBool,
+					Description: "Returns multiple values if true.",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleHttpHeadersRead,
+					Summary:  "Return the given http header's configuration",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleHttpHeadersUpdate,
+					Summary:  "Configure the values to be returned for the http header.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleHttpHeadersDelete,
+					Summary:  "Remove a custom http header.",
+				},
+			},
+
+			HelpDescription: strings.TrimSpace(sysHelp["config/http-response/headers"][0]),
+			HelpSynopsis:    strings.TrimSpace(sysHelp["config/http-response/headers"][1]),
+		},
+
+		{
+			Pattern: "config/http-response/headers/$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleHttpHeadersList,
+					Summary:  "Return a list of configured custom http headers.",
+				},
+			},
+
+			HelpDescription: strings.TrimSpace(sysHelp["config/http-response/headers"][0]),
+			HelpSynopsis:    strings.TrimSpace(sysHelp["config/http-response/headers"][1]),
+		},
+
+		{
 			Pattern: "generate-root(/attempt)?$",
 			Fields: map[string]*framework.FieldSchema{
 				"pgp_key": {
