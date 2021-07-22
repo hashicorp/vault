@@ -472,6 +472,25 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		return logical.ErrorResponse("verification_ttl cannot be longer than 10x rotation_period"), nil
 	}
 
+	if req.Operation == logical.UpdateOperation {
+		// ensure any roles referencing this key do not already have a token_ttl
+		// greater than the key's verification_ttl
+		rolesReferencingTargetKeyName, err := i.getRolesReferencingTargetKeyName(ctx, req, name)
+		if err != nil {
+			return nil, err
+		}
+		for _, role := range rolesReferencingTargetKeyName {
+			if role.TokenTTL > key.VerificationTTL {
+				errorMessage := fmt.Sprintf(
+					"unable to update key %q because it is currently referenced by one or more roles with a token_ttl greater than %d seconds",
+					name,
+					key.VerificationTTL/time.Second,
+				)
+				return logical.ErrorResponse(errorMessage), nil
+			}
+		}
+	}
+
 	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
 		key.AllowedClientIDs = allowedClientIDsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
@@ -554,6 +573,34 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 			"allowed_client_ids": storedNamedKey.AllowedClientIDs,
 		},
 	}, nil
+}
+
+// getRolesReferencingTargetKeyName returns a slice of roles referenced by targetKeyName.
+// Note: this is not threadsafe. It is to be called with Lock already held.
+func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]role, error) {
+	roleNames, err := req.Storage.List(ctx, roleConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempRole role
+	rolesReferencingTargetKeyName := make([]role, 0)
+	for _, roleName := range roleNames {
+		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempRole); err != nil {
+				return nil, err
+			}
+			if tempRole.Key == targetKeyName {
+				rolesReferencingTargetKeyName = append(rolesReferencingTargetKeyName, tempRole)
+			}
+		}
+	}
+
+	return rolesReferencingTargetKeyName, nil
 }
 
 // handleOIDCDeleteKey is used to delete a key

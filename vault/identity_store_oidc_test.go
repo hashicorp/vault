@@ -329,6 +329,64 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 	expectSuccess(t, resp, err)
 }
 
+// TestOIDC_Path_OIDCKey_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a role that depends on test key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/allowed-test-role",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-key" -- should fail since allowed-test-role ttl is less than 2m
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"rotation_period":    "10m",
+			"verification_ttl":   "2m",
+			"allowed_client_ids": "allowed-test-role",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+
+	// Delete allowed-test-role
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/allowed-test-role",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+
+	// Delete test-key -- should succeed this time because no roles depend on test-key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+}
+
 // TestOIDC_Path_OIDCKey tests the List operation for keys
 func TestOIDC_Path_OIDCKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
