@@ -1,0 +1,3 @@
+```release-note:feature
+transit: add support for sha3 in the transit backend
+```
