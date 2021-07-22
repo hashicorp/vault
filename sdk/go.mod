@@ -5,20 +5,17 @@ go 1.16
 require (
 	github.com/armon/go-metrics v0.3.3
 	github.com/armon/go-radix v1.0.0
-	github.com/aws/aws-sdk-go v1.30.27
-	github.com/docker/docker v1.4.2-0.20200319182547-c7ad2b866182
-	github.com/docker/go-connections v0.4.0
 	github.com/fatih/structs v1.1.0
+	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/go-ldap/ldap/v3 v3.1.10
 	github.com/go-test/deep v1.0.2
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1
-	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/go-cleanhttp v0.5.1
-	github.com/hashicorp/go-hclog v0.16.1
+	github.com/hashicorp/errwrap v1.1.0
+	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.1.0
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
-	github.com/hashicorp/go-multierror v1.1.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.0.1
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.1
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1
@@ -31,17 +28,16 @@ require (
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/hashicorp/hcl v1.0.0
-	github.com/hashicorp/vault/api v1.1.1
+	github.com/kr/text v0.2.0 // indirect
+	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pierrec/lz4 v2.5.2+incompatible
-	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.6.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.25.0
 )

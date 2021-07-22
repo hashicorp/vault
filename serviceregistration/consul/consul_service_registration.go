@@ -120,7 +120,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		serviceAddr = &serviceAddrStr
 	}
 	if logger.IsDebug() {
-		logger.Debug("config service_address set", "service_address", serviceAddr)
+		logger.Debug("config service_address set", "service_address", serviceAddrStr)
 	}
 
 	checkTimeout := defaultCheckTimeout
