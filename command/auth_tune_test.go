@@ -1,10 +1,10 @@
 package command
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
@@ -130,17 +130,17 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 			if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
 			}
-			if exp := []string{"authorization", "www-authentication"}; !reflect.DeepEqual(exp, mountInfo.Config.PassthroughRequestHeaders) {
-				t.Errorf("Failed to find expected values in PassthroughRequestHeaders")
+			if diff := deep.Equal([]string{"authorization", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
 			}
-			if exp := []string{"authorization", "www-authentication"}; !reflect.DeepEqual(exp, mountInfo.Config.AllowedResponseHeaders) {
-				t.Errorf("Failed to find expected values in AllowedResponseHeaders")
+			if diff := deep.Equal([]string{"authorization", "www-authentication"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
 			}
-			if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, mountInfo.Config.AuditNonHMACRequestKeys) {
-				t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys")
+			if diff := deep.Equal([]string{"foo", "bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
 			}
-			if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, mountInfo.Config.AuditNonHMACResponseKeys) {
-				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys")
+			if diff := deep.Equal([]string{"foo", "bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 			}
 		})
 

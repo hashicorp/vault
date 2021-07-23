@@ -899,7 +899,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	configMap := data.Get("config").(map[string]interface{})
 	// Augmenting configMap for some config options to treat them as comma separated entries
-	err := augmentEnableAuthConfigMap(configMap)
+	err := expandStringValsWithCommas(configMap)
 	if err != nil {
 		return logical.ErrorResponse(
 				"unable to parse given auth config information"),
@@ -1899,7 +1899,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
+func expandStringValsWithCommas(configMap map[string]interface{}) error {
 	configParamNameSlice := []string{
 		"audit_non_hmac_request_keys",
 		"audit_non_hmac_response_keys",
@@ -1910,11 +1910,14 @@ func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
 		if raw, ok := configMap[paramName]; ok {
 			outputSlice := []string{}
 
-			switch raw.(type) {
+			switch t := raw.(type) {
 			case []interface{}:
 				rawNew := raw.([]interface{})
 				for _, rawVal := range rawNew {
-					rawValSt := rawVal.(string)
+					rawValSt, ok := rawVal.(string)
+					if !ok {
+						return fmt.Errorf("Invalid input parameter %v of type %v", paramName, t)
+					}
 					res, err := parseutil.ParseCommaStringSlice(rawValSt)
 					if err != nil {
 						return err
@@ -1929,7 +1932,7 @@ func augmentEnableAuthConfigMap(configMap map[string]interface{}) error {
 				}
 				outputSlice = append(outputSlice, res...)
 			default:
-				return fmt.Errorf("Invalid input parameter type for %v", paramName)
+				return fmt.Errorf("Invalid input parameter %v of type %v", paramName, t)
 			}
 			configMap[paramName] = outputSlice
 		}
@@ -1964,7 +1967,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	configMap := data.Get("config").(map[string]interface{})
 	// Augmenting configMap for some config options to treat them as comma separated entries
-	err := augmentEnableAuthConfigMap(configMap)
+	err := expandStringValsWithCommas(configMap)
 	if err != nil {
 		return logical.ErrorResponse(
 				"unable to parse given auth config information"),

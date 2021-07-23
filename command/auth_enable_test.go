@@ -2,10 +2,10 @@ package command
 
 import (
 	"io/ioutil"
-	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
@@ -120,17 +120,17 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		if exp := "The best kind of test"; authInfo.Description != exp {
 			t.Errorf("expected %q to be %q", authInfo.Description, exp)
 		}
-		if exp := []string{"authorization", "authentication", "www-authentication"}; !reflect.DeepEqual(exp, authInfo.Config.PassthroughRequestHeaders) {
-			t.Errorf("Failed to find expected values in PassthroughRequestHeaders")
+		if diff := deep.Equal([]string{"authorization", "authentication", "www-authentication"}, authInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
 		}
-		if exp := []string{"authorization"}; !reflect.DeepEqual(exp, authInfo.Config.AllowedResponseHeaders) {
-			t.Errorf("Failed to find expected values in AllowedResponseHeaders")
+		if diff := deep.Equal([]string{"authorization"}, authInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
 		}
-		if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, authInfo.Config.AuditNonHMACRequestKeys) {
-			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys")
+		if diff := deep.Equal([]string{"foo", "bar"}, authInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
 		}
-		if exp := []string{"foo", "bar"}; !reflect.DeepEqual(exp, authInfo.Config.AuditNonHMACResponseKeys) {
-			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys")
+		if diff := deep.Equal([]string{"foo", "bar"}, authInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 		}
 	})
 
