@@ -41,6 +41,7 @@ export default Model.extend(KeyMixin, Validations, {
     helpText:
       'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter',
   }),
+  customMetadata: attr('object'),
   fields: computed(function() {
     return expandAttributeMeta(this, ['maxVersions', 'casRequired']);
   }),

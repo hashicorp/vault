@@ -9,6 +9,7 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
+import KVMetadataObject from 'vault/lib/kv-metadata-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -35,12 +36,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   mode: null,
 
   secretData: null,
+  customMetadata: null,
 
   wrappedData: null,
   isWrapping: false,
   showWrapButton: not('wrappedData'),
 
-  // called with a bool indicating if there's been a change in the secretData
+  // called with a bool indicating if there's been a change in the secretData and customMetadata
   onDataChange() {},
   onRefresh() {},
   onToggleAdvancedEdit() {},
@@ -73,6 +75,11 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
+    // sets up the customMetadata class with the content of one empty array value
+    const customMetadata = KVMetadataObject.create({ content: [] }).createClass();
+    this.set('customMetadata', customMetadata);
+    this.customMetadata.pushObject({ name: '', value: '' });
+
     this.set('codemirrorString', data.toJSONString());
     if (data.isAdvanced()) {
       this.set('preferAdvancedEdit', true);
@@ -365,6 +372,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       }
 
       this.persistKey(() => {
+        debugger;
         this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
@@ -382,6 +390,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     addRow() {
       const data = this.secretData;
+      // fired off on init
       if (isNone(data.findBy('name', ''))) {
         data.pushObject({ name: '', value: '' });
         this.send('handleChange');
