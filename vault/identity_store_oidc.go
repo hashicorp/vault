@@ -605,6 +605,7 @@ func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, re
 
 // getRoleNamesReferencingTargetKeyName returns a slice of strings of role
 // names referenced by targetKeyName.
+// Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) getRoleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
 	rolesReferencingTargetKeyName, err := i.getRolesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
