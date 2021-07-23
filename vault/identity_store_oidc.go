@@ -482,7 +482,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		for _, role := range rolesReferencingTargetKeyName {
 			if role.TokenTTL > key.VerificationTTL {
 				errorMessage := fmt.Sprintf(
-					"unable to update key %q because it is currently referenced by one or more roles with a token_ttl greater than %d seconds",
+					"unable to update key %q because it is currently referenced by one or more roles with a token ttl greater than %d seconds",
 					name,
 					key.VerificationTTL/time.Second,
 				)
@@ -584,7 +584,7 @@ func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, re
 	}
 
 	var tempRole role
-	rolesReferencingTargetKeyName := make([]role, 0)
+	var rolesReferencingTargetKeyName []role
 	for _, roleName := range roleNames {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
 		if err != nil {
@@ -794,13 +794,19 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, err
 	}
 
+	expiry := role.TokenTTL
+	if expiry > key.VerificationTTL {
+		expiry := key.VerificationTTL
+		i.Logger().Warn("a role's token ttl cannot be longer than the verification_ttl of the key it references, setting token ttl to %d", expiry)
+	}
+
 	now := time.Now()
 	idToken := idToken{
 		Issuer:    config.effectiveIssuer,
 		Namespace: ns.ID,
 		Subject:   req.EntityID,
 		Audience:  role.ClientID,
-		Expiry:    now.Add(role.TokenTTL).Unix(),
+		Expiry:    now.Add(expiry).Unix(),
 		IssuedAt:  now.Unix(),
 	}
 
@@ -987,20 +993,18 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	// get the key referenced by this role
 	var key namedKey
-	if req.Operation == logical.CreateOperation || req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
-		if err != nil {
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		if err := entry.DecodeJSON(&key); err != nil {
 			return nil, err
-		}
-		if entry != nil {
-			if err := entry.DecodeJSON(&key); err != nil {
-				return nil, err
-			}
 		}
 	}
 
 	if role.TokenTTL > key.VerificationTTL {
-		return logical.ErrorResponse("a role's token_ttl cannot be longer than the verification_ttl of the key it references"), nil
+		return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
 	}
 
 	if clientID, ok := d.GetOk("client_id"); ok {
@@ -1017,7 +1021,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	}
 
 	// store role (which was either just created or updated)
-	entry, err := logical.StorageEntryJSON(roleConfigPath+name, role)
+	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
 	if err != nil {
 		return nil, err
 	}
