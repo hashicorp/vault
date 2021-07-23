@@ -1038,7 +1038,11 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			ttl = maxTTL
 		}
 
-		notAfter = time.Now().Add(ttl)
+		if data.role.DeviceFlag || data.role.IEEProfile == "802.1AR-2018" {
+			notAfter, _ = time.Parse(time.RFC3339, "9999-12-31T23:59:59Z")
+		} else {
+			notAfter = time.Now().Add(ttl)
+		}
 
 		// If it's not self-signed, verify that the issued certificate won't be
 		// valid past the lifetime of the CA certificate

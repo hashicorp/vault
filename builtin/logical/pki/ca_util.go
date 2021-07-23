@@ -47,6 +47,7 @@ func (b *backend) getGenerationParams(
 		Province:             data.Get("province").([]string),
 		StreetAddress:        data.Get("street_address").([]string),
 		PostalCode:           data.Get("postal_code").([]string),
+		IEEProfile:           data.Get("iee_profile").(string),
 	}
 
 	if role.KeyType == "rsa" && role.KeyBits < 2048 {

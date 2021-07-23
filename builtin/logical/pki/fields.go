@@ -229,6 +229,11 @@ more than one, specify alternative names in
 the alt_names map using OID 2.5.4.5.`,
 	}
 
+	fields["iee_profile"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Set notAfter field to Y10K to compliant with IEEE 802.1AR-2018 standard for root certificate`,
+	}
+
 	return fields
 }
 
