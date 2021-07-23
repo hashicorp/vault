@@ -7,7 +7,7 @@ import BeforeAfterDiagram from '../../components/before-after-diagram'
 import HcpCalloutSection from 'components/hcp-callout-section'
 //  Imports below are used in getStaticProps only
 import RAW_CONTENT from './content.json'
-import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import highlightData from '@hashicorp/platform-code-highlighting/highlight-data'
 import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
@@ -31,7 +31,8 @@ export default function Homepage({ content }) {
             {
               external: false,
               title: 'Try Cloud',
-              url: 'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
+              url:
+                'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
             },
             {
               external: false,
@@ -140,7 +141,8 @@ export default function Homepage({ content }) {
           links={[
             {
               text: 'Learn More',
-              url: 'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
+              url:
+                'https://cloud.hashicorp.com/?utm_source=vault_io&utm_content=hcp_vault_detail',
             },
           ]}
         />
