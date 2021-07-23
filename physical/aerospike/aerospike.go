@@ -162,7 +162,7 @@ func (a *AerospikeBackend) Get(_ context.Context, key string) (*physical.Entry, 
 
 	record, err := a.client.Get(nil, aeroKey)
 	if err != nil {
-		if err.Error() == keyNotFoundError {
+		if strings.Contains(err.Error(), keyNotFoundError) {
 			return nil, nil
 		}
 		return nil, err
