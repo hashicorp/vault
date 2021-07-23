@@ -577,14 +577,14 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 
 // getRolesReferencingTargetKeyName returns a slice of roles referenced by targetKeyName.
 // Note: this is not threadsafe. It is to be called with Lock already held.
-func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]role, error) {
+func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]role, error) {
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var tempRole role
-	var rolesReferencingTargetKeyName []role
+	rolesReferencingTargetKeyName := make(map[string]role)
 	for _, roleName := range roleNames {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
 		if err != nil {
@@ -595,12 +595,27 @@ func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, re
 				return nil, err
 			}
 			if tempRole.Key == targetKeyName {
-				rolesReferencingTargetKeyName = append(rolesReferencingTargetKeyName, tempRole)
+				rolesReferencingTargetKeyName[roleName] = tempRole
 			}
 		}
 	}
 
 	return rolesReferencingTargetKeyName, nil
+}
+
+// getRoleNamesReferencingTargetKeyName returns a slice of strings of role
+// names referenced by targetKeyName.
+func (i *IdentityStore) getRoleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
+	rolesReferencingTargetKeyName, err := i.getRolesReferencingTargetKeyName(ctx, req, targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for key, _ := range rolesReferencingTargetKeyName {
+		names = append(names, key)
+	}
+	return names, nil
 }
 
 // handleOIDCDeleteKey is used to delete a key
@@ -614,35 +629,14 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	i.oidcLock.Lock()
 
-	// it is an error to delete a key that is actively referenced by a role
-	roleNames, err := req.Storage.List(ctx, roleConfigPath)
+	roleNamesReferencingTargetKeyName, err := i.getRoleNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
-		i.oidcLock.Unlock()
 		return nil, err
 	}
 
-	var role *role
-	rolesReferencingTargetKeyName := make([]string, 0)
-	for _, roleName := range roleNames {
-		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
-		if err != nil {
-			i.oidcLock.Unlock()
-			return nil, err
-		}
-		if entry != nil {
-			if err := entry.DecodeJSON(&role); err != nil {
-				i.oidcLock.Unlock()
-				return nil, err
-			}
-			if role.Key == targetKeyName {
-				rolesReferencingTargetKeyName = append(rolesReferencingTargetKeyName, roleName)
-			}
-		}
-	}
-
-	if len(rolesReferencingTargetKeyName) > 0 {
+	if len(roleNamesReferencingTargetKeyName) > 0 {
 		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
-			targetKeyName, strings.Join(rolesReferencingTargetKeyName, ", "))
+			targetKeyName, strings.Join(roleNamesReferencingTargetKeyName, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
