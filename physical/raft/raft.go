@@ -978,8 +978,8 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	if b.disableAutopilot {
@@ -1038,8 +1038,8 @@ func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, err
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
-	if _, done := <-ctx.Done(); done {
-		return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	b.l.RLock()
@@ -1076,8 +1076,8 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 
 // AddPeer adds a new server to the raft cluster
 func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) error {
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	b.l.RLock()
@@ -1108,8 +1108,8 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 // Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
-	if _, done := <-ctx.Done(); done {
-		return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	b.l.RLock()
@@ -1196,8 +1196,8 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 // RestoreSnapshot applies the provided snapshot metadata and snapshot data to
 // raft.
 func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snap io.Reader) error {
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	b.l.RLock()
@@ -1235,8 +1235,8 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
 
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	command := &LogData{
@@ -1263,15 +1263,15 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		return nil, errors.New("raft: fsm not configured")
 	}
 
-	if _, done := <-ctx.Done(); done {
-		return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
-	if _, done := <-ctx.Done(); done {
-		return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	entry, err := b.fsm.Get(ctx, path)
@@ -1292,8 +1292,8 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
 
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	command := &LogData{
@@ -1322,15 +1322,15 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 		return nil, errors.New("raft: fsm not configured")
 	}
 
-	if _, done := <-ctx.Done(); done {
-		return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
-	if _, done := <-ctx.Done(); done {
-		return nil, ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	return b.fsm.List(ctx, prefix)
@@ -1341,8 +1341,8 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "transaction"}, time.Now())
 
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	command := &LogData{
@@ -1381,8 +1381,8 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
 		return errors.New("raft storage is not initialized")
 	}
-	if _, done := <-ctx.Done(); done {
-		return ctx.Err()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	commandBytes, err := proto.Marshal(command)
