@@ -2060,6 +2060,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
+	c.metricsCh = make(chan struct{})
+	go c.emitMetricsActiveNode(c.metricsCh)
+
 	return nil
 }
 
@@ -2113,9 +2116,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
 		}
 	}
-
-	c.metricsCh = make(chan struct{})
-	go c.emitMetrics(c.metricsCh)
 
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has

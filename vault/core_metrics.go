@@ -91,13 +91,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 0, nil)
 			}
 
-			// Refresh gauge metrics that are looped
-			c.cachedGaugeMetricsEmitter()
-
-			// If we're using a raft backend, emit boltdb metrics
+			// If we're using a raft backend, emit raft metrics
 			if rb, ok := c.underlyingPhysical.(*raft.RaftBackend); ok {
 				rb.CollectMetrics(c.MetricSink())
 			}
+
+			// Refresh gauge metrics that are looped
+			c.cachedGaugeMetricsEmitter()
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
 				// Go through the loop again, this time the stop channel case
@@ -109,7 +109,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				if err != nil {
 					c.logger.Error("writing syncing counters", "err", err)
 				}
-			} else {
+			} else if !c.standby {
 				// Perf standbys will have synced above, but active nodes on a secondary cluster still need to ship
 				// barrier encryption counts
 				if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
@@ -198,14 +198,14 @@ func (c *Core) tokenGaugeTtlCollector(ctx context.Context) ([]metricsutil.GaugeL
 	return ts.gaugeCollectorByTtl(ctx)
 }
 
-// emitMetrics is used to start all the periodc metrics; all of them should
-// be shut down when stopCh is closed.
-func (c *Core) emitMetrics(stopCh chan struct{}) {
+// emitMetricsActiveNode is used to start all the periodic metrics; all of them should
+// be shut down when stopCh is closed.  This code runs on the active node only.
+func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// The gauge collection processes are started and stopped here
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
 	//
-	// Both active nodes and performance standby nodes call emitMetrics
+	// Both active nodes and performance standby nodes call emitMetricsNonStandby
 	// so we have to handle both.
 	metricsInit := []struct {
 		MetricName    []string
@@ -315,8 +315,8 @@ func (c *Core) findKvMounts() []*kvMount {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
-	// emitMetrics doesn't grab the statelock, so this code might run during or after the seal process.
-	// Therefore, we need to check if c.mounts is nil. If we do not, emitMetrics will panic if this is
+	// we don't grab the statelock, so this code might run during or after the seal process.
+	// Therefore, we need to check if c.mounts is nil. If we do not, this will panic when
 	// run after seal.
 	if c.mounts == nil {
 		return mounts
