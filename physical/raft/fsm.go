@@ -97,19 +97,15 @@ type FSM struct {
 // NewFSM constructs a FSM using the given directory
 func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 	// Initialize the latest term, index, and config values
-	latestTerm := new(uint64)
-	latestIndex := new(uint64)
 	latestConfig := atomic.Value{}
-	atomic.StoreUint64(latestTerm, 0)
-	atomic.StoreUint64(latestIndex, 0)
 	latestConfig.Store((*ConfigurationValue)(nil))
 
 	f := &FSM{
 		path:   path,
 		logger: logger,
 
-		latestTerm:   latestTerm,
-		latestIndex:  latestIndex,
+		latestTerm:   new(uint64),
+		latestIndex:  new(uint64),
 		latestConfig: latestConfig,
 		// Assume that the default intent is to join as as voter. This will be updated
 		// when this node joins a cluster with a different suffrage, or during cluster
@@ -117,6 +113,7 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		desiredSuffrage: "voter",
 		localID:         localID,
 	}
+	f.setLatestState(0, 0)
 
 	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
 		f:   f,
@@ -202,8 +199,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 				return err
 			}
 
-			atomic.StoreUint64(f.latestTerm, latest.Term)
-			atomic.StoreUint64(f.latestIndex, latest.Index)
+			f.setLatestState(latest.Term, latest.Index)
 		}
 
 		// Read in our latest config and populate it inmemory
@@ -402,8 +398,7 @@ func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 		return err
 	}
 
-	atomic.StoreUint64(f.latestIndex, metadata.Index)
-	atomic.StoreUint64(f.latestTerm, metadata.Term)
+	f.setLatestState(metadata.Term, metadata.Index)
 	f.latestConfig.Store(raftConfigurationToProtoConfiguration(metadata.ConfigurationIndex, metadata.Configuration))
 
 	return nil
@@ -416,6 +411,13 @@ func (f *FSM) LatestState() (*IndexValue, *ConfigurationValue) {
 		Term:  atomic.LoadUint64(f.latestTerm),
 		Index: atomic.LoadUint64(f.latestIndex),
 	}, f.latestConfig.Load().(*ConfigurationValue)
+}
+
+func (f *FSM) setLatestState(term, index uint64) {
+	f.emitGaugeMetric("applied_term", float32(term))
+	f.emitGaugeMetric("applied_index", float32(index))
+	atomic.StoreUint64(f.latestTerm, term)
+	atomic.StoreUint64(f.latestIndex, index)
 }
 
 // Delete deletes the given key from the bolt file.
@@ -680,8 +682,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 
 	// If we advanced the latest value, update the in-memory representation too.
 	if len(logIndex) > 0 {
-		atomic.StoreUint64(f.latestTerm, lastLog.Term)
-		atomic.StoreUint64(f.latestIndex, lastLog.Index)
+		f.setLatestState(lastLog.Term, lastLog.Index)
 	}
 
 	// If one or more configuration changes were processed, store the latest one.
@@ -774,6 +775,15 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 	f.l.Lock()
 	f.noopRestore = enabled
 	f.l.Unlock()
+}
+
+func (f *FSM) emitGaugeMetric(name string, value float32) {
+	metrics.SetGaugeWithLabels([]string{"raft_storage", "fsm", name}, float32(value), []metrics.Label{
+		{
+			Name:  "peer_id",
+			Value: f.localID,
+		},
+	})
 }
 
 // Restore installs a new snapshot from the provided reader. It does an atomic
