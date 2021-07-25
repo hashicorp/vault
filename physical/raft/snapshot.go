@@ -526,7 +526,14 @@ func (i *boltSnapshotInstaller) Install(filename string) error {
 		return err
 	}
 
-	return i.restoreCb(i.meta.Index)
+	if i.restoreCb == nil {
+		return nil
+	}
+	err = i.restoreCb(i.meta.Index)
+	if err != nil {
+		return fmt.Errorf("error running post-restore callback: %w", err)
+	}
+	return nil
 }
 
 // snapshotName generates a name for the snapshot.

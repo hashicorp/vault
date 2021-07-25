@@ -538,7 +538,6 @@ func TestRaft_Recovery_WALLogCopy(t *testing.T) {
 		"trailing_logs":          "100",
 		"performance_multiplier": "1",
 		"logstore":               "raft-wal",
-		"lastindex":              fmt.Sprintf("%d", raft1.AppliedIndex()),
 		"node_id":                "raft4",
 	}
 	t.Log(conf)

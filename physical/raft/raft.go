@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	raftwal "github.com/hashicorp/raft-wal"
-
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
@@ -26,6 +24,7 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
+	raftwal "github.com/hashicorp/raft-wal"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -33,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	"go.etcd.io/bbolt"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -394,26 +394,12 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			if err != nil {
 				return nil, err
 			}
-			if lastindex := conf["lastindex"]; lastindex != "" {
-				//err := s.SetFirstIndex(1)
-				//if err != nil {
-				//      return nil, err
-				//}
-				l, err := strconv.ParseUint(conf["lastindex"], 10, 64)
-				if err != nil {
-					return nil, err
-				}
-				s.SetLastIndex(l)
-			}
 			stable, store, wallog = s, s, s
 
 			restoreCb = func(index uint64) error {
 				rb.l.Lock()
 				defer rb.l.Unlock()
-
-				err := s.SetFirstIndex(index)
-				logger.Trace("restore callback", "index", index, "SetFirstIndexError", err)
-				return err
+				return s.DeleteAll()
 			}
 
 			if conf["archive_path"] != "" {
@@ -548,11 +534,17 @@ func (b *RaftBackend) Close() error {
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
+	var logstoreStats *bbolt.Stats
 	b.l.RLock()
-	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
+	if bs, ok := b.stableStore.(*raftboltdb.BoltStore); ok {
+		bss := bs.Stats()
+		logstoreStats = &bss
+	}
 	fsmStats := b.fsm.db.Stats()
 	b.l.RUnlock()
-	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
+	if logstoreStats != nil {
+		b.collectMetricsWithStats(*logstoreStats, sink, "logstore")
+	}
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
 }
 
