@@ -53,14 +53,7 @@ type BoltSnapshotStore struct {
 	fsm *FSM
 
 	logger log.Logger
-
-	// restoreCb is invoked synchronously after performing a restore.
-	// This is distinct from the FSM's restoreCallback, which is invoked as a
-	// goroutine after a quorum of nodes have applied a snapshot.
-	restoreCb localRestoreCallback
 }
-
-type localRestoreCallback func(index uint64) error
 
 // BoltSnapshotSink implements SnapshotSink optionally choosing to write to a
 // file.
@@ -85,7 +78,7 @@ type BoltSnapshotSink struct {
 
 // NewBoltSnapshotStore creates a new BoltSnapshotStore based
 // on a base directory.
-func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM, restoreCb localRestoreCallback) (*BoltSnapshotStore, error) {
+func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapshotStore, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("no logger provided")
 	}
@@ -98,10 +91,9 @@ func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM, restoreCb lo
 
 	// Setup the store
 	store := &BoltSnapshotStore{
-		logger:    logger,
-		fsm:       fsm,
-		path:      path,
-		restoreCb: restoreCb,
+		logger: logger,
+		fsm:    fsm,
+		path:   path,
 	}
 
 	// Cleanup any old or failed snapshots on startup.
@@ -274,7 +266,6 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 		meta:       meta,
 		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
 		filename:   filename,
-		restoreCb:  f.restoreCb,
 	}
 
 	return meta, installer, nil
@@ -498,9 +489,8 @@ func (s *BoltSnapshotSink) Cancel() error {
 
 type boltSnapshotInstaller struct {
 	io.ReadCloser
-	meta      *raft.SnapshotMeta
-	filename  string
-	restoreCb localRestoreCallback
+	meta     *raft.SnapshotMeta
+	filename string
 }
 
 func (i *boltSnapshotInstaller) Filename() string {
@@ -526,13 +516,6 @@ func (i *boltSnapshotInstaller) Install(filename string) error {
 		return err
 	}
 
-	if i.restoreCb == nil {
-		return nil
-	}
-	err = i.restoreCb(i.meta.Index)
-	if err != nil {
-		return fmt.Errorf("error running post-restore callback: %w", err)
-	}
 	return nil
 }
 

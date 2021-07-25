@@ -356,7 +356,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var stable raft.StableStore
 	var snap raft.SnapshotStore
 	var wallog raftwal.FileWALLog
-	var restoreCb localRestoreCallback
 	var rb *RaftBackend
 	var archivePath string
 
@@ -396,12 +395,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			}
 			stable, store, wallog = s, s, s
 
-			restoreCb = func(index uint64) error {
-				rb.l.Lock()
-				defer rb.l.Unlock()
-				return s.DeleteAll()
-			}
-
 			if conf["archive_path"] != "" {
 				archivePath = conf["archive_path"]
 			}
@@ -431,7 +424,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm, restoreCb)
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}
