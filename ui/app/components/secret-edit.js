@@ -9,7 +9,6 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
-import KVMetadataObject from 'vault/lib/kv-metadata-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -36,7 +35,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   mode: null,
 
   secretData: null,
-  customMetadata: null,
 
   wrappedData: null,
   isWrapping: false,
@@ -75,10 +73,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
-    // sets up the customMetadata class with the content of one empty array value
-    const customMetadata = KVMetadataObject.create({ content: [] }).createClass();
-    this.set('customMetadata', customMetadata);
-    this.customMetadata.pushObject({ name: '', value: '' });
 
     this.set('codemirrorString', data.toJSONString());
     if (data.isAdvanced()) {
@@ -225,10 +219,20 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
         set(this.validationMessages, name, '');
       }
     }
+    if (name === 'customMetadata') {
+      if (value) {
+        this.model.set('customMetadata', { key: 'meep', value: 'meeping' });
+      }
+      console.log(this.model, 'model');
+    }
 
     let values = Object.values(this.validationMessages);
 
     this.set('validationErrorCount', values.filter(Boolean).length);
+  },
+
+  updateCustomMetadata(name, key, value) {
+    console.log(name, key, value, 'here in new func');
   },
 
   onEscape(e) {

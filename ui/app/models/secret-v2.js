@@ -7,6 +7,13 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { validator, buildValidations } from 'ember-cp-validations';
 
 const Validations = buildValidations({
+  // ARG TODO later:
+  //The new custom_metadata field will compete with the version history for storage space in the key metadata entry. To attempt to prevent contention, Vault will impose limits on both the keys and values within the custom_metadata field. The keys and values will be limited to 128 and 512 bytes, respectively. Vault will also impose a limit of 64 total custom_metadata keys.
+
+  customMetadata: validator('format', {
+    regex: /^[^\/]+$/,
+    message: 'Custom Values cannot contain a forward slash.',
+  }),
   maxVersions: [
     validator('number', {
       allowString: false,
@@ -31,6 +38,9 @@ export default Model.extend(KeyMixin, Validations, {
   updatedTime: attr(),
   currentVersion: attr('number'),
   oldestVersion: attr('number'),
+  customMetadata: attr('object', {
+    editType: 'kv',
+  }),
   maxVersions: attr('number', {
     defaultValue: 10,
     label: 'Maximum Number of Versions',
@@ -41,9 +51,8 @@ export default Model.extend(KeyMixin, Validations, {
     helpText:
       'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter',
   }),
-  customMetadata: attr('object'),
   fields: computed(function() {
-    return expandAttributeMeta(this, ['maxVersions', 'casRequired']);
+    return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired']);
   }),
   versionPath: lazyCapabilities(apiPath`${'engineId'}/data/${'id'}`, 'engineId', 'id'),
   secretPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),
