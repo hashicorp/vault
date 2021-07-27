@@ -26,3 +26,12 @@ The following API endpoints have been deprecated and will be removed in a future
 
 * `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
   in GCP Secrets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
+
+## Go Version
+
+Vault 1.8.0 is built with Go 1.16. Please review the [Go Release
+Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
+
+- Go 1.16 has added support for darwin/arm64. Vault binaries for this platform are
+  now available supporting the Apple M1 CPU.
+
