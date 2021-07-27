@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/aws: Cap STS usernames at 64 characters
+```
