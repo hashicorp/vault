@@ -20,6 +20,7 @@ import (
 const (
 	secretAccessKeyType = "access_keys"
 	storageKey          = "config/root"
+	defaultSTSTemplate  = `{{ printf "vault-%d-%d" (unix_time) (random 20) | truncate 32 }}`
 )
 
 func secretAccessKeys(b *backend) *framework.Secret {
@@ -47,25 +48,40 @@ func secretAccessKeys(b *backend) *framework.Secret {
 }
 
 func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string, err error) {
-	// IAM and STS usernames are capped at 64 chars;
-	up, err := template.NewTemplate(template.Template(usernameTemplate))
-	if err != nil {
-		return "", "", fmt.Errorf("unable to initialize username template: %w", err)
-	}
+	switch userType {
+	case "iam_user", "assume_role":
+		// IAM users are capped at 64 chars
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+		}
 
-	um := UsernameMetadata{
-		DisplayName: normalizeDisplayName(displayName),
-		PolicyName:  normalizeDisplayName(policyName),
-	}
+		um := UsernameMetadata{
+			DisplayName: normalizeDisplayName(displayName),
+			PolicyName:  normalizeDisplayName(policyName),
+		}
 
-	ret, err = up.Generate(um)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate username: %w", err)
-	}
-	// To prevent template from exceeding IAM/STS length limits
-	if len(ret) > 64 {
-		ret = ret[0:64]
-		warning = fmt.Sprintf("the calling token's %s user name was truncated to 64 characters to fit within username length limits", userType)
+		ret, err = up.Generate(um)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate username: %w", err)
+		}
+		// To prevent template from exceeding IAM length limits
+		if len(ret) > 64 {
+			ret = ret[0:64]
+			warning = fmt.Sprintf("the calling token's %s user name was truncated to 64 characters to fit within username length limits", userType)
+		}
+	case "sts":
+		// Capped at 32 chars
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+		}
+
+		um := UsernameMetadata{}
+		ret, err = up.Generate(um)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate username: %w", err)
+		}
 	}
 	return
 }
@@ -94,7 +110,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning, usernameError := genUsername(displayName, policyName, "sts", defaultUserNameTemplate)
+	username, usernameWarning, usernameError := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
 	// Send a 400 to Framework.OperationFunc Handler
 	if usernameError != nil {
 		return nil, usernameError
@@ -187,7 +203,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	roleSessionNameWarning := ""
 	var roleSessionNameError error
 	if roleSessionName == "" {
-		roleSessionName, roleSessionNameWarning, roleSessionNameError = genUsername(displayName, roleName, "iam_user", usernameTemplate)
+		roleSessionName, roleSessionNameWarning, roleSessionNameError = genUsername(displayName, roleName, "assume_role", usernameTemplate)
 		// Send a 400 to Framework.OperationFunc Handler
 		if roleSessionNameError != nil {
 			return nil, roleSessionNameError

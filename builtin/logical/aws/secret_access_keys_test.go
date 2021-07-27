@@ -54,6 +54,7 @@ func TestGenUsername(t *testing.T) {
 		UsernameTemplate string
 		warningExpected  string
 		expectedRegex    string
+		expectedLength   int
 	}
 
 	tests := map[string]testCase{
@@ -64,14 +65,25 @@ func TestGenUsername(t *testing.T) {
 			UsernameTemplate: `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`,
 			warningExpected:  "",
 			expectedRegex:    `^vault-name1-policy1-[0-9]+-[a-zA-Z0-9]+`,
+			expectedLength:   64,
+		},
+		"Truncated to 32. No warnings expected": {
+			name:             "name1",
+			policy:           "policy1",
+			userType:         "sts",
+			UsernameTemplate: `{{ printf "vault-%s-%s" (unix_time) (random 20) | truncate 32 }}`,
+			warningExpected:  "",
+			expectedRegex:    `^vault-[0-9]+-[a-zA-Z0-9]+`,
+			expectedLength:   32,
 		},
 		"Too long. Warning expected": {
 			name:             "this---is---a---very---long---name",
 			policy:           "long------policy------name",
-			userType:         "iam_user",
+			userType:         "assume_role",
 			UsernameTemplate: `{{ printf "%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) }}`,
-			warningExpected:  "calling token's iam_user user name was truncated to 64 characters",
+			warningExpected:  "calling token's assume_role user name was truncated to 64 characters",
 			expectedRegex:    `this---is---a---very---long---name-long------policy------name-[0-9][0-9]`,
+			expectedLength:   64,
 		},
 	}
 
@@ -84,8 +96,7 @@ func TestGenUsername(t *testing.T) {
 
 			expectedUsernameRegex := testCase.expectedRegex
 			require.Regexp(t, expectedUsernameRegex, testUsername)
-			// IAM/STS usernames are capped at 64 characters
-			if len(testUsername) > 64 {
+			if len(testUsername) > testCase.expectedLength {
 				t.Fatalf("expected username to be of length 64, got %d", len(testUsername))
 			}
 
@@ -93,8 +104,8 @@ func TestGenUsername(t *testing.T) {
 				t.Fatalf("expected a truncate warning %s; received %s", testCase.warningExpected, warning)
 			}
 
-			if len(warning) > 0 && len(testUsername) != 64 {
-				t.Fatalf("expected a username cap at 64 chars; got length: %d", len(testUsername))
+			if len(warning) > 0 && len(testUsername) != testCase.expectedLength {
+				t.Fatalf("expected a username cap at %d chars; got length: %d", testCase.expectedLength, len(testUsername))
 			}
 		})
 	}
