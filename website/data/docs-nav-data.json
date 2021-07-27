@@ -522,6 +522,10 @@
             "path": "commands/operator"
           },
           {
+            "title": "<code>diagnose</code>",
+            "path": "commands/operator/diagnose"
+          },
+          {
             "title": "<code>generate-root</code>",
             "path": "commands/operator/generate-root"
           },
