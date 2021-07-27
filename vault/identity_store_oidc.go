@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -475,11 +476,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 	if req.Operation == logical.UpdateOperation {
 		// ensure any roles referencing this key do not already have a token_ttl
 		// greater than the key's verification_ttl
-		rolesReferencingTargetKeyName, err := i.getRolesReferencingTargetKeyName(ctx, req, name)
+		roles, err := i.rolesReferencingTargetKeyName(ctx, req, name)
 		if err != nil {
 			return nil, err
 		}
-		for _, role := range rolesReferencingTargetKeyName {
+		for _, role := range roles {
 			if role.TokenTTL > key.VerificationTTL {
 				errorMessage := fmt.Sprintf(
 					"unable to update key %q because it is currently referenced by one or more roles with a token ttl greater than %d seconds",
@@ -575,16 +576,16 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
-// getRolesReferencingTargetKeyName returns a map of role names to roles referenced by targetKeyName.
+// rolesReferencingTargetKeyName returns a map of role names to roles referenced by targetKeyName.
 // Note: this is not threadsafe. It is to be called with Lock already held.
-func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]role, error) {
+func (i *IdentityStore) rolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]role, error) {
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var tempRole role
-	rolesReferencingTargetKeyName := make(map[string]role)
+	roles := make(map[string]role)
 	for _, roleName := range roleNames {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
 		if err != nil {
@@ -595,27 +596,28 @@ func (i *IdentityStore) getRolesReferencingTargetKeyName(ctx context.Context, re
 				return nil, err
 			}
 			if tempRole.Key == targetKeyName {
-				rolesReferencingTargetKeyName[roleName] = tempRole
+				roles[roleName] = tempRole
 			}
 		}
 	}
 
-	return rolesReferencingTargetKeyName, nil
+	return roles, nil
 }
 
-// getRoleNamesReferencingTargetKeyName returns a slice of strings of role
+// roleNamesReferencingTargetKeyName returns a slice of strings of role
 // names referenced by targetKeyName.
 // Note: this is not threadsafe. It is to be called with Lock already held.
-func (i *IdentityStore) getRoleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
-	rolesReferencingTargetKeyName, err := i.getRolesReferencingTargetKeyName(ctx, req, targetKeyName)
+func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
+	roles, err := i.rolesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
 		return nil, err
 	}
 
 	var names []string
-	for key, _ := range rolesReferencingTargetKeyName {
+	for key, _ := range roles {
 		names = append(names, key)
 	}
+	sort.Strings(names)
 	return names, nil
 }
 
@@ -630,14 +632,14 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	i.oidcLock.Lock()
 
-	roleNamesReferencingTargetKeyName, err := i.getRoleNamesReferencingTargetKeyName(ctx, req, targetKeyName)
+	roleNames, err := i.roleNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(roleNamesReferencingTargetKeyName) > 0 {
+	if len(roleNames) > 0 {
 		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
-			targetKeyName, strings.Join(roleNamesReferencingTargetKeyName, ", "))
+			targetKeyName, strings.Join(roleNames, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
