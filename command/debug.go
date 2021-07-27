@@ -1000,6 +1000,9 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	for {
 		select {
 		case log := <-logCh:
+			if !strings.HasSuffix(log, "\n") {
+				log += "\n"
+			}
 			_, err = out.WriteString(log)
 			if err != nil {
 				c.captureError("log", err)
