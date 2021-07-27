@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -53,7 +52,7 @@ func TestGenUsername(t *testing.T) {
 		policy           string
 		userType         string
 		UsernameTemplate string
-		warningExpected  bool
+		warningExpected  string
 		expectedRegex    string
 	}
 
@@ -63,7 +62,7 @@ func TestGenUsername(t *testing.T) {
 			policy:           "policy1",
 			userType:         "iam_user",
 			UsernameTemplate: `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`,
-			warningExpected:  false,
+			warningExpected:  "",
 			expectedRegex:    `^vault-name1-policy1-[0-9]+-[a-zA-Z0-9]+`,
 		},
 		"Too long. Warning expected": {
@@ -71,7 +70,7 @@ func TestGenUsername(t *testing.T) {
 			policy:           "long------policy------name",
 			userType:         "iam_user",
 			UsernameTemplate: `{{ printf "%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) }}`,
-			warningExpected:  true,
+			warningExpected:  "calling token's iam_user user name was truncated to 64 characters",
 			expectedRegex:    `this---is---a---very---long---name-long------policy------name-[0-9][0-9]`,
 		},
 	}
@@ -90,13 +89,12 @@ func TestGenUsername(t *testing.T) {
 				t.Fatalf("expected username to be of length 64, got %d", len(testUsername))
 			}
 
-			if testCase.warningExpected {
-				if warning == "" || !strings.Contains(warning, fmt.Sprintf("calling token's %s user name was truncated to 64 characters", testCase.userType)) {
-					t.Fatalf("expected a truncate warning; received empty string")
-				}
-				if len(testUsername) != 64 {
-					t.Fatalf("expected a username cap at 64 chars; got length: %d", len(testUsername))
-				}
+			if !strings.Contains(warning, testCase.warningExpected) {
+				t.Fatalf("expected a truncate warning %s; received %s", testCase.warningExpected, warning)
+			}
+
+			if len(warning) > 0 && len(testUsername) != 64 {
+				t.Fatalf("expected a username cap at 64 chars; got length: %d", len(testUsername))
 			}
 		})
 	}
