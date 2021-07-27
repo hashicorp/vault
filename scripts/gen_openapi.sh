@@ -65,6 +65,7 @@ vault secrets enable pki
 vault secrets enable postgresql
 vault secrets enable rabbitmq
 vault secrets enable ssh
+vault secrets enable terraform
 vault secrets enable totp
 vault secrets enable transit
 

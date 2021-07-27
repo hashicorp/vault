@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -145,7 +144,6 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
 func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	roleName := data.Get("role").(string)
 
 	// Get the role if one was specified
@@ -230,18 +228,18 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		case errutil.InternalError:
 			return nil, err
 		default:
-			return nil, errwrap.Wrapf("error signing/generating certificate: {{err}}", err)
+			return nil, fmt.Errorf("error signing/generating certificate: %w", err)
 		}
 	}
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
 	}
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
 	respData := map[string]interface{}{
@@ -322,7 +320,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			Value: parsedBundle.CertificateBytes,
 		})
 		if err != nil {
-			return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
+			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 		}
 	}
 

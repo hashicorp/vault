@@ -19,49 +19,52 @@ jobs:
         command: mkdir -p .buildcache && echo "*" > .buildcache/.gitignore
         name: Ignore .buildcache
     - restore_cache:
-        key: package-6919cd327fd098fa9cac37213654422a23e69b8b-{{checksum ".buildcache/cache-keys/package-6919cd327fd098fa9cac37213654422a23e69b8b"}}
+        key: package-6a272394a37f56f2552603381358e76fbf526b3f-{{checksum ".buildcache/cache-keys/package-6a272394a37f56f2552603381358e76fbf526b3f"}}
         name: Restore package cache
     - restore_cache:
-        key: package-45e20b99a94f6c375f8c0e443ebfb28b009acd95-{{checksum ".buildcache/cache-keys/package-45e20b99a94f6c375f8c0e443ebfb28b009acd95"}}
+        key: package-579730d9a8f9ff9fa1664cbf08b45f5ed95126ef-{{checksum ".buildcache/cache-keys/package-579730d9a8f9ff9fa1664cbf08b45f5ed95126ef"}}
         name: Restore package cache
     - restore_cache:
-        key: package-bef9eafa8a9adba115f7d787ee3e73a0544761b5-{{checksum ".buildcache/cache-keys/package-bef9eafa8a9adba115f7d787ee3e73a0544761b5"}}
+        key: package-5f4906871c95f1bd78b9b64210b45f2eeeaf97c7-{{checksum ".buildcache/cache-keys/package-5f4906871c95f1bd78b9b64210b45f2eeeaf97c7"}}
         name: Restore package cache
     - restore_cache:
-        key: package-43f18f765a59b14b9ac9148f9c9901163681a679-{{checksum ".buildcache/cache-keys/package-43f18f765a59b14b9ac9148f9c9901163681a679"}}
+        key: package-63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc-{{checksum ".buildcache/cache-keys/package-63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc"}}
         name: Restore package cache
     - restore_cache:
-        key: package-4b845b9591d4909bff5a5dd2756505978dc6acc2-{{checksum ".buildcache/cache-keys/package-4b845b9591d4909bff5a5dd2756505978dc6acc2"}}
+        key: package-31e5fd4908e34e2761b1712c3d15d71a00f9bef4-{{checksum ".buildcache/cache-keys/package-31e5fd4908e34e2761b1712c3d15d71a00f9bef4"}}
         name: Restore package cache
     - restore_cache:
-        key: package-a1e6f908c37b9969daec49568520798c855f6ee4-{{checksum ".buildcache/cache-keys/package-a1e6f908c37b9969daec49568520798c855f6ee4"}}
+        key: package-81f4aa900ca65692ed573665d81ca92a28c587a8-{{checksum ".buildcache/cache-keys/package-81f4aa900ca65692ed573665d81ca92a28c587a8"}}
         name: Restore package cache
     - restore_cache:
-        key: package-ce94664c77c79941e02927b35c1e6ec718364cff-{{checksum ".buildcache/cache-keys/package-ce94664c77c79941e02927b35c1e6ec718364cff"}}
+        key: package-dbb6701b63ed327978c487430599669d1f9b6a68-{{checksum ".buildcache/cache-keys/package-dbb6701b63ed327978c487430599669d1f9b6a68"}}
         name: Restore package cache
     - restore_cache:
-        key: package-d34e55c92c8b2be7fab8b5053a4449ae38964121-{{checksum ".buildcache/cache-keys/package-d34e55c92c8b2be7fab8b5053a4449ae38964121"}}
+        key: package-92284771eeeef21c4e516cba660c057bae8fc95c-{{checksum ".buildcache/cache-keys/package-92284771eeeef21c4e516cba660c057bae8fc95c"}}
         name: Restore package cache
     - restore_cache:
-        key: package-a3e61658b18645cc95446c46b6b45ef899b445c3-{{checksum ".buildcache/cache-keys/package-a3e61658b18645cc95446c46b6b45ef899b445c3"}}
+        key: package-551a04b8d71a3d3c78c83690e2f35d728bf92d2a-{{checksum ".buildcache/cache-keys/package-551a04b8d71a3d3c78c83690e2f35d728bf92d2a"}}
         name: Restore package cache
     - restore_cache:
-        key: package-b3d3e764cc77f5db67bb588c28f989821987bc10-{{checksum ".buildcache/cache-keys/package-b3d3e764cc77f5db67bb588c28f989821987bc10"}}
+        key: package-55468e5b015d8fca5d9459b114e02baa40d6dcc1-{{checksum ".buildcache/cache-keys/package-55468e5b015d8fca5d9459b114e02baa40d6dcc1"}}
         name: Restore package cache
     - restore_cache:
-        key: package-02ec3527d53df292a70b0a61f0e09481b9eb7f27-{{checksum ".buildcache/cache-keys/package-02ec3527d53df292a70b0a61f0e09481b9eb7f27"}}
+        key: package-dfce08f179d39997bc1a3ccc97cf04d0bacd08c8-{{checksum ".buildcache/cache-keys/package-dfce08f179d39997bc1a3ccc97cf04d0bacd08c8"}}
         name: Restore package cache
     - restore_cache:
-        key: package-b7b0ecda9544400ab8d65124b230c5969c786525-{{checksum ".buildcache/cache-keys/package-b7b0ecda9544400ab8d65124b230c5969c786525"}}
+        key: package-40d64ce5cfb69823811849885bd5b13f40d23ef9-{{checksum ".buildcache/cache-keys/package-40d64ce5cfb69823811849885bd5b13f40d23ef9"}}
         name: Restore package cache
     - restore_cache:
-        key: package-ff18c7878a7913a32be548288ee1f8abde4a5bca-{{checksum ".buildcache/cache-keys/package-ff18c7878a7913a32be548288ee1f8abde4a5bca"}}
+        key: package-0da11fe16534b8b07022defd291103642b1845de-{{checksum ".buildcache/cache-keys/package-0da11fe16534b8b07022defd291103642b1845de"}}
         name: Restore package cache
     - restore_cache:
-        key: package-32e5817de0c3cb666301e70cc80c7b5158c5367a-{{checksum ".buildcache/cache-keys/package-32e5817de0c3cb666301e70cc80c7b5158c5367a"}}
+        key: package-09807c02ba5f213fc80b7d206281da407eb21f7c-{{checksum ".buildcache/cache-keys/package-09807c02ba5f213fc80b7d206281da407eb21f7c"}}
         name: Restore package cache
     - restore_cache:
-        key: package-fa35da445be9605ce15fbd214118afbcebacd7be-{{checksum ".buildcache/cache-keys/package-fa35da445be9605ce15fbd214118afbcebacd7be"}}
+        key: package-03cc7b3b25d3029b4c9f74431dff62b34a7d4bde-{{checksum ".buildcache/cache-keys/package-03cc7b3b25d3029b4c9f74431dff62b34a7d4bde"}}
+        name: Restore package cache
+    - restore_cache:
+        key: package-fd42b02886ce62ae770d7c3c08ea50a387593a1f-{{checksum ".buildcache/cache-keys/package-fd42b02886ce62ae770d7c3c08ea50a387593a1f"}}
         name: Restore package cache
     - run:
         command: make package-meta-all
@@ -73,20 +76,20 @@ jobs:
         command: ls -lahR .buildcache
         name: List Build Cache
     - run:
-        command: cp packages*.lock/pkgs.yml lockfile-1973802ee6f7e7e5.yml
+        command: cp packages*.lock/pkgs.yml lockfile-423447b8bd37d1c3.yml
         name: Update Lockfile Name
     - run:
-        command: tar -czf packages-1973802ee6f7e7e5.tar.gz .buildcache/packages lockfile-1973802ee6f7e7e5.yml
+        command: tar -czf packages-423447b8bd37d1c3.tar.gz .buildcache/packages lockfile-423447b8bd37d1c3.yml
         name: Create Raw Package Tarball
     - run:
-        command: tar -czf meta-1973802ee6f7e7e5.tar.gz .buildcache/packages/store/*.json lockfile-1973802ee6f7e7e5.yml
+        command: tar -czf meta-423447b8bd37d1c3.tar.gz .buildcache/packages/store/*.json lockfile-423447b8bd37d1c3.yml
         name: Create Metadata Tarball
     - store_artifacts:
-        path: lockfile-1973802ee6f7e7e5.yml
+        path: lockfile-423447b8bd37d1c3.yml
     - store_artifacts:
-        path: packages-1973802ee6f7e7e5.tar.gz
+        path: packages-423447b8bd37d1c3.tar.gz
     - store_artifacts:
-        path: meta-1973802ee6f7e7e5.tar.gz
+        path: meta-423447b8bd37d1c3.tar.gz
     - store_artifacts:
         path: .buildcache/packages
     environment:
@@ -101,21 +104,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 6919cd327fd098fa9cac37213654422a23e69b8b
+    - PACKAGE_SPEC_ID: 6a272394a37f56f2552603381358e76fbf526b3f
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-6919cd327fd098fa9cac37213654422a23e69b8b-{{checksum ".buildcache/cache-keys/package-6919cd327fd098fa9cac37213654422a23e69b8b"}}
+        key: package-6a272394a37f56f2552603381358e76fbf526b3f-{{checksum ".buildcache/cache-keys/package-6a272394a37f56f2552603381358e76fbf526b3f"}}
         name: Restore package cache
     - run:
         command: |2
@@ -131,16 +134,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -150,7 +153,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -167,7 +170,85 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-6919cd327fd098fa9cac37213654422a23e69b8b-{{checksum ".buildcache/cache-keys/package-6919cd327fd098fa9cac37213654422a23e69b8b"}}
+        key: package-6a272394a37f56f2552603381358e76fbf526b3f-{{checksum ".buildcache/cache-keys/package-6a272394a37f56f2552603381358e76fbf526b3f"}}
+        name: Save package cache
+        paths:
+        - .buildcache/packages/store
+  darwin_arm64_package:
+    docker:
+    - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
+    shell: /usr/bin/env bash -euo pipefail -c
+    environment:
+    - AUTO_INSTALL_TOOLS: 'YES'
+    - BUILDKIT_PROGRESS: plain
+    - PRODUCT_REVISION: ''
+    - PACKAGE_SPEC_ID: 579730d9a8f9ff9fa1664cbf08b45f5ed95126ef
+    steps:
+    - setup_remote_docker:
+        docker_layer_caching: false
+        version: 19.03.12
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - checkout:
+        path: .
+    - run:
+        command: make -C packages*.lock write-package-cache-key
+        name: Write package cache key
+    - restore_cache:
+        key: package-579730d9a8f9ff9fa1664cbf08b45f5ed95126ef-{{checksum ".buildcache/cache-keys/package-579730d9a8f9ff9fa1664cbf08b45f5ed95126ef"}}
+        name: Restore package cache
+    - run:
+        command: |2
+
+          if ! { PKG=$(find .buildcache/packages/store -maxdepth 1 -mindepth 1 -name '*.zip' 2> /dev/null) && [ -n "$PKG" ]; }; then
+            echo "No package found, continuing with build."
+            exit 0
+          fi
+          echo "Package already cached, skipping build."
+          circleci-agent step halt
+        name: Check cache status
+    - run:
+        command: make -C packages*.lock write-builder-cache-keys
+        name: Write builder layer cache keys
+    - restore_cache:
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
+        keys:
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
+        - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
+        name: 'Restore Builder Image Cache: copy-source'
+    - run:
+        command: make -C packages*.lock load-builder-cache
+        name: Load whatever builder cache we have (if any) into the Docker daemon
+        no_output_timeout: 30m
+    - run:
+        command: |2-
+
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          eval "$(ssh-agent -s)"
+          if [ -f "$KEYFILE" ]; then
+            ssh-add "$KEYFILE"
+          else
+            echo "==> INFO: SSH key for github.com not found"
+            echo "    Attempts to access private repositories from within"
+            echo "    the build will fail, e.g. for private go modules, or"
+            echo "    attempts to directly clone private repositories."
+          fi
+
+          make -C packages*.lock package
+        name: Compile Package
+    - run:
+        command: ls -lahR .buildcache/packages
+        name: List packages
+    - save_cache:
+        key: package-579730d9a8f9ff9fa1664cbf08b45f5ed95126ef-{{checksum ".buildcache/cache-keys/package-579730d9a8f9ff9fa1664cbf08b45f5ed95126ef"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -179,21 +260,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 32e5817de0c3cb666301e70cc80c7b5158c5367a
+    - PACKAGE_SPEC_ID: 03cc7b3b25d3029b4c9f74431dff62b34a7d4bde
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-32e5817de0c3cb666301e70cc80c7b5158c5367a-{{checksum ".buildcache/cache-keys/package-32e5817de0c3cb666301e70cc80c7b5158c5367a"}}
+        key: package-03cc7b3b25d3029b4c9f74431dff62b34a7d4bde-{{checksum ".buildcache/cache-keys/package-03cc7b3b25d3029b4c9f74431dff62b34a7d4bde"}}
         name: Restore package cache
     - run:
         command: |2
@@ -209,16 +290,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -228,7 +309,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -245,19 +326,20 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-32e5817de0c3cb666301e70cc80c7b5158c5367a-{{checksum ".buildcache/cache-keys/package-32e5817de0c3cb666301e70cc80c7b5158c5367a"}}
+        key: package-03cc7b3b25d3029b4c9f74431dff62b34a7d4bde-{{checksum ".buildcache/cache-keys/package-03cc7b3b25d3029b4c9f74431dff62b34a7d4bde"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   install-ui-dependencies:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - run:
         command: |
           cd ui
@@ -266,6 +348,7 @@ jobs:
         name: Install UI dependencies
     - save_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Save yarn cache
         paths:
         - ui/node_modules
   build-common-layers:
@@ -276,29 +359,32 @@ jobs:
     steps:
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
-        name: 'Restore Layer Cache: build-ui'
+        name: 'Restore Layer Cache: copy-source'
     - run:
-        command: LAYER_SPEC_ID=06-build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f make -C packages*.lock load-builder-cache
+        command: LAYER_SPEC_ID=09-copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db make -C packages*.lock load-builder-cache
         name: Load whatever builder cache we have (if any) into the Docker daemon
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -314,7 +400,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -325,12 +411,12 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 01-install-go-d50d25b673345b01cf916d1910439ea63e895f08-image
+          make -f packages*.lock/layer.mk 01-install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7-image
         name: Build install-go layer
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -341,12 +427,12 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 02-install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044-image
+          make -f packages*.lock/layer.mk 02-install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950-image
         name: Build install-go-tools layer
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -357,12 +443,12 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 03-set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6-image
+          make -f packages*.lock/layer.mk 03-set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6-image
         name: Build set-workdir layer
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -373,12 +459,12 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 04-install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74-image
+          make -f packages*.lock/layer.mk 04-install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c-image
         name: Build install-yarn layer
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -389,12 +475,12 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 05-ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e-image
+          make -f packages*.lock/layer.mk 05-ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71-image
         name: Build ui-dependencies layer
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -405,12 +491,12 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 06-build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f-image
+          make -f packages*.lock/layer.mk 06-build-ui-26a986a756dd09ad76b230768f6d889c031d6fea-image
         name: Build build-ui layer
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -421,13 +507,61 @@ jobs:
             echo "    attempts to directly clone private repositories."
           fi
 
-          make -f packages*.lock/layer.mk 06-build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f-save
-        name: Build build-ui layer
+          make -f packages*.lock/layer.mk 07-build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488-image
+        name: Build build-static-assets layer
+    - run:
+        command: |2-
+
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          eval "$(ssh-agent -s)"
+          if [ -f "$KEYFILE" ]; then
+            ssh-add "$KEYFILE"
+          else
+            echo "==> INFO: SSH key for github.com not found"
+            echo "    Attempts to access private repositories from within"
+            echo "    the build will fail, e.g. for private go modules, or"
+            echo "    attempts to directly clone private repositories."
+          fi
+
+          make -f packages*.lock/layer.mk 08-go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c-image
+        name: Build go-modules layer
+    - run:
+        command: |2-
+
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          eval "$(ssh-agent -s)"
+          if [ -f "$KEYFILE" ]; then
+            ssh-add "$KEYFILE"
+          else
+            echo "==> INFO: SSH key for github.com not found"
+            echo "    Attempts to access private repositories from within"
+            echo "    the build will fail, e.g. for private go modules, or"
+            echo "    attempts to directly clone private repositories."
+          fi
+
+          make -f packages*.lock/layer.mk 09-copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db-image
+        name: Build copy-source layer
+    - run:
+        command: |2-
+
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
+          eval "$(ssh-agent -s)"
+          if [ -f "$KEYFILE" ]; then
+            ssh-add "$KEYFILE"
+          else
+            echo "==> INFO: SSH key for github.com not found"
+            echo "    Attempts to access private repositories from within"
+            echo "    the build will fail, e.g. for private go modules, or"
+            echo "    attempts to directly clone private repositories."
+          fi
+
+          make -f packages*.lock/layer.mk 09-copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db-save
+        name: Build copy-source layer
     - save_cache:
-        key: build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        name: 'Save Layer Cache: build-ui'
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
+        name: 'Save Layer Cache: copy-source'
         paths:
-        - .buildcache/archives/06-build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f.tar.gz
+        - .buildcache/archives/09-copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db.tar.gz
     environment:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
@@ -440,21 +574,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: d34e55c92c8b2be7fab8b5053a4449ae38964121
+    - PACKAGE_SPEC_ID: 551a04b8d71a3d3c78c83690e2f35d728bf92d2a
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-d34e55c92c8b2be7fab8b5053a4449ae38964121-{{checksum ".buildcache/cache-keys/package-d34e55c92c8b2be7fab8b5053a4449ae38964121"}}
+        key: package-551a04b8d71a3d3c78c83690e2f35d728bf92d2a-{{checksum ".buildcache/cache-keys/package-551a04b8d71a3d3c78c83690e2f35d728bf92d2a"}}
         name: Restore package cache
     - run:
         command: |2
@@ -470,16 +604,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -489,7 +623,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -506,20 +640,35 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-d34e55c92c8b2be7fab8b5053a4449ae38964121-{{checksum ".buildcache/cache-keys/package-d34e55c92c8b2be7fab8b5053a4449ae38964121"}}
+        key: package-551a04b8d71a3d3c78c83690e2f35d728bf92d2a-{{checksum ".buildcache/cache-keys/package-551a04b8d71a3d3c78c83690e2f35d728bf92d2a"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
+    - run:
+        command: |
+          case "$CIRCLE_BRANCH" in
+          main|ui/*|release/*|merge*) ;;
+          *) # If the branch being tested doesn't match one of the above patterns,
+             # we don't need to run test-ui and can abort the job.
+             circleci-agent step halt
+             ;;
+          esac
+
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
@@ -556,21 +705,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: ce94664c77c79941e02927b35c1e6ec718364cff
+    - PACKAGE_SPEC_ID: 92284771eeeef21c4e516cba660c057bae8fc95c
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-ce94664c77c79941e02927b35c1e6ec718364cff-{{checksum ".buildcache/cache-keys/package-ce94664c77c79941e02927b35c1e6ec718364cff"}}
+        key: package-92284771eeeef21c4e516cba660c057bae8fc95c-{{checksum ".buildcache/cache-keys/package-92284771eeeef21c4e516cba660c057bae8fc95c"}}
         name: Restore package cache
     - run:
         command: |2
@@ -586,16 +735,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -605,7 +754,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -622,13 +771,13 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-ce94664c77c79941e02927b35c1e6ec718364cff-{{checksum ".buildcache/cache-keys/package-ce94664c77c79941e02927b35c1e6ec718364cff"}}
+        key: package-92284771eeeef21c4e516cba660c057bae8fc95c-{{checksum ".buildcache/cache-keys/package-92284771eeeef21c4e516cba660c057bae8fc95c"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   test-ui-browserstack:
     docker:
-    - image: docker.mirror.hashicorp.services/node:10-buster
+    - image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
     resource_class: xlarge
@@ -636,6 +785,7 @@ jobs:
     - checkout
     - restore_cache:
         key: yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
     - attach_workspace:
         at: .
     - run:
@@ -661,12 +811,18 @@ jobs:
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=off" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
           go version
         name: Setup Go
         working_directory: ~/
     - checkout
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - attach_workspace:
         at: .
     - run:
@@ -685,8 +841,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.3
-    - GO111MODULE: 'off'
+    - GO_VERSION: 1.16.5
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -711,21 +866,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 4b845b9591d4909bff5a5dd2756505978dc6acc2
+    - PACKAGE_SPEC_ID: 81f4aa900ca65692ed573665d81ca92a28c587a8
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-4b845b9591d4909bff5a5dd2756505978dc6acc2-{{checksum ".buildcache/cache-keys/package-4b845b9591d4909bff5a5dd2756505978dc6acc2"}}
+        key: package-81f4aa900ca65692ed573665d81ca92a28c587a8-{{checksum ".buildcache/cache-keys/package-81f4aa900ca65692ed573665d81ca92a28c587a8"}}
         name: Restore package cache
     - run:
         command: |2
@@ -741,16 +896,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -760,7 +915,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -777,13 +932,13 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-4b845b9591d4909bff5a5dd2756505978dc6acc2-{{checksum ".buildcache/cache-keys/package-4b845b9591d4909bff5a5dd2756505978dc6acc2"}}
+        key: package-81f4aa900ca65692ed573665d81ca92a28c587a8-{{checksum ".buildcache/cache-keys/package-81f4aa900ca65692ed573665d81ca92a28c587a8"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster
     resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -803,12 +958,31 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 18.09.3
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -828,13 +1002,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -844,6 +1018,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -859,47 +1043,70 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.3-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
               tail -f /dev/null
 
             # Run tests
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
             docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-               \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
         command: |
           docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -911,7 +1118,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
   freebsd_386_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -920,21 +1126,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 45e20b99a94f6c375f8c0e443ebfb28b009acd95
+    - PACKAGE_SPEC_ID: 5f4906871c95f1bd78b9b64210b45f2eeeaf97c7
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-45e20b99a94f6c375f8c0e443ebfb28b009acd95-{{checksum ".buildcache/cache-keys/package-45e20b99a94f6c375f8c0e443ebfb28b009acd95"}}
+        key: package-5f4906871c95f1bd78b9b64210b45f2eeeaf97c7-{{checksum ".buildcache/cache-keys/package-5f4906871c95f1bd78b9b64210b45f2eeeaf97c7"}}
         name: Restore package cache
     - run:
         command: |2
@@ -950,16 +1156,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -969,7 +1175,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -986,13 +1192,13 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-45e20b99a94f6c375f8c0e443ebfb28b009acd95-{{checksum ".buildcache/cache-keys/package-45e20b99a94f6c375f8c0e443ebfb28b009acd95"}}
+        key: package-5f4906871c95f1bd78b9b64210b45f2eeeaf97c7-{{checksum ".buildcache/cache-keys/package-5f4906871c95f1bd78b9b64210b45f2eeeaf97c7"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster
     resource_class: xlarge
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1009,12 +1215,31 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -1033,13 +1258,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -1049,6 +1274,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -1064,42 +1299,64 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.3-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
               tail -f /dev/null
 
             # Run tests
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
             docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              -race \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1111,7 +1368,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
   freebsd_amd64_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -1120,21 +1376,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: bef9eafa8a9adba115f7d787ee3e73a0544761b5
+    - PACKAGE_SPEC_ID: 63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-bef9eafa8a9adba115f7d787ee3e73a0544761b5-{{checksum ".buildcache/cache-keys/package-bef9eafa8a9adba115f7d787ee3e73a0544761b5"}}
+        key: package-63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc-{{checksum ".buildcache/cache-keys/package-63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1150,16 +1406,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1169,7 +1425,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1186,7 +1442,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-bef9eafa8a9adba115f7d787ee3e73a0544761b5-{{checksum ".buildcache/cache-keys/package-bef9eafa8a9adba115f7d787ee3e73a0544761b5"}}
+        key: package-63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc-{{checksum ".buildcache/cache-keys/package-63f94793a2dcbcaa157e41b0c2b8335f76cbc7fc"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1198,21 +1454,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 02ec3527d53df292a70b0a61f0e09481b9eb7f27
+    - PACKAGE_SPEC_ID: 40d64ce5cfb69823811849885bd5b13f40d23ef9
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-02ec3527d53df292a70b0a61f0e09481b9eb7f27-{{checksum ".buildcache/cache-keys/package-02ec3527d53df292a70b0a61f0e09481b9eb7f27"}}
+        key: package-40d64ce5cfb69823811849885bd5b13f40d23ef9-{{checksum ".buildcache/cache-keys/package-40d64ce5cfb69823811849885bd5b13f40d23ef9"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1228,16 +1484,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1247,7 +1503,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1264,7 +1520,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-02ec3527d53df292a70b0a61f0e09481b9eb7f27-{{checksum ".buildcache/cache-keys/package-02ec3527d53df292a70b0a61f0e09481b9eb7f27"}}
+        key: package-40d64ce5cfb69823811849885bd5b13f40d23ef9-{{checksum ".buildcache/cache-keys/package-40d64ce5cfb69823811849885bd5b13f40d23ef9"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1276,21 +1532,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: a1e6f908c37b9969daec49568520798c855f6ee4
+    - PACKAGE_SPEC_ID: dbb6701b63ed327978c487430599669d1f9b6a68
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-a1e6f908c37b9969daec49568520798c855f6ee4-{{checksum ".buildcache/cache-keys/package-a1e6f908c37b9969daec49568520798c855f6ee4"}}
+        key: package-dbb6701b63ed327978c487430599669d1f9b6a68-{{checksum ".buildcache/cache-keys/package-dbb6701b63ed327978c487430599669d1f9b6a68"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1306,16 +1562,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1325,7 +1581,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1342,7 +1598,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-a1e6f908c37b9969daec49568520798c855f6ee4-{{checksum ".buildcache/cache-keys/package-a1e6f908c37b9969daec49568520798c855f6ee4"}}
+        key: package-dbb6701b63ed327978c487430599669d1f9b6a68-{{checksum ".buildcache/cache-keys/package-dbb6701b63ed327978c487430599669d1f9b6a68"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1377,21 +1633,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: ff18c7878a7913a32be548288ee1f8abde4a5bca
+    - PACKAGE_SPEC_ID: 09807c02ba5f213fc80b7d206281da407eb21f7c
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-ff18c7878a7913a32be548288ee1f8abde4a5bca-{{checksum ".buildcache/cache-keys/package-ff18c7878a7913a32be548288ee1f8abde4a5bca"}}
+        key: package-09807c02ba5f213fc80b7d206281da407eb21f7c-{{checksum ".buildcache/cache-keys/package-09807c02ba5f213fc80b7d206281da407eb21f7c"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1407,16 +1663,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1426,7 +1682,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1443,13 +1699,13 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-ff18c7878a7913a32be548288ee1f8abde4a5bca-{{checksum ".buildcache/cache-keys/package-ff18c7878a7913a32be548288ee1f8abde4a5bca"}}
+        key: package-09807c02ba5f213fc80b7d206281da407eb21f7c-{{checksum ".buildcache/cache-keys/package-09807c02ba5f213fc80b7d206281da407eb21f7c"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster
     resource_class: large
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1466,12 +1722,31 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -1490,13 +1765,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -1506,6 +1781,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -1521,42 +1806,64 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.3-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
               tail -f /dev/null
 
             # Run tests
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
             docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                   \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                  \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-               \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - store_artifacts:
@@ -1568,7 +1875,6 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
   netbsd_amd64_package:
     docker:
     - image: docker.mirror.hashicorp.services/circleci/buildpack-deps
@@ -1577,21 +1883,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: b3d3e764cc77f5db67bb588c28f989821987bc10
+    - PACKAGE_SPEC_ID: dfce08f179d39997bc1a3ccc97cf04d0bacd08c8
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-b3d3e764cc77f5db67bb588c28f989821987bc10-{{checksum ".buildcache/cache-keys/package-b3d3e764cc77f5db67bb588c28f989821987bc10"}}
+        key: package-dfce08f179d39997bc1a3ccc97cf04d0bacd08c8-{{checksum ".buildcache/cache-keys/package-dfce08f179d39997bc1a3ccc97cf04d0bacd08c8"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1607,16 +1913,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1626,7 +1932,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1643,7 +1949,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-b3d3e764cc77f5db67bb588c28f989821987bc10-{{checksum ".buildcache/cache-keys/package-b3d3e764cc77f5db67bb588c28f989821987bc10"}}
+        key: package-dfce08f179d39997bc1a3ccc97cf04d0bacd08c8-{{checksum ".buildcache/cache-keys/package-dfce08f179d39997bc1a3ccc97cf04d0bacd08c8"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1655,21 +1961,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: b7b0ecda9544400ab8d65124b230c5969c786525
+    - PACKAGE_SPEC_ID: 0da11fe16534b8b07022defd291103642b1845de
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-b7b0ecda9544400ab8d65124b230c5969c786525-{{checksum ".buildcache/cache-keys/package-b7b0ecda9544400ab8d65124b230c5969c786525"}}
+        key: package-0da11fe16534b8b07022defd291103642b1845de-{{checksum ".buildcache/cache-keys/package-0da11fe16534b8b07022defd291103642b1845de"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1685,16 +1991,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1704,7 +2010,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1721,7 +2027,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-b7b0ecda9544400ab8d65124b230c5969c786525-{{checksum ".buildcache/cache-keys/package-b7b0ecda9544400ab8d65124b230c5969c786525"}}
+        key: package-0da11fe16534b8b07022defd291103642b1845de-{{checksum ".buildcache/cache-keys/package-0da11fe16534b8b07022defd291103642b1845de"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1733,21 +2039,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: a3e61658b18645cc95446c46b6b45ef899b445c3
+    - PACKAGE_SPEC_ID: 55468e5b015d8fca5d9459b114e02baa40d6dcc1
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-a3e61658b18645cc95446c46b6b45ef899b445c3-{{checksum ".buildcache/cache-keys/package-a3e61658b18645cc95446c46b6b45ef899b445c3"}}
+        key: package-55468e5b015d8fca5d9459b114e02baa40d6dcc1-{{checksum ".buildcache/cache-keys/package-55468e5b015d8fca5d9459b114e02baa40d6dcc1"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1763,16 +2069,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1782,7 +2088,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1799,7 +2105,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-a3e61658b18645cc95446c46b6b45ef899b445c3-{{checksum ".buildcache/cache-keys/package-a3e61658b18645cc95446c46b6b45ef899b445c3"}}
+        key: package-55468e5b015d8fca5d9459b114e02baa40d6dcc1-{{checksum ".buildcache/cache-keys/package-55468e5b015d8fca5d9459b114e02baa40d6dcc1"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1811,21 +2117,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: 43f18f765a59b14b9ac9148f9c9901163681a679
+    - PACKAGE_SPEC_ID: 31e5fd4908e34e2761b1712c3d15d71a00f9bef4
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-43f18f765a59b14b9ac9148f9c9901163681a679-{{checksum ".buildcache/cache-keys/package-43f18f765a59b14b9ac9148f9c9901163681a679"}}
+        key: package-31e5fd4908e34e2761b1712c3d15d71a00f9bef4-{{checksum ".buildcache/cache-keys/package-31e5fd4908e34e2761b1712c3d15d71a00f9bef4"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1841,16 +2147,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1860,7 +2166,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1877,7 +2183,7 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-43f18f765a59b14b9ac9148f9c9901163681a679-{{checksum ".buildcache/cache-keys/package-43f18f765a59b14b9ac9148f9c9901163681a679"}}
+        key: package-31e5fd4908e34e2761b1712c3d15d71a00f9bef4-{{checksum ".buildcache/cache-keys/package-31e5fd4908e34e2761b1712c3d15d71a00f9bef4"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
@@ -1889,21 +2195,21 @@ jobs:
     - AUTO_INSTALL_TOOLS: 'YES'
     - BUILDKIT_PROGRESS: plain
     - PRODUCT_REVISION: ''
-    - PACKAGE_SPEC_ID: fa35da445be9605ce15fbd214118afbcebacd7be
+    - PACKAGE_SPEC_ID: fd42b02886ce62ae770d7c3c08ea50a387593a1f
     steps:
     - setup_remote_docker:
         docker_layer_caching: false
         version: 19.03.12
     - add_ssh_keys:
         fingerprints:
-        - c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
     - checkout:
         path: .
     - run:
         command: make -C packages*.lock write-package-cache-key
         name: Write package cache key
     - restore_cache:
-        key: package-fa35da445be9605ce15fbd214118afbcebacd7be-{{checksum ".buildcache/cache-keys/package-fa35da445be9605ce15fbd214118afbcebacd7be"}}
+        key: package-fd42b02886ce62ae770d7c3c08ea50a387593a1f-{{checksum ".buildcache/cache-keys/package-fd42b02886ce62ae770d7c3c08ea50a387593a1f"}}
         name: Restore package cache
     - run:
         command: |2
@@ -1919,16 +2225,16 @@ jobs:
         command: make -C packages*.lock write-builder-cache-keys
         name: Write builder layer cache keys
     - restore_cache:
-        key: copy-source_4f8a_{{checksum ".buildcache/cache-keys/copy-source-4f8a01fa0e06f9ad2f07a54bca7e01955f6341b6"}}
+        key: copy-source_7e82_{{checksum ".buildcache/cache-keys/copy-source-7e825f1c6f1f9f9bd5d3f5f402eb672d5cdc69db"}}
         keys:
-        - warm-go-build-vendor-cache_de71_{{checksum ".buildcache/cache-keys/warm-go-build-vendor-cache-de715b4d006f2b1959e13d46c202731bd8ffd23b"}}
-        - build-static-assets_9c1b_{{checksum ".buildcache/cache-keys/build-static-assets-9c1b9f6de8d722293380cb40c380fd9abe6328eb"}}
-        - build-ui_b8ce_{{checksum ".buildcache/cache-keys/build-ui-b8ce944bf6915c36b234973fc0d966db211ea57f"}}
-        - ui-dependencies_1804_{{checksum ".buildcache/cache-keys/ui-dependencies-1804be87b00add2a8e715f90df37c7ed75b7483e"}}
-        - install-yarn_5261_{{checksum ".buildcache/cache-keys/install-yarn-5261a683a2e0a2efd89cca8ea21c37d1e2266d74"}}
-        - set-workdir_91ed_{{checksum ".buildcache/cache-keys/set-workdir-91ed6789639df06d48c2e2e56af5d5b4820503f6"}}
-        - install-go-tools_62c6_{{checksum ".buildcache/cache-keys/install-go-tools-62c6eccaf61ea4274529d727cea12dd20de1e044"}}
-        - install-go_d50d_{{checksum ".buildcache/cache-keys/install-go-d50d25b673345b01cf916d1910439ea63e895f08"}}
+        - go-modules_bb33_{{checksum ".buildcache/cache-keys/go-modules-bb3323d17b4c836f4b6c60026d33819d447dfe3c"}}
+        - build-static-assets_3aa2_{{checksum ".buildcache/cache-keys/build-static-assets-3aa26dea1731f794acb26d678fbeb5aeec1bf488"}}
+        - build-ui_26a9_{{checksum ".buildcache/cache-keys/build-ui-26a986a756dd09ad76b230768f6d889c031d6fea"}}
+        - ui-dependencies_d185_{{checksum ".buildcache/cache-keys/ui-dependencies-d18517ad93450e51a7be46413f3ceeabafa65e71"}}
+        - install-yarn_8d40_{{checksum ".buildcache/cache-keys/install-yarn-8d402cd7018158a3cb28f4251d8b7508046a2c1c"}}
+        - set-workdir_3310_{{checksum ".buildcache/cache-keys/set-workdir-331006d1434fd1975dad2affbf71fdbf845d22d6"}}
+        - install-go-tools_dcaa_{{checksum ".buildcache/cache-keys/install-go-tools-dcaa9bb2de49ba79e84aa2ec9e02018c05e62950"}}
+        - install-go_d552_{{checksum ".buildcache/cache-keys/install-go-d55278f9cd49b917d025adaeed3032cc8b0dc7d7"}}
         - base_c6cd_{{checksum ".buildcache/cache-keys/base-c6cdf1b224722d2520e082320f2a71875913247c"}}
         name: 'Restore Builder Image Cache: copy-source'
     - run:
@@ -1938,7 +2244,7 @@ jobs:
     - run:
         command: |2-
 
-          KEYFILE="$HOME/.ssh/id_rsa_c6969882dc046c39ddac8305e3151c98"
+          KEYFILE="$HOME/.ssh/id_rsa_0e0377f4e2c356c2536a03e131912f06"
           eval "$(ssh-agent -s)"
           if [ -f "$KEYFILE" ]; then
             ssh-add "$KEYFILE"
@@ -1955,40 +2261,11 @@ jobs:
         command: ls -lahR .buildcache/packages
         name: List packages
     - save_cache:
-        key: package-fa35da445be9605ce15fbd214118afbcebacd7be-{{checksum ".buildcache/cache-keys/package-fa35da445be9605ce15fbd214118afbcebacd7be"}}
+        key: package-fd42b02886ce62ae770d7c3c08ea50a387593a1f-{{checksum ".buildcache/cache-keys/package-fd42b02886ce62ae770d7c3c08ea50a387593a1f"}}
         name: Save package cache
         paths:
         - .buildcache/packages/store
   pre-flight-checks:
-    docker:
-    - image: circleci/buildpack-deps
-    environment:
-    - CCI_VERSION: 0.1.5691
-    shell: /usr/bin/env bash -euo pipefail
-    steps:
-    - checkout
-    - run:
-        command: |
-          export CCI_PATH=/tmp/circleci-cli/$CCI_VERSION
-          mkdir -p $CCI_PATH
-          NAME=circleci-cli_${CCI_VERSION}_${ARCH}
-          URL=$BASE/v${CCI_VERSION}/${NAME}.tar.gz
-          curl -sSL $URL \
-            | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
-          # Add circleci to the path for subsequent steps.
-          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
-          # Done, print some debug info.
-          set -x
-          . $BASH_ENV
-          which circleci
-          circleci version
-        environment:
-          ARCH: linux_amd64
-          BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
-        name: Install CircleCI CLI
-    - run:
-        command: make ci-verify
-  go-mod-vendor:
     machine: true
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /go/src/github.com/hashicorp/vault
@@ -2005,28 +2282,77 @@ jobs:
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
+          echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
+          echo "export GOPRIVATE=github.com/hashicorp/*" >> "$BASH_ENV"
 
           echo "$ go version"
           go version
         name: Setup Go
         working_directory: ~/
     - checkout
-    - attach_workspace:
-        at: .
     - run:
         command: |
-          GO111MODULE=on go mod vendor
-          git diff --exit-code
-        name: Run go mod vendor
+          export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
+          mkdir -p $CCI_PATH
+          NAME=circleci-cli_${CIRCLECI_CLI_VERSION}_${ARCH}
+          URL=$BASE/v${CIRCLECI_CLI_VERSION}/${NAME}.tar.gz
+          curl -sSL $URL \
+            | tar --overwrite --strip-components=1 -xz -C $CCI_PATH "${NAME}/circleci"
+          # Add circleci to the path for subsequent steps.
+          echo "export PATH=$CCI_PATH:\$PATH" >> $BASH_ENV
+          # Done, print some debug info.
+          set -x
+          . $BASH_ENV
+          which circleci
+          circleci version
+        environment:
+          ARCH: linux_amd64
+          BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
+        name: Install CircleCI CLI
+    - run:
+        command: make ci-verify
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.3-{{checksum "go.sum"}}
+        name: Restore closest matching go modules cache
+    - run:
+        command: |
+          # go list ./... forces downloading some additional versions of modules that 'go mod
+          # download' misses. We need this because we make use of go list itself during
+          # code generation in later builds that rely on this module cache.
+          go list ./...
+          go mod download -json
+          ( cd sdk && go mod download -json; )
+          ( cd api && go mod download -json; )
+        name: go mod download
+    - run:
+        command: |
+          git --no-pager diff --exit-code || {
+            echo "ERROR: Files modified by go mod download, see above."
+            exit 1
+          }
+        name: Verify downloading modules did not modify any files
+    - save_cache:
+        key: v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Save go modules cache
+        paths:
+        - /go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.15.3
-    - GO111MODULE: 'off'
+    - GO_VERSION: 1.16.5
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/circleci/golang:1.15.3-buster
+    - image: docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster
     resource_class: medium
     working_directory: /go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -2046,12 +2372,31 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 18.09.3
+    - add_ssh_keys:
+        fingerprints:
+        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+    - run:
+        command: |
+          git config --global url."git@github.com:".insteadOf https://github.com/
+    - run:
+        command: |
+          TZ=GMT date '+%Y%m%d' > /tmp/go-cache-key
+        name: Compute test cache key
+    - restore_cache:
+        keys:
+        - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+    - restore_cache:
+        keys:
+        - v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        name: Restore exact go modules cache
     - run:
         command: |
           set -x
 
+          EXTRA_TAGS=
           case "-race" in
           *-race*) export VAULT_CI_GO_TEST_RACE=1;;
+          *)       EXTRA_TAGS=deadlock;;
           esac
 
           # Install CircleCI CLI
@@ -2071,13 +2416,13 @@ jobs:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
           fi
 
           # After running tests split step, we are now running the following steps
@@ -2087,6 +2432,16 @@ jobs:
 
           make prep
           mkdir -p test-results/go-test
+
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we set VAULT_LICENSE in CI, and here we unset it.  Instead of
+          # VAULT_LICENSE, we populate VAULT_LICENSE_CI, so that tests which want
+          # an externally supplied license can opt-in to using it.
+          export VAULT_LICENSE_CI="$VAULT_LICENSE"
+          VAULT_LICENSE=
 
           # Create a docker network for our testcontainer
           if [ $USE_DOCKER == 1 ]; then
@@ -2102,47 +2457,70 @@ jobs:
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
             fi
 
+
+
             # Start a docker testcontainer to run the tests in
-            docker run -d -e TEST_DOCKER_NETWORK_ID \
-              -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+            docker run -d \
+              -e TEST_DOCKER_NETWORK_ID \
+              -e GOPRIVATE \
+              -e DOCKER_CERT_PATH \
+              -e DOCKER_HOST \
+              -e DOCKER_MACHINE_NAME \
+              -e DOCKER_TLS_VERIFY \
+              -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.3-buster \
+              testcontainer docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster \
               tail -f /dev/null
 
             # Run tests
+            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
             docker exec testcontainer sh -c 'mkdir -p /go/src/github.com/hashicorp/vault'
             docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+            # Copy the downloaded modules inside the container.
+            docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
             docker exec -w /go/src/github.com/hashicorp/vault/ \
-              -e GO111MODULE -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+              -e GOCACHE=/tmp/gocache \
+              -e GO_TAGS \
+              -e GOPROXY="off" \
+              -e VAULT_LICENSE_CI \
+              -e GOARCH=amd64 \
               testcontainer \
+                gotestsum --format=short-verbose \
+                  --junitfile test-results/go-test/results.xml \
+                  --jsonfile test-results/go-test/results.json \
+                  -- \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
+                  -timeout=60m \
+                  -parallel=20 \
+                  -race \
+                  ${package_names}
+          else
+            GOARCH=amd64 \
+              GOCACHE=/tmp/go-cache \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
                 -- \
-                -tags "${GO_TAGS}" \
+                -tags "${GO_TAGS} ${EXTRA_TAGS}" \
                 -timeout=60m \
                 -parallel=20 \
                 -race \
                 ${package_names}
-          else
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
-              -tags "${GO_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              -race \
-              ${package_names}
           fi
+        environment:
+          GOPRIVATE: github.com/hashicorp/*
         name: Run Go tests
         no_output_timeout: 60m
     - run:
         command: |
           docker cp testcontainer:/go/src/github.com/hashicorp/vault/test-results .
+          docker cp testcontainer:/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -2154,9 +2532,8 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO111MODULE: 'off'
 workflows:
-  build-1973802ee6f7e7e5:
+  build-423447b8bd37d1c3:
     jobs:
     - build-common-layers
     - darwin_amd64_package:
@@ -2165,6 +2542,7 @@ workflows:
     - bundle-releases:
         requires:
         - darwin_amd64_package
+        - darwin_arm64_package
         - freebsd_386_package
         - freebsd_amd64_package
         - freebsd_arm_package
@@ -2179,6 +2557,9 @@ workflows:
         - solaris_amd64_package
         - windows_386_package
         - windows_amd64_package
+    - darwin_arm64_package:
+        requires:
+        - build-common-layers
     - freebsd_386_package:
         requires:
         - build-common-layers
@@ -2230,9 +2611,6 @@ workflows:
     - build-go-dev:
         requires:
         - pre-flight-checks
-    - go-mod-vendor:
-        requires:
-        - pre-flight-checks
     - test-ui:
         requires:
         - install-ui-dependencies
@@ -2245,19 +2623,9 @@ workflows:
         - install-ui-dependencies
         - build-go-dev
     - test-go:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-remote-docker:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-race:
@@ -2280,7 +2648,7 @@ workflows:
         filters:
           branches:
             only:
-            - master
+            - main
         context: vault-docs
     - algolia-index:
         filters:

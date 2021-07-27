@@ -1,7 +1,6 @@
 ---
 layout: guides
 page_title: Direct Application Integration - Guides
-sidebar_title: Direct Application Integration
 description: |-
   This guide demonstrates the use of Consul Template and Envconsul tools. To
   understand the difference between the two tools, you are going to retrieve the
@@ -313,7 +312,7 @@ database: "myapp"
 
 To have Consul Template to populate the `<DB_USRENAME>` and `<DB_PASSWORD>`, you
 need to create a template file with Consul Template [templating
-language](https://github.com/hashicorp/consul-template#templating-language).
+language](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md).
 
 1. Create a template file by replacing the username and password with
    Consul Template syntax and save it as **`config.yml.tpl`**. The file should

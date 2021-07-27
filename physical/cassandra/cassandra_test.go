@@ -1,13 +1,14 @@
 package cassandra
 
 import (
+	"os"
+	"reflect"
+	"testing"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	"os"
-	"reflect"
-	"testing"
 )
 
 func TestCassandraBackend(t *testing.T) {
@@ -18,16 +19,15 @@ func TestCassandraBackend(t *testing.T) {
 		t.Skip("skipping race test in CI pending https://github.com/gocql/gocql/pull/1474")
 	}
 
-	cleanup, hosts := cassandra.PrepareTestContainer(t, "")
+	host, cleanup := cassandra.PrepareTestContainer(t)
 	defer cleanup()
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
 	b, err := NewCassandraBackend(map[string]string{
-		"hosts":            hosts,
+		"hosts":            host.ConnectionURL(),
 		"protocol_version": "3",
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -41,7 +41,8 @@ func TestCassandraBackendBuckets(t *testing.T) {
 		"":          {"."},
 		"a":         {"."},
 		"a/b":       {".", "a"},
-		"a/b/c/d/e": {".", "a", "a/b", "a/b/c", "a/b/c/d"}}
+		"a/b/c/d/e": {".", "a", "a/b", "a/b/c", "a/b/c/d"},
+	}
 
 	b := &CassandraBackend{}
 	for input, expected := range expectations {

@@ -14,7 +14,7 @@
           {{/if}}
         {{/let}}
       {{else}}
-        {{#link-to "vault.cluster.secrets.backend.show" (if queryParam (concat queryParam "/" name) name)}}
+        {{#link-to "vault.cluster.secrets.backend.show" (if queryParam (concat queryParam "/" name) name) data-test-item="array"}}
           <span>{{name}}</span>
         {{/link-to}}
       {{/if}}

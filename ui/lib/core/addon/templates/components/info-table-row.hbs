@@ -1,15 +1,17 @@
 {{#if (or alwaysRender value)}}
-  {{#if label}}
-    <div class="column is-one-quarter">
+  <div class="column is-one-quarter" data-test-label-div>
+    {{#if label}}
       <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
       {{#if helperText}}
-        <div>
+        <div> 
           <span class="is-label helper-text has-text-grey">{{helperText}}</span>
         </div>
       {{/if}}
-    </div>
-  {{/if}}
-  <div class="column is-flex">
+    {{else}}
+      <Icon @size="s" @glyph="minus-plain"/>
+    {{/if}}
+  </div>
+  <div class="column is-flex" data-test-value-div>
     {{#if (has-block)}}
       {{yield}}
     {{else if valueIsBoolean}}
@@ -28,6 +30,11 @@
           @glyph="cancel-square-outline"
         /> No
       {{/if}}
+    {{!-- alwaysRender is still true --}}
+    {{else if (and (not value) defaultShown)}}
+      <span data-test-row-value="{{label}}">{{defaultShown}}</span>
+    {{else if (eq value "")}} 
+      <Icon @size="s" @glyph="minus-plain"/>
     {{else}}
       {{#if (eq type 'array')}}
         <InfoTableItemArray
@@ -41,7 +48,23 @@
           @wildcardLabel={{wildcardLabel}}
         />
       {{else}}
-        <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{#if tooltipText}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="left"
+            as |T|>
+            <T.trigger @tabindex=false>
+              <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>  
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{tooltipText}}
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+          <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+        {{/if}}
       {{/if}}
     {{/if}}
   </div>

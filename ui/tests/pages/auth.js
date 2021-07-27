@@ -9,12 +9,13 @@ export default create({
   login: async function(token) {
     // make sure we're always logged out and logged back in
     await this.logout();
+    await settled();
     await this.visit({ with: 'token' });
     await settled();
     if (token) {
-      return this.tokenInput(token).submit();
+      return await this.tokenInput(token).submit();
     }
 
-    return this.tokenInput('root').submit();
+    return await this.tokenInput('root').submit();
   },
 });

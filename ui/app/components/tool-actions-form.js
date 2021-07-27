@@ -3,7 +3,7 @@ import { assign } from '@ember/polyfills';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
-import { addSeconds } from 'date-fns';
+import { addSeconds, parseISO } from 'date-fns';
 
 const DEFAULTS = {
   token: null,
@@ -67,8 +67,8 @@ export default Component.extend(DEFAULTS, {
     if (!(creation_time && creation_ttl)) {
       return null;
     }
-
-    return addSeconds(creation_time, creation_ttl);
+    // returns new Date with seconds added.
+    return addSeconds(parseISO(creation_time), creation_ttl);
   }),
 
   handleError(e) {
@@ -106,7 +106,6 @@ export default Component.extend(DEFAULTS, {
     if (action === 'random') {
       return { bytes: this.bytes, format: this.format };
     }
-
     if (action === 'hash') {
       return { input: this.input, format: this.format, algorithm: this.algorithm };
     }
@@ -135,14 +134,11 @@ export default Component.extend(DEFAULTS, {
       this.reset();
     },
 
-    updateTtl(evt) {
-      const ttl = evt.enabled ? `${evt.seconds}s` : '30m';
+    updateTtl(ttl) {
       set(this, 'wrapTTL', ttl);
     },
 
-    codemirrorUpdated(val, codemirror) {
-      codemirror.performLint();
-      const hasErrors = codemirror.state.lint.marked.length > 0;
+    codemirrorUpdated(val, hasErrors) {
       setProperties(this, {
         buttonDisabled: hasErrors,
         data: val,

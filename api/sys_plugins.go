@@ -109,7 +109,6 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 			for i, nameIfc := range pluginsIfc {
 				name, ok := nameIfc.(string)
 				if !ok {
-
 				}
 				plugins[i] = name
 			}
@@ -323,7 +322,6 @@ func (c *Sys) ReloadPluginStatus(reloadStatusInput *ReloadPluginStatusInput) (*R
 		return &r, nil
 	}
 	return nil, nil
-
 }
 
 // catalogPathByType is a helper to construct the proper API path by plugin type

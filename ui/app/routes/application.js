@@ -48,6 +48,7 @@ export default Route.extend({
 
       // if we have queryParams, update the namespace so that the observer can fire on the controller
       if (queryParams) {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         this.controllerFor('vault.cluster').set('namespaceQueryParam', queryParams.namespace || '');
       }
 
@@ -89,7 +90,7 @@ export default Route.extend({
     });
     if (result.status === 200) {
       const body = await result.json();
-      const flags = body.data?.feature_flags || [];
+      const flags = body.feature_flags || [];
       this.featureFlagService.setFeatureFlags(flags);
     }
   },

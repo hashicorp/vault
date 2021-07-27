@@ -11,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuditEnableCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuditEnableCommand)(nil)
+var (
+	_ cli.Command             = (*AuditEnableCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuditEnableCommand)(nil)
+)
 
 type AuditEnableCommand struct {
 	*BaseCommand

@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/auth - HTTP API
-sidebar_title: <code>/sys/auth</code>
 description: The `/sys/auth` endpoint is used to manage auth methods in Vault.
 ---
 
@@ -104,6 +103,8 @@ relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Specifies if the auth method is local only. Local
   auth methods are not replicated nor (if a secondary) removed by replication.
+  Logins via local auth methods do not make use of identity, i.e. no entity
+  or groups will be attached to the token.
 
   ~> ** Warning:** Remember, policies when using replication secondaries are
   validated by the local cluster. An administrator that can set up a local auth

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "creds/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
@@ -29,10 +29,10 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
 			HelpDescription: pathCredsCreateReadHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the static role.",
 				},
@@ -92,6 +92,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
 		if err != nil {
+			b.CloseIfShutdown(dbi, err)
 			return nil, fmt.Errorf("unable to generate password: %w", err)
 		}
 

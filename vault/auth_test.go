@@ -124,6 +124,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -175,6 +176,7 @@ func TestCore_EnableCredential(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	c2.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{
 			BackendType: logical.TypeCredential,
@@ -210,7 +212,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	c.auth = &MountTable{
 		Type: credentialTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:            credentialTableType,
 				Path:             "noop/",
 				Type:             "noop",
@@ -220,7 +222,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 				NamespaceID:      namespace.RootNamespaceID,
 				namespace:        namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:            credentialTableType,
 				Path:             "noop2/",
 				Type:             "noop",
@@ -376,6 +378,7 @@ func TestCore_DisableCredential(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -512,7 +515,8 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeCredential,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -537,7 +541,8 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeCredential,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.credentialBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -547,7 +552,7 @@ func TestCore_CredentialInitialize(t *testing.T) {
 		c.auth = &MountTable{
 			Type: credentialTableType,
 			Entries: []*MountEntry{
-				&MountEntry{
+				{
 					Table:            credentialTableType,
 					Path:             "foo/",
 					Type:             "initable",

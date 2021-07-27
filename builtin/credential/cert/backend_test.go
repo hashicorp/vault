@@ -5,30 +5,29 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"math/big"
 	mathrand "math/rand"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
+	"reflect"
+	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-sockaddr"
 
 	"golang.org/x/net/http2"
-
-	"crypto/rsa"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"math/big"
-	"net"
-	"os"
-	"reflect"
-	"testing"
-	"time"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -98,7 +97,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +109,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledCAKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +126,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +138,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1580,7 +1579,7 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 func testAccStepListCerts(
 	t *testing.T, certs []string) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.ListOperation,
 			Path:      "certs",
 			Check: func(resp *logical.Response) error {
@@ -1599,7 +1598,7 @@ func testAccStepListCerts(
 				}
 				return nil
 			},
-		}, logicaltest.TestStep{
+		}, {
 			Operation: logical.ListOperation,
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {
@@ -1973,7 +1972,7 @@ func TestBackend_CertUpgrade(t *testing.T) {
 		Period:     time.Second,
 		TTL:        time.Second,
 		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 	}
 
 	entry, err := logical.StorageEntryJSON("cert/foo", foo)
@@ -1995,13 +1994,13 @@ func TestBackend_CertUpgrade(t *testing.T) {
 		Period:     time.Second,
 		TTL:        time.Second,
 		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 		TokenParams: tokenutil.TokenParams{
 			TokenPolicies:   []string{"foo"},
 			TokenPeriod:     time.Second,
 			TokenTTL:        time.Second,
 			TokenMaxTTL:     time.Second,
-			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 		},
 	}
 	if diff := deep.Equal(certEntry, exp); diff != nil {

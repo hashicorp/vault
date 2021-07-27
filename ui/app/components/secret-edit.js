@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
@@ -9,6 +10,7 @@ import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor'
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -16,6 +18,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   wizard: service(),
+  controlGroup: service(),
   router: service(),
   store: service(),
   flashMessages: service(),
@@ -55,6 +58,12 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   hasLintError: false,
   isV2: false,
 
+  // cp-validation related properties
+  validationMessages: null,
+  validationErrorCount: 0,
+
+  secretPaths: null,
+
   init() {
     this._super(...arguments);
     let secrets = this.model.secretData;
@@ -73,13 +82,28 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
-
     if (this.mode === 'edit') {
       this.send('addRow');
     }
+    this.set('validationMessages', {
+      path: '',
+      maxVersions: '',
+    });
+    // for validation, return array of path names already assigned
+    if (Ember.testing) {
+      this.set('secretPaths', ['beep', 'bop', 'boop']);
+    } else {
+      let adapter = this.store.adapterFor('secret-v2');
+      let type = { modelName: 'secret-v2' };
+      let query = { backend: this.model.backend };
+      adapter.query(this.store, type, query).then(result => {
+        this.set('secretPaths', result.data.keys);
+      });
+    }
   },
 
-  waitForKeyUp: task(function*() {
+  waitForKeyUp: task(function*(name, value) {
+    this.checkValidation(name, value);
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
@@ -87,10 +111,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   })
     .on('didInsertElement')
     .cancelOn('willDestroyElement'),
-
-  partialName: computed('mode', function() {
-    return `partials/secret-form-${this.mode}`;
-  }),
 
   updatePath: maybeQueryRecord(
     'capabilities',
@@ -110,7 +130,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('model.canDelete'),
+  canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   v2UpdatePath: maybeQueryRecord(
@@ -173,6 +193,37 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.router.transitionTo(...arguments);
   },
 
+  checkValidation(name, value) {
+    if (name === 'path') {
+      !value
+        ? set(this.validationMessages, name, `${name} can't be blank.`)
+        : set(this.validationMessages, name, '');
+    }
+    // check duplicate on path
+    if (name === 'path' && value) {
+      this.secretPaths?.includes(value)
+        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
+        : set(this.validationMessages, name, '');
+    }
+    // check maxVersions is a number
+    if (name === 'maxVersions') {
+      // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
+      if (value) {
+        let number = Number(value);
+        this.model.set('maxVersions', number);
+      }
+      if (!this.model.validations.attrs.maxVersions.isValid) {
+        set(this.validationMessages, name, this.model.validations.attrs.maxVersions.message);
+      } else {
+        set(this.validationMessages, name, '');
+      }
+    }
+
+    let values = Object.values(this.validationMessages);
+
+    this.set('validationErrorCount', values.filter(Boolean).length);
+  },
+
   onEscape(e) {
     if (e.keyCode !== keys.ESC || this.mode !== 'show') {
       return;
@@ -197,26 +248,35 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       secretData.set(secretData.pathAttr, key);
     }
 
-    return secretData.save().then(() => {
-      if (!secretData.isError) {
-        if (isV2) {
-          secret.set('id', key);
+    return secretData
+      .save()
+      .then(() => {
+        if (!secretData.isError) {
+          if (isV2) {
+            secret.set('id', key);
+          }
+          if (isV2 && Object.keys(secret.changedAttributes()).length) {
+            // save secret metadata
+            secret
+              .save()
+              .then(() => {
+                this.saveComplete(successCallback, key);
+              })
+              .catch(e => {
+                this.set(e, e.errors.join(' '));
+              });
+          } else {
+            this.saveComplete(successCallback, key);
+          }
         }
-        if (isV2 && Object.keys(secret.changedAttributes()).length) {
-          // save secret metadata
-          secret
-            .save()
-            .then(() => {
-              this.saveComplete(successCallback, key);
-            })
-            .catch(e => {
-              this.set(e, e.errors.join(' '));
-            });
-        } else {
-          this.saveComplete(successCallback, key);
+      })
+      .catch(error => {
+        if (error instanceof ControlGroupError) {
+          let errorMessage = this.controlGroup.logFromError(error);
+          this.set('error', errorMessage.content);
         }
-      }
-    });
+        throw error;
+      });
   },
   saveComplete(callback, key) {
     if (this.wizard.featureState === 'secret') {
@@ -298,17 +358,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
-      const MAXIMUM_VERSIONS = 9999999999999999;
       let model = this.modelForData;
-      let secret = this.model;
-      // prevent from submitting if there's no key
       if (type === 'create' && isBlank(model.path || model.id)) {
-        this.flashMessages.danger('Please provide a path for the secret');
-        return;
-      }
-      const maxVersions = secret.get('maxVersions');
-      if (MAXIMUM_VERSIONS < maxVersions) {
-        this.flashMessages.danger('Max versions is too large');
+        this.checkValidation('path', '');
         return;
       }
 

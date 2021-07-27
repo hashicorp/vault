@@ -36,7 +36,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 1: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey1", pub1Bytes, 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey1", pub1Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 1 to temp file: %s", err)
 	}
@@ -44,7 +44,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 2: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey2", pub2Bytes, 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey2", pub2Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
@@ -52,7 +52,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 3: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey3", pub3Bytes, 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey3", pub3Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
 	}
@@ -81,15 +81,15 @@ func TestPubKeyFilesFlagSetB64(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = ioutil.WriteFile(tempDir+"/pubkey1", []byte(pubKey1), 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey1", []byte(pubKey1), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 1 to temp file: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
 	}
@@ -118,7 +118,7 @@ func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0755)
+	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
@@ -149,7 +149,7 @@ func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
 	exp := []string{
 		"0f801f518ec853daff611e836528efcac6caa3db",
 		"cf3d4694c9f57b28cb4092c2eb832c67eb5e8957",
-		"91a6e7f85d05c65630bef18951852d87348ffc4c",
+		"c874011f0ab405110d02105534365d9472d7468f",
 	}
 
 	if !reflect.DeepEqual(fingerprints, exp) {
@@ -183,6 +183,7 @@ PXFv3m3WfUlnG/om78UjQqyVACRZqqAGmuPq+TSkRUCpt9h+A39LQWkojHqyob3cyLgy6z9Q557O
 9uK3lQozbw2gH9zC0RqnePl+rsWIUU/ga16fH6pWc1uJiEBt8UZGypQ/E56/343epmYAe0a87sHx
 8iDV+dNtDVKfPRENiLOOc19MmS+phmUyrbHqI91c0pmysYcJZCD3a502X1gpjFbPZcRtiTmGnUKd
 OIu60YPNE4+h7u2CfYyFPu3AlUaGNMBlvy6PEpU=`
+
 const pubKey2 = `mQENBFXbkJEBCADKb1ZvlT14XrJa2rTOe5924LQr2PTZlRv+651TXy33yEhelZ+V4sMrELN8fKEG
 Zy1kNixmbq3MCF/671k3LigHA7VrOaH9iiQgr6IIq2MeIkUYKZ27C992vQkYLjbYUG8+zl5h69S4
 0Ixm0yL0M54XOJ0gm+maEK1ZESKTUlDNkIS7l0jLZSYwfUeGXSEt6FWs8OgbyRTaHw4PDHrDEE9e
@@ -209,6 +210,7 @@ PkUZTfpaP/L6DLneMmSKPhZE3I+lPIPjwrxqh6xy5uQezcWkJTNKvPWF4FJzrVvx7XTPjfGvOB0U
 PEnjvtZTp5yOhTeZK7DgIEtb/Wcrqs+iRArQKboM930ORSZhwvGK3F9V/gMDpIrvge5vDFsTEYQd
 w/2epIewH0L/FUb/6jBRcVEpGo9Ayg+Jnhq14GOGcd1y9oMZ48kYVLVBTA9tQ+82WE8Bch7uFPj4
 MFOMVRn1dc3qdXlg3mimA+iK7tABQfG0RJ9YzWs=`
+
 const pubKey3 = `mQENBFXbkiMBCACiHW4/VI2JkfvSEINddS7vE6wEu5e1leNQDaLUh6PrATQZS2a4Q6kRE6WlJumj
 6wCeN753Cm93UGQl2Bi3USIEeArIZnPTcocrckOVXxtoLBNKXgqKvEsDXgfw8A+doSfXoDm/3Js4
 Wy3WsYKNR9LaPuJZHnpjsFAJhvRVyhH4UFD+1RTSSefq1mozPfDdMoZeZNEpfhwt3DuTJs7RqcTH

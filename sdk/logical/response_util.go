@@ -102,6 +102,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrPermissionDenied.Error()):
 			statusCode = http.StatusForbidden
+		case errwrap.Contains(err, consts.ErrInvalidWrappingToken.Error()):
+			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrUnsupportedOperation.Error()):
 			statusCode = http.StatusMethodNotAllowed
 		case errwrap.Contains(err, ErrUnsupportedPath.Error()):
@@ -114,6 +116,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusTooManyRequests
 		case errwrap.Contains(err, ErrLeaseCountQuotaExceeded.Error()):
 			statusCode = http.StatusTooManyRequests
+		case errwrap.Contains(err, ErrMissingRequiredState.Error()):
+			statusCode = http.StatusPreconditionFailed
 		}
 	}
 

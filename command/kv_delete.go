@@ -9,8 +9,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVDeleteCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVDeleteCommand)(nil)
+var (
+	_ cli.Command             = (*KVDeleteCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVDeleteCommand)(nil)
+)
 
 type KVDeleteCommand struct {
 	*BaseCommand
@@ -48,7 +50,7 @@ Usage: vault kv delete [options] PATH
 }
 
 func (c *KVDeleteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 	// Common Options
 	f := set.NewFlagSet("Common Options")
 
@@ -116,8 +118,19 @@ func (c *KVDeleteCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
-	return 0
+	if secret == nil {
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
+		}
+		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	return OutputSecret(c.UI, secret)
 }
 
 func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (*api.Secret, error) {

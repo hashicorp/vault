@@ -6,9 +6,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
-var (
-	NamespaceByID func(context.Context, string, *Core) (*namespace.Namespace, error) = namespaceByID
-)
+var NamespaceByID func(context.Context, string, *Core) (*namespace.Namespace, error) = namespaceByID
 
 const (
 	mountTypeNSCubbyhole = "ns_cubbyhole"

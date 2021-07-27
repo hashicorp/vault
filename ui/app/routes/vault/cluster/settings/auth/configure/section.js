@@ -10,6 +10,7 @@ export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
 
   modelType(backendType, section) {
+    // TODO: Update endpoints from PR#10997
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
       'aws-identity-whitelist': 'auth-config/aws/identity-whitelist',

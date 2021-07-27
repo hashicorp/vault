@@ -1,0 +1,3 @@
+```release-note:bug
+quotas/rate-limit: Fix quotas enforcing old rate limit quota paths
+```

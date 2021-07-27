@@ -66,7 +66,7 @@ func TestBackendHandleRequest(t *testing.T) {
 			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -75,7 +75,7 @@ func TestBackendHandleRequest(t *testing.T) {
 			{
 				Pattern: "foo/baz/handler",
 				Fields: map[string]*FieldSchema{
-					"amount": &FieldSchema{Type: TypeInt},
+					"amount": {Type: TypeInt},
 				},
 				Operations: map[logical.Operation]OperationHandler{
 					logical.ReadOperation: &PathOperation{Callback: handler},
@@ -84,7 +84,7 @@ func TestBackendHandleRequest(t *testing.T) {
 			{
 				Pattern: "foo/both/handler",
 				Fields: map[string]*FieldSchema{
-					"amount": &FieldSchema{Type: TypeInt},
+					"amount": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -228,10 +228,10 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeBool},
+					"value": {Type: TypeBool},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.UpdateOperation: callback,
@@ -240,16 +240,18 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 		},
 	}
 
-	_, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
-
-	if err == nil {
-		t.Fatalf("should have thrown a conversion error")
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
 
+	if !strings.Contains(resp.Data["error"].(string), "Field validation failed") {
+		t.Fatalf("bad: %#v", resp)
+	}
 }
 
 func TestBackendHandleRequest_404(t *testing.T) {
@@ -263,10 +265,10 @@ func TestBackendHandleRequest_404(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: `foo/bar`,
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -288,10 +290,10 @@ func TestBackendHandleRequest_404(t *testing.T) {
 func TestBackendHandleRequest_help(t *testing.T) {
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				HelpSynopsis:    "foo",
 				HelpDescription: "bar",
@@ -360,6 +362,7 @@ func TestBackendHandleRequest_renewAuthCallback(t *testing.T) {
 		t.Fatalf("bad: %#v", v)
 	}
 }
+
 func TestBackendHandleRequest_renew(t *testing.T) {
 	called := new(uint32)
 	callback := func(context.Context, *logical.Request, *FieldData) (*logical.Response, error) {
@@ -485,10 +488,10 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: `foo/bar`,
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -518,10 +521,10 @@ func TestBackendHandleRequest_urlPriority(t *testing.T) {
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: `foo/(?P<value>\d+)`,
 				Fields: map[string]*FieldSchema{
-					"value": &FieldSchema{Type: TypeInt},
+					"value": {Type: TypeInt},
 				},
 				Callbacks: map[logical.Operation]OperationFunc{
 					logical.ReadOperation: callback,
@@ -613,13 +616,13 @@ func TestBackendSecret(t *testing.T) {
 		Match   bool
 	}{
 		"no match": {
-			[]*Secret{&Secret{Type: "foo"}},
+			[]*Secret{{Type: "foo"}},
 			"bar",
 			false,
 		},
 
 		"match": {
-			[]*Secret{&Secret{Type: "foo"}},
+			[]*Secret{{Type: "foo"}},
 			"foo",
 			true,
 		},
@@ -747,7 +750,6 @@ func TestFieldSchemaDefaultOrZero(t *testing.T) {
 }
 
 func TestInitializeBackend(t *testing.T) {
-
 	var inited bool
 	backend := &Backend{InitializeFunc: func(context.Context, *logical.InitializationRequest) error {
 		inited = true

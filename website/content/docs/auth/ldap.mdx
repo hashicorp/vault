@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: LDAP - Auth Methods
-sidebar_title: LDAP
 description: |-
   The "ldap" auth method allows users to authenticate with Vault using LDAP
   credentials.

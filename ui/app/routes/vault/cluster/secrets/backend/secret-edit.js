@@ -95,6 +95,7 @@ export default Route.extend(UnloadModelRoute, {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
+      database: secret && secret.startsWith('role/') ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
@@ -218,6 +219,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let modelType = this.modelType(backend, secret);
+    let type = params.type || '';
     if (!secret) {
       secret = '\u0020';
     }
@@ -227,11 +229,14 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);
     }
+    if (modelType === 'database/role') {
+      secret = secret.replace('role/', '');
+    }
     let secretModel;
 
     let capabilities = this.capabilities(secret, modelType);
     try {
-      secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
+      secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
     } catch (err) {
       // we've failed the read request, but if it's a kv-type backend, we want to
       // do additional checks of the capabilities
@@ -259,6 +264,7 @@ export default Route.extend(UnloadModelRoute, {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     const preferAdvancedEdit =
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
     const backendType = this.backendType();
     model.secret.setProperties({ backend });
@@ -297,6 +303,7 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let { mode, model } = this.controller;
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();

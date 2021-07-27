@@ -883,7 +883,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	if entityFetched != nil {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
-
 }
 
 func TestIdentityStore_EntityCRUD(t *testing.T) {

@@ -14,8 +14,10 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-var _ cli.Command = (*OperatorInitCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorInitCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+)
 
 type OperatorInitCommand struct {
 	*BaseCommand
@@ -446,7 +448,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Vault does not store the generated master key. Without at least %d "+
-				"key to reconstruct the master key, Vault will remain permanently "+
+				"keys to reconstruct the master key, Vault will remain permanently "+
 				"sealed!",
 			req.SecretThreshold)))
 

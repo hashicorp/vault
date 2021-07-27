@@ -1,0 +1,10 @@
+<div class="field is-grouped">
+  <div class="control is-expanded">
+    <Input 
+      @class="input"
+      @type="text"
+      @value={{this.searchInput}}
+      {{on 'keyup' this.inputChanged}}
+    />
+  </div>
+</div>

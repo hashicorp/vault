@@ -65,7 +65,6 @@ func (s *gRPCServer) RevokeUser(ctx context.Context, req *RevokeUserRequest) (*E
 }
 
 func (s *gRPCServer) RotateRootCredentials(ctx context.Context, req *RotateRootCredentialsRequest) (*RotateRootCredentialsResponse, error) {
-
 	resp, err := s.impl.RotateRootCredentials(ctx, req.Statements)
 	if err != nil {
 		return nil, err
@@ -128,7 +127,6 @@ func (s *gRPCServer) GenerateCredentials(ctx context.Context, _ *Empty) (*Genera
 }
 
 func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
-
 	username, password, err := s.impl.SetCredentials(ctx, *req.Statements, *req.StaticUserConfig)
 	if err != nil {
 		return nil, err
@@ -222,7 +220,6 @@ func (c *gRPCClient) RevokeUser(ctx context.Context, statements Statements, user
 		Statements: &statements,
 		Username:   username,
 	})
-
 	if err != nil {
 		if c.doneCtx.Err() != nil {
 			return ErrPluginShutdown
@@ -243,7 +240,6 @@ func (c *gRPCClient) RotateRootCredentials(ctx context.Context, statements []str
 	resp, err := c.client.RotateRootCredentials(ctx, &RotateRootCredentialsRequest{
 		Statements: statements,
 	})
-
 	if err != nil {
 		if c.doneCtx.Err() != nil {
 			return nil, ErrPluginShutdown
@@ -330,6 +326,7 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 
 	return resp.Password, nil
 }
+
 func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, staticUser StaticUserConfig) (username, password string, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
@@ -340,7 +337,6 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, 
 		StaticUserConfig: &staticUser,
 		Statements:       &statements,
 	})
-
 	if err != nil {
 		// Fall back to old call if not implemented
 		grpcStatus, ok := status.FromError(err)

@@ -590,7 +590,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				err = os.Mkdir(outputPath, 0755)
+				err = os.Mkdir(outputPath, 0o755)
 				if err != nil {
 					t.Fatal(err)
 				}

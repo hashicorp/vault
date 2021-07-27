@@ -2,7 +2,7 @@ import { helper } from '@ember/component/helper';
 import { isValid } from 'date-fns';
 
 export function parseDateString(date, separator = '-') {
-  // Expects format MM-YYYY by default: no dates
+  // Expects format MM-yyyy by default: no dates
   let datePieces = date.split(separator);
   if (datePieces.length === 2) {
     if (datePieces[0] < 1 || datePieces[0] > 12) {
@@ -14,7 +14,7 @@ export function parseDateString(date, separator = '-') {
     }
   }
   // what to return if not valid?
-  throw new Error(`Please use format MM${separator}YYYY`);
+  throw new Error(`Please use format MM${separator}yyyy`);
 }
 
 export default helper(parseDateString);

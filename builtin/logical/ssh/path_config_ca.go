@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -32,15 +31,15 @@ func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
 		Fields: map[string]*framework.FieldSchema{
-			"private_key": &framework.FieldSchema{
+			"private_key": {
 				Type:        framework.TypeString,
 				Description: `Private half of the SSH key that will be used to sign certificates.`,
 			},
-			"public_key": &framework.FieldSchema{
+			"public_key": {
 				Type:        framework.TypeString,
 				Description: `Public half of the SSH key that will be used to sign certificates.`,
 			},
-			"generate_signing_key": &framework.FieldSchema{
+			"generate_signing_key": {
 				Type:        framework.TypeBool,
 				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields.`,
 				Default:     true,
@@ -66,7 +65,7 @@ Read operations will return the public key, if already stored/generated.`,
 func (b *backend) pathConfigCARead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read CA public key: {{err}}", err)
+		return nil, fmt.Errorf("failed to read CA public key: %w", err)
 	}
 
 	if publicKeyEntry == nil {
@@ -107,7 +106,7 @@ func caKey(ctx context.Context, storage logical.Storage, keyType string) (*keySt
 
 	entry, err := storage.Get(ctx, path)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read CA key of type %q: {{err}}", keyType), err)
+		return nil, fmt.Errorf("failed to read CA key of type %q: %w", keyType, err)
 	}
 
 	if entry == nil {
@@ -203,12 +202,12 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 
 	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read CA public key: {{err}}", err)
+		return nil, fmt.Errorf("failed to read CA public key: %w", err)
 	}
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read CA private key: {{err}}", err)
+		return nil, fmt.Errorf("failed to read CA private key: %w", err)
 	}
 
 	if (publicKeyEntry != nil && publicKeyEntry.Key != "") || (privateKeyEntry != nil && privateKeyEntry.Key != "") {
@@ -240,12 +239,12 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		var mErr *multierror.Error
 
-		mErr = multierror.Append(mErr, errwrap.Wrapf("failed to store CA private key: {{err}}", err))
+		mErr = multierror.Append(mErr, fmt.Errorf("failed to store CA private key: %w", err))
 
 		// If storing private key fails, the corresponding public key should be
 		// removed
 		if delErr := req.Storage.Delete(ctx, caPublicKeyStoragePath); delErr != nil {
-			mErr = multierror.Append(mErr, errwrap.Wrapf("failed to cleanup CA public key: {{err}}", delErr))
+			mErr = multierror.Append(mErr, fmt.Errorf("failed to cleanup CA public key: %w", delErr))
 			return nil, mErr
 		}
 

@@ -1,0 +1,44 @@
+---
+layout: docs
+page_title: Replication - Configuration
+description: |-
+  The replication stanza specifies various parameters for tuning replication related values.
+---
+
+# `replication` Stanza
+
+The `replication` stanza specifies various parameters for tuning replication related values.
+
+```hcl
+replication {
+  resolver_discover_servers = true
+  logshipper_buffer_length = 1000
+  logshipper_buffer_size = "5gb"
+  allow_forwarding_via_header = false
+  best_effort_wal_wait_duration = "2s"
+}
+```
+
+## `replication` Parameters
+
+- `resolver_discover_servers` `(boolean: true)` - This feature should probably always be turned on. It enables secondary
+  cluster nodes to reach out to nodes in the primary cluster to request information on who the active node is. This
+  fixes an issue where a secondary cluster may only know about a single node in the primary cluster, and if that node
+  isn't the active node, the replication connection will not succeed. With resolving disabled, the only way around this
+  is to go through an onerous UpdatePrimary workflow, or do step-downs on the primary cluster until the one node known
+  by the secondary cluster is active.
+- `logshipper_buffer_length` `(integer: 16384)` - The maximum number of entries that the log shipper buffer can hold.
+  If this is not specified, a default of 16K will be used.
+- `logshipper_buffer_size` `(string: "")` - The maximum size that the log shipper buffer can be. This size can be
+  expressed as an integer, indicating the number of bytes, or as a capacity string. Capacity strings are a number,
+  followed by an optional space, followed by a suffix indicating the capacity. Valid suffixes are:
+  `kb, kib, mb, mib, gb, gib, tb, tib`, which correspond to kilobytes, kibibytes, megabytes, mebibytes, etc. Full
+  details on multiple-byte units in both powers of 2 and 10 can be found [on Wikipedia](https://en.wikipedia.org/wiki/Byte#Multiple-byte_units). The suffixes are not case-sensitive. If this
+  is not specified, Vault will attempt to read the total amount of memory available on the host it's running on. If
+  that succeeds, Vault will use 10% of the value found. If Vault is unable to read the amount of host memory, this
+  defaults to 1GB.
+- `allow_forwarding_via_header` `(boolean: flase)` - Enable forwarding options for client controlled consistency,
+  i.e. `X-Vault-Inconsistent: forward-active-node` and `X-Vault-Forward: active-node`.
+- `best_effort_wal_wait_duration` `(duration: "2s")` - Legacy mitigation to try to prevent stale reads: when a
+  write is made via RPC, i.e. the node handling the request didn't do the write itself, wait up to this much
+  time to see the resulting WAL present locally before returning a response to the client.

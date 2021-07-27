@@ -38,6 +38,9 @@ export default EditBase.extend({
     if (modelType === 'transform') {
       modelType = transformModel(transition.to.queryParams);
     }
+    if (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role') {
+      modelType = 'database/role';
+    }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
       if (this.wizard.featureState === 'details' && this.wizard.componentState === 'transit') {
         this.wizard.transitionFeatureMachine('details', 'CONTINUE', 'transit');

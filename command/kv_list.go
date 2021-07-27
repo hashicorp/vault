@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVListCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVListCommand)(nil)
+var (
+	_ cli.Command             = (*KVListCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVListCommand)(nil)
+)
 
 type KVListCommand struct {
 	*BaseCommand
@@ -75,7 +77,7 @@ func (c *KVListCommand) Run(args []string) int {
 
 	// Append trailing slash
 	path := args[0]
-	if !strings.HasSuffix(path , "/") {
+	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
 
@@ -101,6 +103,11 @@ func (c *KVListCommand) Run(args []string) int {
 		return 2
 	}
 
+	// If the secret is wrapped, return the wrapped response.
+	if secret != nil && secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
+	}
+
 	_, ok := extractListData(secret)
 	if Format(c.UI) != "table" {
 		if secret == nil || secret.Data == nil || !ok {
@@ -112,11 +119,6 @@ func (c *KVListCommand) Run(args []string) int {
 	if secret == nil || secret.Data == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
 		return 2
-	}
-
-	// If the secret is wrapped, return the wrapped response.
-	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
-		return OutputSecret(c.UI, secret)
 	}
 
 	if !ok {

@@ -28,7 +28,6 @@ import (
 )
 
 func TestCertEndToEnd(t *testing.T) {
-
 	cases := []struct {
 		name             string
 		withCertRoleName bool
@@ -129,7 +128,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(dhpath, mPubKey, 0600); err != nil {
+	if err := ioutil.WriteFile(dhpath, mPubKey, 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote dh param file", "path", dhpath)

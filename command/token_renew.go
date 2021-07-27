@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*TokenRenewCommand)(nil)
-var _ cli.CommandAutocomplete = (*TokenRenewCommand)(nil)
+var (
+	_ cli.Command             = (*TokenRenewCommand)(nil)
+	_ cli.CommandAutocomplete = (*TokenRenewCommand)(nil)
+)
 
 type TokenRenewCommand struct {
 	*BaseCommand

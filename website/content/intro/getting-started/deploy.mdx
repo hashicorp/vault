@@ -1,7 +1,6 @@
 ---
 layout: intro
 page_title: Deploy Vault - Getting Started
-sidebar_title: Deploy Vault
 description: >-
   Learn how to deploy Vault into production, how to initialize it, configure it,
   etc.
@@ -129,7 +128,7 @@ distribute the key shares printed above. When the Vault is re-sealed,
 restarted, or stopped, you must supply at least 3 of these keys to unseal it
 before it can start servicing requests.
 
-Vault does not store the generated master key. Without at least 3 key to
+Vault does not store the generated master key. Without at least 3 keys to
 reconstruct the master key, Vault will remain permanently sealed!
 
 It is possible to generate new unseal keys, provided you have a quorum of

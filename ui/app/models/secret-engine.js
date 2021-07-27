@@ -2,12 +2,20 @@ import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { validator, buildValidations } from 'ember-cp-validations';
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-export default Model.extend({
+const Validations = buildValidations({
+  path: validator('presence', {
+    presence: true,
+    message: "Path can't be blank.",
+  }),
+});
+
+export default Model.extend(Validations, {
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
@@ -60,21 +68,35 @@ export default Model.extend({
   formFieldGroups: computed('engineType', function() {
     let type = this.engineType;
     let defaultGroup = { default: ['path'] };
+    let optionsGroup = {
+      'Method Options': [
+        'description',
+        'config.listingVisibility',
+        'local',
+        'sealWrap',
+        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ],
+    };
     if (type === 'kv' || type === 'generic') {
-      defaultGroup.default.push('options.{version}');
+      optionsGroup['Method Options'].unshift('options.{version}');
     }
-    return [
-      defaultGroup,
-      {
-        'Method Options': [
-          'description',
-          'config.listingVisibility',
-          'local',
-          'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-        ],
-      },
-    ];
+    if (type === 'database') {
+      // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
+      defaultGroup.default.push('config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}');
+      return [
+        defaultGroup,
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ];
+    }
+    return [defaultGroup, optionsGroup];
   }),
 
   attrs: computed('formFields', function() {

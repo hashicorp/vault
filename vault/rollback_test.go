@@ -24,7 +24,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	view := NewBarrierView(barrier, "logical/")
 
 	mounts.Entries = []*MountEntry{
-		&MountEntry{
+		{
 			Path:        "foo",
 			NamespaceID: namespace.RootNamespaceID,
 			namespace:   namespace.RootNamespace,

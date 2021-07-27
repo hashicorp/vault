@@ -33,7 +33,7 @@ func testPathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: `login`,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type: framework.TypeString,
 			},
 		},

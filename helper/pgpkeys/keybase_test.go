@@ -33,7 +33,7 @@ func TestFetchKeybasePubkeys(t *testing.T) {
 
 	exp := []string{
 		"0f801f518ec853daff611e836528efcac6caa3db",
-		"91a6e7f85d05c65630bef18951852d87348ffc4c",
+		"c874011f0ab405110d02105534365d9472d7468f",
 	}
 
 	if !reflect.DeepEqual(fingerprints, exp) {

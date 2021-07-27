@@ -60,8 +60,10 @@ var defaultPredictVaultMounts = []string{"cubbyhole/"}
 // doesn't change), and the only way to configure the predict/autocomplete
 // client is via environment variables. Even if the user specifies a flag, we
 // can't parse that flag until after the command is submitted.
-var predictClient *api.Client
-var predictClientOnce sync.Once
+var (
+	predictClient     *api.Client
+	predictClientOnce sync.Once
+)
 
 // PredictClient returns the cached API client for the predictor.
 func PredictClient() *api.Client {
