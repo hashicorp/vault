@@ -20,7 +20,6 @@ import (
 const (
 	secretAccessKeyType = "access_keys"
 	storageKey          = "config/root"
-	defaultSTSTemplate  = `{{ printf "vault-%d-%d" (unix_time) (random 20) | truncate 32 }}`
 )
 
 func secretAccessKeys(b *backend) *framework.Secret {
@@ -48,42 +47,26 @@ func secretAccessKeys(b *backend) *framework.Secret {
 }
 
 func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string, err error) {
-	switch userType {
-	case "iam_user":
-		// IAM users are capped at 64 chars; this leaves, after the beginning and
-		// end added below, 42 chars to play with.
-		up, err := template.NewTemplate(template.Template(usernameTemplate))
-		if err != nil {
-			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
-		}
+	// IAM and STS usernames are capped at 64 chars; this leaves, after the beginning and
+	// end added below, 42 chars to play with.
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+	}
 
-		um := UsernameMetadata{
-			DisplayName: normalizeDisplayName(displayName),
-			PolicyName:  normalizeDisplayName(policyName),
-		}
+	um := UsernameMetadata{
+		DisplayName: normalizeDisplayName(displayName),
+		PolicyName:  normalizeDisplayName(policyName),
+	}
 
-		ret, err = up.Generate(um)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to generate username: %w", err)
-		}
-		// To prevent template from exceeding IAM length limits
-		if len(ret) > 64 {
-			ret = ret[0:64]
-			warning = "the calling token display name/IAM policy name were truncated to 64 characters to fit within IAM username length limits"
-		}
-	case "sts":
-		// Capped at 32 chars, which leaves only a couple of characters to play
-		// with, so don't insert display name or policy name at all
-		up, err := template.NewTemplate(template.Template(usernameTemplate))
-		if err != nil {
-			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
-		}
-
-		um := UsernameMetadata{}
-		ret, err = up.Generate(um)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to generate username: %w", err)
-		}
+	ret, err = up.Generate(um)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate username: %w", err)
+	}
+	// To prevent template from exceeding IAM/STS length limits
+	if len(ret) > 64 {
+		ret = ret[0:64]
+		warning = fmt.Sprintf("the calling token's %s user name was truncated to 64 characters to fit within username length limits", userType)
 	}
 	return
 }
@@ -112,7 +95,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning, usernameError := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
+	username, usernameWarning, usernameError := genUsername(displayName, policyName, "sts", defaultUserNameTemplate)
 	// Send a 400 to Framework.OperationFunc Handler
 	if usernameError != nil {
 		return nil, usernameError
