@@ -150,16 +150,16 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if exp := true; mountInfo.Config.ForceNoCache != exp {
 			t.Errorf("expected %t to be %t", mountInfo.Config.ForceNoCache, exp)
 		}
-		if diff := deep.Equal([]string{"authorization", "authentication", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+		if diff := deep.Equal([]string{"authorization,authentication", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
 		}
 		if diff := deep.Equal([]string{"authorization"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
 		}
-		if diff := deep.Equal([]string{"foo", "bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+		if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
 		}
-		if diff := deep.Equal([]string{"foo", "bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+		if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 		}
 

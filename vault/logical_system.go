@@ -1316,18 +1316,6 @@ func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.R
 	return b.handleTuneWriteCommon(ctx, path, data)
 }
 
-func augmentTuneWriteParams(paramIn []string) ([]string, error) {
-	var outputSlice []string
-	for _, v := range paramIn {
-		res, err := parseutil.ParseCommaStringSlice(v)
-		if err != nil {
-			return nil, err
-		}
-		outputSlice = append(outputSlice, res...)
-	}
-	return outputSlice, nil
-}
-
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1437,16 +1425,13 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_request_keys"); ok {
-		newVal := rawVal.([]string)
-		auditNonHMACRequestKeys, err := augmentTuneWriteParams(newVal)
-		if err != nil {
-			return handleError(err)
-		}
+		auditNonHMACRequestKeys := rawVal.([]string)
 
 		oldVal := mountEntry.Config.AuditNonHMACRequestKeys
 		mountEntry.Config.AuditNonHMACRequestKeys = auditNonHMACRequestKeys
 
 		// Update the mount table
+		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1466,16 +1451,13 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("audit_non_hmac_response_keys"); ok {
-		newVal := rawVal.([]string)
-		auditNonHMACResponseKeys, err := augmentTuneWriteParams(newVal)
-		if err != nil {
-			return handleError(err)
-		}
+		auditNonHMACResponseKeys := rawVal.([]string)
 
 		oldVal := mountEntry.Config.AuditNonHMACResponseKeys
 		mountEntry.Config.AuditNonHMACResponseKeys = auditNonHMACResponseKeys
 
 		// Update the mount table
+		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1562,16 +1544,13 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("passthrough_request_headers"); ok {
-		newVal := rawVal.([]string)
-		headers, err := augmentTuneWriteParams(newVal)
-		if err != nil {
-			return handleError(err)
-		}
+		headers := rawVal.([]string)
 
 		oldVal := mountEntry.Config.PassthroughRequestHeaders
 		mountEntry.Config.PassthroughRequestHeaders = headers
 
 		// Update the mount table
+		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1591,15 +1570,12 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	}
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
-		newVal := rawVal.([]string)
-		headers, err := augmentTuneWriteParams(newVal)
-		if err != nil {
-			return handleError(err)
-		}
+		headers := rawVal.([]string)
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
 		// Update the mount table
+		var err error
 		switch {
 		case strings.HasPrefix(path, "auth/"):
 			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1912,19 +1888,19 @@ func expandStringValsWithCommas(configMap map[string]interface{}) error {
 
 			switch t := raw.(type) {
 			case []interface{}:
+				// If the users already passed in a slice with comma separated values,
+				// we don't do anything for compatibility reasons.
 				rawNew := raw.([]interface{})
 				for _, rawVal := range rawNew {
 					rawValSt, ok := rawVal.(string)
 					if !ok {
 						return fmt.Errorf("Invalid input parameter %v of type %v", paramName, t)
 					}
-					res, err := parseutil.ParseCommaStringSlice(rawValSt)
-					if err != nil {
-						return err
-					}
-					outputSlice = append(outputSlice, res...)
+					outputSlice = append(outputSlice, rawValSt)
 				}
 			case string:
+				// To be consistent with auth tune, and in cases where a single comma separated strings
+				// is provided in the curl command, we split the entries by the commas.
 				rawNew := raw.(string)
 				res, err := parseutil.ParseCommaStringSlice(rawNew)
 				if err != nil {
