@@ -139,7 +139,7 @@ func TestCreateUser(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			host, cleanup := cassandra.PrepareTestContainer(t,
-				cassandra.Version("latest"),
+				cassandra.Version("3.11"),
 				cassandra.CopyFromTo(insecureFileMounts),
 			)
 			defer cleanup()
