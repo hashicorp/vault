@@ -40,10 +40,13 @@ export default Model.extend(KeyMixin, Validations, {
   oldestVersion: attr('number'),
   customMetadata: attr('object', {
     editType: 'kv',
+    subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   }),
   maxVersions: attr('number', {
     defaultValue: 10,
     label: 'Maximum Number of Versions',
+    subText:
+      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted.',
   }),
   casRequired: attr('boolean', {
     defaultValue: false,

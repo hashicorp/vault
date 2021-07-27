@@ -1,12 +1,17 @@
 {{#if label}}
-  <label class="title is-4" data-test-kv-label="true">
+  <label class="title {{if small-label 'is-5' 'is-4'}}" data-test-kv-label="true">
     {{label}}
     {{#if helpText}}
       <InfoTooltip>
-        {{helpText}}
+       {{helpText}}
       </InfoTooltip>
     {{/if}}
   </label>
+  {{#if true}}
+    <p class="has-padding-bottom">
+      {{subText}}
+    </p> 
+  {{/if}}
 {{/if}}
 {{#each kvData as |row index|}}
   <div class="columns is-variable is-1" data-test-kv-row>

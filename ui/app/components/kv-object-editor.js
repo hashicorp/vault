@@ -4,15 +4,19 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
+// ARG TODO add documentation here
 
 export default Component.extend({
   'data-test-component': 'kv-object-editor',
-  classNames: ['field', 'form-section'],
+  classNames: ['field'],
+  classNameBindings: ['formSection:form-section'],
+  formSection: true,
   // public API
   // Ember Object to mutate
   value: null,
   label: null,
   helpText: null,
+  subText: null,
   // onChange will be called with the changed Value
   onChange() {},
 
