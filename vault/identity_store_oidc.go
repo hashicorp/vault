@@ -791,10 +791,12 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, err
 	}
 
+	retResp := &logical.Response{}
 	expiry := role.TokenTTL
 	if expiry > key.VerificationTTL {
 		expiry := key.VerificationTTL
-		i.Logger().Warn("a role's token ttl cannot be longer than the verification_ttl of the key it references, setting token ttl to %d", expiry)
+		retResp.AddWarning(fmt.Sprintf("a role's token ttl cannot be longer "+
+			"than the verification_ttl of the key it references, setting token ttl to %d", expiry))
 	}
 
 	now := time.Now()
@@ -832,13 +834,12 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, fmt.Errorf("error signing OIDC token: %w", err)
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"token":     signedIdToken,
-			"client_id": role.ClientID,
-			"ttl":       int64(role.TokenTTL.Seconds()),
-		},
-	}, nil
+	retResp.Data = map[string]interface{}{
+		"token":     signedIdToken,
+		"client_id": role.ClientID,
+		"ttl":       int64(role.TokenTTL.Seconds()),
+	}
+	return retResp, nil
 }
 
 func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
