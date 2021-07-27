@@ -47,8 +47,7 @@ func secretAccessKeys(b *backend) *framework.Secret {
 }
 
 func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string, err error) {
-	// IAM and STS usernames are capped at 64 chars; this leaves, after the beginning and
-	// end added below, 42 chars to play with.
+	// IAM and STS usernames are capped at 64 chars;
 	up, err := template.NewTemplate(template.Template(usernameTemplate))
 	if err != nil {
 		return "", "", fmt.Errorf("unable to initialize username template: %w", err)

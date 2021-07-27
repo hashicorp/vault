@@ -54,52 +54,51 @@ func TestGenUsername(t *testing.T) {
 		userType         string
 		UsernameTemplate string
 		warningExpected  bool
+		expectedRegex    string
 	}
 
 	tests := map[string]testCase{
-		`^vault-name1-policy1-[0-9]+-[a-zA-Z0-9]+`: {
+		"Truncated to 64. No warnings expected": {
 			name:             "name1",
 			policy:           "policy1",
 			userType:         "iam_user",
 			UsernameTemplate: `{{ printf "vault-%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) | truncate 64 }}`,
 			warningExpected:  false,
+			expectedRegex:    `^vault-name1-policy1-[0-9]+-[a-zA-Z0-9]+`,
 		},
-		`this---is---a---very---long---name-long------policy------name-[0-9][0-9]`: {
+		"Too long. Warning expected": {
 			name:             "this---is---a---very---long---name",
 			policy:           "long------policy------name",
 			userType:         "iam_user",
 			UsernameTemplate: `{{ printf "%s-%s-%s-%s" (.DisplayName) (.PolicyName) (unix_time) (random 20) }}`,
 			warningExpected:  true,
+			expectedRegex:    `this---is---a---very---long---name-long------policy------name-[0-9][0-9]`,
 		},
 	}
 
-	for k, v := range tests {
-		testUsername, warning, err := genUsername(v.name, v.policy, v.userType, v.UsernameTemplate)
-		if err != nil {
-			t.Fatalf(
-				"expected no err; got %s",
-				err,
-			)
-		}
-
-		expectedUsernameRegex := k
-		require.Regexp(t, expectedUsernameRegex, testUsername)
-		// IAM/STS usernames are capped at 64 characters
-		if len(testUsername) > 64 {
-			t.Fatalf(
-				"expected username to be of length 64, got %d",
-				len(testUsername),
-			)
-		}
-
-		if v.warningExpected {
-			if warning == "" || !strings.Contains(warning, fmt.Sprintf("calling token's %s user name was truncated to 64 characters", v.userType)) {
-				t.Fatalf("expected a truncate warning; received empty string")
+	for testDescription, testCase := range tests {
+		t.Run(testDescription, func(t *testing.T) {
+			testUsername, warning, err := genUsername(testCase.name, testCase.policy, testCase.userType, testCase.UsernameTemplate)
+			if err != nil {
+				t.Fatalf("expected no err; got %s", err)
 			}
-			if len(testUsername) != 64 {
-				t.Fatalf("expected a username cap at 64 chars; got length: %d", len(testUsername))
+
+			expectedUsernameRegex := testCase.expectedRegex
+			require.Regexp(t, expectedUsernameRegex, testUsername)
+			// IAM/STS usernames are capped at 64 characters
+			if len(testUsername) > 64 {
+				t.Fatalf("expected username to be of length 64, got %d", len(testUsername))
 			}
-		}
+
+			if testCase.warningExpected {
+				if warning == "" || !strings.Contains(warning, fmt.Sprintf("calling token's %s user name was truncated to 64 characters", testCase.userType)) {
+					t.Fatalf("expected a truncate warning; received empty string")
+				}
+				if len(testUsername) != 64 {
+					t.Fatalf("expected a username cap at 64 chars; got length: %d", len(testUsername))
+				}
+			}
+		})
 	}
 }
 
