@@ -81,8 +81,10 @@ $ curl \
 ~> This API is deprecated as of Vault 1.8 and will be removed in a future version of Vault.
 Please use [license autoloading](/docs/enterprise/license/autoloading) instead.
 
-This endpoint is used to install a license into Vault.  This will return an
-error if license autoloading is in use.
+This endpoint is used to install a license into Vault.  The license will be 
+replicated to the Vault instances within the targeted cluster, but will not 
+replicate the license to a [performance replication](/docs/enterprise/replication) cluster. To license a 
+performance replication cluster, this must be run against a Vault instance within that cluster.  
 
 | Method | Path           |
 | :----- | :------------- |
