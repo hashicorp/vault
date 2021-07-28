@@ -20,7 +20,7 @@ FEATURES:
 * **GCP Secrets Engine Static Accounts**: Adds ability to use existing service accounts for generation
   of service account keys and access tokens. [[GH-12023](https://github.com/hashicorp/vault/pull/12023)]
 * **Key Management Secrets Engine (Enterprise)**: Adds general availability for distributing and managing keys in AWS KMS. [[GH-11958](https://github.com/hashicorp/vault/pull/11958)]
-* **License Autoloading**: Licenses may now be automatically loaded from the environment or disk.
+* **License Autoloading (Enterprise)**: Licenses may now be automatically loaded from the environment or disk.
 * **MySQL Database UI**: The UI now supports adding and editing MySQL connections in the database secret engine [[GH-11532](https://github.com/hashicorp/vault/pull/11532)]
 * **Vault Diagnose**: A new `vault operator` command to detect common issues with vault server setups.
 
@@ -34,7 +34,7 @@ IMPROVEMENTS:
 * core: Add `prefix_filter` to telemetry config [[GH-12025](https://github.com/hashicorp/vault/pull/12025)]
 * core: Add a darwin/arm64 binary release supporting the Apple M1 CPU [[GH-12071](https://github.com/hashicorp/vault/pull/12071)]
 * core: Add a small (<1s) exponential backoff to failed TCP listener Accept failures. [[GH-11588](https://github.com/hashicorp/vault/pull/11588)]
-* core: Add controlled capabilities to control group policy stanza
+* core (enterprise): Add controlled capabilities to control group policy stanza
 * core: Add metrics for standby node forwarding. [[GH-11366](https://github.com/hashicorp/vault/pull/11366)]
 * core: Add metrics to report if a node is a perf standby, if a node is a dr secondary or primary, and if a node is a perf secondary or primary. [[GH-11472](https://github.com/hashicorp/vault/pull/11472)]
 * core: Send notifications to systemd on start, stop, and configuration reload. [[GH-11517](https://github.com/hashicorp/vault/pull/11517)]
@@ -112,7 +112,6 @@ BUG FIXES:
 * core: Fix storage entry leak when revoking leases created with non-orphan batch tokens. [[GH-11377](https://github.com/hashicorp/vault/pull/11377)]
 * core: Fixed double counting of http requests after operator stepdown [[GH-11970](https://github.com/hashicorp/vault/pull/11970)]
 * core: correct logic for renewal of leases nearing their expiration time. [[GH-11650](https://github.com/hashicorp/vault/pull/11650)]
-* core: initialized unlicensed raft nodes were starting instead of failing with an error. [[GH-1989](https://github.com/hashicorp/vault/pull/1989)]
 * identity: Use correct mount accessor when refreshing external group memberships. [[GH-11506](https://github.com/hashicorp/vault/pull/11506)]
 * mongo-db: default username template now strips invalid '.' characters [[GH-11872](https://github.com/hashicorp/vault/pull/11872)]
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
