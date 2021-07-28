@@ -5,7 +5,7 @@ import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
-import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import highlightData from '@hashicorp/platform-code-highlighting/highlight-data'
 import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 import FeaturedSlider from '@hashicorp/react-featured-slider'
 
@@ -59,11 +59,13 @@ export default function SecretsManagmentUseCase({ content }) {
         features={[
           {
             logo: {
-              url: 'https://www.datocms-assets.com/2885/1539889072-1524097013-adobe-white-1.svg',
+              url:
+                'https://www.datocms-assets.com/2885/1539889072-1524097013-adobe-white-1.svg',
               alt: 'Adobe Logo',
             },
             image: {
-              url: 'https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=312.5&amp;q=80&amp;w=500',
+              url:
+                'https://www.datocms-assets.com/2885/1520367019-dan_mcteer_adobe_hashiconf2017.jpg?fit=crop&amp;fm=jpg&amp;h=312.5&amp;q=80&amp;w=500',
               alt: 'Dan McTeer at HashiConf 2017',
             },
             heading:
@@ -72,7 +74,8 @@ export default function SecretsManagmentUseCase({ content }) {
               'Securing secrets and application data is a complex task for globally distributed organizations. For Adobe, managing secrets for over 20 products across 100,000 hosts, four regions, and trillions of transactions annually requires a different approach altogether.',
             link: {
               text: 'Read Case Study',
-              url: 'https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault',
+              url:
+                'https://www.hashicorp.com/resources/adobe-100-trillion-transactions-hashicorp-vault',
               type: 'outbound',
             },
           },
