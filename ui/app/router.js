@@ -102,14 +102,9 @@ Router.map(function() {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
+          this.route('show-metadata', { path: '/show-metadata/*secret' }); // show-metadata or edit-metadata
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
-
-          // // kv2 metadata
-          this.route('metadata', function() {
-            this.route('show', { path: '/show/' });
-            this.route('edit', { path: '/edit/*secret' });
-          });
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
