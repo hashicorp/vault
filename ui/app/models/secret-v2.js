@@ -54,8 +54,15 @@ export default Model.extend(KeyMixin, Validations, {
     helpText:
       'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter',
   }),
+  deleteVersionAfter: attr({
+    defaultValue: 0,
+    editType: 'ttl',
+    label: 'Automate secret deletion',
+    textDisabled: 'A secret’s version must be manually deleted.',
+    textEnabled: 'Delete a secret version after.',
+  }),
   fields: computed(function() {
-    return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired']);
+    return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter']);
   }),
   versionPath: lazyCapabilities(apiPath`${'engineId'}/data/${'id'}`, 'engineId', 'id'),
   secretPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),

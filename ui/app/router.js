@@ -94,7 +94,7 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
-          // we have to special-case ids of '' with thier own routes
+          // we have to special-case ids of '' with their own routes
           this.route('list-root', { path: '/list/' });
           this.route('create-root', { path: '/create/' });
           this.route('show-root', { path: '/show/' });
@@ -104,6 +104,12 @@ Router.map(function() {
           this.route('show', { path: '/show/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
+
+          // // kv2 metadata
+          this.route('metadata', function() {
+            this.route('show', { path: '/show/' });
+            this.route('edit', { path: '/edit/*secret' });
+          });
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
