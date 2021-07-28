@@ -39,8 +39,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.CreateOperation: i.pathOIDCCreateUpdateAssignment,
 				logical.UpdateOperation: i.pathOIDCCreateUpdateAssignment,
-				// logical.ReadOperation:   i.pathOIDCReadAssignment,
-				// logical.DeleteOperation: i.pathOIDCDeleteAssignment,
+				logical.ReadOperation:   i.pathOIDCReadAssignment,
+				logical.DeleteOperation: i.pathOIDCDeleteAssignment,
 			},
 			ExistenceCheck:  i.pathOIDCKeyExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC assignments.",
@@ -116,9 +116,46 @@ func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical
 	i.oidcLock.RLock()
 	defer i.oidcLock.RUnlock()
 
-	keys, err := req.Storage.List(ctx, namedAssignmentPath)
+	assignments, err := req.Storage.List(ctx, namedAssignmentPath)
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(keys), nil
+	return logical.ListResponse(assignments), nil
+}
+
+// pathOIDCReadAssignment is used to read an existing assignment
+func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	i.oidcLock.RLock()
+	defer i.oidcLock.RUnlock()
+
+	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var storedNamedAssignment namedAssignment
+	if err := entry.DecodeJSON(&storedNamedAssignment); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"groups":   storedNamedAssignment.Groups,
+			"entities": storedNamedAssignment.Entities,
+		},
+	}, nil
+}
+
+// pathOIDCDeleteAssignment is used to delete a assignment
+func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	err := req.Storage.Delete(ctx, roleConfigPath+name)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
