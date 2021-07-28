@@ -6,11 +6,10 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -478,7 +477,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 
 	iter, err := txn.Get(groupsTable, "namespace_id", ns.ID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to lookup groups using namespace ID: {{err}}", err)
+		return nil, fmt.Errorf("failed to lookup groups using namespace ID: %w", err)
 	}
 
 	var keys []string

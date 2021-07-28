@@ -17,10 +17,8 @@ const (
 	entityPrefix = "entity/"
 )
 
-var (
-	// metaKeyFormatRegEx checks if a metadata key string is valid
-	metaKeyFormatRegEx = regexp.MustCompile(`^[a-zA-Z0-9=/+_-]+$`).MatchString
-)
+// metaKeyFormatRegEx checks if a metadata key string is valid
+var metaKeyFormatRegEx = regexp.MustCompile(`^[a-zA-Z0-9=/+_-]+$`).MatchString
 
 const (
 	// The meta key prefix reserved for Vault's internal use

@@ -191,7 +191,6 @@ func TestAWSEndToEnd(t *testing.T) {
 }
 
 func setAwsEnvCreds() error {
-
 	cfg := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(os.Getenv(envVarAwsTestAccessKey), os.Getenv(envVarAwsTestSecretKey), ""),
 	}

@@ -16,7 +16,7 @@ import (
 var testNow = time.Now().Add(100 * time.Hour)
 
 func TestPopulate_Basic(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		mode              int
 		name              string
 		input             string
@@ -421,7 +421,7 @@ func TestPopulate_CurrentTime(t *testing.T) {
 }
 
 func TestPopulate_FullObject(t *testing.T) {
-	var testEntity = &logical.Entity{
+	testEntity := &logical.Entity{
 		ID:   "abc-123",
 		Name: "Entity Name",
 		Metadata: map[string]string{
@@ -440,7 +440,7 @@ func TestPopulate_FullObject(t *testing.T) {
 		},
 	}
 
-	var testGroups = []*logical.Group{
+	testGroups := []*logical.Group{
 		{ID: "a08b0c02", Name: "g1"},
 		{ID: "239bef91", Name: "g2"},
 	}

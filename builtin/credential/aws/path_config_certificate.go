@@ -442,9 +442,11 @@ corresponding regions should be registered using this endpoint. PKCS#7 is verifi
 using a collection of certificates containing the default certificate and all the
 certificates that are registered using this endpoint.
 `
+
 const pathListCertificatesHelpSyn = `
 Lists all the AWS public certificates that are registered with the backend.
 `
+
 const pathListCertificatesHelpDesc = `
 Certificates will be listed by their respective names that were used during registration.
 `

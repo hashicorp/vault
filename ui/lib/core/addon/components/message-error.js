@@ -44,7 +44,10 @@ export default Component.extend({
           return;
         }
         if (this.model.adapterError.errors.length > 0) {
-          return this.model.adapterError.errors;
+          return this.model.adapterError.errors.map(e => {
+            if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
+            return e;
+          });
         }
         return [this.model.adapterError.message];
       }

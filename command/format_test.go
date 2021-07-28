@@ -24,6 +24,7 @@ func (m mockUi) Ask(_ string) (string, error) {
 	m.t.FailNow()
 	return "", nil
 }
+
 func (m mockUi) AskSecret(_ string) (string, error) {
 	m.t.FailNow()
 	return "", nil

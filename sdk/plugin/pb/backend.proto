@@ -25,6 +25,7 @@ message ProtoError {
 	// ErrTypeInvalidRequest
 	// ErrTypePermissionDenied
 	// ErrTypeMultiAuthzPending
+	// ErrTypeUnrecoverable
 	uint32 err_type = 1;
 	string err_msg = 2;
 	int64 err_code = 3;

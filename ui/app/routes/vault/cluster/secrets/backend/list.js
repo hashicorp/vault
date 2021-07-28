@@ -73,6 +73,7 @@ export default Route.extend({
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine.get('engineType');
     let types = {
+      database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
@@ -86,15 +87,16 @@ export default Route.extend({
     return types[type];
   },
 
-  model(params) {
+  async model(params) {
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
+    const modelType = this.getModelType(backend, params.tab);
 
     return hash({
       secret,
       secrets: this.store
-        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+        .lazyPaginatedQuery(modelType, {
           id: secret,
           backend,
           responsePath: 'data.keys',
@@ -151,7 +153,6 @@ export default Route.extend({
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
     }
-
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -171,7 +172,7 @@ export default Route.extend({
       }
       controller.setProperties({
         filter: filter || '',
-        page: model.get('meta.currentPage') || 1,
+        page: model.meta?.currentPage || 1,
       });
     }
   },
@@ -189,6 +190,7 @@ export default Route.extend({
       let secret = this.secretParam();
       let backend = this.enginePathParam();
       let is404 = error.httpStatus === 404;
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let hasModel = this.controllerFor(this.routeName).get('hasModel');
 
       // this will occur if we've deleted something,

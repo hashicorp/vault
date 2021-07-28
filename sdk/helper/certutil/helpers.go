@@ -643,7 +643,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 			!bytes.Equal(data.SigningBundle.Certificate.AuthorityKeyId, data.SigningBundle.Certificate.SubjectKeyId) {
 
 			result.CAChain = []*CertBlock{
-				&CertBlock{
+				{
 					Certificate: data.SigningBundle.Certificate,
 					Bytes:       data.SigningBundle.CertificateBytes,
 				},

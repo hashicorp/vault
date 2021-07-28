@@ -24,7 +24,6 @@ func TestAerospikeBackend(t *testing.T) {
 		"namespace": config.namespace,
 		"set":       config.set,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -44,7 +43,7 @@ func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "aerospike/aerospike-server",
 		ContainerName: "aerospikedb",
-		ImageTag:      "latest",
+		ImageTag:      "5.5.0.10",
 		Ports:         []string{"3000/tcp", "3001/tcp", "3002/tcp", "3003/tcp"},
 	})
 	if err != nil {

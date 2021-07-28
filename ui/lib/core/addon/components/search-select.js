@@ -12,7 +12,7 @@ import layout from '../templates/components/search-select';
  * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @selectLimit={{2}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
  *
  * @param id {String} - The name of the form field
- * @param models {String} - An array of model types to fetch from the API.
+ * @param models {Array} - An array of model types to fetch from the API.
  * @param onChange {Func} - The onchange action for this form field.
  * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
  * @param label {String} - Label for this form field
@@ -147,6 +147,7 @@ export default Component.extend({
     },
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
+      // fire off getSelectedValue action higher up in get-credentials-card component
       if (!selected.new) {
         this.options.pushObject(selected);
       }

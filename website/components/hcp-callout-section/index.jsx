@@ -12,10 +12,11 @@ export default function HcpCalloutSection({
 }) {
   return (
     <div className={styles.hcpCalloutSection} id={id}>
-      <div className={styles.header}>
-        <h2>{header}</h2>
-      </div>
-
+      {header ? (
+        <div className={styles.header}>
+          <h2>{header}</h2>
+        </div>
+      ) : null}
       <div className={styles.content}>
         <div className={styles.info}>
           <h1>{title}</h1>
@@ -28,6 +29,7 @@ export default function HcpCalloutSection({
                 <div key={link.text}>
                   <Button
                     title={link.text}
+                    label="Learn more — HCP Vault"
                     linkType={link.type}
                     url={link.url}
                     theme={{ variant, brand: 'neutral', background: 'light' }}

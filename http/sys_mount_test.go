@@ -336,7 +336,6 @@ func TestSysMount(t *testing.T) {
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
-
 }
 
 func TestSysMount_put(t *testing.T) {

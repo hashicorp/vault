@@ -133,7 +133,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// Store the initial key in the archive
-	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	keysArchive := []KeyEntry{{}, p.Keys["1"]}
 	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
@@ -293,7 +293,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// Store the initial key in the archive
-	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	keysArchive := []KeyEntry{{}, p.Keys["1"]}
 	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
@@ -444,7 +444,7 @@ func Test_StorageErrorSafety(t *testing.T) {
 	}
 
 	// Store the initial key in the archive
-	keysArchive := []KeyEntry{KeyEntry{}, p.Keys["1"]}
+	keysArchive := []KeyEntry{{}, p.Keys["1"]}
 	checkKeys(t, ctx, p, storage, keysArchive, "initial", 1, 1, 1)
 
 	// We use checkKeys here just for sanity; it doesn't really handle cases of

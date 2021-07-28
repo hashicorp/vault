@@ -9,9 +9,9 @@ import { isArray } from '@ember/array';
  *
  * @param modelClass = An Ember Data model class
  * @param capabilities - an Object whose keys will added to the model class as related 'capabilities' models
- * and whose values should be functions that return the id of the related capabilites model
+ * and whose values should be functions that return the id of the related capabilities model
  *
- * definition of capabilities be done shorthand with the apiPath tagged template funtion
+ * definition of capabilities be done shorthand with the apiPath tagged template function
  *
  *
  * @usage

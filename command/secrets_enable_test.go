@@ -10,11 +10,9 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-var (
-	// logicalBackendAdjustmentFactor is set to 1 for the database backend
-	// which is a plugin but not found in go.mod files
-	logicalBackendAdjustmentFactor = 1
-)
+// logicalBackendAdjustmentFactor is set to 1 for the database backend
+// which is a plugin but not found in go.mod files
+var logicalBackendAdjustmentFactor = 1
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()

@@ -39,6 +39,9 @@ export default {
       ],
       on: {
         CONTINUE: {
+          connection: {
+            cond: type => type === 'database',
+          },
           role: {
             cond: type => ['pki', 'aws', 'ssh'].includes(type),
           },
@@ -49,6 +52,15 @@ export default {
             cond: type => type === 'transit',
           },
         },
+      },
+    },
+    connection: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-connection' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'displayConnection',
       },
     },
     encryption: {
@@ -87,6 +99,24 @@ export default {
         CONTINUE: 'credentials',
       },
     },
+    displayConnection: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-connection-show' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'displayRoleDatabase',
+      },
+    },
+    displayRoleDatabase: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-display-database-role' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'display',
+      },
+    },
     secret: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secrets-secret' },
@@ -103,6 +133,10 @@ export default {
       ],
       on: {
         REPEAT: {
+          connection: {
+            cond: type => type === 'database',
+            actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
+          },
           role: {
             cond: type => ['pki', 'aws', 'ssh'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],

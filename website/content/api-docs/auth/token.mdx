@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: Token - Auth Methods - HTTP API
-sidebar_title: Tokens
 description: This is the API documentation for the Vault token auth method.
 ---
 
@@ -74,7 +73,8 @@ during this call.
 
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
-  subset of the policies belonging to the token making the request, unless root.
+  subset of the policies belonging to the token making the request, unless 
+  the calling token is root or contains `sudo` capabilities to `auth/token/create`.
   If not specified, defaults to all the policies of the calling token.
 - `meta` `(map: {})` – A map of string to string valued metadata. This is
   passed through to the audit devices.

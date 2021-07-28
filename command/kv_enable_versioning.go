@@ -9,8 +9,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVEnableVersioningCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVEnableVersioningCommand)(nil)
+var (
+	_ cli.Command             = (*KVEnableVersioningCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVEnableVersioningCommand)(nil)
+)
 
 type KVEnableVersioningCommand struct {
 	*BaseCommand

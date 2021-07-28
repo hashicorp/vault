@@ -48,6 +48,7 @@ export default Route.extend({
 
       // if we have queryParams, update the namespace so that the observer can fire on the controller
       if (queryParams) {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         this.controllerFor('vault.cluster').set('namespaceQueryParam', queryParams.namespace || '');
       }
 

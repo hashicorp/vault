@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: GitHub - Auth Methods - HTTP API
-sidebar_title: GitHub
 description: This is the API documentation for the Vault GitHub auth method.
 ---
 

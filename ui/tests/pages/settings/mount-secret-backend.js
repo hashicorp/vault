@@ -1,4 +1,5 @@
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 import mountForm from 'vault/tests/pages/components/mount-backend-form';
 
 export default create({
@@ -13,6 +14,8 @@ export default create({
   defaultTTLUnit: fillable('[data-test-ttl-unit="Default Lease TTL"] [data-test-select="ttl-unit"]'),
   enable: async function(type, path) {
     await this.visit();
+    await settled();
     await this.mount(type, path);
+    await settled();
   },
 });

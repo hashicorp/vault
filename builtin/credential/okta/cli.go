@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	pwd "github.com/hashicorp/vault/sdk/helper/password"
 )
 
 // CLIHandler struct
@@ -38,6 +38,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		"password": password,
 	}
 
+	// Okta totp code
+	if totp, ok := m["totp"]; ok {
+		data["totp"] = totp
+	}
+
+	// Legacy MFA support
 	mfa_method, ok := m["method"]
 	if ok {
 		data["method"] = mfa_method

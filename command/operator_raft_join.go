@@ -9,8 +9,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftJoinCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftJoinCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftJoinCommand)(nil)
+)
 
 type OperatorRaftJoinCommand struct {
 	flagRetry            bool

@@ -1,4 +1,4 @@
-import { currentURL, currentRouteName, settled } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -12,13 +12,25 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 const uiConsole = create(consoleClass);
 
+const getRandomPort = () => {
+  let a = Math.floor(100000 + Math.random() * 900000);
+  a = String(a);
+  return a.substring(0, 4);
+};
+
 const mount = async (shouldConfig = true) => {
-  let path = `kmip-${Date.now()}`;
+  const now = Date.now();
+  let path = `kmip-${now}`;
+  let addr = `127.0.0.1:${getRandomPort()}`; // use random port
   let commands = shouldConfig
-    ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config -force`]
+    ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
   await uiConsole.runCommands(commands);
   await settled();
+  let res = uiConsole.lastLogOutput;
+  if (res.includes('Error')) {
+    throw new Error(`Error mounting secrets engine: ${res}`);
+  }
   return path;
 };
 
@@ -26,7 +38,10 @@ const createScope = async () => {
   let path = await mount();
   let scope = `scope-${Date.now()}`;
   await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
-  await settled();
+  let res = uiConsole.lastLogOutput;
+  if (res.includes('Error')) {
+    throw new Error(`Error creating scope: ${res}`);
+  }
   return { path, scope };
 };
 
@@ -34,21 +49,24 @@ const createRole = async () => {
   let { path, scope } = await createScope();
   let role = `role-${Date.now()}`;
   await uiConsole.runCommands([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
-  await settled();
+  let res = uiConsole.lastLogOutput;
+  if (res.includes('Error')) {
+    throw new Error(`Error creating role: ${res}`);
+  }
   return { path, scope, role };
 };
 
 const generateCreds = async () => {
   let { path, scope, role } = await createRole();
   await uiConsole.runCommands([
-    `write ${path}/scope/${scope}/role/${role}/credential/generate format=pem
-    -field=serial_number`,
+    `write ${path}/scope/${scope}/role/${role}/credential/generate format=pem -field=serial_number`,
   ]);
-  await settled();
   let serial = uiConsole.lastLogOutput;
+  if (serial.includes('Error')) {
+    throw new Error(`Credential generation failed with error: ${serial}`);
+  }
   return { path, scope, role, serial };
 };
-
 module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   setupApplicationTest(hooks);
 
@@ -88,6 +106,8 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
       `/vault/secrets/${path}/kmip/configure`,
       'configuration navigates to the configure page'
     );
+    let addr = `127.0.0.1:${getRandomPort()}`;
+    await fillIn('[data-test-string-list-input="0"]', addr);
 
     await scopesPage.submit();
     await settled();
@@ -97,6 +117,23 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
       'redirects to configuration page after saving config'
     );
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
+  });
+
+  test('it can revoke from the credentials show page', async function(assert) {
+    let { path, scope, role, serial } = await generateCreds();
+    await settled();
+    await credentialsPage.visitDetail({ backend: path, scope, role, serial });
+    await settled();
+    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
+    await credentialsPage.delete().confirmDelete();
+    await settled();
+
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      'redirects to the credentials list'
+    );
+    assert.ok(credentialsPage.isEmpty, 'renders an empty credentials page');
   });
 
   test('it can create a scope', async function(assert) {
@@ -125,7 +162,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   });
 
   test('it can delete a scope from the list', async function(assert) {
-    let { path } = await createScope(this);
+    let { path } = await createScope();
     await scopesPage.visit({ backend: path });
     await settled();
     // delete the scope
@@ -140,7 +177,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   });
 
   test('it can create a role', async function(assert) {
-    let { path, scope } = await createScope(this);
+    let { path, scope } = await createScope();
     let role = `role-${Date.now()}`;
     await rolesPage.visit({ backend: path, scope });
     await settled();
@@ -182,7 +219,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   });
 
   test('it can delete a role from the detail page', async function(assert) {
-    let { path, scope, role } = await createRole(this);
+    let { path, scope, role } = await createRole();
     await settled();
     await rolesPage.visitDetail({ backend: path, scope, role });
     await settled();
@@ -246,20 +283,5 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     await settled();
     assert.equal(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
     assert.ok(credentialsPage.isEmpty, 'renders empty');
-  });
-
-  test('it can revoke from the credentials show page', async function(assert) {
-    let { path, scope, role, serial } = await generateCreds();
-    await credentialsPage.visitDetail({ backend: path, scope, role, serial });
-    await settled();
-    await credentialsPage.delete().confirmDelete();
-    await settled();
-
-    assert.equal(
-      currentURL(),
-      `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/credentials`,
-      'redirects to the credentials list'
-    );
-    assert.ok(credentialsPage.isEmpty, 'renders an empty credentials page');
   });
 });
