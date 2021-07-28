@@ -520,9 +520,6 @@ type Core struct {
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
 
-	// Stores request counters
-	counters counters
-
 	// raftFollowerStates tracks information about all the raft follower nodes.
 	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
@@ -667,8 +664,6 @@ type CoreConfig struct {
 	MetricsHelper *metricsutil.MetricsHelper
 	MetricSink    *metricsutil.ClusterMetricSink
 
-	CounterSyncInterval time.Duration
-
 	RecoveryMode bool
 
 	ClusterNetworkLayer cluster.NetworkLayer
@@ -754,11 +749,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.RawConfig = new(server.Config)
 	}
 
-	syncInterval := conf.CounterSyncInterval
-	if syncInterval.Nanoseconds() == 0 {
-		syncInterval = 30 * time.Second
-	}
-
 	// secureRandomReader cannot be nil
 	if conf.SecureRandomReader == nil {
 		conf.SecureRandomReader = rand.Reader
@@ -793,39 +783,35 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		baseLogger:          conf.Logger,
 		logger:              conf.Logger.Named("core"),
 
-		defaultLeaseTTL:              conf.DefaultLeaseTTL,
-		maxLeaseTTL:                  conf.MaxLeaseTTL,
-		sentinelTraceDisabled:        conf.DisableSentinelTrace,
-		cachingDisabled:              conf.DisableCache,
-		clusterName:                  conf.ClusterName,
-		clusterNetworkLayer:          conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache: cache.New(3*clusterHeartbeatInterval, time.Second),
-		enableMlock:                  !conf.DisableMlock,
-		rawEnabled:                   conf.EnableRaw,
-		shutdownDoneCh:               make(chan struct{}),
-		replicationState:             new(uint32),
-		atomicPrimaryClusterAddrs:    new(atomic.Value),
-		atomicPrimaryFailoverAddrs:   new(atomic.Value),
-		localClusterPrivateKey:       new(atomic.Value),
-		localClusterCert:             new(atomic.Value),
-		localClusterParsedCert:       new(atomic.Value),
-		activeNodeReplicationState:   new(uint32),
-		keepHALockOnStepDown:         new(uint32),
-		replicationFailure:           new(uint32),
-		disablePerfStandby:           true,
-		activeContextCancelFunc:      new(atomic.Value),
-		allLoggers:                   conf.AllLoggers,
-		builtinRegistry:              conf.BuiltinRegistry,
-		neverBecomeActive:            new(uint32),
-		clusterLeaderParams:          new(atomic.Value),
-		metricsHelper:                conf.MetricsHelper,
-		metricSink:                   conf.MetricSink,
-		secureRandomReader:           conf.SecureRandomReader,
-		rawConfig:                    new(atomic.Value),
-		counters: counters{
-			requests:     new(uint64),
-			syncInterval: syncInterval,
-		},
+		defaultLeaseTTL:                conf.DefaultLeaseTTL,
+		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		sentinelTraceDisabled:          conf.DisableSentinelTrace,
+		cachingDisabled:                conf.DisableCache,
+		clusterName:                    conf.ClusterName,
+		clusterNetworkLayer:            conf.ClusterNetworkLayer,
+		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
+		enableMlock:                    !conf.DisableMlock,
+		rawEnabled:                     conf.EnableRaw,
+		shutdownDoneCh:                 make(chan struct{}),
+		replicationState:               new(uint32),
+		atomicPrimaryClusterAddrs:      new(atomic.Value),
+		atomicPrimaryFailoverAddrs:     new(atomic.Value),
+		localClusterPrivateKey:         new(atomic.Value),
+		localClusterCert:               new(atomic.Value),
+		localClusterParsedCert:         new(atomic.Value),
+		activeNodeReplicationState:     new(uint32),
+		keepHALockOnStepDown:           new(uint32),
+		replicationFailure:             new(uint32),
+		disablePerfStandby:             true,
+		activeContextCancelFunc:        new(atomic.Value),
+		allLoggers:                     conf.AllLoggers,
+		builtinRegistry:                conf.BuiltinRegistry,
+		neverBecomeActive:              new(uint32),
+		clusterLeaderParams:            new(atomic.Value),
+		metricsHelper:                  conf.MetricsHelper,
+		metricSink:                     conf.MetricSink,
+		secureRandomReader:             conf.SecureRandomReader,
+		rawConfig:                      new(atomic.Value),
 		recoveryMode:                   conf.RecoveryMode,
 		postUnsealStarted:              new(uint32),
 		raftJoinDoneCh:                 make(chan struct{}),
@@ -1984,9 +1970,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
-	if err := c.loadCurrentRequestCounters(ctx, time.Now()); err != nil {
-		return err
-	}
 	if err := c.loadCredentials(ctx); err != nil {
 		return err
 	}
@@ -2183,11 +2166,6 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
-
-	// Zeros out the requests counter to avoid sending all requests for the month on stepdown
-	// when this runs on the active node. Unseal does the complementary operation of loading
-	// the counter from storage, so this operation should be a safe one.
-	atomic.StoreUint64(c.counters.requests, 0)
 
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
