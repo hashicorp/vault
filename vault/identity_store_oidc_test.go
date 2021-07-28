@@ -367,21 +367,6 @@ func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
 		Storage: storage,
 	})
 	expectError(t, resp, err)
-
-	// Delete allowed-test-role
-	c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/role/allowed-test-role",
-		Operation: logical.DeleteOperation,
-		Storage:   storage,
-	})
-
-	// Delete test-key
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/key/test-key",
-		Operation: logical.DeleteOperation,
-		Storage:   storage,
-	})
-	expectSuccess(t, resp, err)
 }
 
 // TestOIDC_Path_OIDCKey tests the List operation for keys
