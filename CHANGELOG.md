@@ -118,7 +118,7 @@ BUG FIXES:
 * replication: Fix panic trying to update walState during identity group invalidation.
 * replication: Fix: mounts created within a namespace that was part of an Allow
   filtering rule would not appear on performance secondary if created after rule
-  was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
+  was defined.
 * secret/pki: use case insensitive domain name comparison as per RFC1035 section 2.3.3
 * secret: fix the bug where transit encrypt batch doesn't work with key_version [[GH-11628](https://github.com/hashicorp/vault/pull/11628)]
 * secrets/ad: Forward all creds requests to active node [[GH-76](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/76)] [[GH-11836](https://github.com/hashicorp/vault/pull/11836)]
