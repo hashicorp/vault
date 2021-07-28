@@ -12,9 +12,8 @@ be also set to `true`. Otherwise, the template engine will log an error but then
 restart its internal runner. [[GH-11775](https://github.com/hashicorp/vault/pull/11775)]
 * agent: Update to use IAM Service Account Credentials endpoint for signing JWTs
 when using GCP Auto-Auth method [[GH-11473](https://github.com/hashicorp/vault/pull/11473)]
-* core: License/EULA changes that ensure the presence of a valid HashiCorp license to
+* core (enterprise): License/EULA changes that ensure the presence of a valid HashiCorp license to
 start Vault. More information is available in the [Vault License FAQ](https://www.vaultproject.io/docs/enterprise/license/faqs)
-* go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
 
 FEATURES:
 
@@ -37,14 +36,15 @@ IMPROVEMENTS:
 * core: Add a small (<1s) exponential backoff to failed TCP listener Accept failures. [[GH-11588](https://github.com/hashicorp/vault/pull/11588)]
 * core: Add controlled capabilities to control group policy stanza
 * core: Add metrics for standby node forwarding. [[GH-11366](https://github.com/hashicorp/vault/pull/11366)]
-* core: Add metrics to report if a node is a perf standby, if a node is a dr secondary or primary, and if a node is a perf secondary or primary.
+* core: Add metrics to report if a node is a perf standby, if a node is a dr secondary or primary, and if a node is a perf secondary or primary. [[GH-11472](https://github.com/hashicorp/vault/pull/11472)]
 * core: Send notifications to systemd on start, stop, and configuration reload. [[GH-11517](https://github.com/hashicorp/vault/pull/11517)]
 * core: add irrevocable lease list and count apis [[GH-11607](https://github.com/hashicorp/vault/pull/11607)]
 * core: allow arbitrary length stack traces upon receiving SIGUSR2 (was 32MB) [[GH-11364](https://github.com/hashicorp/vault/pull/11364)]
 * db/cassandra: Added tls_server_name to specify server name for TLS validation [[GH-11820](https://github.com/hashicorp/vault/pull/11820)]
+* go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
 * raft: Improve raft batch size selection [[GH-11907](https://github.com/hashicorp/vault/pull/11907)]
 * raft: change freelist type to map and set nofreelistsync to true [[GH-11895](https://github.com/hashicorp/vault/pull/11895)]
-* replication: Delay evaluation of X-Vault-Index headers until merkle sync completes. [[GH-1814](https://github.com/hashicorp/vault/pull/1814)]
+* replication: Delay evaluation of X-Vault-Index headers until merkle sync completes.
 * secrets/rabbitmq: Add ability to customize dynamic usernames [[GH-11899](https://github.com/hashicorp/vault/pull/11899)]
 * secrets/ad: Add `rotate-role` endpoint to allow rotations of service accounts. [[GH-11942](https://github.com/hashicorp/vault/pull/11942)]
 * secrets/aws: add IAM tagging support for iam_user roles [[GH-10953](https://github.com/hashicorp/vault/pull/10953)]
@@ -116,7 +116,7 @@ BUG FIXES:
 * identity: Use correct mount accessor when refreshing external group memberships. [[GH-11506](https://github.com/hashicorp/vault/pull/11506)]
 * mongo-db: default username template now strips invalid '.' characters [[GH-11872](https://github.com/hashicorp/vault/pull/11872)]
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
-* replication: Fix panic trying to update walState during identity group invalidation. [[GH-1865](https://github.com/hashicorp/vault/pull/1865)]
+* replication: Fix panic trying to update walState during identity group invalidation.
 * replication: Fix: mounts created within a namespace that was part of an Allow
   filtering rule would not appear on performance secondary if created after rule
   was defined. [[GH-1807](https://github.com/hashicorp/vault/pull/1807)]
