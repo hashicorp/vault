@@ -794,7 +794,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	retResp := &logical.Response{}
 	expiry := role.TokenTTL
 	if expiry > key.VerificationTTL {
-		expiry := key.VerificationTTL
+		expiry = key.VerificationTTL
 		retResp.AddWarning(fmt.Sprintf("a role's token ttl cannot be longer "+
 			"than the verification_ttl of the key it references, setting token ttl to %d", expiry))
 	}
