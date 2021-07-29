@@ -1377,6 +1377,9 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	readResult, err := b.HandleRequest(context.Background(), readCertReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cidrsResult := readResult.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)
 
 	if cidrsResult[0].String() != boundCIDRs[0] ||

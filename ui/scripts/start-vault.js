@@ -78,9 +78,10 @@ async function processLines(input, eachLine = () => {}) {
         written = true;
         console.log('VAULT SERVER READY');
       } else if (initError) {
-        // If this is happening, run `export VAULT_LICENSE_PATH=/Users/username/license.hclic`
-        // to your valid local vault license filepath, or use OSS Vault
         console.log('VAULT SERVER START FAILED');
+        console.log(
+          'If this is happening, run `export VAULT_LICENSE_PATH=/Users/username/license.hclic` to your valid local vault license filepath, or use OSS Vault'
+        );
         process.exit(1);
       }
     });

@@ -19,11 +19,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -2023,7 +2023,6 @@ func (m *ExpirationManager) loadEntry(ctx context.Context, leaseID string) (*lea
 		m.deleteLockForLease(leaseID)
 	}
 	return leaseEntry, err
-
 }
 
 // loadEntryInternal is used when you need to load an entry but also need to

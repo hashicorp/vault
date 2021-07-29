@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
-const minVersionError = "'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
-const maxVersionError = "'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
+const (
+	minVersionError = "'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
+	maxVersionError = "'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
+)
 
 // ListenerChecks diagnoses warnings and the first encountered error for the listener
 // configuration stanzas.
@@ -39,7 +41,6 @@ func ListenerChecks(ctx context.Context, listeners []*configutil.Listener) ([]st
 		}
 		if l.TLSDisableClientCerts {
 			Warn(ctx, fmt.Sprintf("Listener at address %s: TLS for a listener is turned on without requiring client certificates.", listenerID))
-
 		}
 		status, warning := TLSMutualExclusionCertCheck(l)
 		if status == 1 {
@@ -279,7 +280,6 @@ func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
 
 // TLSMutualExclusionCertCheck returns error if both TLSDisableClientCerts and TLSRequireAndVerifyClientCert are set
 func TLSMutualExclusionCertCheck(l *configutil.Listener) (int, string) {
-
 	if l.TLSDisableClientCerts {
 		if l.TLSRequireAndVerifyClientCert {
 			return 1, "The tls_disable_client_certs and tls_require_and_verify_client_cert fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true."
@@ -290,7 +290,6 @@ func TLSMutualExclusionCertCheck(l *configutil.Listener) (int, string) {
 
 // TLSClientCAFileCheck Checks the validity of a client CA file
 func TLSClientCAFileCheck(l *configutil.Listener) ([]string, error) {
-
 	if l.TLSDisableClientCerts {
 		return nil, nil
 	} else if !l.TLSRequireAndVerifyClientCert {
@@ -350,5 +349,4 @@ func TLSCAFileCheck(CAFilePath string) ([]string, error) {
 	}
 
 	return warningsSlc, err
-
 }

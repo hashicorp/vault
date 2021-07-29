@@ -11,6 +11,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -21,7 +22,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
@@ -383,6 +383,11 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return auth, te, retErr
 	}
 
+	// If it is an authenticated ( i.e with vault token ) request
+	// associated with an entity, increment client count
+	if !unauth && c.activityLog != nil && te.EntityID != "" {
+		c.activityLog.HandleTokenCreation(te)
+	}
 	return auth, te, nil
 }
 

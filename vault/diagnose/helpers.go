@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -29,12 +29,12 @@ const (
 	adviceKey                 = attribute.Key("advice")
 )
 
-var (
-	MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
-)
+var MainSection = trace.WithAttributes(attribute.Key("diagnose").String("main-section"))
 
-var diagnoseSession = struct{}{}
-var noopTracer = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
+var (
+	diagnoseSession = struct{}{}
+	noopTracer      = trace.NewNoopTracerProvider().Tracer("vault-diagnose")
+)
 
 type testFunction func(context.Context) error
 
@@ -50,10 +50,10 @@ type Session struct {
 // when the outermost span ends.
 func New(w io.Writer) *Session {
 	tc := NewTelemetryCollector(w)
-	//so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
+	// so, _ := stdout.NewExporter(stdout.WithPrettyPrint())
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		//sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
+		// sdktrace.WithSpanProcessor(sdktrace.NewSimpleSpanProcessor(so)),
 		sdktrace.WithSpanProcessor(tc),
 	)
 	tracer := tp.Tracer("vault-diagnose")
@@ -80,9 +80,7 @@ func Context(ctx context.Context, sess *Session) context.Context {
 func CurrentSession(ctx context.Context) *Session {
 	sessionCtxVal := ctx.Value(diagnoseSession)
 	if sessionCtxVal != nil {
-
 		return sessionCtxVal.(*Session)
-
 	}
 	return nil
 }

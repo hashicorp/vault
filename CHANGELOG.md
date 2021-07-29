@@ -1,5 +1,5 @@
-## 1.8.0-rc2
-### July 15th, 2021
+## 1.8.0
+### July 28th, 2021
 
 CHANGES:
 
@@ -12,23 +12,17 @@ be also set to `true`. Otherwise, the template engine will log an error but then
 restart its internal runner. [[GH-11775](https://github.com/hashicorp/vault/pull/11775)]
 * agent: Update to use IAM Service Account Credentials endpoint for signing JWTs
 when using GCP Auto-Auth method [[GH-11473](https://github.com/hashicorp/vault/pull/11473)]
-* go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
+* core (enterprise): License/EULA changes that ensure the presence of a valid HashiCorp license to
+start Vault. More information is available in the [Vault License FAQ](https://www.vaultproject.io/docs/enterprise/license/faqs)
 
 FEATURES:
 
+* **GCP Secrets Engine Static Accounts**: Adds ability to use existing service accounts for generation
+  of service account keys and access tokens. [[GH-12023](https://github.com/hashicorp/vault/pull/12023)]
+* **Key Management Secrets Engine (Enterprise)**: Adds general availability for distributing and managing keys in AWS KMS. [[GH-11958](https://github.com/hashicorp/vault/pull/11958)]
+* **License Autoloading (Enterprise)**: Licenses may now be automatically loaded from the environment or disk.
 * **MySQL Database UI**: The UI now supports adding and editing MySQL connections in the database secret engine [[GH-11532](https://github.com/hashicorp/vault/pull/11532)]
-* cli/api: Add lease lookup command [[GH-11129](https://github.com/hashicorp/vault/pull/11129)]
-* core: Add controlled capabilities to control group policy stanza
-* secret/rabbitmq: Add ability to customize dynamic usernames [[GH-11899](https://github.com/hashicorp/vault/pull/11899)]
-* secrets/database/elasticsearch: Add ability to customize dynamic usernames [[GH-11957](https://github.com/hashicorp/vault/pull/11957)]
-* secrets/database/influxdb: Add ability to customize dynamic usernames [[GH-11796](https://github.com/hashicorp/vault/pull/11796)]
-* secrets/database/mongodbatlas: Add ability to customize dynamic usernames [[GH-11956](https://github.com/hashicorp/vault/pull/11956)]
-* secrets/database/redshift: Add ability to customize dynamic usernames [[GH-12016](https://github.com/hashicorp/vault/pull/12016)]
-* secrets/database/snowflake: Add ability to customize dynamic usernames [[GH-11997](https://github.com/hashicorp/vault/pull/11997)]
-* secrets/gcp: Adds ability to use existing service accounts for generation of service account keys and access tokens. [[GH-12023](https://github.com/hashicorp/vault/pull/12023)]
-* secrets/keymgmt (enterprise): Adds general availability for distributing and managing keys in AWS KMS. [[GH-11958](https://github.com/hashicorp/vault/pull/11958)]
-* ssh: add support for templated values in SSH CA DefaultExtensions [[GH-11495](https://github.com/hashicorp/vault/pull/11495)]
-* ui: Add database secret engine support for MSSQL [[GH-11231](https://github.com/hashicorp/vault/pull/11231)]
+* **Vault Diagnose**: A new `vault operator` command to detect common issues with vault server setups.
 
 IMPROVEMENTS:
 
@@ -36,24 +30,37 @@ IMPROVEMENTS:
 * agent: Allow Agent auto auth to read symlinked JWT files [[GH-11502](https://github.com/hashicorp/vault/pull/11502)]
 * api: Allow a leveled logger to be provided to `api.Client` through `SetLogger`. [[GH-11696](https://github.com/hashicorp/vault/pull/11696)]
 * auth/aws: Underlying error included in validation failure message. [[GH-11638](https://github.com/hashicorp/vault/pull/11638)]
+* cli/api: Add lease lookup command [[GH-11129](https://github.com/hashicorp/vault/pull/11129)]
 * core: Add `prefix_filter` to telemetry config [[GH-12025](https://github.com/hashicorp/vault/pull/12025)]
+* core: Add a darwin/arm64 binary release supporting the Apple M1 CPU [[GH-12071](https://github.com/hashicorp/vault/pull/12071)]
 * core: Add a small (<1s) exponential backoff to failed TCP listener Accept failures. [[GH-11588](https://github.com/hashicorp/vault/pull/11588)]
+* core (enterprise): Add controlled capabilities to control group policy stanza
 * core: Add metrics for standby node forwarding. [[GH-11366](https://github.com/hashicorp/vault/pull/11366)]
+* core: Add metrics to report if a node is a perf standby, if a node is a dr secondary or primary, and if a node is a perf secondary or primary. [[GH-11472](https://github.com/hashicorp/vault/pull/11472)]
 * core: Send notifications to systemd on start, stop, and configuration reload. [[GH-11517](https://github.com/hashicorp/vault/pull/11517)]
 * core: add irrevocable lease list and count apis [[GH-11607](https://github.com/hashicorp/vault/pull/11607)]
 * core: allow arbitrary length stack traces upon receiving SIGUSR2 (was 32MB) [[GH-11364](https://github.com/hashicorp/vault/pull/11364)]
 * db/cassandra: Added tls_server_name to specify server name for TLS validation [[GH-11820](https://github.com/hashicorp/vault/pull/11820)]
-* plugins/ad: Added rotate-role endpoint for manual service account password rotations [[GH-11942](https://github.com/hashicorp/vault/pull/11942)]
+* go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
 * raft: Improve raft batch size selection [[GH-11907](https://github.com/hashicorp/vault/pull/11907)]
 * raft: change freelist type to map and set nofreelistsync to true [[GH-11895](https://github.com/hashicorp/vault/pull/11895)]
-* replication (enterprise): The log shipper is now memory
-as well as length bound, and length and size can be
-separately configured.
+* replication: Delay evaluation of X-Vault-Index headers until merkle sync completes.
+* secrets/rabbitmq: Add ability to customize dynamic usernames [[GH-11899](https://github.com/hashicorp/vault/pull/11899)]
+* secrets/ad: Add `rotate-role` endpoint to allow rotations of service accounts. [[GH-11942](https://github.com/hashicorp/vault/pull/11942)]
+* secrets/aws: add IAM tagging support for iam_user roles [[GH-10953](https://github.com/hashicorp/vault/pull/10953)]
 * secrets/aws: add ability to provide a role session name when generating STS credentials [[GH-11345](https://github.com/hashicorp/vault/pull/11345)]
+* secrets/database/elasticsearch: Add ability to customize dynamic usernames [[GH-11957](https://github.com/hashicorp/vault/pull/11957)]
+* secrets/database/influxdb: Add ability to customize dynamic usernames [[GH-11796](https://github.com/hashicorp/vault/pull/11796)]
 * secrets/database/mongodb: Add ability to customize `SocketTimeout`, `ConnectTimeout`, and `ServerSelectionTimeout` [[GH-11600](https://github.com/hashicorp/vault/pull/11600)]
 * secrets/database/mongodb: Increased throughput by allowing for multiple request threads to simultaneously update users in MongoDB [[GH-11600](https://github.com/hashicorp/vault/pull/11600)]
+* secrets/database/mongodbatlas: Adds the ability to customize username generation for dynamic users in MongoDB Atlas. [[GH-11956](https://github.com/hashicorp/vault/pull/11956)]
+* secrets/database/redshift: Add ability to customize dynamic usernames [[GH-12016](https://github.com/hashicorp/vault/pull/12016)]
+* secrets/database/snowflake: Add ability to customize dynamic usernames [[GH-11997](https://github.com/hashicorp/vault/pull/11997)]
+* ssh: add support for templated values in SSH CA DefaultExtensions [[GH-11495](https://github.com/hashicorp/vault/pull/11495)]
+* storage/raft/autopilot (enterprise): Enable Autopilot on DR secondary clusters
 * storage/raft: Support autopilot for HA only raft storage. [[GH-11260](https://github.com/hashicorp/vault/pull/11260)]
 * ui: Add Validation to KV secret engine [[GH-11785](https://github.com/hashicorp/vault/pull/11785)]
+* ui: Add database secret engine support for MSSQL [[GH-11231](https://github.com/hashicorp/vault/pull/11231)]
 * ui: Add push notification message when selecting okta auth. [[GH-11442](https://github.com/hashicorp/vault/pull/11442)]
 * ui: Add regex validation to Transform Template pattern input [[GH-11586](https://github.com/hashicorp/vault/pull/11586)]
 * ui: Add specific error message if unseal fails due to license [[GH-11705](https://github.com/hashicorp/vault/pull/11705)]
@@ -67,6 +74,7 @@ separately configured.
 * ui: Update ember to latest LTS and upgrade UI dependencies [[GH-11447](https://github.com/hashicorp/vault/pull/11447)]
 * ui: Update partials to components [[GH-11680](https://github.com/hashicorp/vault/pull/11680)]
 * ui: Updated ivy code mirror component for consistency [[GH-11500](https://github.com/hashicorp/vault/pull/11500)]
+* ui: Updated node to v14, latest stable build [[GH-12049](https://github.com/hashicorp/vault/pull/12049)]
 * ui: Updated search select component styling [[GH-11360](https://github.com/hashicorp/vault/pull/11360)]
 * ui: add transform secrets engine to features list [[GH-12003](https://github.com/hashicorp/vault/pull/12003)]
 * ui: add validations for duplicate path kv engine [[GH-11878](https://github.com/hashicorp/vault/pull/11878)]
@@ -75,25 +83,27 @@ separately configured.
 
 DEPRECATIONS:
 
-* secrets/gcp: Deprecated the `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets.
-Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead. [[GH-12023](https://github.com/hashicorp/vault/pull/12023)]
+* secrets/gcp: Deprecated the `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating
+  secrets for rolesets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead. [[GH-12023](https://github.com/hashicorp/vault/pull/12023)]
 
 BUG FIXES:
 
 * activity: Omit wrapping tokens and control groups from client counts [[GH-11826](https://github.com/hashicorp/vault/pull/11826)]
 * agent/cert: Fix issue where the API client on agent was not honoring certificate
-information from the auto-auth config map on renewals or retries. [[GH-11576](https://github.com/hashicorp/vault/pull/11576)]
+  information from the auto-auth config map on renewals or retries. [[GH-11576](https://github.com/hashicorp/vault/pull/11576)]
 * agent/template: fix command shell quoting issue [[GH-11838](https://github.com/hashicorp/vault/pull/11838)]
 * agent: Fixed agent templating to use configured tls servername values [[GH-11288](https://github.com/hashicorp/vault/pull/11288)]
 * agent: fix timestamp format in log messages from the templating engine [[GH-11838](https://github.com/hashicorp/vault/pull/11838)]
 * auth/approle: fixing dereference of nil pointer [[GH-11864](https://github.com/hashicorp/vault/pull/11864)]
 * auth/jwt: Updates the [hashicorp/cap](https://github.com/hashicorp/cap) library to `v0.1.0` to
-bring in a verification key caching fix. [[GH-11784](https://github.com/hashicorp/vault/pull/11784)]
+  bring in a verification key caching fix. [[GH-11784](https://github.com/hashicorp/vault/pull/11784)]
+* auth/kubernetes: Fix AliasLookahead to correctly extract ServiceAccount UID when using ephemeral JWTs [[GH-12073](https://github.com/hashicorp/vault/pull/12073)]
 * auth/ldap: Fix a bug where the LDAP auth method does not return the request_timeout configuration parameter on config read. [[GH-11975](https://github.com/hashicorp/vault/pull/11975)]
 * cli: Add support for response wrapping in `vault list` and `vault kv list` with output format other than `table`. [[GH-12031](https://github.com/hashicorp/vault/pull/12031)]
 * cli: vault delete and vault kv delete should support the same output options (e.g. -format) as vault write. [[GH-11992](https://github.com/hashicorp/vault/pull/11992)]
 * core (enterprise): Fix orphan return value from auth methods executed on performance standby nodes.
 * core (enterprise): Fix plugins mounted in namespaces being unable to use password policies [[GH-11596](https://github.com/hashicorp/vault/pull/11596)]
+* core (enterprise): serialize access to HSM entropy generation to avoid errors in concurrent key generation.
 * core/metrics: Add generic KV mount support for vault.kv.secret.count telemetry metric [[GH-12020](https://github.com/hashicorp/vault/pull/12020)]
 * core: Fix cleanup of storage entries from cubbyholes within namespaces. [[GH-11408](https://github.com/hashicorp/vault/pull/11408)]
 * core: Fix edge cases in the configuration endpoint for barrier key autorotation. [[GH-11541](https://github.com/hashicorp/vault/pull/11541)]
@@ -105,6 +115,10 @@ bring in a verification key caching fix. [[GH-11784](https://github.com/hashicor
 * identity: Use correct mount accessor when refreshing external group memberships. [[GH-11506](https://github.com/hashicorp/vault/pull/11506)]
 * mongo-db: default username template now strips invalid '.' characters [[GH-11872](https://github.com/hashicorp/vault/pull/11872)]
 * pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value [[GH-11367](https://github.com/hashicorp/vault/pull/11367)]
+* replication: Fix panic trying to update walState during identity group invalidation.
+* replication: Fix: mounts created within a namespace that was part of an Allow
+  filtering rule would not appear on performance secondary if created after rule
+  was defined.
 * secret/pki: use case insensitive domain name comparison as per RFC1035 section 2.3.3
 * secret: fix the bug where transit encrypt batch doesn't work with key_version [[GH-11628](https://github.com/hashicorp/vault/pull/11628)]
 * secrets/ad: Forward all creds requests to active node [[GH-76](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/76)] [[GH-11836](https://github.com/hashicorp/vault/pull/11836)]
@@ -112,20 +126,29 @@ bring in a verification key caching fix. [[GH-11784](https://github.com/hashicor
 * secrets/database/cassandra: Fixed issue where the PEM parsing logic of `pem_bundle` and `pem_json` didn't work for CA-only configurations [[GH-11861](https://github.com/hashicorp/vault/pull/11861)]
 * secrets/database/cassandra: Updated default statement for password rotation to allow for special characters. This applies to root and static credentials. [[GH-11262](https://github.com/hashicorp/vault/pull/11262)]
 * secrets/database: Fix marshalling to allow providing numeric arguments to external database plugins. [[GH-11451](https://github.com/hashicorp/vault/pull/11451)]
+* secrets/database: Fixed an issue that prevented external database plugin processes from restarting after a shutdown. [[GH-12087](https://github.com/hashicorp/vault/pull/12087)]
 * secrets/database: Fixed minor race condition when rotate-root is called [[GH-11600](https://github.com/hashicorp/vault/pull/11600)]
 * secrets/database: Fixes issue for V4 database interface where `SetCredentials` wasn't falling back to using `RotateRootCredentials` if `SetCredentials` is `Unimplemented` [[GH-11585](https://github.com/hashicorp/vault/pull/11585)]
+* secrets/openldap: Fix bug where schema was not compatible with rotate-root [#24](https://github.com/hashicorp/vault-plugin-secrets-openldap/pull/24) [[GH-12019](https://github.com/hashicorp/vault/pull/12019)]
 * storage/dynamodb: Handle throttled batch write requests by retrying, without which writes could be lost. [[GH-10181](https://github.com/hashicorp/vault/pull/10181)]
 * storage/raft: Support cluster address change for nodes in a cluster managed by autopilot [[GH-11247](https://github.com/hashicorp/vault/pull/11247)]
 * storage/raft: Tweak creation of vault.db file [[GH-12034](https://github.com/hashicorp/vault/pull/12034)]
 * storage/raft: leader_tls_servername wasn't used unless leader_ca_cert_file and/or mTLS were configured. [[GH-11252](https://github.com/hashicorp/vault/pull/11252)]
 * tokenutil: Perform the num uses check before token type. [[GH-11647](https://github.com/hashicorp/vault/pull/11647)]
 * transform (enterprise): Fix an issue with malformed transform configuration
-storage when upgrading from 1.5 to 1.6.  See Upgrade Notes for 1.6.x.
+  storage when upgrading from 1.5 to 1.6.  See Upgrade Notes for 1.6.x.
+* ui: Add role from database connection automatically populates the database for new role [[GH-11119](https://github.com/hashicorp/vault/pull/11119)]
 * ui: Add root rotation statements support to appropriate database secret engine plugins [[GH-11404](https://github.com/hashicorp/vault/pull/11404)]
+* ui: Automatically refresh the page when user logs out [[GH-12035](https://github.com/hashicorp/vault/pull/12035)]
+* ui: Fix Version History queryParams on LinkedBlock [[GH-12079](https://github.com/hashicorp/vault/pull/12079)]
+* ui: Fix bug where database secret engines with custom names cannot delete connections [[GH-11127](https://github.com/hashicorp/vault/pull/11127)]
 * ui: Fix bug where the UI does not recognize version 2 KV until refresh, and fix [object Object] error message [[GH-11258](https://github.com/hashicorp/vault/pull/11258)]
+* ui: Fix database role CG access [[GH-12111](https://github.com/hashicorp/vault/pull/12111)]
+* ui: Fix date display on expired token notice [[GH-11142](https://github.com/hashicorp/vault/pull/11142)]
 * ui: Fix entity group membership and metadata not showing [[GH-11641](https://github.com/hashicorp/vault/pull/11641)]
 * ui: Fix error message caused by control group [[GH-11143](https://github.com/hashicorp/vault/pull/11143)]
 * ui: Fix footer URL linking to the correct version changelog. [[GH-11283](https://github.com/hashicorp/vault/pull/11283)]
+* ui: Fix issue where logging in without namespace input causes error [[GH-11094](https://github.com/hashicorp/vault/pull/11094)]
 * ui: Fix namespace-bug on login [[GH-11182](https://github.com/hashicorp/vault/pull/11182)]
 * ui: Fix status menu no showing on login [[GH-11213](https://github.com/hashicorp/vault/pull/11213)]
 * ui: Fix text link URL on database roles list [[GH-11597](https://github.com/hashicorp/vault/pull/11597)]
@@ -237,6 +260,7 @@ BUG FIXES:
 * secrets/database/cassandra: Updated default statement for password rotation to allow for special characters. This applies to root and static credentials. [[GH-11262](https://github.com/hashicorp/vault/pull/11262)]
 * storage/dynamodb: Handle throttled batch write requests by retrying, without which writes could be lost. [[GH-10181](https://github.com/hashicorp/vault/pull/10181)]
 * storage/raft: leader_tls_servername wasn't used unless leader_ca_cert_file and/or mTLS were configured. [[GH-11252](https://github.com/hashicorp/vault/pull/11252)]
+* storage/raft: using raft for ha_storage with a different storage backend was broken in 1.7.0, now fixed. [[GH-11340](https://github.com/hashicorp/vault/pull/11340)]
 * ui: Add root rotation statements support to appropriate database secret engine plugins [[GH-11404](https://github.com/hashicorp/vault/pull/11404)]
 * ui: Fix bug where the UI does not recognize version 2 KV until refresh, and fix [object Object] error message [[GH-11258](https://github.com/hashicorp/vault/pull/11258)]
 * ui: Fix OIDC bug seen when running on HCP [[GH-11283](https://github.com/hashicorp/vault/pull/11283)]
@@ -268,6 +292,7 @@ FEATURES:
   * **Server Health Checking**: An API has been added to track the state of servers, including their health.
   * **New Server Stabilization**: When a new server is added to the cluster, there will be a waiting period where it must be healthy and stable for a certain amount of time before being promoted to a full, voting member.
 * **Tokenization Secrets Engine (Enterprise)**: The Tokenization Secrets Engine is now generally available. We have added support for MySQL, key rotation, and snapshot/restore.
+* replication (enterprise): The log shipper is now memory as well as length bound, and length and size can be separately configured.
 * agent: Support for persisting the agent cache to disk [[GH-10938](https://github.com/hashicorp/vault/pull/10938)]
 * auth/jwt: Adds `max_age` role parameter and `auth_time` claim validation. [[GH-10919](https://github.com/hashicorp/vault/pull/10919)]
 * core (enterprise): X-Vault-Index and related headers can be used by clients to manage eventual consistency.

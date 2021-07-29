@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
@@ -402,7 +402,6 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 	// Parse the metric filters
 	telemetryAllowedPrefixes, telemetryBlockedPrefixes, err := parsePrefixFilter(opts.Config.PrefixFilter)
-
 	if err != nil {
 		return nil, nil, false, err
 	}

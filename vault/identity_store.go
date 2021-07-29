@@ -10,13 +10,13 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -450,7 +450,7 @@ func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, cl
 	return i.entityByAliasFactorsInTxn(txn, mountAccessor, aliasName, clone)
 }
 
-// entityByAlaisFactorsInTxn fetches the entity based on factors of alias, i.e
+// entityByAliasFactorsInTxn fetches the entity based on factors of alias, i.e
 // mount accessor and the alias name.
 func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
 	if txn == nil {
