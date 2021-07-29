@@ -12,10 +12,8 @@ label {
 }
 
 .masked-font {
-  font-family: obscure;
-  font-size: $size-medium;
+  font-family: obscure, text-security-square;
   letter-spacing: 2px;
-  color: $ui-gray-300;
 }
 
 .label {
