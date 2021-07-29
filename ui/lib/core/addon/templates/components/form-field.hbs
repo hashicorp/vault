@@ -121,7 +121,6 @@
 {{else if (eq attr.options.editType "ttl")}}
   {{!-- TTL Picker --}}
   <div class="field">
-    {{log attr.options}}
     <TtlPicker2
       @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
       @label={{labelString}}
