@@ -199,7 +199,8 @@ these IPs in their IP SANs.
 Before we explore solutions to this problem, let's recapitulate how Vault nodes
 speak to one another.
 
-Vault exposes two TCP ports: the API port and the cluster port.
+Vault exposes two TCP ports: [the API port](/docs/configuration#api_addr) and
+[the cluster port](/docs/configuration#cluster_addr).
 
 The API port is where clients send their Vault HTTP requests.
 
