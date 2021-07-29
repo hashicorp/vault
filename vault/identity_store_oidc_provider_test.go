@@ -71,85 +71,65 @@ func TestOIDC_Path_OIDCAssignment(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
+
+	// Read "test-assignment" again and validate
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if resp != nil {
+		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
 }
 
-// // TestOIDC_Path_OIDCKey tests the List operation for keys
-// func TestOIDC_Path_OIDCKey(t *testing.T) {
-// 	c, _, _ := TestCoreUnsealed(t)
-// 	ctx := namespace.RootContext(nil)
-// 	storage := &logical.InmemStorage{}
+// TestOIDC_Path_OIDC_ProviderAssignmentList tests the List operation for assignments
+func TestOIDC_Path_OIDC_ProviderAssignmentList(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
 
-// 	// Prepare two keys, test-key1 and test-key2
-// 	c.identityStore.HandleRequest(ctx, &logical.Request{
-// 		Path:      "oidc/key/test-key1",
-// 		Operation: logical.CreateOperation,
-// 		Storage:   storage,
-// 	})
+	// Prepare two assignments, test-assignment1 and test-assignment2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
 
-// 	c.identityStore.HandleRequest(ctx, &logical.Request{
-// 		Path:      "oidc/key/test-key2",
-// 		Operation: logical.CreateOperation,
-// 		Storage:   storage,
-// 	})
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
 
-// 	// list keys
-// 	respListKey, listErr := c.identityStore.HandleRequest(ctx, &logical.Request{
-// 		Path:      "oidc/key",
-// 		Operation: logical.ListOperation,
-// 		Storage:   storage,
-// 	})
-// 	expectSuccess(t, respListKey, listErr)
+	// list assignments
+	respListAssignments, listErr := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListAssignments, listErr)
 
-// 	// validate list response
-// 	expectedStrings := map[string]interface{}{"test-key1": true, "test-key2": true}
-// 	expectStrings(t, respListKey.Data["keys"].([]string), expectedStrings)
+	// validate list response
+	expectedStrings := map[string]interface{}{"test-assignment1": true, "test-assignment2": true}
+	expectStrings(t, respListAssignments.Data["keys"].([]string), expectedStrings)
 
-// 	// delete test-key2
-// 	c.identityStore.HandleRequest(ctx, &logical.Request{
-// 		Path:      "oidc/key/test-key2",
-// 		Operation: logical.DeleteOperation,
-// 		Storage:   storage,
-// 	})
+	// delete test-assignment2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment2",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
 
-// 	// list keyes again and validate response
-// 	respListKeyAfterDelete, listErrAfterDelete := c.identityStore.HandleRequest(ctx, &logical.Request{
-// 		Path:      "oidc/key",
-// 		Operation: logical.ListOperation,
-// 		Storage:   storage,
-// 	})
-// 	expectSuccess(t, respListKeyAfterDelete, listErrAfterDelete)
+	// list assignments again and validate response
+	respListAssignmentAfterDelete, listErrAfterDelete := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListAssignmentAfterDelete, listErrAfterDelete)
 
-// 	// validate list response
-// 	delete(expectedStrings, "test-key2")
-// 	expectStrings(t, respListKeyAfterDelete.Data["keys"].([]string), expectedStrings)
-// }
-
-// // some helpers
-// func expectSuccess(t *testing.T, resp *logical.Response, err error) {
-// 	t.Helper()
-// 	if err != nil || (resp != nil && resp.IsError()) {
-// 		t.Fatalf("expected success but got error:\n%v\nresp: %#v", err, resp)
-// 	}
-// }
-
-// func expectError(t *testing.T, resp *logical.Response, err error) {
-// 	if err == nil {
-// 		if resp == nil || !resp.IsError() {
-// 			t.Fatalf("expected error but got success; error:\n%v\nresp: %#v", err, resp)
-// 		}
-// 	}
-// }
-
-// // expectString fails unless every string in actualStrings is also included in expectedStrings and
-// // the length of actualStrings and expectedStrings are the same
-// func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[string]interface{}) {
-// 	if len(actualStrings) != len(expectedStrings) {
-// 		t.Fatalf("expectStrings mismatch:\nactual strings:\n%#v\nexpected strings:\n%#v\n", actualStrings, expectedStrings)
-// 	}
-// 	for _, actualString := range actualStrings {
-// 		_, ok := expectedStrings[actualString]
-// 		if !ok {
-// 			t.Fatalf("the string %q was not expected", actualString)
-// 		}
-// 	}
-// }
+	// validate list response
+	delete(expectedStrings, "test-assignment2")
+	expectStrings(t, respListAssignmentAfterDelete.Data["keys"].([]string), expectedStrings)
+}

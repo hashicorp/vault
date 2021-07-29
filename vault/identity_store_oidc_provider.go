@@ -153,7 +153,7 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 // pathOIDCDeleteAssignment is used to delete a assignment
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, roleConfigPath+name)
+	err := req.Storage.Delete(ctx, namedAssignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
