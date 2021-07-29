@@ -946,6 +946,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.Key = d.Get("key").(string)
 	}
 
+	if role.Key == "" {
+		return logical.ErrorResponse("the key parameter is required"), nil
+	}
+
 	if template, ok := d.GetOk("template"); ok {
 		role.Template = template.(string)
 	} else if req.Operation == logical.CreateOperation {
@@ -996,12 +1000,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		if err != nil {
 			return nil, err
 		}
-		if entry != nil {
-			if err := entry.DecodeJSON(&key); err != nil {
-				return nil, err
-			}
-		} else {
+		if entry == nil {
 			return logical.ErrorResponse("cannot find key %q", role.Key), nil
+		}
+		if err := entry.DecodeJSON(&key); err != nil {
+			return nil, err
 		}
 		if role.TokenTTL > key.VerificationTTL {
 			return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil

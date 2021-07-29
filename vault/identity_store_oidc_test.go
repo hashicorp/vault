@@ -18,39 +18,29 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-// TestOIDC_Path_OIDC_RoleNoKeyParameter
+// TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
+// without a key parameter
 func TestOIDC_Path_OIDC_RoleNoKeyParameter(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	// Create a test role "test-role1" without a key param -- should succeed
+	// Create a test role "test-role1" without a key param -- should fail
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
-	expectSuccess(t, resp, err)
-
-	// Read "test-role1" and validate
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/role/test-role1",
-		Operation: logical.ReadOperation,
-		Storage:   storage,
-	})
-	expectSuccess(t, resp, err)
-	expected := map[string]interface{}{
-		"ttl":       int64(86400),
-		"template":  "",
-		"key":       "",
-		"client_id": resp.Data["client_id"],
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"the key parameter is required": true,
 	}
-	if diff := deep.Equal(expected, resp.Data); diff != nil {
-		t.Fatal(diff)
-	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
 
-// TestOIDC_Path_OIDC_RoleNilKeyEntry
+// TestOIDC_Path_OIDC_RoleNilKeyEntry tests taht a role cannot be created when
+// a key parameter is provided but the key does not exist
 func TestOIDC_Path_OIDC_RoleNilKeyEntry(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
