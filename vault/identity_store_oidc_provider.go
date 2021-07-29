@@ -42,7 +42,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				logical.ReadOperation:   i.pathOIDCReadAssignment,
 				logical.DeleteOperation: i.pathOIDCDeleteAssignment,
 			},
-			ExistenceCheck:  i.pathOIDCKeyExistenceCheck,
+			ExistenceCheck:  i.pathOIDCAssignmentExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC assignments.",
 			HelpDescription: "Create, Read, Update, and Delete OIDC named assignments.",
 		},
@@ -98,7 +98,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 		return nil, err
 	}
 
-	// store named key
+	// store named assignment
 	entry, err := logical.StorageEntryJSON(namedAssignmentPath+name, assignment)
 	if err != nil {
 		return nil, err
@@ -158,4 +158,18 @@ func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logic
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+
+	i.oidcLock.RLock()
+	defer i.oidcLock.RUnlock()
+
+	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
 }
