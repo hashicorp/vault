@@ -45,7 +45,7 @@ export default Model.extend({
   rotation_period: attr({
     editType: 'ttl',
     defaultValue: '24h',
-    helperTextDisabled:
+    subText:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds. Default is 24 hours.',
   }),
   creation_statements: attr('array', {
