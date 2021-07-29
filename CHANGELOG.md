@@ -42,8 +42,6 @@ IMPROVEMENTS:
 * core: allow arbitrary length stack traces upon receiving SIGUSR2 (was 32MB) [[GH-11364](https://github.com/hashicorp/vault/pull/11364)]
 * db/cassandra: Added tls_server_name to specify server name for TLS validation [[GH-11820](https://github.com/hashicorp/vault/pull/11820)]
 * go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
-* raft: Improve raft batch size selection [[GH-11907](https://github.com/hashicorp/vault/pull/11907)]
-* raft: change freelist type to map and set nofreelistsync to true [[GH-11895](https://github.com/hashicorp/vault/pull/11895)]
 * replication: Delay evaluation of X-Vault-Index headers until merkle sync completes.
 * secrets/rabbitmq: Add ability to customize dynamic usernames [[GH-11899](https://github.com/hashicorp/vault/pull/11899)]
 * secrets/ad: Add `rotate-role` endpoint to allow rotations of service accounts. [[GH-11942](https://github.com/hashicorp/vault/pull/11942)]
@@ -57,8 +55,11 @@ IMPROVEMENTS:
 * secrets/database/redshift: Add ability to customize dynamic usernames [[GH-12016](https://github.com/hashicorp/vault/pull/12016)]
 * secrets/database/snowflake: Add ability to customize dynamic usernames [[GH-11997](https://github.com/hashicorp/vault/pull/11997)]
 * ssh: add support for templated values in SSH CA DefaultExtensions [[GH-11495](https://github.com/hashicorp/vault/pull/11495)]
-* storage/raft/autopilot (enterprise): Enable Autopilot on DR secondary clusters
+* storage/raft: Improve raft batch size selection [[GH-11907](https://github.com/hashicorp/vault/pull/11907)]
+* storage/raft: change freelist type to map and set nofreelistsync to true [[GH-11895](https://github.com/hashicorp/vault/pull/11895)]
+* storage/raft: Switch to shared raft-boltdb library and add boltdb metrics [[GH-11269](https://github.com/hashicorp/vault/pull/11269)]
 * storage/raft: Support autopilot for HA only raft storage. [[GH-11260](https://github.com/hashicorp/vault/pull/11260)]
+* storage/raft (enterprise): Enable Autopilot on DR secondary clusters
 * ui: Add Validation to KV secret engine [[GH-11785](https://github.com/hashicorp/vault/pull/11785)]
 * ui: Add database secret engine support for MSSQL [[GH-11231](https://github.com/hashicorp/vault/pull/11231)]
 * ui: Add push notification message when selecting okta auth. [[GH-11442](https://github.com/hashicorp/vault/pull/11442)]
