@@ -21,12 +21,13 @@ information is also available on the
 To be highly available, one of the Vault server nodes grabs a lock within the
 data store. The successful server node then becomes the active node; all other
 nodes become standby nodes. At this point, if the standby nodes receive a
-request, they will either forward the request or redirect the client depending
-on the current configuration and state of the cluster -- see the sections below
-for details. Due to this architecture, HA does not enable increased
-scalability. In general, the bottleneck of Vault is the data store itself, not
-Vault core. For example: to increase the scalability of Vault with Consul, you
-would generally scale Consul instead of Vault.
+request, they will either [forward the request](#request-forwarding) or
+[redirect the client](#client-redirection) depending on the current
+configuration and state of the cluster -- see the sections below for details.
+Due to this architecture, HA does not enable increased scalability. In general,
+the bottleneck of Vault is the data store itself, not Vault core. For example:
+to increase the scalability of Vault with Consul, you would generally scale
+Consul instead of Vault.
 
 Certain storage backends can support high availability mode, which enable them
 to store both Vault's information in addition to the HA lock. However, Vault
