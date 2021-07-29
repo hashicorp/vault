@@ -989,20 +989,23 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
-	// get the key referenced by this role
-	var key namedKey
-	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
-	if err != nil {
-		return nil, err
-	}
-	if entry != nil {
-		if err := entry.DecodeJSON(&key); err != nil {
+	// get the key referenced by this role (if it exists)
+	if role.Key != "" {
+		var key namedKey
+		entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+		if err != nil {
 			return nil, err
 		}
-	}
-
-	if role.TokenTTL > key.VerificationTTL {
-		return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
+		if entry != nil {
+			if err := entry.DecodeJSON(&key); err != nil {
+				return nil, err
+			}
+		} else {
+			return logical.ErrorResponse("cannot find key %q", role.Key), nil
+		}
+		if role.TokenTTL > key.VerificationTTL {
+			return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
+		}
 	}
 
 	if clientID, ok := d.GetOk("client_id"); ok {
@@ -1019,7 +1022,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	}
 
 	// store role (which was either just created or updated)
-	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
+	entry, err := logical.StorageEntryJSON(roleConfigPath+name, role)
 	if err != nil {
 		return nil, err
 	}
