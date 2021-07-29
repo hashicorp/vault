@@ -102,7 +102,7 @@ Router.map(function() {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
-          this.route('show-metadata', { path: '/show-metadata/*secret' }); // show-metadata or edit-metadata
+          this.route('metadata', { path: '/metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
 
