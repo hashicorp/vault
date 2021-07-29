@@ -107,9 +107,9 @@ func (r *ResponseError) Error() string {
 		errString = "Raw Message"
 	}
 
-	ns := r.NamespacePath
-	if ns != "" && ns != "root/" {
-		ns = "Namespace: " + ns + "\n"
+	var ns string
+	if r.NamespacePath != "" && r.NamespacePath != "root/" {
+		ns = "Namespace: " + r.NamespacePath + "\n"
 	}
 
 	var errBody bytes.Buffer
