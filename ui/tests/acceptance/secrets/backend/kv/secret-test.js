@@ -307,6 +307,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await authPage.login(userToken);
 
     await writeSecret(backend, 'secret', 'foo', 'bar');
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
