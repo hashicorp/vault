@@ -30,7 +30,7 @@ Vault's cluster port. The cluster port defaults to `8201`. The TLS information
 is exchanged at join time and is rotated on a cadence.
 
 A requirement for integrated storage is that the
-[cluster_addr](/docs/concepts/ha#per-node-cluster-address) configuration option
+[`cluster_addr`](/docs/concepts/ha#per-node-cluster-address) configuration option
 is set. This allows Vault to assign an address to the node ID at join time.
 
 ## Cluster Membership
@@ -57,10 +57,10 @@ been joined it cannot be re-joined to a different cluster.
 
 You can either join the node automatically via the config file or manually through the
 API (both methods described below). When joining a node, the API address of the leader node must be used. We
-recommend setting the [api_addr](/docs/concepts/ha#direct-access) configuration
+recommend setting the [`api_addr`](/docs/concepts/ha#direct-access) configuration
 option on all nodes to make joining simpler.
 
-#### retry_join Configuration
+#### `retry_join` Configuration
 
 This method enables setting one, or more, target leader nodes in the config file.
 When an uninitialized Vault server starts up it will attempt to join each potential
@@ -69,7 +69,7 @@ leaders become active this node will successfully join. When using Shamir seal,
 the joined nodes will still need to be unsealed manually. When using Auto Unseal
 the node will be able to join and unseal automatically.
 
-An example [retry_join](/docs/configuration/storage/raft#retry_join-stanza)
+An example [`retry_join`](/docs/configuration/storage/raft#retry_join-stanza)
 config can be seen below:
 
 ```hcl
@@ -86,14 +86,18 @@ storage "raft" {
 }
 ```
 
-Note, in each `retry_join` stanza, you may provide a single `leader_api_addr` or
-`auto_join` value. When a cloud `auto_join` configuration value is provided, Vault
-will use [go-discover](https://github.com/hashicorp/go-discover) to automatically
-attempt to discover and resolve potential Raft leader addresses.
+Note, in each [`retry_join`](/docs/configuration/storage/raft#retry_join-stanza)
+stanza, you may provide a single
+[`leader_api_addr`](/docs/configuration/storage/raft#leader_api_addr) or
+[`auto_join`](/docs/configuration/storage/raft#auto_join) value.  When a cloud
+[`auto_join`](/docs/configuration/storage/raft#auto_join) configuration value is
+provided, Vault will use [go-discover](https://github.com/hashicorp/go-discover)
+to automatically attempt to discover and resolve potential Raft leader
+addresses.
 
 See the go-discover
 [README](https://github.com/hashicorp/go-discover/blob/master/README.md) for
-details on the format of the `auto_join` value.
+details on the format of the [`auto_join`](/docs/configuration/storage/raft#auto_join) value.
 
 ```hcl
 storage "raft" {
@@ -106,9 +110,11 @@ storage "raft" {
 }
 ```
 
-By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
-Operators may override these through the `auto_join_scheme` and `auto_join_port`
-fields respectively.
+By default, Vault will attempt to reach discovered peers using HTTPS and port
+8200.  Operators may override these through the
+[`auto_join_scheme`](/docs/configuration/storage/raft#auto_join_scheme) and
+[`auto_join_port`](/docs/configuration/storage/raft#auto_join_port) fields
+respectively.
 
 ```hcl
 storage "raft" {
@@ -125,7 +131,7 @@ storage "raft" {
 
 #### Join from the CLI
 
-Alternatively you can use the [join CLI
+Alternatively you can use the [`join` CLI
 command](/docs/commands/operator/raft/#join) or the API to join a node. The
 active node's API address will need to be specified:
 
@@ -154,7 +160,7 @@ the size of the cluster, or for many other reasons. Removing the peer will
 ensure the cluster stays at the desired size, and that quorum is maintained.
 
 To remove the peer you can issue a
-[remove-peer](/docs/commands/operator/raft#remove-peer) command and provide the
+[`remove-peer`](/docs/commands/operator/raft#remove-peer) command and provide the
 node ID you wish to remove:
 
 ```shell-session
@@ -165,7 +171,7 @@ Peer removed successfully!
 ### Listing Peers
 
 To see the current peer set for the cluster you can issue a
-[list-peers](/docs/commands/operator/raft#list-peers) command. All the voting
+[`list-peers`](/docs/commands/operator/raft#list-peers) command. All the voting
 nodes that are listed here contribute to the quorum and a majority must be alive
 for integrated storage to continue to operate.
 
@@ -183,9 +189,10 @@ node3    node3.vault.local:8201    leader      true
 We've glossed over some details in the above sections on bootstrapping clusters.
 The instructions are sufficient for most cases, but some users have run into
 problems when using auto-join and TLS in conjunction with things like auto-scaling.
-The issue is that go-discover on most platforms returns IPs (not hostnames), and
-because the IPs aren't knowable in advance, the TLS certificates used to secure
-the Vault API port don't contain these IPs in their IP SANs.
+The issue is that [go-discover](https://github.com/hashicorp/go-discover) on
+most platforms returns IPs (not hostnames), and because the IPs aren't knowable
+in advance, the TLS certificates used to secure the Vault API port don't contain
+these IPs in their IP SANs.
 
 ### Vault networking recap
 
@@ -198,7 +205,7 @@ The API port is where clients send their Vault HTTP requests.
 
 For a single-node Vault cluster you don't worry about a cluster port as it won't be used.
 
-When you have multiple nodes you also need a cluster port.  This is used by Vault
+When you have multiple nodes, you also need a cluster port.  This is used by Vault
 nodes to issue RPCs to one another, e.g. to forward requests from a standby node
 to the active node, or when Raft is in use, to handle leader election and
 replication of stored data.
@@ -217,12 +224,12 @@ instead of the cluster port.  This is currently the only situation in which
 OSS Vault does this (Vault Enterprise also does something similar when setting
 up replication.)
 
-* node2 wants to join the cluster, so issues challenge API request to existing member node1
-* node1 replies to challenge request with (1) an encrypted random UUID and (2) seal config
-* node2 must decrypt UUID using seal; if using auto-unseal can do it directly, if using shamir must wait for user to provide enough unseal keys to perform decryption
-* node2 sends decrypted UUID back to node1 using answer API
-* node1 sees node2 can be trusted (since it has seal access) and replies with a bootstrap package which includes the cluster TLS certificate and private key
-* node2 gets sent a raft snapshot over the cluster port
+* `node2` wants to join the cluster, so issues challenge API request to existing member `node1`
+* `node1` replies to challenge request with (1) an encrypted random UUID and (2) seal config
+* `node2` must decrypt UUID using seal; if using auto-unseal can do it directly, if using Shamir must wait for user to provide enough unseal keys to perform decryption
+* `node2` sends decrypted UUID back to `node1` using answer API
+* `node1` sees `node2` can be trusted (since it has seal access) and replies with a bootstrap package which includes the cluster TLS certificate and private key
+* `node2` gets sent a raft snapshot over the cluster port
 
 After this procedure the new node will never again send traffic to the API port.
 All subsequent inter-node communication will use the cluster port.
@@ -231,22 +238,26 @@ All subsequent inter-node communication will use the cluster port.
 
 ### Assisted raft join techniques
 
-The simplest option is to do it by hand: issue raft join commands specifying the
-explicit names or IPs of the nodes to join to.  In this section we look at other
-TLS-compatible options that lend themselves more to automation.
+The simplest option is to do it by hand: issue [`raft
+join`](/docs/commands/operator/raft#join) commands specifying the explicit names
+or IPs of the nodes to join to.  In this section we look at other TLS-compatible
+options that lend themselves more to automation.
 
 #### Autojoin with TLS servername
 
-As of Vault 1.6.2, the simplest option might be to specify a leader_tls_servername
-in the retry_join stanza which matches a DNS SAN in the certificate.
+As of Vault 1.6.2, the simplest option might be to specify a
+[`leader_tls_servername`](/docs/configuration/storage/raft#leader_tls_servername)
+in the [`retry_join`](/docs/configuration/storage/raft#retry_join-stanza) stanza
+which matches a [DNS
+SAN](https://en.wikipedia.org/wiki/Subject_Alternative_Name) in the certificate.
 
 Note that names in a certificate's DNS SAN don't actually have to be registered
 in a DNS server.  Your nodes may have no names found in DNS, while still
-using certificate(s) that contain this shared "servername" in their DNS SANs.
+using certificate(s) that contain this shared `servername` in their DNS SANs.
 
 #### Autojoin but constrain CIDR, list all possible IPs in certificate
 
-If all the vault node IPs are assigned from a small subnet, e.g. a /28, it
+If all the vault node IPs are assigned from a small subnet, e.g. a `/28`, it
 becomes practical to put all the IPs that exist in that subnet into the IP SANs
 of the TLS certificate the nodes will share.
 
@@ -258,8 +269,9 @@ using non-voting nodes and dynamically scaling clusters.
 
 Most Vault instances are going to have a load balancer (LB) between clients and
 the Vault nodes.  In that case, the LB knows how to route traffic to working
-Vault nodes, and there's no need for auto-join: we can just use retry_join
-with the LB address as the target.
+Vault nodes, and there's no need for auto-join: we can just use
+[`retry_join`](/docs/configuration/storage/raft#retry_join-stanza) with the LB
+address as the target.
 
 One potential issue here: some users want a public facing LB for clients to
 connect to Vault, but aren't comfortable with Vault internal traffic
@@ -279,12 +291,13 @@ and have it reconnect to the cluster with the same host address. This will retur
 the cluster to a fully healthy state.
 
 If this is impractical, you need to remove the failed server. Usually, you can
-issue a remove-peer command to remove the failed server if it's still a member
-of the cluster.
+issue a [`remove-peer`](/docs/commands/operator/raft#remove-peer) command to
+remove the failed server if it's still a member of the cluster.
 
-If the remove-peer command isn't possible or you'd rather manually re-write the
-cluster membership a `raft/peers.json` file can be written to the configured
-data directory.
+If the [`remove-peer`](/docs/commands/operator/raft#remove-peer) command isn't
+possible or you'd rather manually re-write the cluster membership a
+[`raft/peers.json`](#manual-recovery-using-peers-json) file can be written to
+the configured data directory.
 
 ### Quorum Lost
 
@@ -302,22 +315,24 @@ committed could be incomplete. The recovery process implicitly commits all
 outstanding Raft log entries, so it's also possible to commit data that was
 uncommitted before the failure.
 
-See the section below on manual recovery using peers.json for details of the
-recovery procedure. You include only the remaining servers in the
-raft/peers.json recovery file. The cluster should be able to elect a leader once
-the remaining servers are all restarted with an identical raft/peers.json
-configuration.
+See the section below on manual recovery using
+[`peers.json`](#manual-recovery-using-peers-json) for details of the recovery
+procedure. You include only the remaining servers in the
+[`peers.json`](#manual-recovery-using-peers-json) recovery file. The
+cluster should be able to elect a leader once the remaining servers are all
+restarted with an identical
+[`peers.json`](#manual-recovery-using-peers-json) configuration.
 
 Any servers you introduce later can be fresh with totally clean data
 directories and joined using Vault's join command.
 
 In extreme cases, it should be possible to recover with just a single remaining
 server by starting that single server with itself as the only peer in the
-raft/peers.json recovery file.
+[`peers.json`](#manual-recovery-using-peers-json) recovery file.
 
 ### Manual Recovery Using peers.json
 
-Using raft/peers.json for recovery can cause uncommitted Raft log entries to be
+Using `raft/peers.json` for recovery can cause uncommitted Raft log entries to be
 implicitly committed, so this should only be used after an outage where no other
 option is available to recover a lost server. Make sure you don't have any
 automated processes that will put the peers file in place on a periodic basis.
@@ -326,10 +341,10 @@ To begin, stop all remaining servers.
 
 The next step is to go to the [configured data
 path](/docs/configuration/storage/raft/#path) of each Vault server. Inside that
-directory, there will be a raft/ sub-directory. We need to create a
-raft/peers.json file. The file should be formatted as a JSON array containing
-the node ID, address:port, and suffrage information of each Vault server you
-wish to be in the cluster.
+directory, there will be a `raft/` sub-directory. We need to create a
+`raft/peers.json` file. The file should be formatted as a JSON array containing
+the node ID, `address:port`, and suffrage information of each Vault server you
+wish to be in the cluster:
 
 ```json
 [
@@ -352,7 +367,7 @@ wish to be in the cluster.
 ```
 
 - `id` `(string: <required>)` - Specifies the node ID of the server. This can be
-  found in the config file, or inside the node-id file in the server's data
+  found in the config file, or inside the `node-id` file in the server's data
   directory if it was auto-generated.
 - `address` `(string: <required>)` - Specifies the host and port of the server. The
   port is the server's cluster port.
