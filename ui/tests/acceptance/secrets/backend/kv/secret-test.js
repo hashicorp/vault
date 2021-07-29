@@ -73,6 +73,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
+    await settled();
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', secretPath);
     await fillIn('[data-test-input="maxVersions"]', maxVersions);
@@ -93,6 +94,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let enginePath = `kv-${new Date().getTime()}`;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
+    await settled();
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', 'beep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
