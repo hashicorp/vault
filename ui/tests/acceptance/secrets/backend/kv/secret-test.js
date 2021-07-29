@@ -43,11 +43,14 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('it creates a secret and redirects', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
     await listPage.create();
+    await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
+    await settled();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
