@@ -1,3 +1,4 @@
-import Route from '@ember/routing/route';
+// import Route from '@ember/routing/route';
+import Metadata from './metadata';
 
-export default class VaultClusterSecretsBackendEditMetadataRoute extends Route {}
+export default class EditMetadataRoute extends Metadata {}
