@@ -10,12 +10,3 @@
   grid-row: 1;
   align-self: center;
 }
-
-.overflow-ellipsis {
-  box-sizing: border-box;
-  &.is-closed {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}

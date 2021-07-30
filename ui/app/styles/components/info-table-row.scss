@@ -2,6 +2,10 @@
   box-shadow: 0 1px 0 $grey-light;
   margin: 0;
 
+  &.has-no-shadow {
+    box-shadow: none;
+  }
+
   @include from($tablet) {
     display: flex;
   }

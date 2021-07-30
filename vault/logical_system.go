@@ -3602,18 +3602,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	resp := logical.ErrorResponse("The functionality has been removed on this path")
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": counters,
-		},
-	}
-
-	return resp, nil
+	return resp, logical.ErrPathFunctionalityRemoved
 }
 
 func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4808,8 +4799,8 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"internal-counters-requests": {
-		"Count of requests seen by this Vault cluster over time.",
-		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 	"internal-counters-tokens": {
 		"Count of active tokens in this Vault cluster.",
