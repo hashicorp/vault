@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -41,7 +42,7 @@ func (r *Response) Error() error {
 
 	r.Body.Close()
 	r.Body = ioutil.NopCloser(bodyBuf)
-	ns := r.Header.Get("X-Vault-Namespace")
+	ns := r.Header.Get(consts.NamespaceHeaderName)
 
 	// Build up the error object
 	respErr := &ResponseError{

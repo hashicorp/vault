@@ -351,9 +351,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 
 		// Setting the namespace in the header to be included in the error message
-		ns := r.Header.Get("X-Vault-Namespace")
+		ns := r.Header.Get(consts.NamespaceHeaderName)
 		if ns != "" {
-			w.Header().Set("X-Vault-Namespace", ns)
+			w.Header().Set(consts.NamespaceHeaderName, ns)
 		}
 
 		h.ServeHTTP(w, r)
