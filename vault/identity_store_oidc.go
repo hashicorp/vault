@@ -243,6 +243,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"key": {
 					Type:        framework.TypeString,
 					Description: "The OIDC key to use for generating tokens. The specified key must already exist.",
+					Required:    true,
 				},
 				"template": {
 					Type:        framework.TypeString,
