@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/command/agent"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -28,6 +29,7 @@ type Config struct {
 	Vault          *Vault                     `hcl:"vault"`
 	TemplateConfig *TemplateConfig            `hcl:"template_config"`
 	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
+	PasswordStore  *agent.PasswordStore       `hcl:"password_store"`
 }
 
 func (c *Config) Prune() {

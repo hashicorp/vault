@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/hashicorp/vault/command/agent"
 	"io"
 	"io/ioutil"
 	"net"
@@ -682,9 +683,11 @@ func (c *AgentCommand) Run(args []string) int {
 				muxHandler = verifyRequestHeader(muxHandler)
 			}
 
+			ps := agent.NewPasswordStore(config.PasswordStore, leaseCache, client)
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle("/v1/password_store/", ps)
 			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
