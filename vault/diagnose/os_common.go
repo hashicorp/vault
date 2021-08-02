@@ -36,7 +36,7 @@ partLoop:
 			} else if usage.Free < 1<<30 {
 				if usage.Free > 1<<20 {
 					// convert warning to MB to be more human readable
-					SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %d bytes free.", int64(usage.Free/(1<<20))))
+					SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %d MB free.", int64(usage.Free/(1<<20))))
 				} else {
 					SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %d bytes free.", usage.Free))
 				}
