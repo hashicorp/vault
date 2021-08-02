@@ -63,7 +63,7 @@ func TestDiagnoseOtelResults(t *testing.T) {
 		},
 	}
 	sess := New(os.Stdout)
-	sess.SetSkipList([]string{"dispose-grounds"})
+	sess.SkipFilters = []string{"dispose-grounds"}
 	ctx := Context(context.Background(), sess)
 
 	func() {
@@ -107,7 +107,7 @@ func makeCoffee(ctx context.Context) error {
 
 	SpotCheck(ctx, "pick-scone", pickScone)
 
-	Test(ctx, "dispose-grounds", Skippable("dispose-grounds", disposeGrounds))
+	Test(ctx, "dispose-grounds", disposeGrounds)
 	return nil
 }
 

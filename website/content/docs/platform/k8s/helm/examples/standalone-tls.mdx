@@ -133,7 +133,13 @@ TMPDIR=/tmp
    kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
    ```
 
-4. Store the key, cert, and Kubernetes CA into Kubernetes secrets.
+4. Create the namespace.
+
+    ```bash
+    kubectl create namespace ${NAMESPACE}
+    ```
+
+5. Store the key, cert, and Kubernetes CA into Kubernetes secrets.
 
    ```bash
    kubectl create secret generic ${SECRET_NAME} \

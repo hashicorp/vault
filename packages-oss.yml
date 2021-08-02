@@ -104,6 +104,7 @@ build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/sdk/version;
 # is a useful data source for building CI/CD pipelines.
 packages:
   - inputs: { GOOS: darwin, GOARCH: amd64 }
+  - inputs: { GOOS: darwin, GOARCH: arm64 }
   - inputs: { GOOS: freebsd, GOARCH: 386 }
   - inputs: { GOOS: freebsd, GOARCH: amd64 }
   - inputs: { GOOS: freebsd, GOARCH: arm }
@@ -225,7 +226,7 @@ layers:
       WORKDIR $DIR
   - name: install-yarn
     dockerfile: |-
-      RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+      RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
       RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
       RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
       RUN apt-get update -y && apt-get install -y -q nodejs yarn={{.YARN_VERSION}} \

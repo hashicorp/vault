@@ -5,7 +5,7 @@ import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
-import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import highlightData from '@hashicorp/platform-code-highlighting/highlight-data'
 import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {

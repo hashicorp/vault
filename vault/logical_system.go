@@ -24,6 +24,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -34,8 +36,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -3548,18 +3548,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	resp := logical.ErrorResponse("The functionality has been removed on this path")
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": counters,
-		},
-	}
-
-	return resp, nil
+	return resp, logical.ErrPathFunctionalityRemoved
 }
 
 func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4754,8 +4745,8 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"internal-counters-requests": {
-		"Count of requests seen by this Vault cluster over time.",
-		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 	"internal-counters-tokens": {
 		"Count of active tokens in this Vault cluster.",

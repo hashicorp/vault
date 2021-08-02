@@ -14,7 +14,7 @@ import (
 	"github.com/cockroachdb/cockroach-go/crdb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	// CockroachDB uses the Postgres SQL driver

@@ -31,7 +31,7 @@ There can be many different types of clients that authenticate and communicate w
 
 ## How do Clients work in Vault?
 
-When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](https://www.vaultproject.io/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](/what-is-a-client#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
+When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](https://www.vaultproject.io/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
 
 ## But wait, there’s more...
 
