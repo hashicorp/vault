@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/shirou/gopsutil/disk"
 )
 
@@ -34,12 +35,7 @@ partLoop:
 				SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" is %.2f percent full.", usage.UsedPercent))
 				Advise(ctx, "It is recommended to have more than five percent of the partition free.")
 			} else if usage.Free < 1<<30 {
-				if usage.Free > 1<<20 {
-					// convert warning to MB to be more human readable
-					SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %d MB free.", int64(usage.Free/(1<<20))))
-				} else {
-					SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %d bytes free.", usage.Free))
-				}
+				SpotWarn(ctx, testName, fmt.Sprintf(partition.Mountpoint+" has %s free.", humanize.Bytes(usage.Free)))
 				Advise(ctx, "It is recommended to have at least 1 GB of space free per partition.")
 			} else {
 				SpotOk(ctx, testName, partition.Mountpoint+" usage ok.")
