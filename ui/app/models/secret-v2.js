@@ -59,7 +59,7 @@ export default Model.extend(KeyMixin, Validations, {
     editType: 'ttl',
     label: 'Automate secret deletion',
     textDisabled: 'A secret’s version must be manually deleted.',
-    textEnabled: 'Delete a secret version after.',
+    textEnabled: 'Delete a secret version after',
   }),
   fields: computed(function() {
     return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter']);
