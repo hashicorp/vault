@@ -31,14 +31,21 @@ repository.
 ### Via the CLI Helper
 
 Vault includes a CLI helper that obtains a signed JWT locally and sends the
-request to Vault. This helper is only available for IAM-type roles.
+request to Vault.
 
 ```shell-session
+# This for authentication to vault outside of Google Cloud
 $ vault login -method=gcp \
     role="my-role" \
     service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
     jwt_exp="15m" \
     credentials=@path/to/signer/credentials.json
+```
+
+```shell-session
+# This for authentication to vault inside of Google Cloud.
+$ vault login -method=gcp \
+    role="my-role" \
 ```
 
 For more usage information, run `vault auth help gcp`.
@@ -79,7 +86,7 @@ management tool.
    $ vault auth enable gcp
    ```
 
-1. Configure the auth method credentials:
+1. Configure the auth method credentials if Vault is not running on Google Cloud:
 
    ```text
    $ vault write auth/gcp/config \
@@ -183,6 +190,10 @@ If you are using Group Aliases as described below, you will also need to add the
 
 #### Permissions For Authenticating Against Vault
 
+If you are authenticating to Vault from Google Cloud, you can skip the following step as
+vault will use generate and present the identity token of the service account configured
+on the instance or the pod.
+
 Note that the previously mentioned permissions are given to the _Vault servers_.
 The IAM service account or GCE instance that is **authenticating against Vault**
 must have the following role:
@@ -248,7 +259,7 @@ for IAM service accounts looks like this:
 ### GCE Login
 
 GCE login only applies to roles of type `gce` and **must be completed on an
-instance running in GCE**. These steps will not work from your local laptop or
+infrastructure running on Google Cloud**. These steps will not work from your local laptop or
 another cloud provider.
 
 [![Vault Google Cloud GCE Login Workflow](/img/vault-gcp-gce-auth-workflow.svg)](/img/vault-gcp-gce-auth-workflow.svg)
@@ -332,6 +343,8 @@ Read more on the
 [Google Open Source blog](https://opensource.googleblog.com/2017/08/hashicorp-vault-and-google-cloud-iam.html).
 
 ### GCE
+
+You can autogenerate this token in Vault versions newer than 1.8.2.
 
 GCE tokens **can only be generated from a GCE instance**. The JWT token can be
 obtained from the `service-accounts/default/identity` endpoint for a
