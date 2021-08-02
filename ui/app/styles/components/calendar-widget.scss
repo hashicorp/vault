@@ -1,0 +1,85 @@
+.select-year {
+  grid-area: select-year;
+  margin-left: 24px;
+  font-weight: $font-weight-bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: first baseline;
+
+  .icon-container {
+    padding-right: 26px;
+  }
+}
+
+.select-months {
+  grid-area: select-months;
+  margin-left: 26px;
+  color: $ui-gray-400;
+  font-weight: $font-weight-semibold;
+  font-size: 13px;
+}
+
+.calendar-widget {
+  grid-area: calendar-widget;
+}
+
+.month-nav {
+  grid-area: month-nav;
+}
+
+.border-col {
+  grid-area: border-col;
+  background-color: $ui-gray-200;
+}
+
+.calendar-widget-container {
+  display: grid;
+  grid-template-areas:
+    'select-year border-col . '
+    'select-months border-col .'
+    'calendar-widget border-col month-nav';
+  grid-template-columns: 2fr 0.01fr 1fr;
+  grid-template-rows: 0.7fr 0.2fr 3fr;
+  box-shadow: 0 0 0 1.5px $ui-gray-200;
+  background-color: white;
+  border-radius: 2px;
+  padding: 14px 0px 14px 14px;
+}
+
+.calendar-widget-grid {
+  display: grid;
+  grid-template-columns: 110px 110px;
+  grid-template-rows: repeat(2, 1fr);
+  grid-gap: 0.5rem;
+  padding: 7px 28px 28px 28px;
+}
+
+.is-selected {
+  background-color: $blue-500;
+  color: white;
+  text-align: center;
+}
+
+.is-not-selected {
+  background-color: white;
+  color: black;
+  text-align: center;
+  border: 1px solid $ui-gray-200;
+  border-radius: 2px;
+}
+
+.calendar-widget-nav {
+  border-left: 1px solid $ui-gray-200;
+  text-align: center;
+  line-height: 35px;
+  padding-top: 7px;
+  font-weight: $font-weight-semibold;
+  ul > li {
+    color: $blue-500 !important;
+
+    &.active,
+    &:hover {
+      background-color: $ui-gray-100;
+    }
+  }
+}

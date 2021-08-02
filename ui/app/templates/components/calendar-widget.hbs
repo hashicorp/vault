@@ -1,0 +1,52 @@
+
+    <BasicDropdown
+      @class="popup-menu"
+      @horizontalPosition="auto-right"
+      @verticalPosition="below"
+      as |D|
+    >
+      <D.trigger
+        data-test-popup-menu-trigger="version"
+        @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @tagName="button"
+      >
+        5/2021 - 6/2021
+        {{!-- make direction dynamic --}}
+        <Chevron @direction="down" @isButton={{true}} /> 
+      </D.trigger>
+      <D.content @class="popup-menu-content">
+        <div class="calendar-widget-container">
+            <div class="select-year">
+                <p>2021</p>
+                <div class="icon-container">
+                    <Chevron @direction="left" @size="s" class="has-text-grey" />
+                    <Chevron @direction="right" @size="s" class="has-text-grey" />
+                </div>
+            </div>
+            <div class="select-months">SELECT MONTHS</div>
+            <div class="calendar-widget-grid calendar-widget">
+                <div class="is-selected">January</div>
+                <div class="is-selected">February</div>
+                <div class="is-selected">March</div>
+                <div class="is-selected">April</div>
+                <div class="is-selected">May</div>
+                <div class="is-selected">June</div>
+                <div class="is-selected">July</div>
+                <div class="is-selected">August</div>
+                <div class="is-selected">September</div>
+                <div class="is-selected">October</div>
+                <div class="is-selected">November</div>
+                <div class="is-not-selected">December</div>
+            </div>
+            <div class="border-col"></div>
+            <div class="calendar-widget-nav month-nav">
+                <ul>
+                    <li>Last month</li>
+                    <li>Last 3 months</li>
+                    <li>Last 6 months</li>
+                    <li>Last 12 months</li>
+                </ul>
+            </div>
+        </div>
+      </D.content>
+    </BasicDropdown>
