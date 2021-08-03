@@ -1,4 +1,3 @@
-
     <BasicDropdown
       @class="popup-menu"
       @horizontalPosition="auto-right"
@@ -9,16 +8,20 @@
         @class={{concat "calendar-widget-dropdown" (if D.isOpen " is-active")}}
         @tagName="button"
       >
-        {{this.lastMonth}} - {{this.presentMonth}}
+        {{this.startMonthRange}} - {{this.endMonthRange}}
         <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} /> 
       </D.trigger>
       <D.content @class="popup-menu-content">
         <div class="calendar-widget-container">
             <div class="select-year">
-                <p>2021</p>
+                <p>{{this.displayYear}}</p>
                 <div class="icon-container">
-                    <Chevron @direction="left" @size="s" class="has-text-grey" />
-                    <Chevron @direction="right" @size="s" class="has-text-grey" />
+                    <button type="button" class="button is-transparent" {{on "click" this.subYear}}>
+                        <Chevron @direction="left" @size="s" class="has-text-grey" />
+                    </button>
+                    <button type="button" class="button is-transparent" {{on "click" this.addYear}}>
+                        <Chevron @direction="right" @size="s" class="has-text-grey" />
+                    </button>
                 </div>
             </div>
             <div class="select-months">SELECT MONTHS</div>

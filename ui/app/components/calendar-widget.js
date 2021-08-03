@@ -14,14 +14,33 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, sub } from 'date-fns';
+import { format, sub, add } from 'date-fns';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 
 class CalendarWidget extends Component {
-  lastMonth = format(this.calculateLastMonth(), 'M/yyyy');
-  presentMonth = format(Date.now(), 'M/yyyy');
+  startMonthRange = format(this.calculateLastMonth(), 'M/yyyy');
+  endMonthRange = format(this.currentDate(), 'M/yyyy');
+
+  @tracked
+  displayYear = parseInt(format(this.currentDate(), 'yyyy'));
 
   calculateLastMonth() {
-    return sub(Date.now(), { months: 1 });
+    return sub(this.currentDate(), { months: 1 });
+  }
+
+  currentDate() {
+    return Date.now();
+  }
+
+  @action
+  subYear() {
+    this.displayYear -= 1;
+  }
+
+  @action
+  addYear() {
+    this.displayYear += 1;
   }
 }
 
