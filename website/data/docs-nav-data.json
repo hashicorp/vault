@@ -7,10 +7,7 @@
     "title": "Use Cases",
     "path": "use-cases"
   },
-  {
-    "title": "Vault Integration Program",
-    "path": "partnerships"
-  },
+
   {
     "divider": true
   },
@@ -1211,6 +1208,11 @@
   {
     "title": "Plugin Portal",
     "path": "plugin-portal"
+  },
+
+  {
+    "title": "Vault Integration Program",
+    "path": "partnerships"
   },
   {
     "divider": true
