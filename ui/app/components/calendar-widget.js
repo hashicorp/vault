@@ -11,6 +11,18 @@
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import layout from '../templates/components/calendar-widget';
+import { setComponentTemplate } from '@ember/component';
+import { format, sub } from 'date-fns';
 
-export default Component.extend({});
+class CalendarWidget extends Component {
+  lastMonth = format(this.calculateLastMonth(), 'M/yyyy');
+  presentMonth = format(Date.now(), 'M/yyyy');
+
+  calculateLastMonth() {
+    return sub(Date.now(), { months: 1 });
+  }
+}
+
+export default setComponentTemplate(layout, CalendarWidget);

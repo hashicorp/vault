@@ -1,3 +1,24 @@
+.calendar-widget-dropdown {
+  @extend .button;
+  @extend .is-ghost;
+  @extend .has-icon-right;
+  border: 0;
+  color: $black;
+  transition: background-color $speed;
+
+  &:hover {
+    background-color: $ui-gray-100;
+    border: 0;
+    color: $blue;
+  }
+
+  &.is-active {
+    background-color: $ui-gray-100;
+    border: 0;
+    color: $blue;
+  }
+}
+
 .select-year {
   grid-area: select-year;
   margin-left: 24px;
