@@ -26,6 +26,9 @@ class CalendarWidget extends Component {
   isActive = false;
 
   @tracked
+  isSelected = false;
+
+  @tracked
   // will need to be in API appropriate format, using parseInt here for hack-y functionality
   displayYear = parseInt(format(this.currentDate(), 'yyyy'));
 
