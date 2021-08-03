@@ -26,18 +26,18 @@
             </div>
             <div class="select-months">SELECT MONTHS</div>
             <div class="calendar-widget-grid calendar-widget">
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>January</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>February</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>March</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>April</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>May</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>June</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>July</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>August</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>September</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>October</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>November</div>
-                <div class={{ if this.isSelected "is-selected" "is-not-selected"}}>December</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-january" >January</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-february">February</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-march">March</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-april">April</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-may">May</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-june">June</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-july">July</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-august">August</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-september">September</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-october">October</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-november">November</div>
+                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-december">December</div>
             </div>
             <div class="border-col"></div>
             <div class="calendar-widget-nav month-nav">

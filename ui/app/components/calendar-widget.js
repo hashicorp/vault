@@ -14,7 +14,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, sub, add } from 'date-fns';
+import { format, sub, add, eachMonthOfInterval } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -25,8 +25,7 @@ class CalendarWidget extends Component {
   @tracked
   isActive = false;
 
-  @tracked
-  isSelected = false;
+  @tracked isSelected = false;
 
   @tracked
   // will need to be in API appropriate format, using parseInt here for hack-y functionality
@@ -37,7 +36,7 @@ class CalendarWidget extends Component {
   }
 
   currentDate() {
-    return Date.now();
+    return new Date();
   }
 
   @action
@@ -51,20 +50,49 @@ class CalendarWidget extends Component {
   }
 
   @action
+  selectMonth(e) {
+    if (e.target.className === 'is-not-selected') {
+      e.target.className = 'is-selected';
+    } else {
+      e.target.className = 'is-not-selected';
+    }
+  }
+
+  @action
   selectMonths(e) {
     const innerText = e.target.textContent;
+    let result;
+    let months = [];
     switch (innerText) {
       case 'Last month':
-        console.log('okay just go back a month');
+        result = this.calculateLastMonth();
+        this.selectJuly = true;
+        months.push(format(result, 'MMMM'));
+        console.log(months);
         break;
       case 'Last 3 months':
-        console.log('nice 3 months');
+        result = eachMonthOfInterval({
+          start: sub(this.currentDate(), { months: 3 }),
+          end: this.currentDate(),
+        });
+        result.forEach(date => months.push(format(date, 'MMMM')));
+        console.log(months);
         break;
       case 'Last 6 months':
-        console.log('woah 6 months');
+        result = eachMonthOfInterval({
+          start: sub(this.currentDate(), { months: 6 }),
+          end: this.currentDate(),
+        });
+        result.forEach(date => months.push(format(date, 'MMMM')));
+        console.log(months);
         break;
       case 'Last 12 months':
-        console.log('a whole dang year?!');
+        result = eachMonthOfInterval({
+          start: sub(this.currentDate(), { months: 12 }),
+          end: this.currentDate(),
+        });
+        result.forEach(date => months.push(format(date, 'MMMM')));
+        console.log(months);
         break;
       default:
         console.log('Incorrect input');
