@@ -98,9 +98,10 @@
   ul > li {
     color: $blue-500 !important;
 
-    &.active,
+    &.is-active,
     &:hover {
       background-color: $ui-gray-100;
+      cursor: pointer;
     }
   }
 }

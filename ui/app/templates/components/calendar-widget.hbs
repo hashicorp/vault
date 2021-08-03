@@ -42,10 +42,10 @@
             <div class="border-col"></div>
             <div class="calendar-widget-nav month-nav">
                 <ul>
-                    <li>Last month</li>
-                    <li>Last 3 months</li>
-                    <li>Last 6 months</li>
-                    <li>Last 12 months</li>
+                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last month</li>
+                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last 3 months</li>
+                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last 6 months</li>
+                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last 12 months</li>
                 </ul>
             </div>
         </div>

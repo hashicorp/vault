@@ -23,6 +23,10 @@ class CalendarWidget extends Component {
   endMonthRange = format(this.currentDate(), 'M/yyyy');
 
   @tracked
+  isActive = false;
+
+  @tracked
+  // will need to be in API appropriate format, using parseInt here for hack-y functionality
   displayYear = parseInt(format(this.currentDate(), 'yyyy'));
 
   calculateLastMonth() {
@@ -41,6 +45,27 @@ class CalendarWidget extends Component {
   @action
   addYear() {
     this.displayYear += 1;
+  }
+
+  @action
+  selectMonths(e) {
+    const innerText = e.target.textContent;
+    switch (innerText) {
+      case 'Last month':
+        console.log('okay just go back a month');
+        break;
+      case 'Last 3 months':
+        console.log('nice 3 months');
+        break;
+      case 'Last 6 months':
+        console.log('woah 6 months');
+        break;
+      case 'Last 12 months':
+        console.log('a whole dang year?!');
+        break;
+      default:
+        console.log('Incorrect input');
+    }
   }
 }
 
