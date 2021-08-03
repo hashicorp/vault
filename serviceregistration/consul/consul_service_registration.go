@@ -49,6 +49,10 @@ const (
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
 	reconcileTimeout = 60 * time.Second
+
+	// metaExternalSource is a metadata value for external-source that can be
+	// used by the Consul UI.
+	metaExternalSource = "vault"
 )
 
 var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
@@ -503,6 +507,9 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		Port:              int(c.redirectPort),
 		Address:           serviceAddress,
 		EnableTagOverride: false,
+		Meta: map[string]string{
+			"external-source": metaExternalSource,
+		},
 	}
 
 	checkStatus := api.HealthCritical
