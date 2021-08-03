@@ -244,7 +244,7 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		origBody := new(bytes.Buffer)
 		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
 		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		req, _, status, err := BuildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return

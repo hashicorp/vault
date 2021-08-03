@@ -39,7 +39,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 
-		// We don't want to do buildLogicalRequestNoAuth here because, if the
+		// We don't want to do BuildLogicalRequestNoAuth here because, if the
 		// request gets allowed by the quota, the same function will get called
 		// again, which is not desired.
 		path, status, err := buildLogicalPath(r)
@@ -76,7 +76,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {
-				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+				req, _, status, err := BuildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 				if err != nil || status != 0 {
 					respondError(w, status, err)
 					return

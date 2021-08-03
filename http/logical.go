@@ -38,7 +38,7 @@ func (b *bufferedReader) Close() error {
 	return b.rOrig.Close()
 }
 
-func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func BuildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
@@ -214,7 +214,7 @@ func buildLogicalPath(r *http.Request) (string, int, error) {
 }
 
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
-	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	req, origBody, status, err := BuildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
@@ -266,7 +266,7 @@ func handleLogicalNoForward(core *vault.Core) http.Handler {
 
 func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
+		req, _, statusCode, err := BuildLogicalRequestNoAuth(false, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return

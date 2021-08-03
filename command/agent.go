@@ -687,7 +687,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-			mux.Handle("/v1/password_store/", ps)
+			mux.Handle("/v1/agent/", ps)
 			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
