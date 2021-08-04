@@ -1003,7 +1003,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		if role.TokenTTL > key.VerificationTTL {
 			return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
 		}
-
 	}
 
 	if clientID, ok := d.GetOk("client_id"); ok {
