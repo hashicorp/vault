@@ -1,3 +1,0 @@
-```release-note:bug
-identity: allow creating a role with a non-existent key
-```
