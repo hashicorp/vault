@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database/influxdb: Upgrade influxdb1 client library and import it from new URI
+```
