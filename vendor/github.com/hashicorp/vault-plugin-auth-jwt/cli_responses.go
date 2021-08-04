@@ -449,7 +449,7 @@ func formpostHTML(path, code, state string) string {
       </div>
     </div>
 	<script>
-		window.localStorage.setItem("oidcState", JSON.stringify({"path":"%s", "code":"%s", "state":"%s"}));
+		window.opener.postMessage({ path: "%s", code: "%s", state: "%s"}, window.origin);
 	</script>
   </body>
 </html>

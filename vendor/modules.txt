@@ -587,7 +587,7 @@ github.com/hashicorp/vault-plugin-auth-cf/util
 ## explicit
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.8.1
+# github.com/hashicorp/vault-plugin-auth-jwt v0.8.2
 ## explicit
 github.com/hashicorp/vault-plugin-auth-jwt
 # github.com/hashicorp/vault-plugin-auth-kerberos v0.2.0
