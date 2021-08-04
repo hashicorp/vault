@@ -44,10 +44,12 @@
   grid-area: calendar-widget;
 
   > div {
-    &.is-selected {
-      background-color: $blue-500;
-      color: white;
+    &.is-calendar-month {
+      background-color: white;
+      color: black;
       text-align: center;
+      border: 1px solid $ui-gray-200;
+      border-radius: 2px;
     }
     &:hover {
       background-color: $blue-500;
@@ -55,12 +57,10 @@
       text-align: center;
       cursor: pointer;
     }
-    &.is-not-selected {
-      background-color: white;
-      color: black;
+    &.is-selected {
+      background-color: $blue-500;
+      color: white;
       text-align: center;
-      border: 1px solid $ui-gray-200;
-      border-radius: 2px;
     }
   }
 }

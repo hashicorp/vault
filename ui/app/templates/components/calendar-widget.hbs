@@ -26,26 +26,26 @@
             </div>
             <div class="select-months">SELECT MONTHS</div>
             <div class="calendar-widget-grid calendar-widget">
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-january" >January</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-february">February</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-march">March</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-april">April</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-may">May</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-june">June</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-july">July</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-august">August</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-september">September</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-october">October</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-november">November</div>
-                <div {{on "click" this.selectMonth}} class="is-not-selected" id="month-december">December</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-1">January</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-2">February</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-3">March</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-4">April</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-5">May</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-6">June</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-7">July</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-8">August</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-9">September</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-10">October</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-11">November</div>
+                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-12">December</div>
             </div>
             <div class="border-col"></div>
             <div class="calendar-widget-nav month-nav">
                 <ul>
-                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last month</li>
-                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last 3 months</li>
-                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last 6 months</li>
-                    <li class={{if isActive " is-active"}} {{on "click" this.selectMonths}}>Last 12 months</li>
+                    <li class={{if isActive " is-active"}} {{on "click" (fn this.selectMonths 0)}}>Last month</li>
+                    <li class={{if isActive " is-active"}} {{on "click" (fn this.selectMonths 2)}}>Last 3 months</li>
+                    <li class={{if isActive " is-active"}} {{on "click" (fn this.selectMonths 5)}}>Last 6 months</li>
+                    <li class={{if isActive " is-active"}} {{on "click" (fn this.selectMonths 11)}}>Last 12 months</li>
                 </ul>
             </div>
         </div>
