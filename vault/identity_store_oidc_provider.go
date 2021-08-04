@@ -66,9 +66,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 
 	name := d.Get("name").(string)
 
-	i.oidcLock.Lock()
-	defer i.oidcLock.Unlock()
-
 	var assignment namedAssignment
 	if req.Operation == logical.UpdateOperation {
 		entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
@@ -113,9 +110,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 
 // pathOIDCListAssignment is used to list named assignments
 func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	i.oidcLock.RLock()
-	defer i.oidcLock.RUnlock()
-
 	assignments, err := req.Storage.List(ctx, namedAssignmentPath)
 	if err != nil {
 		return nil, err
@@ -126,9 +120,6 @@ func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical
 // pathOIDCReadAssignment is used to read an existing assignment
 func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-
-	i.oidcLock.RLock()
-	defer i.oidcLock.RUnlock()
 
 	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
 	if err != nil {
@@ -162,9 +153,6 @@ func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logic
 
 func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-
-	i.oidcLock.RLock()
-	defer i.oidcLock.RUnlock()
 
 	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
 	if err != nil {
