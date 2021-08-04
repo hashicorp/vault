@@ -188,7 +188,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// If storing the certificate and on a performance standby, forward this request on to the primary
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby|consts.ReplicationPerformanceSecondary) {
 		return nil, logical.ErrReadOnly
 	}
 
