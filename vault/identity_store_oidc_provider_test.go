@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// TestOIDC_Path_OIDCAssignment tests CRUD operations for assignments
-func TestOIDC_Path_OIDCAssignment(t *testing.T) {
+// TestOIDC_Path_OIDCProviderAssignment tests CRUD operations for assignments
+func TestOIDC_Path_OIDCProviderAssignment(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -80,6 +80,66 @@ func TestOIDC_Path_OIDCAssignment(t *testing.T) {
 	})
 	if resp != nil {
 		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
+// TestOIDC_Path_OIDCProviderAssignment_Update tests Update operations for assignments
+func TestOIDC_Path_OIDCProviderAssignment_Update(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test assignment "test-assignment" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"groups":   "my-group",
+			"entities": "my-entity",
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-assignment" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"groups":   []string{"my-group"},
+		"entities": []string{"my-entity"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-assignment" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"groups": "my-group2",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-assignment" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"groups":   []string{"my-group2"},
+		"entities": []string{"my-entity"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

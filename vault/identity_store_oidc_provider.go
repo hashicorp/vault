@@ -36,11 +36,19 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Description: "Comma separated string or array of identity group names",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: i.pathOIDCCreateUpdateAssignment,
-				logical.UpdateOperation: i.pathOIDCCreateUpdateAssignment,
-				logical.ReadOperation:   i.pathOIDCReadAssignment,
-				logical.DeleteOperation: i.pathOIDCDeleteAssignment,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateAssignment,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateAssignment,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadAssignment,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathOIDCDeleteAssignment,
+				},
 			},
 			ExistenceCheck:  i.pathOIDCAssignmentExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC assignments.",
@@ -48,8 +56,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/assignment/?$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathOIDCListAssignment,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathOIDCListAssignment,
+				},
 			},
 			HelpSynopsis:    "List OIDC assignments",
 			HelpDescription: "List all configured OIDC assignments in the identity backend.",
