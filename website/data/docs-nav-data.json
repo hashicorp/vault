@@ -1,5 +1,18 @@
 [
   {
+    "title": "What is Vault?",
+    "path": "what-is-vault"
+  },
+  {
+    "title": "Use Cases",
+    "path": "use-cases"
+  },
+
+  {
+    "divider": true
+  },
+
+  {
     "title": "Installing Vault",
     "path": "install"
   },
@@ -520,6 +533,10 @@
           {
             "title": "Overview",
             "path": "commands/operator"
+          },
+          {
+            "title": "<code>diagnose</code>",
+            "path": "commands/operator/diagnose"
           },
           {
             "title": "<code>generate-root</code>",
@@ -1192,17 +1209,7 @@
     "title": "Plugin Portal",
     "path": "plugin-portal"
   },
-  {
-    "divider": true
-  },
-  {
-    "title": "What is Vault?",
-    "path": "what-is-vault"
-  },
-  {
-    "title": "Use Cases",
-    "path": "use-cases"
-  },
+
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
@@ -1612,6 +1619,10 @@
       {
         "title": "Upgrade to 1.7.0",
         "path": "upgrading/upgrade-to-1.7.0"
+      },
+      {
+        "title": "Upgrade to 1.8.0",
+        "path": "upgrading/upgrade-to-1.8.0"
       }
     ]
   },
@@ -1636,6 +1647,10 @@
       {
         "title": "1.7.0",
         "path": "release-notes/1.7.0"
+      },
+      {
+        "title": "1.8.0",
+        "path": "release-notes/1.8.0"
       }
     ]
   },

@@ -493,6 +493,7 @@ jobs:
 
           make -f packages*.lock/layer.mk 06-build-ui-26a986a756dd09ad76b230768f6d889c031d6fea-image
         name: Build build-ui layer
+        no_output_timeout: 15m
     - run:
         command: |2-
 

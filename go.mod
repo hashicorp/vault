@@ -41,6 +41,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
+	github.com/dustin/go-humanize v1.0.0
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 	github.com/fatih/color v1.11.0
 	github.com/fatih/structs v1.1.0
