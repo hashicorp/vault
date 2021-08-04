@@ -72,20 +72,24 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
 
-- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the 
-  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`, 
-  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret, 
-  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`. 
+- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the
+  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`,
+  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret,
+  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`.
   For example, if a secret annotation `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-template-file-foobar` would configure the template file.
 
-- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering 
+- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering
   secrets if no custom template is defined. Possible values include `map` and `json`. Defaults to `map`.
 
 - `vault.hashicorp.com/template-config-exit-on-retry-failure` - controls whether
   Vault Agent exits after it has exhausted its number of template retry attempts
   due to failures. Defaults to `true`. See [Vault Agent Template
   Config](/docs/agent/template-config) for more details.
+
+- `vault.hashicorp.com/template-static-secret-render-interval` - If specified,
+  configures how often Vault Agent Template should render non-leased secrets such as KV v2.
+  Defaults to `5m`. See [Vault Agent Template  Config](/docs/agent/template-config) for more details.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
