@@ -113,6 +113,41 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDCRole_NoKey tests that a role can be created with a non-existent key
+func TestOIDC_Path_OIDCRole_NoKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test role "test-role1" with a non-existent key -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-role1" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"key":       "test-key",
+		"ttl":       int64(86400),
+		"template":  "",
+		"client_id": resp.Data["client_id"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 // TestOIDC_Path_OIDCRole_InvalidTokenTTL tests the TokenTTL validation
 func TestOIDC_Path_OIDCRole_InvalidTokenTTL(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
