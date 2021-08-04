@@ -8,6 +8,192 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestOIDC_Path_OIDC_ProviderScope tests CRUD operations for scopes
+func TestOIDC_Path_OIDC_ProviderScope(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-scope" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"template":    "",
+		"description": "",
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-scope" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"template":    "my-template",
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-scope" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"template":    "my-template",
+		"description": "my-description",
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Delete test-scope -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-scope" again and validate
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if resp != nil {
+		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderScope_Update tests Update operations for scopes
+func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"template":    "my-template",
+			"description": "my-description",
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-scope" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"template":    "my-template",
+		"description": "my-description",
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-scope" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"template": "my-template2",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-scope" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"template":    "my-template2",
+		"description": "my-description",
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderScopeList tests the List operation for scopes
+func TestOIDC_Path_OIDC_ProviderScopeList(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Prepare two scopes, test-scope1 and test-scope2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// list scopes
+	respListScopes, listErr := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListScopes, listErr)
+
+	// validate list response
+	expectedStrings := map[string]interface{}{"test-scope1": true, "test-scope2": true}
+	expectStrings(t, respListScopes.Data["keys"].([]string), expectedStrings)
+
+	// delete test-scope2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope2",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+
+	// list scopes again and validate response
+	respListScopeAfterDelete, listErrAfterDelete := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListScopeAfterDelete, listErrAfterDelete)
+
+	// validate list response
+	delete(expectedStrings, "test-scope2")
+	expectStrings(t, respListScopeAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
 // TestOIDC_Path_OIDCProviderAssignment tests CRUD operations for assignments
 func TestOIDC_Path_OIDCProviderAssignment(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
