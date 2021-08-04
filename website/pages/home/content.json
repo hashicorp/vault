@@ -114,6 +114,17 @@
           "alt": "Microsoft Azure logo"
         }
       ]
-    }
+    },
+    {
+      "textSplit": {
+        "heading": "Next-gen Privileged Access Management ",
+        "content": "Direct integration with HashiCorp Boundary for human-to-machine authentication and authorization."
+      },
+      "codeBlock": {
+        "options": { "showWindowBar": "true" },
+        "language": "shell-session",
+        "code": "add logo here"
+      }
+    }    
   ]
 }
