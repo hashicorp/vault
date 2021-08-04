@@ -989,7 +989,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
-	// get the key referenced by this role
+	// get the key referenced by this role if it exists
 	var key namedKey
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
 	if err != nil {
@@ -999,10 +999,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		if err := entry.DecodeJSON(&key); err != nil {
 			return nil, err
 		}
-	}
 
-	if role.TokenTTL > key.VerificationTTL {
-		return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
+		if role.TokenTTL > key.VerificationTTL {
+			return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
+		}
+
 	}
 
 	if clientID, ok := d.GetOk("client_id"); ok {
