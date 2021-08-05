@@ -14,7 +14,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/calendar-widget';
 import { setComponentTemplate } from '@ember/component';
-import { format, sub, add, eachMonthOfInterval } from 'date-fns';
+import { format, sub } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -36,9 +36,14 @@ class CalendarWidget extends Component {
     let getMonths = document.querySelectorAll('.is-month-list');
     this.allMonthsArray = getMonths;
     this.allMonthsArray.forEach(e => {
+      // clear all is-readOnly classes and start over.
+      e.classList.remove('is-readOnly');
       let elementMonthId = parseInt(e.id.split('-')[1]);
       if (this.currentMonth <= elementMonthId) {
-        e.classList.add('is-readOnly');
+        // only disable months when current year is selected
+        if (this.selectedYear === this.currentYear) {
+          e.classList.add('is-readOnly');
+        }
       }
     });
   }
@@ -55,17 +60,17 @@ class CalendarWidget extends Component {
   subYear() {
     this.selectedYear = parseInt(this.selectedYear) - 1;
     this.selectMonths(this.quickMonthsSelection);
+    // call disable months action
+    this.disableMonths();
     this.isDisabled = this.currentYear === this.selectedYear;
   }
 
   @action
-  getYear() {
-    console.log(this.selectedYear);
-  }
-  @action
   addYear() {
     this.selectedYear = parseInt(this.selectedYear) + 1;
     this.selectMonths(this.quickMonthsSelection);
+    // call disable months action
+    this.disableMonths();
     this.isDisabled = this.currentYear === this.selectedYear;
   }
 
@@ -89,13 +94,17 @@ class CalendarWidget extends Component {
     this.allMonthsArray.forEach(monthElement => {
       monthElement.classList.remove('is-selected');
     });
-    // reports not available for current month so don't want it in range
+    // if the user has not selected anything exit function
+    if (lastXNumberOfMonths === null) {
+      return;
+    }
+    // reports are not available for current month so we don't want it in range
     let endMonth = this.currentMonth - 1;
     // start range X months back, subtract one to skip current month
     let startRange = endMonth - lastXNumberOfMonths;
     // creates array of selected months (integers)
     let selectedRange = this.createRange(startRange, endMonth);
-
+    console.log(selectedRange, 'selected Range');
     // array of ids for months selected from previous year
     let lastYearSelectedRangeIdsArray = selectedRange.filter(n => n < 0).map(n => `month-${n + 13}`);
 
