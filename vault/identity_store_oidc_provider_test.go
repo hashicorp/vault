@@ -246,7 +246,7 @@ func TestOIDC_Path_OIDC_ProviderScope(t *testing.T) {
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template":    "my-template",
+			"template":    "eyAiZ3JvdXBzIjoge3tpZGVudGl0eS5lbnRpdHkuZ3JvdXBzLm5hbWVzfX0gfQ==",
 			"description": "my-description",
 		},
 		Storage: storage,
@@ -261,7 +261,7 @@ func TestOIDC_Path_OIDC_ProviderScope(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"template":    "my-template",
+		"template":    "{ \"groups\": {{identity.entity.groups.names}} }",
 		"description": "my-description",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
@@ -299,7 +299,7 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"template":    "my-template",
+			"template":    "eyAiZ3JvdXBzIjoge3tpZGVudGl0eS5lbnRpdHkuZ3JvdXBzLm5hbWVzfX0gfQ==",
 			"description": "my-description",
 		},
 	})
@@ -313,7 +313,7 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"template":    "my-template",
+		"template":    "{ \"groups\": {{identity.entity.groups.names}} }",
 		"description": "my-description",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
@@ -325,7 +325,8 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template": "my-template2",
+			"template":    "eyAiZ3JvdXBzIjoge3tpZGVudGl0eS5lbnRpdHkuZ3JvdXBzLm5hbWVzfX0gfQ==",
+			"description": "my-description-2",
 		},
 		Storage: storage,
 	})
@@ -339,8 +340,8 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"template":    "my-template2",
-		"description": "my-description",
+		"template":    "{ \"groups\": {{identity.entity.groups.names}} }",
+		"description": "my-description-2",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)

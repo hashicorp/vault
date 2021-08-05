@@ -2,9 +2,13 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -186,11 +190,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 
 // pathOIDCCreateUpdateAssignment is used to create a new named assignment or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	name := d.Get("name").(string)
 
 	var assignment namedAssignment
@@ -216,10 +215,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 		assignment.Groups = groupsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
 		assignment.Groups = d.Get("groups").([]string)
-	}
-
-	if err := i.oidcCache.Flush(ns); err != nil {
-		return nil, err
 	}
 
 	// store named assignment
@@ -291,11 +286,6 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 
 // pathOIDCCreateUpdateScope is used to create a new named scope or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	name := d.Get("name").(string)
 
 	var scope namedScope
@@ -311,22 +301,48 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 		}
 	}
 
-	if templateRaw, ok := d.GetOk("template"); ok {
-		scope.Template = templateRaw.(string)
-	} else if req.Operation == logical.CreateOperation {
-		scope.Template = d.Get("template").(string)
-	}
-
 	if descriptionRaw, ok := d.GetOk("description"); ok {
 		scope.Description = descriptionRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
 		scope.Description = d.Get("description").(string)
 	}
 
-	if err := i.oidcCache.Flush(ns); err != nil {
-		return nil, err
+	if templateRaw, ok := d.GetOk("template"); ok {
+		scope.Template = templateRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		scope.Template = d.Get("template").(string)
 	}
 
+	// Attempt to decode as base64 and use that if it works
+	if decoded, err := base64.StdEncoding.DecodeString(scope.Template); err == nil {
+		scope.Template = string(decoded)
+	}
+
+	// Validate that template can be parsed and results in valid JSON
+	if scope.Template != "" {
+		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:   identitytpl.JSONTemplating,
+			String: scope.Template,
+			Entity: new(logical.Entity),
+			Groups: make([]*logical.Group, 0),
+			// namespace?
+		})
+		if err != nil {
+			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
+		}
+
+		var tmp map[string]interface{}
+		if err := json.Unmarshal([]byte(populatedTemplate), &tmp); err != nil {
+			return logical.ErrorResponse("error parsing template JSON: %s", err.Error()), nil
+		}
+
+		for key := range tmp {
+			if strutil.StrListContains(requiredClaims, key) {
+				return logical.ErrorResponse(`top level key %q not allowed. Restricted keys: %s`,
+					key, strings.Join(requiredClaims, ", ")), nil
+			}
+		}
+	}
 	// store named scope
 	entry, err := logical.StorageEntryJSON(namedScopePath+name, scope)
 	if err != nil {
