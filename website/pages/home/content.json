@@ -118,7 +118,7 @@
     {
       "textSplit": {
         "heading": "Next-gen Privileged Access Management ",
-        "content": "Direct integration with <a href=\"https://www.boundaryproject.io/\">HashiCorp Boundary</a> for human-to-machine authentication and authorization.",
+        "content": "Direct integration with HashiCorp Boundary for human-to-machine authentication and authorization.",
         "textSide": "right"
       },
       "logoGrid": [
