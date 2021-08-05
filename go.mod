@@ -5,6 +5,7 @@ go 1.16
 replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
+replace github.com/hashicorp/go-cleanhttp => ../go-cleanhttp
 
 require (
 	cloud.google.com/go v0.56.0
@@ -54,7 +55,7 @@ require (
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/consul-template v0.26.0
@@ -175,9 +176,14 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200425165423-262c93980547
 	go.mongodb.org/mongo-driver v1.4.6
-	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
+	go.opentelemetry.io/contrib v0.22.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.22.0 // indirect
+	go.opentelemetry.io/contrib/propagators v0.22.0 // indirect
+	go.opentelemetry.io/otel v1.0.0-RC2
+	go.opentelemetry.io/otel/exporters/jaeger v1.0.0-RC2 // indirect
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC1 // indirect
+	go.opentelemetry.io/otel/sdk v1.0.0-RC2
+	go.opentelemetry.io/otel/trace v1.0.0-RC2
 	go.uber.org/atomic v1.6.0
 	go.uber.org/goleak v1.1.10
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97

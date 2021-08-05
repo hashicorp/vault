@@ -4,17 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/wrapping"
-	"github.com/hashicorp/vault/sdk/logical"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
+	"sync"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -750,7 +743,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 		if c.openTelemetryEnabled {
 			var span trace.Span
-			ctx, span = global.Tracer("github.com/hashicorp/vault").Start(ctx, entry.Type)
+			ctx, span = otel.Tracer("github.com/hashicorp/vault").Start(ctx, entry.Type)
 			defer span.End()
 		}
 	}
@@ -1150,7 +1143,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 		if c.openTelemetryEnabled {
 			var span trace.Span
-			ctx, span = global.Tracer("github.com/hashicorp/vault").Start(ctx, entry.Type)
+			ctx, span = otel.Tracer("github.com/hashicorp/vault").Start(ctx, entry.Type)
 			defer span.End()
 		}
 	}
@@ -1512,7 +1505,6 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	return nil
 }
 
-<<<<<<< HEAD
 type mergedContext struct {
 	mu      sync.Mutex
 	mainCtx context.Context

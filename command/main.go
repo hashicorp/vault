@@ -4,13 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/go-cleanhttp"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,10 +14,14 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
 )
 
 type VaultUI struct {
@@ -192,26 +190,21 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	if openTelemetryEnable {
-		// Construct and register an export pipeline using the Jaeger
-		// exporter and a span processor.
-		flush, err := jaeger.InstallNewPipeline(
-			jaeger.WithAgentEndpoint("localhost:6831"),
-			jaeger.WithProcess(jaeger.Process{
-				ServiceName: "Vault-CLI",
-			}))
+		tp, err := tracerProvider("http://localhost:14268/api/traces")
 		if err != nil {
-			fmt.Printf("failed to initialize stdout export pipeline: %v", err)
-			return 1
+			fmt.Fprintf(runOpts.Stderr, "%e", err)
 		}
 
-		defer flush()
-
-		global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(b3.B3{}, propagators.TraceContext{}, propagators.Baggage{}))
+		// Register our TracerProvider as the global so any imported
+		// instrumentation in the future will default to using it.
+		otel.SetTracerProvider(tp)
+		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(b3.New(), propagation.TraceContext{}, propagation.Baggage{}))
 
 		// Replace the default HTTP client with one which propagates tracing context
 		http.DefaultClient = &http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
+			Transport: otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithSpanNameFormatter(formatRequest)),
 		}
+
 		cleanhttp.EnableOpenTelemetry = true
 	}
 

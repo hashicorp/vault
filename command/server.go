@@ -6,15 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/useragent"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"io"
 	"io/ioutil"
@@ -33,6 +24,7 @@ import (
 
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -61,11 +53,14 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/exporters/trace/jaeger"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -1201,30 +1196,23 @@ func (c *ServerCommand) Run(args []string) int {
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
 	if !config.Telemetry.OpenTelemetryDisable {
-
-		// Construct and register an export pipeline using the Jaeger
-		// exporter and a span processor.
-		flush, err := jaeger.InstallNewPipeline(
-			jaeger.WithAgentEndpoint("localhost:6831"),
-			jaeger.WithProcess(jaeger.Process{
-				ServiceName: "Vault",
-			}))
+		tp, err := tracerProvider("http://localhost:14268/api/traces")
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("failed to initialize stdout export pipeline: %v", err))
-			return 1
+			c.UI.Error(err.Error())
 		}
 
-		defer flush()
-
-		global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(b3.B3{}, propagators.TraceContext{}, propagators.Baggage{}))
+		// Register our TracerProvider as the global so any imported
+		// instrumentation in the future will default to using it.
+		otel.SetTracerProvider(tp)
+		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(b3.New(), propagation.TraceContext{}, propagation.Baggage{}))
 
 		// Replace the default HTTP client with one which propagates tracing context
 		http.DefaultClient = &http.Client{
 			Transport: otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithSpanNameFormatter(formatRequest)),
 		}
+
 		cleanhttp.EnableOpenTelemetry = true
 	}
-
 
 	// Initialize the storage backend
 	backend, err := c.setupStorage(config)
@@ -2512,7 +2500,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
-		OpenTelemetryEnabled:      !config.Telemetry.OpenTelemetryDisable,
+		OpenTelemetryEnabled:           !config.Telemetry.OpenTelemetryDisable,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -2767,4 +2755,30 @@ func (g *grpclogFaker) Println(args ...interface{}) {
 	if g.log && g.logger.IsDebug() {
 		g.logger.Debug(fmt.Sprintln(args...))
 	}
+}
+
+// tracerProvider returns an OpenTelemetry TracerProvider configured to use
+// the Jaeger exporter that will send spans to the provided url. The returned
+// TracerProvider will also use a Resource configured with all the information
+// about the application.
+func tracerProvider(url string) (*tracesdk.TracerProvider, error) {
+	// Create the Jaeger exporter
+	exp, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(url)))
+	if err != nil {
+		return nil, err
+	}
+	tp := tracesdk.NewTracerProvider(
+		// Always be sure to batch in production.
+		tracesdk.WithBatcher(exp),
+		// Record information about this application in an Resource.
+		tracesdk.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("vault"),
+		)),
+	)
+	return tp, nil
+}
+
+func formatRequest(operation string, r *http.Request) string {
+	return fmt.Sprintf("%s %s", operation, r.URL.Path)
 }

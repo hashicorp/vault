@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/attribute"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel"
 )
 
 // ErrReadOnly is returned when a backend does not support
@@ -39,29 +39,29 @@ func NewTelemetryStorageWrapper(s Storage) *TelemetryStorageWrapper {
 }
 
 func (t *TelemetryStorageWrapper) List(ctx context.Context, s string) ([]string, error) {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage LIST")
-	span.SetAttributes(label.String("path", s))
+	ctx, span := otel.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage LIST")
+	span.SetAttributes(attribute.Key("path").String(s))
 	defer span.End()
 	return t.storage.List(ctx, s)
 }
 
 func (t *TelemetryStorageWrapper) Get(ctx context.Context, s string) (*StorageEntry, error) {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage GET")
-	span.SetAttributes(label.String("path", s))
+	ctx, span := otel.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage GET")
+	span.SetAttributes(attribute.Key("path").String(s))
 	defer span.End()
 	return t.storage.Get(ctx, s)
 }
 
 func (t *TelemetryStorageWrapper) Put(ctx context.Context, entry *StorageEntry) error {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage PUT")
-	span.SetAttributes(label.String("key", entry.Key))
+	ctx, span := otel.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage PUT")
+	span.SetAttributes(attribute.Key("path").String(entry.Key))
 	defer span.End()
 	return t.storage.Put(ctx, entry)
 }
 
 func (t *TelemetryStorageWrapper) Delete(ctx context.Context, s string) error {
-	ctx, span := global.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage DELETE")
-	span.SetAttributes(label.String("path", s))
+	ctx, span := otel.Tracer("github.com/hashicorp/vault").Start(ctx, "Storage DELETE")
+	span.SetAttributes(attribute.Key("path").String(s))
 	defer span.End()
 	return t.storage.Delete(ctx, s)
 }
