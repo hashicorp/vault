@@ -215,11 +215,6 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 
 // pathOIDCCreateUpdateScope is used to create a new named scope or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	name := d.Get("name").(string)
 
 	var scope namedScope
@@ -245,10 +240,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 		scope.Description = descriptionRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
 		scope.Description = d.Get("description").(string)
-	}
-
-	if err := i.oidcCache.Flush(ns); err != nil {
-		return nil, err
 	}
 
 	// store named scope
