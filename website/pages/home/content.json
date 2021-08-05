@@ -121,11 +121,12 @@
         "content": "Direct integration with <a href=\"https://www.boundaryproject.io/\">HashiCorp Boundary</a> for human-to-machine authentication and authorization.",
         "textSide": "right"
       },
-      "logoGrid": {
-        "options": { "showWindowBar": "true" },
-        "language": "shell-session",
-        "code": "add logo here"
-      }
+      "logoGrid": [
+        {
+          "url": "https://www.datocms-assets.com/2885/1566919170-aws.svg",
+          "alt": "AWS logo"
+        }
+      ]
     }    
   ]
 }
