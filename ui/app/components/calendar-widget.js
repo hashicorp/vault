@@ -59,6 +59,10 @@ class CalendarWidget extends Component {
   }
 
   @action
+  getYear() {
+    console.log(this.selectedYear);
+  }
+  @action
   addYear() {
     this.selectedYear = parseInt(this.selectedYear) + 1;
     this.selectMonths(this.quickMonthsSelection);
@@ -79,33 +83,40 @@ class CalendarWidget extends Component {
   }
 
   @action
-  selectMonths(number) {
-    this.quickMonthsSelection = number;
+  selectMonths(lastXNumberOfMonths) {
+    this.quickMonthsSelection = lastXNumberOfMonths;
+    // deselect all elements before reselecting
     this.allMonthsArray.forEach(monthElement => {
       monthElement.classList.remove('is-selected');
     });
-    // define current month
-    let lastMonth = parseInt(format(this.currentDate(), 'M')) - 1; // subtract one to skip current month
-    let startRange = lastMonth - number;
-    let selectedRange = this.createRange(startRange, lastMonth); // returns array of integers
-    console.log(selectedRange);
-    let previousYearMonthElementsArray = [];
+    // reports not available for current month so don't want it in range
+    let endMonth = this.currentMonth - 1;
+    // start range X months back, subtract one to skip current month
+    let startRange = endMonth - lastXNumberOfMonths;
+    // creates array of selected months (integers)
+    let selectedRange = this.createRange(startRange, endMonth);
+
+    // array of ids for months selected from previous year
     let lastYearSelectedRangeIdsArray = selectedRange.filter(n => n < 0).map(n => `month-${n + 13}`);
+
+    // array of month elements
+    let previousYearMonthElementsArray = [];
     this.allMonthsArray.forEach(monthElement => {
       lastYearSelectedRangeIdsArray.includes(monthElement.id)
         ? previousYearMonthElementsArray.push(monthElement)
         : '';
     });
 
-    // select current year months
+    // array of ids for months selected from current year
     let selectedRangeIdsArray = selectedRange.filter(n => n > 0).map(n => `month-${n}`);
+
     let currentYearMonthElementsArray = [];
     this.allMonthsArray.forEach(monthElement => {
       selectedRangeIdsArray.includes(monthElement.id) ? currentYearMonthElementsArray.push(monthElement) : '';
     });
+
+    // add selector class to month elements for both last year and current year
     currentYearMonthElementsArray.forEach(element => {
-      console.log(this.currentYear, 'current');
-      console.log(this.selectedYear, 'selected');
       if (this.currentYear === this.selectedYear) {
         element.classList.add('is-selected');
       }
