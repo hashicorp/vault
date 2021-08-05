@@ -20,9 +20,19 @@ type namedScope struct {
 	Description string `json:"description"`
 }
 
+type namedClient struct {
+	name           string
+	RedirectURIs   []string `json:"redirect_uris"`
+	Assignments    []string `json:"assignments"`
+	Key            string   `json:"key"`
+	IDTokenTTL     int      `json:"id_token_ttl"`
+	AccessTokenTTL int      `json:"access_token_ttl"`
+}
+
 const (
 	namedAssignmentPath = oidcTokensPrefix + "named_assignments/"
 	namedScopePath      = oidcTokensPrefix + "named_scopes/"
+	namedClientPath     = oidcTokensPrefix + "named_clients/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -114,6 +124,62 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			HelpSynopsis:    "List OIDC scopes",
 			HelpDescription: "List all configured OIDC scopes in the identity backend.",
+		},
+		{
+			Pattern: "oidc/client/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the client.",
+				},
+				"redirect_uris": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Comma separated string or array of redirect URIs used by the client. One of these values must exactly match the redirect_uri parameter value used in each authentication request.",
+				},
+				"assignments": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Comma separated string or array of assignment resources.",
+				},
+				"key": {
+					Type:        framework.TypeString,
+					Description: "A reference to a named key resource. Cannot be modified after creation. If not provided, the default key will be used.",
+				},
+				"id_token_ttl": {
+					Type:        framework.TypeDurationSecond,
+					Description: "The time-to-live for ID tokens obtained by the client.",
+				},
+				"access_token_ttl": {
+					Type:        framework.TypeDurationSecond,
+					Description: "The time-to-live for access tokens obtained by the client.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateClient,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateClient,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadClient,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathOIDCDeleteClient,
+				},
+			},
+			ExistenceCheck:  i.pathOIDCClientExistenceCheck,
+			HelpSynopsis:    "CRUD operations for OIDC clients.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC named clients.",
+		},
+		{
+			Pattern: "oidc/client/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathOIDCListClient,
+				},
+			},
+			HelpSynopsis:    "List OIDC clients",
+			HelpDescription: "List all configured OIDC clients in the identity backend.",
 		},
 	}
 }
@@ -321,6 +387,132 @@ func (i *IdentityStore) pathOIDCScopeExistenceCheck(ctx context.Context, req *lo
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, namedScopePath+name)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
+}
+
+// pathOIDCCreateUpdateClient is used to create a new named client or update an existing one
+func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	name := d.Get("name").(string)
+
+	var client namedClient
+	if req.Operation == logical.UpdateOperation {
+		entry, err := req.Storage.Get(ctx, namedClientPath+name)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&client); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if redirectURIsRaw, ok := d.GetOk("redirect_uris"); ok {
+		client.RedirectURIs = redirectURIsRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		client.RedirectURIs = d.Get("redirect_uris").([]string)
+	}
+
+	if assignmentsRaw, ok := d.GetOk("assignments"); ok {
+		client.Assignments = assignmentsRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		client.Assignments = d.Get("assignments").([]string)
+	}
+
+	if keyRaw, ok := d.GetOk("key"); ok {
+		client.Key = keyRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		client.Key = d.Get("key").(string)
+	}
+
+	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
+		client.IDTokenTTL = idTokenTTLRaw.(int)
+	} else if req.Operation == logical.CreateOperation {
+		client.IDTokenTTL = d.Get("id_token_ttl").(int)
+	}
+
+	if accessTokenTTLRaw, ok := d.GetOk("access_token_ttl"); ok {
+		client.AccessTokenTTL = accessTokenTTLRaw.(int)
+	} else if req.Operation == logical.CreateOperation {
+		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
+	}
+
+	if err := i.oidcCache.Flush(ns); err != nil {
+		return nil, err
+	}
+
+	// store named client
+	entry, err := logical.StorageEntryJSON(namedClientPath+name, client)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// pathOIDCListClient is used to list named clients
+func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	clients, err := req.Storage.List(ctx, namedClientPath)
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(clients), nil
+}
+
+// pathOIDCReadClient is used to read an existing client
+func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, namedClientPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var storedNamedClient namedClient
+	if err := entry.DecodeJSON(&storedNamedClient); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"redirect_uris":    storedNamedClient.RedirectURIs,
+			"assignments":      storedNamedClient.Assignments,
+			"key":              storedNamedClient.Key,
+			"id_token_ttl":     storedNamedClient.IDTokenTTL,
+			"access_token_ttl": storedNamedClient.AccessTokenTTL,
+		},
+	}, nil
+}
+
+// pathOIDCDeleteClient is used to delete an client
+func (i *IdentityStore) pathOIDCDeleteClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	err := req.Storage.Delete(ctx, namedClientPath+name)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, namedClientPath+name)
 	if err != nil {
 		return false, err
 	}
