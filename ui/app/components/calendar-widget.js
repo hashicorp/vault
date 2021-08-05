@@ -17,6 +17,7 @@ import { setComponentTemplate } from '@ember/component';
 import { format, sub } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { is } from 'date-fns/locale';
 
 class CalendarWidget extends Component {
   startMonthRange = format(this.calculateLastMonth(), 'M/yyyy');
@@ -33,6 +34,9 @@ class CalendarWidget extends Component {
   @tracked isClearAllMonths = false;
   @tracked areAnyMonthsSelected = false;
   @tracked shiftClickCount = 0;
+  @tracked startMonth;
+  @tracked endMonth;
+  @tracked shiftClickRange = [];
 
   @action
   disableMonths() {
@@ -115,35 +119,57 @@ class CalendarWidget extends Component {
     });
 
     if (e.shiftKey) {
-      let startMonth;
-      let endMonth;
       let monthArray = [];
-      this.shiftClickCount = ++this.shiftClickCount;
-      if (this.shiftClickCount > 2) {
-        this.shiftClickCount = 0;
-        return;
-      }
-
-      console.log(this.shiftClickCount);
       this.allMonthsArray.forEach(e => {
         monthArray.push(e);
       });
+      let reverseMonthArray = monthArray.reverse();
 
-      this.allMonthsArray.forEach(e => {
-        if (e.classList.contains('is-selected')) {
-          startMonth = e.id;
-          return;
-        }
-      });
-
-      if (this.shiftClickCount === 2) {
-        let reverseMonthArray = monthArray.reverse();
-        reverseMonthArray.forEach(e => {
+      // count shift clicks
+      this.shiftClickCount = ++this.shiftClickCount;
+      if (this.shiftClickCount > 2) {
+        this.clearSelectedMonths();
+        this.shiftClickCount = 0;
+        return;
+      }
+      // grab start month
+      if (this.shiftClickCount === 1) {
+        this.allMonthsArray.forEach(e => {
           if (e.classList.contains('is-selected')) {
-            endMonth = e.id;
+            this.startMonth = e.id;
             return;
           }
         });
+      }
+      // grab end month
+      let isSelectedArray = [];
+      if (this.shiftClickCount === 2) {
+        this.endMonth = reverseMonthArray.forEach(e => {
+          if (e.classList.contains('is-selected')) {
+            isSelectedArray.push(e.id);
+            return;
+          }
+        });
+        this.endMonth = isSelectedArray[0];
+
+        console.log(this.startMonth, 'starty');
+        console.log(this.endMonth, 'end');
+        // create a range
+        // split last months
+        this.shiftClickRange = this.createRange(
+          parseInt(this.startMonth.split('-')[1]),
+          parseInt(this.endMonth.split('-')[1])
+        ).map(n => `month-${n}`);
+
+        this.shiftClickRange.forEach(id => {
+          this.allMonthsArray.forEach(e => {
+            if (e.id === id) {
+              e.classList.add('is-selected');
+            }
+          });
+        });
+
+        console.log(this.shiftClickRange);
       }
     }
   }
