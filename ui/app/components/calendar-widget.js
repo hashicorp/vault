@@ -33,7 +33,7 @@ class CalendarWidget extends Component {
 
   @action
   disableMonths() {
-    let getMonths = document.querySelectorAll('.month-list');
+    let getMonths = document.querySelectorAll('.is-month-list');
     this.allMonthsArray = getMonths;
     this.allMonthsArray.forEach(e => {
       let elementMonthId = parseInt(e.id.split('-')[1]);
