@@ -2512,6 +2512,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		OpenTelemetryEnabled:      !config.Telemetry.OpenTelemetryDisable,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
