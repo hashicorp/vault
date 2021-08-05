@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -69,11 +68,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 
 // pathOIDCCreateUpdateAssignment is used to create a new named assignment or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	name := d.Get("name").(string)
 
 	var assignment namedAssignment
@@ -99,10 +93,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 		assignment.Groups = groupsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
 		assignment.Groups = d.Get("groups").([]string)
-	}
-
-	if err := i.oidcCache.Flush(ns); err != nil {
-		return nil, err
 	}
 
 	// store named assignment
