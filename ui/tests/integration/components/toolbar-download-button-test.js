@@ -10,7 +10,7 @@ module('Integration | Component | toolbar-download-button', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<ToolbarDownloadButton @actionText="Link" />`);
 
-    assert.equal(this.element.textContent.trim(), 'Link');
+    assert.dom(this.element).hasText('Link');
     assert.ok(isPresent('.toolbar-link'));
     assert.ok(isPresent('.icon'));
   });

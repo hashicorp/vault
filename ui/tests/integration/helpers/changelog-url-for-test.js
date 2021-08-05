@@ -9,12 +9,12 @@ module('Integration | Helper | changelog-url-for', function(hooks) {
 
   test('it builds an enterprise URL', function(assert) {
     const result = changelogUrlFor(['1.5.0+prem']);
-    assert.equal(result, CHANGELOG_URL.concat('v150'));
+    assert.equal(result, CHANGELOG_URL.concat('150'));
   });
 
   test('it builds an OSS URL', function(assert) {
     const result = changelogUrlFor(['1.4.3']);
-    assert.equal(result, CHANGELOG_URL.concat('v143'));
+    assert.equal(result, CHANGELOG_URL.concat('143'));
   });
 
   test('it returns the base changelog URL if the version is less than 1.4.3', function(assert) {

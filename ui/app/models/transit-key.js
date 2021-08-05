@@ -1,10 +1,8 @@
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { set, get, computed } from '@ember/object';
-import DS from 'ember-data';
 import clamp from 'vault/utils/clamp';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-
-const { attr } = DS;
 
 const ACTION_VALUES = {
   encrypt: {
@@ -41,11 +39,15 @@ const ACTION_VALUES = {
   export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
 };
 
-export default DS.Model.extend({
+export default Model.extend({
   type: attr('string', {
     defaultValue: 'aes256-gcm96',
   }),
-  name: attr('string'),
+  name: attr('string', {
+    label: 'Name',
+    fieldValue: 'id',
+    readOnly: true,
+  }),
   deletionAllowed: attr('boolean'),
   derived: attr('boolean'),
   exportable: attr('boolean'),
@@ -93,11 +95,11 @@ export default DS.Model.extend({
 
   canDelete: computed('deletionAllowed', 'lastLoadTS', function() {
     const deleteAttrChanged = Boolean(this.changedAttributes().deletionAllowed);
-    return get(this, 'deletionAllowed') && deleteAttrChanged === false;
+    return this.deletionAllowed && deleteAttrChanged === false;
   }),
 
   keyVersions: computed('validKeyVersions', function() {
-    let maxVersion = Math.max(...get(this, 'validKeyVersions'));
+    let maxVersion = Math.max(...this.validKeyVersions);
     let versions = [];
     while (maxVersion > 0) {
       versions.unshift(maxVersion);
@@ -106,18 +108,24 @@ export default DS.Model.extend({
     return versions;
   }),
 
-  encryptionKeyVersions: computed('keyVerisons', 'minDecryptionVersion', 'latestVersion', function() {
-    const { keyVersions, minDecryptionVersion } = this.getProperties('keyVersions', 'minDecryptionVersion');
+  encryptionKeyVersions: computed(
+    'keyVerisons',
+    'keyVersions',
+    'latestVersion',
+    'minDecryptionVersion',
+    function() {
+      const { keyVersions, minDecryptionVersion } = this;
 
-    return keyVersions
-      .filter(version => {
-        return version >= minDecryptionVersion;
-      })
-      .reverse();
-  }),
+      return keyVersions
+        .filter(version => {
+          return version >= minDecryptionVersion;
+        })
+        .reverse();
+    }
+  ),
 
   keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function() {
-    let { minEncryptionVersion, latestVersion } = this.getProperties('minEncryptionVersion', 'latestVersion');
+    let { minEncryptionVersion, latestVersion } = this;
     let minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
     let versions = [];
     while (latestVersion > minVersion) {
@@ -128,15 +136,15 @@ export default DS.Model.extend({
   }),
 
   validKeyVersions: computed('keys', function() {
-    return Object.keys(get(this, 'keys'));
+    return Object.keys(this.keys);
   }),
 
-  exportKeyTypes: computed('exportable', 'type', function() {
+  exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function() {
     let types = ['hmac'];
-    if (this.get('supportsSigning')) {
+    if (this.supportsSigning) {
       types.unshift('signing');
     }
-    if (this.get('supportsEncryption')) {
+    if (this.supportsEncryption) {
       types.unshift('encryption');
     }
     return types;

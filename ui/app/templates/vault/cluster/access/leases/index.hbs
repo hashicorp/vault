@@ -11,7 +11,7 @@
     <div class="field">
       <label for="lease-id" class="is-label">Lease ID</label>
       <div class="control">
-        {{input value=leaseId id="lease-id" class="input"}}
+        <Input @value={{leaseId}} @id="lease-id" class="input" />
       </div>
       <p class="help has-text-grey">
         If you know the <code>id</code> of a lease, enter it above to lookup details of the lease.

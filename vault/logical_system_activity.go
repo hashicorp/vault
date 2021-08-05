@@ -17,11 +17,11 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "internal/counters/activity$",
 		Fields: map[string]*framework.FieldSchema{
-			"start_time": &framework.FieldSchema{
+			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
 			},
-			"end_time": &framework.FieldSchema{
+			"end_time": {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
 			},
@@ -38,24 +38,40 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	}
 }
 
+// monthlyActivityCountPath is available in every namespace
+func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
+	return &framework.Path{
+		Pattern:         "internal/counters/activity/monthly",
+		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleMonthlyActivityCount,
+				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
+			},
+		},
+	}
+}
+
 // rootActivityPaths are available only in the root namespace
 func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return []*framework.Path{
 		b.activityQueryPath(),
+		b.monthlyActivityCountPath(),
 		{
 			Pattern: "internal/counters/config$",
 			Fields: map[string]*framework.FieldSchema{
-				"default_report_months": &framework.FieldSchema{
+				"default_report_months": {
 					Type:        framework.TypeInt,
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
 				},
-				"retention_months": &framework.FieldSchema{
+				"retention_months": {
 					Type:        framework.TypeInt,
 					Default:     24,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
 				},
-				"enabled": &framework.FieldSchema{
+				"enabled": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
@@ -93,7 +109,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	// Also convert any user inputs to UTC to avoid
 	// problems later.
 	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(time.Now().UTC().AddDate(0, -1, 0))
+		endTime = timeutil.EndOfMonth(timeutil.StartOfPreviousMonth(time.Now().UTC()))
 	} else {
 		endTime = endTime.UTC()
 	}
@@ -113,6 +129,22 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	if results == nil {
 		resp204, err := logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 		return resp204, err
+	}
+
+	return &logical.Response{
+		Data: results,
+	}, nil
+}
+
+func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	a := b.Core.activityLog
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	results := a.partialMonthClientCount(ctx)
+	if results == nil {
+		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 	}
 
 	return &logical.Response{
@@ -156,6 +188,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
+	warnings := make([]string, 0)
+
 	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
 		return nil, err
@@ -186,12 +220,22 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 	{
 		// Parse the enabled setting
 		if enabledRaw, ok := d.GetOk("enabled"); ok {
-			config.Enabled = enabledRaw.(string)
-		}
-		switch config.Enabled {
-		case "default", "enable", "disable":
-		default:
-			return logical.ErrorResponse("enabled must be one of \"default\", \"enable\", \"disable\""), logical.ErrInvalidRequest
+			enabledStr := enabledRaw.(string)
+
+			// If we switch from enabled to disabled, then we return a warning to the client.
+			// We have to keep the default state of activity log enabled in mind
+			if config.Enabled == "enable" && enabledStr == "disable" ||
+				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
+				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
+				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
+			}
+
+			switch enabledStr {
+			case "default", "enable", "disable":
+				config.Enabled = enabledStr
+			default:
+				return logical.ErrorResponse("enabled must be one of \"default\", \"enable\", \"disable\""), logical.ErrInvalidRequest
+			}
 		}
 	}
 
@@ -215,6 +259,12 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
+
+	if len(warnings) > 0 {
+		return &logical.Response{
+			Warnings: warnings,
+		}, nil
+	}
 
 	return nil, nil
 }

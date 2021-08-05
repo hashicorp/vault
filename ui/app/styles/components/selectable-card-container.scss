@@ -3,6 +3,13 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   grid-template-rows: 1fr;
   grid-gap: 2rem;
+
+  &.one-card {
+    max-width: 33%;
+    min-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .selectable-card-container.has-grid {

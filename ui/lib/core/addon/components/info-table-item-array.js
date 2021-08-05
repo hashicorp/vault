@@ -35,6 +35,9 @@ export default Component.extend({
   store: service(),
   displayArrayAmended: computed('displayArray', function() {
     let { displayArray } = this;
+    if (!displayArray) {
+      return;
+    }
     if (displayArray.length >= 10) {
       // if array greater than 10 in length only display the first 5
       displayArray = displayArray.slice(0, 5);
@@ -44,6 +47,9 @@ export default Component.extend({
   }),
 
   checkWildcardInArray: task(function*() {
+    if (!this.displayArray) {
+      return;
+    }
     let filteredArray = yield this.displayArray.filter(item => isWildcardString(item));
     this.set('wildcardInDisplayArray', filteredArray.length > 0 ? true : false);
   }).on('didInsertElement'),

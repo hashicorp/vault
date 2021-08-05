@@ -26,11 +26,11 @@ export default Component.extend({
     'errorMessage',
     'model.{isError,adapterError.message,adapterError.errors.@each}',
     'errors',
-    'errors.@each',
+    'errors.[]',
     function() {
-      const errorMessage = this.get('errorMessage');
-      const errors = this.get('errors');
-      const modelIsError = this.get('model.isError');
+      const errorMessage = this.errorMessage;
+      const errors = this.errors;
+      const modelIsError = this.model?.isError;
       if (errorMessage) {
         return [errorMessage];
       }
@@ -40,11 +40,19 @@ export default Component.extend({
       }
 
       if (modelIsError) {
-        if (this.get('model.adapterError.errors.length') > 0) {
-          return this.get('model.adapterError.errors');
+        if (!this.model.adapterError) {
+          return;
         }
-        return [this.get('model.adapterError.message')];
+        if (this.model.adapterError.errors.length > 0) {
+          return this.model.adapterError.errors.map(e => {
+            if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
+            return e;
+          });
+        }
+        return [this.model.adapterError.message];
       }
+
+      return 'no error';
     }
   ),
 });

@@ -12,12 +12,16 @@ import { computed } from '@ember/object';
  * @param cardTitle=null {String} - cardTitle displays the card title
  * @param total=0 {Number} - the Total number displays like a title, it's the largest text in the component
  * @param subText=null {String} - subText describes the total
+ * @param actionCard=false {Boolean} - false default selectable card container used in metrics, true a card that focus on actions as seen in database secret engine overview
+ * @param actionText=null {String} - that action that happens in an actionCard
  */
 
 export default Component.extend({
   cardTitle: '',
   total: 0,
   subText: '',
+  actionCard: false,
+  actionText: '',
   gridContainer: false,
   tagName: '', // do not wrap component with div
   formattedCardTitle: computed('total', function() {

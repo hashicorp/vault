@@ -2,14 +2,17 @@ package command
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"strings"
 )
 
-var _ cli.Command = (*PluginReloadCommand)(nil)
-var _ cli.CommandAutocomplete = (*PluginReloadCommand)(nil)
+var (
+	_ cli.Command             = (*PluginReloadCommand)(nil)
+	_ cli.CommandAutocomplete = (*PluginReloadCommand)(nil)
+)
 
 type PluginReloadStatusCommand struct {
 	*BaseCommand
@@ -73,7 +76,6 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 	r, err := client.Sys().ReloadPluginStatus(&api.ReloadPluginStatusInput{
 		ReloadID: reloadId,
 	})
-
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error retrieving plugin reload status: %s", err))
 		return 2

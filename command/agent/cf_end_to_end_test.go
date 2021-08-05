@@ -64,7 +64,7 @@ func TestCFEndToEnd(t *testing.T) {
 	}()
 
 	// Start a mock server representing their API.
-	mockCFAPI := cfAPI.MockServer(false)
+	mockCFAPI := cfAPI.MockServer(false, nil)
 	defer mockCFAPI.Close()
 
 	// Configure a CA certificate like a Vault operator would in setting up CF.

@@ -1,5 +1,5 @@
 {{#each listData as |key index|}}
-  {{pgp-file key=key index=index onChange=(action 'setKey')}}
+  <PgpFile @key={{key}} @index={{index}} @onChange={{action "setKey"}} />
 {{else}}
   <p class="has-text-grey" data-test-empty-text>
     Enter a number of Key Shares to enter PGP keys.

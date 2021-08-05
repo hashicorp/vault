@@ -138,7 +138,6 @@ func TestLogger_log(t *testing.T) {
 	if !strings.Contains(result, expected) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
-
 }
 
 func TestLogger_setLevel(t *testing.T) {
@@ -186,6 +185,7 @@ func (l *deprecatedLoggerClient) Info(msg string, args ...interface{}) {
 	}
 	l.client.Call("Plugin.Info", cArgs, &struct{}{})
 }
+
 func (l *deprecatedLoggerClient) Warn(msg string, args ...interface{}) error {
 	var reply LoggerReply
 	cArgs := &LoggerArgs{
@@ -202,6 +202,7 @@ func (l *deprecatedLoggerClient) Warn(msg string, args ...interface{}) error {
 
 	return nil
 }
+
 func (l *deprecatedLoggerClient) Error(msg string, args ...interface{}) error {
 	var reply LoggerReply
 	cArgs := &LoggerArgs{
@@ -242,6 +243,7 @@ func (l *deprecatedLoggerClient) IsTrace() bool {
 	l.client.Call("Plugin.IsTrace", new(interface{}), &reply)
 	return reply.IsTrue
 }
+
 func (l *deprecatedLoggerClient) IsDebug() bool {
 	var reply LoggerReply
 	l.client.Call("Plugin.IsDebug", new(interface{}), &reply)

@@ -32,7 +32,7 @@ type UIConfig struct {
 // NewUIConfig creates a new UI config
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
-	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none'; frame-ancestors 'none'")
+	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none'; frame-ancestors 'none'; font-src 'self'")
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
 
 	return &UIConfig{
@@ -92,25 +92,25 @@ func (c *UIConfig) HeaderKeys(ctx context.Context) ([]string, error) {
 	return keys, nil
 }
 
-// GetHeader retrieves the configured value for the given header
-func (c *UIConfig) GetHeader(ctx context.Context, header string) (string, error) {
+// GetHeader retrieves the configured values for the given header
+func (c *UIConfig) GetHeader(ctx context.Context, header string) ([]string, error) {
 	c.l.RLock()
 	defer c.l.RUnlock()
 
 	config, err := c.get(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if config == nil {
-		return "", nil
+		return nil, nil
 	}
 
-	value := config.Headers.Get(header)
+	value := config.Headers.Values(header)
 	return value, nil
 }
 
-// SetHeader sets the value for the given header
-func (c *UIConfig) SetHeader(ctx context.Context, header, value string) error {
+// SetHeader sets the values for the given header
+func (c *UIConfig) SetHeader(ctx context.Context, header string, values []string) error {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -123,7 +123,14 @@ func (c *UIConfig) SetHeader(ctx context.Context, header, value string) error {
 			Headers: http.Header{},
 		}
 	}
-	config.Headers.Set(header, value)
+
+	// Clear custom header values before setting new
+	config.Headers.Del(header)
+
+	// Set new values
+	for _, value := range values {
+		config.Headers.Add(header, value)
+	}
 	return c.save(ctx, config)
 }
 

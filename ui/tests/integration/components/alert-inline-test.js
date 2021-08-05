@@ -12,6 +12,6 @@ module('Integration | Component | alert-inline', function(hooks) {
 
     await render(hbs`{{alert-inline type="danger" message="test message"}}`);
 
-    assert.equal(this.element.textContent.trim(), 'test message');
+    assert.dom(this.element).hasText('test message');
   });
 });

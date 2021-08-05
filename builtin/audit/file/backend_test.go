@@ -61,7 +61,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	}
 	defer os.Remove(f.Name())
 
-	err = os.Chmod(f.Name(), 0777)
+	err = os.Chmod(f.Name(), 0o777)
 	if err != nil {
 		t.Fatalf("Failure to chmod temp file for testing.")
 	}
@@ -88,7 +88,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot retrieve file mode from `Stat`")
 	}
-	if info.Mode() != os.FileMode(0600) {
+	if info.Mode() != os.FileMode(0o600) {
 		t.Fatalf("File mode does not match.")
 	}
 }
@@ -126,7 +126,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 				TTL: 60 * time.Second,
 			},
 			Headers: map[string][]string{
-				"foo": []string{"bar"},
+				"foo": {"bar"},
 			},
 		},
 	}

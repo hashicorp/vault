@@ -26,5 +26,4 @@ func TestStorage_GRPC(t *testing.T) {
 	testStorage := &GRPCStorageClient{client: pb.NewStorageClient(client)}
 
 	logical.TestStorage(t, testStorage)
-
 }

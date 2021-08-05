@@ -1,4 +1,4 @@
-{{#if (not this.selectedAuthIsPath)}}
+{{#unless this.selectedAuthIsPath}}
   <div class="box has-slim-padding is-shadowless">
     <ToggleButton
       @toggleTarget={{this}}
@@ -19,8 +19,13 @@
              oninput={{action @onPathChange value="target.value"}}
           />
         </div>
-        <AlertInline @type="info" @message="If this backend was mounted using a non-default path, enter it here." />
+        <AlertInline
+          @sizeSmall=true
+          @paddingTop=true
+          @type="info"
+          @message="If this backend was mounted using a non-default path, enter it here."
+        />
       </div>
     {{/if}}
   </div>
-{{/if}}
+{{/unless}}

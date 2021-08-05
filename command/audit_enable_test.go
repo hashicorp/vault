@@ -189,7 +189,8 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			case "file":
 				args = append(args, "file_path=discard")
 			case "socket":
-				args = append(args, "address=127.0.0.1:8888")
+				args = append(args, "address=127.0.0.1:8888",
+					"skip_test=true")
 			case "syslog":
 				if _, exists := os.LookupEnv("WSLENV"); exists {
 					t.Log("skipping syslog test on WSL")

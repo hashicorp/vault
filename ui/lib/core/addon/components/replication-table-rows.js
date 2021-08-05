@@ -1,3 +1,4 @@
+import { reads } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import layout from '../templates/components/replication-table-rows';
@@ -22,16 +23,14 @@ export default Component.extend({
   classNames: ['replication-table-rows'],
   replicationDetails: null,
   clusterMode: null,
-  secondaryId: computed('replicationDetails.{secondaryId}', function() {
-    return this.replicationDetails.secondaryId;
-  }),
-  primaryClusterAddr: computed('replicationDetails.{primaryClusterAddr}', function() {
+  secondaryId: reads('replicationDetails.secondaryId'),
+  primaryClusterAddr: computed('replicationDetails.primaryClusterAddr', function() {
     return this.replicationDetails.primaryClusterAddr || 'None set';
   }),
-  merkleRoot: computed('replicationDetails.{merkleRoot}', function() {
+  merkleRoot: computed('replicationDetails.merkleRoot', function() {
     return this.replicationDetails.merkleRoot || 'unknown';
   }),
-  clusterId: computed('replicationDetails.{clusterId}', function() {
+  clusterId: computed('replicationDetails.clusterId', function() {
     return this.replicationDetails.clusterId || 'unknown';
   }),
 });

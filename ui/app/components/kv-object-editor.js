@@ -18,7 +18,7 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    const data = KVObject.create({ content: [] }).fromJSON(this.get('value'));
+    const data = KVObject.create({ content: [] }).fromJSON(this.value);
     this.set('kvData', data);
     this.addRow();
   },
@@ -26,20 +26,20 @@ export default Component.extend({
   kvData: null,
 
   kvDataAsJSON: computed('kvData', 'kvData.[]', function() {
-    return this.get('kvData').toJSON();
+    return this.kvData.toJSON();
   }),
 
   kvDataIsAdvanced: computed('kvData', 'kvData.[]', function() {
-    return this.get('kvData').isAdvanced();
+    return this.kvData.isAdvanced();
   }),
 
   kvHasDuplicateKeys: computed('kvData', 'kvData.@each.name', function() {
-    let data = this.get('kvData');
+    let data = this.kvData;
     return data.uniqBy('name').length !== data.get('length');
   }),
 
   addRow() {
-    let data = this.get('kvData');
+    let data = this.kvData;
     let newObj = { name: '', value: '' };
     if (!isNone(data.findBy('name', ''))) {
       return;
@@ -53,17 +53,17 @@ export default Component.extend({
     },
 
     updateRow() {
-      let data = this.get('kvData');
-      this.get('onChange')(data.toJSON());
+      let data = this.kvData;
+      this.onChange(data.toJSON());
     },
 
     deleteRow(object, index) {
-      let data = this.get('kvData');
+      let data = this.kvData;
       let oldObj = data.objectAt(index);
 
       assert('object guids match', guidFor(oldObj) === guidFor(object));
       data.removeAt(index);
-      this.get('onChange')(data.toJSON());
+      this.onChange(data.toJSON());
     },
   },
 });

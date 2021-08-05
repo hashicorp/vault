@@ -22,7 +22,7 @@ func main() {
 
 // Run instantiates a RedShift object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := redshift.New(true)()
+	dbType, err := redshift.New()
 	if err != nil {
 		return err
 	}

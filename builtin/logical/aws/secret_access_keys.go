@@ -3,35 +3,40 @@ package aws
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"regexp"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const secretAccessKeyType = "access_keys"
+const (
+	secretAccessKeyType = "access_keys"
+	storageKey          = "config/root"
+	defaultSTSTemplate  = `{{ printf "vault-%d-%d" (unix_time) (random 20) | truncate 32 }}`
+)
 
 func secretAccessKeys(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: secretAccessKeyType,
 		Fields: map[string]*framework.FieldSchema{
-			"access_key": &framework.FieldSchema{
+			"access_key": {
 				Type:        framework.TypeString,
 				Description: "Access Key",
 			},
 
-			"secret_key": &framework.FieldSchema{
+			"secret_key": {
 				Type:        framework.TypeString,
 				Description: "Secret Key",
 			},
-			"security_token": &framework.FieldSchema{
+			"security_token": {
 				Type:        framework.TypeString,
 				Description: "Security Token",
 			},
@@ -42,26 +47,44 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	}
 }
 
-func genUsername(displayName, policyName, userType string) (ret string, warning string) {
-	var midString string
-
+func genUsername(displayName, policyName, userType, usernameTemplate string) (ret string, warning string, err error) {
 	switch userType {
 	case "iam_user":
 		// IAM users are capped at 64 chars; this leaves, after the beginning and
 		// end added below, 42 chars to play with.
-		midString = fmt.Sprintf("%s-%s-",
-			normalizeDisplayName(displayName),
-			normalizeDisplayName(policyName))
-		if len(midString) > 42 {
-			midString = midString[0:42]
-			warning = "the calling token display name/IAM policy name were truncated to fit into IAM username length limits"
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+		}
+
+		um := UsernameMetadata{
+			DisplayName: normalizeDisplayName(displayName),
+			PolicyName:  normalizeDisplayName(policyName),
+		}
+
+		ret, err = up.Generate(um)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate username: %w", err)
+		}
+		// To prevent template from exceeding IAM length limits
+		if len(ret) > 64 {
+			ret = ret[0:64]
+			warning = "the calling token display name/IAM policy name were truncated to 64 characters to fit within IAM username length limits"
 		}
 	case "sts":
 		// Capped at 32 chars, which leaves only a couple of characters to play
 		// with, so don't insert display name or policy name at all
-	}
+		up, err := template.NewTemplate(template.Template(usernameTemplate))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to initialize username template: %w", err)
+		}
 
-	ret = fmt.Sprintf("vault-%s%d-%d", midString, time.Now().Unix(), rand.Int31n(10000))
+		um := UsernameMetadata{}
+		ret, err = up.Generate(um)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate username: %w", err)
+		}
+	}
 	return
 }
 
@@ -89,7 +112,11 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "sts")
+	username, usernameWarning, usernameError := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
+	// Send a 400 to Framework.OperationFunc Handler
+	if usernameError != nil {
+		return nil, usernameError
+	}
 
 	getTokenInput := &sts.GetFederationTokenInput{
 		Name:            aws.String(username),
@@ -111,7 +138,6 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	}
 
 	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
-
 	if err != nil {
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -141,7 +167,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error) {
 
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
@@ -165,10 +191,31 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, roleName, "iam_user")
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	// Set as defaultUsernameTemplate if not provided
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	roleSessionNameWarning := ""
+	var roleSessionNameError error
+	if roleSessionName == "" {
+		roleSessionName, roleSessionNameWarning, roleSessionNameError = genUsername(displayName, roleName, "iam_user", usernameTemplate)
+		// Send a 400 to Framework.OperationFunc Handler
+		if roleSessionNameError != nil {
+			return nil, roleSessionNameError
+		}
+	} else {
+		roleSessionName = normalizeDisplayName(roleSessionName)
+	}
 
 	assumeRoleInput := &sts.AssumeRoleInput{
-		RoleSessionName: aws.String(username),
+		RoleSessionName: aws.String(roleSessionName),
 		RoleArn:         aws.String(roleArn),
 		DurationSeconds: &lifeTimeInSeconds,
 	}
@@ -179,7 +226,6 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
 	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
-
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -188,8 +234,9 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		"access_key":     *tokenResp.Credentials.AccessKeyId,
 		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 		"security_token": *tokenResp.Credentials.SessionToken,
+		"arn":            *tokenResp.AssumedRoleUser.Arn,
 	}, map[string]interface{}{
-		"username": username,
+		"username": roleSessionName,
 		"policy":   roleArn,
 		"is_sts":   true,
 	})
@@ -200,23 +247,55 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	// STS are purposefully short-lived and aren't renewable
 	resp.Secret.Renewable = false
 
-	if usernameWarning != "" {
-		resp.AddWarning(usernameWarning)
+	if roleSessionNameWarning != "" {
+		resp.AddWarning(roleSessionNameWarning)
 	}
 
 	return resp, nil
 }
 
+func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error) {
+	entry, err := storage.Get(ctx, storageKey)
+	if err != nil {
+		return rootConfig{}, err
+	}
+	if entry == nil {
+		return rootConfig{}, nil
+	}
+
+	var connConfig rootConfig
+	if err := entry.DecodeJSON(&connConfig); err != nil {
+		return rootConfig{}, err
+	}
+	return connConfig, nil
+}
+
 func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
-	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
+	displayName, policyName string,
+	role *awsRoleEntry) (*logical.Response, error) {
 	iamClient, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	// Set as defaultUsernameTemplate if not provided
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	username, usernameWarning, usernameError := genUsername(displayName, policyName, "iam_user", usernameTemplate)
+	// Send a 400 to Framework.OperationFunc Handler
+	if usernameError != nil {
+		return nil, usernameError
+	}
 
 	// Write to the WAL that this user will be created. We do this before
 	// the user is created because if switch the order then the WAL put
@@ -226,7 +305,7 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: username,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
+		return nil, fmt.Errorf("error writing WAL entry: %w", err)
 	}
 
 	userPath := role.UserPath
@@ -246,8 +325,8 @@ func (b *backend) secretAccessKeysCreate(
 	_, err = iamClient.CreateUserWithContext(ctx, createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
-			iamErr := errwrap.Wrapf("error creating IAM user: {{err}}", err)
-			return nil, errwrap.Wrap(errwrap.Wrapf("failed to delete WAL entry: {{err}}", walErr), iamErr)
+			iamErr := fmt.Errorf("error creating IAM user: %w", err)
+			return nil, errwrap.Wrap(fmt.Errorf("failed to delete WAL entry: %w", walErr), iamErr)
 		}
 		return logical.ErrorResponse("Error creating IAM user: %s", err), awsutil.CheckAWSError(err)
 	}
@@ -286,6 +365,26 @@ func (b *backend) secretAccessKeysCreate(
 		}
 	}
 
+	var tags []*iam.Tag
+	for key, value := range role.IAMTags {
+		// This assignment needs to be done in order to create unique addresses for
+		// these variables. Without doing so, all the tags will be copies of the last
+		// tag listed in the role.
+		k, v := key, value
+		tags = append(tags, &iam.Tag{Key: &k, Value: &v})
+	}
+
+	if len(tags) > 0 {
+		_, err = iamClient.TagUser(&iam.TagUserInput{
+			Tags:     tags,
+			UserName: &username,
+		})
+
+		if err != nil {
+			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
+		}
+	}
+
 	// Create the keys
 	keyResp, err := iamClient.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
@@ -298,7 +397,7 @@ func (b *backend) secretAccessKeysCreate(
 	// the secret because it'll get rolled back anyways, so we have to return
 	// an error here.
 	if err := framework.DeleteWAL(ctx, s, walID); err != nil {
-		return nil, errwrap.Wrapf("failed to commit WAL entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to commit WAL entry: %w", err)
 	}
 
 	// Return the info!
@@ -354,7 +453,6 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	// STS cleans up after itself so we can skip this if is_sts internal data
 	// element set to true. If is_sts is not set, assumes old version
 	// and defaults to the IAM approach.
@@ -405,4 +503,9 @@ func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
 		}
 	}
 	return retval
+}
+
+type UsernameMetadata struct {
+	DisplayName string
+	PolicyName  string
 }

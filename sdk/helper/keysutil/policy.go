@@ -312,7 +312,7 @@ type Policy struct {
 	deleted uint32
 
 	Name string      `json:"name"`
-	Key  []byte      `json:"key,omitempty"` //DEPRECATED
+	Key  []byte      `json:"key,omitempty"` // DEPRECATED
 	Keys keyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is
@@ -1335,6 +1335,8 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	}
 }
 
+// Rotate rotates the policy and persists it to storage.
+// If the rotation partially fails, the policy state will be restored.
 func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
@@ -1355,14 +1357,15 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		}
 	}()
 
-	if p.Keys == nil {
-		// This is an initial key rotation when generating a new policy. We
-		// don't need to call migrate here because if we've called getPolicy to
-		// get the policy in the first place it will have been run.
-		p.Keys = keyEntryMap{}
+	if err := p.RotateInMemory(randReader); err != nil {
+		return err
 	}
 
-	p.LatestVersion += 1
+	return p.Persist(ctx, storage)
+}
+
+// RotateInMemory rotates the policy but does not persist it to storage.
+func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1449,6 +1452,14 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		}
 	}
 
+	p.LatestVersion += 1
+
+	if p.Keys == nil {
+		// This is an initial key rotation when generating a new policy. We
+		// don't need to call migrate here because if we've called getPolicy to
+		// get the policy in the first place it will have been run.
+		p.Keys = keyEntryMap{}
+	}
 	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
 	// This ensures that with new key creations min decryption version is set
@@ -1458,7 +1469,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		p.MinDecryptionVersion = 1
 	}
 
-	return p.Persist(ctx, storage)
+	return nil
 }
 
 func (p *Policy) MigrateKeyToKeysMap() {

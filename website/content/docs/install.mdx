@@ -1,0 +1,85 @@
+---
+layout: docs
+page_title: Install Vault
+description: |-
+  Download a precompiled binary, compile from source, or use a package.
+---
+
+# Install Vault
+
+There are several approaches to installing Vault:
+
+1. Install a [Linux package](#linux-package)
+
+1. Use a [precompiled binary](#precompiled-binaries)
+
+1. Install [from source](#compiling-from-source)
+
+Installing a Linux package is the easiest. If you develop or deploy on another
+platform, the precompiled binary will be easiest. We provide downloads over TLS
+along with SHA256 sums to verify the binary. We also distribute a PGP signature
+with the SHA256 sums that can be verified.
+
+## Linux Package
+
+We build and sign official packages for Ubuntu, Debian, Fedora, RHEL, Amazon
+Linux, and other distributions. Follow the instructions at [HashiCorp
+Learn][learn-vault-install] to add our GPG key, add our repository, and
+install.
+
+## Precompiled Binaries
+
+To install the precompiled binary, [download](/downloads) the appropriate
+package for your system. Vault is currently packaged as a zip file.
+
+Once the zip is downloaded, unzip it into any directory. The `vault` binary
+inside is all that is necessary to run Vault (or `vault.exe` for Windows). No
+additional files are required to run Vault.
+
+Copy the binary to anywhere on your system. If you intend to access it from the
+command-line, make sure to place it somewhere on your `PATH`.
+
+Continue on to [HashiCorp Learn][learn-vault-dev-server] to start a server, `put`
+your first secret, and use other features of Vault.
+
+## Compiling from Source
+
+To compile from source, you will need [Go](https://golang.org) installed and
+configured properly (including a `GOPATH` environment variable set), as well as
+a copy of [`git`](https://www.git-scm.com/) in your `PATH`.
+
+Clone the Vault repository from GitHub into your `GOPATH`:
+
+```shell
+$ mkdir -p $GOPATH/src/github.com/hashicorp && cd $_
+$ git clone https://github.com/hashicorp/vault.git
+$ cd vault
+```
+
+Bootstrap the project. This will download and compile libraries and tools needed
+to compile Vault:
+
+```shell
+$ make bootstrap
+```
+
+Build Vault for your current system and put the binary in `./bin/` (relative to
+the git checkout). The `make dev` target is just a shortcut that builds `vault`
+for only your local build environment (no cross-compiled targets).
+
+```shell
+$ make dev
+```
+
+## Verifying the Installation
+
+To verify Vault is properly installed, run `vault -h` on your system. You should
+see help output. If you are executing it from the command line, make sure it is
+on your PATH or you may get an error about Vault not being found.
+
+```shell-session
+$ vault -h
+```
+
+[learn-vault-install]: https://learn.hashicorp.com/vault/getting-started/install
+[learn-vault-dev-server]: https://learn.hashicorp.com/vault/getting-started/dev-server

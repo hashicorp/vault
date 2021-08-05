@@ -145,7 +145,6 @@ func TestOpenAPI_Regex(t *testing.T) {
 				t.Fatalf("Clean Regex error (%s). Expected %s, got %s", test.input, test.output, result)
 			}
 		}
-
 	})
 }
 
@@ -599,7 +598,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {
-		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
+		// fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
 		t.Fatal(diff)
 	}
 }
@@ -630,7 +629,6 @@ func expected(name string) string {
 
 func mustJSONMarshal(t *testing.T, data interface{}) []byte {
 	j, err := json.MarshalIndent(data, "", "  ")
-
 	if err != nil {
 		t.Fatal(err)
 	}

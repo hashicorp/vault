@@ -12,6 +12,7 @@
       <div class="has-copy-button">
         <JsonEditor
           data-test-json-viewer
+          @showToolbar={{false}}
           @value={{ stringify unwrapData }}
           @options={{hash
           readOnly=true
@@ -25,14 +26,14 @@
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      {{#link-to 'vault.cluster.access.control-groups' class="button"}}
+      <LinkTo @route="vault.cluster.access.control-groups" class="button">
         <Chevron @direction="left" /> Back
-      {{/link-to}}
+      </LinkTo>
     </div>
   {{else}}
     <div class="control-group-success" data-test-unwrap-form>
       <form {{action (perform unwrap token) on="submit"}}>
-        {{message-error errorMessage=error}}
+        <MessageError @errorMessage={{error}} />
           <p>
           If you have the token, you can now can access <code>{{model.requestPath}}</code>
           </p>

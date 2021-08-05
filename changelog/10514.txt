@@ -1,0 +1,3 @@
+```release-note:improvement
+core: add metrics for active entity count
+```

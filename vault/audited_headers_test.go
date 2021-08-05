@@ -51,7 +51,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	}
 
 	expected := map[string]*auditedHeaderSettings{
-		"x-test-header": &auditedHeaderSettings{
+		"x-test-header": {
 			HMAC: false,
 		},
 	}
@@ -92,7 +92,6 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	if !reflect.DeepEqual(headers, expected) {
 		t.Fatalf("Expected config didn't match actual. Expected: %#v, Got: %#v", expected, headers)
 	}
-
 }
 
 func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
@@ -118,7 +117,7 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 	}
 
 	expected := map[string]*auditedHeaderSettings{
-		"x-vault-header": &auditedHeaderSettings{
+		"x-vault-header": {
 			HMAC: true,
 		},
 	}
@@ -162,9 +161,9 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 	conf.add(context.Background(), "X-Vault-HeAdEr", true)
 
 	reqHeaders := map[string][]string{
-		"X-Test-Header":  []string{"foo"},
-		"X-Vault-Header": []string{"bar", "bar"},
-		"Content-Type":   []string{"json"},
+		"X-Test-Header":  {"foo"},
+		"X-Vault-Header": {"bar", "bar"},
+		"Content-Type":   {"json"},
 	}
 
 	hashFunc := func(ctx context.Context, s string) (string, error) { return "hashed", nil }
@@ -175,25 +174,24 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"x-test-header":  []string{"foo"},
-		"x-vault-header": []string{"hashed", "hashed"},
+		"x-test-header":  {"foo"},
+		"x-vault-header": {"hashed", "hashed"},
 	}
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Fatalf("Expected headers did not match actual: Expected %#v\n Got %#v\n", expected, result)
 	}
 
-	//Make sure we didn't edit the reqHeaders map
+	// Make sure we didn't edit the reqHeaders map
 	reqHeadersCopy := map[string][]string{
-		"X-Test-Header":  []string{"foo"},
-		"X-Vault-Header": []string{"bar", "bar"},
-		"Content-Type":   []string{"json"},
+		"X-Test-Header":  {"foo"},
+		"X-Vault-Header": {"bar", "bar"},
+		"Content-Type":   {"json"},
 	}
 
 	if !reflect.DeepEqual(reqHeaders, reqHeadersCopy) {
 		t.Fatalf("Req headers were changed, expected %#v\n got %#v", reqHeadersCopy, reqHeaders)
 	}
-
 }
 
 func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
@@ -203,14 +201,14 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 	}
 
 	conf.Headers = map[string]*auditedHeaderSettings{
-		"X-Test-Header":  &auditedHeaderSettings{false},
-		"X-Vault-Header": &auditedHeaderSettings{true},
+		"X-Test-Header":  {false},
+		"X-Vault-Header": {true},
 	}
 
 	reqHeaders := map[string][]string{
-		"X-Test-Header":  []string{"foo"},
-		"X-Vault-Header": []string{"bar", "bar"},
-		"Content-Type":   []string{"json"},
+		"X-Test-Header":  {"foo"},
+		"X-Vault-Header": {"bar", "bar"},
+		"Content-Type":   {"json"},
 	}
 
 	salter, err := salt.NewSalt(context.Background(), nil, nil)

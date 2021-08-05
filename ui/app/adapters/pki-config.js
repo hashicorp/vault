@@ -1,8 +1,8 @@
+import AdapterError from '@ember-data/adapter/error';
 import { hash, resolve } from 'rsvp';
 import { capitalize } from '@ember/string';
 import { set } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -49,7 +49,7 @@ export default ApplicationAdapter.extend({
   fetchSection(backendPath, section) {
     const sections = ['cert', 'urls', 'crl', 'tidy'];
     if (!section || !sections.includes(section)) {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

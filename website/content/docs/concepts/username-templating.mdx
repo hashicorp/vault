@@ -1,0 +1,158 @@
+---
+layout: docs
+page_title: Username Templating
+description: >-
+  Username templating are used in some secret engines to allow operators to define
+  how dynamic usernames are generated.
+---
+
+# Username Templating
+
+Some of the secrets engines that generate dynamic users for external systems provide the ability for Vault operators
+to customize how usernames are generated for said external systems. This customization feature uses the
+[Go template language](https://golang.org/pkg/text/template/). This page describes the basics of using these templates
+for username generation but does not go into great depth of using the templating language for more advanced usages.
+See the API documentation for the given secret engine to determine if it supports username templating and for more
+details on using it with that engine.
+
+~> When customizing how usernames are generated, take care to ensure you have enough randomness to ensure uniqueness
+otherwise multiple calls to create the credentials may interfere with each other.
+
+In addition to the functionality built into the Go template language, a number of additional functions are available:
+
+## Available Functions
+
+### String/Character Manipulation
+
+`lowercase` - Lowercases the input value.<br/>
+**Example**: `{{.FieldName | lowercase}}`
+
+`replace` - Find/replace on the input value.<br/>
+**Example**: `{{.FieldName | replace - _}}`
+
+`truncate` - truncates the input value to the specified number of characters.<br/>
+**Example**: `{{.FieldName | truncate 10}}`
+
+`truncate_sha256` - Truncates the input value to the specified number of characters. The last 8 characters of the
+new value will be replace by the first 8 characters of the SHA256 hash of the truncated characters.<br/>
+**Example**: `{{.FieldName | truncate_sha256 20}}`. If `FieldName` is `abcdefghijklmnopqrstuvwxyz`, all characters after
+the 12th (`l`) are removed and SHA256 hashed (`872808ffbf...1886ca6f20`).
+The first 8 characters of the hash (`872808ff`) are then appended to the end of the first 12 characters from the
+original value: `abcdefghijkl872808ff`.
+
+`uppercase` - Uppercases the input value.<br/>
+**Example**: `{{.FieldName | uppercase}}`
+
+### Generating Values
+
+`random` - Generates a random string from lowercase letters, uppercase letters, and numbers. Must include a
+number indicating how many characters to generate.<br/>
+**Example**: `{{random 20}}` generates 20 random characters
+
+`timestamp` - The current time. Must provide a formatting string based on Go’s [time package](https://golang.org/pkg/time/).<br/>
+**Example**: `{{timestamp "2006-01-02T15:04:05Z"}}`
+
+`unix_time` - The current unix timestamp (number of seconds since Jan 1 1970).<br/>
+**Example**: `{{unix_time}}`
+
+`unix_time_millis` - The current unix timestamp in milliseconds.<br/>
+**Example**: `{{unix_time_millis}}`
+
+`uuid` - Generates a random UUID.<br/>
+**Example**: `{{uuid}}`
+
+### Hashing
+
+`base64` - Base64 encodes the input value.<br/>
+**Example**: `{{.FieldName | base64}}`
+
+`sha256` - SHA256 hashes the input value.<br/>
+**Example**: `{{.FieldName | sha256}}`
+
+## Examples
+
+Each secret engine provides a different set of data to the template. Please see the associated secret engine's
+documentation for details on what values are provided to the template. The examples below are modeled after the
+[Database engine's](/docs/secrets/databases) data, however the specific fields that are provided from a given engine
+may differ from these examples. Additionally, the time is assumed to be 2009-02-13 11:31:30PM GMT
+(unix timestamp: 1234567890) and random characters are the ordered english alphabet: `abcdefghijklmnopqrstuvwxyz`.
+
+-> Note: The space between `{{`/`}}` and the values/functions are optional.
+For instance: `{{.DisplayName}}` is equivalent to `{{ .DisplayName }}`
+
+| Field name    | Value                     |
+| ------------- | ------------------------- |
+| `DisplayName` | `token-with-display-name` |
+| `RoleName`    | `my_custom_database_role` |
+
+To reference either of these fields, a `.` must be put in front of the field name: `{{.DisplayName}}`. Custom functions
+do not include a `.` in front of them: `{{random 20}}`.
+
+### Basic Example
+
+**Template**:
+
+```
+{{.DisplayName}}_{{.RoleName}}
+```
+
+**Username**:
+
+```
+token-with-display-name_my_custom_database_role
+```
+
+This is a basic example that references the two fields that are provided to the template. In simplest terms, this is
+a simple string substitution.
+
+~> This example does not have any randomness and should not be used when generating dynamic usernames. The purpose is to
+demonstrate referencing data within the Go template language.
+
+### Custom Functions
+
+**Template**:
+
+```
+FOO_{{.DisplayName | replace "-" "_" | uppercase}}_{{.RoleName | replace "-" "_" | uppercase}}_{{timestamp "2006_01_02T15_04_05Z" | replace "-" "_"}}
+```
+
+**Username**:
+
+```
+FOO_TOKEN_WITH_DISPLAY_NAME_MY_CUSTOM_DATABASE_ROLE_2009_02_13T11_31_30Z_0700
+```
+
+`{{.DisplayName | replace "-" "_" | uppercase}}` - Replaces all dashes with underscores and then uppercases the display name.<br/>
+`{{.RoleName | replace "-" "_" | uppercase}}` - Replaces all dashes with underscores and then uppercases the role name.<br/>
+`{{timestamp "2006_01_02T15_04_05Z" | replace "-" "_"}}` - Generates the current timestamp using the provided format and
+replaces all dashes with underscores.
+
+### Truncating to Maximum Length
+
+**Template**:
+
+```
+{{printf "v_%s_%s_%s_%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 45}}
+```
+
+**Username**:
+
+```
+v_token-wi_my_custo_abcdefghijklmnopqrst_1234
+```
+
+`.DisplayName | truncate 8` truncates the display name to 8 characters (`token-wi`).<br/>
+`.RoleName | truncate 8` truncates the role name to 8 characters (`my_custo`).<br/>
+`random 20` generates 20 random characters `abcdefghijklmnopqrst`.<br/>
+`unix_time` generates the current timestamp as the number of seconds since January 1, 1970 (`1234567890`).<br/>
+
+Each of these values are passed to `printf "v_%s_%s_%s_%s"` which prepends them with `v_` and puts an underscore between
+each field. This results in `v_token-wi_my_custo_abcdefghijklmnopqrst_1234567890`. This value is then passed to
+`truncate 45` where the last 6 characters are removed which results in `v_token-wi_my_custo_abcdefghijklmnopqrst_1234`.
+
+## Learn
+
+Refer to the following tutorials for step-by-step instructions.
+
+- [Database Secrets Engine with MongoDB](https://learn.hashicorp.com/tutorials/vault/database-mongodb#customize-the-generated-username-schema)
+- [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets#define-a-username-template)

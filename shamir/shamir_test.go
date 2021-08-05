@@ -63,7 +63,7 @@ func TestCombine_invalid(t *testing.T) {
 		t.Fatalf("should err")
 	}
 
-	//Too short
+	// Too short
 	parts = [][]byte{
 		[]byte("f"),
 		[]byte("b"),

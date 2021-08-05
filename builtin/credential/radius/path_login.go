@@ -21,17 +21,17 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login" + framework.OptionalParamRegex("urlusername"),
 		Fields: map[string]*framework.FieldSchema{
-			"urlusername": &framework.FieldSchema{
+			"urlusername": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login. (URL parameter)",
 			},
 
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username to be used for login. (POST request body)",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 			},

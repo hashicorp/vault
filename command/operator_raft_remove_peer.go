@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftRemovePeerCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftRemovePeerCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftRemovePeerCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftRemovePeerCommand)(nil)
+)
 
 type OperatorRaftRemovePeerCommand struct {
 	*BaseCommand

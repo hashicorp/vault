@@ -2,8 +2,8 @@ package pki
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -14,7 +14,7 @@ func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
 		Fields: map[string]*framework.FieldSchema{
-			"pem_bundle": &framework.FieldSchema{
+			"pem_bundle": {
 				Type: framework.TypeString,
 				Description: `PEM-format, concatenated unencrypted
 secret key and certificate.`,
@@ -65,7 +65,7 @@ func (b *backend) pathCAWrite(ctx context.Context, req *logical.Request, data *f
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw values into cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw values into cert bundle: %w", err)
 	}
 
 	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)

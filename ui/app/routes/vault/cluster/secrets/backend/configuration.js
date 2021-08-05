@@ -5,12 +5,8 @@ export default Route.extend({
   wizard: service(),
   model() {
     let backend = this.modelFor('vault.cluster.secrets.backend');
-    if (this.get('wizard.featureState') === 'list') {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'CONTINUE',
-        backend.get('type')
-      );
+    if (this.wizard.featureState === 'list') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', backend.get('type'));
     }
     return backend;
   },

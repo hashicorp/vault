@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/posener/complete"
 )
 
@@ -390,7 +390,9 @@ func TestPredict_Plugins(t *testing.T) {
 				"rabbitmq",
 				"radius",
 				"redshift-database-plugin",
+				"snowflake-database-plugin",
 				"ssh",
+				"terraform",
 				"totp",
 				"transform",
 				"transit",

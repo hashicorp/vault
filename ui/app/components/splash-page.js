@@ -9,6 +9,6 @@ export default Component.extend({
   tagName: '',
 
   activeCluster: computed('auth.activeCluster', function() {
-    return this.get('store').peekRecord('cluster', this.get('auth.activeCluster'));
+    return this.store.peekRecord('cluster', this.auth.activeCluster);
   }),
 });

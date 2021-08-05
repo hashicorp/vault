@@ -1,0 +1,266 @@
+---
+layout: docs
+page_title: Telemetry - Configuration
+description: |-
+  The telemetry stanza specifies various configurations for Vault to publish
+  metrics to upstream systems.
+---
+
+# `telemetry` Stanza
+
+The `telemetry` stanza specifies various configurations for Vault to publish
+metrics to upstream systems. Available Vault metrics can be found in the
+[Telemetry internals documentation](/docs/internals/telemetry).
+
+```hcl
+telemetry {
+  statsite_address = "statsite.company.local:8125"
+}
+```
+
+## `telemetry` Parameters
+
+Due to the number of configurable parameters to the `telemetry` stanza,
+parameters on this page are grouped by the telemetry provider.
+
+### Common
+
+The following options are available on all telemetry configurations.
+
+- `usage_gauge_period` `(string: "10m")` - Specifies the interval at which high-cardinality
+  usage data is collected, such as token counts, entity counts, and secret counts.  
+   A value of "none" disables the collection.
+- `maximum_gauge_cardinality` `(int: 500)` - The maximum cardinality of gauge labels.
+- `disable_hostname` `(bool: false)` - Specifies if gauge values should be
+  prefixed with the local hostname.
+- `enable_hostname_label` `(bool: false)` - Specifies if all metric values should
+  contain the `host` label with the local hostname. It is recommended to enable
+  `disable_hostname` if this option is used.
+- `lease_metrics_epsilon` `(string: "1hr")` - Specifies the the size of the bucket used to measure future
+  lease expiration. For example, for the default value of 1 hour, the `vault.expire.leases.by_expiration`
+  metric will aggregate the total number of expiring leases for 1 hour buckets, starting from the current time.
+  Note that leases are put into buckets by rounding. For example, if `lease_metrics_epsilon` is set to 1hr and
+  lease A expires 25 minutes from now, and lease B expires 35 minutes from now, then lease A will be in the first
+  bucket, which corresponds to 0-30 minutes, and lease B will be in the second bucket, which corresponds to 31-90
+  minutes.
+- `num_lease_metrics_buckets` `(int: 168)` - The number of expiry buckets for leases. For the default value, for
+  example, 168 value labels for the `vault.expire.leases.by_expiration` metric will be reported, where each value
+  each bucket is separated in time by the `lease_metrics_epsilon` parameter. For the default 1 hour value of
+  `lease_metrics_epsilon` and the default value of `num_lease_metrics_buckets`, `vault.expire.leases.by_expiration`
+  will report the total number of leases expiring within each hour from the current time to one week from the current time.
+- `add_lease_metrics_namespace_labels` `(bool: false)` - If this value is set to true, then `vault.expire.leases.by_expiration`
+  will break down expiring leases by both time and namespace. This parameter is disabled by default because enabling it can lead
+  to a large-cardinality metric.
+- `filter_default` `(bool: true)` - This controls whether to allow metrics that have not been specified by the filter.
+  Defaults to `true`, which will allow all metrics when no filters are provided.
+  When set to `false` with no filters, no metrics will be sent.
+- `prefix_filter` `(string array: [])` - This is a list of filter rules to apply for allowing/blocking metrics by
+  prefix in the following format:
+  ```json
+  ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
+  ```
+  A leading "**+**" will enable any metrics with the given prefix, and a leading "**-**" will block them. 
+  If there is overlap between two rules, the more specific rule will take precedence. Blocking will take priority if the same prefix is listed multiple times.
+
+
+### `statsite`
+
+These `telemetry` parameters apply to
+[statsite](https://github.com/armon/statsite).
+
+- `statsite_address` `(string: "")` - Specifies the address of a statsite server
+  to forward metrics data to.
+
+```hcl
+telemetry {
+  statsite_address = "statsite.company.local:8125"
+}
+```
+
+### `statsd`
+
+These `telemetry` parameters apply to
+[statsd](https://github.com/etsy/statsd).
+
+- `statsd_address` `(string: "")` - Specifies the address of a statsd server to
+  forward metrics to.
+
+```hcl
+telemetry {
+  statsd_address = "statsd.company.local:8125"
+}
+```
+
+### `circonus`
+
+These `telemetry` parameters apply to [Circonus](http://circonus.com/).
+
+- `circonus_api_token` `(string: "")` - Specifies a valid Circonus API Token
+  used to create/manage check. If provided, metric management is enabled.
+
+- `circonus_api_app` `(string: "nomad")` - Specifies a valid app name associated
+  with the API token.
+
+- `circonus_api_url` `(string: "https://api.circonus.com/v2")` - Specifies the
+  base URL to use for contacting the Circonus API.
+
+- `circonus_submission_interval` `(string: "10s")` - Specifies the interval at
+  which metrics are submitted to Circonus.
+
+- `circonus_submission_url` `(string: "")` - Specifies the
+  `check.config.submission_url` field, of a Check API object, from a previously
+  created HTTPTRAP check.
+
+- `circonus_check_id` `(string: "")` - Specifies the Check ID (**not check
+  bundle**) from a previously created HTTPTRAP check. The numeric portion of the
+  `check._cid` field in the Check API object.
+
+- `circonus_check_force_metric_activation` `(bool: false)` - Specifies if force
+  activation of metrics which already exist and are not currently active. If
+  check management is enabled, the default behavior is to add new metrics as
+  they are encountered. If the metric already exists in the check, it will
+  not be activated. This setting overrides that behavior.
+
+- `circonus_check_instance_id` `(string: "<hostname>:<application>")` - Serves
+  to uniquely identify the metrics coming from this _instance_. It can be used
+  to maintain metric continuity with transient or ephemeral instances as they
+  move around within an infrastructure. By default, this is set to
+  hostname:application name (e.g. "host123:nomad").
+
+- `circonus_check_search_tag` `(string: <service>:<application>)` - Specifies a
+  special tag which, when coupled with the instance id, helps to narrow down the
+  search results when neither a Submission URL or Check ID is provided. By
+  default, this is set to service:app (e.g. "service:nomad").
+
+- `circonus_check_display_name` `(string: "")` - Specifies a name to give a
+  check when it is created. This name is displayed in the Circonus UI Checks
+  list.
+
+- `circonus_check_tags` `(string: "")` - Comma separated list of additional
+  tags to add to a check when it is created.
+
+- `circonus_broker_id` `(string: "")` - Specifies the ID of a specific Circonus
+  Broker to use when creating a new check. The numeric portion of `broker._cid`
+  field in a Broker API object. If metric management is enabled and neither a
+  Submission URL nor Check ID is provided, an attempt will be made to search for
+  an existing check using Instance ID and Search Tag. If one is not found, a new
+  HTTPTRAP check will be created. By default, this is a random
+  Enterprise Broker is selected, or, the default Circonus Public Broker.
+
+- `circonus_broker_select_tag` `(string: "")` - Specifies a special tag which
+  will be used to select a Circonus Broker when a Broker ID is not provided. The
+  best use of this is to as a hint for which broker should be used based on
+  _where_ this particular instance is running (e.g. a specific geo location or
+  datacenter, dc:sfo).
+
+### `dogstatsd`
+
+These `telemetry` parameters apply to
+[DogStatsD](http://docs.datadoghq.com/guides/dogstatsd/).
+
+- `dogstatsd_addr` `(string: "")` - This provides the address of a DogStatsD
+  instance. DogStatsD is a protocol-compatible flavor of statsd, with the added
+  ability to decorate metrics with tags and event information. If provided,
+  Vault will send various telemetry information to that instance for
+  aggregation. This can be used to capture runtime information.
+
+* `dogstatsd_tags` `(string array: [])` - This provides a list of global tags
+  that will be added to all telemetry packets sent to DogStatsD. It is a list
+  of strings, where each string looks like "my_tag_name:my_tag_value".
+
+### `prometheus`
+
+These `telemetry` parameters apply to
+[prometheus](https://prometheus.io).
+
+- `prometheus_retention_time` `(string: "24h")` - Specifies the amount of time that
+  Prometheus metrics are retained in memory. Setting this to 0 will disable Prometheus telemetry.
+- `disable_hostname` `(bool: false)` - It is recommended to also enable the option
+  `disable_hostname` to avoid having prefixed metrics with hostname.
+
+The `/v1/sys/metrics` endpoint is only accessible on active nodes
+and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
+endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
+
+Vault does not use the default Prometheus path, so Prometheus must be configured
+with the path below.
+Note that using `?format=prometheus` in the path won't work as "?" will be
+escaped, so it must be specified as a parameter.
+
+A Vault token is required with `capabilities = ["read", "list"]` to
+/v1/sys/metrics. The Prometheus `bearer_token` or `bearer_token_file` options
+must be added to the scrape job.
+
+An example job_name stanza required in the [Prometheus config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) is provided below.
+
+```
+# prometheus.yml
+scrape_configs:
+  - job_name: 'vault'
+    metrics_path: "/v1/sys/metrics"
+    params:
+      format: ['prometheus']
+    scheme: https
+    tls_config:
+      ca_file: your_ca_here.pem
+    bearer_token: "your_vault_token_here"
+    static_configs:
+    - targets: ['your_vault_server_here:8200']
+```
+
+An example telemetry configuration to be added to Vault's configuration file is shown below:
+
+```hcl
+telemetry {
+  prometheus_retention_time = "30s"
+  disable_hostname = true
+}
+```
+
+### `stackdriver`
+
+These `telemetry` parameters apply to [Stackdriver Monitoring](https://cloud.google.com/monitoring/).
+
+The Stackdriver telemetry provider uses the official Google Cloud Golang SDK. This means
+it supports the common ways of
+[providing credentials to Google Cloud](https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application).
+
+To use this telemetry provider, the service account must have the following
+minimum scope(s):
+
+```text
+https://www.googleapis.com/auth/cloud-platform
+https://www.googleapis.com/auth/monitoring
+https://www.googleapis.com/auth/monitoring.write
+```
+
+And the following IAM role(s):
+
+```text
+roles/monitoring.metricWriter
+```
+
+- `stackdriver_project_id` `(string: "")` - The Google Cloud ProjectID to send telemetry data to.
+- `stackdriver_location` `(string: "")` - The GCP or AWS region of the monitored resource.
+- `stackdriver_namespace` `(string: "")` - A namespace identifier for the telemetry data.
+- `stackdriver_debug_logs` `(bool: "false")` - Specifies if Vault writes additional stackdriver
+related debug logs to standard error output (stderr).  
+
+It is recommended to also enable the option `disable_hostname` to avoid having prefixed
+metrics with hostname and enable instead `enable_hostname_label`.
+
+```hcl
+telemetry {
+  stackdriver_project_id = "my-test-project"
+  stackdriver_location = "us-east1-a"
+  stackdriver_namespace = "vault-cluster-a"
+  disable_hostname = true
+  enable_hostname_label = true
+}
+```
+
+Metrics from Vault can be found in [Metrics Explorer](https://cloud.google.com/monitoring/charts/metrics-explorer).
+All those metrics are shown with a resource type of `generic_task`, and the metric name
+is prefixed with `custom.googleapis.com/go-metrics/`.
+
+[telemetry-tcp]: /docs/configuration/listener/tcp#telemetry-parameters

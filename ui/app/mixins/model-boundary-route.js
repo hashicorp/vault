@@ -20,8 +20,8 @@ export default Mixin.create({
   modelTypes: null,
 
   verifyProps: on('init', function() {
-    var modelType = this.get('modelType');
-    var modelTypes = this.get('modelTypes');
+    var modelType = this.modelType;
+    var modelTypes = this.modelTypes;
     warn(
       'No `modelType` or `modelTypes` specified for `' +
         this.toString() +
@@ -38,8 +38,8 @@ export default Mixin.create({
   }),
 
   clearModelCache: on('deactivate', function() {
-    var modelType = this.get('modelType');
-    var modelTypes = this.get('modelTypes');
+    var modelType = this.modelType;
+    var modelTypes = this.modelTypes;
 
     if (!modelType && !modelTypes) {
       warn(

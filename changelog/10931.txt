@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/terraform: New secret engine for managing Terraform Cloud API tokens
+```

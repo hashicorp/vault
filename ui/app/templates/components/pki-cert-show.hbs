@@ -1,12 +1,6 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=(hash display=model.id id=model.idForNav)
-      path="vault.cluster.secrets.backend.list"
-      mode=mode
-      root=root
-      showCurrent=true
-    }}
+    <KeyValueHeader @baseKey={{hash display=model.id id=model.idForNav}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
@@ -16,35 +10,36 @@
 </PageHeader>
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{message-error model=model}}
+  <MessageError @model={{model}} />
   {{#each model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
+      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
     {{else}}
-      {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{#if attr.options.masked}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+          />
+        </InfoTableRow>
+      {{else}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
+      {{/if}}
     {{/if}}
   {{/each}}
 </div>
 <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
   <div class="field is-grouped">
     <div class="control">
-      {{#copy-button
-        clipboardText=model.toCreds
-        class="button is-primary"
-        buttonType="button"
-        success=(action (set-flash-message "Credentials copied!"))
-      }}
+      <CopyButton @clipboardText={{model.toCreds}} @class="button is-primary" @buttonType="button" @success={{action (set-flash-message "Credentials copied!")}}>
         Copy credentials
-      {{/copy-button}}
+      </CopyButton>
     </div>
     <div class="control">
-      {{#link-to
-        "vault.cluster.secrets.backend.list-root"
-        (query-params tab="certs")
-        class="button"
-      }}
+      <LinkTo @route="vault.cluster.secrets.backend.list-root" @query={{hash tab="certs"}} class="button">
         Back
-      {{/link-to}}
+      </LinkTo>
     </div>
   </div>
   {{#if (and (not model.revocationTime) model.canRevoke)}}

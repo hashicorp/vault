@@ -1,6 +1,6 @@
 import { assert } from '@ember/debug';
 import Component from '@ember/component';
-import { set, get, computed } from '@ember/object';
+import { set, computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
 export default Component.extend({
@@ -11,18 +11,18 @@ export default Component.extend({
   ttl: '30m',
 
   wrapTTL: computed('wrapResponse', 'ttl', function() {
-    const { wrapResponse, ttl } = this.getProperties('wrapResponse', 'ttl');
+    const { wrapResponse, ttl } = this;
     return wrapResponse ? ttl : null;
   }),
 
   didRender() {
     this._super(...arguments);
-    get(this, 'onChange')(get(this, 'wrapTTL'));
+    this.onChange(this.wrapTTL);
   },
 
   init() {
     this._super(...arguments);
-    assert('`onChange` handler is a required attr in `' + this.toString() + '`.', get(this, 'onChange'));
+    assert('`onChange` handler is a required attr in `' + this.toString() + '`.', this.onChange);
   },
 
   layout: hbs`
@@ -43,7 +43,7 @@ export default Component.extend({
     changedValue(ttlObj) {
       set(this, 'wrapResponse', ttlObj.enabled);
       set(this, 'ttl', `${ttlObj.seconds}s`);
-      get(this, 'onChange')(get(this, 'wrapTTL'));
+      this.onChange(this.wrapTTL);
     },
   },
 });

@@ -1,0 +1,169 @@
+---
+layout: docs
+page_title: Kubernetes - Service Registration - Configuration
+description: >-
+  Kubernetes Service Registration labels Vault pods with their current status
+  for use with selectors.
+---
+
+# Kubernetes Service Registration
+
+Kubernetes Service Registration tags Vault pods with their current status for
+use with selectors. Service registration is only available when Vault is running in
+[High Availability mode](/docs/concepts/ha).
+
+- **HashiCorp Supported** – Kubernetes Service Registration is officially supported
+  by HashiCorp.
+
+## Configuration
+
+```hcl
+service_registration "kubernetes" {
+  namespace      = "my-namespace"
+  pod_name       = "my-pod-name"
+}
+```
+
+Alternatively, the namespace and pod name can be set through the following
+environment variables:
+
+- `VAULT_K8S_NAMESPACE`
+- `VAULT_K8S_POD_NAME`
+
+This allows you to set these parameters using
+[the Downward API](https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/).
+
+If using only environment variables, the service registration stanza declaring
+you're using Kubernetes must still exist to indicate your intentions:
+
+```
+service_registration "kubernetes" {}
+```
+
+For service registration to succeed, Vault must be able to apply labels to pods
+in Kubernetes. The following RBAC rules are required to allow the service account
+associated with the Vault pods to update its own pod specification:
+
+```
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: mynamespace
+  name: vault-service-account
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "update"]
+```
+
+## Examples
+
+Once properly configured, enabling service registration will cause Kubernetes pods
+to come up with the following labels:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vault
+  labels:
+    vault-active: "false"
+    vault-initialized: "true"
+    vault-perf-standby: "false"
+    vault-sealed: "false"
+    vault-version: 1.3.0
+```
+
+After shutdowns, Vault pods will bear the following labels:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vault
+  labels:
+    vault-active: "false"
+    vault-initialized: "false"
+    vault-perf-standby: "false"
+    vault-sealed: "true"
+    vault-version: 1.3.0
+```
+
+## Label Definitions
+
+- `vault-active` `(string: "true"/"false")` – Vault active is updated dynamically each time Vault's active status changes.
+  True indicates that this Vault pod is currently the leader. False indicates that this Vault pod is currently a standby.
+- `vault-initialized` `(string: "true"/"false")` – Vault initialized is updated dynamically each time Vault's initialization
+  status changes. True indicates that Vault is currently initialized. False indicates the Vault is currently uninitialized.
+- `vault-perf-standby` `(string: "true"/"false")` – Vault performance standby is updated dynamically each
+  time Vault's leader/standby status changes. **This field is only valuable if the pod is a member of a performance standby cluster**,
+  it will simply be set to "false" when it's not applicable. True indicates that this Vault pod is currently a performance standby. False indicates
+  that this Vault pod is currently a performance leader.
+- `vault-sealed` `(string: "true"/"false")` – Vault sealed is updated dynamically each
+  time Vault's sealed/unsealed status changes. True indicates that Vault is currently sealed. False indicates that Vault
+  is currently unsealed.
+- `vault-version` `(string: "1.3.0")` – Vault version is a string that will not change during a pod's lifecycle.
+
+## Working with Vault's Service Discovery Labels
+
+### Example Service
+
+With labels applied to the pod, services can be created using selectors to filter pods with specific Vault HA roles,
+effectively allowing direct communication with subsets of Vault pods. Note the `vault-active: "true"` line below.
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: vault
+    app.kubernetes.io/name: vault
+    helm.sh/chart: vault-0.1.2
+  name: vault-active-us-east
+  namespace: default
+spec:
+  clusterIP: 10.7.254.51
+  ports:
+  - name: http
+    port: 8200
+    protocol: TCP
+    targetPort: 8200
+  - name: internal
+    port: 8201
+    protocol: TCP
+    targetPort: 8201
+  publishNotReadyAddresses: false
+  selector:
+    app.kubernetes.io/instance: vault
+    app.kubernetes.io/name: vault
+    component: server
+    vault-active: "true"
+  type: ClusterIP
+```
+
+Also, by setting `publishNotReadyAddresses: false` above, pods that have failed will be removed from the service pool.
+
+With this active service in place, we now have a dedicated endpoint that will always reach the active node. When
+setting up Vault replication, it can be used as the primary address:
+
+```shell-session
+$ vault write -f sys/replication/performance/primary/enable \
+    primary_cluster_addr='https://vault-active-us-east:8201'
+```
+
+### Example Upgrades
+
+In conjunction with the pod labels and the `OnDelete` upgrade strategy, upgrades are much easier to orchestrate:
+
+```shell-session
+$ helm upgrade vault --set='server.image.tag=1.4.0'
+
+$ kubectl delete pod --selector=vault-active=false \
+    --selector=vault-version=1.2.3
+
+$ kubectl delete pod --selector=vault-active=true \
+    --selector=vault-version=1.2.3
+```
+
+When deleting an instance of a pod, the `Statefulset` defining the desired state of the cluster will reschedule the
+deleted pods with the newest image.

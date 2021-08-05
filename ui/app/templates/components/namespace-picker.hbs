@@ -24,14 +24,14 @@
       </D.trigger>
       <D.content @class="namespace-picker-content">
         <div class="is-mobile level-left">
-          {{#if (not isUserRootNamespace)}}
+          {{#unless isUserRootNamespace}}
             <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
               <Chevron
                 @direction="left"
                 @class="has-text-grey"
               />
             </NamespaceLink>
-          {{/if}}
+          {{/unless}}
           <h5 class="list-header">Current namespace</h5>
         </div>
         <div class="namespace-header-bar level is-mobile">
@@ -48,14 +48,14 @@
         </div>
         <div class="namespace-list {{if isAnimating "animated-list"}}">
           <div class="is-mobile level-left">
-          {{#if (not isUserRootNamespace)}}
+          {{#unless isUserRootNamespace}}
             <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link is-current button is-ghost icon">
               <Chevron
                 @direction="left"
                 @class="has-text-grey"
               />
             </NamespaceLink>
-          {{/if}}
+          {{/unless}}
           <h5 class="list-header">Namespaces</h5>
         </div>
           {{#if (contains '' lastMenuLeaves)}}

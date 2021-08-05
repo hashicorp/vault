@@ -31,14 +31,14 @@ func (m *Manager) inLeasePathCache(path string) bool {
 
 type entManager struct {
 	isPerfStandby bool
+	isDRSecondary bool
 }
 
 func (*entManager) Reset() error {
 	return nil
 }
 
-type LeaseCountQuota struct {
-}
+type LeaseCountQuota struct{}
 
 func (l LeaseCountQuota) allow(request *Request) (Response, error) {
 	panic("implement me")

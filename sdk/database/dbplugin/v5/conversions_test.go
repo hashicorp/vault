@@ -491,6 +491,7 @@ func intPtr(i int) *int {
 func float64Ptr(f float64) *float64 {
 	return &f
 }
+
 func strPtr(str string) *string {
 	return &str
 }

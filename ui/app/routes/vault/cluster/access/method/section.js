@@ -1,8 +1,7 @@
-/* eslint-disable prettier/prettier */
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import DS from 'ember-data';
 
 export default Route.extend({
   wizard: service(),
@@ -10,7 +9,7 @@ export default Route.extend({
   model(params) {
     const { section_name: section } = params;
     if (section !== 'configuration') {
-      const error = new DS.AdapterError();
+      const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
     }

@@ -23,7 +23,7 @@ func ServeConfig(db Database) *plugin.ServeConfig {
 
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
-		5: plugin.PluginSet{
+		5: {
 			"database": &GRPCDatabasePlugin{
 				Impl: db,
 			},

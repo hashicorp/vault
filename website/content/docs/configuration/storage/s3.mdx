@@ -1,0 +1,123 @@
+---
+layout: docs
+page_title: S3 - Storage Backends - Configuration
+description: |-
+  The S3 storage backend is used to persist Vault's data in an Amazon S3
+  bucket.
+---
+
+# S3 Storage Backend
+
+The S3 storage backend is used to persist Vault's data in an [Amazon S3][s3]
+bucket.
+
+- **No High Availability** – the S3 storage backend does not support high
+  availability.
+
+- **Community Supported** – the S3 storage backend is supported by the
+  community. While it has undergone review by HashiCorp employees, they may not
+  be as knowledgeable about the technology. If you encounter problems with them,
+  you may be referred to the original author.
+
+```hcl
+storage "s3" {
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+  bucket     = "my-bucket"
+}
+```
+
+## `s3` Parameters
+
+- `bucket` `(string: <required>)` – Specifies the name of the S3 bucket. This
+  can also be provided via the environment variable `AWS_S3_BUCKET`.
+
+- `endpoint` `(string: "")` – Specifies an alternative, AWS compatible, S3
+  endpoint. This can also be provided via the environment variable
+  `AWS_S3_ENDPOINT`.
+
+- `region` `(string "us-east-1")` – Specifies the AWS region. This can also be
+  provided via the environment variable `AWS_REGION` or `AWS_DEFAULT_REGION`,
+  in that order of preference.
+
+The following settings are used for authenticating to AWS. If you are
+running your Vault server on an EC2 instance, you can also make use of the EC2
+instance profile service to provide the credentials Vault will use to make
+S3 API calls. Leaving the `access_key` and `secret_key` fields empty will
+cause Vault to attempt to retrieve credentials from the AWS metadata service.
+
+- `access_key` – Specifies the AWS access key. This can also be provided via
+  the environment variable `AWS_ACCESS_KEY_ID`, AWS credential files, or by
+  IAM role.
+
+- `secret_key` – Specifies the AWS secret key. This can also be provided via
+  the environment variable `AWS_SECRET_ACCESS_KEY`, AWS credential files, or
+  by IAM role.
+
+- `session_token` `(string: "")` – Specifies the AWS session token. This can
+  also be provided via the environment variable `AWS_SESSION_TOKEN`.
+
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to S3.
+
+- `s3_force_path_style` `(string: "false")` - Specifies whether to use host
+  bucket style domains with the configured endpoint.
+
+- `disable_ssl` `(string: "false")` - Specifies if SSL should be used for the
+  endpoint connection (highly recommended not to disable for production).
+
+- `kms_key_id` `(string: "")` - Specifies the ID or Alias of the KMS key used to
+  encrypt data in the S3 backend. Vault must have `kms:Encrypt` and `kms:Decrypt`
+  permissions for this key. You can use `alias/aws/s3` to specify the default
+  key for the account.
+
+- `path` `(string: "")` - Specifies the path in the S3 Bucket where Vault
+  data will be stored.
+
+## `s3` Examples
+
+### Default Example
+
+This example shows using Amazon S3 as a storage backend.
+
+```hcl
+storage "s3" {
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+  bucket     = "my-bucket"
+}
+```
+
+### S3 KMS Encryption with Default Key
+
+This example shows using Amazon S3 as a storage backend using KMS
+encryption with the default S3 KMS key for the account.
+
+```hcl
+storage "s3" {
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+  bucket     = "my-bucket"
+  kms_key_id = "alias/aws/s3"
+}
+```
+
+### S3 KMS Encryption with Custom Key
+
+This example shows using Amazon S3 as a storage backend using KMS
+encryption with a customer managed KMS key.
+
+```hcl
+storage "s3" {
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+  bucket     = "my-bucket"
+  kms_key_id = "001234ac-72d3-9902-a3fc-0123456789ab"
+}
+```
+
+[s3]: https://aws.amazon.com/s3/
+
+## AWS Instance Metadata Timeouts
+
+@include 'aws-imds-timeout.mdx'

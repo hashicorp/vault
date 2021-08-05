@@ -164,5 +164,4 @@ func TestExpiration_RenewToken_TestCluster(t *testing.T) {
 	if ttl < 4*time.Second {
 		t.Fatal("expected ttl value to be around 5s")
 	}
-
 }

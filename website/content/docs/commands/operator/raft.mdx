@@ -1,0 +1,303 @@
+---
+layout: docs
+page_title: operator raft - Command
+description: >-
+  The "operator raft" command is used to interact with the integrated Raft storage backend.
+---
+
+# operator raft
+
+This command groups subcommands for operators to manage the integrated Raft storage backend.
+
+```text
+Usage: vault operator raft <subcommand> [options] [args]
+
+ This command groups subcommands for operators interacting with the Vault
+ integrated Raft storage backend. Most users will not need to interact with these
+ commands. Here are a few examples of the Raft operator commands:
+
+Subcommands:
+    join           Joins a node to the Raft cluster
+    list-peers     Returns the Raft peer set
+    remove-peer    Removes a node from the Raft cluster
+    snapshot       Restores and saves snapshots from the Raft cluster
+```
+
+## join
+
+This command is used to join a new node as a peer to the Raft cluster. In order
+to join, there must be at least one existing member of the cluster. If Shamir
+seal is in use, then unseal keys are to be supplied before or after the
+join process, depending on whether it's being used exclusively for HA.
+
+If raft is used for `storage`, the node must be joined before unsealing and the
+`leader-api-addr` argument must be provided. If raft is used for `ha_storage`,
+the node must be first unsealed before joining and the `leader-api-addr` must
+_not_ be provided.
+
+```text
+Usage: vault operator raft join [options] <leader-api-addr>
+
+  Join the current node as a peer to the Raft cluster by providing the address
+  of the Raft leader node.
+
+	  $ vault operator raft join "http://127.0.0.2:8200"
+```
+
+The `join` command also allows operators to specify cloud auto-join configuration
+instead of a static IP address or hostname. When provided, Vault will attempt to
+automatically discover and resolve potential leader addresses based on the provided
+auto-join configuration.
+
+Vault uses go-discover to support the auto-join functionality. Please see the
+go-discover
+[README](https://github.com/hashicorp/go-discover/blob/master/README.md) for
+details on the format.
+
+By default, Vault will attempt to reach discovered peers using HTTPS and port 8200.
+Operators may override these through the `--auto-join-scheme` and `--auto-join-port`
+CLI flags respectively.
+
+```text
+Usage: vault operator raft join [options] <auto-join-configuration>
+  Join the current node as a peer to the Raft cluster by providing cloud auto-join
+  metadata configuration.
+    $ vault operator raft join "provider=aws region=eu-west-1 ..."
+```
+
+### Parameters
+
+The following flags are available for the `operator raft join` command.
+
+- `-leader-ca-cert` `(string: "")` - CA cert to communicate with Raft leader.
+
+- `-leader-client-cert` `(string: "")` - Client cert to authenticate to Raft leader.
+
+- `-leader-client-key` `(string: "")` - Client key to authenticate to Raft leader.
+
+- `-non-voter` `(bool: false) (enterprise)` - This flag is used to make the
+  server not participate in the Raft quorum, and have it only receive the data
+  replication stream. This can be used to add read scalability to a cluster in
+  cases where a high volume of reads to servers are needed. The default is false.
+
+- `-retry` `(bool: false)` - Continuously retry joining the Raft cluster upon
+  failures. The default is false.
+
+## list-peers
+
+This command is used to list the full set of peers in the Raft cluster.
+
+```text
+Usage: vault operator raft list-peers
+
+  Provides the details of all the peers in the Raft cluster.
+
+	  $ vault operator raft list-peers
+```
+
+### Example Output
+
+```json
+{
+ ...
+  "data": {
+    "config": {
+      "index": 62,
+      "servers": [
+        {
+          "address": "127.0.0.2:8201",
+          "leader": true,
+          "node_id": "node1",
+          "protocol_version": "3",
+          "voter": true
+        },
+        {
+          "address": "127.0.0.4:8201",
+          "leader": false,
+          "node_id": "node3",
+          "protocol_version": "3",
+          "voter": true
+        }
+      ]
+    }
+  }
+}
+```
+
+## remove-peer
+
+This command is used to remove a node from being a peer to the Raft cluster. In
+certain cases where a peer may be left behind in the Raft configuration even
+though the server is no longer present and known to the cluster, this command
+can be used to remove the failed server so that it is no longer affects the Raft
+quorum.
+
+```text
+Usage: vault operator raft remove-peer <server_id>
+
+  Removes a node from the Raft cluster.
+
+	  $ vault operator raft remove-peer node1
+```
+
+## snapshot
+
+This command groups subcommands for operators interacting with the snapshot
+functionality of the integrated Raft storage backend. There are 2 subcommands
+supported: `save` and `restore`.
+
+```text
+Usage: vault operator raft snapshot <subcommand> [options] [args]
+
+  This command groups subcommands for operators interacting with the snapshot
+  functionality of the integrated Raft storage backend.
+
+Subcommands:
+    restore    Installs the provided snapshot, returning the cluster to the state defined in it
+    save       Saves a snapshot of the current state of the Raft cluster into a file
+```
+
+### snapshot save
+
+Takes a snapshot of the Vault data. The snapshot can be used to restore Vault to
+the point in time when a snapshot was taken.
+
+```text
+Usage: vault operator raft snapshot save <snapshot_file>
+
+  Saves a snapshot of the current state of the Raft cluster into a file.
+
+	  $ vault operator raft snapshot save raft.snap
+```
+
+~> **Note:** Snapshot is not supported when Raft is used only for `ha_storage`.
+
+### snapshot restore
+
+Restores a snapshot of Vault data taken with `vault operator raft snapshot save`.
+
+```text
+Usage: vault operator raft snapshot restore <snapshot_file>
+
+  Installs the provided snapshot, returning the cluster to the state defined in it.
+
+	  $ vault operator raft snapshot restore raft.snap
+```
+
+## autopilot
+
+This command groups subcommands for operators interacting with the autopilot
+functionality of the integrated Raft storage backend. There are 3 subcommands
+supported: `get-config`, `set-config` and `state`.
+
+For a more detailed overview of autopilot features, see the [concepts page](/docs/concepts/integrated-storage/autopilot).
+
+```text
+Usage: vault operator raft autopilot <subcommand> [options] [args]
+
+This command groups subcommands for operators interacting with the autopilot
+functionality of the integrated Raft storage backend.
+
+Subcommands:
+    get-config    Returns the configuration of the autopilot subsystem under integrated storage
+    set-config    Modify the configuration of the autopilot subsystem under integrated storage
+    state         Displays the state of the raft cluster under integrated storage as seen by autopilot
+```
+
+### autopilot state
+
+Displays the state of the raft cluster under integrated storage as seen by
+autopilot. It shows whether autopilot thinks the cluster is healthy or not,
+and how many nodes could fail before the cluster becomes unhealthy ("Failure Tolerance").
+
+State includes a list of all servers by nodeID and IP address. Last Index
+indicates how close the state on each node is to the leader's.
+
+A node can have a status of "leader", "voter", and
+"[non-voter](/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only)".
+
+```text
+Usage: vault operator raft autopilot state
+
+  Displays the state of the raft cluster under integrated storage as seen by autopilot.
+
+    $ vault operator raft autopilot state
+```
+
+#### Example Output
+
+```text
+Healthy:                      true
+Failure Tolerance:            1
+Leader:                       raft1
+Voters:
+   raft1
+   raft2
+   raft3
+Servers:
+   raft1
+      Name:            raft1
+      Address:         127.0.0.1:8201
+      Status:          leader
+      Node Status:     alive
+      Healthy:         true
+      Last Contact:    0s
+      Last Term:       3
+      Last Index:      38
+   raft2
+      Name:            raft2
+      Address:         127.0.0.2:8201
+      Status:          voter
+      Node Status:     alive
+      Healthy:         true
+      Last Contact:    2.514176729s
+      Last Term:       3
+      Last Index:      38
+```
+
+### autopilot get-config
+
+Returns the configuration of the autopilot subsystem under integrated storage.
+
+```text
+Usage: vault operator raft autopilot get-config
+
+  Returns the configuration of the autopilot subsystem under integrated storage.
+
+    $ vault operator raft autopilot get-config
+```
+
+### autopilot set-config
+
+Modify the configuration of the autopilot subsystem under integrated storage.
+
+```text
+Usage: vault operator raft autopilot set-config [options]
+
+  Modify the configuration of the autopilot subsystem under integrated storage.
+
+	  $ vault operator raft autopilot set-config -server-stabilization-time 10s
+
+```
+
+Flags applicable to this command are the following:
+
+- `cleanup-dead-servers` `(bool)` - Controls whether to remove dead servers from
+  the Raft peer list periodically or when a new server joins. This requires that
+  `min-quorum` is also set.
+
+- `last-contact-threshold` `(string)` - Limit on the amount of time a server can
+  go without leader contact before being considered unhealthy.
+
+- `dead-server-last-contact-threshold` `(string)` - Limit on the amount of time
+  a server can go without leader contact before being considered failed. This
+  takes effect only when `cleanup_dead_servers` is set.
+
+- `max-trailing-logs` `(int)` - Amount of entries in the Raft Log that a server
+  can be behind before being considered unhealthy.
+
+- `min-quorum` `(int)` - Minimum number of servers allowed in a cluster before
+  autopilot can prune dead servers. This should at least be 3. Applicable only for
+  voting nodes.
+
+- `server-stabilization-time` `(string)` - Minimum amount of time a server must be in a stable, healthy state before it can become a voter. Until that happens, it will be visible as a peer in the cluster, but as a non-voter, meaning it won't contribute to quorum.

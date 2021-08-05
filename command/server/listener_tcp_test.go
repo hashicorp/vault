@@ -28,7 +28,7 @@ func TestTCPListener(t *testing.T) {
 		return net.Dial("tcp", ln.Addr().String())
 	}
 
-	testListenerImpl(t, ln, connFn, "")
+	testListenerImpl(t, ln, connFn, "", 0)
 }
 
 // TestTCPListener_tls tests TLS generally
@@ -75,7 +75,6 @@ func TestTCPListener_tls(t *testing.T) {
 				conf.Certificates = []tls.Certificate{clientCert}
 			}
 			conn, err := tls.Dial("tcp", ln.Addr().String(), conf)
-
 			if err != nil {
 				return nil, err
 			}
@@ -86,7 +85,7 @@ func TestTCPListener_tls(t *testing.T) {
 		}
 	}
 
-	testListenerImpl(t, ln, connFn(true), "foo.example.com")
+	testListenerImpl(t, ln, connFn(true), "foo.example.com", 0)
 
 	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
 		Address:                       "127.0.0.1:0",
@@ -111,7 +110,7 @@ func TestTCPListener_tls(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	testListenerImpl(t, ln, connFn(false), "foo.example.com")
+	testListenerImpl(t, ln, connFn(false), "foo.example.com", 0)
 }
 
 func TestTCPListener_tls13(t *testing.T) {
@@ -158,7 +157,6 @@ func TestTCPListener_tls13(t *testing.T) {
 				conf.Certificates = []tls.Certificate{clientCert}
 			}
 			conn, err := tls.Dial("tcp", ln.Addr().String(), conf)
-
 			if err != nil {
 				return nil, err
 			}
@@ -169,7 +167,7 @@ func TestTCPListener_tls13(t *testing.T) {
 		}
 	}
 
-	testListenerImpl(t, ln, connFn(true), "foo.example.com")
+	testListenerImpl(t, ln, connFn(true), "foo.example.com", tls.VersionTLS13)
 
 	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
 		Address:                       "127.0.0.1:0",
@@ -196,5 +194,19 @@ func TestTCPListener_tls13(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	testListenerImpl(t, ln, connFn(false), "foo.example.com")
+	testListenerImpl(t, ln, connFn(false), "foo.example.com", tls.VersionTLS13)
+
+	ln, _, _, err = tcpListenerFactory(&configutil.Listener{
+		Address:               "127.0.0.1:0",
+		TLSCertFile:           wd + "reload_foo.pem",
+		TLSKeyFile:            wd + "reload_foo.key",
+		TLSDisableClientCerts: true,
+		TLSClientCAFile:       wd + "reload_ca.pem",
+		TLSMaxVersion:         "tls12",
+	}, nil, cli.NewMockUi())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	testListenerImpl(t, ln, connFn(false), "foo.example.com", tls.VersionTLS12)
 }

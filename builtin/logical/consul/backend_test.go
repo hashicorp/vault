@@ -198,7 +198,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-
 }
 
 func testBackendRenewRevoke14(t *testing.T, version string) {

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -92,7 +91,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 
 		cert, err := x509.ParseCertificate(certEntry.Value)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing certificate: {{err}}", err)
+			return nil, fmt.Errorf("error parsing certificate: %w", err)
 		}
 		if cert == nil {
 			return nil, fmt.Errorf("got a nil certificate")
@@ -132,7 +131,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
 	case errutil.InternalError:
-		return nil, errwrap.Wrapf("error encountered during CRL building: {{err}}", crlErr)
+		return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 	}
 
 	resp := &logical.Response{

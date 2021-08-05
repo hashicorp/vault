@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 )
 
 type Client struct {
@@ -77,7 +77,7 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 		if err == nil {
 			if retErr != nil {
 				if c.Logger.IsDebug() {
-					c.Logger.Debug("errors connecting to some hosts: %s", retErr.Error())
+					c.Logger.Debug("errors connecting to some hosts", "error", retErr.Error())
 				}
 			}
 			retErr = nil

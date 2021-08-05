@@ -28,7 +28,7 @@ func getFSM(t testing.TB) (*FSM, string) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(raftDir, logger)
+	fsm, err := NewFSM(raftDir, "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestFSM_Batching(t *testing.T) {
 				Type:  raft.LogConfiguration,
 				Data: raft.EncodeConfiguration(raft.Configuration{
 					Servers: []raft.Server{
-						raft.Server{
+						{
 							Address: raft.ServerAddress("test"),
 							ID:      raft.ServerID("test"),
 						},
