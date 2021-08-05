@@ -14,30 +14,30 @@
       <D.content @class="popup-menu-content">
         <div class="calendar-widget-container">
             <div class="select-year">
-                <p>{{this.displayYear}}</p>
+                <p>{{this.selectedYear}}</p>
                 <div class="icon-container">
                     <button type="button" class="button is-transparent" {{on "click" this.subYear}}>
                         <Chevron @direction="left" @size="s" class="has-text-grey" />
                     </button>
-                    <button type="button" class="button is-transparent" {{on "click" this.addYear}}>
+                    <button type="button" class="button is-transparent" disabled={{this.isDisabled}} {{on "click" this.addYear}}>
                         <Chevron @direction="right" @size="s" class="has-text-grey" />
                     </button>
                 </div>
             </div>
             <div class="select-months">SELECT MONTHS</div>
-            <div class="calendar-widget-grid calendar-widget">
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-1">January</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-2">February</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-3">March</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-4">April</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-5">May</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-6">June</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-7">July</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-8">August</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-9">September</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-10">October</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-11">November</div>
-                <div {{on "click" this.selectMonth}} class="month-list is-calendar-month" id="month-12">December</div>
+            <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-1">January</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-2">February</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-3">March</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-4">April</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-5">May</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-6">June</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-7">July</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-8">August</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-9">September</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-10">October</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-11">November</div>
+                <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="month-list is-calendar-month" id="month-12">December</div>
             </div>
             <div class="border-col"></div>
             <div class="calendar-widget-nav month-nav">

@@ -51,11 +51,18 @@
       border: 1px solid $ui-gray-200;
       border-radius: 2px;
     }
+    &.is-current-month {
+      border: 1px solid $ui-gray-900;
+    }
     &:hover {
       background-color: $blue-500;
       color: white;
       text-align: center;
       cursor: pointer;
+    }
+    &.is-readOnly {
+      background-color: $ui-gray-100;
+      pointer-events: none;
     }
     &.is-selected {
       background-color: $blue-500;
