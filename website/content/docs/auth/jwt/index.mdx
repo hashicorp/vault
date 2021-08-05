@@ -140,10 +140,16 @@ of the configured redirected URIs. These same "localhost" URIs must be added to 
 **Vault UI**
 
 Logging in via the Vault UI requires a redirect URI of the form:
+
 `https://{host:port}/ui/vault/auth/{path}/oidc/callback`
 
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
+
+If the [oidc_response_mode](/api-docs/auth/jwt#oidc_response_mode) is set to `form_post`, then
+logging in via the UI requires a redirect URI of the form:
+
+`https://{host:port}/v1/auth/{path}/oidc/callback`
 
 Prior to Vault 1.6, if [namespaces](/docs/enterprise/namespaces) are in use,
 they must be added as query parameters, for example:
