@@ -412,11 +412,6 @@ func (i *IdentityStore) pathOIDCScopeExistenceCheck(ctx context.Context, req *lo
 
 // pathOIDCCreateUpdateClient is used to create a new named client or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	name := d.Get("name").(string)
 
 	var client namedClient
@@ -460,10 +455,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.AccessTokenTTL = accessTokenTTLRaw.(int)
 	} else if req.Operation == logical.CreateOperation {
 		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
-	}
-
-	if err := i.oidcCache.Flush(ns); err != nil {
-		return nil, err
 	}
 
 	// store named client
