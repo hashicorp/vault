@@ -32,6 +32,7 @@ class CalendarWidget extends Component {
   @tracked allMonthsArray = [];
   @tracked isClearAllMonths = false;
   @tracked areAnyMonthsSelected = false;
+  @tracked shiftClickCount = 0;
 
   @action
   disableMonths() {
@@ -101,6 +102,8 @@ class CalendarWidget extends Component {
 
   @action
   selectMonth(e) {
+    // if one month is selected, then proceed else return
+    // if click + shift again, find range
     e.target.classList.contains('is-selected')
       ? e.target.classList.remove('is-selected')
       : e.target.classList.add('is-selected');
@@ -110,6 +113,39 @@ class CalendarWidget extends Component {
         this.areAnyMonthsSelected = true;
       }
     });
+
+    if (e.shiftKey) {
+      let startMonth;
+      let endMonth;
+      let monthArray = [];
+      this.shiftClickCount = ++this.shiftClickCount;
+      if (this.shiftClickCount > 2) {
+        this.shiftClickCount = 0;
+        return;
+      }
+
+      console.log(this.shiftClickCount);
+      this.allMonthsArray.forEach(e => {
+        monthArray.push(e);
+      });
+
+      this.allMonthsArray.forEach(e => {
+        if (e.classList.contains('is-selected')) {
+          startMonth = e.id;
+          return;
+        }
+      });
+
+      if (this.shiftClickCount === 2) {
+        let reverseMonthArray = monthArray.reverse();
+        reverseMonthArray.forEach(e => {
+          if (e.classList.contains('is-selected')) {
+            endMonth = e.id;
+            return;
+          }
+        });
+      }
+    }
   }
 
   createRange(start, end) {
