@@ -128,6 +128,7 @@ BUG FIXES:
 * core: Fix cleanup of storage entries from cubbyholes within namespaces. [[GH-11408](https://github.com/hashicorp/vault/pull/11408)]
 * core: Fix edge cases in the configuration endpoint for barrier key autorotation. [[GH-11541](https://github.com/hashicorp/vault/pull/11541)]
 * core: Fix goroutine leak when updating rate limit quota [[GH-11371](https://github.com/hashicorp/vault/pull/11371)]
+* core (enterprise): Fix panic on DR secondary when there are lease count quotas [[GH-11742](https://github.com/hashicorp/vault/pull/11742)]
 * core: Fix race that allowed remounting on path used by another mount [[GH-11453](https://github.com/hashicorp/vault/pull/11453)]
 * core: Fix storage entry leak when revoking leases created with non-orphan batch tokens. [[GH-11377](https://github.com/hashicorp/vault/pull/11377)]
 * core: Fixed double counting of http requests after operator stepdown [[GH-11970](https://github.com/hashicorp/vault/pull/11970)]
