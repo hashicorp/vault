@@ -8,7 +8,7 @@
         @class={{concat "calendar-widget-dropdown" (if D.isOpen " is-active")}}
         @tagName="button"
       >
-        {{this.startMonthRange}} - {{this.endMonthRange}}
+        Select Date
         <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} /> 
       </D.trigger>
       <D.content @class="popup-menu-content">
@@ -24,7 +24,24 @@
                     </button>
                 </div>
             </div>
-            <div class="select-months">SELECT MONTHS</div>
+            <div class="select-months">
+              <p>SELECT MONTHS</p>
+              <ToolTip @horizontalPosition="center" @verticalPosition="above" as |T|>
+                <T.trigger>
+                   <Icon 
+                    @glyph="cancel-circle-outline"
+                    class={{concat "level-right clear-icon" (unless this.areAnyMonthsSelected " no-months-selected")}}
+                    {{on "click" this.clearSelectedMonths}}
+                  />
+                </T.trigger>
+                <T.content @class="tool-tip">
+                  <div class="box">
+                    Clear selected months
+                  </div>
+                </T.content>
+              </ToolTip>
+
+            </div>
             <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
                 <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="is-month-list" id="month-1">January</div>
                 <div {{on "click" this.selectMonth}} year={{this.selectedYear}} class="is-month-list" id="month-2">February</div>

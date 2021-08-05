@@ -48,6 +48,20 @@ $dark-gray: #535f73;
   color: $ui-gray-400;
   font-weight: $font-weight-semibold;
   font-size: 13px;
+
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+
+  .clear-icon {
+    color: lighten($blue-500, 10%);
+    margin-left: 10px;
+    padding-top: 1px;
+
+    &.no-months-selected {
+      color: $ui-gray-200;
+    }
+  }
 }
 
 .calendar-widget {
