@@ -13,8 +13,16 @@ type namedAssignment struct {
 	Entities []string `json:"entities"`
 }
 
+type namedProvider struct {
+	name             string
+	Issuer           string   `json:"issuer"`
+	AllowedClientIDs []string `json:"allowed_client_ids"`
+	Scopes           []string `json:"scopes"`
+}
+
 const (
 	namedAssignmentPath = oidcTokensPrefix + "named_assignments/"
+	namedProviderPath   = oidcTokensPrefix + "named_providers/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -62,6 +70,54 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			HelpSynopsis:    "List OIDC assignments",
 			HelpDescription: "List all configured OIDC assignments in the identity backend.",
+		},
+		{
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the assignment",
+				},
+				"issuer": {
+					Type:        framework.TypeString,
+					Description: "Specifies what will be used for the iss claim of ID tokens.",
+				},
+				"allowed_client_ids": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "The client IDs that are permitted to use the provider",
+				},
+				"scopes": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "The scopes available for requesting on the provider",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateProvider,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateProvider,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadProvider,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathOIDCDeleteProvider,
+				},
+			},
+			ExistenceCheck:  i.pathOIDCProviderExistenceCheck,
+			HelpSynopsis:    "CRUD operations for OIDC providers.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC named providers.",
+		},
+		{
+			Pattern: "oidc/provider/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathOIDCListProvider,
+				},
+			},
+			HelpSynopsis:    "List OIDC providers",
+			HelpDescription: "List all configured OIDC providers in the identity backend.",
 		},
 	}
 }
@@ -155,6 +211,109 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
+}
+
+// pathOIDCCreateUpdateProvider is used to create a new named provider or update an existing one
+func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	var provider namedProvider
+	if req.Operation == logical.UpdateOperation {
+		entry, err := req.Storage.Get(ctx, namedProviderPath+name)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&provider); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if issuerRaw, ok := d.GetOk("issuer"); ok {
+		provider.Issuer = issuerRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		provider.Issuer = d.Get("issuer").(string)
+	}
+
+	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
+		provider.AllowedClientIDs = allowedClientIDsRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		provider.AllowedClientIDs = d.Get("allowed_client_ids").([]string)
+	}
+
+	if scopesRaw, ok := d.GetOk("scopes"); ok {
+		provider.Scopes = scopesRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		provider.Scopes = d.Get("scopes").([]string)
+	}
+
+	// store named provider
+	entry, err := logical.StorageEntryJSON(namedProviderPath+name, provider)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// pathOIDCListProvider is used to list named providers
+func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	providers, err := req.Storage.List(ctx, namedProviderPath)
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(providers), nil
+}
+
+// pathOIDCReadProvider is used to read an existing provider
+func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, namedProviderPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var storedNameProvider namedProvider
+	if err := entry.DecodeJSON(&storedNameProvider); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"issuer":             storedNameProvider.Issuer,
+			"allowed_client_ids": storedNameProvider.AllowedClientIDs,
+			"scopes":             storedNameProvider.Scopes,
+		},
+	}, nil
+}
+
+// pathOIDCDeleteProvider is used to delete an assignment
+func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	err := req.Storage.Delete(ctx, namedProviderPath+name)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (i *IdentityStore) pathOIDCProviderExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, namedProviderPath+name)
 	if err != nil {
 		return false, err
 	}
