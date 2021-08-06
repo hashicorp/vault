@@ -37,7 +37,7 @@ The key features of Vault are:
 
 * **Data Encryption**: Vault can encrypt and decrypt data without storing
   it. This allows security teams to define encryption parameters and
-  developers to store encrypted data in a location such as SQL without
+  developers to store encrypted data in a location such as an SQL database without
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
