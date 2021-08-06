@@ -171,7 +171,7 @@ class CalendarWidget extends Component {
       });
     }
 
-    this.shiftClickRange = this.createRange(startAndEndMonths[0], startAndEndMonths[-1]).map(
+    this.shiftClickRange = this.createRange(startAndEndMonths[0], startAndEndMonths[1]).map(
       n => `month-${n}`
     );
 
