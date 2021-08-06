@@ -25,17 +25,24 @@ class CalendarWidget extends Component {
   @tracked displayYear = this.currentYear;
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
   @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
-  @tracked quickMonthsSelection = null;
+  @tracked preselectRangeOfMonths = null;
   @tracked allMonthsNodeList = [];
   @tracked isClearAllMonths = false;
   @tracked areMonthsSelected = false;
   @tracked shiftClickCount = 0;
-  @tracked startMonth;
-  @tracked endMonth;
+  @tracked startShiftRange;
+  @tracked endShiftRange;
   @tracked shiftClickRange = [];
 
   // HELPER FUNCTIONS //
 
+  checkAndSetAreMonthsSelected() {
+    this.allMonthsNodeList.forEach(e => {
+      if (e.classList.contains('is-selected')) {
+        this.areMonthsSelected = true;
+      }
+    });
+  }
   calculateLastMonth() {
     return sub(this.currentDate(), { months: 1 });
   }
@@ -99,13 +106,13 @@ class CalendarWidget extends Component {
 
   @action
   subYear() {
-    // if clearMonths was clicked new dom elements are render and we need to clear any selected months
-    this.displayYear = parseInt(this.displayYear) - 1;
-    this.selectMonths(this.quickMonthsSelection);
+    this.displayYear = this.displayYear - 1;
+    this.selectMonths(this.preselectRangeOfMonths);
     // call disable months action
     this.disableMonths();
     this.disableFutureYear = this.isCurrentYear();
     this.disablePastYear = this.isObsoleteYear();
+    // if clearMonths was clicked new dom elements are rendered and we need to clear any selected months
     if (this.isClearAllMonths) {
       this.deselectAllMonths();
     }
@@ -113,9 +120,8 @@ class CalendarWidget extends Component {
 
   @action
   addYear() {
-    this.displayYear = parseInt(this.displayYear) + 1;
-    this.selectMonths(this.quickMonthsSelection);
-    // call disable months action
+    this.displayYear = this.displayYear + 1;
+    this.selectMonths(this.preselectRangeOfMonths);
     this.disableMonths();
     this.disableFutureYear = this.isCurrentYear();
     this.disablePastYear = this.isObsoleteYear();
@@ -133,11 +139,7 @@ class CalendarWidget extends Component {
       ? this.removeClass(e.target, 'is-selected')
       : this.addClass(e.target, 'is-selected');
 
-    this.allMonthsNodeList.forEach(e => {
-      if (e.classList.contains('is-selected')) {
-        this.areMonthsSelected = true;
-      }
-    });
+    this.checkAndSetAreMonthsSelected();
 
     if (e.shiftKey) {
       let monthArray = [];
@@ -157,7 +159,7 @@ class CalendarWidget extends Component {
       if (this.shiftClickCount === 1) {
         this.allMonthsNodeList.forEach(e => {
           if (e.classList.contains('is-selected')) {
-            this.startMonth = e.id;
+            this.startShiftRange = e.id;
             return;
           }
         });
@@ -165,19 +167,19 @@ class CalendarWidget extends Component {
       // grab end month
       let isSelectedArray = [];
       if (this.shiftClickCount === 2) {
-        this.endMonth = reverseMonthArray.forEach(e => {
+        this.endShiftRange = reverseMonthArray.forEach(e => {
           if (e.classList.contains('is-selected')) {
             isSelectedArray.push(e.id);
             return;
           }
         });
-        this.endMonth = isSelectedArray[0];
+        this.endShiftRange = isSelectedArray[0];
 
         // create a range
         // split last months
         this.shiftClickRange = this.createRange(
-          parseInt(this.startMonth.split('-')[1]),
-          parseInt(this.endMonth.split('-')[1])
+          parseInt(this.startShiftRange.split('-')[1]),
+          parseInt(this.endShiftRange.split('-')[1])
         ).map(n => `month-${n}`);
 
         this.shiftClickRange.forEach(id => {
@@ -192,49 +194,46 @@ class CalendarWidget extends Component {
   }
 
   @action
-  selectMonths(lastXNumberOfMonths) {
-    this.quickMonthsSelection = lastXNumberOfMonths;
-    // deselect all elements before reselecting
+  selectMonths(quickSelectNumber) {
+    this.preselectRangeOfMonths = quickSelectNumber;
     this.deselectAllMonths();
     // if the user has not selected anything exit function
-    if (lastXNumberOfMonths === null) {
+    if (quickSelectNumber === null) {
       return;
     }
     this.areMonthsSelected = true;
-    // reports are not available for current month so we don't want it in range
+    // exclude current month in range
     let endMonth = this.currentMonth - 1;
-    // start range X months back, subtract one to skip current month
-    let startRange = endMonth - lastXNumberOfMonths;
-    // creates array of selected months (integers)
+    // start range quickSelectNumber of months back
+    let startRange = endMonth - quickSelectNumber;
+    // creates array of integers correlating to selected months
     let selectedRange = this.createRange(startRange, endMonth);
-    // array of ids for months selected from previous year
-    let lastYearSelectedRangeIdsArray = selectedRange.filter(n => n < 0).map(n => `month-${n + 13}`);
+    // array of month-ids for months selected from previous year
+    let previousYearMonthIds = selectedRange.filter(n => n < 0).map(n => `month-${n + 13}`);
 
-    // array of month elements
-    let previousYearMonthElementsArray = [];
+    // array of month-ids for months selected from current year
+    let currentYearMonthIds = selectedRange.filter(n => n > 0).map(n => `month-${n}`);
+
+    let previousYearMonthElements = [];
     this.allMonthsNodeList.forEach(monthElement => {
-      lastYearSelectedRangeIdsArray.includes(monthElement.id)
-        ? previousYearMonthElementsArray.push(monthElement)
-        : '';
+      previousYearMonthIds.includes(monthElement.id) ? previousYearMonthElements.push(monthElement) : '';
     });
 
-    // array of ids for months selected from current year
-    let selectedRangeIdsArray = selectedRange.filter(n => n > 0).map(n => `month-${n}`);
-
-    let currentYearMonthElementsArray = [];
+    let currentYearMonthElements = [];
     this.allMonthsNodeList.forEach(monthElement => {
-      selectedRangeIdsArray.includes(monthElement.id) ? currentYearMonthElementsArray.push(monthElement) : '';
+      currentYearMonthIds.includes(monthElement.id) ? currentYearMonthElements.push(monthElement) : '';
     });
 
-    // add selector class to month elements for both last year and current year
-    currentYearMonthElementsArray.forEach(element => {
+    // iterate array of current year month elements and select
+    currentYearMonthElements.forEach(element => {
       if (this.currentYear === this.displayYear) {
         this.addClass(element, 'is-selected');
       }
     });
 
-    previousYearMonthElementsArray.forEach(element => {
-      if (parseInt(this.currentYear) - 1 === this.displayYear) {
+    // iterate array of previous year month elements and select
+    previousYearMonthElements.forEach(element => {
+      if (this.currentYear - 1 === this.displayYear) {
         this.addClass(element, 'is-selected');
       }
     });
