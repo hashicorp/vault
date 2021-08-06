@@ -30,13 +30,11 @@ class CalendarWidget extends Component {
   @tracked isClearAllMonths = false;
   @tracked areMonthsSelected = false;
   @tracked shiftClickCount = 0;
-  @tracked startShiftRange;
-  @tracked endShiftRange;
   @tracked shiftClickRange = [];
 
   // HELPER FUNCTIONS //
 
-  checkAndSetAreMonthsSelected() {
+  checkIfMonthsSelected() {
     this.allMonthsNodeList.forEach(e => {
       if (e.classList.contains('is-selected')) {
         this.areMonthsSelected = true;
@@ -133,64 +131,57 @@ class CalendarWidget extends Component {
 
   @action
   selectMonth(e) {
-    // if one month is selected, then proceed else return
-    // if click + shift again, find range
     e.target.classList.contains('is-selected')
       ? this.removeClass(e.target, 'is-selected')
       : this.addClass(e.target, 'is-selected');
 
-    this.checkAndSetAreMonthsSelected();
+    this.checkIfMonthsSelected();
 
     if (e.shiftKey) {
-      let monthArray = [];
-      this.allMonthsNodeList.forEach(e => {
-        monthArray.push(e);
-      });
-      let reverseMonthArray = monthArray.reverse();
-
-      // count shift clicks
-      this.shiftClickCount = ++this.shiftClickCount;
-      if (this.shiftClickCount > 2) {
-        this.deselectMonths();
-        this.shiftClickCount = 0;
-        return;
-      }
-      // grab start month
-      if (this.shiftClickCount === 1) {
-        this.allMonthsNodeList.forEach(e => {
-          if (e.classList.contains('is-selected')) {
-            this.startShiftRange = e.id;
-            return;
-          }
-        });
-      }
-      // grab end month
-      let isSelectedArray = [];
-      if (this.shiftClickCount === 2) {
-        this.endShiftRange = reverseMonthArray.forEach(e => {
-          if (e.classList.contains('is-selected')) {
-            isSelectedArray.push(e.id);
-            return;
-          }
-        });
-        this.endShiftRange = isSelectedArray[0];
-
-        // create a range
-        // split last months
-        this.shiftClickRange = this.createRange(
-          parseInt(this.startShiftRange.split('-')[1]),
-          parseInt(this.endShiftRange.split('-')[1])
-        ).map(n => `month-${n}`);
-
-        this.shiftClickRange.forEach(id => {
-          this.allMonthsNodeList.forEach(e => {
-            if (e.id === id) {
-              this.addClass(e, 'is-selected');
-            }
-          });
-        });
-      }
+      this.handleShift();
     }
+  }
+
+  reverseMonthNodeList() {
+    let reverseMonthArray = [];
+    this.allMonthsNodeList.forEach(e => {
+      reverseMonthArray.unshift(e);
+    });
+    return reverseMonthArray;
+  }
+
+  handleShift() {
+    // count shift clicks
+    this.shiftClickCount = ++this.shiftClickCount;
+
+    // if going wild with shift clicks, reset count and deselect all months
+    if (this.shiftClickCount > 2) {
+      this.deselectMonths();
+      this.shiftClickCount = 0;
+      return;
+    }
+
+    let startAndEndMonths = [];
+    if (this.shiftClickCount === 2) {
+      this.allMonthsNodeList.forEach(e => {
+        if (e.classList.contains('is-selected')) {
+          startAndEndMonths.push(parseInt(e.id.split('-')[1]));
+          return;
+        }
+      });
+    }
+
+    this.shiftClickRange = this.createRange(startAndEndMonths[0], startAndEndMonths[-1]).map(
+      n => `month-${n}`
+    );
+
+    this.shiftClickRange.forEach(id => {
+      this.allMonthsNodeList.forEach(e => {
+        if (e.id === id) {
+          this.addClass(e, 'is-selected');
+        }
+      });
+    });
   }
 
   @action
