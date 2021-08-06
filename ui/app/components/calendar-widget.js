@@ -17,19 +17,15 @@ import { setComponentTemplate } from '@ember/component';
 import { format, sub } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { is } from 'date-fns/locale';
 
 class CalendarWidget extends Component {
-  startMonthRange = format(this.calculateLastMonth(), 'M/yyyy');
-  endMonthRange = format(this.currentDate(), 'M/yyyy');
   currentYear = parseInt(format(this.currentDate(), 'yyyy'));
   currentMonth = parseInt(format(this.currentDate(), 'M'));
 
-  @tracked isActive = false;
-  @tracked isSelected = false;
-  @tracked selectedYear = this.currentYear;
+  @tracked displayYear = this.currentYear;
+  @tracked disablePastYear = this.isObsoleteYear(); // disables clicking to outdated year (currently set to 5+ years)
+  @tracked disableFutureYear = this.isFutureYear(); // disables clicking to future years
   @tracked quickMonthsSelection = null;
-  @tracked isDisabled = this.currentYear === this.selectedYear;
   @tracked allMonthsArray = [];
   @tracked isClearAllMonths = false;
   @tracked areAnyMonthsSelected = false;
@@ -37,6 +33,22 @@ class CalendarWidget extends Component {
   @tracked startMonth;
   @tracked endMonth;
   @tracked shiftClickRange = [];
+
+  calculateLastMonth() {
+    return sub(this.currentDate(), { months: 1 });
+  }
+
+  currentDate() {
+    return new Date();
+  }
+
+  isFutureYear() {
+    return this.currentYear === this.displayYear;
+  }
+
+  isObsoleteYear() {
+    return this.displayYear === this.currentYear - 4; // won't display more than 5 years ago
+  }
 
   @action
   disableMonths() {
@@ -48,7 +60,7 @@ class CalendarWidget extends Component {
       let elementMonthId = parseInt(e.id.split('-')[1]);
       if (this.currentMonth <= elementMonthId) {
         // only disable months when current year is selected
-        if (this.selectedYear === this.currentYear) {
+        if (this.displayYear === this.currentYear) {
           e.classList.add('is-readOnly');
         }
       }
@@ -64,24 +76,17 @@ class CalendarWidget extends Component {
     });
   }
 
-  calculateLastMonth() {
-    return sub(this.currentDate(), { months: 1 });
-  }
-
-  currentDate() {
-    return new Date();
-  }
-
   @action
   subYear() {
     // if clearMonths was clicked new dom elements are render and we need to clear any selected months
     console.log(this.isClearAllMonths, 'clearAllMOnths');
 
-    this.selectedYear = parseInt(this.selectedYear) - 1;
+    this.displayYear = parseInt(this.displayYear) - 1;
     this.selectMonths(this.quickMonthsSelection);
     // call disable months action
     this.disableMonths();
-    this.isDisabled = this.currentYear === this.selectedYear;
+    this.disableFutureYear = this.isFutureYear();
+    this.disablePastYear = this.isObsoleteYear();
     if (this.isClearAllMonths) {
       this.allMonthsArray.forEach(e => {
         e.classList.remove('is-selected');
@@ -91,11 +96,12 @@ class CalendarWidget extends Component {
 
   @action
   addYear() {
-    this.selectedYear = parseInt(this.selectedYear) + 1;
+    this.displayYear = parseInt(this.displayYear) + 1;
     this.selectMonths(this.quickMonthsSelection);
     // call disable months action
     this.disableMonths();
-    this.isDisabled = this.currentYear === this.selectedYear;
+    this.disableFutureYear = this.isFutureYear();
+    this.disablePastYear = this.isObsoleteYear();
     // if clearMonths was clicked new dom elements are render and we need to clear any selected months
     if (this.isClearAllMonths) {
       this.allMonthsArray.forEach(e => {
@@ -219,13 +225,13 @@ class CalendarWidget extends Component {
 
     // add selector class to month elements for both last year and current year
     currentYearMonthElementsArray.forEach(element => {
-      if (this.currentYear === this.selectedYear) {
+      if (this.currentYear === this.displayYear) {
         element.classList.add('is-selected');
       }
     });
 
     previousYearMonthElementsArray.forEach(element => {
-      if (parseInt(this.currentYear) - 1 === this.selectedYear) {
+      if (parseInt(this.currentYear) - 1 === this.displayYear) {
         element.classList.add('is-selected');
       }
     });
