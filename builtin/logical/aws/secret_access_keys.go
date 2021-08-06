@@ -20,8 +20,6 @@ import (
 const (
 	secretAccessKeyType = "access_keys"
 	storageKey          = "config/root"
-	// STS usernames are capped at 32 chars
-	defaultSTSTemplate = `{{ printf "vault-%d-%d" (unix_time) (random 20) | truncate 32 }}`
 )
 
 func secretAccessKeys(b *backend) *framework.Secret {
@@ -58,6 +56,7 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 		}
 
 		um := UsernameMetadata{
+			Type:        "IAM",
 			DisplayName: normalizeDisplayName(displayName),
 			PolicyName:  normalizeDisplayName(policyName),
 		}
@@ -76,7 +75,9 @@ func genUsername(displayName, policyName, userType, usernameTemplate string) (re
 			return "", fmt.Errorf("unable to initialize username template: %w", err)
 		}
 
-		um := UsernameMetadata{}
+		um := UsernameMetadata{
+			Type: "STS",
+		}
 		ret, err = up.Generate(um)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate username: %w", err)
@@ -109,7 +110,18 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	username, usernameError := genUsername(displayName, policyName, "sts", defaultSTSTemplate)
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read configuration: %w", err)
+	}
+
+	// Set as defaultUsernameTemplate if not provided
+	usernameTemplate := config.UsernameTemplate
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	username, usernameError := genUsername(displayName, policyName, "sts", usernameTemplate)
 	// Send a 400 to Framework.OperationFunc Handler
 	if usernameError != nil {
 		return nil, usernameError
@@ -490,6 +502,7 @@ func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
 }
 
 type UsernameMetadata struct {
+	Type        string
 	DisplayName string
 	PolicyName  string
 }
