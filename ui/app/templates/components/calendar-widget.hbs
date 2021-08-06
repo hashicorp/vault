@@ -30,8 +30,8 @@
                 <T.trigger>
                    <Icon 
                     @glyph="cancel-circle-outline"
-                    class={{concat "level-right clear-icon" (unless this.areAnyMonthsSelected " no-months-selected")}}
-                    {{on "click" this.clearSelectedMonths}}
+                    class={{concat "level-right cancel-circle-icon" (if this.areMonthsSelected " is-active")}}
+                    {{on "click" this.deselectMonths}}
                   />
                 </T.trigger>
                 <T.content @class="tool-tip">

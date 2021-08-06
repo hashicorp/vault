@@ -28,7 +28,7 @@ class CalendarWidget extends Component {
   @tracked quickMonthsSelection = null;
   @tracked allMonthsArray = [];
   @tracked isClearAllMonths = false;
-  @tracked areAnyMonthsSelected = false;
+  @tracked areMonthsSelected = false;
   @tracked shiftClickCount = 0;
   @tracked startMonth;
   @tracked endMonth;
@@ -66,12 +66,12 @@ class CalendarWidget extends Component {
       }
     });
   }
+
   @action
-  clearSelectedMonths() {
+  deselectMonths() {
     this.isClearAllMonths = !this.isClearAllMonths;
-    this.areAnyMonthsSelected = false;
+    this.areMonthsSelected = false;
     this.allMonthsArray.forEach(e => {
-      // clear all selected months
       e.classList.remove('is-selected');
     });
   }
@@ -79,8 +79,6 @@ class CalendarWidget extends Component {
   @action
   subYear() {
     // if clearMonths was clicked new dom elements are render and we need to clear any selected months
-    console.log(this.isClearAllMonths, 'clearAllMOnths');
-
     this.displayYear = parseInt(this.displayYear) - 1;
     this.selectMonths(this.quickMonthsSelection);
     // call disable months action
@@ -120,7 +118,7 @@ class CalendarWidget extends Component {
 
     this.allMonthsArray.forEach(e => {
       if (e.classList.contains('is-selected')) {
-        this.areAnyMonthsSelected = true;
+        this.areMonthsSelected = true;
       }
     });
 
@@ -134,7 +132,7 @@ class CalendarWidget extends Component {
       // count shift clicks
       this.shiftClickCount = ++this.shiftClickCount;
       if (this.shiftClickCount > 2) {
-        this.clearSelectedMonths();
+        this.deselectMonths();
         this.shiftClickCount = 0;
         return;
       }
@@ -197,7 +195,7 @@ class CalendarWidget extends Component {
     if (lastXNumberOfMonths === null) {
       return;
     }
-    this.areAnyMonthsSelected = true;
+    this.areMonthsSelected = true;
     // reports are not available for current month so we don't want it in range
     let endMonth = this.currentMonth - 1;
     // start range X months back, subtract one to skip current month

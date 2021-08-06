@@ -53,13 +53,13 @@ $dark-gray: #535f73;
   justify-content: flex-start;
   align-items: flex-end;
 
-  .clear-icon {
-    color: lighten($blue-500, 10%);
+  .cancel-circle-icon {
+    color: $ui-gray-200;
     margin-left: 10px;
     padding-top: 1px;
 
-    &.no-months-selected {
-      color: $ui-gray-200;
+    &.is-active {
+      color: lighten($blue-500, 10%);
     }
   }
 }
