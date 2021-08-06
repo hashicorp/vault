@@ -19,20 +19,22 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 class CalendarWidget extends Component {
-  currentYear = parseInt(format(this.currentDate(), 'yyyy'));
-  currentMonth = parseInt(format(this.currentDate(), 'M'));
+  currentYear = parseInt(format(this.currentDate(), 'yyyy')); // integer
+  currentMonth = parseInt(format(this.currentDate(), 'M')); // integer
 
   @tracked displayYear = this.currentYear;
-  @tracked disablePastYear = this.isObsoleteYear(); // disables clicking to outdated year (currently set to 5+ years)
-  @tracked disableFutureYear = this.isFutureYear(); // disables clicking to future years
+  @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
+  @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
   @tracked quickMonthsSelection = null;
-  @tracked allMonthsArray = [];
+  @tracked allMonthsNodeList = [];
   @tracked isClearAllMonths = false;
   @tracked areMonthsSelected = false;
   @tracked shiftClickCount = 0;
   @tracked startMonth;
   @tracked endMonth;
   @tracked shiftClickRange = [];
+
+  // HELPER FUNCTIONS //
 
   calculateLastMonth() {
     return sub(this.currentDate(), { months: 1 });
@@ -42,7 +44,7 @@ class CalendarWidget extends Component {
     return new Date();
   }
 
-  isFutureYear() {
+  isCurrentYear() {
     return this.currentYear === this.displayYear;
   }
 
@@ -50,17 +52,38 @@ class CalendarWidget extends Component {
     return this.displayYear === this.currentYear - 4; // won't display more than 5 years ago
   }
 
+  deselectAllMonths() {
+    this.allMonthsNodeList.forEach(element => {
+      this.removeClass(element, 'is-selected');
+    });
+  }
+
+  removeClass(element, classString) {
+    element.classList.remove(classString);
+  }
+
+  addClass(element, classString) {
+    element.classList.add(classString);
+  }
+
+  createRange(start, end) {
+    return Array(end - start + 1)
+      .fill()
+      .map((_, idx) => start + idx);
+  }
+
+  // ACTIONS //
+
   @action
   disableMonths() {
-    let getMonths = document.querySelectorAll('.is-month-list');
-    this.allMonthsArray = getMonths;
-    this.allMonthsArray.forEach(e => {
+    this.allMonthsNodeList = document.querySelectorAll('.is-month-list');
+    this.allMonthsNodeList.forEach(e => {
       // clear all is-readOnly classes and start over.
-      e.classList.remove('is-readOnly');
+      this.removeClass(e, 'is-readOnly');
       let elementMonthId = parseInt(e.id.split('-')[1]);
       if (this.currentMonth <= elementMonthId) {
         // only disable months when current year is selected
-        if (this.displayYear === this.currentYear) {
+        if (this.isCurrentYear()) {
           e.classList.add('is-readOnly');
         }
       }
@@ -71,9 +94,7 @@ class CalendarWidget extends Component {
   deselectMonths() {
     this.isClearAllMonths = !this.isClearAllMonths;
     this.areMonthsSelected = false;
-    this.allMonthsArray.forEach(e => {
-      e.classList.remove('is-selected');
-    });
+    this.deselectAllMonths();
   }
 
   @action
@@ -83,12 +104,10 @@ class CalendarWidget extends Component {
     this.selectMonths(this.quickMonthsSelection);
     // call disable months action
     this.disableMonths();
-    this.disableFutureYear = this.isFutureYear();
+    this.disableFutureYear = this.isCurrentYear();
     this.disablePastYear = this.isObsoleteYear();
     if (this.isClearAllMonths) {
-      this.allMonthsArray.forEach(e => {
-        e.classList.remove('is-selected');
-      });
+      this.deselectAllMonths();
     }
   }
 
@@ -98,13 +117,11 @@ class CalendarWidget extends Component {
     this.selectMonths(this.quickMonthsSelection);
     // call disable months action
     this.disableMonths();
-    this.disableFutureYear = this.isFutureYear();
+    this.disableFutureYear = this.isCurrentYear();
     this.disablePastYear = this.isObsoleteYear();
     // if clearMonths was clicked new dom elements are render and we need to clear any selected months
     if (this.isClearAllMonths) {
-      this.allMonthsArray.forEach(e => {
-        e.classList.remove('is-selected');
-      });
+      this.deselectAllMonths();
     }
   }
 
@@ -113,10 +130,10 @@ class CalendarWidget extends Component {
     // if one month is selected, then proceed else return
     // if click + shift again, find range
     e.target.classList.contains('is-selected')
-      ? e.target.classList.remove('is-selected')
-      : e.target.classList.add('is-selected');
+      ? this.removeClass(e.target, 'is-selected')
+      : this.addClass(e.target, 'is-selected');
 
-    this.allMonthsArray.forEach(e => {
+    this.allMonthsNodeList.forEach(e => {
       if (e.classList.contains('is-selected')) {
         this.areMonthsSelected = true;
       }
@@ -124,7 +141,7 @@ class CalendarWidget extends Component {
 
     if (e.shiftKey) {
       let monthArray = [];
-      this.allMonthsArray.forEach(e => {
+      this.allMonthsNodeList.forEach(e => {
         monthArray.push(e);
       });
       let reverseMonthArray = monthArray.reverse();
@@ -138,7 +155,7 @@ class CalendarWidget extends Component {
       }
       // grab start month
       if (this.shiftClickCount === 1) {
-        this.allMonthsArray.forEach(e => {
+        this.allMonthsNodeList.forEach(e => {
           if (e.classList.contains('is-selected')) {
             this.startMonth = e.id;
             return;
@@ -156,8 +173,6 @@ class CalendarWidget extends Component {
         });
         this.endMonth = isSelectedArray[0];
 
-        console.log(this.startMonth, 'starty');
-        console.log(this.endMonth, 'end');
         // create a range
         // split last months
         this.shiftClickRange = this.createRange(
@@ -166,31 +181,21 @@ class CalendarWidget extends Component {
         ).map(n => `month-${n}`);
 
         this.shiftClickRange.forEach(id => {
-          this.allMonthsArray.forEach(e => {
+          this.allMonthsNodeList.forEach(e => {
             if (e.id === id) {
-              e.classList.add('is-selected');
+              this.addClass(e, 'is-selected');
             }
           });
         });
-
-        console.log(this.shiftClickRange);
       }
     }
-  }
-
-  createRange(start, end) {
-    return Array(end - start + 1)
-      .fill()
-      .map((_, idx) => start + idx);
   }
 
   @action
   selectMonths(lastXNumberOfMonths) {
     this.quickMonthsSelection = lastXNumberOfMonths;
     // deselect all elements before reselecting
-    this.allMonthsArray.forEach(monthElement => {
-      monthElement.classList.remove('is-selected');
-    });
+    this.deselectAllMonths();
     // if the user has not selected anything exit function
     if (lastXNumberOfMonths === null) {
       return;
@@ -207,7 +212,7 @@ class CalendarWidget extends Component {
 
     // array of month elements
     let previousYearMonthElementsArray = [];
-    this.allMonthsArray.forEach(monthElement => {
+    this.allMonthsNodeList.forEach(monthElement => {
       lastYearSelectedRangeIdsArray.includes(monthElement.id)
         ? previousYearMonthElementsArray.push(monthElement)
         : '';
@@ -217,20 +222,20 @@ class CalendarWidget extends Component {
     let selectedRangeIdsArray = selectedRange.filter(n => n > 0).map(n => `month-${n}`);
 
     let currentYearMonthElementsArray = [];
-    this.allMonthsArray.forEach(monthElement => {
+    this.allMonthsNodeList.forEach(monthElement => {
       selectedRangeIdsArray.includes(monthElement.id) ? currentYearMonthElementsArray.push(monthElement) : '';
     });
 
     // add selector class to month elements for both last year and current year
     currentYearMonthElementsArray.forEach(element => {
       if (this.currentYear === this.displayYear) {
-        element.classList.add('is-selected');
+        this.addClass(element, 'is-selected');
       }
     });
 
     previousYearMonthElementsArray.forEach(element => {
       if (parseInt(this.currentYear) - 1 === this.displayYear) {
-        element.classList.add('is-selected');
+        this.addClass(element, 'is-selected');
       }
     });
   }
