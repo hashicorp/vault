@@ -25,7 +25,7 @@ $ helm install cert-manager jetstack/cert-manager \
 
 ## Create a Certificate Authority (CA)
 
-For this example we will bootstrap a self-signed certificate authority (CA) [Issuer](https://cert-manager.io/docs/configuration/). If you already have a ClusterIssuer configured for your cluster, you may skip this step.
+For this example we will bootstrap a self-signed certificate authority (CA) [Issuer](https://cert-manager.io/docs/configuration/). If you already have a [ClusterIssuer](https://cert-manager.io/docs/concepts/issuer/) configured for your cluster, you may skip this step.
 
 ```yaml
 apiVersion: cert-manager.io/v1
