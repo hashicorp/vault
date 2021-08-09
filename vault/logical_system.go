@@ -1884,33 +1884,17 @@ func expandStringValsWithCommas(configMap map[string]interface{}) error {
 	}
 	for _, paramName := range configParamNameSlice {
 		if raw, ok := configMap[paramName]; ok {
-			outputSlice := []string{}
-
 			switch t := raw.(type) {
-			case []interface{}:
-				// If the users already passed in a slice with comma separated values,
-				// we don't do anything for compatibility reasons.
-				rawNew := raw.([]interface{})
-				for _, rawVal := range rawNew {
-					rawValSt, ok := rawVal.(string)
-					if !ok {
-						return fmt.Errorf("Invalid input parameter %v of type %v", paramName, t)
-					}
-					outputSlice = append(outputSlice, rawValSt)
-				}
 			case string:
 				// To be consistent with auth tune, and in cases where a single comma separated strings
 				// is provided in the curl command, we split the entries by the commas.
 				rawNew := raw.(string)
 				res, err := parseutil.ParseCommaStringSlice(rawNew)
 				if err != nil {
-					return err
+					return fmt.Errorf("invalid input parameter %v of type %v", paramName, t)
 				}
-				outputSlice = append(outputSlice, res...)
-			default:
-				return fmt.Errorf("Invalid input parameter %v of type %v", paramName, t)
+				configMap[paramName] = res
 			}
-			configMap[paramName] = outputSlice
 		}
 	}
 	return nil
