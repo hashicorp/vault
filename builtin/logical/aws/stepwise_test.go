@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	stepwise "github.com/hashicorp/vault-testing-stepwise"
+	dockerEnvironment "github.com/hashicorp/vault-testing-stepwise/environments/docker"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 	"github.com/mitchellh/mapstructure"
 )
 

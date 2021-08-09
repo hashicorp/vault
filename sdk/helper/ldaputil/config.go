@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	"github.com/hashicorp/errwrap"
 )

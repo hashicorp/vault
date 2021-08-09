@@ -4,11 +4,16 @@
   class="list-item-row"
   data-test-secret-link=@item.id
   encode=true
-  queryParams=(secret-query-params @backendType)
+  queryParams=(secret-query-params @backendType @item.type)
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      <LinkTo @route={{concat "vault.cluster.secrets.backend.show" }} @model={{if this.keyTypeValue (concat 'role/' @item.id) @item.id}} class="has-text-black has-text-weight-semibold">
+      <LinkTo
+        @route={{concat "vault.cluster.secrets.backend.show" }}
+        @model={{if this.keyTypeValue (concat 'role/' @item.id) @item.id}}
+        @query={{secret-query-params @backendType @item.type}}
+        class="has-text-black has-text-weight-semibold"
+      >
         <Icon
           @glyph="user-square-outline"
           class="has-text-grey-light is-pulled-left"
@@ -50,10 +55,16 @@
                 </button>
               </li>
             {{/if}}
-            {{#if @item.canGenerateCredentials}}
+            {{#if (and (eq @item.type "dynamic") @item.canGenerateCredentials)}}
               <li class="action">
                 <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
                   Generate credentials
+                </LinkTo>
+              </li>
+            {{else if (and (eq @item.type "static") @item.canGetCredentials)}}
+              <li class="action">
+                <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} @query={{hash roleType=this.keyTypeValue}}>
+                  Get credentials
                 </LinkTo>
               </li>
             {{/if}}

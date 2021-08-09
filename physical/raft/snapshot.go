@@ -210,7 +210,7 @@ func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error)
 	}
 
 	filename := filepath.Join(f.path, id, databaseFilename)
-	boltDB, err := bolt.Open(filename, 0o666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(filename, 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +330,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 
 	// Create the BoltDB file
 	dbPath := filepath.Join(path, databaseFilename)
-	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{Timeout: 1 * time.Second})
+	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}

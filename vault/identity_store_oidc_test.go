@@ -113,6 +113,83 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDCRole_NoKey tests that a role can be created with a non-existent key
+func TestOIDC_Path_OIDCRole_NoKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test role "test-role1" with a non-existent key -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-role1" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"key":       "test-key",
+		"ttl":       int64(86400),
+		"template":  "",
+		"client_id": resp.Data["client_id"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestOIDC_Path_OIDCRole_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDCRole_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": int64(60),
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role1" with a ttl longer than the
+	// verification_ttl -- should fail with error
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": int64(3600),
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+
+	// Read "test-role1"
+	respReadTestRole1, err3 := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	// Ensure that "test-role1" was not created
+	expectSuccess(t, respReadTestRole1, err3)
+	if respReadTestRole1 != nil {
+		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestRole1)
+	}
+}
+
 // TestOIDC_Path_OIDCRole tests the List operation for roles
 func TestOIDC_Path_OIDCRole(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -282,6 +359,49 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
+}
+
+// TestOIDC_Path_OIDCKey_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a role that depends on test key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/allowed-test-role",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-key" -- should fail since allowed-test-role ttl is less than 2m
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"rotation_period":    "10m",
+			"verification_ttl":   "2m",
+			"allowed_client_ids": "allowed-test-role",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
 }
 
 // TestOIDC_Path_OIDCKey tests the List operation for keys
@@ -1100,6 +1220,7 @@ func expectSuccess(t *testing.T, resp *logical.Response, err error) {
 }
 
 func expectError(t *testing.T, resp *logical.Response, err error) {
+	t.Helper()
 	if err == nil {
 		if resp == nil || !resp.IsError() {
 			t.Fatalf("expected error but got success; error:\n%v\nresp: %#v", err, resp)

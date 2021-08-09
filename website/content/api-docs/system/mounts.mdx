@@ -137,21 +137,21 @@ This endpoint enables a new secrets engine at the given path.
 
   - `force_no_cache` `(bool: false)` - Disable caching.
 
-  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the request data object.
+  - `audit_non_hmac_request_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the request data object.
 
-  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the response data object.
+  - `audit_non_hmac_response_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`. If not set, behaves like `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist and pass from the request to the plugin.
+  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+    and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist, allowing a plugin to include them in the response.
+  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+    allowing a plugin to include them in the response.
 
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
@@ -261,23 +261,21 @@ This endpoint tunes configuration parameters for a given mount point.
 - `description` `(string: "")` – Specifies the description of the mount. This
   overrides the current stored value, if any.
 
-- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the request data
-  object.
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the request data object.
 
-- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the response data
-  object.
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the response data object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist and pass from the request to the plugin.
+- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist, allowing a plugin to include them in the response.
+- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  allowing a plugin to include them in the response.
 
 ### Sample Payload
 

@@ -4,11 +4,19 @@ import { computed } from '@ember/object';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
+import { validator, buildValidations } from 'ember-cp-validations';
 
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-let ModelExport = Model.extend({
+const Validations = buildValidations({
+  path: validator('presence', {
+    presence: true,
+    message: "Path can't be blank.",
+  }),
+});
+
+let ModelExport = Model.extend(Validations, {
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),

@@ -2,6 +2,10 @@
   box-shadow: 0 1px 0 $grey-light;
   margin: 0;
 
+  &.has-no-shadow {
+    box-shadow: none;
+  }
+
   @include from($tablet) {
     display: flex;
   }
@@ -18,7 +22,7 @@
 
   .column {
     align-self: center;
-
+    padding-left: 0px;
     &.info-table-row-edit {
       padding-bottom: 0.3rem;
       padding-top: 0.3rem;

@@ -3,7 +3,7 @@
 # we're explicitly compiling for 'linux/amd64'
 FROM debian:buster AS builder
 
-ARG VERSION=1.16.2
+ARG VERSION=1.16.6
 ARG CGO_ENABLED=0
 ARG BUILD_TAGS
 ENV JOBS=2
@@ -20,7 +20,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          libltdl-dev \
                          libltdl7
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
 RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
 

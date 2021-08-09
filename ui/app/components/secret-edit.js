@@ -87,7 +87,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
     this.set('validationMessages', {
       path: '',
-      key: '',
       maxVersions: '',
     });
     // for validation, return array of path names already assigned
@@ -195,17 +194,18 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   },
 
   checkValidation(name, value) {
-    // because path and key are not on the model performing custom validations instead of cp-validations
-    if (name === 'path' || name === 'key') {
-      // no value indicates missing presence
+    if (name === 'path') {
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
-
-      this.secretPaths.includes(value)
+    }
+    // check duplicate on path
+    if (name === 'path' && value) {
+      this.secretPaths?.includes(value)
         ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
     }
+    // check maxVersions is a number
     if (name === 'maxVersions') {
       // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
       if (value) {
@@ -246,13 +246,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
-    }
-
-    if (this.mode === 'create') {
-      key = JSON.stringify({
-        backend: secret.backend,
-        id: key,
-      });
     }
 
     return secretData
@@ -366,24 +359,13 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     createOrUpdateKey(type, event) {
       event.preventDefault();
       let model = this.modelForData;
-      let arraySecretKeys = Object.keys(model.secretData);
       if (type === 'create' && isBlank(model.path || model.id)) {
         this.checkValidation('path', '');
         return;
       }
-      if (arraySecretKeys.includes('')) {
-        this.checkValidation('key', '');
-        return;
-      }
 
-      this.persistKey(key => {
-        let secretKey;
-        try {
-          secretKey = JSON.parse(key).id;
-        } catch (error) {
-          secretKey = key;
-        }
-        this.transitionToRoute(SHOW_ROUTE, secretKey);
+      this.persistKey(() => {
+        this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
 

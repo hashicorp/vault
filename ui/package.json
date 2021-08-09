@@ -44,6 +44,7 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.12.1",
     "@babel/plugin-transform-block-scoping": "^7.12.1",
     "@ember/optional-features": "^2.0.0",
+    "@ember/render-modifiers": "^1.0.2",
     "@glimmer/component": "^1.0.2",
     "@glimmer/tracking": "^1.0.2",
     "@hashicorp/structure-icons": "^1.3.0",
@@ -188,7 +189,7 @@
     "xmlhttprequest-ssl": "^1.6.2"
   },
   "engines": {
-    "node": "10.* || >= 12"
+    "node": "14.*"
   },
   "ember": {
     "edition": "octane"
