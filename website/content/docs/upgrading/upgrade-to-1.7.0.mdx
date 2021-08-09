@@ -32,6 +32,7 @@ endpoint changes is available in the [AWS Auth API docs](/api-docs/auth/aws#depr
 ## Known Issues
 
 Due to the known issue, Transform Secrets Engine users are recommended to upgrade to version 1.7.0.
+Due to the known issue, Lease Count Quota users with DR Secondaries are recommended to upgrade to version 1.7.4.
 
 ### Autopilot
 
@@ -43,3 +44,5 @@ Due to the known issue, Transform Secrets Engine users are recommended to upgrad
   `VAULT_RAFT_AUTOPILOT_DISABLE` environment variable to 1.
 
 @include 'transform-upgrade.mdx'
+
+@include 'lease-count-quota-upgrade.mdx'
