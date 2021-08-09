@@ -1,4 +1,4 @@
-package command
+package api
 
 import (
 	"errors"
@@ -8,10 +8,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/api"
 )
 
-func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
+func KvReadRequest(client *Client, path string, params map[string]string) (*Secret, error) {
 	r := client.NewRequest("GET", "/v1/"+path)
 	for k, v := range params {
 		r.Params.Set(k, v)
@@ -21,7 +20,7 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := api.ParseSecret(resp.Body)
+		secret, parseErr := ParseSecret(resp.Body)
 		switch parseErr {
 		case nil:
 		case io.EOF:
@@ -38,10 +37,10 @@ func kvReadRequest(client *api.Client, path string, params map[string]string) (*
 		return nil, err
 	}
 
-	return api.ParseSecret(resp.Body)
+	return ParseSecret(resp.Body)
 }
 
-func kvPreflightVersionRequest(client *api.Client, path string) (string, int, error) {
+func kvPreflightVersionRequest(client *Client, path string) (string, int, error) {
 	// We don't want to use a wrapping call here so save any custom value and
 	// restore after
 	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
@@ -66,7 +65,7 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 		return "", 0, err
 	}
 
-	secret, err := api.ParseSecret(resp.Body)
+	secret, err := ParseSecret(resp.Body)
 	if err != nil {
 		return "", 0, err
 	}
@@ -96,7 +95,7 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	return mountPath, 1, nil
 }
 
-func isKVv2(path string, client *api.Client) (string, bool, error) {
+func IsKVv2(path string, client *Client) (string, bool, error) {
 	mountPath, version, err := kvPreflightVersionRequest(client, path)
 	if err != nil {
 		return "", false, err
@@ -105,7 +104,7 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 	return mountPath, version == 2, nil
 }
 
-func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
+func AddPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 	switch {
 	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
 		return path.Join(mountPath, apiPrefix)
@@ -115,7 +114,7 @@ func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 	}
 }
 
-func getHeaderForMap(header string, data map[string]interface{}) string {
+func GetHeaderForMap(header string, data map[string]interface{}) string {
 	maxKey := 0
 	for k := range data {
 		if len(k) > maxKey {
@@ -142,7 +141,7 @@ func getHeaderForMap(header string, data map[string]interface{}) string {
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
 }
 
-func kvParseVersionsFlags(versions []string) []string {
+func KvParseVersionsFlags(versions []string) []string {
 	versionsOut := make([]string, 0, len(versions))
 	for _, v := range versions {
 		versionsOut = append(versionsOut, strutil.ParseStringSlice(v, ",")...)

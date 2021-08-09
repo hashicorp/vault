@@ -6,6 +6,8 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -83,14 +85,14 @@ func (c *KVListCommand) Run(args []string) int {
 
 	// Sanitize path
 	path = sanitizePath(path)
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "metadata")
+		path = api.AddPrefixToVKVPath(path, mountPath, "metadata")
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2

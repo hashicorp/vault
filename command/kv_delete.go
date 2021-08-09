@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -97,7 +98,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -138,19 +139,19 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
-		path = addPrefixToVKVPath(path, mountPath, "delete")
+		path = api.AddPrefixToVKVPath(path, mountPath, "delete")
 		if err != nil {
 			return nil, err
 		}
 
 		data := map[string]interface{}{
-			"versions": kvParseVersionsFlags(c.flagVersions),
+			"versions": api.KvParseVersionsFlags(c.flagVersions),
 		}
 
 		secret, err = client.Logical().Write(path, data)
 	default:
 
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		path = api.AddPrefixToVKVPath(path, mountPath, "data")
 		if err != nil {
 			return nil, err
 		}

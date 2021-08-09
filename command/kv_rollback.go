@@ -7,6 +7,8 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -104,7 +106,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -115,7 +117,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "data")
+	path = api.AddPrefixToVKVPath(path, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -124,7 +126,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	// First, do a read to get the current version for check-and-set
 	var meta map[string]interface{}
 	{
-		secret, err := kvReadRequest(client, path, nil)
+		secret, err := api.KvReadRequest(client, path, nil)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
 			return 2
@@ -163,7 +165,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	// Now run it again and read the version we want to roll back to
 	var data map[string]interface{}
 	{
-		secret, err := kvReadRequest(client, path, versionParam)
+		secret, err := api.KvReadRequest(client, path, versionParam)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
 			return 2

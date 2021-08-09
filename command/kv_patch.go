@@ -8,6 +8,8 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -104,7 +106,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 1
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -115,7 +117,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "data")
+	path = api.AddPrefixToVKVPath(path, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -125,7 +127,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	// Note that we don't want to see curl output for the read request.
 	curOutputCurl := client.OutputCurlString()
 	client.SetOutputCurlString(false)
-	secret, err := kvReadRequest(client, path, nil)
+	secret, err := api.KvReadRequest(client, path, nil)
 	client.SetOutputCurlString(curOutputCurl)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))

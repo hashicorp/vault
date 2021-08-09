@@ -8,6 +8,8 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -127,7 +129,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -137,7 +139,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	path = api.AddPrefixToVKVPath(path, mountPath, "metadata")
 	data := map[string]interface{}{
 		"max_versions": c.flagMaxVersions,
 		"cas_required": c.flagCASRequired,

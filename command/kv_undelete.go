@@ -6,6 +6,8 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -94,7 +96,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -104,9 +106,9 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "undelete")
+	path = api.AddPrefixToVKVPath(path, mountPath, "undelete")
 	data := map[string]interface{}{
-		"versions": kvParseVersionsFlags(c.flagVersions),
+		"versions": api.KvParseVersionsFlags(c.flagVersions),
 	}
 
 	secret, err := client.Logical().Write(path, data)

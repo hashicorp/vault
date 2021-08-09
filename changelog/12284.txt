@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Allow `Read`, `ReadWithData` and `List` methods on the `Logical` api type to work for KV V2 calls.
+```

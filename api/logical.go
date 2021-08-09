@@ -7,8 +7,10 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
+
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -52,6 +54,19 @@ func (c *Logical) Read(path string) (*Secret, error) {
 }
 
 func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, error) {
+	if data == nil {
+		data = make(map[string][]string)
+	}
+
+	mountPath, v2, err := IsKVv2(path, c.c)
+	if err != nil {
+		return nil, err
+	}
+
+	if v2 && !strings.Contains(path, "data") {
+		path = AddPrefixToVKVPath(path, mountPath, "data")
+	}
+
 	r := c.c.NewRequest("GET", "/v1/"+path)
 
 	var values url.Values
@@ -96,6 +111,18 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 }
 
 func (c *Logical) List(path string) (*Secret, error) {
+	mountPath, v2, err := IsKVv2(path, c.c)
+	if err != nil {
+		return nil, err
+	}
+
+	if v2 {
+		path = AddPrefixToVKVPath(path, mountPath, "metadata")
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function

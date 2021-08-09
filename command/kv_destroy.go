@@ -6,6 +6,8 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+
+	"github.com/hashicorp/vault/api"
 )
 
 var (
@@ -95,7 +97,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
+	mountPath, v2, err := api.IsKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -104,14 +106,14 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		c.UI.Error("Destroy not supported on KV Version 1")
 		return 1
 	}
-	path = addPrefixToVKVPath(path, mountPath, "destroy")
+	path = api.AddPrefixToVKVPath(path, mountPath, "destroy")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
 
 	data := map[string]interface{}{
-		"versions": kvParseVersionsFlags(c.flagVersions),
+		"versions": api.KvParseVersionsFlags(c.flagVersions),
 	}
 
 	secret, err := client.Logical().Write(path, data)
