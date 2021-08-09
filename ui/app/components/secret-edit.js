@@ -376,7 +376,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       }
 
       this.persistKey(() => {
-        debugger;
         this.transitionToRoute(SHOW_ROUTE, this.model.path || this.model.id);
       });
     },
