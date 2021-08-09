@@ -259,11 +259,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		return nil, err
 	}
 
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, req.Storage.Put(ctx, entry)
 }
 
 // pathOIDCListProvider is used to list named providers
@@ -303,11 +299,7 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 // pathOIDCDeleteProvider is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedProviderPath+name)
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return nil, req.Storage.Delete(ctx, namedProviderPath+name)
 }
 
 func (i *IdentityStore) pathOIDCProviderExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
