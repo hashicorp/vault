@@ -8,6 +8,10 @@ export default ApplicationAdapter.extend({
     return path ? url + '/' + encodePath(path) : url;
   },
 
+  urlForConfig(path) {
+    return `/v1/${path}/config`;
+  },
+
   internalURL(path) {
     let url = `/${this.urlPrefix()}/internal/ui/mounts`;
     if (path) {
@@ -26,15 +30,43 @@ export default ApplicationAdapter.extend({
 
   createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
+    let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
-
-    return this.ajax(this.url(path), 'POST', { data }).then(() => {
-      // ember data doesn't like 204s if it's not a DELETE
-      return {
-        data: assign({}, data, { path: path + '/', id: path }),
-      };
-    });
+    // for kv2 we make two network requests
+    if (type.modelName === 'secret-engine') {
+      // data has both data for sys mount and the config, we need to separate them
+      let configData = (({ max_versions, delete_version_after, cas_required }) => ({
+        max_versions,
+        delete_version_after,
+        cas_required,
+      }))(data);
+      // remove extra params from data
+      /*eslint no-unused-vars: ["error", { "ignoreRestSiblings": true }]*/
+      let { max_versions, delete_version_after, cas_required, ...newData } = data;
+      data = newData;
+      // first create the engine
+      return this.ajax(this.url(path), 'POST', { data })
+        .then(() => {
+          // second modify config on engine
+          return this.ajax(this.urlForConfig(path), 'POST', { data: configData });
+        })
+        .then(() => {
+          // ember data doesn't like 204s if it's not a DELETE
+          return {
+            data: assign({}, data, { path: path + '/', id: path }),
+          };
+        })
+        .catch(e => {
+          console.log(e, 'error');
+        });
+    } else {
+      return this.ajax(this.url(path), 'POST', { data }).then(() => {
+        // ember data doesn't like 204s if it's not a DELETE
+        return {
+          data: assign({}, data, { path: path + '/', id: path }),
+        };
+      });
+    }
   },
 
   findRecord(store, type, path, snapshot) {
