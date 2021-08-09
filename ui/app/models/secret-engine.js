@@ -35,6 +35,26 @@ export default Model.extend(Validations, {
     helpText:
       'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
   }),
+  // KV 2 additional config default options
+  maxVersions: attr('number', {
+    defaultValue: 10,
+    label: 'Maximum Number of Versions',
+    subText:
+      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value.',
+  }),
+  casRequired: attr('boolean', {
+    defaultValue: false,
+    label: 'Require Check and Set',
+    subText:
+      'If checked all keys will require the cas parameter to be set on all write request. A key’s metadata settings can overwrite this value.',
+  }),
+  deleteVersionAfter: attr({
+    defaultValue: 0,
+    editType: 'ttl',
+    label: 'Automate secret deletion',
+    helperTextDisabled: 'A secret’s version must be manually deleted.',
+    helperTextEnabled: 'Delete all new versions of this secret after',
+  }),
 
   modelTypeForKV: computed('engineType', 'options.version', function() {
     let type = this.engineType;
@@ -67,7 +87,13 @@ export default Model.extend(Validations, {
 
   formFieldGroups: computed('engineType', function() {
     let type = this.engineType;
-    let defaultGroup = { default: ['path'] };
+    let defaultGroup;
+    // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
+    if (type === 'kv') {
+      defaultGroup = { default: ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'] };
+    } else {
+      defaultGroup = { default: ['path'] };
+    }
     let optionsGroup = {
       'Method Options': [
         'description',

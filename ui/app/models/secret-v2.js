@@ -51,15 +51,15 @@ export default Model.extend(KeyMixin, Validations, {
   casRequired: attr('boolean', {
     defaultValue: false,
     label: 'Require Check and Set',
-    helpText:
+    subText:
       'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter',
   }),
   deleteVersionAfter: attr({
     defaultValue: 0,
     editType: 'ttl',
     label: 'Automate secret deletion',
-    textDisabled: 'A secret’s version must be manually deleted.',
-    textEnabled: 'Delete a secret version after',
+    helperTextDisabled: 'A secret’s version must be manually deleted.',
+    helperTextEnabled: 'Delete all new versions of this secret after',
   }),
   fields: computed(function() {
     return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter']);
