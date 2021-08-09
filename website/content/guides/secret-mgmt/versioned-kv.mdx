@@ -859,13 +859,13 @@ $ tee payload.json<<EOF
 }
 EOF
 
-# Enable cas_requied on the secret engine mounted at secret/
+# Enable cas_required on the secret engine mounted at secret/
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
        --data @payload.json
        http://127.0.0.1:8200/v1/secret/config
 
-# Enable cas_requied only on the secret/partner path
+# Enable cas_required only on the secret/partner path
 $ curl --header "X-Vault-Token: ..." \
       --request POST \
       --data @payload.json

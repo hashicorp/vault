@@ -407,7 +407,7 @@ $ curl --header "X-Vault-Token: ..." \
        --data @admin-payload.json \
        http://127.0.0.1:8200/v1/sys/policies/acl/admin
 
-# Create the API requset payload for creating provisioner policy
+# Create the API request payload for creating provisioner policy
 $ tee provisioner-payload.json <<EOF
 {
   "policy": "# Manage auth methods broadly across Vault\npath \"auth/*\"\n{\n  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\", \"sudo\"]\n}\n\n# List, create, update, and delete auth methods\npath \"sys/auth/*\"\n{\n  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"sudo\"]\n}\n\n# List existing policies\npath \"sys/policy\"\n{\n  capabilities = [\"read\"]\n}\n\n# Create and manage ACL policies\npath \"sys/policy/*\"\n{\n  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"]\n}\n\n# List, create, update, and delete key/value secrets\npath \"secret/*\"\n{\n  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"]\n}"

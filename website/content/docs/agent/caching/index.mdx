@@ -215,7 +215,7 @@ page.
 
 These are common configuration values that live within the `persist` block:
 
-- `type` `(string: required)` - The type of the persistent cahce to use,
+- `type` `(string: required)` - The type of the persistent cache to use,
   e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
   the block, e.g. `persist "kubernetes" {...}`.
 
@@ -226,7 +226,7 @@ These are common configuration values that live within the `persist` block:
   is not deleted. Defaults to `false`.
 
 - `exit_on_err` `(bool: optional)` - When set to true, if any errors occur during
-  a persitent cache restore, Vault Agent will exit with an error. Defaults to `true`.
+  a persistent cache restore, Vault Agent will exit with an error. Defaults to `true`.
 
 ## Configuration (`listener`)
 
