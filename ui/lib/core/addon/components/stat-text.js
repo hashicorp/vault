@@ -4,6 +4,8 @@
  *
  * @example
  * ```js
+ *
+ * <StatText @label="label" @stat="number" @subText="I am optional subtext" />
  * <StatText
  *  @label={label}
  *  @stat={stat}
