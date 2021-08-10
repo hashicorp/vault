@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/db: Add private key template to specify a private key in connection URLs
+```
