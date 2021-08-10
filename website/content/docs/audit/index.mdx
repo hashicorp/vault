@@ -56,7 +56,7 @@ In the command above, we passed the "file_path" parameter to specify the path
 where the audit log will be written to. Each audit device has its own
 set of parameters. See the documentation to the left for more details.
 
-~> Note: Audit device configuration is replicated to all nodes within a cluster. Before enabling an audit device, ensure that all nodes within the cluster will be able to successfully log to the audit device to avoid Vault being blocked from serving requests. 
+~> Note: Audit device configuration is replicated to all nodes within a cluster by default. Before enabling an audit device, ensure that all nodes within the cluster will be able to successfully log to the audit device to avoid Vault being blocked from serving requests. An audit device can be enabled as a local device with the [`local`](api/system/audit#local) parameter. 
 
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.
