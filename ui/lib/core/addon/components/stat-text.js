@@ -4,17 +4,11 @@
  *
  * @example
  * ```js
- *
- * <StatText @label="label" @stat="number" @subText="I am optional subtext" />
- * <StatText
- *  @label={label}
- *  @stat={stat}
- *  @size={size}
- *  @subText={subText}
+ * <StatText @label="Active Clients" @stat="4,198" @size="l" @subText="These are the active client counts"/>
  * ```
- * @param {string} label - Label is the name of the statistic
- * @param {string} stat - stat is the integer passed in to be displayed
- * @param {string} size - sizes component as large or small
+ * @param {string} label=null - the label for the statistic
+ * @param {string} stat=null - number or statistic
+ * @param {string} [size=l] - size the component as small or large, 's' or 'l'
  * @param {string} [subText] - subText is optional and will display below the label
  */
 
