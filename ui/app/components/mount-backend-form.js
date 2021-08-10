@@ -108,14 +108,30 @@ export default Component.extend({
 
   actions: {
     onKeyUp(name, value) {
-      this.mountModel.set('path', value);
-      this.mountModel.validations.attrs.path.isValid
-        ? set(this.validationMessages, 'path', '')
-        : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
+      // validate path
+      if (name === 'path') {
+        this.mountModel.set('path', value);
+        this.mountModel.validations.attrs.path.isValid
+          ? set(this.validationMessages, 'path', '')
+          : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
 
-      this.mountModel.validate().then(({ validations }) => {
-        this.set('isFormInvalid', !validations.isValid);
-      });
+        this.mountModel.validate().then(({ validations }) => {
+          this.set('isFormInvalid', !validations.isValid);
+        });
+      }
+      // check maxVersions is a number
+      if (name === 'maxVersions') {
+        // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
+        if (value) {
+          let number = Number(value);
+          this.mountModel.set('maxVersions', number);
+        }
+        if (!this.mountModel.validations.attrs.maxVersions.isValid) {
+          set(this.validationMessages, name, this.mountModel.validations.attrs.maxVersions.message);
+        } else {
+          set(this.validationMessages, name, '');
+        }
+      }
     },
     onTypeChange(path, value) {
       if (path === 'type') {

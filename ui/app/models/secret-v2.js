@@ -9,7 +9,6 @@ import { validator, buildValidations } from 'ember-cp-validations';
 const Validations = buildValidations({
   // ARG TODO later:
   //The new custom_metadata field will compete with the version history for storage space in the key metadata entry. To attempt to prevent contention, Vault will impose limits on both the keys and values within the custom_metadata field. The keys and values will be limited to 128 and 512 bytes, respectively. Vault will also impose a limit of 64 total custom_metadata keys.
-
   customMetadata: validator('format', {
     regex: /^[^\/]+$/,
     message: 'Custom Values cannot contain a forward slash.',

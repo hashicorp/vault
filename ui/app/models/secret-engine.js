@@ -13,6 +13,18 @@ const Validations = buildValidations({
     presence: true,
     message: "Path can't be blank.",
   }),
+  maxVersions: [
+    validator('number', {
+      allowString: false,
+      integer: true,
+      message: 'Maximum versions must be a number.',
+    }),
+    validator('length', {
+      min: 1,
+      max: 16,
+      message: 'You cannot go over 16 characters.',
+    }),
+  ],
 });
 
 export default Model.extend(Validations, {
