@@ -89,7 +89,7 @@ func TestSQLPrivateKey(t *testing.T) {
 				}
 
 				if u.Query().Get("privateKey") != tc.PrivateKey {
-					t.Errorf("Private key not set in the connection URL: %q", u.String())
+					t.Errorf("Parsed privateKey %q != original privateKey %q", u.Query().Get("privateKey"), tc.PrivateKey)
 				}
 			}
 		}
