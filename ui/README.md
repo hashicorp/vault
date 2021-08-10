@@ -186,7 +186,7 @@ import { storiesOf } from '@storybook/ember';
 import { text, withKnobs } from '@storybook/addon-knobs';
 import notes from './stat-text.md';
 
-storiesOf('StatText', module)
+storiesOf('MyComponent', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
   .add(
