@@ -1,17 +1,18 @@
 .stat-text {
-  .container {
+  &.container {
     line-height: normal;
+    border: 1px solid lavender;
 
     &:hover {
       box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
     }
-  }
 
-  .sub-text {
-    font-weight: $font-weight-normal;
-  }
+    div > &.sub-text {
+      font-weight: $font-weight-normal;
+    }
 
-  .title.is-6 {
-    margin-bottom: $spacing-xs;
+    div > &.title.is-6 {
+      margin-bottom: $spacing-xs;
+    }
   }
 }
