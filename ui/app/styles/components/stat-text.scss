@@ -1,66 +1,62 @@
+// size will change conditionally depending on whether or not a description is passed in
+// IF description then title does NOT change size
+// if no description, title gets incrementally smaller
+// there will not be a description in key value use cases
+
 .stat-text-container {
   border: 1px solid lavender;
+  line-height: normal;
 
   &.l {
-    .stat-label {
+    > .stat-label {
       font-size: $size-5;
       font-weight: $font-weight-semibold;
-      line-height: normal;
+      line-height: inherit;
     }
     .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
-      line-height: normal;
     }
     .stat-value {
       font-size: $size-3;
       font-weight: $font-weight-normal;
-      line-height: normal;
       margin-top: $spacing-s;
     }
   }
+
   &.m {
-    .stat-label {
-      font-size: $size-5; // which design? stays same size or decrease to 8?
+    > .stat-label {
+      font-size: $size-5; // which design? stays same size or decrease to 8 (~.857rem)
       font-weight: $font-weight-semibold;
-      line-height: normal;
     }
-    .stat-text {
+    > .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
-      line-height: normal;
     }
-    .stat-value {
+    > .stat-value {
       font-size: $size-5;
       font-weight: $font-weight-normal;
-      line-height: normal;
       margin-top: $spacing-s;
     }
   }
+
   &.s {
-    .stat-label {
+    > .stat-label {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-500;
-      line-height: normal;
     }
-    .stat-text {
+    > .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
-      line-height: normal;
     }
-    .stat-value {
+    > .stat-value {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-800;
-      line-height: normal;
     }
   }
 }
-
-// &:hover {
-//   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
-// }
