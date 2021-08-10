@@ -8,8 +8,8 @@ StatText components are used to display a label and associated statistic below, 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | label | <code>string</code> | <code>null</code> | the label for the statistic |
-| stat | <code>string</code> | <code>null</code> | number or statistic |
-| [size] | <code>string</code> | <code>&quot;l&quot;</code> | size the component as small or large, 's' or 'l' |
+| value | <code>string</code> | <code>null</code> | value passed in, usually a number or statistic |
+| [size] | <code>string</code> | <code>&quot;m&quot;</code> | size the component as small or large, 's', 'm' or 'l' |
 | [subText] | <code>string</code> |  | subText is optional and will display below the label |
 
 **Example**

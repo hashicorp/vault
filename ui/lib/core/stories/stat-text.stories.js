@@ -13,13 +13,13 @@ storiesOf('StatText', module)
     <h5 class="title is-5">StatText Component</h5>
     <StatText
      @label={{label}}
-     @stat={{stat}}
+     @value={{value}}
      @size={{size}}
      @subText={{subText}} />
     `,
       context: {
         label: text('label', 'Active Clients'),
-        stat: text('stat', '4,198'),
+        value: text('value', '4,198'),
         size: text('size', 'l'),
         subText: text('subText', 'These are your active clients'),
       },

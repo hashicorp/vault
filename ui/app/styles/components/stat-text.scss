@@ -1,18 +1,66 @@
-.stat-text {
-  &.container {
-    line-height: normal;
-    border: 1px solid lavender;
+.stat-text-container {
+  border: 1px solid lavender;
 
-    &:hover {
-      box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+  &.l {
+    .stat-label {
+      font-size: $size-5;
+      font-weight: $font-weight-semibold;
+      line-height: normal;
     }
-
-    div > &.sub-text {
+    .stat-text {
+      font-size: $size-8;
       font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: normal;
     }
-
-    div > &.title.is-6 {
-      margin-bottom: $spacing-xs;
+    .stat-value {
+      font-size: $size-3;
+      font-weight: $font-weight-normal;
+      line-height: normal;
+      margin-top: $spacing-s;
+    }
+  }
+  &.m {
+    .stat-label {
+      font-size: $size-5; // which design? stays same size or decrease to 8?
+      font-weight: $font-weight-semibold;
+      line-height: normal;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: normal;
+    }
+    .stat-value {
+      font-size: $size-5;
+      font-weight: $font-weight-normal;
+      line-height: normal;
+      margin-top: $spacing-s;
+    }
+  }
+  &.s {
+    .stat-label {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-500;
+      line-height: normal;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: normal;
+    }
+    .stat-value {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-800;
+      line-height: normal;
     }
   }
 }
+
+// &:hover {
+//   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
+// }

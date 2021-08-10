@@ -7,8 +7,8 @@
  * <StatText @label="Active Clients" @stat="4,198" @size="l" @subText="These are the active client counts"/>
  * ```
  * @param {string} label=null - the label for the statistic
- * @param {string} stat=null - number or statistic
- * @param {string} [size=l] - size the component as small or large, 's' or 'l'
+ * @param {string} value=null - value passed in, usually a number or statistic
+ * @param {string} size=null - size the component as small or large, 's', 'm' or 'l'
  * @param {string} [subText] - subText is optional and will display below the label
  */
 

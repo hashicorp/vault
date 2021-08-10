@@ -1,5 +1,7 @@
-<div class="stat-text container">
-  <div class="title is-6">{{@label}}</div>
-  <div class="sub-text">{{@subText}}</div>
-  <div class="is-3">{{@stat}}</div>
+<div class={{concat "stat-text-container " @size}}>
+  <div class="stat-label">{{@label}}</div>
+  {{#if @subText}}
+    <div class="stat-text">{{@subText}}</div>
+  {{/if}}
+  <div class="stat-value">{{@value}}</div>
 </div>
