@@ -178,7 +178,24 @@ Note that placing a param inside brackets (e.g. `[closedLabel=More options]` ind
 
 2. Generate a new story with `ember generate story [name-of-component]`
 3. Inside the newly generated `stories` file, add at least one example of the component. If the component should be interactive, enable the [Storybook Knobs addon](https://github.com/storybooks/storybook/tree/master/addons/knobs).
-4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]` (e.g. `yarn gen-md alert-banner core`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file.
+4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]` (e.g. `yarn gen-md alert-banner core`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file. 
+
+Note: The markdown file will need to be imported in your `[component-name].stories.js` (e.g. `import notes from './[name-of-component].md'`). The `add` method will look something like this:
+````js
+  .add(
+    `MyComponent`,
+    () => ({
+      template: hbs`
+    <h5 class="title is-5">MyComponent</h5>
+    <MyComponent @param={{param}} />
+    `,
+      context: {
+        param: text('param', 'My Parameter'),
+      },
+    }),
+    { notes }
+  );
+````
 
 See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for more information on writing stories.
 
