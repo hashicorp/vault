@@ -26,6 +26,7 @@ type SQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	PrivateKey               string      `json:"private_key" mapstructure:"private_key" structs:"private_key"`
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -64,8 +65,9 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
 	// then maybe we won't be able to use it to do URL substitution any more.
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
-		"username": url.PathEscape(c.Username),
-		"password": password,
+		"username":    url.PathEscape(c.Username),
+		"password":    password,
+		"private_key": url.PathEscape(c.PrivateKey),
 	})
 
 	if c.MaxOpenConnections == 0 {
@@ -160,7 +162,8 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 
 func (c *SQLConnectionProducer) SecretValues() map[string]interface{} {
 	return map[string]interface{}{
-		c.Password: "[password]",
+		c.Password:   "[password]",
+		c.PrivateKey: "[private_key]",
 	}
 }
 

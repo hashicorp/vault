@@ -54,3 +54,44 @@ func TestSQLPasswordChars(t *testing.T) {
 		}
 	}
 }
+
+func TestSQLPrivateKey(t *testing.T) {
+	testCases := []struct {
+		Username   string
+		PrivateKey string
+	}{
+		{"foo", "bar"},
+		{"test", "key"},
+	}
+	for _, tc := range testCases {
+		t.Logf("username %q private_key %q", tc.Username, tc.PrivateKey)
+
+		sql := &SQLConnectionProducer{}
+		ctx := context.Background()
+		conf := map[string]interface{}{
+			"connection_url": "snowflake://{{username}}@localhost/mydb?privateKey={{private_key}}",
+			"username":       tc.Username,
+			"private_key":    tc.PrivateKey,
+		}
+		_, err := sql.Init(ctx, conf, false)
+		if err != nil {
+			t.Errorf("Init error on %q %q: %+v", tc.Username, tc.PrivateKey, err)
+		} else {
+			// This jumps down a few layers...
+			// Connection() uses sql.Open uses lib/pq uses net/url.Parse
+			u, err := url.Parse(sql.ConnectionURL)
+			if err != nil {
+				t.Errorf("URL parse error on %q %q: %+v", tc.Username, tc.PrivateKey, err)
+			} else {
+				username := u.User.Username()
+				if username != tc.Username {
+					t.Errorf("Parsed username %q != original username %q", username, tc.Username)
+				}
+
+				if u.Query().Get("privateKey") != tc.PrivateKey {
+					t.Errorf("Private key not set in the connection URL: %q", u.String())
+				}
+			}
+		}
+	}
+}
