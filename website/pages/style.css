@@ -48,7 +48,12 @@
   scroll-margin-top: calc(64px + 0.5em);
 }
 
-/* Layout Styles */
+/*
+ * Layout Styles
+ *
+ * Note: this is possibly debt we want to replace.
+ * ref: https://app.asana.com/0/1100423001970639/1200768863236365/f
+ */
 .g-section-block section {
   padding-top: 96px;
   padding-bottom: 96px;
