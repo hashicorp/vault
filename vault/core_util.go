@@ -181,6 +181,6 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 	return false
 }
 
-func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig) (bool, []string) {
+func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
 	return false, nil
 }

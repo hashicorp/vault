@@ -29,14 +29,14 @@ export default Model.extend({
     editType: 'ttl',
     defaultValue: '1h',
     label: 'Generated credentials’s Time-to-Live (TTL)',
-    subText: 'Vault will use the engine default of 1 hour',
+    helperTextDisabled: 'Vault will use a TTL of 1 hour.',
     defaultShown: 'Engine default',
   }),
   max_ttl: attr({
     editType: 'ttl',
     defaultValue: '24h',
     label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
-    subText: 'Vault will use the engine default of 24 hours',
+    helperTextDisabled: 'Vault will use a TTL of 24 hours.',
     defaultShown: 'Engine default',
   }),
   username: attr('string', {
@@ -45,8 +45,9 @@ export default Model.extend({
   rotation_period: attr({
     editType: 'ttl',
     defaultValue: '24h',
-    textDisabled:
+    helperTextDisabled:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds. Default is 24 hours.',
+    helperTextEnabled: 'Vault will rotate password after',
   }),
   creation_statements: attr('array', {
     editType: 'stringArray',
