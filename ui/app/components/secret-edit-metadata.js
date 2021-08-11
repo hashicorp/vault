@@ -1,31 +1,33 @@
-import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
-
-// ARG TODO FILL OUT
 /**
- * @module AuthInfo
+ * @module SecretEditMetadata
  *
  * @example
  * ```js
- * <AuthInfo @activeClusterName={{cluster.name}} @onLinkClick={{action "onLinkClick"}} />
+ * <SecretEditMetadata
+ * @model={{model}}
+ * @validationMessages={{validationMessages}}
+ * @mode={{mode}}
+ * />
  * ```
  *
- * @param {string} activeClusterName - name of the current cluster, passed from the parent.
- * @param {Function} onLinkClick - parent action which determines the behavior on link click
+ * @param {object} model - name of the current cluster, passed from the parent.
+ * @param {object} [validationMessages] - Object that contains form validation errors. keys are the field names and values are the messages.
+ * @param {Function} mode - if the mode is create, show, edit.
  */
+
+import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 export default class SecretEditMetadata extends Component {
   @service router;
   @service store;
 
   async save() {
     let model = this.args.model;
-    console.log(model, 'MODEL');
     try {
       await model.save();
     } catch (err) {
-      // ARG TODO handle error in error object
-      console.log(err, 'ERROR');
+      // error
     }
     this.router.transitionTo('vault.cluster.secrets.backend.metadata', this.args.model.id);
   }

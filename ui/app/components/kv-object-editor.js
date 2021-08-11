@@ -1,10 +1,31 @@
+/**
+ * @module KvObjectEditor
+ * KvObjectEditor components are called in FormFields when the editType on the model is kv.  They are used to show a key-value input field.
+ *
+ * @example
+ * ```js
+ * <KvObjectEditor
+ *  @value={{get model valuePath}}
+ *  @onChange={{action "setAndBroadcast" valuePath }}
+ *  @label="some label"
+   />
+ * ```
+ * @param {string} value - the value is captured from the model.
+ * @param {function} onChange - function that captures the value on change
+ * @param {string} [label] - label displayed over key value inputs
+ * @param {string} [warning] - warning that is displayed
+ * @param {string} [helpText] - helper text. In tooltip.
+ * @param {string} [subText] - placed under label.
+ * @param {boolean} [small-label]- change label size.
+ * @param {boolean} [formSection] - if false the component is meant to live outside of a form, like in the customMetadata which is nested already inside a form-section.
+ */
+
 import { isNone } from '@ember/utils';
 import { assert } from '@ember/debug';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
-// ARG TODO add documentation here
 
 export default Component.extend({
   'data-test-component': 'kv-object-editor',
