@@ -19,7 +19,7 @@ export default function HcpCalloutSection({
       ) : null}
       <div className={styles.content}>
         <div className={styles.info}>
-          <h2 className="g-type-display-1">{title}</h2>
+          <h1 className="g-type-display-1">{title}</h1>
           <span className={styles.chin}>{chin}</span>
           <p className={styles.description}>{description}</p>
           <div className={styles.links}>
