@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -157,13 +156,13 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 	for _, pluginName := range plugins {
 		pluginRaw, err := c.catalogView.Get(ctx, pluginName)
 		if err != nil {
-			retErr = multierror.Append(errwrap.Wrapf("failed to load plugin entry: {{err}}", err))
+			retErr = multierror.Append(fmt.Errorf("failed to load plugin entry: %w", err))
 			continue
 		}
 
 		plugin := new(pluginutil.PluginRunner)
 		if err := jsonutil.DecodeJSON(pluginRaw.Value, plugin); err != nil {
-			retErr = multierror.Append(errwrap.Wrapf("failed to decode plugin entry: {{err}}", err))
+			retErr = multierror.Append(fmt.Errorf("failed to decode plugin entry: %w", err))
 			continue
 		}
 
@@ -215,20 +214,20 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 		// Look for external plugins in the barrier
 		out, err := c.catalogView.Get(ctx, pluginType.String()+"/"+name)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
+			return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 		}
 		if out == nil {
 			// Also look for external plugins under what their name would have been if they
 			// were registered before plugin types existed.
 			out, err = c.catalogView.Get(ctx, name)
 			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
+				return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 			}
 		}
 		if out != nil {
 			entry := new(pluginutil.PluginRunner)
 			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-				return nil, errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
+				return nil, fmt.Errorf("failed to decode plugin entry: %w", err)
 			}
 			if entry.Type != pluginType && entry.Type != consts.PluginTypeUnknown {
 				return nil, nil
@@ -279,11 +278,11 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
-		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
+		return fmt.Errorf("error while validating the command path: %w", err)
 	}
 	symAbs, err := filepath.Abs(filepath.Dir(sym))
 	if err != nil {
-		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
+		return fmt.Errorf("error while validating the command path: %w", err)
 	}
 
 	if symAbs != c.directory {
@@ -324,7 +323,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
-		return errwrap.Wrapf("failed to encode plugin entry: {{err}}", err)
+		return fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
 	logicalEntry := logical.StorageEntry{
@@ -332,7 +331,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
-		return errwrap.Wrapf("failed to persist plugin entry: {{err}}", err)
+		return fmt.Errorf("failed to persist plugin entry: %w", err)
 	}
 	return nil
 }

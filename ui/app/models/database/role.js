@@ -29,14 +29,14 @@ export default Model.extend({
     editType: 'ttl',
     defaultValue: '1h',
     label: 'Generated credentials’s Time-to-Live (TTL)',
-    subText: 'Vault will use the engine default of 1 hour',
+    helperTextDisabled: 'Vault will use a TTL of 1 hour.',
     defaultShown: 'Engine default',
   }),
   max_ttl: attr({
     editType: 'ttl',
     defaultValue: '24h',
     label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
-    subText: 'Vault will use the engine default of 24 hours',
+    helperTextDisabled: 'Vault will use a TTL of 24 hours.',
     defaultShown: 'Engine default',
   }),
   username: attr('string', {
@@ -45,12 +45,12 @@ export default Model.extend({
   rotation_period: attr({
     editType: 'ttl',
     defaultValue: '24h',
-    subText:
-      'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds.',
+    helperTextDisabled:
+      'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds. Default is 24 hours.',
+    helperTextEnabled: 'Vault will rotate password after',
   }),
   creation_statements: attr('array', {
     editType: 'stringArray',
-    defaultShown: 'Default',
   }),
   revocation_statements: attr('array', {
     editType: 'stringArray',
@@ -60,13 +60,23 @@ export default Model.extend({
     editType: 'stringArray',
     defaultShown: 'Default',
   }),
+  rollback_statements: attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  }),
+  renew_statements: attr('array', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  }),
   creation_statement: attr('string', {
     editType: 'json',
+    allowReset: true,
     theme: 'hashi short',
     defaultShown: 'Default',
   }),
   revocation_statement: attr('string', {
     editType: 'json',
+    allowReset: true,
     theme: 'hashi short',
     defaultShown: 'Default',
   }),
@@ -100,6 +110,8 @@ export default Model.extend({
       'revocation_statements',
       'revocation_statement', // only for MongoDB (styling difference)
       'rotation_statements',
+      'rollback_statements',
+      'renew_statements',
     ];
     return expandAttributeMeta(this, allRoleSettingFields);
   }),
@@ -116,7 +128,9 @@ export default Model.extend({
   staticPath: lazyCapabilities(apiPath`${'backend'}/static-roles/+`, 'backend'),
   canCreateStatic: alias('staticPath.canCreate'),
   credentialPath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
+  staticCredentialPath: lazyCapabilities(apiPath`${'backend'}/static-creds/${'id'}`, 'backend', 'id'),
   canGenerateCredentials: alias('credentialPath.canRead'),
+  canGetCredentials: alias('staticCredentialPath.canRead'),
   databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),
   canUpdateDb: alias('databasePath.canUpdate'),
 });

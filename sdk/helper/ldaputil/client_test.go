@@ -43,7 +43,7 @@ func TestLDAPEscape(t *testing.T) {
 }
 
 func TestGetTLSConfigs(t *testing.T) {
-	config := testConfig()
+	config := testConfig(t)
 	if err := config.Validate(); err != nil {
 		t.Fatal(err)
 	}

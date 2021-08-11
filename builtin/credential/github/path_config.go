@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -147,7 +146,7 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 	var result config
 	if entry != nil {
 		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, errwrap.Wrapf("error reading configuration: {{err}}", err)
+			return nil, fmt.Errorf("error reading configuration: %w", err)
 		}
 	}
 

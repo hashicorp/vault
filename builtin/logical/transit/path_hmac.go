@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -147,7 +146,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -253,7 +252,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {

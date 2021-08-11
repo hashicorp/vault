@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
+	"go.uber.org/goleak"
 )
 
 type clientResult struct {
@@ -34,6 +36,9 @@ func TestNewRateLimitQuota(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink())
 			require.Equal(t, tc.expectErr, err != nil, err)
+			if err == nil {
+				require.Nil(t, tc.rlq.close())
+			}
 		})
 	}
 }
@@ -61,6 +66,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 	}
 
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
+	defer rlq.close()
 
 	var wg sync.WaitGroup
 
@@ -135,6 +141,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 	}
 
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
+	defer rlq.close()
 	require.True(t, rlq.getPurgeBlocked())
 
 	var wg sync.WaitGroup
@@ -203,4 +210,16 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 			}
 		}
 	}()
+}
+
+func TestRateLimitQuota_Update(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	require.NoError(t, err)
+
+	quota := NewRateLimitQuota("quota1", "", "", 10, time.Second, 0)
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
+
+	require.Nil(t, quota.close())
 }

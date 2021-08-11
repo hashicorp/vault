@@ -7,13 +7,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/lib/pq"
 )
@@ -445,10 +444,10 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
+		return fmt.Errorf("could not generate revocation statements for all rows: %w", rows.Err())
 	}
 	if lastStmtError != nil {
-		return errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
+		return fmt.Errorf("could not perform all revocation statements: %w", lastStmtError)
 	}
 
 	// Drop this user

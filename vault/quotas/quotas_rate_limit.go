@@ -319,6 +319,7 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 }
 
 // close stops the current running client purge loop.
+// It should be called with the write lock held.
 func (rlq *RateLimitQuota) close() error {
 	if rlq.purgeBlocked {
 		close(rlq.closePurgeBlockedCh)

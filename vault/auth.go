@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -685,7 +685,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeCredential) {
+			if plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential); plugerr == nil && !plug.Builtin {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.

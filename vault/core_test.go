@@ -245,7 +245,7 @@ func TestCore_Shutdown(t *testing.T) {
 	}
 }
 
-// verify the channel returned by ShutdownDone is closed after Shutdown
+// verify the channel returned by ShutdownDone is closed after Finalize
 func TestCore_ShutdownDone(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	doneCh := c.ShutdownDone()

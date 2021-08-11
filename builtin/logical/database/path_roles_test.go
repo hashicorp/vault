@@ -462,6 +462,9 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected error, got none")
 	}
@@ -505,6 +508,9 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected error, got none")
 	}

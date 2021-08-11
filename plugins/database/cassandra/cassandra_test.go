@@ -3,7 +3,6 @@ package cassandra
 import (
 	"context"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,14 +16,16 @@ import (
 )
 
 func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()) {
-	cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
-	pieces := strings.Split(connURL, ":")
+	host, cleanup := cassandra.PrepareTestContainer(t,
+		cassandra.Version("3.11"),
+		cassandra.CopyFromTo(insecureFileMounts),
+	)
 
 	db := new()
 	initReq := dbplugin.InitializeRequest{
 		Config: map[string]interface{}{
-			"hosts":            connURL,
-			"port":             pieces[1],
+			"hosts":            host.ConnectionURL(),
+			"port":             host.Port,
 			"username":         "cassandra",
 			"password":         "cassandra",
 			"protocol_version": protocolVersion,
@@ -34,8 +35,8 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 	}
 
 	expectedConfig := map[string]interface{}{
-		"hosts":            connURL,
-		"port":             pieces[1],
+		"hosts":            host.ConnectionURL(),
+		"port":             host.Port,
 		"username":         "cassandra",
 		"password":         "cassandra",
 		"protocol_version": protocolVersion,
@@ -53,27 +54,38 @@ func getCassandra(t *testing.T, protocolVersion interface{}) (*Cassandra, func()
 	return db, cleanup
 }
 
-func TestCassandra_Initialize(t *testing.T) {
-	db, cleanup := getCassandra(t, 4)
-	defer cleanup()
+func TestInitialize(t *testing.T) {
+	t.Run("integer protocol version", func(t *testing.T) {
+		// getCassandra performs an Initialize call
+		db, cleanup := getCassandra(t, 4)
+		t.Cleanup(cleanup)
 
-	err := db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+		err := db.Close()
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+	})
 
-	db, cleanup = getCassandra(t, "4")
-	defer cleanup()
+	t.Run("string protocol version", func(t *testing.T) {
+		// getCassandra performs an Initialize call
+		db, cleanup := getCassandra(t, "4")
+		t.Cleanup(cleanup)
+
+		err := db.Close()
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+	})
 }
 
-func TestCassandra_CreateUser(t *testing.T) {
+func TestCreateUser(t *testing.T) {
 	type testCase struct {
 		// Config will have the hosts & port added to it during the test
 		config                map[string]interface{}
 		newUserReq            dbplugin.NewUserRequest
 		expectErr             bool
 		expectedUsernameRegex string
-		assertCreds           func(t testing.TB, address string, port int, username, password string, timeout time.Duration)
+		assertCreds           func(t testing.TB, address string, port int, username, password string, sslOpts *gocql.SslOptions, timeout time.Duration)
 	}
 
 	tests := map[string]testCase{
@@ -126,15 +138,17 @@ func TestCassandra_CreateUser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := cassandra.PrepareTestContainer(t, "latest")
-			pieces := strings.Split(connURL, ":")
+			host, cleanup := cassandra.PrepareTestContainer(t,
+				cassandra.Version("3.11"),
+				cassandra.CopyFromTo(insecureFileMounts),
+			)
 			defer cleanup()
 
 			db := new()
 
 			config := test.config
-			config["hosts"] = connURL
-			config["port"] = pieces[1]
+			config["hosts"] = host.ConnectionURL()
+			config["port"] = host.Port
 
 			initReq := dbplugin.InitializeRequest{
 				Config:           config,
@@ -157,12 +171,12 @@ func TestCassandra_CreateUser(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 			require.Regexp(t, test.expectedUsernameRegex, newUserResp.Username)
-			test.assertCreds(t, db.Hosts, db.Port, newUserResp.Username, test.newUserReq.Password, 5*time.Second)
+			test.assertCreds(t, db.Hosts, db.Port, newUserResp.Username, test.newUserReq.Password, nil, 5*time.Second)
 		})
 	}
 }
 
-func TestMyCassandra_UpdateUserPassword(t *testing.T) {
+func TestUpdateUserPassword(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
@@ -181,7 +195,7 @@ func TestMyCassandra_UpdateUserPassword(t *testing.T) {
 
 	createResp := dbtesting.AssertNewUser(t, db, createReq)
 
-	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
+	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, nil, 5*time.Second)
 
 	newPassword := "somenewpassword"
 	updateReq := dbplugin.UpdateUserRequest{
@@ -195,10 +209,10 @@ func TestMyCassandra_UpdateUserPassword(t *testing.T) {
 
 	dbtesting.AssertUpdateUser(t, db, updateReq)
 
-	assertCreds(t, db.Hosts, db.Port, createResp.Username, newPassword, 5*time.Second)
+	assertCreds(t, db.Hosts, db.Port, createResp.Username, newPassword, nil, 5*time.Second)
 }
 
-func TestCassandra_DeleteUser(t *testing.T) {
+func TestDeleteUser(t *testing.T) {
 	db, cleanup := getCassandra(t, 4)
 	defer cleanup()
 
@@ -217,7 +231,7 @@ func TestCassandra_DeleteUser(t *testing.T) {
 
 	createResp := dbtesting.AssertNewUser(t, db, createReq)
 
-	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
+	assertCreds(t, db.Hosts, db.Port, createResp.Username, password, nil, 5*time.Second)
 
 	deleteReq := dbplugin.DeleteUserRequest{
 		Username: createResp.Username,
@@ -225,13 +239,13 @@ func TestCassandra_DeleteUser(t *testing.T) {
 
 	dbtesting.AssertDeleteUser(t, db, deleteReq)
 
-	assertNoCreds(t, db.Hosts, db.Port, createResp.Username, password, 5*time.Second)
+	assertNoCreds(t, db.Hosts, db.Port, createResp.Username, password, nil, 5*time.Second)
 }
 
-func assertCreds(t testing.TB, address string, port int, username, password string, timeout time.Duration) {
+func assertCreds(t testing.TB, address string, port int, username, password string, sslOpts *gocql.SslOptions, timeout time.Duration) {
 	t.Helper()
 	op := func() error {
-		return connect(t, address, port, username, password)
+		return connect(t, address, port, username, password, sslOpts)
 	}
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = timeout
@@ -245,7 +259,7 @@ func assertCreds(t testing.TB, address string, port int, username, password stri
 	}
 }
 
-func connect(t testing.TB, address string, port int, username, password string) error {
+func connect(t testing.TB, address string, port int, username, password string, sslOpts *gocql.SslOptions) error {
 	t.Helper()
 	clusterConfig := gocql.NewCluster(address)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
@@ -254,6 +268,7 @@ func connect(t testing.TB, address string, port int, username, password string) 
 	}
 	clusterConfig.ProtoVersion = 4
 	clusterConfig.Port = port
+	clusterConfig.SslOpts = sslOpts
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
@@ -263,12 +278,12 @@ func connect(t testing.TB, address string, port int, username, password string) 
 	return nil
 }
 
-func assertNoCreds(t testing.TB, address string, port int, username, password string, timeout time.Duration) {
+func assertNoCreds(t testing.TB, address string, port int, username, password string, sslOpts *gocql.SslOptions, timeout time.Duration) {
 	t.Helper()
 
 	op := func() error {
 		// "Invert" the error so the backoff logic sees a failure to connect as a success
-		err := connect(t, address, port, username, password)
+		err := connect(t, address, port, username, password, sslOpts)
 		if err != nil {
 			return nil
 		}

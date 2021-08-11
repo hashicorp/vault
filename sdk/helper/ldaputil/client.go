@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 )
 
 type Client struct {

@@ -2,9 +2,9 @@ package transit
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -66,7 +66,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		var err error
 		cacheSize, err = GetCacheSizeFromStorage(ctx, conf.StorageView)
 		if err != nil {
-			return nil, errwrap.Wrapf("Error retrieving cache size from storage: {{err}}", err)
+			return nil, fmt.Errorf("Error retrieving cache size from storage: %w", err)
 		}
 	}
 

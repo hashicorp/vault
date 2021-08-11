@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
@@ -13,12 +15,10 @@ import (
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
@@ -33,14 +33,16 @@ const (
 
 // Telemetry is the telemetry configuration for the server
 type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
+	FoundKeys    []string     `hcl:",decodedFields"`
+	UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
+	StatsiteAddr string       `hcl:"statsite_address"`
+	StatsdAddr   string       `hcl:"statsd_address"`
 
 	DisableHostname     bool   `hcl:"disable_hostname"`
 	EnableHostnameLabel bool   `hcl:"enable_hostname_label"`
 	MetricsPrefix       string `hcl:"metrics_prefix"`
 	UsageGaugePeriod    time.Duration
-	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period"`
+	UsageGaugePeriodRaw interface{} `hcl:"usage_gauge_period,alias:UsageGaugePeriod"`
 
 	MaximumGaugeCardinality int `hcl:"maximum_gauge_cardinality"`
 
@@ -149,6 +151,18 @@ type Telemetry struct {
 
 	// Whether or not telemetry should add labels for namespaces
 	LeaseMetricsNameSpaceLabels bool `hcl:"add_lease_metrics_namespace_labels"`
+
+	// FilterDefault is the default for whether to allow a metric that's not
+	// covered by the prefix filter.
+	FilterDefault *bool `hcl:"filter_default"`
+
+	// PrefixFilter is a list of filter rules to apply for allowing
+	// or blocking metrics by prefix.
+	PrefixFilter []string `hcl:"prefix_filter"`
+}
+
+func (t *Telemetry) Validate(source string) []ConfigError {
+	return ValidateUnusedFields(t.UnusedKeys, source)
 }
 
 func (t *Telemetry) GoString() string {
@@ -254,6 +268,9 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	metricsConf := metrics.DefaultConfig(opts.ServiceName)
 	metricsConf.EnableHostname = !opts.Config.DisableHostname
 	metricsConf.EnableHostnameLabel = opts.Config.EnableHostnameLabel
+	if opts.Config.FilterDefault != nil {
+		metricsConf.FilterDefault = *opts.Config.FilterDefault
+	}
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
@@ -336,7 +353,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, nil, false, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
@@ -383,5 +400,31 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper.TelemetryConsts.LeaseMetricsNameSpaceLabels = opts.Config.LeaseMetricsNameSpaceLabels
 	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
 
+	// Parse the metric filters
+	telemetryAllowedPrefixes, telemetryBlockedPrefixes, err := parsePrefixFilter(opts.Config.PrefixFilter)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	metrics.UpdateFilter(telemetryAllowedPrefixes, telemetryBlockedPrefixes)
 	return inm, wrapper, prometheusEnabled, nil
+}
+
+func parsePrefixFilter(prefixFilters []string) ([]string, []string, error) {
+	var telemetryAllowedPrefixes, telemetryBlockedPrefixes []string
+
+	for _, rule := range prefixFilters {
+		if rule == "" {
+			return nil, nil, fmt.Errorf("Cannot have empty filter rule in prefix_filter")
+		}
+		switch rule[0] {
+		case '+':
+			telemetryAllowedPrefixes = append(telemetryAllowedPrefixes, rule[1:])
+		case '-':
+			telemetryBlockedPrefixes = append(telemetryBlockedPrefixes, rule[1:])
+		default:
+			return nil, nil, fmt.Errorf("Filter rule must begin with either '+' or '-': %q", rule)
+		}
+	}
+	return telemetryAllowedPrefixes, telemetryBlockedPrefixes, nil
 }

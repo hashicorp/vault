@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -15,13 +16,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	sr "github.com/hashicorp/vault/serviceregistration"
+	"github.com/hashicorp/vault/vault/diagnose"
 	atomicB "go.uber.org/atomic"
 	"golang.org/x/net/http2"
 )
@@ -48,6 +49,10 @@ const (
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
 	reconcileTimeout = 60 * time.Second
+
+	// metaExternalSource is a metadata value for external-source that can be
+	// used by the Consul UI.
+	metaExternalSource = "vault"
 )
 
 var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
@@ -86,7 +91,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	if ok && disableReg != "" {
 		b, err := parseutil.ParseBool(disableReg)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing disable_registration parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing disable_registration parameter: %w", err)
 		}
 		disableRegistration = b
 	}
@@ -119,7 +124,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 		serviceAddr = &serviceAddrStr
 	}
 	if logger.IsDebug() {
-		logger.Debug("config service_address set", "service_address", serviceAddr)
+		logger.Debug("config service_address set", "service_address", serviceAddrStr)
 	}
 
 	checkTimeout := defaultCheckTimeout
@@ -146,6 +151,39 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
+	SetupSecureTLS(context.Background(), consulConf, conf, logger, false)
+
+	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
+	client, err := api.NewClient(consulConf)
+	if err != nil {
+		return nil, fmt.Errorf("client setup failed: %w", err)
+	}
+
+	// Setup the backend
+	c := &serviceRegistration{
+		Client: client,
+
+		logger:              logger,
+		serviceName:         service,
+		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
+		serviceAddress:      serviceAddr,
+		checkTimeout:        checkTimeout,
+		disableRegistration: disableRegistration,
+
+		notifyActiveCh:      make(chan struct{}),
+		notifySealedCh:      make(chan struct{}),
+		notifyPerfStandbyCh: make(chan struct{}),
+		notifyInitializedCh: make(chan struct{}),
+
+		isActive:      atomicB.NewBool(state.IsActive),
+		isSealed:      atomicB.NewBool(state.IsSealed),
+		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
+		isInitialized: atomicB.NewBool(state.IsInitialized),
+	}
+	return c, nil
+}
+
+func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -179,47 +217,39 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	}
 
 	if consulConf.Scheme == "https" {
+		if isDiagnose {
+			certPath, okCert := conf["tls_cert_file"]
+			keyPath, okKey := conf["tls_key_file"]
+			if okCert && okKey {
+				warnings, err := diagnose.TLSFileChecks(certPath, keyPath)
+				for _, warning := range warnings {
+					diagnose.Warn(ctx, warning)
+				}
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+		}
+
 		// Use the parsed Address instead of the raw conf['address']
 		tlsClientConfig, err := tlsutil.SetupTLSConfig(conf, consulConf.Address)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		consulConf.Transport.TLSClientConfig = tlsClientConfig
 		if err := http2.ConfigureTransport(consulConf.Transport); err != nil {
-			return nil, err
+			return err
 		}
 		logger.Debug("configured TLS")
+	} else {
+		if isDiagnose {
+			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification.")
+		}
 	}
-
-	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
-	client, err := api.NewClient(consulConf)
-	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
-	}
-
-	// Setup the backend
-	c := &serviceRegistration{
-		Client: client,
-
-		logger:              logger,
-		serviceName:         service,
-		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
-		serviceAddress:      serviceAddr,
-		checkTimeout:        checkTimeout,
-		disableRegistration: disableRegistration,
-
-		notifyActiveCh:      make(chan struct{}),
-		notifySealedCh:      make(chan struct{}),
-		notifyPerfStandbyCh: make(chan struct{}),
-		notifyInitializedCh: make(chan struct{}),
-
-		isActive:      atomicB.NewBool(state.IsActive),
-		isSealed:      atomicB.NewBool(state.IsSealed),
-		isPerfStandby: atomicB.NewBool(state.IsPerformanceStandby),
-		isInitialized: atomicB.NewBool(state.IsInitialized),
-	}
-	return c, nil
+	return nil
 }
 
 func (c *serviceRegistration) Run(shutdownCh <-chan struct{}, wait *sync.WaitGroup, redirectAddr string) error {
@@ -477,6 +507,9 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 		Port:              int(c.redirectPort),
 		Address:           serviceAddress,
 		EnableTagOverride: false,
+		Meta: map[string]string{
+			"external-source": metaExternalSource,
+		},
 	}
 
 	checkStatus := api.HealthCritical
@@ -496,11 +529,11 @@ func (c *serviceRegistration) reconcileConsul(registeredServiceID string) (servi
 	}
 
 	if err := agent.ServiceRegister(service); err != nil {
-		return "", errwrap.Wrapf(`service registration failed: {{err}}`, err)
+		return "", fmt.Errorf(`service registration failed: %w`, err)
 	}
 
 	if err := agent.CheckRegister(sealedCheck); err != nil {
-		return serviceID, errwrap.Wrapf(`service check registration failed: {{err}}`, err)
+		return serviceID, fmt.Errorf(`service check registration failed: %w`, err)
 	}
 
 	return serviceID, nil
@@ -544,7 +577,7 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to parse redirect URL %q: {{err}}", addr), err)
+		return fmt.Errorf("failed to parse redirect URL %q: %w", addr, err)
 	}
 
 	var portStr string
@@ -558,12 +591,12 @@ func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 			portStr = "-1"
 			c.redirectHost = url.Path
 		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
+			return fmt.Errorf("failed to find a host:port in redirect address %q: %w", url.Host, err)
 		}
 	}
 	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
 	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
+		return fmt.Errorf("failed to parse valid port %q: %w", portStr, err)
 	}
 
 	return nil

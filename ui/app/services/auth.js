@@ -191,7 +191,7 @@ export default Service.extend({
     }
 
     if (!data.displayName) {
-      data.displayName = get(this.getTokenData(tokenName) || {}, 'displayName');
+      data.displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
     tokens.addObject(tokenName);
     this.set('tokens', tokens);

@@ -52,12 +52,12 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="save" @noun={{itemType}} />
       <MessageError @model={{model}} />
-      <FormFieldGroups @model={{model}} @mode={{mode}} />
+      <FormFieldGroups @model={{model}} @mode={{mode}} @onKeyUp={{action "onKeyUp"}} @validationMessages={{validationMessages}}/>
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
         <button type="submit" data-test-save-config="true"
-          class="button is-primary {{if saveModel.isRunning "loading"}}" disabled={{saveModel.isRunning}}>
+          class="button is-primary {{if saveModel.isRunning "loading"}}" disabled={{or saveModel.isRunning isFormInvalid}}>
           Save
         </button>
         {{#if (eq mode "create")}}

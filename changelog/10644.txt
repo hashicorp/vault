@@ -1,3 +1,0 @@
-```release-note: improvement
-agent: Add template-retry stanza to agent config.
-```

@@ -11,6 +11,11 @@ label {
   }
 }
 
+.masked-font {
+  font-family: obscure, text-security-square;
+  letter-spacing: 2px;
+}
+
 .label {
   color: $grey-darker;
   text-transform: uppercase;
@@ -311,4 +316,12 @@ label {
   color: $grey;
   position: absolute;
   right: 8px;
+}
+
+fieldset.form-fieldset {
+  border: none;
+}
+
+.has-error-border {
+  border: 1px solid $red-500;
 }

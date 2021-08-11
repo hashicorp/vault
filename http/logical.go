@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -153,7 +152,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
 	req := &logical.Request{
@@ -220,32 +219,22 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, nil, status, err
 	}
 
-	rawRequired := r.Header.Values(VaultIndexHeaderName)
-	if len(rawRequired) != 0 && core.MissingRequiredState(rawRequired) {
-		return nil, nil, http.StatusPreconditionFailed, fmt.Errorf("required index state not present")
-	}
-
-	req, err = requestAuth(core, r, req)
-	if err != nil {
-		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-			return nil, nil, http.StatusForbidden, nil
-		}
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
-	}
+	req.SetRequiredState(r.Header.Values(VaultIndexHeaderName))
+	requestAuth(r, req)
 
 	req, err = requestWrapInfo(r, req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("error parsing X-Vault-Wrap-TTL header: %w", err)
 	}
 
 	err = parseMFAHeader(req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse X-Vault-MFA header: %w", err)
 	}
 
 	err = requestPolicyOverride(r, req)
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
+		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to parse %s header: %w", PolicyOverrideHeaderName, err)
 	}
 
 	return req, origBody, 0, nil
@@ -311,129 +300,6 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
-		}
-
-		// Always forward requests that are using a limited use count token.
-		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
-			// Prevent forwarding on local-only requests.
-			if noForward {
-				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
-				return
-			}
-			if origBody != nil {
-				r.Body = origBody
-			}
-			forwardRequest(core, w, r)
-			return
-		}
-
-		// req.Path will be relative by this point. The prefix check is first
-		// to fail faster if we're not in this situation since it's a hot path
-		switch {
-		case strings.HasPrefix(req.Path, "sys/wrapping/"), strings.HasPrefix(req.Path, "auth/token/"):
-			// Get the token ns info; if we match the paths below we want to
-			// swap in the token context (but keep the relative path)
-			te := req.TokenEntry()
-			newCtx := r.Context()
-			if te != nil {
-				ns, err := vault.NamespaceByID(newCtx, te.NamespaceID, core)
-				if err != nil {
-					core.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
-					respondError(w, http.StatusInternalServerError, err)
-					return
-				}
-				if ns != nil {
-					newCtx = namespace.ContextWithNamespace(newCtx, ns)
-				}
-			}
-			switch req.Path {
-			// Route the token wrapping request to its respective sys NS
-			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
-				r = r.WithContext(newCtx)
-				if err := wrappingVerificationFunc(r.Context(), core, req); err != nil {
-					if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-						respondError(w, http.StatusForbidden, err)
-					} else {
-						respondError(w, http.StatusBadRequest, err)
-					}
-					return
-				}
-
-			// The -self paths have no meaning outside of the token NS, so
-			// requests for these paths always go to the token NS
-			case "auth/token/lookup-self", "auth/token/renew-self", "auth/token/revoke-self":
-				r = r.WithContext(newCtx)
-
-			// For the following operations, we can set the proper namespace context
-			// using the token's embedded nsID if a relative path was provided. Since
-			// this is done at the HTTP layer, the operation will still be gated by
-			// ACLs.
-			case "auth/token/lookup", "auth/token/renew", "auth/token/revoke", "auth/token/revoke-orphan":
-				token, ok := req.Data["token"]
-				// If the token is not present (e.g. a bad request), break out and let the backend
-				// handle the error
-				if !ok {
-					// If this is a token lookup request and if the token is not
-					// explicitly provided, it will use the client token so we simply set
-					// the context to the client token's context.
-					if req.Path == "auth/token/lookup" {
-						r = r.WithContext(newCtx)
-					}
-					break
-				}
-				_, nsID := namespace.SplitIDFromString(token.(string))
-				if nsID != "" {
-					ns, err := vault.NamespaceByID(newCtx, nsID, core)
-					if err != nil {
-						core.Logger().Warn("error looking up namespace from the token's namespace ID", "error", err)
-						respondError(w, http.StatusInternalServerError, err)
-						return
-					}
-					if ns != nil {
-						newCtx = namespace.ContextWithNamespace(newCtx, ns)
-						r = r.WithContext(newCtx)
-					}
-				}
-			}
-
-		// The following relative sys/leases/ paths handles re-routing requests
-		// to the proper namespace using the lease ID on applicable paths.
-		case strings.HasPrefix(req.Path, "sys/leases/"):
-			switch req.Path {
-			// For the following operations, we can set the proper namespace context
-			// using the lease's embedded nsID if a relative path was provided. Since
-			// this is done at the HTTP layer, the operation will still be gated by
-			// ACLs.
-			case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
-				leaseID, ok := req.Data["lease_id"]
-				// If lease ID is not present, break out and let the backend handle the error
-				if !ok {
-					break
-				}
-				_, nsID := namespace.SplitIDFromString(leaseID.(string))
-				if nsID != "" {
-					newCtx := r.Context()
-					ns, err := vault.NamespaceByID(newCtx, nsID, core)
-					if err != nil {
-						core.Logger().Warn("error looking up namespace from the lease's namespace ID", "error", err)
-						respondError(w, http.StatusInternalServerError, err)
-						return
-					}
-					if ns != nil {
-						newCtx = namespace.ContextWithNamespace(newCtx, ns)
-						r = r.WithContext(newCtx)
-					}
-				}
-			}
-
-		// Prevent any metrics requests to be forwarded from a standby node.
-		// Instead, we return an error since we cannot be sure if we have an
-		// active token store to validate the provided token.
-		case strings.HasPrefix(req.Path, "sys/metrics"):
-			if isStandby, _ := core.Standby(); isStandby {
-				respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
-				return
-			}
 		}
 
 		// Make the internal request. We attach the connection info

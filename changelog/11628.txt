@@ -1,0 +1,3 @@
+```release-note:bug
+secret: fix the bug where transit encrypt batch doesn't work with key_version
+```

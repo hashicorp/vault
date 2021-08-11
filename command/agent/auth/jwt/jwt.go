@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -31,6 +32,8 @@ type jwtMethod struct {
 	latestToken     *atomic.Value
 }
 
+// NewJWTAuthMethod returns an implementation of Agent's auth.AuthMethod
+// interface for JWT auth.
 func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf == nil {
 		return nil, errors.New("empty config")
@@ -86,7 +89,7 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	return j, nil
 }
 
-func (j *jwtMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
+func (j *jwtMethod) Authenticate(_ context.Context, _ *api.Client) (string, http.Header, map[string]interface{}, error) {
 	j.logger.Trace("beginning authentication")
 
 	j.ingressToken()
@@ -160,8 +163,16 @@ func (j *jwtMethod) ingressToken() {
 
 	j.logger.Debug("new jwt file found")
 
-	if !fi.Mode().IsRegular() {
-		j.logger.Error("jwt file is not a regular file")
+	// Check that the path refers to a file.
+	// If it's a symlink, it could still be a symlink to a directory,
+	// but ioutil.ReadFile below will return a descriptive error.
+	switch mode := fi.Mode(); {
+	case mode.IsRegular():
+		// regular file
+	case mode&fs.ModeSymlink != 0:
+		// symlink
+	default:
+		j.logger.Error("jwt file is not a regular file or symlink")
 		return
 	}
 

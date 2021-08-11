@@ -24,6 +24,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -34,8 +36,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -106,6 +106,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-force/*",
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
+				"leases",
 			},
 
 			Unauthenticated: []string{
@@ -124,6 +125,9 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/update-primary",
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
+				"replication/dr/secondary/license/signed",
+				"replication/dr/secondary/license/status",
+				"replication/dr/secondary/sys/config/reload/license",
 				"replication/dr/secondary/reindex",
 				"storage/raft/bootstrap/challenge",
 				"storage/raft/bootstrap/answer",
@@ -182,12 +186,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
-	// If the node is in a DR secondary cluster, we need to allow the ability to
-	// remove a Raft peer without being authenticated by instead providing a DR
-	// operation token.
+	// If the node is in a DR secondary cluster, gate some raft operations by
+	// the DR operation token.
 	if core.IsDRSecondary() {
-		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/state")
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -226,6 +231,18 @@ func (b *SystemBackend) handleConfigStateSanitized(ctx context.Context, req *log
 		Data: config,
 	}
 	return resp, nil
+}
+
+// handleConfigReload handles reloading specific pieces of the configuration.
+func (b *SystemBackend) handleConfigReload(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	subsystem := data.Get("subsystem").(string)
+
+	switch subsystem {
+	case "license":
+		return handleLicenseReload(b)(ctx, req, data)
+	}
+
+	return nil, logical.ErrUnsupportedPath
 }
 
 // handleCORSRead returns the current CORS configuration
@@ -283,6 +300,84 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
+}
+
+func (b *SystemBackend) handleLeaseCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	typeRaw, ok := d.GetOk("type")
+	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
+		return nil, nil
+	}
+
+	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
+	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
+
+	resp, err := b.Core.expiration.getIrrevocableLeaseCounts(ctx, includeChildNamespaces)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: resp,
+	}, nil
+}
+
+func processLimit(d *framework.FieldData) (bool, int, error) {
+	limitStr := ""
+	limitRaw, ok := d.GetOk("limit")
+	if ok {
+		limitStr = limitRaw.(string)
+	}
+
+	includeAll := false
+	maxResults := MaxIrrevocableLeasesToReturn
+	if limitStr == "" {
+		// use the defaults
+	} else if strings.ToLower(limitStr) == "none" {
+		includeAll = true
+	} else {
+		// not having a valid, positive int here is an error
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			return false, 0, fmt.Errorf("invalid 'limit' provided: %w", err)
+		}
+
+		if limit < 1 {
+			return false, 0, fmt.Errorf("limit must be 'none' or a positive integer")
+		}
+
+		maxResults = limit
+	}
+
+	return includeAll, maxResults, nil
+}
+
+func (b *SystemBackend) handleLeaseList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	typeRaw, ok := d.GetOk("type")
+	if !ok || strings.ToLower(typeRaw.(string)) != "irrevocable" {
+		return nil, nil
+	}
+
+	includeChildNamespacesRaw, ok := d.GetOk("include_child_namespaces")
+	includeChildNamespaces := ok && includeChildNamespacesRaw.(bool)
+
+	includeAll, maxResults, err := processLimit(d)
+	if err != nil {
+		return nil, err
+	}
+
+	leases, warning, err := b.Core.expiration.listIrrevocableLeases(ctx, includeChildNamespaces, includeAll, maxResults)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: leases,
+	}
+	if warning != "" {
+		resp.AddWarning(warning)
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -633,7 +728,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	recovery bool) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to look up backed-up keys: {{err}}", err)
+		return nil, fmt.Errorf("unable to look up backed-up keys: %w", err)
 	}
 	if backup == nil {
 		return logical.ErrorResponse("no backed-up keys found"), nil
@@ -648,7 +743,7 @@ func (b *SystemBackend) handleRekeyRetrieve(
 			}
 			key, err := hex.DecodeString(j)
 			if err != nil {
-				return nil, errwrap.Wrapf("error decoding hex-encoded backup key: {{err}}", err)
+				return nil, fmt.Errorf("error decoding hex-encoded backup key: %w", err)
 			}
 			currB64Keys = append(currB64Keys, base64.StdEncoding.EncodeToString(key))
 			keysB64[k] = currB64Keys
@@ -684,7 +779,7 @@ func (b *SystemBackend) handleRekeyDelete(
 	recovery bool) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
-		return nil, errwrap.Wrapf("error during deletion of backed-up keys: {{err}}", err)
+		return nil, fmt.Errorf("error during deletion of backed-up keys: %w", err)
 	}
 
 	return nil, nil
@@ -803,6 +898,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -1078,7 +1180,7 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	// Attempt remount
-	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.PerfStandby()); err != nil {
+	if err := b.Core.remount(ctx, fromPath, toPath, !b.Core.perfStandby); err != nil {
 		b.Backend.Logger().Error("remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
@@ -1469,7 +1571,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
 		headers := rawVal.([]string)
-
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
@@ -1511,11 +1612,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			// enabled. If the vkv backend suports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 			if err != nil {
-				return nil, errwrap.Wrapf("unable to parse mount entry: {{err}}", err)
+				return nil, fmt.Errorf("unable to parse mount entry: %w", err)
 			}
 			optVersion, err := parseutil.ParseInt(v)
 			if err != nil {
-				return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
+				return handleError(fmt.Errorf("unable to parse options: %w", err))
 			}
 
 			// Only accept valid versions
@@ -1774,6 +1875,31 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func expandStringValsWithCommas(configMap map[string]interface{}) error {
+	configParamNameSlice := []string{
+		"audit_non_hmac_request_keys",
+		"audit_non_hmac_response_keys",
+		"passthrough_request_headers",
+		"allowed_response_headers",
+	}
+	for _, paramName := range configParamNameSlice {
+		if raw, ok := configMap[paramName]; ok {
+			switch t := raw.(type) {
+			case string:
+				// To be consistent with auth tune, and in cases where a single comma separated strings
+				// is provided in the curl command, we split the entries by the commas.
+				rawNew := raw.(string)
+				res, err := parseutil.ParseCommaStringSlice(rawNew)
+				if err != nil {
+					return fmt.Errorf("invalid input parameter %v of type %v", paramName, t)
+				}
+				configMap[paramName] = res
+			}
+		}
+	}
+	return nil
+}
+
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1800,6 +1926,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -2566,7 +2699,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 		return nil, err
 	}
 	if ok {
-		rotConfig.MaxOperations = int64(maxOps.(int))
+		rotConfig.MaxOperations = maxOps.(int64)
 	}
 	interval, ok, err := data.GetOkErr("interval")
 	if err != nil {
@@ -2585,7 +2718,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Reject out of range settings
-	if rotConfig.Interval < minimumRotationInterval {
+	if rotConfig.Interval < minimumRotationInterval && rotConfig.Interval != 0 {
 		return logical.ErrorResponse("interval must be greater or equal to %s", minimumRotationInterval.String()), logical.ErrInvalidRequest
 	}
 
@@ -2715,7 +2848,7 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	httpResp := &logical.HTTPResponse{}
 	err = jsonutil.DecodeJSON([]byte(response), httpResp)
 	if err != nil {
-		return nil, errwrap.Wrapf("error decoding wrapped response: {{err}}", err)
+		return nil, fmt.Errorf("error decoding wrapped response: %w", err)
 	}
 	if httpResp.Data != nil &&
 		(httpResp.Data[logical.HTTPStatusCode] != nil ||
@@ -2769,7 +2902,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, tokenID)
 		if err != nil {
-			return "", errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
+			return "", fmt.Errorf("error decrementing wrapping token's use-count: %w", err)
 		}
 
 		defer b.Core.tokenStore.revokeOrphan(ctx, tokenID)
@@ -2783,7 +2916,7 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return "", errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return "", fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return "no information found; wrapping token may be from a previous Vault version", ErrInternalError
@@ -2979,7 +3112,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3001,7 +3134,7 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 	if creationTTLRaw != nil {
 		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
-			return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
+			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %w", err)
 		}
 		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
@@ -3046,7 +3179,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(ctx, token)
 		if err != nil {
-			return nil, errwrap.Wrapf("error decrementing wrapping token's use-count: {{err}}", err)
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %w", err)
 		}
 		defer b.Core.tokenStore.revokeOrphan(ctx, token)
 	}
@@ -3060,7 +3193,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3079,7 +3212,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
-		return nil, errwrap.Wrapf("error reading creation_ttl value from wrapping information: {{err}}", err)
+		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %w", err)
 	}
 
 	// Get creation_path to return as the response later
@@ -3098,7 +3231,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	cubbyReq.SetTokenEntry(te)
 	cubbyResp, err = b.Core.router.Route(ctx, cubbyReq)
 	if err != nil {
-		return nil, errwrap.Wrapf("error looking up response: {{err}}", err)
+		return nil, fmt.Errorf("error looking up response: %w", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -3453,18 +3586,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	resp := logical.ErrorResponse("The functionality has been removed on this path")
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": counters,
-		},
-	}
-
-	return resp, nil
+	return resp, logical.ErrPathFunctionalityRemoved
 }
 
 func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4659,8 +4783,8 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"internal-counters-requests": {
-		"Count of requests seen by this Vault cluster over time.",
-		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 	"internal-counters-tokens": {
 		"Count of active tokens in this Vault cluster.",
@@ -4687,5 +4811,13 @@ This path responds to the following HTTP methods.
 	"activity-config": {
 		"Control the collection and reporting of client counts.",
 		"Control the collection and reporting of client counts.",
+	},
+	"count-leases": {
+		"Count of leases associated with this Vault cluster",
+		"Count of leases associated with this Vault cluster",
+	},
+	"list-leases": {
+		"List leases associated with this Vault cluster",
+		"Requires sudo capability. List leases associated with this Vault cluster",
 	},
 }

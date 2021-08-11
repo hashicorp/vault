@@ -3,8 +3,8 @@ package nomad
 import (
 	"context"
 	"errors"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -77,7 +77,7 @@ func (b *backend) Role(ctx context.Context, storage logical.Storage, name string
 
 	entry, err := storage.Get(ctx, "role/"+name)
 	if err != nil {
-		return nil, errwrap.Wrapf("error retrieving role: {{err}}", err)
+		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
 	if entry == nil {
 		return nil, nil
