@@ -59,7 +59,7 @@
   }
 
   &:not(.no-section-spacing) > * + *,
-  & > .g-grid-container > * + * {
+  &:not(.g-featured-slider-section) > .g-grid-container > * + * {
     margin-top: 96px;
   }
 }
