@@ -138,8 +138,9 @@ of the secret's lease duration has elapsed.
 
 ### Non-Renewable Secrets
 
-If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes. This is not
-configurable. Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
+If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes.
+This can be configured using Template config [static_secret_render_interval](/docs/agent/template-config#static_secret_render_interval).
+Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
 
 ### Non-Renewable Leased Secrets
 
