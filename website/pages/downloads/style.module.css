@@ -1,5 +1,5 @@
 .root {
-  composes: .g-container from global;
+  composes: .g-grid-container from global;
   margin-top: 72px;
   margin-bottom: 72px;
 }

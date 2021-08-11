@@ -54,12 +54,12 @@
   padding-bottom: 96px;
 
   & > .g-section-header + *,
-  & > .g-container > .g-section-header + * {
+  & > .g-grid-container > .g-section-header + * {
     margin-top: 72px;
   }
 
   &:not(.no-section-spacing) > * + *,
-  & > .g-container > * + * {
+  & > .g-grid-container > * + * {
     margin-top: 96px;
   }
 }
@@ -74,7 +74,7 @@
 }
 
 .g-section-block section > * + .button-container,
-.g-section-block section > .g-container > * + .button-container {
+.g-section-block section > .g-grid-container > * + .button-container {
   margin-top: 40px;
 }
 
