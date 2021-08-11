@@ -145,6 +145,48 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			path += "/"
 		}
 
+	case "PATCH":
+		// TODO: Most of this is copied from post/put. Probably best to abstract it, if possible, when we do the real thing
+		op = logical.PatchOperation
+
+		// Buffer the request body in order to allow us to peek at the beginning
+		// without consuming it. This approach involves no copying.
+		bufferedBody := newBufferedReader(r.Body)
+		r.Body = bufferedBody
+
+		// Sample the first bytes to determine whether this should be parsed as
+		// a form or as JSON. The amount to look ahead (512 bytes) is arbitrary
+		// but extremely tolerant (i.e. allowing 511 bytes of leading whitespace
+		// and an incorrect content-type).
+		head, err := bufferedBody.Peek(512)
+		if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
+			status := http.StatusBadRequest
+			logical.AdjustErrorStatusCode(&status, err)
+			return nil, nil, status, fmt.Errorf("error reading data")
+		}
+
+		if isForm(head, r.Header.Get("Content-Type")) {
+			formData, err := parseFormRequest(r)
+			if err != nil {
+				status := http.StatusBadRequest
+				logical.AdjustErrorStatusCode(&status, err)
+				return nil, nil, status, fmt.Errorf("error parsing form data")
+			}
+
+			data = formData
+		} else {
+			origBody, err = parseJSONRequest(perfStandby, r, w, &data)
+			if err == io.EOF {
+				data = nil
+				err = nil
+			}
+			if err != nil {
+				status := http.StatusBadRequest
+				logical.AdjustErrorStatusCode(&status, err)
+				return nil, nil, status, fmt.Errorf("error parsing JSON")
+			}
+		}
+
 	case "OPTIONS", "HEAD":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil

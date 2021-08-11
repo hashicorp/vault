@@ -354,6 +354,7 @@ const (
 	ListOperation                     = "list"
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
+	PatchOperation                    = "patch"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
