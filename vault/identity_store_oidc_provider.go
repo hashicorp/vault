@@ -26,7 +26,7 @@ type scope struct {
 
 const (
 	oidcProviderPrefix = "oidc_provider/"
-	assignmentPath     = oidcProviderPrefix + "named_assignments/"
+	assignmentPath     = oidcProviderPrefix + "assignment/"
 	scopePath          = oidcProviderPrefix + "named_scopes/"
 )
 
