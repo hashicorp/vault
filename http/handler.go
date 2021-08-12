@@ -107,7 +107,6 @@ var (
 
 func init() {
 	alwaysRedirectPaths.AddPaths([]string{
-		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
 	})
 }
