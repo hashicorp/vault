@@ -12,13 +12,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type namedAssignment struct {
+type assignment struct {
 	name     string
 	Groups   []string `json:"groups"`
 	Entities []string `json:"entities"`
 }
 
-type namedScope struct {
+type scope struct {
 	name        string
 	Template    string `json:"template"`
 	Description string `json:"description"`
@@ -34,9 +34,10 @@ type namedClient struct {
 }
 
 const (
-	namedAssignmentPath = oidcTokensPrefix + "named_assignments/"
-	namedScopePath      = oidcTokensPrefix + "named_scopes/"
-	namedClientPath     = oidcTokensPrefix + "named_clients/"
+	oidcProviderPrefix = "oidc_provider/"
+	assignmentPath     = oidcProviderPrefix + "named_assignments/"
+	scopePath          = oidcProviderPrefix + "named_scopes/"
+	namedClientPath    = oidcTokensPrefix + "named_clients/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -73,7 +74,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			ExistenceCheck:  i.pathOIDCAssignmentExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC assignments.",
-			HelpDescription: "Create, Read, Update, and Delete OIDC named assignments.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC assignments.",
 		},
 		{
 			Pattern: "oidc/assignment/?$",
@@ -117,7 +118,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			ExistenceCheck:  i.pathOIDCScopeExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC scopes.",
-			HelpDescription: "Create, Read, Update, and Delete OIDC named scopes.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC scopes.",
 		},
 		{
 			Pattern: "oidc/scope/?$",
@@ -188,13 +189,13 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
-// pathOIDCCreateUpdateAssignment is used to create a new named assignment or update an existing one
+// pathOIDCCreateUpdateAssignment is used to create a new assignment or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var assignment namedAssignment
+	var assignment assignment
 	if req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+		entry, err := req.Storage.Get(ctx, assignmentPath+name)
 		if err != nil {
 			return nil, err
 		}
@@ -208,17 +209,17 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 	if entitiesRaw, ok := d.GetOk("entities"); ok {
 		assignment.Entities = entitiesRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Entities = d.Get("entities").([]string)
+		assignment.Entities = d.GetDefaultOrZero("entities").([]string)
 	}
 
 	if groupsRaw, ok := d.GetOk("groups"); ok {
 		assignment.Groups = groupsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Groups = d.Get("groups").([]string)
+		assignment.Groups = d.GetDefaultOrZero("groups").([]string)
 	}
 
-	// store named assignment
-	entry, err := logical.StorageEntryJSON(namedAssignmentPath+name, assignment)
+	// store assignment
+	entry, err := logical.StorageEntryJSON(assignmentPath+name, assignment)
 	if err != nil {
 		return nil, err
 	}
@@ -230,9 +231,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 	return nil, nil
 }
 
-// pathOIDCListAssignment is used to list named assignments
+// pathOIDCListAssignment is used to list assignments
 func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	assignments, err := req.Storage.List(ctx, namedAssignmentPath)
+	assignments, err := req.Storage.List(ctx, assignmentPath)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +244,7 @@ func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical
 func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	entry, err := req.Storage.Get(ctx, assignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -251,14 +252,14 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 		return nil, nil
 	}
 
-	var storedNamedAssignment namedAssignment
-	if err := entry.DecodeJSON(&storedNamedAssignment); err != nil {
+	var assignment assignment
+	if err := entry.DecodeJSON(&assignment); err != nil {
 		return nil, err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"groups":   storedNamedAssignment.Groups,
-			"entities": storedNamedAssignment.Entities,
+			"groups":   assignment.Groups,
+			"entities": assignment.Entities,
 		},
 	}, nil
 }
@@ -266,7 +267,7 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 // pathOIDCDeleteAssignment is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedAssignmentPath+name)
+	err := req.Storage.Delete(ctx, assignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +277,7 @@ func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logic
 func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	entry, err := req.Storage.Get(ctx, assignmentPath+name)
 	if err != nil {
 		return false, err
 	}
@@ -284,13 +285,13 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 	return entry != nil, nil
 }
 
-// pathOIDCCreateUpdateScope is used to create a new named scope or update an existing one
+// pathOIDCCreateUpdateScope is used to create a new scope or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var scope namedScope
+	var scope scope
 	if req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedScopePath+name)
+		entry, err := req.Storage.Get(ctx, scopePath+name)
 		if err != nil {
 			return nil, err
 		}
@@ -304,13 +305,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 	if descriptionRaw, ok := d.GetOk("description"); ok {
 		scope.Description = descriptionRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
-		scope.Description = d.Get("description").(string)
+		scope.Description = d.GetDefaultOrZero("description").(string)
 	}
 
 	if templateRaw, ok := d.GetOk("template"); ok {
 		scope.Template = templateRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
-		scope.Template = d.Get("template").(string)
+		scope.Template = d.GetDefaultOrZero("template").(string)
 	}
 
 	// Attempt to decode as base64 and use that if it works
@@ -343,8 +344,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 			}
 		}
 	}
-	// store named scope
-	entry, err := logical.StorageEntryJSON(namedScopePath+name, scope)
+	// store scope
+	entry, err := logical.StorageEntryJSON(scopePath+name, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -356,9 +357,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 	return nil, nil
 }
 
-// pathOIDCListScope is used to list named scopes
+// pathOIDCListScope is used to list scopes
 func (i *IdentityStore) pathOIDCListScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	scopes, err := req.Storage.List(ctx, namedScopePath)
+	scopes, err := req.Storage.List(ctx, scopePath)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +370,7 @@ func (i *IdentityStore) pathOIDCListScope(ctx context.Context, req *logical.Requ
 func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedScopePath+name)
+	entry, err := req.Storage.Get(ctx, scopePath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -377,14 +378,14 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 		return nil, nil
 	}
 
-	var storedNamedScope namedScope
-	if err := entry.DecodeJSON(&storedNamedScope); err != nil {
+	var scope scope
+	if err := entry.DecodeJSON(&scope); err != nil {
 		return nil, err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"template":    storedNamedScope.Template,
-			"description": storedNamedScope.Description,
+			"template":    scope.Template,
+			"description": scope.Description,
 		},
 	}, nil
 }
@@ -392,7 +393,7 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 // pathOIDCDeleteScope is used to delete an scope
 func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedScopePath+name)
+	err := req.Storage.Delete(ctx, scopePath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +403,7 @@ func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Re
 func (i *IdentityStore) pathOIDCScopeExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedScopePath+name)
+	entry, err := req.Storage.Get(ctx, scopePath+name)
 	if err != nil {
 		return false, err
 	}

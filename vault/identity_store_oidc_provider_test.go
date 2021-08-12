@@ -348,8 +348,8 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderScopeList tests the List operation for scopes
-func TestOIDC_Path_OIDC_ProviderScopeList(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderScope_List tests the List operation for scopes
+func TestOIDC_Path_OIDC_ProviderScope_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -399,8 +399,8 @@ func TestOIDC_Path_OIDC_ProviderScopeList(t *testing.T) {
 	expectStrings(t, respListScopeAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
-// TestOIDC_Path_OIDCProviderAssignment tests CRUD operations for assignments
-func TestOIDC_Path_OIDCProviderAssignment(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderAssignment tests CRUD operations for assignments
+func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -474,8 +474,8 @@ func TestOIDC_Path_OIDCProviderAssignment(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDCProviderAssignment_Update tests Update operations for assignments
-func TestOIDC_Path_OIDCProviderAssignment_Update(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderAssignment_Update tests Update operations for assignments
+func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -534,8 +534,8 @@ func TestOIDC_Path_OIDCProviderAssignment_Update(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderAssignmentList tests the List operation for assignments
-func TestOIDC_Path_OIDC_ProviderAssignmentList(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderAssignment_List tests the List operation for assignments
+func TestOIDC_Path_OIDC_ProviderAssignment_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
