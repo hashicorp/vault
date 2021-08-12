@@ -15,7 +15,7 @@ type assignment struct {
 
 const (
 	oidcProviderPrefix = "oidc_provider/"
-	assignmentPath     = oidcProviderPrefix + "named_assignments/"
+	assignmentPath     = oidcProviderPrefix + "assignment/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
