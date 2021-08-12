@@ -27,7 +27,7 @@ type scope struct {
 const (
 	oidcProviderPrefix = "oidc_provider/"
 	assignmentPath     = oidcProviderPrefix + "assignment/"
-	scopePath          = oidcProviderPrefix + "named_scopes/"
+	scopePath          = oidcProviderPrefix + "scope/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
