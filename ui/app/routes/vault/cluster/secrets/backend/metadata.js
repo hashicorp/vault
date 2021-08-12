@@ -2,16 +2,15 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 export default class MetadataShow extends Route {
   @service store;
-  // ARG TODO unloadmodelroute
   beforeModel() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     this.backend = backend;
   }
   model(params) {
-    let { secret } = params; // of dynamic route /*secret
+    let { secret } = params;
     return this.store
       .queryRecord('secret-v2', {
-        backend: 'kv',
+        backend: this.backend,
         id: secret,
       })
       .then(record => {
@@ -23,7 +22,6 @@ export default class MetadataShow extends Route {
         };
         return record;
       });
-    // make an API request that uses the id
   }
   setupController(controller, model) {
     controller.set('backend', this.backend); // for backendCrumb
