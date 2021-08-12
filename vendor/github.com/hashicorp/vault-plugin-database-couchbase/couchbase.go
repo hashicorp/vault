@@ -21,7 +21,7 @@ const (
 	defaultCouchbaseUserRole = `{"Roles": [{"role":"ro_admin"}]}`
 	defaultTimeout           = 20000 * time.Millisecond
 
-	defaultUserNameTemplate = `V_{{.DisplayName | uppercase | truncate 64}}_{{.RoleName | uppercase | truncate 64}}_{{random 20 | uppercase}}_{{unix_time}}`
+	defaultUserNameTemplate = `{{printf "V_%s_%s_%s_%s" (printf "%s" .DisplayName | uppercase | truncate 64) (printf "%s" .RoleName | uppercase | truncate 64) (random 20 | uppercase) (unix_time) | truncate 128}}`
 )
 
 var (
