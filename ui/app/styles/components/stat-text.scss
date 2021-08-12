@@ -1,10 +1,4 @@
-// size will change conditionally depending on whether or not a description is passed in
-// IF description then title does NOT change size
-// if no description, title gets incrementally smaller
-// there will not be a description in key value use cases
-
 .stat-text-container {
-  border: 1px solid lavender;
   line-height: normal;
 
   &.l {
@@ -17,6 +11,7 @@
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
+      line-height: inherit;
     }
     .stat-value {
       font-size: $size-3;
@@ -25,15 +20,17 @@
     }
   }
 
-  &.m {
+  &.s {
     > .stat-label {
-      font-size: $size-5; // which design? stays same size or decrease to 8 (~.857rem)
+      font-size: $size-5;
       font-weight: $font-weight-semibold;
+      line-height: inherit;
     }
     > .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
+      line-height: inherit;
     }
     > .stat-value {
       font-size: $size-5;
@@ -42,21 +39,62 @@
     }
   }
 
-  &.s {
+  &.l-no-subText {
     > .stat-label {
+      font-size: $size-5;
+      font-weight: $font-weight-semibold;
+      line-height: inherit;
+    }
+    .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
-      color: $ui-gray-500;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
+      font-size: $size-3;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-xxs;
+    }
+  }
+
+  &.m-no-subText {
+    > .stat-label {
+      font-size: $size-8;
+      font-weight: $font-weight-bold;
+      line-height: inherit;
     }
     > .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
+      line-height: inherit;
+    }
+    > .stat-value {
+      font-size: $size-5;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-xxs;
+    }
+  }
+
+  &.s-no-subText {
+    > .stat-label {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-500;
+      line-height: inherit;
+    }
+    > .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
     }
     > .stat-value {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-800;
+      line-height: inherit;
     }
   }
 }
