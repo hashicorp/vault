@@ -238,7 +238,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 	if issuerRaw, ok := d.GetOk("issuer"); ok {
 		provider.Issuer = issuerRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
-		provider.Issuer = d.Get("issuer").(string)
+		provider.Issuer = d.GetDefaultOrZero("issuer").(string)
 	}
 
 	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
