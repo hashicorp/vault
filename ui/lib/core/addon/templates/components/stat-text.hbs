@@ -1,4 +1,4 @@
-<div class={{concat "stat-text-container " @size (unless @subText "-no-subText")}}>
+<div class={{concat "stat-text-container " @size (unless @subText "-no-subText")}} data-test-stat-text-container>
   <div class="stat-label">{{@label}}</div>
     {{#if @subText}}
       <div class="stat-text">{{@subText}}</div>

@@ -2,18 +2,37 @@
   line-height: normal;
 
   &.l {
-    > .stat-label {
+    .stat-label {
       font-size: $size-5;
       font-weight: $font-weight-semibold;
       line-height: inherit;
     }
-    > .stat-text {
+    .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    > .stat-value {
+    .stat-value {
+      font-size: $size-3;
+      font-weight: $font-weight-normal;
+      margin-top: $spacing-s;
+    }
+  }
+  // medium styling is the same as large
+  &.m {
+    .stat-label {
+      font-size: $size-5;
+      font-weight: $font-weight-semibold;
+      line-height: inherit;
+    }
+    .stat-text {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      line-height: inherit;
+    }
+    .stat-value {
       font-size: $size-3;
       font-weight: $font-weight-normal;
       margin-top: $spacing-s;
@@ -21,18 +40,18 @@
   }
 
   &.s {
-    > .stat-label {
+    .stat-label {
       font-size: $size-5;
       font-weight: $font-weight-semibold;
       line-height: inherit;
     }
-    > .stat-text {
+    .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    > .stat-value {
+    .stat-value {
       font-size: $size-5;
       font-weight: $font-weight-normal;
       margin-top: $spacing-s;
@@ -40,18 +59,18 @@
   }
 
   &.l-no-subText {
-    > .stat-label {
+    .stat-label {
       font-size: $size-5;
       font-weight: $font-weight-semibold;
       line-height: inherit;
     }
-    > .stat-text {
+    .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    > .stat-value {
+    .stat-value {
       font-size: $size-3;
       font-weight: $font-weight-normal;
       margin-top: $spacing-xxs;
@@ -59,18 +78,18 @@
   }
 
   &.m-no-subText {
-    > .stat-label {
+    .stat-label {
       font-size: $size-8;
       font-weight: $font-weight-bold;
       line-height: inherit;
     }
-    > .stat-text {
+    .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    > .stat-value {
+    .stat-value {
       font-size: $size-5;
       font-weight: $font-weight-normal;
       margin-top: $spacing-xxs;
@@ -78,19 +97,19 @@
   }
 
   &.s-no-subText {
-    > .stat-label {
+    .stat-label {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-500;
       line-height: inherit;
     }
-    > .stat-text {
+    .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    > .stat-value {
+    .stat-value {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-800;

@@ -7,12 +7,9 @@ module('Integration | Component | StatText', function(hooks) {
   setupRenderingTest(hooks);
 
   test('it renders', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
-
     await render(hbs`<StatText />`);
 
-    assert.equal(this.element.textContent.trim(), '');
+    assert.dom('[data-test-stat-text-container]').exists('renders element');
   });
 
   test('it renders passed in attributes', async function(assert) {
