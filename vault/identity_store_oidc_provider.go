@@ -18,7 +18,7 @@ type assignment struct {
 	Entities []string `json:"entities"`
 }
 
-type namedScope struct {
+type scope struct {
 	name        string
 	Template    string `json:"template"`
 	Description string `json:"description"`
@@ -27,7 +27,7 @@ type namedScope struct {
 const (
 	oidcProviderPrefix = "oidc_provider/"
 	assignmentPath     = oidcProviderPrefix + "named_assignments/"
-	namedScopePath     = oidcTokensPrefix + "named_scopes/"
+	scopePath          = oidcTokensPrefix + "named_scopes/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -108,7 +108,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			ExistenceCheck:  i.pathOIDCScopeExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC scopes.",
-			HelpDescription: "Create, Read, Update, and Delete OIDC named scopes.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC scopes.",
 		},
 		{
 			Pattern: "oidc/scope/?$",
@@ -219,13 +219,13 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 	return entry != nil, nil
 }
 
-// pathOIDCCreateUpdateScope is used to create a new named scope or update an existing one
+// pathOIDCCreateUpdateScope is used to create a new scope or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var scope namedScope
+	var scope scope
 	if req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedScopePath+name)
+		entry, err := req.Storage.Get(ctx, scopePath+name)
 		if err != nil {
 			return nil, err
 		}
@@ -278,8 +278,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 			}
 		}
 	}
-	// store named scope
-	entry, err := logical.StorageEntryJSON(namedScopePath+name, scope)
+	// store scope
+	entry, err := logical.StorageEntryJSON(scopePath+name, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -291,9 +291,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 	return nil, nil
 }
 
-// pathOIDCListScope is used to list named scopes
+// pathOIDCListScope is used to list scopes
 func (i *IdentityStore) pathOIDCListScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	scopes, err := req.Storage.List(ctx, namedScopePath)
+	scopes, err := req.Storage.List(ctx, scopePath)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func (i *IdentityStore) pathOIDCListScope(ctx context.Context, req *logical.Requ
 func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedScopePath+name)
+	entry, err := req.Storage.Get(ctx, scopePath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -312,14 +312,14 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 		return nil, nil
 	}
 
-	var storedNamedScope namedScope
-	if err := entry.DecodeJSON(&storedNamedScope); err != nil {
+	var scope scope
+	if err := entry.DecodeJSON(&scope); err != nil {
 		return nil, err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"template":    storedNamedScope.Template,
-			"description": storedNamedScope.Description,
+			"template":    scope.Template,
+			"description": scope.Description,
 		},
 	}, nil
 }
@@ -327,7 +327,7 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 // pathOIDCDeleteScope is used to delete an scope
 func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedScopePath+name)
+	err := req.Storage.Delete(ctx, scopePath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +337,7 @@ func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Re
 func (i *IdentityStore) pathOIDCScopeExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedScopePath+name)
+	entry, err := req.Storage.Get(ctx, scopePath+name)
 	if err != nil {
 		return false, err
 	}
