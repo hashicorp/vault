@@ -244,13 +244,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
 		provider.AllowedClientIDs = allowedClientIDsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		provider.AllowedClientIDs = d.Get("allowed_client_ids").([]string)
+		provider.AllowedClientIDs = d.GetDefaultOrZero("allowed_client_ids").([]string)
 	}
 
 	if scopesRaw, ok := d.GetOk("scopes"); ok {
 		provider.Scopes = scopesRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		provider.Scopes = d.Get("scopes").([]string)
+		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
 
 	// store named provider
