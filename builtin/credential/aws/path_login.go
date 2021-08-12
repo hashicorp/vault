@@ -103,8 +103,8 @@ This must match the request body included in the signature.`,
 			"iam_request_headers": {
 				Type: framework.TypeHeader,
 				Description: `Key/value pairs of headers for use in the
-sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either
-a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs.
+sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either 
+a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. 
 This must at a minimum include the headers over which AWS has included a  signature.`,
 			},
 			"identity": {
@@ -348,7 +348,8 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 
 	// Verify extracts the authenticated attributes in the PKCS#7 signature, and verifies
 	// the authenticity of the content using 'dsa.PublicKey' embedded in the public certificate.
-	if pkcs7Data.Verify() != nil {
+	err = pkcs7Data.Verify()
+	if err != nil {
 		return nil, fmt.Errorf("failed to verify the signature: %w", err)
 	}
 
