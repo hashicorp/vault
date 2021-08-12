@@ -38,6 +38,11 @@ as it is more flexible and aligns with best practices to perform access
 control and authentication. See the section on comparing the two auth methods
 below for more information.
 
+-> **Usage:** See the [Authentication](#authentication) section for Vault CLI
+and API usage examples. The [Code Example](#code-example) section provides a
+code snippet demonstrating the authentication with Vault using the AWS auth
+method.
+
 ### IAM auth method
 
 The AWS STS API includes a method, [`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html), which allows you to validate the identity of a client. The client signs a `GetCallerIdentity` query using the [AWS Signature v4 algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and sends it to the Vault server. The credentials used to sign the GetCallerIdentity request can come from the EC2 instance metadata service for an EC2 instance, or from the AWS environment variables in an AWS Lambda function execution, which obviates the need for an operator to manually provision some sort of identity material first. However, the credentials can, in principle, come from anywhere, not just from the locations AWS has provided for you.
