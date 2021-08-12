@@ -1,3 +1,3 @@
-```release-note:bug
-auth/aws: Fixes bug where PKCS7 error was not returned if signature verification fails
+```release-note:improvement
+auth/aws: PKCS7 verification error messages are now returned to user
 ```
