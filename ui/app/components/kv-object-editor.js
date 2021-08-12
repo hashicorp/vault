@@ -90,5 +90,12 @@ export default Component.extend({
       data.removeAt(index);
       this.onChange(data.toJSON());
     },
+
+    handleKeyUp(name, value) {
+      if (!this.onKeyUp) {
+        return;
+      }
+      this.onKeyUp(name, value);
+    },
   },
 });

@@ -89,7 +89,15 @@ export default Component.extend({
     }
     if (name === 'customMetadata') {
       if (value) {
-        this.model.set('customMetadata', { key: 'meep', value: 'meeping' });
+        // ARG TODO for now set this to hardcoded.
+        this.model.set('customMetadata', { key: 'meep', value: value });
+        // Cp validations won't work on an object so performing validations here
+        let regex = /^[^\/]+$/g; // looking for a forward slash
+        if (!value.match(regex)) {
+          set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');
+        } else {
+          set(this.validationMessages, name, '');
+        }
       }
     }
 
@@ -144,7 +152,6 @@ export default Component.extend({
       })
       .catch(error => {
         if (error instanceof ControlGroupError) {
-          // ARG TODO YOU NEED TO TEST THIS!
           let errorMessage = this.controlGroup.logFromError(error);
           this.set('error', errorMessage.content);
         }

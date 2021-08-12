@@ -112,6 +112,9 @@
     subText=attr.options.subText
     small-label=(if (eq valuePath 'customMetadata') true false )
     formSection=(if (eq valuePath 'customMetadata') false true )
+    name=valuePath
+    onKeyUp=onKeyUp
+    validationMessages=validationMessages
   }}
 {{else if (eq attr.options.editType "file")}}
 {{!-- File Input --}}

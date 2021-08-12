@@ -19,7 +19,30 @@
       <Input data-test-kv-key={{true}} @value={{row.name}} placeholder="key" @change={{action "updateRow" row index}} class="input" />
     </div>
     <div class="column">
-      <Textarea data-test-kv-value={{true}} @name={{row.name}} @change={{action "updateRow" row index}} @value={{row.value}} @wrap="off" class="input" placeholder="value" @rows={{1}} />
+      <Textarea 
+        data-test-kv-value={{true}}
+        @name={{row.name}}
+        class="input {{if (get validationMessages name) "has-error-border"}}"
+        @change={{action "updateRow" row index}}
+        @value={{row.value}}
+        @wrap="off"
+        class="input"
+        placeholder="value"
+        @rows={{1}}
+        onkeyup={{action
+          (action "handleKeyUp" name)
+          value="target.value"
+        }}
+      />
+      {{#if (get validationMessages name)}}
+      <div>
+        <AlertInline 
+          @type="danger" 
+          @message={{get validationMessages name}} 
+          @paddingTop=true
+        />
+      </div>
+    {{/if}}
     </div>
     <div class="column is-narrow">
       {{#if (eq kvData.length (inc index))}}
