@@ -24,7 +24,7 @@ type scope struct {
 	Description string `json:"description"`
 }
 
-type namedClient struct {
+type client struct {
 	name           string
 	RedirectURIs   []string `json:"redirect_uris"`
 	Assignments    []string `json:"assignments"`
@@ -37,7 +37,7 @@ const (
 	oidcProviderPrefix = "oidc_provider/"
 	assignmentPath     = oidcProviderPrefix + "named_assignments/"
 	scopePath          = oidcProviderPrefix + "named_scopes/"
-	namedClientPath    = oidcTokensPrefix + "named_clients/"
+	clientPath         = oidcTokensPrefix + "named_clients/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -174,7 +174,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			ExistenceCheck:  i.pathOIDCClientExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC clients.",
-			HelpDescription: "Create, Read, Update, and Delete OIDC named clients.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC clients.",
 		},
 		{
 			Pattern: "oidc/client/?$",
@@ -411,13 +411,13 @@ func (i *IdentityStore) pathOIDCScopeExistenceCheck(ctx context.Context, req *lo
 	return entry != nil, nil
 }
 
-// pathOIDCCreateUpdateClient is used to create a new named client or update an existing one
+// pathOIDCCreateUpdateClient is used to create a new client or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var client namedClient
+	var client client
 	if req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedClientPath+name)
+		entry, err := req.Storage.Get(ctx, clientPath+name)
 		if err != nil {
 			return nil, err
 		}
@@ -458,8 +458,8 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
 	}
 
-	// store named client
-	entry, err := logical.StorageEntryJSON(namedClientPath+name, client)
+	// store client
+	entry, err := logical.StorageEntryJSON(clientPath+name, client)
 	if err != nil {
 		return nil, err
 	}
@@ -471,9 +471,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	return nil, nil
 }
 
-// pathOIDCListClient is used to list named clients
+// pathOIDCListClient is used to list clients
 func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	clients, err := req.Storage.List(ctx, namedClientPath)
+	clients, err := req.Storage.List(ctx, clientPath)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +484,7 @@ func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Req
 func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedClientPath+name)
+	entry, err := req.Storage.Get(ctx, clientPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -492,17 +492,17 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 		return nil, nil
 	}
 
-	var storedNamedClient namedClient
-	if err := entry.DecodeJSON(&storedNamedClient); err != nil {
+	var client client
+	if err := entry.DecodeJSON(&client); err != nil {
 		return nil, err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"redirect_uris":    storedNamedClient.RedirectURIs,
-			"assignments":      storedNamedClient.Assignments,
-			"key":              storedNamedClient.Key,
-			"id_token_ttl":     storedNamedClient.IDTokenTTL,
-			"access_token_ttl": storedNamedClient.AccessTokenTTL,
+			"redirect_uris":    client.RedirectURIs,
+			"assignments":      client.Assignments,
+			"key":              client.Key,
+			"id_token_ttl":     client.IDTokenTTL,
+			"access_token_ttl": client.AccessTokenTTL,
 		},
 	}, nil
 }
@@ -510,7 +510,7 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 // pathOIDCDeleteClient is used to delete an client
 func (i *IdentityStore) pathOIDCDeleteClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedClientPath+name)
+	err := req.Storage.Delete(ctx, clientPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +520,7 @@ func (i *IdentityStore) pathOIDCDeleteClient(ctx context.Context, req *logical.R
 func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedClientPath+name)
+	entry, err := req.Storage.Get(ctx, clientPath+name)
 	if err != nil {
 		return false, err
 	}

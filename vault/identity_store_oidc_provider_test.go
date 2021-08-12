@@ -161,8 +161,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderClientList tests the List operation for clients
-func TestOIDC_Path_OIDC_ProviderClientList(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderClient_List tests the List operation for clients
+func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
