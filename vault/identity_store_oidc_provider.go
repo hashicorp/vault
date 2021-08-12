@@ -35,9 +35,9 @@ type client struct {
 
 const (
 	oidcProviderPrefix = "oidc_provider/"
-	assignmentPath     = oidcProviderPrefix + "named_assignments/"
-	scopePath          = oidcProviderPrefix + "named_scopes/"
-	clientPath         = oidcTokensPrefix + "named_clients/"
+	assignmentPath     = oidcProviderPrefix + "assignment/"
+	scopePath          = oidcProviderPrefix + "scope/"
+	clientPath         = oidcProviderPrefix + "client/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
