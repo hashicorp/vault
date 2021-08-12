@@ -7,13 +7,13 @@
       font-weight: $font-weight-semibold;
       line-height: inherit;
     }
-    .stat-text {
+    > .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    .stat-value {
+    > .stat-value {
       font-size: $size-3;
       font-weight: $font-weight-normal;
       margin-top: $spacing-s;
@@ -45,13 +45,13 @@
       font-weight: $font-weight-semibold;
       line-height: inherit;
     }
-    .stat-text {
+    > .stat-text {
       font-size: $size-8;
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
     }
-    .stat-value {
+    > .stat-value {
       font-size: $size-3;
       font-weight: $font-weight-normal;
       margin-top: $spacing-xxs;
