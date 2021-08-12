@@ -1,15 +1,15 @@
 /**
  * @module StatText
- * StatText components are used to display a label and associated statistic below, with the option to add a description.
+ * StatText components are used to display a label and associated value beneath, with the option to include a description.
  *
  * @example
  * ```js
  * <StatText @label="Active Clients" @stat="4,198" @size="l" @subText="These are the active client counts"/>
  * ```
- * @param {string} label=null - the label for the statistic
- * @param {string} value=null - value passed in, usually a number or statistic
- * @param {string} size=null - size the component as small or large, 's', 'm' or 'l'
- * @param {string} [subText] - subText is optional and will display below the label
+ * @param {string} label=null - The label for the statistic
+ * @param {string} value=null - Value passed in, usually a number or statistic
+ * @param {string} size=null - Sizing changes whether or not there is subtext. If there is subtext 's' and 'l' are valid sizes. If no subtext, then 'm' is also acceptable.
+ * @param {string} [subText] - SubText is optional and will display below the label
  */
 
 import Component from '@glimmer/component';

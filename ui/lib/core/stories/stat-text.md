@@ -1,16 +1,16 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in lib/core/addon/components/stat-text.js. To make changes, first edit that file and run "yarn gen-story-md stat-text" to re-generate the content.-->
 
 ## StatText
-StatText components are used to display a label and associated statistic below, with the option to add a description.
+StatText components are used to display a label and associated value beneath, with the option to include a description.
 
 **Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| label | <code>string</code> | <code>null</code> | the label for the statistic |
-| value | <code>string</code> | <code>null</code> | value passed in, usually a number or statistic |
-| [size] | <code>string</code> | <code>&quot;m&quot;</code> | size the component as small or large, 's', 'm' or 'l' |
-| [subText] | <code>string</code> |  | subText is optional and will display below the label |
+| label | <code>string</code> | <code>null</code> | The label for the statistic |
+| value | <code>string</code> | <code>null</code> | Value passed in, usually a number or statistic |
+| size | <code>string</code> | <code>null</code> | Sizing changes whether or not there is subtext. If there is subtext 's' and 'l' are valid sizes. If no subtext, then 'm' is also acceptable. |
+| [subText] | <code>string</code> |  | SubText is optional and will display below the label |
 
 **Example**
   
