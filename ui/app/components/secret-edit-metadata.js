@@ -16,11 +16,22 @@
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { set } from '@ember/object';
 import { action } from '@ember/object';
 export default class SecretEditMetadata extends Component {
   @service router;
   @service store;
+
+  @tracked validationMesssages;
+
+  constructor() {
+    super(...arguments);
+    this.validationMessages = {
+      customMetadata: '',
+    };
+  }
 
   async save() {
     let model = this.args.model;
@@ -41,5 +52,18 @@ export default class SecretEditMetadata extends Component {
       return;
     }
     // ARG TODO else validation error?
+  }
+  @action onKeyUp(name, value) {
+    if (value) {
+      // // ARG TODO for now set this to hardcoded.
+      // this.model.set('customMetadata', { key: 'meep', value: value });
+      // cp validations won't work on an object so performing validations here
+      let regex = /^[^\/]+$/g; // looking for a forward slash
+      if (!value.match(regex)) {
+        set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');
+      } else {
+        set(this.validationMessages, name, '');
+      }
+    }
   }
 }

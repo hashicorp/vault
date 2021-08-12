@@ -13,6 +13,15 @@
     </p> 
   {{/if}}
 {{/if}}
+{{#if (get validationMessages name)}}
+  <div>
+    <AlertInline 
+      @type="danger" 
+      @message={{get validationMessages name}} 
+      @paddingTop=true
+    />
+  </div>
+{{/if}}
 {{#each kvData as |row index|}}
   <div class="columns is-variable" data-test-kv-row>
     <div class="column is-one-quarter">
@@ -34,15 +43,6 @@
           value="target.value"
         }}
       />
-      {{#if (get validationMessages name)}}
-      <div>
-        <AlertInline 
-          @type="danger" 
-          @message={{get validationMessages name}} 
-          @paddingTop=true
-        />
-      </div>
-    {{/if}}
     </div>
     <div class="column is-narrow">
       {{#if (eq kvData.length (inc index))}}
