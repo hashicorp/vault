@@ -143,13 +143,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 	if entitiesRaw, ok := d.GetOk("entities"); ok {
 		assignment.Entities = entitiesRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Entities = d.Get("entities").([]string)
+		assignment.Entities = d.GetDefaultOrZero("entities").([]string)
 	}
 
 	if groupsRaw, ok := d.GetOk("groups"); ok {
 		assignment.Groups = groupsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Groups = d.Get("groups").([]string)
+		assignment.Groups = d.GetDefaultOrZero("groups").([]string)
 	}
 
 	// store assignment
