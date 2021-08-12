@@ -61,7 +61,7 @@ fi
 echo
 
 echo "patching quux to lol using allow_token (should work)"
-curl -s -X PATCH -H "X-Vault-Token: $allow_token" -d '{"data":{"quux": "lol"}}' $VAULT_ADDR/v1/secret/data/data/foo
+curl -s -X PATCH -H "X-Vault-Token: $allow_token" -d '{"data":{"quux": "lol"}}' $VAULT_ADDR/v1/secret/data/foo
 quux=$(VAULT_TOKEN="$vault_token" vault kv get -format=json secret/foo | jq -r '.data.data.quux')
 
 if [ "$quux" != "lol" ]; then
@@ -72,7 +72,7 @@ else
 fi
 
 echo "patching quux to lawl using deny_token (should fail)"
-curl -s -X PATCH -H "X-Vault-Token: $deny_token" -d '{"data":{"quux": "lawl"}}' $VAULT_ADDR/v1/secret/data/data/foo
+curl -s -X PATCH -H "X-Vault-Token: $deny_token" -d '{"data":{"quux": "lawl"}}' $VAULT_ADDR/v1/secret/data/foo
 quux=$(VAULT_TOKEN="$vault_token" vault kv get -format=json secret/foo | jq -r '.data.data.quux')
 
 if [ "$quux" == "lawl" ]; then
