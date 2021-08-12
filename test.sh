@@ -49,14 +49,38 @@ deny_token=$(vault token create -format=json -policy="p2" | jq -r ".auth.client_
 
 VAULT_TOKEN="$vault_token" vault kv put secret/foo bar=baz quux=wibble wobble=wubble
 quux=$(VAULT_TOKEN="$vault_token" vault kv get -format=json secret/foo | jq -r '.data.data.quux')
-echo "quux before patch = $quux"
+echo
 
-echo "patching quux using allow_token (should work)"
+echo "checking quux: it should be wibble"
+if [ "$quux" != "wibble" ]; then
+  echo "expected quux to be wibble but it was $quux"
+  exit 1
+else
+  echo "test 1: passed"
+fi
+echo
+
+echo "patching quux to lol using allow_token (should work)"
 curl -s -X PATCH -H "X-Vault-Token: $allow_token" -d '{"data":{"quux": "lol"}}' $VAULT_ADDR/v1/secret/data/data/foo
 quux=$(VAULT_TOKEN="$vault_token" vault kv get -format=json secret/foo | jq -r '.data.data.quux')
-echo "quux after patch with allow_token = $quux"
 
-echo "patching quux using deny_token (should fail)"
+if [ "$quux" != "lol" ]; then
+  echo "expected quux to be lol but it was $quux"
+  exit 1
+else
+  echo "test 2: passed"
+fi
+
+echo "patching quux to lawl using deny_token (should fail)"
 curl -s -X PATCH -H "X-Vault-Token: $deny_token" -d '{"data":{"quux": "lawl"}}' $VAULT_ADDR/v1/secret/data/data/foo
 quux=$(VAULT_TOKEN="$vault_token" vault kv get -format=json secret/foo | jq -r '.data.data.quux')
-echo "quux after patch with deny_token = $quux"
+
+if [ "$quux" == "lawl" ]; then
+  echo "expected quux to be lol but it was $quux"
+  exit 1
+elif [ "$quux" == "lol" ]; then
+  echo "test 3: passed"
+else
+  echo "something weird happened. quux == $quux"
+  exit 2
+fi
