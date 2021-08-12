@@ -239,13 +239,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 	if descriptionRaw, ok := d.GetOk("description"); ok {
 		scope.Description = descriptionRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
-		scope.Description = d.Get("description").(string)
+		scope.Description = d.GetDefaultOrZero("description").(string)
 	}
 
 	if templateRaw, ok := d.GetOk("template"); ok {
 		scope.Template = templateRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
-		scope.Template = d.Get("template").(string)
+		scope.Template = d.GetDefaultOrZero("template").(string)
 	}
 
 	// Attempt to decode as base64 and use that if it works
