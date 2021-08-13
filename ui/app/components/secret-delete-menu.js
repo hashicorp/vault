@@ -17,30 +17,7 @@ export default class SecretDeleteMenu extends Component {
 
   @tracked showDeleteModal = false;
 
-  @maybeQueryRecord(
-    'capabilities',
-    context => {
-      if (!context.args.model) {
-        return;
-      }
-      let backend = context.args.model.backend;
-      let id = context.args.model.id;
-      let path = context.args.isV2
-        ? `${encodeURIComponent(backend)}/data/${encodeURIComponent(id)}`
-        : `${encodeURIComponent(backend)}/${encodeURIComponent(id)}`;
-      return {
-        id: path,
-      };
-    },
-    'isV2',
-    'model',
-    'model.id',
-    'mode'
-  )
-  updatePath;
-  @alias('updatePath.canDelete') canDelete;
-  @alias('updatePath.canUpdate') canUpdate;
-
+  // canDeleteSecretData is calculated in secret-edit because it's already calling maybeQueryRecord on the data endpoint
   @maybeQueryRecord(
     'capabilities',
     context => {
@@ -82,7 +59,7 @@ export default class SecretDeleteMenu extends Component {
   )
   destroyVersionPath;
   @alias('destroyVersionPath.canUpdate') canDestroyVersion;
-
+  // ARG TODO try and move this to the model, after merge.
   @maybeQueryRecord(
     'capabilities',
     context => {

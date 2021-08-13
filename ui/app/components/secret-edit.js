@@ -76,6 +76,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
   },
 
+  // ARG TODO this should be handled in the model??? Tried doesn't work.
   updatePath: maybeQueryRecord(
     'capabilities',
     context => {
@@ -94,28 +95,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('updatePath.canDelete'),
-  canEdit: alias('updatePath.canUpdate'),
-
-  v2UpdatePath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      if (!context.model || context.mode === 'create' || context.isV2 === false) {
-        return;
-      }
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/metadata/${id}`,
-      };
-    },
-    'isV2',
-    'model',
-    'model.id',
-    'mode'
-  ),
-
-  canEditV2Secret: alias('v2UpdatePath.canUpdate'),
+  canDeleteSecretData: alias('updatePath.canDelete'),
+  canEditSecretData: alias('updatePath.canUpdate'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 

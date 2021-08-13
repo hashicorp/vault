@@ -57,10 +57,10 @@ export default Model.extend(KeyMixin, Validations, {
   fields: computed(function() {
     return expandAttributeMeta(this, ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter']);
   }),
-  versionPath: lazyCapabilities(apiPath`${'engineId'}/data/${'id'}`, 'engineId', 'id'),
-  secretPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),
+  secretDataPath: lazyCapabilities(apiPath`${'engineId'}/data/${'id'}`, 'engineId', 'id'),
+  secretMetadataPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),
 
-  canEdit: alias('versionPath.canUpdate'),
-  canDelete: alias('secretPath.canDelete'),
-  canRead: alias('secretPath.canRead'),
+  canListMetadata: alias('secretMetadataPath.canList'),
+  canReadMetadata: alias('secretMetadataPath.canRead'),
+  canUpdateMetadata: alias('secretMetadataPath.canUpdate'),
 });

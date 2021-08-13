@@ -14,8 +14,8 @@
  * @showAdvancedMode={{showAdvancedMode}}
  * @modelForData={{this.modelForData}}
  * @navToNearestAncestor={{this.navToNearestAncestor}}
- * @canEditV2Secret={{canEditV2Secret}}
- * @canEdit={{canEdit}}
+ * @canUpdateSecretData={{canUpdateSecretData}}
+ * @canDeleteSecretData={{canDeleteSecretData}}
  * @codemirrorString={{codemirrorString}}
  * @wrappedData={{wrappedData}}
  * @editActions={{hash
@@ -32,7 +32,8 @@
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {object} modelForData - a modified version of the model with secret data
  * @param {string} navToNearestAncestor - route to nav to if press cancel
- * @param {boolean} canEditV2Secret - permissions
+ * @param {boolean} canDeleteSecretData - permissions that either show or hide the Delete button, calculated in secret-edit because it's used in secret-edit-toolbar AND secret-delete-menu. deletion based on data endpoint.
+ * @param {boolean} canUpdateSecretData - permissions that show the create new version button or not.
  * @param {boolean} canEdit - permissions
  * @param {string} codemirrorString - used in JSON editor
  * @param {object} wrappedData - when copy the data it's the token of the secret returned.
