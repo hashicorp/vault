@@ -69,17 +69,38 @@ func TestClientNilConfig(t *testing.T) {
 	}
 }
 
+func TestClientDefaultHttpClient_unixSocket(t *testing.T) {
+	os.Setenv("VAULT_AGENT_ADDR", "unix:///var/run/vault.sock")
+	defer os.Setenv("VAULT_AGENT_ADDR", "")
+
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Fatal("expected a non-nil client")
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: %s", client.addr.Scheme)
+	}
+	if client.addr.Host != "/var/run/vault.sock" {
+		t.Fatalf("bad: %s", client.addr.Host)
+	}
+}
+
 func TestClientSetAddress(t *testing.T) {
 	client, err := NewClient(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Start with TCP address using HTTP
 	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
 		t.Fatal(err)
 	}
 	if client.addr.Host != "172.168.2.1:8300" {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
 	}
+	// Test switching to Unix Socket address from TCP address
 	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
 		t.Fatal(err)
 	}
@@ -94,6 +115,16 @@ func TestClientSetAddress(t *testing.T) {
 	}
 	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
 		t.Fatal("bad: expected DialContext to not be nil")
+	}
+	// Test switching to TCP address from Unix Socket address
+	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Host != "172.168.2.1:8300" {
+		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
 	}
 }
 
