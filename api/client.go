@@ -462,6 +462,50 @@ func (c *Config) ReadEnvironment() error {
 	return nil
 }
 
+// ParseAddress transforms the provided address into a url.URL and handles
+// the case of Unix domain sockets by setting the DialContext in the
+// configuration's HttpClient.Transport.
+func (c *Config) ParseAddress(address string) (*url.URL, error) {
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Address = address
+
+	if strings.HasPrefix(address, "unix://") {
+		// When the address begins with unix://, always change the transport's
+		// DialContext (to match previous behaviour)
+		socket := strings.TrimPrefix(address, "unix://")
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			}
+
+			// Since the address points to a unix domain socket, the scheme in the
+			// *URL would be set to `unix`. The *URL in the client is expected to
+			// be pointing to the protocol used in the application layer and not to
+			// the transport layer. Hence, setting the fields accordingly.
+			u.Scheme = "http"
+			u.Host = socket
+			u.Path = ""
+		} else {
+			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+		}
+	} else if strings.HasPrefix(c.Address, "unix://") {
+		// When the address being set does not begin with unix:// but the previous
+		// address in the Config did, change the transport's DialContext back to
+		// use the default configuration that cleanhttp uses.
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = cleanhttp.DefaultPooledTransport().DialContext
+		}
+	}
+
+	return u, nil
+}
+
 func parseRateLimit(val string) (rate float64, burst int, err error) {
 	_, err = fmt.Sscanf(val, "%f:%d", &rate, &burst)
 	if err != nil {
@@ -561,50 +605,6 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	return client, nil
-}
-
-// ParseAddress transforms the provided address into a url.URL and handles
-// the case of Unix domain sockets by setting the DialContext in the
-// configuration's HttpClient.Transport.
-func (c *Config) ParseAddress(address string) (*url.URL, error) {
-	u, err := url.Parse(address)
-	if err != nil {
-		return nil, err
-	}
-
-	c.Address = address
-
-	if strings.HasPrefix(address, "unix://") {
-		// When the address begins with unix://, always change the transport's
-		// DialContext (to match previous behaviour)
-		socket := strings.TrimPrefix(address, "unix://")
-
-		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
-			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
-				return net.Dial("unix", socket)
-			}
-
-			// Since the address points to a unix domain socket, the scheme in the
-			// *URL would be set to `unix`. The *URL in the client is expected to
-			// be pointing to the protocol used in the application layer and not to
-			// the transport layer. Hence, setting the fields accordingly.
-			u.Scheme = "http"
-			u.Host = socket
-			u.Path = ""
-		} else {
-			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
-		}
-	} else if strings.HasPrefix(c.Address, "unix://") {
-		// When the address being set does not begin with unix:// but the previous
-		// address in the Config did, change the transport's DialContext back to
-		// use the default configuration that cleanhttp uses.
-
-		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
-			transport.DialContext = cleanhttp.DefaultPooledTransport().DialContext
-		}
-	}
-
-	return u, nil
 }
 
 func (c *Client) CloneConfig() *Config {
