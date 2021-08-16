@@ -109,6 +109,7 @@ func init() {
 	alwaysRedirectPaths.AddPaths([]string{
 		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
+		"!sys/storage/raft/snapshot-auto/config",
 	})
 }
 
@@ -348,6 +349,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			respondError(w, http.StatusNotFound, nil)
 			cancelFunc()
 			return
+		}
+
+		// Setting the namespace in the header to be included in the error message
+		ns := r.Header.Get(consts.NamespaceHeaderName)
+		if ns != "" {
+			w.Header().Set(consts.NamespaceHeaderName, ns)
 		}
 
 		h.ServeHTTP(w, r)

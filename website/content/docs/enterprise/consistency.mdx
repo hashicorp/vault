@@ -192,7 +192,7 @@ The option `when_inconsistent` controls how stale reads are prevented:
 - `"fail"` means that when a `412` response is seen, it is returned to the client
 - `"retry"` means that `412` responses will be retried automatically by Agent,
   so the client doesn't have to deal with them
-- `"forward-active-node"` makes Agent provide the
+- `"forward"` makes Agent provide the
   `X-Vault-Inconsistent: forward-active-node` header as described above under
   Conditional Forwarding
 
