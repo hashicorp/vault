@@ -18,7 +18,6 @@ type assignment struct {
 }
 
 type scope struct {
-	name        string
 	Template    string `json:"template"`
 	Description string `json:"description"`
 }
