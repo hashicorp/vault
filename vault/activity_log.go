@@ -1450,6 +1450,10 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
+	sort.Slice(byNamespace, func(i, j int) bool {
+		return byNamespace[i].Counts.Clients > byNamespace[j].Counts.Clients
+	})
+
 	responseData["by_namespace"] = byNamespace
 	responseData["total"] = &ClientCountResponse{
 		DistinctEntities: totalEntities,
