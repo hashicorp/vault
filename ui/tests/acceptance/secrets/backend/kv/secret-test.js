@@ -43,11 +43,14 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('it creates a secret and redirects', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
     await listPage.create();
+    await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
+    await settled();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
@@ -70,6 +73,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
+    await settled();
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', secretPath);
     await fillIn('[data-test-input="maxVersions"]', maxVersions);
@@ -90,6 +94,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let enginePath = `kv-${new Date().getTime()}`;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
+    await settled();
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', 'beep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
