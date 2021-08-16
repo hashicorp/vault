@@ -13,13 +13,11 @@ import (
 )
 
 type assignment struct {
-	name     string
 	Groups   []string `json:"groups"`
 	Entities []string `json:"entities"`
 }
 
 type scope struct {
-	name        string
 	Template    string `json:"template"`
 	Description string `json:"description"`
 }
