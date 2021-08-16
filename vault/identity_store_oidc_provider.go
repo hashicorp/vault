@@ -147,7 +147,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				},
 				"key": {
 					Type:        framework.TypeString,
-					Description: "A reference to a named key resource. Cannot be modified after creation. If not provided, the default key will be used.",
+					Description: "A reference to a named key resource. Cannot be modified after creation.",
+					Required:    true,
 				},
 				"id_token_ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -446,6 +447,19 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.Key = d.Get("key").(string)
 	}
 
+	if client.Key == "" {
+		return logical.ErrorResponse("the key parameter is required"), nil
+	}
+
+	// enforce key existence on client creation
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+client.Key)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("cannot find key %q", client.Key), nil
+	}
+
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
 		client.IDTokenTTL = idTokenTTLRaw.(int)
 	} else if req.Operation == logical.CreateOperation {
@@ -459,7 +473,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	}
 
 	// store client
-	entry, err := logical.StorageEntryJSON(clientPath+name, client)
+	entry, err = logical.StorageEntryJSON(clientPath+name, client)
 	if err != nil {
 		return nil, err
 	}

@@ -8,17 +8,76 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
+// be created without a key parameter
+func TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test client "test-client1" without a key param -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"the key parameter is required": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry tests that a client cannot be
+// created when a key parameter is provided but the key does not exist
+func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test client "test-client1" with a non-existent key -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"cannot find key \"test-key\"": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
 // TestOIDC_Path_OIDC_ProviderClient tests CRUD operations for clients
 func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
 	// Create a test client "test-client" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
 	})
 	expectSuccess(t, resp, err)
 
@@ -32,7 +91,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	expected := map[string]interface{}{
 		"redirect_uris":    []string{},
 		"assignments":      []string{},
-		"key":              "",
+		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
 	}
@@ -47,7 +106,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		Data: map[string]interface{}{
 			"redirect_uris":    "http://localhost:3456/callback",
 			"assignments":      "my-assignment",
-			"key":              "",
+			"key":              "test-key",
 			"id_token_ttl":     0,
 			"access_token_ttl": 0,
 		},
@@ -65,7 +124,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	expected = map[string]interface{}{
 		"redirect_uris":    []string{"http://localhost:3456/callback"},
 		"assignments":      []string{"my-assignment"},
-		"key":              "",
+		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
 	}
@@ -98,6 +157,17 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
 	// Create a test client "test-client" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
@@ -106,7 +176,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		Data: map[string]interface{}{
 			"redirect_uris":    "http://localhost:3456/callback",
 			"assignments":      "my-assignment",
-			"key":              "",
+			"key":              "test-key",
 			"id_token_ttl":     0,
 			"access_token_ttl": 0,
 		},
@@ -123,7 +193,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 	expected := map[string]interface{}{
 		"redirect_uris":    []string{"http://localhost:3456/callback"},
 		"assignments":      []string{"my-assignment"},
-		"key":              "",
+		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
 	}
@@ -152,7 +222,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 	expected = map[string]interface{}{
 		"redirect_uris":    []string{"http://localhost:3456/callback2"},
 		"assignments":      []string{"my-assignment"},
-		"key":              "",
+		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
 	}
@@ -167,17 +237,34 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
 	// Prepare two clients, test-client1 and test-client2
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client1",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
 	})
 
 	c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client2",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
 	})
 
 	// list clients
