@@ -23,7 +23,6 @@ type scope struct {
 }
 
 type client struct {
-	name           string
 	RedirectURIs   []string `json:"redirect_uris"`
 	Assignments    []string `json:"assignments"`
 	Key            string   `json:"key"`
