@@ -2624,8 +2624,8 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			return fmt.Errorf("Found nil listener config after parsing")
 		}
 
-		if !configutil.IsValidListener(ln.Config) {
-			return fmt.Errorf("invalid listener configuration")
+		if err := configutil.IsValidListener(ln.Config); err != nil {
+			return err
 		}
 
 		handler := vaulthttp.Handler(&vault.HandlerProperties{

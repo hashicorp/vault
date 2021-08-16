@@ -2,6 +2,6 @@
 
 package configutil
 
-func IsValidListener(listener *Listener) bool {
-	return true
+func IsValidListener(listener *Listener) error {
+	return nil
 }

@@ -2,6 +2,8 @@
 
 package configutil
 
-func IsValidListener(listener *Listener) bool {
-	return !listener.TLSDisable
+import "errors"
+
+func IsValidListener(listener *Listener) error {
+	return errors.New("invalid configuration: all HTTP listeners must have TLS enabled")
 }
