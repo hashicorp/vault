@@ -68,7 +68,7 @@ in keys and policies without manual intervention.
 ### Secrets Engine
 
 A secrets engine is responsible for managing secrets.
-Simple secrets engines like the "kv" secrets engine simply return the same
+Simple secrets engines, such as the "kv" secrets engine, return the same
 secret when queried. Some secrets engines support using policies to
 dynamically generate a secret each time they are queried. This allows for
 unique secrets to be used which allows Vault to do fine-grained revocation and
