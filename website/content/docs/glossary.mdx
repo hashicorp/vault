@@ -64,7 +64,7 @@ in keys and policies without manual intervention.
 ### Secrets Engine
 
 A secrets engine is responsible for managing secrets.
-Simple secrets engines like the "kv" secrets engine simply return the same
+Simple secrets engines, such as the "kv" secrets engine, return the same
 secret when queried. Some secrets engines support using policies to
 dynamically generate a secret each time they are queried. This allows for
 unique secrets to be used which allows Vault to do fine-grained revocation and
@@ -78,7 +78,7 @@ Vault depends on a long-running instance which operates as a
 server. The Vault server provides an API which clients interact with and
 manages the interaction between all the secrets engines, ACL enforcement, and
 secret lease revocation. Having a server based architecture decouples clients
-from the security keys and policies, enables centralized audit logging and
+from the security keys and policies, enables centralized audit logging, and
 simplifies administration for operators.
 
 ### Storage Backend
