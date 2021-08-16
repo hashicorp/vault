@@ -1,5 +1,18 @@
 [
   {
+    "title": "What is Vault?",
+    "path": "what-is-vault"
+  },
+  {
+    "title": "Use Cases",
+    "path": "use-cases"
+  },
+
+  {
+    "divider": true
+  },
+
+  {
     "title": "Installing Vault",
     "path": "install"
   },
@@ -1196,17 +1209,7 @@
     "title": "Plugin Portal",
     "path": "plugin-portal"
   },
-  {
-    "divider": true
-  },
-  {
-    "title": "What is Vault?",
-    "path": "what-is-vault"
-  },
-  {
-    "title": "Use Cases",
-    "path": "use-cases"
-  },
+
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
@@ -1305,6 +1308,10 @@
                   {
                     "title": "Vault Agent Injector TLS Configuration",
                     "path": "platform/k8s/helm/examples/injector-tls"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS with Cert-Manager",
+                    "path": "platform/k8s/helm/examples/injector-tls-cert-manager"
                   }
                 ]
               }
@@ -1620,6 +1627,11 @@
       {
         "title": "Upgrade to 1.8.0",
         "path": "upgrading/upgrade-to-1.8.0"
+      },
+      {
+        "title": "Upgrade to 1.9.0",
+        "path": "upgrading/upgrade-to-1.9.0",
+        "hidden": true
       }
     ]
   },
