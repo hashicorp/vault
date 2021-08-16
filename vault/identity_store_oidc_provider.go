@@ -8,7 +8,6 @@ import (
 )
 
 type assignment struct {
-	name     string
 	Groups   []string `json:"groups"`
 	Entities []string `json:"entities"`
 }
