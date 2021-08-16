@@ -39,11 +39,7 @@ allows users to authenticate via GitHub.
 
 ### Barrier
 
-The barrier is cryptographic steel and concrete around the
-Vault. All data that flows between Vault and the storage backend passes
-through the barrier. The barrier ensures that only encrypted data is written
-out, and that data is verified and decrypted on the way in. Much like a bank
-vault, the barrier must be "unsealed" before anything inside can be accessed.
+Almost everything Vault writes to storage is encrypted using the keyring, which is protected by the seal. We refer to this practice as "the barrier". There are a few exceptions to the rule, for example, the seal configuration is stored in an unencrypted file since it's needed to unseal the barrier, and the keyring is encrypted using the master key, while the master key is encrypted using the seal.
 
 ### Client Token
 
@@ -58,10 +54,10 @@ policies. This token is passed via HTTP headers.
 A secret is the term for anything returned by Vault which
 contains confidential or cryptographic material. Not everything returned by
 Vault is a secret, for example system configuration, status information, or
-policies are not considered secrets. Secrets always have an associated lease.
-This means clients cannot assume that the secret contents can be used
-indefinitely. Vault will revoke a secret at the end of the lease, and an
-operator may intervene to revoke the secret before the lease is over. This
+policies are not considered secrets. Dynamic secrets always have an associated lease, and static secrets do not.
+This means clients cannot assume that the dynamic secret contents can be used
+indefinitely. Vault will revoke a dynamic secret at the end of the lease, and an
+operator may intervene to revoke the Dynamic Secret before the lease is over. This
 contract between Vault and its clients is critical, as it allows for changes
 in keys and policies without manual intervention.
 
