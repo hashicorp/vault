@@ -1,9 +1,13 @@
 <br><br><br><br>
-<h2 class="title ">Top 10 namespaces</h2>
-<p>Each namespace's client count includes clients in child namespaces.</p>
-<svg {{did-insert this.renderBarChart}}
-  id="bar-chart"
-  class="bar-chart"
->
-
-</svg>
+<div class="bar-chart-container">
+  <div class="chart-header">
+    <h2 class="chart-title">Top 10 namespaces</h2>
+    <p class="chart-description" >Each namespace's client count includes clients in child namespaces.</p>
+  </div>
+  <div class="is-border"></div>
+  <svg {{did-insert this.renderBarChart}}
+    id="bar-chart"
+    class="bar-chart"
+  >
+  </svg>
+</div>

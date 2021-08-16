@@ -1,10 +1,35 @@
-.bar-chart {
+.bar-chart-container {
   width: 751px;
   height: 405px;
-  left: 58px;
-  top: 665px;
   border: 1px solid #dce0e6;
-  box-sizing: border-box;
   border-radius: 4px;
-  padding: 24px 24px 12px;
+  padding: 24px, 24px, 12px, 24px;
+
+  > div.is-border {
+    border: 0.75px solid #dce0e6;
+    width: 703px;
+    margin: 5px 24px 0px 24px;
+  }
+}
+
+.bar-chart {
+  width: 100%;
+  height: 100%;
+  padding: 27px 24px 26px 24px;
+}
+
+.chart-header {
+  margin: 24px 0px 0px 24px;
+}
+
+.chart-title {
+  font-size: $size-5;
+  font-weight: $font-weight-bold;
+  line-height: normal;
+}
+
+.chart-description {
+  font-size: $size-8;
+  font-weight: $font-weight-normal;
+  color: $ui-gray-700;
 }
