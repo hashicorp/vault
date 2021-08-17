@@ -83,7 +83,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				},
 				"template": {
 					Type:        framework.TypeString,
-					Description: "The template string for the scope",
+					Description: "The template string to use for the scope. This may be in string-ified JSON or base64 format.",
 				},
 				"description": {
 					Type:        framework.TypeString,
