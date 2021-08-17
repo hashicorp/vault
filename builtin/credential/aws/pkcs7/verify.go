@@ -1,6 +1,8 @@
 package pkcs7
 
 import (
+	"crypto"
+	"crypto/dsa"
 	"crypto/subtle"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -108,7 +110,55 @@ func verifySignatureAtTime(p7 *PKCS7, signer signerInfo, truststore *x509.CertPo
 	if err != nil {
 		return err
 	}
-	return ee.CheckSignature(sigalg, signedData, signer.EncryptedDigest)
+	switch sigalg {
+	case x509.DSAWithSHA1, x509.DSAWithSHA256:
+		return dsaCheckSignature(sigalg, signedData, signer.EncryptedDigest, ee.PublicKey)
+	default:
+		return ee.CheckSignature(sigalg, signedData, signer.EncryptedDigest)
+	}
+}
+
+// dsaSignature verifies the DSA signature on a PKCS7 document. DSA support was
+// removed from Go's crypto/x509 support prior to Go 1.16. This allows
+// verifying legacy signatures until affected applications can be migrated off
+// of DSA.
+func dsaCheckSignature(algo x509.SignatureAlgorithm, signed, signature []byte, publicKey crypto.PublicKey) error {
+	dsaKey, ok := publicKey.(*dsa.PublicKey)
+	if !ok {
+		return ErrUnsupportedAlgorithm
+	}
+
+	var hashType crypto.Hash
+	switch algo {
+	case x509.DSAWithSHA1:
+		hashType = crypto.SHA1
+	case x509.DSAWithSHA256:
+		hashType = crypto.SHA256
+	default:
+		return ErrUnsupportedAlgorithm
+	}
+	h := hashType.New()
+	h.Write(signed)
+	signed = h.Sum(nil)
+
+	dsaSig := new(dsaSignature)
+	if rest, err := asn1.Unmarshal(signature, dsaSig); err != nil {
+		return err
+	} else if len(rest) != 0 {
+		return errors.New("x509: trailing data after DSA signature")
+	}
+	if dsaSig.R.Sign() <= 0 || dsaSig.S.Sign() <= 0 {
+		return errors.New("x509: DSA signature contained zero or negative values")
+	}
+	// According to FIPS 186-3, section 4.6, the hash must be truncated if it is longer
+	// than the key length, but crypto/dsa doesn't do it automatically.
+	if maxHashLen := dsaKey.Q.BitLen() / 8; maxHashLen < len(signed) {
+		signed = signed[:maxHashLen]
+	}
+	if !dsa.Verify(dsaKey, signed, dsaSig.R, dsaSig.S) {
+		return errors.New("x509: DSA verification failure")
+	}
+	return nil
 }
 
 func verifySignature(p7 *PKCS7, signer signerInfo, truststore *x509.CertPool) (err error) {
