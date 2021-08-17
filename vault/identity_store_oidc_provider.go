@@ -122,7 +122,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
-// pathOIDCCreateUpdateAssignment is used to create a new named assignment or update an existing one
+// pathOIDCCreateUpdateAssignment is used to create a new assignment or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
@@ -209,6 +209,7 @@ func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logic
 
 func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
+
 	entry, err := req.Storage.Get(ctx, assignmentPath+name)
 	if err != nil {
 		return false, err
