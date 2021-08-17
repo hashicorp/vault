@@ -1308,6 +1308,10 @@
                   {
                     "title": "Vault Agent Injector TLS Configuration",
                     "path": "platform/k8s/helm/examples/injector-tls"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS with Cert-Manager",
+                    "path": "platform/k8s/helm/examples/injector-tls-cert-manager"
                   }
                 ]
               }
@@ -1623,6 +1627,11 @@
       {
         "title": "Upgrade to 1.8.0",
         "path": "upgrading/upgrade-to-1.8.0"
+      },
+      {
+        "title": "Upgrade to 1.9.0",
+        "path": "upgrading/upgrade-to-1.9.0",
+        "hidden": true
       }
     ]
   },
@@ -1653,6 +1662,14 @@
         "path": "release-notes/1.8.0"
       }
     ]
+  },
+  {
+    "divider": true
+  },
+
+  {
+    "title": "Glossary",
+    "path": "glossary"
   },
   {
     "divider": true
