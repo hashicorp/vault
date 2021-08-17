@@ -18,6 +18,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { select } from 'd3-selection';
 import { scaleLinear } from 'd3-scale';
+import { max } from 'd3-array';
 class BarChart extends Component {
   dataset = [
     { label: 'top-namespace', count: 1512 },
@@ -32,17 +33,11 @@ class BarChart extends Component {
     { label: 'path/to/namespace', count: 300 },
   ];
 
-  calculateMaxValue(data) {
-    let counts = data.map(data => data.count);
-    // turns array of counts into an argument list
-    return Math.max(...counts);
-  }
-
   @action
   renderBarChart() {
     let xScale = scaleLinear()
-      .domain([0, this.calculateMaxValue(this.dataset)]) // min and max values of dataset
-      .range([0, 90]); // bar length will expand to 90% of container
+      .domain([0, max(this.dataset, d => d.count)]) // min and max values of dataset
+      .range([0, 90]); // max bar will expand to 90% of container
 
     let svg = select('#bar-chart');
     svg
