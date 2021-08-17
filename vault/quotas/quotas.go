@@ -765,7 +765,7 @@ func (m *Manager) Invalidate(key string) {
 	default:
 		splitKeys := strings.Split(key, "/")
 		if len(splitKeys) != 2 {
-			m.logger.Error("incorrect key while invalidating quota rule")
+			m.logger.Error(fmt.Sprintf("incorrect key while invalidating quota rule. Key is %v", key))
 			return
 		}
 		qType := splitKeys[0]
@@ -987,7 +987,8 @@ func (m *Manager) HandleRemount(ctx context.Context, nsPath, fromPath, toPath st
 }
 
 // HandleBackendDisabling updates the quota subsystem with the disabling of auth
-// or secret engine disabling.
+// or secret engine disabling. This should only be called on the primary cluster
+// node.
 func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
