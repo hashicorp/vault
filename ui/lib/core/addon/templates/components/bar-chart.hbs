@@ -1,13 +1,13 @@
 <br><br><br><br>
 <div class="bar-chart-container">
   <div class="chart-header">
-    <h2 class="chart-title">Top 10 namespaces</h2>
-    <p class="chart-description" >Each namespace's client count includes clients in child namespaces.</p>
+    <h2 class="chart-title">{{@title}}</h2>
+    <p class="chart-description">{{@description}}</p>
   </div>
   <div class="is-border"></div>
-  <svg {{did-insert this.renderBarChart}}
-    id="bar-chart"
-    class="bar-chart"
-  >
-  </svg>
+ {{!-- add conditional here to check for data --}}
+    <svg {{did-insert this.renderBarChart}}
+      class="bar-chart"
+    >
+    </svg>
 </div>
