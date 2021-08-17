@@ -7,14 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -354,7 +353,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {
-			return output, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
+			return output, fmt.Errorf("error writing WAL entry: %w", err)
 		}
 	}
 
@@ -370,7 +369,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
-		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
+		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
 
 	// Store updated role information

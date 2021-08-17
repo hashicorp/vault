@@ -7,6 +7,7 @@ export default Mixin.create({
   modelPath: 'model',
   unloadModel() {
     let { modelPath } = this;
+    /* eslint-disable-next-line ember/no-controller-access-in-routes */
     let model = this.controller.get(modelPath);
     if (!model || !model.unloadRecord) {
       return;

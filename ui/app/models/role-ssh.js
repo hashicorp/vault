@@ -1,9 +1,8 @@
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 // these arrays define the order in which the fields will be displayed
 // see

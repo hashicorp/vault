@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -15,13 +16,12 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	bolt "go.etcd.io/bbolt"
@@ -61,7 +61,7 @@ type FSMApplyResponse struct {
 	Success bool
 }
 
-// FSM is Vault's primary state storage. It writes updates to an bolt db file
+// FSM is Vault's primary state storage. It writes updates to a bolt db file
 // that lives on local disk. FSM implements raft.FSM and physical.Backend
 // interfaces.
 type FSM struct {
@@ -125,7 +125,7 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 
 	dbPath := filepath.Join(path, databaseFilename)
 	if err := f.openDBFile(dbPath); err != nil {
-		return nil, errwrap.Wrapf("failed to open bolt file: {{err}}", err)
+		return nil, fmt.Errorf("failed to open bolt file: %w", err)
 	}
 
 	return f, nil
@@ -155,10 +155,32 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
-	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{Timeout: 1 * time.Second})
+	st, err := os.Stat(dbPath)
+	switch {
+	case err != nil && os.IsNotExist(err):
+	case err != nil:
+		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
+	default:
+		perms := st.Mode() & os.ModePerm
+		if perms&0o077 != 0 {
+			f.logger.Warn("raft FSM db file has wider permissions than needed",
+				"needed", os.FileMode(0o600), "existing", perms)
+		}
+	}
+
+	freelistType, noFreelistSync := freelistOptions()
+	start := time.Now()
+	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{
+		Timeout:        1 * time.Second,
+		FreelistType:   freelistType,
+		NoFreelistSync: noFreelistSync,
+	})
 	if err != nil {
 		return err
 	}
+	elapsed := time.Now().Sub(start)
+	f.logger.Debug("time to open database", "elapsed", elapsed, "path", dbPath)
+	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
 
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
@@ -792,7 +814,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	var retErr *multierror.Error
 	if err := snapshotInstaller.Install(dbPath); err != nil {
 		f.logger.Error("failed to install snapshot", "error", err)
-		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to install snapshot database: {{err}}", err))
+		retErr = multierror.Append(retErr, fmt.Errorf("failed to install snapshot database: %w", err))
 	} else {
 		f.logger.Info("snapshot installed")
 	}
@@ -801,7 +823,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	// worked. If the install failed we should try to open the old DB file.
 	if err := f.openDBFile(dbPath); err != nil {
 		f.logger.Error("failed to open new database file", "error", err)
-		retErr = multierror.Append(retErr, errwrap.Wrapf("failed to open new bolt file: {{err}}", err))
+		retErr = multierror.Append(retErr, fmt.Errorf("failed to open new bolt file: %w", err))
 	}
 
 	// Handle local node config restore. lnConfig should not be nil here, but
@@ -810,7 +832,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		// Persist the local node config on the restored fsm.
 		if err := f.persistDesiredSuffrage(lnConfig); err != nil {
 			f.logger.Error("failed to persist local node config from before the restore", "error", err)
-			retErr = multierror.Append(retErr, errwrap.Wrapf("failed to persist local node config from before the restore: {{err}}", err))
+			retErr = multierror.Append(retErr, fmt.Errorf("failed to persist local node config from before the restore: %w", err))
 		}
 	}
 
@@ -890,7 +912,7 @@ func (f *FSMChunkStorage) chunkPaths(chunk *raftchunking.ChunkInfo) (string, str
 func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error) {
 	b, err := jsonutil.EncodeJSON(chunk)
 	if err != nil {
-		return false, errwrap.Wrapf("error encoding chunk info: {{err}}", err)
+		return false, fmt.Errorf("error encoding chunk info: %w", err)
 	}
 
 	prefix, key := f.chunkPaths(chunk)
@@ -907,7 +929,7 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 	done := new(bool)
 	if err := f.f.db.Update(func(tx *bolt.Tx) error {
 		if err := tx.Bucket(dataBucketName).Put([]byte(entry.Key), entry.Value); err != nil {
-			return errwrap.Wrapf("error storing chunk info: {{err}}", err)
+			return fmt.Errorf("error storing chunk info: %w", err)
 		}
 
 		// Assume bucket exists and has keys
@@ -940,12 +962,12 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 func (f *FSMChunkStorage) FinalizeOp(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
 	ret, err := f.chunksForOpNum(opNum)
 	if err != nil {
-		return nil, errwrap.Wrapf("error getting chunks for op keys: {{err}}", err)
+		return nil, fmt.Errorf("error getting chunks for op keys: %w", err)
 	}
 
 	prefix, _ := f.chunkPaths(&raftchunking.ChunkInfo{OpNum: opNum})
 	if err := f.f.DeletePrefix(f.ctx, prefix); err != nil {
-		return nil, errwrap.Wrapf("error deleting prefix after op finalization: {{err}}", err)
+		return nil, fmt.Errorf("error deleting prefix after op finalization: %w", err)
 	}
 
 	return ret, nil
@@ -956,7 +978,7 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 
 	opChunkKeys, err := f.f.List(f.ctx, prefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("error fetching op chunk keys: {{err}}", err)
+		return nil, fmt.Errorf("error fetching op chunk keys: %w", err)
 	}
 
 	if len(opChunkKeys) == 0 {
@@ -968,17 +990,17 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 	for _, v := range opChunkKeys {
 		seqNum, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return nil, errwrap.Wrapf("error converting seqnum to integer: {{err}}", err)
+			return nil, fmt.Errorf("error converting seqnum to integer: %w", err)
 		}
 
 		entry, err := f.f.Get(f.ctx, prefix+v)
 		if err != nil {
-			return nil, errwrap.Wrapf("error fetching chunkinfo: {{err}}", err)
+			return nil, fmt.Errorf("error fetching chunkinfo: %w", err)
 		}
 
 		var ci raftchunking.ChunkInfo
 		if err := jsonutil.DecodeJSON(entry.Value, &ci); err != nil {
-			return nil, errwrap.Wrapf("error decoding chunkinfo json: {{err}}", err)
+			return nil, fmt.Errorf("error decoding chunkinfo json: %w", err)
 		}
 
 		if ret == nil {
@@ -994,7 +1016,7 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 	opNums, err := f.f.List(f.ctx, chunkingPrefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("error doing recursive list for chunk saving: {{err}}", err)
+		return nil, fmt.Errorf("error doing recursive list for chunk saving: %w", err)
 	}
 
 	if len(opNums) == 0 {
@@ -1005,12 +1027,12 @@ func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 	for _, opNumStr := range opNums {
 		opNum, err := strconv.ParseInt(opNumStr, 10, 64)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing op num during chunk saving: {{err}}", err)
+			return nil, fmt.Errorf("error parsing op num during chunk saving: %w", err)
 		}
 
 		opChunks, err := f.chunksForOpNum(uint64(opNum))
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting chunks for op keys during chunk saving: {{err}}", err)
+			return nil, fmt.Errorf("error getting chunks for op keys during chunk saving: %w", err)
 		}
 
 		ret[uint64(opNum)] = opChunks
@@ -1021,7 +1043,7 @@ func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 
 func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
 	if err := f.f.DeletePrefix(f.ctx, chunkingPrefix); err != nil {
-		return errwrap.Wrapf("error deleting prefix for chunk restoration: {{err}}", err)
+		return fmt.Errorf("error deleting prefix for chunk restoration: %w", err)
 	}
 	if len(chunks) == 0 {
 		return nil
@@ -1036,7 +1058,7 @@ func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
 				return errors.New("unexpected op number in chunk")
 			}
 			if _, err := f.StoreChunk(chunk); err != nil {
-				return errwrap.Wrapf("error storing chunk during restoration: {{err}}", err)
+				return fmt.Errorf("error storing chunk during restoration: %w", err)
 			}
 		}
 	}

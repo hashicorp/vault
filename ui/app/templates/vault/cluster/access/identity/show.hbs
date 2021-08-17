@@ -21,7 +21,7 @@
   <nav class="tabs sub-nav">
     <ul>
       {{#each (tabs-for-identity-show model.identityType model.type) as |tab|}}
-        <LinkTo @route="vault.cluster.access.identity.show" @models={{array (pluralize model.identityType) model.id tab}} @tagName="li">
+        <LinkTo @route="vault.cluster.access.identity.show" @models={{array (pluralize model.identityType) model.id tab}} @tagName="li" data-test-tab-subnav={{tab}}>
           <LinkTo @route="vault.cluster.access.identity.show" @models={{array (pluralize model.identityType) model.id tab}}>
             {{capitalize (humanize tab)}}
           </LinkTo>

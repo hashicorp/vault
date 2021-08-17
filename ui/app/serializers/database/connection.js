@@ -19,13 +19,17 @@ export default RESTSerializer.extend({
       return connections;
     }
     // Query single record response:
-    return {
+    let response = {
       id: payload.id,
       name: payload.id,
       backend: payload.backend,
       ...payload.data,
       ...payload.data.connection_details,
     };
+    if (payload.data.root_credentials_rotate_statements) {
+      response.root_rotation_statements = payload.data.root_credentials_rotate_statements;
+    }
+    return response;
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	otplib "github.com/pquerna/otp"
@@ -108,7 +107,7 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 			int64(key.Period)*
 			int64((2+key.Skew))))
 	if err != nil {
-		return nil, errwrap.Wrapf("error adding code to used cache: {{err}}", err)
+		return nil, fmt.Errorf("error adding code to used cache: %w", err)
 	}
 
 	return &logical.Response{

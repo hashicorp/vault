@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
@@ -112,7 +112,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.form.generateCA('Intermediate CA', 'intermediate');
     await settled();
     // cache csr
-    csrVal = page.form.csr;
+    await click('.masked-input-toggle');
+    csrVal = document.querySelector('.masked-value').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: rootPath });
@@ -121,7 +122,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
-    intermediateCert = page.form.certificate;
+    await click('.masked-input-toggle');
+    intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: intermediatePath });

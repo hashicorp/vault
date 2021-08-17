@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	"github.com/hashicorp/errwrap"
 )
@@ -417,6 +417,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"tls_max_version":        c.TLSMaxVersion,
 		"use_token_groups":       c.UseTokenGroups,
 		"anonymous_group_search": c.AnonymousGroupSearch,
+		"request_timeout":        c.RequestTimeout,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

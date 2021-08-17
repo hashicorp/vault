@@ -15,11 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
@@ -156,14 +155,14 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	extensions, err := b.calculateExtensions(data, role)
+	extensions, err := b.calculateExtensions(data, req, role)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read CA private key: {{err}}", err)
+		return nil, fmt.Errorf("failed to read CA private key: %w", err)
 	}
 	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
 		return nil, fmt.Errorf("failed to read CA private key")
@@ -171,7 +170,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 
 	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse stored CA private key: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
 	}
 
 	cBundle := creationBundle{
@@ -357,27 +356,51 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 	return criticalOptions, nil
 }
 
-func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
+func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Request, role *sshRole) (map[string]string, error) {
 	unparsedExtensions := data.Get("extensions").(map[string]interface{})
-	if len(unparsedExtensions) == 0 {
-		return role.DefaultExtensions, nil
-	}
+	extensions := make(map[string]string)
 
-	extensions := convertMapToStringValue(unparsedExtensions)
+	if len(unparsedExtensions) > 0 {
+		extensions := convertMapToStringValue(unparsedExtensions)
+		if role.AllowedExtensions != "" {
+			notAllowed := []string{}
+			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
 
-	if role.AllowedExtensions != "" {
-		notAllowed := []string{}
-		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+			for extensionKey, _ := range extensions {
+				if !strutil.StrListContains(allowedExtensions, extensionKey) {
+					notAllowed = append(notAllowed, extensionKey)
+				}
+			}
 
-		for extension := range extensions {
-			if !strutil.StrListContains(allowedExtensions, extension) {
-				notAllowed = append(notAllowed, extension)
+			if len(notAllowed) != 0 {
+				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 			}
 		}
+		return extensions, nil
+	}
 
-		if len(notAllowed) != 0 {
-			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
+	if role.DefaultExtensionsTemplate {
+		for extensionKey, extensionValue := range role.DefaultExtensions {
+			// Look for templating markers {{ .* }}
+			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)
+			if matched {
+				if req.EntityID != "" {
+					// Retrieve extension value based on template + entityID from request.
+					templateExtensionValue, err := framework.PopulateIdentityTemplate(extensionValue, req.EntityID, b.System())
+					if err == nil {
+						// Template returned an extension value that we can use
+						extensions[extensionKey] = templateExtensionValue
+					} else {
+						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", extensionValue, err)
+					}
+				}
+			} else {
+				// Static extension value or err template
+				extensions[extensionKey] = extensionValue
+			}
 		}
+	} else {
+		extensions = role.DefaultExtensions
 	}
 
 	return extensions, nil
@@ -532,7 +555,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	algo := b.Role.AlgorithmSigner
 	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to generate signed SSH key: sign error: {{err}}", err)
+		return nil, fmt.Errorf("failed to generate signed SSH key: sign error: %w", err)
 	}
 
 	certificate.Signature = sig

@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -938,12 +938,13 @@ func (c *Core) remount(ctx context.Context, src, dst string, updateStorage bool)
 		c.logger.Error("failed to update mounts table", "error", err)
 		return logical.CodedError(500, "failed to update mounts table")
 	}
-	c.mountsLock.Unlock()
 
 	// Remount the backend
 	if err := c.router.Remount(ctx, src, dst); err != nil {
+		c.mountsLock.Unlock()
 		return err
 	}
+	c.mountsLock.Unlock()
 
 	// Un-taint the path
 	if err := c.router.Untaint(ctx, dst); err != nil {

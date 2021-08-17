@@ -23,7 +23,7 @@ module('Integration | Helper | is-empty-value', function(hooks) {
 
     await render(template);
 
-    assert.equal(this.element.textContent.trim(), 'Empty');
+    assert.dom(this.element).hasText('Empty');
   });
 
   test('it is truthy if the value evaluated is an empty string', async function(assert) {
@@ -31,7 +31,7 @@ module('Integration | Helper | is-empty-value', function(hooks) {
 
     await render(template);
 
-    assert.equal(this.element.textContent.trim(), 'Empty');
+    assert.dom(this.element).hasText('Empty');
   });
 
   test('it is truthy if the value evaluated is an empty object', async function(assert) {
@@ -39,13 +39,13 @@ module('Integration | Helper | is-empty-value', function(hooks) {
 
     await render(template);
 
-    assert.equal(this.element.textContent.trim(), 'Empty');
+    assert.dom(this.element).hasText('Empty');
   });
   test('it is falsy if the value evaluated is not an empty object', async function(assert) {
     this.set('inputValue', nonEmptyObject);
 
     await render(template);
 
-    assert.equal(this.element.textContent.trim(), 'Full');
+    assert.dom(this.element).hasText('Full');
   });
 });

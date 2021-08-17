@@ -349,7 +349,7 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 		t.Fatal(peers)
 	}
 
-	// Shutdown raft1
+	// Finalize raft1
 	if err := raft1.TeardownCluster(nil); err != nil {
 		t.Fatal(err)
 	}

@@ -1,12 +1,13 @@
+import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
-import { get, computed } from '@ember/object';
+import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
 /**
@@ -101,7 +102,7 @@ export default Component.extend(DEFAULTS, {
     let firstMethod = this.methodsToShow.firstObject;
     if (!firstMethod) return;
     // prefer backends with a path over those with a type
-    return get(firstMethod, 'path') || get(firstMethod, 'type');
+    return firstMethod.path || firstMethod.type;
   },
 
   resetDefaults() {
@@ -127,14 +128,14 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerPartialName: computed('selectedAuthBackend.type', function() {
+  providerName: computed('selectedAuthBackend.type', function() {
     if (!this.selectedAuthBackend) {
       return;
     }
     let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
-    return `partials/auth-form/${templateName}`;
+    return templateName;
   }),
 
   hasCSPError: alias('csp.connectionViolations.firstObject'),
@@ -152,9 +153,7 @@ export default Component.extend(DEFAULTS, {
   }),
   methodsToShow: computed('methods', function() {
     let methods = this.methods || [];
-    let shownMethods = methods.filter(m =>
-      BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
-    );
+    let shownMethods = methods.filter(m => BACKENDS.find(b => b.type.toLowerCase() === m.type.toLowerCase()));
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
@@ -179,7 +178,16 @@ export default Component.extend(DEFAULTS, {
           unauthenticated: true,
         },
       });
-      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
+      this.set(
+        'methods',
+        methods.map(m => {
+          const method = m.serialize({ includeId: true });
+          return {
+            ...method,
+            mountDescription: method.description,
+          };
+        })
+      );
       next(() => {
         store.unloadAll('auth-method');
       });
@@ -210,6 +218,9 @@ export default Component.extend(DEFAULTS, {
   authenticate: task(function*(backendType, data) {
     let clusterId = this.cluster.id;
     try {
+      if (backendType === 'okta') {
+        this.delayAuthMessageReminder.perform();
+      }
       let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
 
       let { isRoot, namespace } = authResponse;
@@ -237,6 +248,15 @@ export default Component.extend(DEFAULTS, {
     }
   }).withTestWaiter(),
 
+  delayAuthMessageReminder: task(function*() {
+    if (Ember.testing) {
+      this.showLoading = true;
+      yield timeout(0);
+      return;
+    }
+    yield timeout(5000);
+  }),
+
   actions: {
     doSubmit() {
       let passedData, e;
@@ -254,16 +274,16 @@ export default Component.extend(DEFAULTS, {
       });
       let backend = this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
-        b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
+        b => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
-      let attributes = get(backendMeta || {}, 'formAttributes') || [];
+      let attributes = (backendMeta || {}).formAttributes || [];
 
       data = assign(data, this.getProperties(...attributes));
       if (passedData) {
         data = assign(data, passedData);
       }
-      if (this.customPath || get(backend, 'id')) {
-        data.path = this.customPath || get(backend, 'id');
+      if (this.customPath || backend.id) {
+        data.path = this.customPath || backend.id;
       }
       return this.authenticate.unlinked().perform(backend.type, data);
     },

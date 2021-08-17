@@ -141,8 +141,13 @@ advertise the correct address to other nodes.
 
 ### `telemetry` Parameters
 
-- `unauthenticated_metrics_access` `(string: "false")` - If set to true, allows
+- `unauthenticated_metrics_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/metrics` endpoint.
+
+### `profiling` Parameters
+
+- `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
+  unauthenticated access to the `/v1/sys/pprof` endpoint.
 
 ## `tcp` Listener Examples
 
@@ -186,6 +191,19 @@ listener "tcp" {
   }
 }
 ```
+
+### Configuring unauthenticated profiling access
+
+This example shows enabling unauthenticated profiling access.
+
+```hcl
+listener "tcp" {
+  profiling {
+    unauthenticated_pprof_access = true
+  }
+}
+```
+
 
 ### Listening on all IPv6 & IPv4 Interfaces
 

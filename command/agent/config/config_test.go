@@ -88,9 +88,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
-	config.Listeners[1].RawConfig = nil
-	config.Listeners[2].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -101,9 +99,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	}
 	expected.Vault.TLSSkipVerifyRaw = interface{}(true)
 
-	config.Listeners[0].RawConfig = nil
-	config.Listeners[1].RawConfig = nil
-	config.Listeners[2].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -168,6 +164,7 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -177,6 +174,7 @@ func TestLoadConfigFile(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -218,6 +216,7 @@ func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -248,7 +247,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -341,7 +340,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -385,7 +384,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -429,7 +428,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -484,7 +483,7 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -523,12 +522,7 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
-	}
-
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -539,6 +533,60 @@ func TestLoadConfigFile_AgentCache_PersistMissingType(t *testing.T) {
 	if err == nil || os.IsNotExist(err) {
 		t.Fatal("expected error or file is missing")
 	}
+}
+
+func TestLoadConfigFile_TemplateConfig(t *testing.T) {
+
+	testCases := map[string]struct {
+		fixturePath            string
+		expectedTemplateConfig TemplateConfig
+	}{
+		"set-true": {
+			"./test-fixtures/config-template_config.hcl",
+			TemplateConfig{
+				ExitOnRetryFailure:    true,
+				StaticSecretRenderInt: 1 * time.Minute,
+			},
+		},
+		"empty": {
+			"./test-fixtures/config-template_config-empty.hcl",
+			TemplateConfig{
+				ExitOnRetryFailure: false,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config, err := LoadConfig(tc.fixturePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			expected := &Config{
+				SharedConfig: &configutil.SharedConfig{},
+				Vault: &Vault{
+					Address: "http://127.0.0.1:1111",
+					Retry: &Retry{
+						NumRetries: 5,
+					},
+				},
+				TemplateConfig: &tc.expectedTemplateConfig,
+				Templates: []*ctconfig.TemplateConfig{
+					{
+						Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+						Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+					},
+				},
+			}
+
+			config.Prune()
+			if diff := deep.Equal(config, expected); diff != nil {
+				t.Fatal(diff)
+			}
+		})
+	}
+
 }
 
 // TestLoadConfigFile_Template tests template definitions in Vault Agent
@@ -644,6 +692,7 @@ func TestLoadConfigFile_Template(t *testing.T) {
 				Templates: tc.expectedTemplates,
 			}
 
+			config.Prune()
 			if diff := deep.Equal(config, expected); diff != nil {
 				t.Fatal(diff)
 			}
@@ -744,6 +793,7 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 				},
 			}
 
+			config.Prune()
 			if diff := deep.Equal(config, expected); diff != nil {
 				t.Fatal(diff)
 			}
@@ -790,6 +840,7 @@ func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -834,6 +885,7 @@ func TestLoadConfigFile_Vault_Retry_Empty(t *testing.T) {
 		},
 	}
 
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
@@ -867,7 +919,7 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 		},
 	}
 
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}

@@ -22,6 +22,18 @@ module('Acceptance | ssh secret backend', function(hooks) {
       },
       async fillInGenerate() {
         await fillIn('[data-test-input="publicKey"]', PUB_KEY);
+        await click('[data-test-toggle-button]');
+        await settled();
+        await click('[data-test-toggle-label="TTL"]');
+        await fillIn('[data-test-select="ttl-unit"]', 'm');
+        await settled();
+        document.querySelector('[data-test-ttl-value="TTL"]').value = 30;
+      },
+      assertBeforeGenerate(assert) {
+        assert.dom('[data-test-form-field-from-model]').exists('renders the FormFieldFromModel');
+        let value = document.querySelector('[data-test-ttl-value="TTL"]').value;
+        // confirms that the actions are correctly being passed down to the FormFieldFromModel component
+        assert.equal(value, '30', 'renders action updateTtl');
       },
       assertAfterGenerate(assert, sshPath) {
         assert.equal(currentURL(), `/vault/secrets/${sshPath}/sign/${this.name}`, 'ca sign url is correct');
@@ -106,6 +118,9 @@ module('Acceptance | ssh secret backend', function(hooks) {
       await click('[data-test-backend-credentials]');
       await settled();
       await role.fillInGenerate();
+      if (role.type === 'ca') {
+        role.assertBeforeGenerate(assert);
+      }
 
       // generate creds
       await click('[data-test-secret-generate]');

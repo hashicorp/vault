@@ -18,12 +18,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -129,7 +128,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("unable to access bucket %q in region %q: {{err}}", bucket, region), err)
+		return nil, fmt.Errorf("unable to access bucket %q in region %q: %w", bucket, region, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -137,7 +136,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)

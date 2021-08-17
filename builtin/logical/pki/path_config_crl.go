@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -117,7 +116,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		case errutil.UserError:
 			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
 		case errutil.InternalError:
-			return nil, errwrap.Wrapf("error encountered during CRL building: {{err}}", crlErr)
+			return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 		}
 	}
 

@@ -1,32 +1,32 @@
 <div class="box is-shadowless is-marginless is-fullwidth">
-  {{#if model.disabled}}
+  {{#if @model.disabled}}
     <AlertBanner
       @type="warning"
       @title="Attention"
-      @message="This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
+      @message="This {{@model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
       data-test-disabled-warning>
-      {{#if model.canEdit}}
-        <button onclick={{action 'enable' model}} type="button" class="link" data-test-enable=true>
+      {{#if @model.canEdit}}
+        <button onclick={{action 'enable' @model}} type="button" class="link" data-test-enable=true>
           Enable
         </button>
       {{/if}}
     </AlertBanner>
   {{/if}}
-  <InfoTableRow @label="Name" @value={{model.name}} @data-test-identity-item-name={{true}} />
-  <InfoTableRow @label="Type" @value={{model.type}} />
-  <InfoTableRow @label="ID" @value={{model.id}} />
-  <InfoTableRow @label="Merged Ids" @value={{model.mergedEntityIds}}>
+  <InfoTableRow @label="Name" @value={{@model.name}} @data-test-identity-item-name={{true}} />
+  <InfoTableRow @label="Type" @value={{@model.type}} />
+  <InfoTableRow @label="ID" @value={{@model.id}} />
+  <InfoTableRow @label="Merged Ids" @value={{@model.mergedEntityIds}}>
     <div>
-      {{#each model.mergedEntityIds as |id|}}
+      {{#each @model.mergedEntityIds as |id|}}
         <div>
           <code class="has-text-black">{{id}}</code>
         </div>
       {{/each}}
     </div>
   </InfoTableRow>
-  <InfoTableRow @label="Created" @value={{model.creationTime}}>
-    <time datetime={{model.creationTime}} title={{model.creationTime}}>
-      {{date-format model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
+  <InfoTableRow @label="Created" @value={{@model.creationTime}}>
+    <time datetime={{@model.creationTime}} title={{@model.creationTime}}>
+      {{date-format @model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
     </time>
   </InfoTableRow>
   <InfoTableRow @label="Last Updated" @value={{model.lastUpdateTime}}>

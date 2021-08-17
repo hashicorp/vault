@@ -8,17 +8,17 @@ export default function UseCaseCtaSection() {
         <Button
           url="/downloads"
           title="Download"
+          label="Download CLI"
           linkType="download"
           theme={{
             variant: 'primary',
-            background: 'dark',
-            brand: 'neutral'
+            brand: 'neutral',
           }}
         />
         <Button
           url="/docs"
           title="Explore Docs"
-          theme={{ variant: 'secondary', background: 'dark' }}
+          theme={{ variant: 'secondary' }}
         />
       </div>
     </section>

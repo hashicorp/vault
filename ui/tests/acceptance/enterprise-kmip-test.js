@@ -119,6 +119,23 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
   });
 
+  test('it can revoke from the credentials show page', async function(assert) {
+    let { path, scope, role, serial } = await generateCreds();
+    await settled();
+    await credentialsPage.visitDetail({ backend: path, scope, role, serial });
+    await settled();
+    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
+    await credentialsPage.delete().confirmDelete();
+    await settled();
+
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      'redirects to the credentials list'
+    );
+    assert.ok(credentialsPage.isEmpty, 'renders an empty credentials page');
+  });
+
   test('it can create a scope', async function(assert) {
     let path = await mount(this);
     await scopesPage.visit({ backend: path });
@@ -266,20 +283,5 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     await settled();
     assert.equal(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
     assert.ok(credentialsPage.isEmpty, 'renders empty');
-  });
-
-  test('it can revoke from the credentials show page', async function(assert) {
-    let { path, scope, role, serial } = await generateCreds();
-    await credentialsPage.visitDetail({ backend: path, scope, role, serial });
-    await settled();
-    await credentialsPage.delete().confirmDelete();
-    await settled();
-
-    assert.equal(
-      currentURL(),
-      `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/credentials`,
-      'redirects to the credentials list'
-    );
-    assert.ok(credentialsPage.isEmpty, 'renders an empty credentials page');
   });
 });

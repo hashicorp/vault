@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -29,12 +30,12 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -89,6 +90,9 @@ func TestPKI_RequireCN(t *testing.T) {
 		"allow_subdomains":   true,
 		"max_ttl":            "2h",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
@@ -114,6 +118,9 @@ func TestPKI_RequireCN(t *testing.T) {
 		"max_ttl":            "2h",
 		"require_cn":         false,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Issue a cert with require_cn set to false and without supplying the
 	// common name. It should succeed.
@@ -1411,6 +1418,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				}
 				cert := parsedCertBundle.Certificate
 				foundOthers, err := getOtherSANsFromX509Extensions(cert.Extensions)
+				if err != nil {
+					return err
+				}
 				var emptyOthers []otherNameUtf8
 				var expected []otherNameUtf8 = append(emptyOthers, expectedOthers...)
 				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
@@ -2985,6 +2995,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
 		"csr":                   intermediateCSR,
+		"ttl":                   "10s",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -3005,6 +3016,9 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 		"serial_number": intermediateCertSerial,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Revoke adds a fixed 2s buffer, so we sleep for a bit longer to ensure
 	// the revocation time is past the current time.
@@ -3023,14 +3037,77 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	// Sleep a bit to make sure we're past the safety buffer
 	time.Sleep(2 * time.Second)
 
-	// Attempt to read the intermediate cert after revoke + tidy, and ensure
-	// that it's no longer present
-	secret, err = client.Logical().Read("pki/cert/" + intermediateCASerialColon)
+	// Get CRL and ensure the tidied cert is still in the list after the tidy
+	// operation since it's not past the NotAfter (ttl) value yet.
+	req := client.NewRequest("GET", "/v1/pki/crl")
+	resp, err := client.RawRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret != nil {
-		t.Fatalf("expected empty response data, got: %#v", secret.Data)
+	defer resp.Body.Close()
+
+	crlBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(crlBytes) == 0 {
+		t.Fatalf("expected CRL in response body")
+	}
+
+	crl, err := x509.ParseDERCRL(crlBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	revokedCerts := crl.TBSCertList.RevokedCertificates
+	if len(revokedCerts) == 0 {
+		t.Fatal("expected CRL to be non-empty")
+	}
+
+	sn := certutil.GetHexFormatted(revokedCerts[0].SerialNumber.Bytes(), ":")
+	if sn != intermediateCertSerial {
+		t.Fatalf("expected: %v, got: %v", intermediateCertSerial, sn)
+	}
+
+	// Wait for cert to expire
+	time.Sleep(10 * time.Second)
+
+	// Issue a tidy on /pki
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_cert_store":    true,
+		"tidy_revoked_certs": true,
+		"safety_buffer":      "1s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sleep a bit to make sure we're past the safety buffer
+	time.Sleep(2 * time.Second)
+
+	req = client.NewRequest("GET", "/v1/pki/crl")
+	resp, err = client.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	crlBytes, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(crlBytes) == 0 {
+		t.Fatalf("expected CRL in response body")
+	}
+
+	crl, err = x509.ParseDERCRL(crlBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	revokedCerts = crl.TBSCertList.RevokedCertificates
+	if len(revokedCerts) != 0 {
+		t.Fatal("expected CRL to be empty")
 	}
 }
 

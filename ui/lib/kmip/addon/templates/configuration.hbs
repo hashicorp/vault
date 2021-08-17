@@ -19,10 +19,13 @@
 </Toolbar>
 {{#if model}}
   <FieldGroupShow @model={{model}} />
-  <InfoTableRow
-    @label="CA PEM"
-    @value={{model.ca.caPem}}
-  />
+  <InfoTableRow @label="CA PEM" @value={{model.ca.caPem}}>
+    <MaskedInput
+      @value={{model.ca.caPem}}
+      @displayOnly={{true}}
+      @allowCopy={{true}}
+    />
+  </InfoTableRow>
 {{else}}
   <EmptyState
     @title="No configuration for this secrets engine"
