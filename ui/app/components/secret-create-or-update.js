@@ -23,7 +23,7 @@ import { task, waitForEvent } from 'ember-concurrency';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-
+// ARG TODO make this a glimmer and give documentation
 export default Component.extend({
   secretPaths: null,
   validationErrorCount: 0,

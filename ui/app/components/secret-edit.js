@@ -76,8 +76,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
   },
 
-  // ARG TODO this should be handled in the model??? Tried doesn't work.
-  updatePath: maybeQueryRecord(
+  checkSecretCapabilities: maybeQueryRecord(
     'capabilities',
     context => {
       if (!context.model || context.mode === 'create') {
@@ -95,8 +94,29 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDeleteSecretData: alias('updatePath.canDelete'),
-  canEditSecretData: alias('updatePath.canUpdate'),
+  canDeleteSecretData: alias('checkSecretCapabilities.canDelete'),
+  canUpdateSecretData: alias('checkSecretCapabilities.canUpdate'),
+
+  checkMetadataCapabilities: maybeQueryRecord(
+    'capabilities',
+    context => {
+      if (!context.model || !context.isV2) {
+        return;
+      }
+      let backend = context.model.backend;
+      let path = `${backend}/metadata/`;
+      return {
+        id: path,
+      };
+    },
+    'isV2',
+    'model',
+    'model.id',
+    'mode'
+  ),
+  canDeleteSecretMetadata: alias('checkMetadataCapabilities.canDelete'),
+  canUpdateSecretMetadata: alias('checkMetadataCapabilities.canUpdate'),
+  canCreateSecretMetadata: alias('checkMetadataCapabilities.canCreate'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
