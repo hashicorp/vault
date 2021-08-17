@@ -561,6 +561,68 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient tests that an
+// assignment cannot be deleted when it is referenced by a client
+func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test assignment "test-assignment" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":         "test-key",
+			"assignments": []string{"test-assignment"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Delete test-assignment -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"unable to delete assignment \"test-assignment\" because it is currently referenced by these clients: test-client": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-assignment" again and validate
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if resp != nil {
+		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderAssignment_Update tests Update operations for assignments
 func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

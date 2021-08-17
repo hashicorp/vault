@@ -576,7 +576,9 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
-// rolesReferencingTargetKeyName returns a map of role names to roles referenced by targetKeyName.
+// rolesReferencingTargetKeyName returns a map of role names to roles
+// referencing targetKeyName.
+//
 // Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) rolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]role, error) {
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
@@ -605,7 +607,8 @@ func (i *IdentityStore) rolesReferencingTargetKeyName(ctx context.Context, req *
 }
 
 // roleNamesReferencingTargetKeyName returns a slice of strings of role
-// names referenced by targetKeyName.
+// names referencing targetKeyName.
+//
 // Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
 	roles, err := i.rolesReferencingTargetKeyName(ctx, req, targetKeyName)

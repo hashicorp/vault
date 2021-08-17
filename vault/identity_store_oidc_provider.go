@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -187,6 +189,56 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
+// clientsReferencingTargetAssignmentName returns a map of client names to
+// clients referencing targetAssignmentName.
+//
+// Note: this is not threadsafe. It is to be called with Lock already held.
+func (i *IdentityStore) clientsReferencingTargetAssignmentName(ctx context.Context, req *logical.Request, targetAssignmentName string) (map[string]client, error) {
+	clientNames, err := req.Storage.List(ctx, clientPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempClient client
+	clients := make(map[string]client)
+	for _, clientName := range clientNames {
+		entry, err := req.Storage.Get(ctx, clientPath+clientName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempClient); err != nil {
+				return nil, err
+			}
+			for _, a := range tempClient.Assignments {
+				if a == targetAssignmentName {
+					clients[clientName] = tempClient
+				}
+			}
+		}
+	}
+
+	return clients, nil
+}
+
+// clientNamesReferencingTargetAssignmentName returns a slice of strings of client
+// names referencing targetAssignmentName.
+//
+// Note: this is not threadsafe. It is to be called with Lock already held.
+func (i *IdentityStore) clientNamesReferencingTargetAssignmentName(ctx context.Context, req *logical.Request, targetAssignmentName string) ([]string, error) {
+	clients, err := i.clientsReferencingTargetAssignmentName(ctx, req, targetAssignmentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for client, _ := range clients {
+		names = append(names, client)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 // pathOIDCCreateUpdateAssignment is used to create a new assignment or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
@@ -266,6 +318,19 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	err := req.Storage.Delete(ctx, assignmentPath+name)
+
+	targetAssignmentName := d.Get("name").(string)
+
+	clientNames, err := i.clientNamesReferencingTargetAssignmentName(ctx, req, targetAssignmentName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(clientNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete assignment %q because it is currently referenced by these clients: %s",
+			targetAssignmentName, strings.Join(clientNames, ", "))
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
 	if err != nil {
 		return nil, err
 	}
