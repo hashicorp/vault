@@ -1231,6 +1231,7 @@ func expectError(t *testing.T, resp *logical.Response, err error) {
 // expectString fails unless every string in actualStrings is also included in expectedStrings and
 // the length of actualStrings and expectedStrings are the same
 func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[string]interface{}) {
+	t.Helper()
 	if len(actualStrings) != len(expectedStrings) {
 		t.Fatalf("expectStrings mismatch:\nactual strings:\n%#v\nexpected strings:\n%#v\n", actualStrings, expectedStrings)
 	}
