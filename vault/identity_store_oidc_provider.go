@@ -7,13 +7,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type namedAssignment struct {
-	name     string
+type assignment struct {
 	Groups   []string `json:"groups"`
 	Entities []string `json:"entities"`
 }
 
-type namedProvider struct {
+type provider struct {
 	name             string
 	Issuer           string   `json:"issuer"`
 	AllowedClientIDs []string `json:"allowed_client_ids"`
@@ -21,8 +20,9 @@ type namedProvider struct {
 }
 
 const (
-	namedAssignmentPath = oidcTokensPrefix + "named_assignments/"
-	namedProviderPath   = oidcTokensPrefix + "named_providers/"
+	oidcProviderPrefix = "oidc_provider/"
+	providerPath       = oidcProviderPrefix + "provider/"
+	assignmentPath     = oidcProviderPrefix + "assignment/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -59,7 +59,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			},
 			ExistenceCheck:  i.pathOIDCAssignmentExistenceCheck,
 			HelpSynopsis:    "CRUD operations for OIDC assignments.",
-			HelpDescription: "Create, Read, Update, and Delete OIDC named assignments.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC assignments.",
 		},
 		{
 			Pattern: "oidc/assignment/?$",
@@ -142,17 +142,17 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 	if entitiesRaw, ok := d.GetOk("entities"); ok {
 		assignment.Entities = entitiesRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Entities = d.Get("entities").([]string)
+		assignment.Entities = d.GetDefaultOrZero("entities").([]string)
 	}
 
 	if groupsRaw, ok := d.GetOk("groups"); ok {
 		assignment.Groups = groupsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Groups = d.Get("groups").([]string)
+		assignment.Groups = d.GetDefaultOrZero("groups").([]string)
 	}
 
-	// store named assignment
-	entry, err := logical.StorageEntryJSON(namedAssignmentPath+name, assignment)
+	// store assignment
+	entry, err := logical.StorageEntryJSON(assignmentPath+name, assignment)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +164,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 	return nil, nil
 }
 
-// pathOIDCListAssignment is used to list named assignments
+// pathOIDCListAssignment is used to list assignments
 func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	assignments, err := req.Storage.List(ctx, namedAssignmentPath)
+	assignments, err := req.Storage.List(ctx, assignmentPath)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (i *IdentityStore) pathOIDCListAssignment(ctx context.Context, req *logical
 func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	entry, err := req.Storage.Get(ctx, assignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -185,14 +185,14 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 		return nil, nil
 	}
 
-	var storedNamedAssignment namedAssignment
-	if err := entry.DecodeJSON(&storedNamedAssignment); err != nil {
+	var assignment assignment
+	if err := entry.DecodeJSON(&assignment); err != nil {
 		return nil, err
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"groups":   storedNamedAssignment.Groups,
-			"entities": storedNamedAssignment.Entities,
+			"groups":   assignment.Groups,
+			"entities": assignment.Entities,
 		},
 	}, nil
 }
@@ -200,7 +200,7 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 // pathOIDCDeleteAssignment is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, namedAssignmentPath+name)
+	err := req.Storage.Delete(ctx, assignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -209,8 +209,7 @@ func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logic
 
 func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-
-	entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+	entry, err := req.Storage.Get(ctx, assignmentPath+name)
 	if err != nil {
 		return false, err
 	}
@@ -222,9 +221,9 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var provider namedProvider
+	var provider provider
 	if req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedProviderPath+name)
+		entry, err := req.Storage.Get(ctx, providerPath+name)
 		if err != nil {
 			return nil, err
 		}
@@ -254,7 +253,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 	}
 
 	// store named provider
-	entry, err := logical.StorageEntryJSON(namedProviderPath+name, provider)
+	entry, err := logical.StorageEntryJSON(providerPath+name, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +263,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 
 // pathOIDCListProvider is used to list named providers
 func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	providers, err := req.Storage.List(ctx, namedProviderPath)
+	providers, err := req.Storage.List(ctx, providerPath)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +274,7 @@ func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.R
 func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedProviderPath+name)
+	entry, err := req.Storage.Get(ctx, providerPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +282,7 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 		return nil, nil
 	}
 
-	var storedNameProvider namedProvider
+	var storedNameProvider provider
 	if err := entry.DecodeJSON(&storedNameProvider); err != nil {
 		return nil, err
 	}
@@ -299,13 +298,13 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 // pathOIDCDeleteProvider is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	return nil, req.Storage.Delete(ctx, namedProviderPath+name)
+	return nil, req.Storage.Delete(ctx, providerPath+name)
 }
 
 func (i *IdentityStore) pathOIDCProviderExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, namedProviderPath+name)
+	entry, err := req.Storage.Get(ctx, providerPath+name)
 	if err != nil {
 		return false, err
 	}

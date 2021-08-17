@@ -1666,6 +1666,14 @@
   {
     "divider": true
   },
+
+  {
+    "title": "Glossary",
+    "path": "glossary"
+  },
+  {
+    "divider": true
+  },
   {
     "title": "Vault Enterprise",
     "routes": [

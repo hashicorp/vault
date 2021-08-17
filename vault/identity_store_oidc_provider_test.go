@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// TestOIDC_Path_OIDCProviderAssignment tests CRUD operations for assignments
-func TestOIDC_Path_OIDCProviderAssignment(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderAssignment tests CRUD operations for assignments
+func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -83,8 +83,8 @@ func TestOIDC_Path_OIDCProviderAssignment(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDCProviderAssignment_Update tests Update operations for assignments
-func TestOIDC_Path_OIDCProviderAssignment_Update(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderAssignment_Update tests Update operations for assignments
+func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -143,8 +143,8 @@ func TestOIDC_Path_OIDCProviderAssignment_Update(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderAssignmentList tests the List operation for assignments
-func TestOIDC_Path_OIDC_ProviderAssignmentList(t *testing.T) {
+// TestOIDC_Path_OIDC_ProviderAssignment_List tests the List operation for assignments
+func TestOIDC_Path_OIDC_ProviderAssignment_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -336,7 +336,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 }
 
 // TestOIDC_Path_OIDC_ProviderList tests the List operation for providers
-func TestOIDC_Path_OIDC_ProviderList(t *testing.T) {
+func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
