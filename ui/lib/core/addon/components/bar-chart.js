@@ -15,15 +15,18 @@ import Component from '@glimmer/component';
 import layout from '../templates/components/bar-chart';
 import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { select } from 'd3-selection';
-import { scaleLinear } from 'd3-scale';
+import { scaleLinear, scaleBand } from 'd3-scale';
 import { max } from 'd3-array';
-import { stack as d3Layout } from 'd3-shape';
+import { stack } from 'd3-shape';
+import { axisLeft } from 'd3-axis';
 
-const BAR_HEIGHT = 6; // bar height in pixels;
-const BAR_SPACING = 20; // bar spacing in pixel
+const BAR_THICKNESS = 6; // bar thickness in pixels;
+const BAR_SPACING = 20; // spacing between bars in pixels
+const CHART_MARGIN = { top: 0, right: 24, bottom: 26, left: 137 };
+
 class BarChart extends Component {
+  // make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
   dataset = [
     { label: 'top-namespace', count: 1512, unique: 300 },
     { label: 'namespace2', count: 1300, unique: 250 },
@@ -40,49 +43,41 @@ class BarChart extends Component {
   @action
   renderBarChart(element) {
     let dataset = this.dataset;
-    let stack = d3Layout().keys(['count', 'unique']);
-
-    let stackedData = stack(dataset);
-    console.log(stackedData, 'stackedData');
+    let stackFunction = stack().keys(['count', 'unique']);
+    let stackedData = stackFunction(dataset);
 
     let xScale = scaleLinear()
-      .domain([0, max(this.dataset, d => d.count + d.unique)]) // min and max values of dataset
-      .range([0, 100]); // range is from 0-100%
+      .domain([0, max(dataset, d => d.count + d.unique)]) // min and max values of dataset
+      .range([0, 100]); // range is 0-100%
+
+    let yScale = scaleBand()
+      .domain(dataset.map(d => d.label))
+      .range([0, 193]);
+
+    let yAxis = axisLeft(yScale);
 
     let svg = select(element);
-
     let colors = ['#BFD4FF', '#8AB1FF'];
-    // Add a group for each row of data
+    // add a group for each row of data
     let groups = svg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
-      .style('fill', function(d, i) {
-        return colors[i];
-      });
-    // Add a rect for each data value
+      .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
+      .style('fill', (d, i) => colors[i]);
+
+    yAxis(groups.append('g'));
+    // add a rect for each data value
     let rects = groups
       .selectAll('rect')
-      .data(function(d) {
-        return d;
-      })
+      .data(d => d)
       .enter()
       .append('rect')
-      .attr('width', dataValue => `${xScale(dataValue[1] - dataValue[0])}%`)
-      .attr('x', dataValue => `${xScale(dataValue[0])}%`)
-      .attr('height', BAR_HEIGHT)
+      .attr('width', value => `${xScale(value[1] - value[0])}%`)
+      .attr('height', BAR_THICKNESS)
+      .attr('x', value => `${xScale(value[0])}%`)
       .attr('y', (label, index) => index * BAR_SPACING);
-
-    // svg
-    //   .selectAll('rect')
-    //   .data(this.dataset)
-    //   .enter()
-    //   .append('rect')
-    //   .attr('width', label => `${xScale(label.count)}%`)
-    //   .attr('height', BAR_HEIGHT)
-    //   .attr('y', (label, index) => index * BAR_SPACING)
-    //   .attr('fill', '#BFD4FF');
   }
 }
 
