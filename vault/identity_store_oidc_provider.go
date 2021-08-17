@@ -126,9 +126,9 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	var assignment namedAssignment
+	var assignment assignment
 	if req.Operation == logical.UpdateOperation {
-		entry, err := req.Storage.Get(ctx, namedAssignmentPath+name)
+		entry, err := req.Storage.Get(ctx, assignmentPath+name)
 		if err != nil {
 			return nil, err
 		}
