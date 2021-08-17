@@ -213,7 +213,13 @@ func verifySignature(p7 *PKCS7, signer signerInfo, truststore *x509.CertPool) (e
 	if err != nil {
 		return err
 	}
-	return ee.CheckSignature(sigalg, signedData, signer.EncryptedDigest)
+
+	switch sigalg {
+	case x509.DSAWithSHA1, x509.DSAWithSHA256:
+		return dsaCheckSignature(sigalg, signedData, signer.EncryptedDigest, ee.PublicKey)
+	default:
+		return ee.CheckSignature(sigalg, signedData, signer.EncryptedDigest)
+	}
 }
 
 // GetOnlySigner returns an x509.Certificate for the first signer of the signed
