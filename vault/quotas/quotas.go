@@ -765,7 +765,7 @@ func (m *Manager) Invalidate(key string) {
 	default:
 		splitKeys := strings.Split(key, "/")
 		if len(splitKeys) != 2 {
-			m.logger.Error(fmt.Sprintf("incorrect key while invalidating quota rule. Key is %v", key))
+			m.logger.Error("incorrect key while invalidating quota rule", "key", key)
 			return
 		}
 		qType := splitKeys[0]
