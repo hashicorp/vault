@@ -115,7 +115,7 @@ func (c *Logical) List(path string) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
