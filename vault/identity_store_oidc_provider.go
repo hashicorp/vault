@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -175,6 +176,36 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all configured OIDC providers in the identity backend.",
 		},
 	}
+}
+
+// providersReferencingTargetScopeName returns a list of provider names referencing targetScopeName.
+// Not threadsafe. To be called with lock already held.
+func (i *IdentityStore) providersReferencingTargetScopeName(ctx context.Context, req *logical.Request, targetScopeName string) ([]string, error) {
+	providerNames, err := req.Storage.List(ctx, providerPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempProvider provider
+	var providers []string
+	for _, providerName := range providerNames {
+		entry, err := req.Storage.Get(ctx, providerPath+providerName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempProvider); err != nil {
+				return nil, err
+			}
+			for _, a := range tempProvider.Scopes {
+				if a == targetScopeName {
+					providers = append(providers, providerName)
+				}
+			}
+		}
+	}
+
+	return providers, nil
 }
 
 // pathOIDCCreateUpdateAssignment is used to create a new assignment or update an existing one
@@ -384,6 +415,19 @@ func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Re
 	err := req.Storage.Delete(ctx, scopePath+name)
 	if err != nil {
 		return nil, err
+	}
+
+	targetScopeName := d.Get("name").(string)
+
+	providerNames, err := i.providersReferencingTargetScopeName(ctx, req, targetScopeName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(providerNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete scope %q because it is currently referenced by these providers: %s",
+			targetScopeName, strings.Join(providerNames, ", "))
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 	return nil, nil
 }
