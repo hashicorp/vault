@@ -45,7 +45,7 @@ export default Model.extend(KeyMixin, Validations, {
     defaultValue: false,
     label: 'Require Check and Set',
     subText:
-      'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter',
+      'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter.',
   }),
   deleteVersionAfter: attr({
     defaultValue: 0,
@@ -62,5 +62,8 @@ export default Model.extend(KeyMixin, Validations, {
 
   canListMetadata: alias('secretMetadataPath.canList'),
   canReadMetadata: alias('secretMetadataPath.canRead'),
-  canUpdateMetadata: alias('secretMetadataPath.canUpdate'),
+  canUpdateMetadata: alias('secretMetadataPath.canUpdate'), // ARG this work in edit-metadata, but not in secret-edit???
+
+  canUpdateMetadataRoot: belongsTo('secret-engine'),
+  canListMetadataMeep: alias('secretMetadataPath.canUpdate'),
 });
