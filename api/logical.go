@@ -81,7 +81,7 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
@@ -159,7 +159,7 @@ func (c *Logical) write(path string, request *Request) (*Secret, error) {
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -206,7 +206,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 		case io.EOF:
 			return nil, nil
 		default:
-			return nil, err
+			return nil, parseErr
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -259,7 +259,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	case io.EOF:
 		return nil, nil
 	default:
-		return nil, err
+		return nil, parseErr
 	}
 	if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 		return secret, nil
