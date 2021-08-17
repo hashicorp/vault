@@ -53,6 +53,42 @@ func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
 
+// TestOIDC_Path_OIDC_ProviderClient_AssignmentDoesNotExist tests that a client
+// cannot be created with assignments that do not exist
+func TestOIDC_Path_OIDC_ProviderClient_AssignmentDoesNotExist(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":         "test-key",
+			"assignments": "my-assignment",
+		},
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"cannot find assignment \"my-assignment\"": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
 // TestOIDC_Path_OIDC_ProviderClient tests CRUD operations for clients
 func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

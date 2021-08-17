@@ -503,6 +503,17 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.Assignments = d.Get("assignments").([]string)
 	}
 
+	// enforce assignment existence
+	for _, assignment := range client.Assignments {
+		entry, err := req.Storage.Get(ctx, assignmentPath+assignment)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			return logical.ErrorResponse("cannot find assignment %q", assignment), nil
+		}
+	}
+
 	if keyRaw, ok := d.GetOk("key"); ok {
 		client.Key = keyRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
