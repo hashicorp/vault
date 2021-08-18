@@ -348,8 +348,7 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 
 	// Verify extracts the authenticated attributes in the PKCS#7 signature, and verifies
 	// the authenticity of the content using 'dsa.PublicKey' embedded in the public certificate.
-	err = pkcs7Data.Verify()
-	if err != nil {
+	if err := pkcs7Data.Verify(); err != nil {
 		return nil, fmt.Errorf("failed to verify the signature: %w", err)
 	}
 
