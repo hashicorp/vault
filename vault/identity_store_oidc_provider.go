@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
@@ -30,6 +31,10 @@ type client struct {
 	Key            string   `json:"key"`
 	IDTokenTTL     int      `json:"id_token_ttl"`
 	AccessTokenTTL int      `json:"access_token_ttl"`
+
+	// used for OIDC endpoints
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 const (
@@ -432,7 +437,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 			String: scope.Template,
 			Entity: new(logical.Entity),
 			Groups: make([]*logical.Group, 0),
-			// namespace?
 		})
 		if err != nil {
 			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
@@ -586,6 +590,32 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.AccessTokenTTL = accessTokenTTLRaw.(int)
 	} else if req.Operation == logical.CreateOperation {
 		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
+	}
+
+	if clientID, ok := d.GetOk("client_id"); ok {
+		client.ClientID = clientID.(string)
+	}
+
+	if client.ClientID == "" {
+		// generate client_id
+		clientID, err := base62.Random(32)
+		if err != nil {
+			return nil, err
+		}
+		client.ClientID = clientID
+	}
+
+	if clientSecret, ok := d.GetOk("client_secret"); ok {
+		client.ClientSecret = clientSecret.(string)
+	}
+
+	if client.ClientSecret == "" {
+		// generate client_secret
+		clientSecret, err := base62.Random(64)
+		if err != nil {
+			return nil, err
+		}
+		client.ClientSecret = clientSecret
 	}
 
 	// store client
