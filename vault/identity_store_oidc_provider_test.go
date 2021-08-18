@@ -135,6 +135,14 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		t.Fatal(diff)
 	}
 
+	// Create a test assignment "my-assignment" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/my-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
 	// Update "test-client" -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
@@ -204,8 +212,16 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		Storage: storage,
 	})
 
-	// Create a test client "test-client" -- should succeed
+	// Create a test assignment "my-assignment" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/my-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test client "test-client" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
