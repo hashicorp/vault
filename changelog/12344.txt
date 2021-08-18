@@ -1,0 +1,3 @@
+```release-note:improvement
+Improved rendering of the api-docs/secret/databases/ documentation pages
+```

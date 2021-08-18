@@ -111,17 +111,17 @@ list the plugin does not support that statement type.
 - `creation_statements` `(string: <required>)` – Specifies the database
   statements executed to create and configure a user. Must be a
   serialized JSON object, or a base64-encoded serialized JSON object.
-  The object can optionally contain a "db" string for session connection,
-  and must contain a "roles" array. This array contains objects that holds
-  a "role", and an optional "db" value, and is similar to the BSON document that
+  The object can optionally contain a `db` string for session connection,
+  and must contain a `roles` array. This array contains objects that holds
+  a `role`, and an optional `db` value, and is similar to the BSON document that
   is accepted by MongoDB's `roles` field. Vault will transform this array into
   such format. For more information regarding the `roles` field, refer to
   [MongoDB's documentation](https://docs.mongodb.com/manual/reference/method/db.createUser/).
 
 - `revocation_statements` `(string: "")` – Specifies the database statements to
   be executed to revoke a user. Must be a serialized JSON object, or a base64-encoded
-  serialized JSON object. The object can optionally contain a "db" string. If no
-  "db" value is provided, it defaults to the "admin" database.
+  serialized JSON object. The object can optionally contain a `db` string. If no
+  `db` value is provided, it defaults to the `admin` database.
 
 ### Sample Creation Statement
 
