@@ -5,31 +5,32 @@
  * ```js
  * <SecretEditMetadata
  * @model={{model}}
- * @validationMessages={{validationMessages}}
  * @mode={{mode}}
+ * @updateValidationErrorCount={{updateValidationErrorCount}}
  * />
  * ```
  *
  * @param {object} model - name of the current cluster, passed from the parent.
- * @param {object} [validationMessages] - Object that contains form validation errors. keys are the field names and values are the messages.
- * @param {Function} mode - if the mode is create, show, edit.
+ * @param {string} mode - if the mode is create, show, edit.
+ * @param {Function} updateValidationErrorCount - function on parent that handle disabling the save button.
  */
 
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { set } from '@ember/object';
-import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 export default class SecretEditMetadata extends Component {
   @service router;
   @service store;
 
-  @tracked validationMesssages;
+  @tracked validationErrorCount = 0;
 
   constructor() {
     super(...arguments);
     this.validationMessages = {
       customMetadata: '',
+      maxVersions: '',
     };
   }
 
@@ -54,16 +55,34 @@ export default class SecretEditMetadata extends Component {
     // ARG TODO else validation error?
   }
   @action onKeyUp(name, value) {
+    console.log(name, value, 'here');
     if (value) {
-      // // ARG TODO for now set this to hardcoded.
-      // this.model.set('customMetadata', { key: 'meep', value: value });
-      // cp validations won't work on an object so performing validations here
-      let regex = /^[^\/]+$/g; // looking for a forward slash
-      if (!value.match(regex)) {
-        set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');
-      } else {
-        set(this.validationMessages, name, '');
+      if (name === 'customMetadata') {
+        // // ARG TODO for now set this to hardcoded.
+        // this.model.set('customMetadata', { key: 'meep', value: value });
+        // cp validations won't work on an object so performing validations here
+        let regex = /^[^\/]+$/g; // looking for a forward slash
+        if (!value.match(regex)) {
+          set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');
+        } else {
+          set(this.validationMessages, name, '');
+        }
+      }
+      if (name === 'maxVersions') {
+        let number = Number(value);
+        this.args.model.maxVersions = number;
+        if (!this.args.model.validations.attrs.maxVersions.isValid) {
+          set(this.validationMessages, name, this.args.model.validations.attrs.maxVersions.message);
+        } else {
+          set(this.validationMessages, name, '');
+        }
       }
     }
+
+    let values = Object.values(this.validationMessages);
+    this.validationErrorCount = values.filter(Boolean).length;
+    // when it's update this work, but on create we need to bubble up the count
+    // so it disables the save in the secret-creat-or-update form
+    this.args.updateValidationErrorCount(this.validationErrorCount);
   }
 }

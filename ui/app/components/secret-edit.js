@@ -65,8 +65,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     }
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
-
     this.set('codemirrorString', data.toJSONString());
+
     if (data.isAdvanced()) {
       this.set('preferAdvancedEdit', true);
     }
