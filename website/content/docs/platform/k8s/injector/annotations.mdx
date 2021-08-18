@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `hashicorp/vault:1.8.0`.
+  not needed. Defaults to `hashicorp/vault:1.8.1`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -71,6 +71,12 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-file-SECRET-NAME`. For example, if a secret annotation
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
+
+- `vault.hashicorp.com/agent-inject-perms` - configures the permissions of the
+  file to create in the secrets volume. The name of the secret is the string
+  after "vault.hashicorp.com/agent-inject-perms-", and should map to the same
+  unique value provided in "vault.hashicorp.com/agent-inject-secret-". The value
+  is the octal permission, for example: `0644`.
 
 - `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the
   custom template to use. This should be used with `vault.hashicorp.com/extra-secret`,
