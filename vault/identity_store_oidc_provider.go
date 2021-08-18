@@ -667,6 +667,8 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 			"key":              client.Key,
 			"id_token_ttl":     client.IDTokenTTL,
 			"access_token_ttl": client.AccessTokenTTL,
+			"client_id":        client.ClientID,
+			"client_secret":    client.ClientSecret,
 		},
 	}, nil
 }

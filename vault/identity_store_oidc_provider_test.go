@@ -187,6 +187,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -228,6 +230,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -305,6 +309,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -334,6 +340,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"key":              "test-key",
 		"id_token_ttl":     0,
 		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
