@@ -326,8 +326,6 @@ github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5m
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
-github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f h1:AwZUiMWfYSmIiHdFJIubTSs8BFIFoMmUFbeuwBzHIPs=
-github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f/go.mod h1:v+YaWX3bdea5J/mo8dSETolEo7R71Vk1u8bnjau5yw4=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
@@ -570,8 +568,6 @@ github.com/hashicorp/consul/sdk v0.4.1-0.20200910203702-bb2b5dd871ca/go.mod h1:f
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
-github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible h1:EDTAuh27kAIhxuyK8ef3iHQARA+8NQaXyTeDEiG3Q6o=
-github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible/go.mod h1:+IrDq36jUYG0q6TsDY9uO2p77C8f8S5y+RbYHr2UI+U=
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-cleanhttp v0.5.1/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-cleanhttp v0.5.2 h1:035FKYIWjmULyFRBKPs8TBQoi0x6d9G4xc9neXJWAZQ=
@@ -709,8 +705,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.9.0/go.mod h1:exPUMj8yNohKM7yRiHa7O
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-gcp v0.10.0 h1:EBvgbyiPXqmmEQqIwkorLLEjvv4GPl6DQ1LdE0zJkh0=
 github.com/hashicorp/vault-plugin-auth-gcp v0.10.0/go.mod h1:Z+mj9fAqzXfDNxLmMoSS8NheVK7ugLvD8sTHO1GXfCA=
-github.com/hashicorp/vault-plugin-auth-jwt v0.10.0 h1:9jzAxMnhTA0xsDE3p7IzUoa9O54ijwDfV/J1D7FpB2U=
-github.com/hashicorp/vault-plugin-auth-jwt v0.10.0/go.mod h1:3KxfehLIM7zH19+O8jHJ/QJsLGRzSKRqjsesOJmBuoI=
+github.com/hashicorp/vault-plugin-auth-jwt v0.10.1 h1:7hvGSiICXpmp7Ras5glxVVxTDg2dZL+l/jWeBQ6bzr0=
+github.com/hashicorp/vault-plugin-auth-jwt v0.10.1/go.mod h1:3KxfehLIM7zH19+O8jHJ/QJsLGRzSKRqjsesOJmBuoI=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0 h1:7M7/DbFsUoOMBd2/R48ZNj4PM3Gdsg0dGcbMOdt5z1Q=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0/go.mod h1:h+7pLm4Z2EeKHOGPefX0bGzdUQCMBUlvM/BpSMNgTFw=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1 h1:7c2ufXt5oXSUISNHpO07W956fpgn00nT1IQFPEP5XQE=

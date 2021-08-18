@@ -28,6 +28,9 @@ _testmain.go
 /bin/
 /pkg/
 
+# Generated Web UI goes here
+/http/web_ui/**
+
 # Vault-specific
 example.hcl
 example.vault.d
@@ -73,7 +76,6 @@ dist/*
 ui/dist
 ui/tmp
 ui/root
-http/bindata_assetfs.go
 
 # dependencies
 ui/node_modules
