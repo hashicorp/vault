@@ -191,8 +191,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 
 // clientsReferencingTargetAssignmentName returns a map of client names to
 // clients referencing targetAssignmentName.
-//
-// Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) clientsReferencingTargetAssignmentName(ctx context.Context, req *logical.Request, targetAssignmentName string) (map[string]client, error) {
 	clientNames, err := req.Storage.List(ctx, clientPath)
 	if err != nil {
@@ -223,10 +221,52 @@ func (i *IdentityStore) clientsReferencingTargetAssignmentName(ctx context.Conte
 
 // clientNamesReferencingTargetAssignmentName returns a slice of strings of client
 // names referencing targetAssignmentName.
-//
-// Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) clientNamesReferencingTargetAssignmentName(ctx context.Context, req *logical.Request, targetAssignmentName string) ([]string, error) {
 	clients, err := i.clientsReferencingTargetAssignmentName(ctx, req, targetAssignmentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for client, _ := range clients {
+		names = append(names, client)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// clientsReferencingTargetKeyName returns a map of client names to
+// clients referencing targetKeyName.
+func (i *IdentityStore) clientsReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]client, error) {
+	clientNames, err := req.Storage.List(ctx, clientPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempClient client
+	clients := make(map[string]client)
+	for _, clientName := range clientNames {
+		entry, err := req.Storage.Get(ctx, clientPath+clientName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempClient); err != nil {
+				return nil, err
+			}
+			if tempClient.Key == targetKeyName {
+				clients[clientName] = tempClient
+			}
+		}
+	}
+
+	return clients, nil
+}
+
+// clientNamesReferencingTargetKeyName returns a slice of strings of client
+// names referencing targetKeyName.
+func (i *IdentityStore) clientNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
+	clients, err := i.clientsReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
 		return nil, err
 	}

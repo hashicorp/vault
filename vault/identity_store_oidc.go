@@ -647,6 +647,18 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 
+	clientNames, err := i.clientNamesReferencingTargetKeyName(ctx, req, targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(clientNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these clients: %s",
+			targetKeyName, strings.Join(clientNames, ", "))
+		i.oidcLock.Unlock()
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
 	// key can safely be deleted now
 	err = req.Storage.Delete(ctx, namedKeyConfigPath+targetKeyName)
 	if err != nil {
