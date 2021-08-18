@@ -8,6 +8,27 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestOIDC_Path_OIDC_ProviderScope_ReservedName tests that the reserved name
+// "openid" cannot be used when creating a scope
+func TestOIDC_Path_OIDC_ProviderScope_ReservedName(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/openid",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"the \"openid\" scope name is reserved": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
 // TestOIDC_Path_OIDC_ProviderScope tests CRUD operations for scopes
 func TestOIDC_Path_OIDC_ProviderScope(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
