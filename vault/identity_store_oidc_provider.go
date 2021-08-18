@@ -94,7 +94,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				},
 				"template": {
 					Type:        framework.TypeString,
-					Description: "The template string for the scope",
+					Description: "The template string to use for the scope. This may be in string-ified JSON or base64 format.",
 				},
 				"description": {
 					Type:        framework.TypeString,
@@ -351,6 +351,9 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 // pathOIDCCreateUpdateScope is used to create a new scope or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	if name == "openid" {
+		return logical.ErrorResponse("the \"openid\" scope name is reserved"), nil
+	}
 
 	var scope scope
 	if req.Operation == logical.UpdateOperation {
