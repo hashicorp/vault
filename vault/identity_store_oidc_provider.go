@@ -562,6 +562,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	}
 
 	if keyRaw, ok := d.GetOk("key"); ok {
+		key := keyRaw.(string)
+		if req.Operation == logical.UpdateOperation && client.Key != key {
+			return logical.ErrorResponse("key modification is not allowed"), nil
+		}
 		client.Key = keyRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
 		client.Key = d.Get("key").(string)
