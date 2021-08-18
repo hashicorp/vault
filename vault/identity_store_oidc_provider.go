@@ -220,6 +220,9 @@ func (i *IdentityStore) pathOIDCAssignmentExistenceCheck(ctx context.Context, re
 // pathOIDCCreateUpdateScope is used to create a new scope or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	if name == "openid" {
+		return logical.ErrorResponse("the \"openid\" scope name is reserved"), nil
+	}
 
 	var scope scope
 	if req.Operation == logical.UpdateOperation {
