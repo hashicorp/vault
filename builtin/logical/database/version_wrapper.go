@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -16,17 +17,29 @@ import (
 )
 
 type databaseVersionWrapper struct {
+	passwordGenerator passwordGenerator
+
 	v4 v4.Database
 	v5 v5.Database
 }
 
+type system interface {
+	pluginutil.LookRunnerUtil
+	passwordGenerator
+}
+
+type passwordGenerator interface {
+	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
+}
+
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin.
-func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
+func newDatabaseWrapper(ctx context.Context, pluginName string, sys system, logger log.Logger) (dbw databaseVersionWrapper, err error) {
 	newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
-			v5: newDB,
+			passwordGenerator: sys,
+			v5:                newDB,
 		}
 		return dbw, nil
 	}
@@ -37,6 +50,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 	legacyDB, err := v4.PluginFactory(ctx, pluginName, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
+			// passwordGenerator isn't needed for v4
 			v4: legacyDB,
 		}
 		return dbw, nil
@@ -74,35 +88,85 @@ func (d databaseVersionWrapper) Initialize(ctx context.Context, req v5.Initializ
 // does not have a way of returning the password so this function signature needs to be different.
 // The password returned here should be considered the source of truth, not the provided password.
 // Errors if the wrapper does not contain an underlying database.
-func (d databaseVersionWrapper) NewUser(ctx context.Context, req v5.NewUserRequest) (resp v5.NewUserResponse, password string, err error) {
+func (d databaseVersionWrapper) NewUser(ctx context.Context, dbConfig *DatabaseConfig, role *roleEntry, roleName string, dispName string, expiration time.Time) (respData map[string]interface{}, internalData map[string]interface{}, err error) {
 	if !d.isV5() && !d.isV4() {
-		return v5.NewUserResponse{}, "", fmt.Errorf("no underlying database specified")
+		return nil, nil, fmt.Errorf("no underlying database specified")
 	}
 
-	// v5 Database
 	if d.isV5() {
-		resp, err = d.v5.NewUser(ctx, req)
-		return resp, req.Password, err
+		return d.newUserV5(ctx, dbConfig, role, roleName, dispName, expiration)
 	}
 
-	// v4 Database
-	stmts := v4.Statements{
-		Creation: req.Statements.Commands,
-		Rollback: req.RollbackStatements.Commands,
+	return d.newUserV4(ctx, role, roleName, dispName, expiration)
+}
+
+func (d databaseVersionWrapper) newUserV5(ctx context.Context, dbConfig *DatabaseConfig, role *roleEntry, roleName string, dispName string, expiration time.Time) (respData map[string]interface{}, internalData map[string]interface{}, err error) {
+	password, err := d.GeneratePassword(ctx, d.passwordGenerator, dbConfig.PasswordPolicy)
+
+	newUserReq := v5.NewUserRequest{
+		UsernameConfig: v5.UsernameMetadata{
+			DisplayName: dispName,
+			RoleName:    roleName,
+		},
+		Statements: v5.Statements{
+			Commands: role.Statements.Creation,
+		},
+		RollbackStatements: v5.Statements{
+			Commands: role.Statements.Rollback,
+		},
+		Expiration: expiration,
+		Password:   password,
 	}
-	usernameConfig := v4.UsernameConfig{
-		DisplayName: req.UsernameConfig.DisplayName,
-		RoleName:    req.UsernameConfig.RoleName,
-	}
-	username, password, err := d.v4.CreateUser(ctx, stmts, usernameConfig, req.Expiration)
+
+	newUserResp, err := d.v5.NewUser(ctx, newUserReq)
 	if err != nil {
-		return resp, "", err
+		return nil, nil, err
 	}
 
-	resp = v5.NewUserResponse{
-		Username: username,
+	respData = getNewUserResponseData(newUserReq, newUserResp)
+	internalData = map[string]interface{}{
+		"username":              newUserResp.Username,
+		"role":                  roleName,
+		"db_name":               role.DBName,
+		"revocation_statements": role.Statements.Revocation,
 	}
-	return resp, password, nil
+
+	return respData, internalData, nil
+}
+
+func getNewUserResponseData(req v5.NewUserRequest, resp v5.NewUserResponse) map[string]interface{} {
+	respData := map[string]interface{}{
+		"username": resp.Username,
+	}
+
+	if req.Password != "" {
+		respData["password"] = req.Password
+	}
+
+	return respData
+}
+
+func (d databaseVersionWrapper) newUserV4(ctx context.Context, role *roleEntry, roleName string, dispName string, expiration time.Time) (respData map[string]interface{}, internalData map[string]interface{}, err error) {
+	usernameConfig := v4.UsernameConfig{
+		DisplayName: dispName,
+		RoleName:    roleName,
+	}
+	username, password, err := d.v4.CreateUser(ctx, role.Statements, usernameConfig, expiration)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	respData = map[string]interface{}{
+		"username": username,
+		"password": password,
+	}
+	internalData = map[string]interface{}{
+		"username":              username,
+		"role":                  roleName,
+		"db_name":               role.DBName,
+		"revocation_statements": role.Statements.Revocation,
+	}
+	return respData, internalData, nil
 }
 
 // UpdateUser in the underlying database. This is used to update any information currently supported
@@ -232,10 +296,6 @@ func (d databaseVersionWrapper) Close() error {
 // /////////////////////////////////////////////////////////////////////////////////
 // Password generation
 // /////////////////////////////////////////////////////////////////////////////////
-
-type passwordGenerator interface {
-	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
-}
 
 var defaultPasswordGenerator = random.DefaultStringGenerator
 

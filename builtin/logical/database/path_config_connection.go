@@ -7,11 +7,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 var (
@@ -19,18 +19,17 @@ var (
 	respErrEmptyName       = "empty name attribute given"
 )
 
-// DatabaseConfig is used by the Factory function to configure a Database
-// object.
+// DatabaseConfig is used by the Factory function to configure a Database object
 type DatabaseConfig struct {
-	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
-	// ConnectionDetails stores the database specific connection settings needed
-	// by each database type.
-	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
+	PluginName string `json:"plugin_name" mapstructure:"plugin_name"`
 
-	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" structs:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
+	// ConnectionDetails stores the database specific connection settings needed by each database type
+	ConnectionDetails map[string]interface{} `json:"connection_details" mapstructure:"connection_details,remain"`
+	AllowedRoles      []string               `json:"allowed_roles"      mapstructure:"allowed_roles"`
 
-	PasswordPolicy string `json:"password_policy" structs:"password_policy" mapstructure:"password_policy"`
+	RootCredentialsRotateStatements []string `json:"root_credentials_rotate_statements" mapstructure:"root_credentials_rotate_statements"`
+
+	PasswordPolicy string `json:"password_policy" mapstructure:"password_policy"`
 }
 
 // pathResetConnection configures a path to reset a plugin.
@@ -208,9 +207,16 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
 
-		return &logical.Response{
-			Data: structs.New(config).Map(),
-		}, nil
+		respData := map[string]interface{}{}
+		err = mapstructure.WeakDecode(config, &respData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode response data: %w", err)
+		}
+
+		resp := &logical.Response{
+			Data: respData,
+		}
+		return resp, nil
 	}
 }
 
@@ -240,6 +246,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		verifyConnection := data.Get("verify_connection").(bool)
+		delete(data.Raw, "verify_connection") // So it doesn't go into the connection_details field
 
 		name := data.Get("name").(string)
 		if name == "" {
@@ -259,57 +266,19 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			}
 		}
 
-		if pluginNameRaw, ok := data.GetOk("plugin_name"); ok {
-			config.PluginName = pluginNameRaw.(string)
-		} else if req.Operation == logical.CreateOperation {
-			config.PluginName = data.Get("plugin_name").(string)
-		}
-		if config.PluginName == "" {
-			return logical.ErrorResponse(respErrEmptyPluginName), nil
-		}
+		// Make sure the data is parsed into the correct type (slices, integers, etc.)
+		// This will not convert the data that goes into ConnectionDetails since those
+		// fields are not in the schema
+		parseData(data)
 
-		if allowedRolesRaw, ok := data.GetOk("allowed_roles"); ok {
-			config.AllowedRoles = allowedRolesRaw.([]string)
-		} else if req.Operation == logical.CreateOperation {
-			config.AllowedRoles = data.Get("allowed_roles").([]string)
+		err = mapstructure.WeakDecode(data.Raw, config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode request: %w", err)
 		}
-
-		if rootRotationStatementsRaw, ok := data.GetOk("root_rotation_statements"); ok {
-			config.RootCredentialsRotateStatements = rootRotationStatementsRaw.([]string)
-		} else if req.Operation == logical.CreateOperation {
-			config.RootCredentialsRotateStatements = data.Get("root_rotation_statements").([]string)
-		}
-
-		if passwordPolicyRaw, ok := data.GetOk("password_policy"); ok {
-			config.PasswordPolicy = passwordPolicyRaw.(string)
-		}
-
-		// Remove these entries from the data before we store it keyed under
-		// ConnectionDetails.
-		delete(data.Raw, "name")
-		delete(data.Raw, "plugin_name")
-		delete(data.Raw, "allowed_roles")
-		delete(data.Raw, "verify_connection")
-		delete(data.Raw, "root_rotation_statements")
-		delete(data.Raw, "password_policy")
 
 		id, err := uuid.GenerateUUID()
 		if err != nil {
 			return nil, err
-		}
-
-		// If this is an update, take any new values, overwrite what was there
-		// before, and pass that in as the "new" set of values to the plugin,
-		// then save what results
-		if req.Operation == logical.CreateOperation {
-			config.ConnectionDetails = data.Raw
-		} else {
-			if config.ConnectionDetails == nil {
-				config.ConnectionDetails = make(map[string]interface{})
-			}
-			for k, v := range data.Raw {
-				config.ConnectionDetails[k] = v
-			}
 		}
 
 		// Create a database plugin and initialize it.
@@ -366,6 +335,15 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		return resp, nil
+	}
+}
+
+func parseData(data *framework.FieldData) {
+	for k := range data.Schema {
+		newV, ok := data.GetOk(k)
+		if ok {
+			data.Raw[k] = newV
+		}
 	}
 }
 

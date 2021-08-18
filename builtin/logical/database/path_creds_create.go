@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -90,45 +89,14 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
-		if err != nil {
-			b.CloseIfShutdown(dbi, err)
-			return nil, fmt.Errorf("unable to generate password: %w", err)
-		}
-
-		newUserReq := v5.NewUserRequest{
-			UsernameConfig: v5.UsernameMetadata{
-				DisplayName: req.DisplayName,
-				RoleName:    name,
-			},
-			Statements: v5.Statements{
-				Commands: role.Statements.Creation,
-			},
-			RollbackStatements: v5.Statements{
-				Commands: role.Statements.Rollback,
-			},
-			Password:   password,
-			Expiration: expiration,
-		}
-
 		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
-		newUserResp, password, err := dbi.database.NewUser(ctx, newUserReq)
+		respData, internalData, err := dbi.database.NewUser(ctx, dbConfig, role, name, req.DisplayName, expiration)
 		if err != nil {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
 
-		respData := map[string]interface{}{
-			"username": newUserResp.Username,
-			"password": password,
-		}
-		internal := map[string]interface{}{
-			"username":              newUserResp.Username,
-			"role":                  name,
-			"db_name":               role.DBName,
-			"revocation_statements": role.Statements.Revocation,
-		}
-		resp := b.Secret(SecretCredsType).Response(respData, internal)
+		resp := b.Secret(SecretCredsType).Response(respData, internalData)
 		resp.Secret.TTL = role.DefaultTTL
 		resp.Secret.MaxTTL = role.MaxTTL
 		return resp, nil

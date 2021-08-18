@@ -205,7 +205,7 @@ func TestBackend_config_connection(t *testing.T) {
 				"someotherdata":  "testing",
 			},
 			"allowed_roles":                      []string{"*"},
-			"root_credentials_rotate_statements": []string{},
+			"root_credentials_rotate_statements": []string(nil),
 			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
@@ -258,7 +258,7 @@ func TestBackend_config_connection(t *testing.T) {
 				"someotherdata":  "testing",
 			},
 			"allowed_roles":                      []string{"*"},
-			"root_credentials_rotate_statements": []string{},
+			"root_credentials_rotate_statements": []string(nil),
 			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation
@@ -300,7 +300,7 @@ func TestBackend_config_connection(t *testing.T) {
 				"someotherdata":  "testing",
 			},
 			"allowed_roles":                      []string{"flu", "barre"},
-			"root_credentials_rotate_statements": []string{},
+			"root_credentials_rotate_statements": []string(nil),
 			"password_policy":                    "",
 		}
 		configReq.Operation = logical.ReadOperation

@@ -12,6 +12,7 @@ import (
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -349,60 +350,93 @@ func TestGeneratePassword_no_policy(t *testing.T) {
 func TestNewUser_missingDB(t *testing.T) {
 	dbw := databaseVersionWrapper{}
 
-	req := v5.NewUserRequest{}
-	resp, pass, err := dbw.NewUser(context.Background(), req)
-	if err == nil {
-		t.Fatalf("err expected, got nil")
-	}
-
-	expectedResp := v5.NewUserResponse{}
-	if !reflect.DeepEqual(resp, expectedResp) {
-		t.Fatalf("Actual resp: %#v\nExpected resp: %#v", resp, expectedResp)
-	}
-
-	if pass != "" {
-		t.Fatalf("Password should be empty but was: %s", pass)
-	}
+	respData, internalData, err := dbw.NewUser(context.Background(),
+		&DatabaseConfig{},
+		&roleEntry{},
+		"test-role",
+		"test-disp-name",
+		time.Now())
+	require.Error(t, err)
+	require.Nil(t, respData, internalData)
 }
 
 func TestNewUser_newDB(t *testing.T) {
 	type testCase struct {
-		req v5.NewUserRequest
+		dbConfig   *DatabaseConfig
+		role       *roleEntry
+		roleName   string
+		dispName   string
+		expiration time.Time
 
-		newUserResp  v5.NewUserResponse
-		newUserErr   error
-		newUserCalls int
+		generatedPassword string
+		newUserResp       v5.NewUserResponse
+		newUserErr        error
+		newUserCalls      int
 
-		expectedResp v5.NewUserResponse
-		expectErr    bool
+		expectedRespData     map[string]interface{}
+		expectedInternalData map[string]interface{}
+		expectErr            bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: v5.NewUserRequest{
-				Password: "new_password",
+			dbConfig: &DatabaseConfig{
+				PasswordPolicy: "test-policy",
 			},
+			role: &roleEntry{
+				DBName: "test-db",
+				Statements: v4.Statements{
+					Creation:   []string{"create {{username}}"},
+					Rollback:   []string{"rollback {{username}}"},
+					Revocation: []string{"revoke {{username}}"},
+				},
+			},
+			roleName:   "test-role",
+			dispName:   "test-token",
+			expiration: time.Now().Add(1 * time.Minute),
 
+			generatedPassword: "areallysecurepassword",
 			newUserResp: v5.NewUserResponse{
 				Username: "newuser",
 			},
+			newUserErr:   nil,
 			newUserCalls: 1,
 
-			expectedResp: v5.NewUserResponse{
-				Username: "newuser",
+			expectedRespData: map[string]interface{}{
+				"username": "newuser",
+				"password": "areallysecurepassword",
+			},
+			expectedInternalData: map[string]interface{}{
+				"username":              "newuser",
+				"role":                  "test-role",
+				"db_name":               "test-db",
+				"revocation_statements": []string{"revoke {{username}}"},
 			},
 			expectErr: false,
 		},
-		"error": {
-			req: v5.NewUserRequest{
-				Password: "new_password",
+		"new user error": {
+			dbConfig: &DatabaseConfig{
+				PasswordPolicy: "test-policy",
 			},
+			role: &roleEntry{
+				DBName: "test-db",
+				Statements: v4.Statements{
+					Creation:   []string{"create {{username}}"},
+					Rollback:   []string{"rollback {{username}}"},
+					Revocation: []string{"revoke {{username}}"},
+				},
+			},
+			roleName:   "test-role",
+			dispName:   "test-token",
+			expiration: time.Now().Add(1 * time.Minute),
 
-			newUserErr:   fmt.Errorf("test error"),
-			newUserCalls: 1,
+			generatedPassword: "areallysecurepassword",
+			newUserErr:        fmt.Errorf("test error"),
+			newUserCalls:      1,
 
-			expectedResp: v5.NewUserResponse{},
-			expectErr:    true,
+			expectedRespData:     nil,
+			expectedInternalData: nil,
+			expectErr:            true,
 		},
 	}
 
@@ -414,10 +448,14 @@ func TestNewUser_newDB(t *testing.T) {
 			defer newDB.AssertNumberOfCalls(t, "NewUser", test.newUserCalls)
 
 			dbw := databaseVersionWrapper{
+				passwordGenerator: fakePasswordGenerator{
+					password: test.generatedPassword,
+					err:      nil,
+				},
 				v5: newDB,
 			}
 
-			resp, password, err := dbw.NewUser(context.Background(), test.req)
+			respData, internalData, err := dbw.NewUser(context.Background(), test.dbConfig, test.role, test.roleName, test.dispName, test.expiration)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -425,57 +463,85 @@ func TestNewUser_newDB(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			if !reflect.DeepEqual(resp, test.expectedResp) {
-				t.Fatalf("Actual resp: %#v\nExpected resp: %#v", resp, test.expectedResp)
-			}
-
-			if password != test.req.Password {
-				t.Fatalf("Actual password: %s Expected password: %s", password, test.req.Password)
-			}
+			require.Equal(t, test.expectedRespData, respData)
+			require.Equal(t, test.expectedInternalData, internalData)
 		})
 	}
 }
 
 func TestNewUser_legacyDB(t *testing.T) {
 	type testCase struct {
-		req v5.NewUserRequest
+		dbConfig   *DatabaseConfig
+		role       *roleEntry
+		roleName   string
+		dispName   string
+		expiration time.Time
 
 		createUserUsername string
 		createUserPassword string
 		createUserErr      error
 		createUserCalls    int
 
-		expectedResp     v5.NewUserResponse
-		expectedPassword string
-		expectErr        bool
+		expectedRespData     map[string]interface{}
+		expectedInternalData map[string]interface{}
+		expectErr            bool
 	}
 
 	tests := map[string]testCase{
 		"success": {
-			req: v5.NewUserRequest{
-				Password: "new_password",
+			dbConfig: &DatabaseConfig{
+				PasswordPolicy: "test-policy",
 			},
+			role: &roleEntry{
+				DBName: "test-db",
+				Statements: v4.Statements{
+					Creation:   []string{"create {{username}}"},
+					Rollback:   []string{"rollback {{username}}"},
+					Revocation: []string{"revoke {{username}}"},
+				},
+			},
+			roleName:   "test-role",
+			dispName:   "test-token",
+			expiration: time.Now().Add(1 * time.Minute),
 
 			createUserUsername: "newuser",
 			createUserPassword: "securepassword",
 			createUserCalls:    1,
 
-			expectedResp: v5.NewUserResponse{
-				Username: "newuser",
+			expectedRespData: map[string]interface{}{
+				"username": "newuser",
+				"password": "securepassword",
 			},
-			expectedPassword: "securepassword",
-			expectErr:        false,
+			expectedInternalData: map[string]interface{}{
+				"username":              "newuser",
+				"role":                  "test-role",
+				"db_name":               "test-db",
+				"revocation_statements": []string{"revoke {{username}}"},
+			},
+			expectErr: false,
 		},
 		"error": {
-			req: v5.NewUserRequest{
-				Password: "new_password",
+			dbConfig: &DatabaseConfig{
+				PasswordPolicy: "test-policy",
 			},
+			role: &roleEntry{
+				DBName: "test-db",
+				Statements: v4.Statements{
+					Creation:   []string{"create {{username}}"},
+					Rollback:   []string{"rollback {{username}}"},
+					Revocation: []string{"revoke {{username}}"},
+				},
+			},
+			roleName:   "test-role",
+			dispName:   "test-token",
+			expiration: time.Now().Add(1 * time.Minute),
 
 			createUserErr:   fmt.Errorf("test error"),
 			createUserCalls: 1,
 
-			expectedResp: v5.NewUserResponse{},
-			expectErr:    true,
+			expectedRespData:     nil,
+			expectedInternalData: nil,
+			expectErr:            true,
 		},
 	}
 
@@ -490,7 +556,7 @@ func TestNewUser_legacyDB(t *testing.T) {
 				v4: legacyDB,
 			}
 
-			resp, password, err := dbw.NewUser(context.Background(), test.req)
+			respData, internalData, err := dbw.NewUser(context.Background(), test.dbConfig, test.role, test.roleName, test.dispName, test.expiration)
 			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
 			}
@@ -498,13 +564,8 @@ func TestNewUser_legacyDB(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			if !reflect.DeepEqual(resp, test.expectedResp) {
-				t.Fatalf("Actual resp: %#v\nExpected resp: %#v", resp, test.expectedResp)
-			}
-
-			if password != test.expectedPassword {
-				t.Fatalf("Actual password: %s Expected password: %s", password, test.req.Password)
-			}
+			require.Equal(t, test.expectedRespData, respData)
+			require.Equal(t, test.expectedInternalData, internalData)
 		})
 	}
 }
