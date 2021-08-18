@@ -481,6 +481,17 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
 
+	// enforce scope existence on provider creation
+	for _, scope := range provider.Scopes {
+		entry, err := req.Storage.Get(ctx, scopePath+scope)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			return logical.ErrorResponse("cannot find scope %s", scope), nil
+		}
+	}
+
 	// store named provider
 	entry, err := logical.StorageEntryJSON(providerPath+name, provider)
 	if err != nil {
