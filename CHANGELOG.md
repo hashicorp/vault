@@ -61,6 +61,11 @@ FEATURES:
 * **MySQL Database UI**: The UI now supports adding and editing MySQL connections in the database secret engine [[GH-11532](https://github.com/hashicorp/vault/pull/11532)]
 * **Vault Diagnose**: A new `vault operator` command to detect common issues with vault server setups.
 
+SECURITY:
+
+* storage/raft: When initializing Vault’s Integrated Storage backend, excessively broad filesystem permissions may be set for the underlying Bolt database used by Vault’s Raft implementation. This vulnerability, CVE-2021-38553, was fixed in Vault 1.8.0.
+* ui: The Vault UI erroneously cached and exposed user-viewed secrets between authenticated sessions in a single shared browser, if the browser window / tab was not refreshed or closed between logout and a subsequent login. This vulnerability, CVE-2021-38554, was fixed in Vault 1.8.0 and will be addressed in pending 1.7.4 / 1.6.6 releases.
+
 IMPROVEMENTS:
 
 * agent/template: Added static_secret_render_interval to specify how often to fetch non-leased secrets [[GH-11934](https://github.com/hashicorp/vault/pull/11934)]

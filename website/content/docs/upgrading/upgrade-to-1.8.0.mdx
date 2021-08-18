@@ -38,3 +38,6 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
 ## Known Issues
 
 - Vault Enterprise binaries for `arm64` architectures will crash immediately when using production-ready storage backends.  This issue is addressed in Vault 1.8.1.
+- AWS Auth using the [EC2 method](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method)
+  fails with the error `failed to verify the signature`. This effects 1.8.0 and 1.8.1 and there
+  is not a workaround. The issue will be fixed in a future Vault minor release.
