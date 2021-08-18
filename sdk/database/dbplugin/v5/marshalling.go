@@ -19,6 +19,7 @@ func mapToStruct(m map[string]interface{}) (*structpb.Struct, error) {
 
 			m[k] = nf
 		}
+		// TODO: May need support for slices that aren't []interface{}
 	}
 
 	return structpb.NewStruct(m)

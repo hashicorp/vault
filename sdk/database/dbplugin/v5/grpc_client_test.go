@@ -515,7 +515,7 @@ func assertErrEquals(expectedErr error) errorAssertion {
 	}
 }
 
-var _ proto.DatabaseClient = fakeClient{}
+var _ proto.DatabaseClient = (*fakeClient)(nil)
 
 type fakeClient struct {
 	initResp *proto.InitializeResponse
@@ -532,6 +532,9 @@ type fakeClient struct {
 
 	typeResp *proto.TypeResponse
 	typeErr  error
+
+	supportedFeaturesResp *proto.SupportedFeaturesResponse
+	supportedFeaturesErr  error
 
 	closeErr error
 }
@@ -558,4 +561,8 @@ func (f fakeClient) Type(context.Context, *proto.Empty, ...grpc.CallOption) (*pr
 
 func (f fakeClient) Close(context.Context, *proto.Empty, ...grpc.CallOption) (*proto.Empty, error) {
 	return &proto.Empty{}, f.typeErr
+}
+
+func (f fakeClient) SupportedFeatures(ctx context.Context, in *proto.Empty, opts ...grpc.CallOption) (*proto.SupportedFeaturesResponse, error) {
+	return f.supportedFeaturesResp, f.supportedFeaturesErr
 }

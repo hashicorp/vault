@@ -2,6 +2,7 @@ package dbplugin
 
 import (
 	"context"
+	"crypto/rsa"
 	"time"
 )
 
@@ -31,6 +32,14 @@ type Database interface {
 	// Close attempts to close the underlying database connection that was
 	// established by the backend.
 	Close() error
+}
+
+// FeatureSupporter returns a list of features the plugin supports. This is an optional interface that Database
+// plugins may implement. If not implemented, the database engine will assume the plugin supports Password
+// authentication and no other supported features.
+type FeatureSupporter interface {
+	Database
+	SupportedFeatures() (*SupportedFeatures, error)
 }
 
 // ///////////////////////////////////////////////////////////////////////////
@@ -90,11 +99,14 @@ type NewUserRequest struct {
 	// if the new user creation process fails.
 	RollbackStatements Statements
 
-	// Password credentials to use when creating the user
-	Password string
-
 	// Expiration of the user. Not all database plugins will support this.
 	Expiration time.Time
+
+	// Password credentials to use when creating the user. Mutually exclusive with RSAKey
+	Password string
+
+	// RSAKey credentials to use when creating the user. Mutually exclusive with Password
+	RSAKey *rsa.PrivateKey
 }
 
 // UsernameMetadata is metadata the database plugin can use to generate a username
@@ -175,4 +187,28 @@ type Statements struct {
 	// Commands is an ordered list of commands to execute in the database.
 	// These commands may include templated fields such as {{username}} and {{password}}
 	Commands []string
+}
+
+// ///////////////////////////////////////////////////////
+// SupportedFeatures() optional function
+// ///////////////////////////////////////////////////////
+
+// SupportedFeatures that this plugin will accept
+type SupportedFeatures struct {
+	Credentials *SupportedCredentials
+}
+
+// SupportedCredentials the plugin supports
+type SupportedCredentials struct {
+	Passwords *PasswordCredential
+	RSAKeys   *RSAKeyCredential
+}
+
+type PasswordCredential struct {
+	// Intentionally empty. This may have future fields in it, but for now just the existence of this struct is needed
+}
+
+type RSAKeyCredential struct {
+	MinLength int
+	MaxLength int
 }

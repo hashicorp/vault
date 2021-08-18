@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ proto.DatabaseServer = gRPCServer{}
+var _ proto.DatabaseServer = (*gRPCServer)(nil)
 
 type gRPCServer struct {
 	impl Database
@@ -158,7 +158,7 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 	return &proto.DeleteUserResponse{}, nil
 }
 
-func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
+func (g gRPCServer) Type(_ context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
 	t, err := g.impl.Type()
 	if err != nil {
 		return &proto.TypeResponse{}, status.Errorf(codes.Internal, "unable to retrieve type: %s", err)
@@ -170,12 +170,63 @@ func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeRespon
 	return resp, nil
 }
 
-func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
+func (g gRPCServer) Close(_ context.Context, _ *proto.Empty) (*proto.Empty, error) {
 	err := g.impl.Close()
 	if err != nil {
 		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
 	}
 	return &proto.Empty{}, nil
+}
+
+var (
+	defaultSupportedFeatures = &proto.SupportedFeaturesResponse{
+		Credentials: &proto.SupportedCredentials{
+			Passwords: &proto.PasswordCredential{}, // Supports passwords only
+		},
+	}
+)
+
+func (g gRPCServer) SupportedFeatures(_ context.Context, _ *proto.Empty) (*proto.SupportedFeaturesResponse, error) {
+	featureSupporter, ok := g.impl.(FeatureSupporter)
+	if !ok {
+		return defaultSupportedFeatures, nil
+	}
+	supportedFeatures := featureSupporter.SupportedFeatures()
+	resp := &proto.SupportedFeaturesResponse{
+		Credentials: supportedCredentialsToProto(supportedFeatures.Credentials),
+	}
+	return resp, nil
+}
+
+func supportedCredentialsToProto(credentials *SupportedCredentials) *proto.SupportedCredentials {
+	if credentials == nil {
+		return nil
+	}
+
+	protoCreds := &proto.SupportedCredentials{
+		Passwords: passwordCredentialToProto(credentials.Passwords),
+		RSAKeys:   rsaKeysToProto(credentials.RSAKeys),
+	}
+	return protoCreds
+}
+
+func passwordCredentialToProto(passCreds *PasswordCredential) *proto.PasswordCredential {
+	if passCreds == nil {
+		return nil
+	}
+	return &proto.PasswordCredential{}
+}
+
+func rsaKeysToProto(keyCreds *RSAKeyCredential) *proto.RSAKeyCredential {
+	if keyCreds == nil {
+		return nil
+	}
+
+	protoCreds := &proto.RSAKeyCredential{
+		MinimumSize: int32(keyCreds.MinLength),
+		MaximumSize: int32(keyCreds.MaxLength),
+	}
+	return protoCreds
 }
 
 func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {

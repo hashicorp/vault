@@ -23,10 +23,12 @@ message InitializeResponse {
 
 message NewUserRequest {
     UsernameConfig username_config = 1;
-    string password = 2;
     google.protobuf.Timestamp expiration = 3;
     Statements statements = 4;
     Statements rollback_statements = 5;
+
+    string password = 2;
+    bytes rsa_key = 6;
 }
 
 message UsernameConfig {
@@ -43,12 +45,20 @@ message NewUserResponse {
 /////////////////
 message UpdateUserRequest {
     string username = 1;
+
     ChangePassword password = 2;
+    ChangeRSAKey key = 4;
+
     ChangeExpiration expiration = 3;
 }
 
 message ChangePassword {
     string new_password = 1;
+    Statements statements = 2;
+}
+
+message ChangeRSAKey {
+    bytes new_private_key = 1;
     Statements statements = 2;
 }
 
@@ -76,9 +86,38 @@ message TypeResponse {
     string Type = 1;
 }
 
-/////////////////
+////////////////////////
+// SupportedFeatures()
+////////////////////////
+message SupportedFeaturesResponse {
+    // Credentials this plugin will accept and process
+    SupportedCredentials Credentials = 1;
+}
+
+message SupportedCredentials {
+    // Passwords are supported by this plugin
+    PasswordCredential Passwords = 1;
+
+    // RSAKeys are supported by this plugin
+    RSAKeyCredential RSAKeys = 2;
+}
+
+message PasswordCredential {
+    // Intentionally empty - existence of this object within SupportedCredentials indicates support for passwords
+    // This isn't a boolean in the event that additional configuration is needed in the future
+}
+
+message RSAKeyCredential {
+    // MinimumSize the key is allowed to be. Inclusive.
+    int32 MinimumSize = 1;
+
+    // MaximumSize the key is allowed to be. Inclusive.
+    int32 MaximumSize = 2;
+}
+
+////////////////////
 // General purpose
-/////////////////
+////////////////////
 message Statements {
     repeated string Commands = 1;
 }
@@ -92,4 +131,7 @@ service Database {
     rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
     rpc Type(Empty) returns (TypeResponse);
     rpc Close(Empty) returns (Empty);
+
+    // Optional function to list what features this plugin supports
+    rpc SupportedFeatures(Empty) returns (SupportedFeaturesResponse);
 }
