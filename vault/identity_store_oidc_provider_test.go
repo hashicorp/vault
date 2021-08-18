@@ -216,6 +216,62 @@ func TestOIDC_Path_OIDC_ProviderScope_List(t *testing.T) {
 	expectStrings(t, respListScopeAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
+// TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider tests that a
+// Scope cannot be deleted when it is referenced by a provider
+func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template": `{
+				"groups": {{identity.entity.groups.names}}
+			}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Delete test-scope -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"unable to delete scope \"test-scope\" because it is currently referenced by these providers: test-provider": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-scope" again and validate
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if resp != nil {
+		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderAssignment tests CRUD operations for assignments
 func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -408,8 +464,25 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	// Create a test provider "test-provider" -- should succeed
+	// Create a test provider "test-provider" with non-existing scope
+	// Should fail
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope"},
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"cannot find scope test-scope": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Create a test provider "test-provider" with no scopes -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
@@ -431,6 +504,20 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template": `{
+				"groups": {{identity.entity.groups.names}}
+			}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
 
 	// Update "test-provider" -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -494,7 +581,6 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 		Data: map[string]interface{}{
 			"issuer":             "test-issuer",
 			"allowed_client_ids": []string{"test-client-id"},
-			"scopes":             []string{"test-scope"},
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -509,7 +595,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":             "test-issuer",
 		"allowed_client_ids": []string{"test-client-id"},
-		"scopes":             []string{"test-scope"},
+		"scopes":             []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -536,7 +622,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	expected = map[string]interface{}{
 		"issuer":             "test-issuer-2",
 		"allowed_client_ids": []string{"test-client-id"},
-		"scopes":             []string{"test-scope"},
+		"scopes":             []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
