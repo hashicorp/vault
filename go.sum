@@ -326,8 +326,6 @@ github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5m
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
-github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f h1:AwZUiMWfYSmIiHdFJIubTSs8BFIFoMmUFbeuwBzHIPs=
-github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f/go.mod h1:v+YaWX3bdea5J/mo8dSETolEo7R71Vk1u8bnjau5yw4=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
@@ -570,8 +568,6 @@ github.com/hashicorp/consul/sdk v0.4.1-0.20200910203702-bb2b5dd871ca/go.mod h1:f
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
-github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible h1:EDTAuh27kAIhxuyK8ef3iHQARA+8NQaXyTeDEiG3Q6o=
-github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible/go.mod h1:+IrDq36jUYG0q6TsDY9uO2p77C8f8S5y+RbYHr2UI+U=
 github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-cleanhttp v0.5.1/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-cleanhttp v0.5.2 h1:035FKYIWjmULyFRBKPs8TBQoi0x6d9G4xc9neXJWAZQ=
@@ -717,8 +713,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1 h1:7c2ufXt5oXSUISNHpO0
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1/go.mod h1:2c/k3nsoGPKV+zpAWCiajt4e66vncEq8Li/eKLqErAc=
 github.com/hashicorp/vault-plugin-auth-oci v0.8.0 h1:qYtVYsQlVnqqlCVqZ+CAiFEXuYJqUQCuqcWQVELybZY=
 github.com/hashicorp/vault-plugin-auth-oci v0.8.0/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
-github.com/hashicorp/vault-plugin-database-couchbase v0.4.1 h1:DSFwDOcmgZ+CSgTh4F5AK7p311QHoT1Jebj/z9PNi6g=
-github.com/hashicorp/vault-plugin-database-couchbase v0.4.1/go.mod h1:Seivjno/BOtkqX41d/DDYtTg6zNoxIgNaUVZ3ObZYi4=
+github.com/hashicorp/vault-plugin-database-couchbase v0.4.0 h1:N5ChjecnC88mRfT9KehoeSK6xEyzGoL6g9HJnSZKgII=
+github.com/hashicorp/vault-plugin-database-couchbase v0.4.0/go.mod h1:Seivjno/BOtkqX41d/DDYtTg6zNoxIgNaUVZ3ObZYi4=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0 h1:c9/fwjJf9XjXSM8WzCKL2fco4jyAudUSM9QIY4hY+5M=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0/go.mod h1:QiQnpM6tI8LqIO+XfI/5AddV7d9cT1DhhOekLV2+AKY=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0 h1:baCsn+MRffmcqkOf3p6Fh0fvw2llXl63Ts4Fl14Vn3A=
