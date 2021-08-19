@@ -362,20 +362,19 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 // pathOIDCDeleteAssignment is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, assignmentPath+name)
 
-	targetAssignmentName := d.Get("name").(string)
-
-	clientNames, err := i.clientNamesReferencingTargetAssignmentName(ctx, req, targetAssignmentName)
+	clientNames, err := i.clientNamesReferencingTargetAssignmentName(ctx, req, name)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(clientNames) > 0 {
 		errorMessage := fmt.Sprintf("unable to delete assignment %q because it is currently referenced by these clients: %s",
-			targetAssignmentName, strings.Join(clientNames, ", "))
+			name, strings.Join(clientNames, ", "))
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
+
+	err = req.Storage.Delete(ctx, assignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -557,7 +556,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 			return nil, err
 		}
 		if entry == nil {
-			return logical.ErrorResponse("cannot find assignment %q", assignment), nil
+			return logical.ErrorResponse("assignment %q does not exist", assignment), nil
 		}
 	}
 
@@ -581,7 +580,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		return nil, err
 	}
 	if entry == nil {
-		return logical.ErrorResponse("cannot find key %q", client.Key), nil
+		return logical.ErrorResponse("key %q does not exist", client.Key), nil
 	}
 
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
@@ -594,10 +593,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.AccessTokenTTL = accessTokenTTLRaw.(int)
 	} else if req.Operation == logical.CreateOperation {
 		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
-	}
-
-	if clientID, ok := d.GetOk("client_id"); ok {
-		client.ClientID = clientID.(string)
 	}
 
 	if client.ClientID == "" {

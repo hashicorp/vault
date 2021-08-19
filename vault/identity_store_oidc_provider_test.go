@@ -48,7 +48,7 @@ func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"cannot find key \"test-key\"": true,
+		"key \"test-key\" does not exist": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
@@ -141,7 +141,7 @@ func TestOIDC_Path_OIDC_ProviderClient_AssignmentDoesNotExist(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"cannot find assignment \"my-assignment\"": true,
+		"assignment \"my-assignment\" does not exist": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
@@ -751,13 +751,18 @@ func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
 	// Read "test-assignment" again and validate
-	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/assignment/test-assignment",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
-	if resp != nil {
-		t.Fatalf("expected nil but got resp: %#v", resp)
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"groups":   []string{},
+		"entities": []string{},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
