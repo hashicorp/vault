@@ -13,7 +13,6 @@
  *  @isV2=true
  *  @secretData={{@secretData}}
  *  @canCreateSecretMetadata=true
- *  @showWriteWithoutReadWarnings=true
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
@@ -24,7 +23,6 @@
  * @param {boolean} isV2 - whether or not KV 1 or KV 2
  * @param {object} secretData - class that is created in secret-edit
  * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If create access.
- * @param {boolean} showWriteWithoutReadWarnings - based on permissions
  */
 
 import Component from '@glimmer/component';

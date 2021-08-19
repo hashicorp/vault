@@ -28,7 +28,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create meep', function(hooks) {
+module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -372,6 +372,7 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
+
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
@@ -586,7 +587,6 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-    assert.ok(editPage.showsNoCASWarning, 'shows no CAS write warning');
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -605,7 +605,6 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-    assert.ok(editPage.showsV2WriteWarning, 'shows v2 warning');
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -623,8 +622,6 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    assert.ok(editPage.showsV1WriteWarning, 'shows v1 warning');
-
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
   });
