@@ -604,10 +604,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.ClientID = clientID
 	}
 
-	if clientSecret, ok := d.GetOk("client_secret"); ok {
-		client.ClientSecret = clientSecret.(string)
-	}
-
 	if client.ClientSecret == "" {
 		// generate client_secret
 		clientSecret, err := base62.Random(64)
