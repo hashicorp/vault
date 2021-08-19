@@ -72,6 +72,15 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
 
+- `vault.hashicorp.com/agent-inject-perms` - configures the file permission of the rendered secret.
+  If this option is left unspecified, Vault Agent will attempt to match the permissions of the file
+  that already exists at the destination path. If no file exists at that path,
+  the permissions are 0644.
+  For example, if a secret annotation
+  `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
+  `vault.hashicorp.com/agent-inject-perms-foobar` would configure the permission for that rendered
+  secret.
+
 - `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the
   custom template to use. This should be used with `vault.hashicorp.com/extra-secret`,
   which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret,
