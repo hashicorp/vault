@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"q"
+
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -20,6 +22,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 )
+
+//adding an alias for partialMonthClientCount
+//open source vault calls partialMonthClientCount
+//enterprise calls entPartialMonthClientCount
+var PartialMonthClientCount = (*ActivityLog).partialMonthClientCount
 
 const (
 	// activitySubPath is the directory under the system view where
@@ -1820,6 +1827,7 @@ func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.Ga
 // partialMonthClientCount returns the number of clients used so far this month.
 // If activity log is not enabled, the response will be nil
 func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]interface{} {
+	q.Q("open source function called")
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
 
@@ -1828,48 +1836,17 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]in
 		return nil
 	}
 
+	entityCount := len(a.activeEntities)
+	var tokenCount int
+	for _, countByNS := range a.currentSegment.tokenCount.CountByNamespaceID {
+		tokenCount += int(countByNS)
+	}
+	clientCount := entityCount + tokenCount
+
 	responseData := make(map[string]interface{})
+	responseData["distinct_entities"] = entityCount
+	responseData["non_entity_tokens"] = tokenCount
+	responseData["clients"] = clientCount
 
-	byNamespace := make([]*ClientCountInNamespace, 0)
-	queryNS, err := namespace.FromContext(ctx)
-	if err != nil {
-		return responseData
-	}
-
-	totalEntities := 0
-	totalTokens := 0
-
-	for nsID, entityCount := range a.entityCountByNamespaceID {
-		ns, err := NamespaceByID(ctx, nsID, a.core)
-		if err != nil {
-			return responseData
-		}
-		if a.includeInResponse(queryNS, ns) {
-			var displayPath string
-			if ns == nil {
-				displayPath = fmt.Sprintf("deleted namespace %q", nsID)
-			} else {
-				displayPath = ns.Path
-			}
-			byNamespace = append(byNamespace, &ClientCountInNamespace{
-				NamespaceID:   nsID,
-				NamespacePath: displayPath,
-				Counts: ClientCountResponse{
-					DistinctEntities: int(entityCount),
-					NonEntityTokens:  int(a.currentSegment.tokenCount.CountByNamespaceID[nsID]),
-					Clients:          int(entityCount + a.currentSegment.tokenCount.CountByNamespaceID[nsID]),
-				},
-			})
-			totalEntities += int(entityCount)
-			totalTokens += int(a.currentSegment.tokenCount.CountByNamespaceID[nsID])
-		}
-	}
-
-	responseData["by_namespace"] = byNamespace
-	responseData["total"] = &ClientCountResponse{
-		DistinctEntities: totalEntities,
-		NonEntityTokens:  totalTokens,
-		Clients:          totalEntities + totalTokens,
-	}
 	return responseData
 }
