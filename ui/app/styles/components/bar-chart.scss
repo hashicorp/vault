@@ -15,7 +15,7 @@
 .bar-chart {
   width: 100%;
   height: 100%;
-  padding: 27px 24px 26px 24px;
+  padding: 17px 24px 26px 24px; // pad here? or modify in js file?
 }
 
 .chart-header {
@@ -32,4 +32,9 @@
   font-size: $size-8;
   font-weight: $font-weight-normal;
   color: $ui-gray-700;
+}
+
+text {
+  font-weight: $font-weight-semibold;
+  font-size: $size-8;
 }
