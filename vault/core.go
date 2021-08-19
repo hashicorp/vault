@@ -2722,7 +2722,7 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
 // If the given request's path is exempt, no rate limiting will be applied.
-func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
+func (c *Core) ApplyRateLimitQuota(ctx context.Context, req *quotas.Request) (quotas.Response, error) {
 	req.Type = quotas.TypeRateLimit
 
 	resp := quotas.Response{
@@ -2736,7 +2736,7 @@ func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error)
 			return resp, nil
 		}
 
-		return c.quotaManager.ApplyQuota(req)
+		return c.quotaManager.ApplyQuota(ctx, req)
 	}
 
 	return resp, nil
