@@ -42,10 +42,8 @@ require (
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.0
-	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
 	github.com/fatih/color v1.11.0
 	github.com/fatih/structs v1.1.0
-	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.2.4
@@ -60,7 +58,6 @@ require (
 	github.com/hashicorp/consul-template v0.26.0
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/go-bindata v3.0.8-0.20180209072458-bf7910af8997+incompatible
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.7.0
@@ -102,7 +99,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.4.1
+	github.com/hashicorp/vault-plugin-database-couchbase v0.4.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.2.0

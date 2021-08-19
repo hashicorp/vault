@@ -20,74 +20,74 @@ LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_CACHE_KEY_FILE := .
 LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_ARCHIVE_FILE   := .buildcache/archives/01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8.tar.gz
 $(eval $(call LAYER,$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_ID),$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_TYPE),$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_BASE_LAYER),$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_SOURCE_INCLUDE),$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_SOURCE_EXCLUDE),$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_CACHE_KEY_FILE),$(LAYER_01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8_ARCHIVE_FILE)))
 
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_ID             := 02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_TYPE           := install-go-tools
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_BASE_LAYER     := 01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_SOURCE_INCLUDE := 
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_SOURCE_EXCLUDE := 
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_CACHE_KEY_FILE := .buildcache/cache-keys/install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec
-LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_ARCHIVE_FILE   := .buildcache/archives/02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec.tar.gz
-$(eval $(call LAYER,$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_ID),$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_TYPE),$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_BASE_LAYER),$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_SOURCE_INCLUDE),$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_SOURCE_EXCLUDE),$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_CACHE_KEY_FILE),$(LAYER_02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec_ARCHIVE_FILE)))
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_ID             := 02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_TYPE           := install-go-tools
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_BASE_LAYER     := 01-install-go-513f2a338cda5459ba6af9c19726ca6a5e5f77d8
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_SOURCE_INCLUDE := 
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_SOURCE_EXCLUDE := 
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_CACHE_KEY_FILE := .buildcache/cache-keys/install-go-tools-1b88204454441cb85c9a985619687fe732397adb
+LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_ARCHIVE_FILE   := .buildcache/archives/02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb.tar.gz
+$(eval $(call LAYER,$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_ID),$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_TYPE),$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_BASE_LAYER),$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_SOURCE_INCLUDE),$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_SOURCE_EXCLUDE),$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_CACHE_KEY_FILE),$(LAYER_02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb_ARCHIVE_FILE)))
 
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_ID             := 03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_TYPE           := set-workdir
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_BASE_LAYER     := 02-install-go-tools-92f8ab040fee3f3939d07b7bd4d4d6626892b8ec
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_SOURCE_INCLUDE := 
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_SOURCE_EXCLUDE := 
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_CACHE_KEY_FILE := .buildcache/cache-keys/set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc
-LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_ARCHIVE_FILE   := .buildcache/archives/03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc.tar.gz
-$(eval $(call LAYER,$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_ID),$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_TYPE),$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_BASE_LAYER),$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_SOURCE_INCLUDE),$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_SOURCE_EXCLUDE),$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_CACHE_KEY_FILE),$(LAYER_03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc_ARCHIVE_FILE)))
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_ID             := 03-set-workdir-eaac312562ef27696f50c506254a113574055476
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_TYPE           := set-workdir
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_BASE_LAYER     := 02-install-go-tools-1b88204454441cb85c9a985619687fe732397adb
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_SOURCE_INCLUDE := 
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_SOURCE_EXCLUDE := 
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_CACHE_KEY_FILE := .buildcache/cache-keys/set-workdir-eaac312562ef27696f50c506254a113574055476
+LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_ARCHIVE_FILE   := .buildcache/archives/03-set-workdir-eaac312562ef27696f50c506254a113574055476.tar.gz
+$(eval $(call LAYER,$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_ID),$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_TYPE),$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_BASE_LAYER),$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_SOURCE_INCLUDE),$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_SOURCE_EXCLUDE),$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_CACHE_KEY_FILE),$(LAYER_03-set-workdir-eaac312562ef27696f50c506254a113574055476_ARCHIVE_FILE)))
 
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_ID             := 04-install-yarn-841661371841438326b045be1fbefa82cef8e90c
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_TYPE           := install-yarn
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_BASE_LAYER     := 03-set-workdir-b283f2d1b935f6393c81b9212febb9d46fe06ddc
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_SOURCE_INCLUDE := 
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_SOURCE_EXCLUDE := 
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_CACHE_KEY_FILE := .buildcache/cache-keys/install-yarn-841661371841438326b045be1fbefa82cef8e90c
-LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_ARCHIVE_FILE   := .buildcache/archives/04-install-yarn-841661371841438326b045be1fbefa82cef8e90c.tar.gz
-$(eval $(call LAYER,$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_ID),$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_TYPE),$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_BASE_LAYER),$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_SOURCE_INCLUDE),$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_SOURCE_EXCLUDE),$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_CACHE_KEY_FILE),$(LAYER_04-install-yarn-841661371841438326b045be1fbefa82cef8e90c_ARCHIVE_FILE)))
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_ID             := 04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_TYPE           := install-yarn
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_BASE_LAYER     := 03-set-workdir-eaac312562ef27696f50c506254a113574055476
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_SOURCE_INCLUDE := 
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_SOURCE_EXCLUDE := 
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_CACHE_KEY_FILE := .buildcache/cache-keys/install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848
+LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_ARCHIVE_FILE   := .buildcache/archives/04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848.tar.gz
+$(eval $(call LAYER,$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_ID),$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_TYPE),$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_BASE_LAYER),$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_SOURCE_INCLUDE),$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_SOURCE_EXCLUDE),$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_CACHE_KEY_FILE),$(LAYER_04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848_ARCHIVE_FILE)))
 
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_ID             := 05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_TYPE           := ui-dependencies
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_BASE_LAYER     := 04-install-yarn-841661371841438326b045be1fbefa82cef8e90c
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_SOURCE_INCLUDE := ui/package.json ui/yarn.lock
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_SOURCE_EXCLUDE := 
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_CACHE_KEY_FILE := .buildcache/cache-keys/ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17
-LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_ARCHIVE_FILE   := .buildcache/archives/05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17.tar.gz
-$(eval $(call LAYER,$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_ID),$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_TYPE),$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_BASE_LAYER),$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_SOURCE_INCLUDE),$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_SOURCE_EXCLUDE),$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_CACHE_KEY_FILE),$(LAYER_05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17_ARCHIVE_FILE)))
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_ID             := 05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_TYPE           := make-ui-folder
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_BASE_LAYER     := 04-install-yarn-3241a17563f3af8379a63c52ae1d99c37cf4a848
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_SOURCE_INCLUDE := 
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_SOURCE_EXCLUDE := 
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_CACHE_KEY_FILE := .buildcache/cache-keys/make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec
+LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_ARCHIVE_FILE   := .buildcache/archives/05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec.tar.gz
+$(eval $(call LAYER,$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_ID),$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_TYPE),$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_BASE_LAYER),$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_SOURCE_INCLUDE),$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_SOURCE_EXCLUDE),$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_CACHE_KEY_FILE),$(LAYER_05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec_ARCHIVE_FILE)))
 
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_ID             := 06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_TYPE           := build-ui
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_BASE_LAYER     := 05-ui-dependencies-1b62521b37dfa9993be3ff98c16705b16a4e0c17
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_SOURCE_INCLUDE := ui/
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_SOURCE_EXCLUDE := 
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_CACHE_KEY_FILE := .buildcache/cache-keys/build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce
-LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_ARCHIVE_FILE   := .buildcache/archives/06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce.tar.gz
-$(eval $(call LAYER,$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_ID),$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_TYPE),$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_BASE_LAYER),$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_SOURCE_INCLUDE),$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_SOURCE_EXCLUDE),$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_CACHE_KEY_FILE),$(LAYER_06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce_ARCHIVE_FILE)))
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_ID             := 06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_TYPE           := ui-dependencies
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_BASE_LAYER     := 05-make-ui-folder-99c91243495b8cb34b913fe204ccd0496b456fec
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_SOURCE_INCLUDE := ui/package.json ui/yarn.lock
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_SOURCE_EXCLUDE := 
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_CACHE_KEY_FILE := .buildcache/cache-keys/ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329
+LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_ARCHIVE_FILE   := .buildcache/archives/06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329.tar.gz
+$(eval $(call LAYER,$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_ID),$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_TYPE),$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_BASE_LAYER),$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_SOURCE_INCLUDE),$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_SOURCE_EXCLUDE),$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_CACHE_KEY_FILE),$(LAYER_06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329_ARCHIVE_FILE)))
 
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_ID             := 07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_TYPE           := build-static-assets
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_BASE_LAYER     := 06-build-ui-26f5264dcd97eb09701528b3a7e55c2b319384ce
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_SOURCE_INCLUDE := Makefile
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_SOURCE_EXCLUDE := 
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_CACHE_KEY_FILE := .buildcache/cache-keys/build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9
-LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_ARCHIVE_FILE   := .buildcache/archives/07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9.tar.gz
-$(eval $(call LAYER,$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_ID),$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_TYPE),$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_BASE_LAYER),$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_SOURCE_INCLUDE),$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_SOURCE_EXCLUDE),$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_CACHE_KEY_FILE),$(LAYER_07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9_ARCHIVE_FILE)))
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_ID             := 07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_TYPE           := build-ui
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_BASE_LAYER     := 06-ui-dependencies-b1fedc1e35d52a00e566f3e794d006ec66941329
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_SOURCE_INCLUDE := ui/
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_SOURCE_EXCLUDE := 
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_CACHE_KEY_FILE := .buildcache/cache-keys/build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd
+LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_ARCHIVE_FILE   := .buildcache/archives/07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd.tar.gz
+$(eval $(call LAYER,$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_ID),$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_TYPE),$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_BASE_LAYER),$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_SOURCE_INCLUDE),$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_SOURCE_EXCLUDE),$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_CACHE_KEY_FILE),$(LAYER_07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd_ARCHIVE_FILE)))
 
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_ID             := 08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_TYPE           := go-modules
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_BASE_LAYER     := 07-build-static-assets-10fc1249063de7bd9a8a6152020abbf7b4f10be9
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_SOURCE_INCLUDE := go.mod go.sum */go.mod */go.sum
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_SOURCE_EXCLUDE := 
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_CACHE_KEY_FILE := .buildcache/cache-keys/go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2
-LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_ARCHIVE_FILE   := .buildcache/archives/08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2.tar.gz
-$(eval $(call LAYER,$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_ID),$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_TYPE),$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_BASE_LAYER),$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_SOURCE_INCLUDE),$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_SOURCE_EXCLUDE),$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_CACHE_KEY_FILE),$(LAYER_08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2_ARCHIVE_FILE)))
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_ID             := 08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_TYPE           := go-modules
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_BASE_LAYER     := 07-build-ui-e24e20704e479126b43d8cd87e20e0bd417035bd
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_SOURCE_INCLUDE := go.mod go.sum */go.mod */go.sum
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_SOURCE_EXCLUDE := 
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_CACHE_KEY_FILE := .buildcache/cache-keys/go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d
+LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_ARCHIVE_FILE   := .buildcache/archives/08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d.tar.gz
+$(eval $(call LAYER,$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_ID),$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_TYPE),$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_BASE_LAYER),$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_SOURCE_INCLUDE),$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_SOURCE_EXCLUDE),$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_CACHE_KEY_FILE),$(LAYER_08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d_ARCHIVE_FILE)))
 
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_ID             := 09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_TYPE           := copy-source
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_BASE_LAYER     := 08-go-modules-b46a16e3e288e060c137a6b575c3d4076b8858d2
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_SOURCE_INCLUDE := *.go
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_SOURCE_EXCLUDE := 
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_CACHE_KEY_FILE := .buildcache/cache-keys/copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b
-LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_ARCHIVE_FILE   := .buildcache/archives/09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b.tar.gz
-$(eval $(call LAYER,$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_ID),$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_TYPE),$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_BASE_LAYER),$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_SOURCE_INCLUDE),$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_SOURCE_EXCLUDE),$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_CACHE_KEY_FILE),$(LAYER_09-copy-source-f49cce6acaba0ad2a431d8b3773a5c9bceff462b_ARCHIVE_FILE)))
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_ID             := 09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_TYPE           := copy-source
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_BASE_LAYER     := 08-go-modules-3ebf5318cd569e7cb74a02a29db01657fd9cb84d
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_SOURCE_INCLUDE := *.go
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_SOURCE_EXCLUDE := 
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_CACHE_KEY_FILE := .buildcache/cache-keys/copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4
+LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_ARCHIVE_FILE   := .buildcache/archives/09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4.tar.gz
+$(eval $(call LAYER,$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_ID),$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_TYPE),$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_BASE_LAYER),$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_SOURCE_INCLUDE),$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_SOURCE_EXCLUDE),$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_CACHE_KEY_FILE),$(LAYER_09-copy-source-b668328bb8abfe59ab7c2fdc87a12851398205d4_ARCHIVE_FILE)))
