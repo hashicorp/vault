@@ -21,9 +21,6 @@ var (
 	defaultRotationConfig = KeyRotationConfig{
 		MaxOperations: absoluteOperationMaximum,
 	}
-	disabledRotationConfig = KeyRotationConfig{
-		Disabled: true,
-	}
 )
 
 // Keyring is used to manage multiple encryption keys used by

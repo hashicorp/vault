@@ -27,16 +27,10 @@ import (
 	uberAtomic "go.uber.org/atomic"
 )
 
-const (
-	replTimeout = 1 * time.Second
-)
-
 var (
 	// DefaultMaxRequestDuration is the amount of time we'll wait for a request
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second
-
-	egpDebugLogging bool
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.

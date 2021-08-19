@@ -5,8 +5,6 @@ import (
 )
 
 const (
-	requestCounterDatePathFormat = "2006/01"
-
 	// This storage path stores both the request counters in this file, and the activity log.
 	countersSubPath = "counters/"
 )

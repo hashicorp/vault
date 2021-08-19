@@ -41,9 +41,6 @@ const (
 
 	// StoredBarrierKeysPath is the path used for storing HSM-encrypted unseal keys
 	StoredBarrierKeysPath = "core/hsm/barrier-unseal-keys"
-
-	// hsmStoredIVPath is the path to the initialization vector for stored keys
-	hsmStoredIVPath = "core/hsm/iv"
 )
 
 const (

@@ -63,7 +63,6 @@ const (
 	systemMountType    = "system"
 	identityMountType  = "identity"
 	cubbyholeMountType = "cubbyhole"
-	pluginMountType    = "plugin"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false

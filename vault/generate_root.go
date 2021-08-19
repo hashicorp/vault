@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/vault/shamir"
 )
 
-const coreDROperationTokenPath = "core/dr-operation-token"
-
 var (
 	// GenerateStandardRootTokenStrategy is the strategy used to generate a
 	// typical root token

@@ -3755,10 +3755,6 @@ lease entries after certain error conditions. Usually running this is not
 necessary, and is only required if upgrade notes or support personnel suggest
 it.
 `
-	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
-Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
-which are enforced on every request. This backend also allows for generating sub-tokens as well
-as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp          = `The token create path is used to create new tokens.`
 	tokenCreateOrphanHelp    = `The token create path is used to create new orphan tokens.`
 	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
@@ -3766,7 +3762,6 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenRenewAccessorHelp   = `This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenLookupHelp          = `This endpoint will lookup a token and its properties.`
-	tokenPathRolesHelp       = `This endpoint allows creating, reading, and deleting roles.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
 	tokenRevokeHelp          = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp      = `This endpoint will delete the token used to call it and all of its child tokens.`
@@ -3781,23 +3776,12 @@ policy names.`
 no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
-	tokenPeriodHelp = `If set, tokens created via this role
-will have no max lifetime; instead, their
-renewal period will be fixed to this value.
-This takes an integer number of seconds,
-or a string duration (e.g. "24h").`
 	tokenPathSuffixHelp = `If set, tokens created via this role
 will contain the given suffix as a part of
 their path. This can be used to assist use
 of the 'revoke-prefix' endpoint later on.
 The given suffix must match the regular
 expression.`
-	tokenExplicitMaxTTLHelp = `If set, tokens created via this role
-carry an explicit maximum TTL. During renewal,
-the current maximum TTL values of the role
-and the mount are not checked for changes,
-and any updates to these values will have
-no effect on the token being renewed.`
 	tokenRenewableHelp = `Tokens created via this role will be
 renewable or not according to this value.
 Defaults to "true".`

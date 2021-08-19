@@ -53,11 +53,6 @@ const (
 
 	// Maximum number of segments per month
 	activityLogMaxSegmentPerMonth = 81
-
-	// Number of records (entity or token) to store in a
-	// standby fragment before sending it to the active node.
-	// Estimates as 8KiB / 64 bytes = 128
-	activityFragmentStandbyCapacity = 128
 )
 
 type segmentInfo struct {

@@ -27,8 +27,7 @@ const (
 	// Storage path where the local cluster name and identifier are stored
 	coreLocalClusterInfoPath = "core/cluster/local/info"
 
-	corePrivateKeyTypeP521    = "p521"
-	corePrivateKeyTypeED25519 = "ed25519"
+	corePrivateKeyTypeP521 = "p521"
 
 	// Internal so as not to log a trace message
 	IntNoForwardingHeaderName = "X-Vault-Internal-No-Request-Forwarding"

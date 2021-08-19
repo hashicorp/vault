@@ -72,16 +72,10 @@ const (
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
 
-	// knownPrimaryAddrsPrefix is used to store last-known cluster address
-	// information for primaries
-	knownPrimaryAddrsPrefix = "core/primary-addrs/"
-
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
 	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
 	coreKeyringCanaryPath = "core/canary-keyring"
-
-	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
 )
 
 var (
@@ -110,7 +104,6 @@ var (
 	enterprisePostUnseal         = enterprisePostUnsealImpl
 	enterprisePreSeal            = enterprisePreSealImpl
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
-	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
 	startReplication             = startReplicationImpl
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
@@ -2191,10 +2184,6 @@ func enterprisePreSealImpl(c *Core) error {
 }
 
 func enterpriseSetupFilteredPathsImpl(c *Core) error {
-	return nil
-}
-
-func enterpriseSetupQuotasImpl(ctx context.Context, c *Core) error {
 	return nil
 }
 

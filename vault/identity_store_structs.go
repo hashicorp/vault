@@ -12,11 +12,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const (
-	// Storage prefixes
-	entityPrefix = "entity/"
-)
-
 // metaKeyFormatRegEx checks if a metadata key string is valid
 var metaKeyFormatRegEx = regexp.MustCompile(`^[a-zA-Z0-9=/+_-]+$`).MatchString
 

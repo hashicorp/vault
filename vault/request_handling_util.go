@@ -26,10 +26,6 @@ func shouldForward(c *Core, resp *logical.Response, err error) bool {
 	return false
 }
 
-func syncCounters(c *Core) error {
-	return nil
-}
-
 func syncBarrierEncryptionCounter(c *Core) error {
 	return nil
 }

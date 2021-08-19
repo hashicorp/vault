@@ -14,8 +14,6 @@ import (
 )
 
 var (
-	invalidateMFAConfig = func(context.Context, *SystemBackend, string) {}
-
 	sysInvalidate = func(b *SystemBackend) func(context.Context, string) {
 		return nil
 	}
