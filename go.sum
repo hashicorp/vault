@@ -472,7 +472,6 @@ github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw
 github.com/golang/snappy v0.0.0-20170215233205-553a64147049/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golang/snappy v0.0.1/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
-github.com/golang/snappy v0.0.2 h1:aeE13tS0IiQgFjYdoL8qN3K1N2bXXtI6Vi51/y7BpMw=
 github.com/golang/snappy v0.0.2/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golang/snappy v0.0.4 h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=
 github.com/golang/snappy v0.0.4/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
@@ -729,8 +728,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0 h1:EhTRXoWCjM3suD1atK9
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0/go.mod h1:SSkKpSTOMnX84PfgYiWHgwVg+YMhxHNjo+YCJGNBoZk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.10.0 h1:pJTWKVHYqfnlB3xg3XnnF9BOpj2/J7LC/e0RgiwkwKI=
 github.com/hashicorp/vault-plugin-secrets-azure v0.10.0/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.10.1 h1:04M7fG2SIyZqIpazX2fLg/wpoprZXMlGAISWVl3o550=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.10.1/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2 h1:+DtlYJTsrFRInQpAo09KkYN64scrextjBiTSunpluo8=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0 h1:7a0iWuFA/YNinQ1xXogyZHStolxMVtLV+sy1LpEHaZs=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0/go.mod h1:hhwps56f2ATeC4Smgghrc5JH9dXR31b4ehSf1HblP5Q=
 github.com/hashicorp/vault-plugin-secrets-kv v0.9.0 h1:nCw2IfWw2bWUGFZsNk8BvTEg9k7jDpRn48+VAqjdQ3s=
