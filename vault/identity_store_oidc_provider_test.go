@@ -567,6 +567,77 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDCProvider_DuplicateTempalteKeys tests that no two
+// scopes have the same top-level keys when creating a provider
+func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope1" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "desc1",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create another test scope "test-scope2" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "desc2",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider" with scopes that have same top-level keys
+	// Should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope1", "test-scope2"},
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"two scopes cannot have the same top-level key; found scopes: test-scope2, test-scope1": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// // Update "test-scope1" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"template": `{"roles": "{{identity.entity.groups.names}}"}`,
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider" with updated scopes
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope1", "test-scope2"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+}
+
 // TestOIDC_Path_OIDCProvider_Update tests Update operations for providers
 func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

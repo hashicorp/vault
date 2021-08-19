@@ -481,14 +481,34 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
 
-	// enforce scope existence on provider creation
-	for _, scope := range provider.Scopes {
-		entry, err := req.Storage.Get(ctx, scopePath+scope)
+	scopeTemplateKeyNames := make(map[string]string)
+	for _, scopeName := range provider.Scopes {
+		entry, err := req.Storage.Get(ctx, scopePath+scopeName)
 		if err != nil {
 			return nil, err
 		}
+		// enforce scope existence on provider creation
 		if entry == nil {
-			return logical.ErrorResponse("cannot find scope %s", scope), nil
+			return logical.ErrorResponse("cannot find scope %s", scopeName), nil
+		}
+
+		// ensure no two templates have the same top-level keys
+		var storedScope scope
+		if err := entry.DecodeJSON(&storedScope); err != nil {
+			return nil, err
+		}
+
+		jsonTemplate := make(map[string]interface{})
+		if err = json.Unmarshal([]byte(storedScope.Template), &jsonTemplate); err != nil {
+			return nil, err
+		}
+
+		for keyName := range jsonTemplate {
+			if _, ok := scopeTemplateKeyNames[keyName]; !ok {
+				scopeTemplateKeyNames[keyName] = scopeName
+			} else if val, ok := scopeTemplateKeyNames[keyName]; ok && val != scopeName {
+				return logical.ErrorResponse("two scopes cannot have the same top-level key; found scopes: %s, %s", scopeName, val), nil
+			}
 		}
 	}
 
