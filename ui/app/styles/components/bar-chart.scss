@@ -16,6 +16,25 @@
   width: 100%;
   height: 100%;
   padding: 17px 24px 26px 24px; // pad here? or modify in js file?
+
+  text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-8;
+  }
+
+  // rect {
+  //   rx: 3;
+  //   ry: 3;
+  // }
+
+  // style here? or in .js file
+  // line {
+  //   visibility: hidden;
+  // }
+
+  // .domain {
+  //   visibility: hidden;
+  // }
 }
 
 .chart-header {
@@ -32,9 +51,4 @@
   font-size: $size-8;
   font-weight: $font-weight-normal;
   color: $ui-gray-700;
-}
-
-text {
-  font-weight: $font-weight-semibold;
-  font-size: $size-8;
 }

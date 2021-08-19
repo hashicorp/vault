@@ -23,7 +23,7 @@ import { axisLeft } from 'd3-axis';
 
 const BAR_THICKNESS = 6; // bar thickness in pixels;
 const BAR_SPACING = 20; // spacing between bars in pixels
-const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 120 };
+const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 };
 const BAR_COLORS = ['#BFD4FF', '#8AB1FF'];
 class BarChart extends Component {
   // make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
@@ -37,18 +37,19 @@ class BarChart extends Component {
     { label: 'namespace', count: 400, unique: 300 },
     { label: 'namespace999', count: 650, unique: 40 },
     { label: 'name-space', count: 600, unique: 20 },
-    { label: 'path/to/namespace', count: 300, unique: 10 },
+    { label: 'path/to/namespace', count: 300, unique: 499 },
   ];
 
   @action
   renderBarChart(element) {
-    let dataset = this.dataset;
+    let dataset = this.dataset.sort((a, b) => a.count + a.unique - (b.count + b.unique)).reverse();
+
     let stackFunction = stack().keys(['count', 'unique']);
     let stackedData = stackFunction(dataset);
 
     let xScale = scaleLinear()
       .domain([0, max(dataset, d => d.count + d.unique)]) // min and max values of dataset
-      .range([0, 75]); // range in percent (25% reserved for margins)
+      .range([0, 70]); // range in percent (30% reserved for margins)
 
     let yScale = scaleBand()
       .domain(dataset.map(d => d.label))
@@ -59,6 +60,7 @@ class BarChart extends Component {
 
     let svg = select(element);
     // add a group for each row of data
+
     let groups = svg
       .selectAll('g')
       .data(stackedData)
@@ -67,19 +69,22 @@ class BarChart extends Component {
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
       .style('fill', (d, i) => BAR_COLORS[i]);
 
+    // yAxis legend
     let yAxis = axisLeft(yScale);
     yAxis(groups.append('g'));
 
-    // add a rect for each data value
     let rects = groups
       .selectAll('rect')
       .data(d => d)
       .enter()
       .append('rect')
-      .attr('width', data => `${xScale(data[1] - data[0])}%`)
+      .attr('width', data => `${xScale(data[1] - data[0] - 10)}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', data => `${xScale(data[0])}%`)
       .attr('y', data => yScale(data.data.label));
+
+    // style here? or in .css file
+    groups.selectAll('.domain, .tick line').remove();
   }
 }
 
