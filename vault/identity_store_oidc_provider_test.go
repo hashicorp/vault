@@ -228,9 +228,7 @@ func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"template": `{
-				"groups": {{identity.entity.groups.names}}
-			}`,
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
 			"description": "my-description",
 		},
 		Storage: storage,
@@ -510,9 +508,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"template": `{
-				"groups": {{identity.entity.groups.names}}
-			}`,
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
 			"description": "my-description",
 		},
 		Storage: storage,
