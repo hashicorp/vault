@@ -143,6 +143,10 @@ type ActivityLog struct {
 
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
+
+	// All known active entity count by namespace ID this month; use fragmentLock read-locked
+	// to check whether it already exists.
+	entityCountByNamespaceID map[string]uint64
 }
 
 // These non-persistent configuration options allow us to disable
@@ -164,17 +168,18 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 	}
 
 	a := &ActivityLog{
-		core:            core,
-		configOverrides: &core.activityLogConfig,
-		logger:          logger,
-		view:            view,
-		metrics:         metrics,
-		nodeID:          hostname,
-		newFragmentCh:   make(chan struct{}, 1),
-		sendCh:          make(chan struct{}, 1), // buffered so it can be triggered by fragment size
-		writeCh:         make(chan struct{}, 1), // same for full segment
-		doneCh:          make(chan struct{}, 1),
-		activeEntities:  make(map[string]struct{}),
+		core:                     core,
+		configOverrides:          &core.activityLogConfig,
+		logger:                   logger,
+		view:                     view,
+		metrics:                  metrics,
+		nodeID:                   hostname,
+		newFragmentCh:            make(chan struct{}, 1),
+		sendCh:                   make(chan struct{}, 1), // buffered so it can be triggered by fragment size
+		writeCh:                  make(chan struct{}, 1), // same for full segment
+		doneCh:                   make(chan struct{}, 1),
+		activeEntities:           make(map[string]struct{}),
+		entityCountByNamespaceID: make(map[string]uint64),
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
 			currentEntities: &activity.EntityActivityLog{
@@ -531,7 +536,14 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	// Or the feature has been disabled.
 	if a.enabled && startTime.Unix() == a.currentSegment.startTimestamp {
 		for _, ent := range out.Entities {
-			a.activeEntities[ent.EntityID] = struct{}{}
+			//check if the entity already exists in the list of activeEntities this month
+			//if entity doesnot exist in active Entities, increment the namespaceID count
+			if _, ok := a.activeEntities[ent.EntityID]; !ok {
+				//do something here
+				a.activeEntities[ent.EntityID] = struct{}{}
+				a.entityCountByNamespaceID[ent.NamespaceID] = a.entityCountByNamespaceID[ent.NamespaceID] + 1
+			}
+
 		}
 	}
 	a.fragmentLock.Unlock()
@@ -571,7 +583,13 @@ func (a *ActivityLog) loadCurrentEntitySegment(ctx context.Context, startTime ti
 	}
 
 	for _, ent := range out.Entities {
-		a.activeEntities[ent.EntityID] = struct{}{}
+		//check if the entity already exists in the list of activeEntities this month
+		//if entity doesnot exist in active Entities, increment the namespaceID count
+		if _, ok := a.activeEntities[ent.EntityID]; !ok {
+			a.activeEntities[ent.EntityID] = struct{}{}
+			a.entityCountByNamespaceID[ent.NamespaceID] = a.entityCountByNamespaceID[ent.NamespaceID] + 1
+		}
+
 	}
 
 	return nil
@@ -684,6 +702,7 @@ func (a *ActivityLog) resetCurrentLog() {
 
 	a.fragment = nil
 	a.activeEntities = make(map[string]struct{})
+	a.entityCountByNamespaceID = make(map[string]uint64)
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
 }
 
@@ -1095,6 +1114,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker() {
 			// clear active entity set
 			a.fragmentLock.Lock()
 			a.activeEntities = make(map[string]struct{})
+			a.entityCountByNamespaceID = make(map[string]uint64)
 			a.fragmentLock.Unlock()
 
 			// Set timer for next month.
@@ -1309,6 +1329,8 @@ func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, t
 			NamespaceID: namespaceID,
 			Timestamp:   timestamp,
 		})
+	//incrementing the entity by namespace id count map
+	a.entityCountByNamespaceID[namespaceID] = a.entityCountByNamespaceID[namespaceID] + 1
 	a.activeEntities[entityID] = struct{}{}
 }
 
@@ -1353,7 +1375,12 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	}
 
 	for _, e := range fragment.Entities {
-		a.activeEntities[e.EntityID] = struct{}{}
+		//check if the entity already exists in the list of activeEntities this month
+		//if entity doesnot exist in active Entities, increment the namespaceID count
+		if _, ok := a.activeEntities[e.EntityID]; !ok {
+			a.activeEntities[e.EntityID] = struct{}{}
+			a.entityCountByNamespaceID[e.NamespaceID] = a.entityCountByNamespaceID[e.NamespaceID] + 1
+		}
 	}
 
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
@@ -1801,17 +1828,48 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]in
 		return nil
 	}
 
-	entityCount := len(a.activeEntities)
-	var tokenCount int
-	for _, countByNS := range a.currentSegment.tokenCount.CountByNamespaceID {
-		tokenCount += int(countByNS)
-	}
-	clientCount := entityCount + tokenCount
-
 	responseData := make(map[string]interface{})
-	responseData["distinct_entities"] = entityCount
-	responseData["non_entity_tokens"] = tokenCount
-	responseData["clients"] = clientCount
 
+	byNamespace := make([]*ClientCountInNamespace, 0)
+	queryNS, err := namespace.FromContext(ctx)
+	if err != nil {
+		return responseData
+	}
+
+	totalEntities := 0
+	totalTokens := 0
+
+	for nsID, entityCount := range a.entityCountByNamespaceID {
+		ns, err := NamespaceByID(ctx, nsID, a.core)
+		if err != nil {
+			return responseData
+		}
+		if a.includeInResponse(queryNS, ns) {
+			var displayPath string
+			if ns == nil {
+				displayPath = fmt.Sprintf("deleted namespace %q", nsID)
+			} else {
+				displayPath = ns.Path
+			}
+			byNamespace = append(byNamespace, &ClientCountInNamespace{
+				NamespaceID:   nsID,
+				NamespacePath: displayPath,
+				Counts: ClientCountResponse{
+					DistinctEntities: int(entityCount),
+					NonEntityTokens:  int(a.currentSegment.tokenCount.CountByNamespaceID[nsID]),
+					Clients:          int(entityCount + a.currentSegment.tokenCount.CountByNamespaceID[nsID]),
+				},
+			})
+			totalEntities += int(entityCount)
+			totalTokens += int(a.currentSegment.tokenCount.CountByNamespaceID[nsID])
+		}
+	}
+
+	responseData["by_namespace"] = byNamespace
+	responseData["total"] = &ClientCountResponse{
+		DistinctEntities: totalEntities,
+		NonEntityTokens:  totalTokens,
+		Clients:          totalEntities + totalTokens,
+	}
 	return responseData
 }
