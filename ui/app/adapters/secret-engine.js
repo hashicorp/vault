@@ -33,7 +33,7 @@ export default ApplicationAdapter.extend({
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
     // for kv2 we make two network requests
-    if (type.modelName === 'secret-engine') {
+    if (data.type === 'kv' && data.options.version !== 1) {
       // data has both data for sys mount and the config, we need to separate them
       let configData = (({ max_versions, delete_version_after, cas_required }) => ({
         max_versions,

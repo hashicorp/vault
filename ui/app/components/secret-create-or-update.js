@@ -4,11 +4,27 @@
  *
  * @example
  * ```js
- * <SecretCreateOrUpdate @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <SecretCreateOrUpdate
+ *  @mode="create"
+ *  @model={{model}}
+ *  @showAdvancedMode=true
+ *  @modelForData={{@modelForData}}
+ *  @error={{@error}}
+ *  @isV2=true
+ *  @secretData={{@secretData}}
+ *  @canCreateSecretMetadata=true
+ *  @showWriteWithoutReadWarnings=true
+ * />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {string} mode - create, edit, show determines what view to display
+ * @param {object} model -  the route model, comes from secret-v2 ember record
+ * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
+ * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
+ * @param {object} error - keep track of errors
+ * @param {boolean} isV2 - whether or not KV 1 or KV 2
+ * @param {object} secretData - class that is created in secret-edit
+ * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If create access.
+ * @param {boolean} showWriteWithoutReadWarnings - based on permissions
  */
 
 import Component from '@glimmer/component';
@@ -27,7 +43,6 @@ import { task, waitForEvent } from 'ember-concurrency';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-// ARG TODO documentation
 export default class SecretCreateOrUpdate extends Component {
   @tracked secretPaths = null;
   @tracked validationErrorCount = 0;
@@ -59,7 +74,7 @@ export default class SecretCreateOrUpdate extends Component {
     this.checkRows();
 
     if (this.args.mode === 'edit') {
-      this.send('addRow');
+      this.addRow();
     }
   }
 
@@ -204,7 +219,7 @@ export default class SecretCreateOrUpdate extends Component {
     }
     data.removeObject(item);
     this.checkRows();
-    this.send('handleChange');
+    this.handleChange();
   }
   @action
   formatJSON() {
@@ -217,7 +232,7 @@ export default class SecretCreateOrUpdate extends Component {
   }
 
   //submit on shift + enter
-  // ARG TODO TEST THIS???
+  // ARG TODO come back and fix this.
   @action
   handleKeyDown(e) {
     e.stopPropagation();

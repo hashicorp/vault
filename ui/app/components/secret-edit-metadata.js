@@ -55,12 +55,12 @@ export default class SecretEditMetadata extends Component {
     // ARG TODO else validation error?
   }
   @action onKeyUp(name, value) {
-    console.log(name, value, 'here');
     if (value) {
       if (name === 'customMetadata') {
-        // // ARG TODO for now set this to hardcoded.
+        // // ARG TODO for now set this to hardcoded. Need to write test coverage for this.
         // this.model.set('customMetadata', { key: 'meep', value: value });
         // cp validations won't work on an object so performing validations here
+        /* eslint-disable no-useless-escape */
         let regex = /^[^\/]+$/g; // looking for a forward slash
         if (!value.match(regex)) {
           set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');

@@ -94,7 +94,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'model.id',
     'mode'
   ),
-  canDeleteSecretData: alias('checkSecretCapabilities.canDelete'),
   canUpdateSecretData: alias('checkSecretCapabilities.canUpdate'),
 
   checkMetadataCapabilities: maybeQueryRecord(

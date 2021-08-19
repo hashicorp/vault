@@ -28,7 +28,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create', function(hooks) {
+module('Acceptance | secrets/secret/create meep', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -43,10 +43,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('it creates a secret and redirects', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
+
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
     await listPage.create();
+    await settled();
+    await editPage.toggleMetadata();
     await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
@@ -76,19 +79,23 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-secret-create="true"]');
     await fillIn('[data-test-secret-path="true"]', secretPath);
-    await fillIn('[data-test-input="maxVersions"]', maxVersions);
-    await click('[data-test-secret-save]');
+    await editPage.toggleMetadata();
     await settled();
-    await click('[data-test-secret-edit="true"]');
+    await fillIn('[data-test-input="maxVersions"]', maxVersions);
+    await settled();
+    await editPage.save();
+    await settled();
+    await editPage.metadataTab();
     await settled();
     // convert to number for IE11 browserstack test
-    let savedMaxVersions = Number(document.querySelector('[data-test-input="maxVersions"]').value);
+    let savedMaxVersions = Number(document.querySelectorAll('[data-test-value-div]')[0].innerText);
     assert.equal(
       maxVersions,
       savedMaxVersions,
       'max_version displays the saved number set when creating the secret'
     );
   });
+  // ARG TOD add test here that adds custom metadata
 
   test('it disables save when validation errors occur', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
@@ -105,8 +112,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
         'when duplicate path it shows correct error message'
       );
 
+    await editPage.toggleMetadata();
+    await settled();
     document.querySelector('#maxVersions').value = 'abc';
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await settled();
     assert
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
@@ -362,7 +372,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
-
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
