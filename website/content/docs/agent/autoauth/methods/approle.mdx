@@ -44,7 +44,7 @@ An example configuration, using approle to enable [auto-auth](/docs/agent/autoau
 pid_file = "./pidfile"
 
 vault {
-        address = "https://127.0.0.1:8200"
+  address = "https://127.0.0.1:8200"
 }
 
 auto_auth {
@@ -58,30 +58,30 @@ auto_auth {
     }
   }
 
-    sink {
-      type = "file"
-      wrap_ttl = "30m"
-      config = {
-        path = "sink_file_wrapped_1.txt"
-      }
+  sink {
+    type = "file"
+    wrap_ttl = "30m"
+    config = {
+      path = "sink_file_wrapped_1.txt"
     }
+  }
 
-    sink {
-      type = "file"
-      config = {
-        path = "sink_file_unwrapped_2.txt"
-      }
+  sink {
+    type = "file"
+    config = {
+      path = "sink_file_unwrapped_2.txt"
     }
+  }
 }
 
 
 cache {
-        use_auto_auth_token = true
+  use_auto_auth_token = true
 }
 
 listener "tcp" {
-         address = "127.0.0.1:8100"
-         tls_disable = true
+  address = "127.0.0.1:8100"
+  tls_disable = true
 }
 
 template {
