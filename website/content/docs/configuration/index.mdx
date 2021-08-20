@@ -136,7 +136,7 @@ to specify where the configuration is.
 
 - `max_lease_ttl` `(string: "768h")` – Specifies the maximum possible lease
   duration for tokens and secrets. This is specified using a label
-  suffix like `"30s"` or `"1h"`.
+  suffix like `"30s"` or `"1h"`. Individual mounts can override this value by tuning the mount with [`max-lease-ttl`](/docs/commands/auth/tune#max-lease-ttl).
 
 - `default_max_request_duration` `(string: "90s")` – Specifies the default
   maximum request duration allowed before Vault cancels the request. This can
