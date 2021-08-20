@@ -150,7 +150,7 @@ $ curl ...
 </Tab>
 </Tabs>
 
-Contined normal markdown content
+Continued normal markdown content
 ````
 
 The intentionally skipped line is a limitation of the mdx parser which is being actively worked on. All tabs must have a heading, and there is no limit to the number of tabs, though it is recommended to go for a maximum of three or four.
