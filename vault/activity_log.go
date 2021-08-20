@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"q"
-
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1861,8 +1859,6 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	responseData["distinct_entities"] = totalEntities
 	responseData["non_entity_tokens"] = totalTokens
 	responseData["clients"] = totalEntities + totalTokens
-
-	q.Q(responseData)
 
 	return responseData, nil
 }
