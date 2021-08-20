@@ -1323,7 +1323,6 @@ func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, t
 			NamespaceID: namespaceID,
 			Timestamp:   timestamp,
 		})
-	//incrementing the entity by namespace id count map
 	a.entityCountByNamespaceID[namespaceID] += 1
 	a.activeEntities[entityID] = struct{}{}
 }
