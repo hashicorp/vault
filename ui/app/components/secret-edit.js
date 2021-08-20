@@ -49,11 +49,9 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   // use a named action here so we don't have to pass one in
   // this will bubble to the route
   toggleAdvancedEdit: 'toggleAdvancedEdit',
-  error: null,
 
   codemirrorString: null,
 
-  hasLintError: false,
   isV2: false,
 
   init() {
@@ -119,7 +117,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
+  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid'),
 
   modelForData: computed('isV2', 'model', function() {
     let { model } = this;

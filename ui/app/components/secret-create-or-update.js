@@ -9,7 +9,6 @@
  *  @model={{model}}
  *  @showAdvancedMode=true
  *  @modelForData={{@modelForData}}
- *  @error={{@error}}
  *  @isV2=true
  *  @secretData={{@secretData}}
  *  @canCreateSecretMetadata=true
@@ -19,7 +18,6 @@
  * @param {object} model -  the route model, comes from secret-v2 ember record
  * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
- * @param {object} error - keep track of errors
  * @param {boolean} isV2 - whether or not KV 1 or KV 2
  * @param {object} secretData - class that is created in secret-edit
  * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If create access.
@@ -42,10 +40,11 @@ const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class SecretCreateOrUpdate extends Component {
+  @tracked codemirrorString = null;
+  @tracked error = null;
   @tracked secretPaths = null;
   @tracked validationErrorCount = 0;
   @tracked validationMessages = null;
-  @tracked codemirrorString = null;
 
   @service controlGroup;
   @service router;
@@ -182,6 +181,7 @@ export default class SecretCreateOrUpdate extends Component {
   }
   @action
   codemirrorUpdated(val, codemirror) {
+    console;
     this.error = null;
     codemirror.performLint();
     const noErrors = codemirror.state.lint.marked.length === 0;
@@ -193,7 +193,6 @@ export default class SecretCreateOrUpdate extends Component {
         this.error = e.message;
       }
     }
-    this.hasLintError = !noErrors;
     this.codemirrorString = val;
   }
   @action
@@ -221,10 +220,12 @@ export default class SecretCreateOrUpdate extends Component {
   }
   @action
   formatJSON() {
+    console.log('formatJson in secret create upate');
     this.codemirrorString = this.args.secretData.toJSONString(true);
   }
   @action
   handleChange() {
+    console.log('handleChange in secret create upate');
     this.codemirrorString = this.args.secretData.toJSONString(true);
     set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
   }
