@@ -1,12 +1,13 @@
-<br><br><br><br>
-<div class="bar-chart-container">
+<div class="bar-chart-div">
   <div class="chart-header">
     <h2 class="chart-title">{{@title}}</h2>
     <p class="chart-description">{{@description}}</p>
   </div>
-  <div class="is-border"></div>
- {{!-- add conditional here to check for data --}}
-  <div > 
+      <div class="is-border"></div>
+  <div class="bar-chart-container">
+  {{!-- add conditional here to check for data --}}
     <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
   </div>
+  <div class="is-border"></div>
+  <svg class="legend"></svg>
 </div>

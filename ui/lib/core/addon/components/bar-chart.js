@@ -28,6 +28,9 @@ const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 };
 const BAR_COLORS = ['#BFD4FF', '#8AB1FF'];
 class BarChart extends Component {
   // make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
+  variableA = 'Active Direct Tokens';
+  variableB = 'Unique Entities';
+
   dataset = [
     { label: 'top-namespace', count: 1212, unique: 300 },
     { label: 'namespace2', count: 650, unique: 550 },
@@ -49,7 +52,7 @@ class BarChart extends Component {
 
     let xScale = scaleLinear()
       .domain([0, max(dataset, d => d.count + d.unique)]) // min and max values of dataset
-      .range([0, 70]); // range in percent (30% reserved for margins)
+      .range([0, 75]); // range in percent (30% reserved for margins)
 
     let yScale = scaleBand()
       .domain(dataset.map(d => d.label))
@@ -78,10 +81,14 @@ class BarChart extends Component {
       .data(d => d)
       .enter()
       .append('rect')
-      .attr('width', data => `${xScale(data[1] - data[0] - 10)}%`)
+      .attr('width', data => `${xScale(data[1] - data[0] - 6)}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', data => `${xScale(data[0])}%`)
-      .attr('y', ({ data }) => yScale(data.label));
+      .attr('y', ({ data }) => yScale(data.label))
+      .attr('rx', 3)
+      .attr('ry', 3);
+
+    svg.attr('height', (dataset.length + 1) * 24);
 
     let totalNumbers = [];
     stackedData[1].forEach(e => {
@@ -120,6 +127,34 @@ class BarChart extends Component {
 
     // style here? or in .css file
     groups.selectAll('.domain, .tick line').remove();
+
+    let legend = select('.legend');
+    legend
+      .append('circle')
+      .attr('cx', '60%')
+      .attr('cy', '20%')
+      .attr('r', 6)
+      .style('fill', '#BFD4FF');
+    legend
+      .append('text')
+      .attr('x', '62%')
+      .attr('y', '20%')
+      .text(`${this.variableA}`)
+      .style('font-size', '15px')
+      .attr('alignment-baseline', 'middle');
+    legend
+      .append('circle')
+      .attr('cx', '83%')
+      .attr('cy', '20%')
+      .attr('r', 6)
+      .style('fill', '#8AB1FF');
+    legend
+      .append('text')
+      .attr('x', '85%')
+      .attr('y', '20%')
+      .text(`${this.variableB}`)
+      .style('font-size', '15px')
+      .attr('alignment-baseline', 'middle');
   }
 }
 
