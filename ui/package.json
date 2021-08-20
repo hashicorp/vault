@@ -164,6 +164,7 @@
     "lint-staged": "^10.5.1"
   },
   "resolutions": {
+    "browserslist": "^4.16.5",
     "cryptiles": "^4.1.2",
     "eslint-utils": "^1.4.1",
     "glob-parent": "5.1.2",
@@ -189,7 +190,8 @@
     "yargs-parser": "^13.1.2",
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
-    "xmlhttprequest-ssl": "^1.6.2"
+    "xmlhttprequest-ssl": "^1.6.2",
+    "y18n": "^4.0.3"
   },
   "engines": {
     "node": "14.*"
