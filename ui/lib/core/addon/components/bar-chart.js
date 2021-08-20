@@ -15,40 +15,57 @@ import Component from '@glimmer/component';
 import layout from '../templates/components/bar-chart';
 import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
-import { select } from 'd3-selection';
+import { select, event } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { max } from 'd3-array';
 import { stack } from 'd3-shape';
 import { axisLeft } from 'd3-axis';
+import { transition } from 'd3-transition';
 import { format } from 'd3-format';
 
-const BAR_THICKNESS = 6; // bar thickness in pixels;
-const BAR_SPACING = 20; // spacing between bars in pixels
 const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 };
 const BAR_COLORS = ['#BFD4FF', '#8AB1FF'];
 class BarChart extends Component {
   // make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
-  variableA = 'Active Direct Tokens';
-  variableB = 'Unique Entities';
+  variableA = 'Active direct tokens';
+  variableB = 'Unique entities';
 
   dataset = [
-    { label: 'top-namespace', count: 1212, unique: 300 },
-    { label: 'namespace2', count: 650, unique: 550 },
-    { label: 'longnamenamespace', count: 200, unique: 1000 },
-    { label: 'anothernamespace', count: 400, unique: 550 },
-    { label: 'namespacesomething', count: 400, unique: 400 },
-    { label: 'namespace5', count: 800, unique: 300 },
-    { label: 'namespace', count: 400, unique: 300 },
-    { label: 'namespace999', count: 350, unique: 250 },
-    { label: 'name-space', count: 450, unique: 200 },
-    { label: 'path/to/namespace', count: 200, unique: 100 },
+    { label: 'top-namespace', count: 1212, unique: 300, total: 1512 },
+    { label: 'namespace2', count: 650, unique: 550, total: 1200 },
+    { label: 'longnamenamespace', count: 200, unique: 1000, total: 1200 },
+    { label: 'anothernamespace', count: 400, unique: 550, total: 1100 },
+    { label: 'namespacesomething', count: 400, unique: 400, total: 950 },
+    { label: 'namespace5', count: 800, unique: 300, total: 800 },
+    { label: 'namespace', count: 400, unique: 300, total: 700 },
+    { label: 'namespace999', count: 350, unique: 250, total: 650 },
+    { label: 'name-space', count: 450, unique: 200, total: 600 },
+    { label: 'path/to/namespace', count: 200, unique: 100, total: 300 },
   ];
+
+  totalCount = this.dataset.reduce((previousValue, currentValue) => previousValue + currentValue.count, 0);
+  totalUnique = this.dataset.reduce((previousValue, currentValue) => previousValue + currentValue.unique, 0);
+  totalActive = this.totalCount + this.totalUnique;
+
+  createToolTipText(data) {
+    let total = data.reduce((prev, acc) => prev + acc, 0);
+    return `${total / this.totalActive}%`;
+    // console.log(percent)
+  }
 
   @action
   renderBarChart(element) {
     let dataset = this.dataset.sort((a, b) => a.count + a.unique - (b.count + b.unique)).reverse();
+    let totalActive = this.totalActive;
     let stackFunction = stack().keys(['count', 'unique']);
     let stackedData = stackFunction(dataset); // returns an array of coordinates for each rectangle group, first group is for counts (left), second for unique (right)
+
+    let container = select('.bar-chart-container');
+    container.attr('viewBox', '0 0 751 405');
+    container
+      .append('div')
+      .attr('class', 'chart-tooltip')
+      .attr('style', 'position: absolute; opacity: 0;');
 
     let xScale = scaleLinear()
       .domain([0, max(dataset, d => d.count + d.unique)]) // min and max values of dataset
@@ -61,10 +78,11 @@ class BarChart extends Component {
       // it tells the scale the percent of the total width it should reserve for white space between bars
       .paddingInner(0.765);
 
-    let svg = select(element);
-    // add a group for each row of data
+    let chartSvg = select(element);
+    chartSvg.attr('height', (dataset.length + 1) * 24);
 
-    let groups = svg
+    // add a group for each row of data
+    let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
@@ -86,9 +104,37 @@ class BarChart extends Component {
       .attr('x', data => `${xScale(data[0])}%`)
       .attr('y', ({ data }) => yScale(data.label))
       .attr('rx', 3)
-      .attr('ry', 3);
-
-    svg.attr('height', (dataset.length + 1) * 24);
+      .attr('ry', 3)
+      .on('mouseover', function({ data }) {
+        select(this).attr('fill', '#1563FF');
+        select('.chart-tooltip')
+          .transition()
+          .duration(200)
+          .style('opacity', 1)
+          .text(
+            ` 
+        ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+        ${data.unique} unique entities, ${data.count} active tokens.
+        `
+          )
+          .style('color', 'white')
+          .style('background', '#525761')
+          .style('max-width', '200px')
+          .style('font-size', '.929rem')
+          .style('padding', '10px')
+          .style('border-radius', '4px');
+      })
+      .on('mouseout', function(d) {
+        select('.chart-tooltip').style('opacity', 0);
+        select(this).attr('fill', function() {
+          d[0] === 0 ? `${BAR_COLORS[0]}` : `${BAR_COLORS[1]}`;
+        });
+      })
+      .on('mousemove', function() {
+        select('.chart-tooltip')
+          .style('left', `${event.pageX - 110}px`)
+          .style('top', `${event.pageY - 150}px`);
+      });
 
     let totalNumbers = [];
     stackedData[1].forEach(e => {
@@ -98,14 +144,12 @@ class BarChart extends Component {
 
     let textData = [];
     rects.each(function(d, i) {
-      // if (d[0] !== 0){
       let textDatum = {
         text: totalNumbers[i],
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
         y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
       };
       textData.push(textDatum);
-      // };
     });
 
     let text = groups
@@ -116,6 +160,7 @@ class BarChart extends Component {
       .text(d => d.text)
       .attr('fill', '#000')
       .attr('class', 'total-value')
+      .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
       .attr('y', d => {
         return `${d.y}`;
@@ -125,35 +170,36 @@ class BarChart extends Component {
         return `${translateRight}%`;
       });
 
-    // style here? or in .css file
+    // remove axes lines
     groups.selectAll('.domain, .tick line').remove();
 
-    let legend = select('.legend');
-    legend
+    let legendSvg = select('.legend');
+
+    legendSvg
       .append('circle')
       .attr('cx', '60%')
       .attr('cy', '20%')
       .attr('r', 6)
       .style('fill', '#BFD4FF');
-    legend
+    legendSvg
       .append('text')
       .attr('x', '62%')
       .attr('y', '20%')
       .text(`${this.variableA}`)
-      .style('font-size', '15px')
+      .style('font-size', '.8rem')
       .attr('alignment-baseline', 'middle');
-    legend
+    legendSvg
       .append('circle')
       .attr('cx', '83%')
       .attr('cy', '20%')
       .attr('r', 6)
       .style('fill', '#8AB1FF');
-    legend
+    legendSvg
       .append('text')
       .attr('x', '85%')
       .attr('y', '20%')
       .text(`${this.variableB}`)
-      .style('font-size', '15px')
+      .style('font-size', '.8rem')
       .attr('alignment-baseline', 'middle');
   }
 }

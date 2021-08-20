@@ -1,50 +1,48 @@
-.bar-chart-div {
-  border: 1px solid #dce0e6;
-  border-radius: 4px;
-  padding: 24px, 24px, 12px, 24px;
+.container {
+  display: grid;
 
-  > div.is-border {
-    border: 0.3px solid #dce0e6;
-    width: 94%;
-    margin-left: 3%;
+  .bar-chart-div {
+    border: 1px solid #dce0e6;
+    border-radius: 4px;
+    padding: 24px, 24px, 12px, 24px;
+
+    > div.is-border {
+      border: 0.3px solid #dce0e6;
+      width: 94%;
+      margin-left: 3%;
+    }
   }
-}
 
-.chart-header {
-  margin: 24px 0px 0px 24px;
-}
+  .chart-header {
+    margin: 24px 0px 0px 24px;
+  }
 
-.chart-title {
-  font-size: $size-5;
-  font-weight: $font-weight-bold;
-  line-height: normal;
-}
+  .chart-title {
+    font-size: $size-5;
+    font-weight: $font-weight-bold;
+    line-height: normal;
+  }
 
-.chart-description {
-  font-size: $size-8;
-  font-weight: $font-weight-normal;
-  color: $ui-gray-700;
-  margin-bottom: 8px;
-}
-
-.bar-chart {
-  width: 100%;
-  height: 100%;
-  padding: 17px 24px 20px 24px;
-
-  .total-value {
+  .chart-description {
+    font-size: $size-8;
     font-weight: $font-weight-normal;
-    color: $black;
-    font-size: $size-8;
+    color: $ui-gray-700;
+    margin-bottom: 8px;
   }
 
-  .tick > text {
-    font-weight: $font-weight-semibold;
-    font-size: $size-8;
-  }
-}
+  .bar-chart {
+    width: 100%;
+    height: 100%;
+    padding: 17px 24px 20px 24px;
 
-.legend {
-  width: 100%;
-  height: 100%;
+    .tick > text {
+      font-weight: $font-weight-semibold;
+      font-size: $size-8;
+    }
+  }
+
+  .legend {
+    width: 100%;
+    height: 100%;
+  }
 }
