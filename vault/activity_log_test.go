@@ -1390,6 +1390,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 	return a, entityRecords, tokenRecords
 }
 
+//setupActivityRecordsInStorageRootNS creates entity and non-entity tokens only with root namespace
 func setupActivityRecordsInStorageRootNS(t *testing.T, base time.Time, includeEntities, includeTokens bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
 	t.Helper()
 

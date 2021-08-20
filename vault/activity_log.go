@@ -23,10 +23,6 @@ import (
 	"github.com/hashicorp/vault/vault/activity"
 )
 
-//adding an alias for partialMonthClientCount
-//open source vault calls partialMonthClientCount
-//enterprise calls entPartialMonthClientCount
-
 const (
 	// activitySubPath is the directory under the system view where
 	// the log will be stored.
@@ -1878,7 +1874,6 @@ func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uin
 	clientCountTable := make(map[string]*clients)
 	for nsID, count := range entityMap {
 		if _, ok := clientCountTable[nsID]; !ok {
-			//client := &clients{distinctEntities: 0, nonEntityTokens: 0}
 			clientCountTable[nsID] = &clients{distinctEntities: 0, nonEntityTokens: 0}
 		}
 		clientCountTable[nsID].distinctEntities += count
@@ -1887,7 +1882,6 @@ func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uin
 	//add non-entity token count
 	for nsID, count := range tokenMap {
 		if _, ok := clientCountTable[nsID]; !ok {
-			//client := &clients{distinctEntities: 0, nonEntityTokens: 0}
 			clientCountTable[nsID] = &clients{distinctEntities: 0, nonEntityTokens: 0}
 		}
 		clientCountTable[nsID].nonEntityTokens += count
@@ -1897,7 +1891,6 @@ func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uin
 
 }
 
-//AddEntity updates the activeEntities list as well as the activityentities by namespace map
 func (a *ActivityLog) AddEntity(e *activity.EntityRecord) {
 	if _, ok := a.activeEntities[e.EntityID]; !ok {
 		a.activeEntities[e.EntityID] = struct{}{}
