@@ -449,9 +449,9 @@ func TestOIDC_pathOIDCClientExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a namedClient
-	namedClient := &client{}
-	entry, _ := logical.StorageEntryJSON(clientPath+clientName, namedClient)
+	// Populte storage with a client
+	client := &client{}
+	entry, _ := logical.StorageEntryJSON(clientPath+clientName, client)
 	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatalf("writing to in mem storage failed")
 	}
@@ -782,9 +782,9 @@ func TestOIDC_pathOIDCScopeExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a namedScope
-	namedScope := &scope{}
-	entry, _ := logical.StorageEntryJSON(scopePath+scopeName, namedScope)
+	// Populte storage with a scope
+	scope := &scope{}
+	entry, _ := logical.StorageEntryJSON(scopePath+scopeName, scope)
 	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatalf("writing to in mem storage failed")
 	}
@@ -1095,9 +1095,9 @@ func TestOIDC_pathOIDCAssignmentExistenceCheck(t *testing.T) {
 		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
 	}
 
-	// Populte storage with a namedAssignment
-	namedAssignment := &assignment{}
-	entry, _ := logical.StorageEntryJSON(assignmentPath+assignmentName, namedAssignment)
+	// Populte storage with a assignment
+	assignment := &assignment{}
+	entry, _ := logical.StorageEntryJSON(assignmentPath+assignmentName, assignment)
 	if err := storage.Put(ctx, entry); err != nil {
 		t.Fatalf("writing to in mem storage failed")
 	}
