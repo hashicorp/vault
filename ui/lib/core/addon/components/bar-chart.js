@@ -99,6 +99,7 @@ class BarChart extends Component {
       .data(d => d)
       .enter()
       .append('rect')
+      .style('cursor', 'pointer')
       .attr('width', data => `${xScale(data[1] - data[0] - 6)}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', data => `${xScale(data[0])}%`)
@@ -133,7 +134,7 @@ class BarChart extends Component {
       .on('mousemove', function() {
         select('.chart-tooltip')
           .style('left', `${event.pageX - 110}px`)
-          .style('top', `${event.pageY - 150}px`);
+          .style('top', `${event.pageY - 145}px`);
       });
 
     let totalNumbers = [];
