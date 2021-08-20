@@ -1390,6 +1390,79 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 	return a, entityRecords, tokenRecords
 }
 
+func setupActivityRecordsInStorageRootNS(t *testing.T, base time.Time, includeEntities, includeTokens bool) (*ActivityLog, []*activity.EntityRecord, map[string]uint64) {
+	t.Helper()
+
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
+	monthsAgo := base.AddDate(0, -3, 0)
+
+	var entityRecords []*activity.EntityRecord
+	if includeEntities {
+		entityRecords = []*activity.EntityRecord{
+			{
+				EntityID:    "11111111-1111-1111-1111-111111111111",
+				NamespaceID: "root",
+				Timestamp:   time.Now().Unix(),
+			},
+			{
+				EntityID:    "22222222-2222-2222-2222-222222222222",
+				NamespaceID: "root",
+				Timestamp:   time.Now().Unix(),
+			},
+			{
+				EntityID:    "33333333-2222-2222-2222-222222222222",
+				NamespaceID: "root",
+				Timestamp:   time.Now().Unix(),
+			},
+		}
+
+		testEntities1 := &activity.EntityActivityLog{
+			Entities: entityRecords[:1],
+		}
+		entityData1, err := proto.Marshal(testEntities1)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+		testEntities2 := &activity.EntityActivityLog{
+			Entities: entityRecords[1:2],
+		}
+		entityData2, err := proto.Marshal(testEntities2)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+		testEntities3 := &activity.EntityActivityLog{
+			Entities: entityRecords[2:],
+		}
+		entityData3, err := proto.Marshal(testEntities3)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData1)
+		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/0", entityData2)
+		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/1", entityData3)
+	}
+
+	var tokenRecords map[string]uint64
+	if includeTokens {
+		tokenRecords = make(map[string]uint64)
+		tokenRecords["root"] = 4
+		tokenCount := &activity.TokenCount{
+			CountByNamespaceID: tokenRecords,
+		}
+
+		tokenData, err := proto.Marshal(tokenCount)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		WriteToStorage(t, core, ActivityLogPrefix+"directtokens/"+fmt.Sprint(base.Unix())+"/0", tokenData)
+	}
+
+	return a, entityRecords, tokenRecords
+}
+
 func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	a, expectedEntityRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 	a.SetEnable(true)
@@ -2499,9 +2572,9 @@ func TestActivityLog_Deletion(t *testing.T) {
 func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
-	ctx := context.Background()
+	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
-	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+	a, entities, tokenCounts := setupActivityRecordsInStorageRootNS(t, timeutil.StartOfMonth(now), true, true)
 
 	a.SetEnable(true)
 	var wg sync.WaitGroup
@@ -2520,7 +2593,10 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
 
-	results := a.partialMonthClientCount(ctx)
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 	if results == nil {
 		t.Fatal("no results to test")
 	}

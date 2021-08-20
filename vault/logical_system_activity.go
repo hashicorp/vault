@@ -142,7 +142,12 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	results := PartialMonthClientCount(a, ctx)
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		return &logical.Response{
+			Data: results,
+		}, err
+	}
 	if results == nil {
 		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
 	}

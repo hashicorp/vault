@@ -26,7 +26,6 @@ import (
 //adding an alias for partialMonthClientCount
 //open source vault calls partialMonthClientCount
 //enterprise calls entPartialMonthClientCount
-var PartialMonthClientCount = (*ActivityLog).partialMonthClientCount
 
 const (
 	// activitySubPath is the directory under the system view where
@@ -72,6 +71,11 @@ type segmentInfo struct {
 	currentEntities      *activity.EntityActivityLog
 	tokenCount           *activity.TokenCount
 	entitySequenceNumber uint64
+}
+
+type clients struct {
+	distinctEntities uint64
+	nonEntityTokens  uint64
 }
 
 // ActivityLog tracks unique entity counts and non-entity token counts.
@@ -543,14 +547,7 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	// Or the feature has been disabled.
 	if a.enabled && startTime.Unix() == a.currentSegment.startTimestamp {
 		for _, ent := range out.Entities {
-			//check if the entity already exists in the list of activeEntities this month
-			//if entity doesnot exist in active Entities, increment the namespaceID count
-			if _, ok := a.activeEntities[ent.EntityID]; !ok {
-				//do something here
-				a.activeEntities[ent.EntityID] = struct{}{}
-				a.entityCountByNamespaceID[ent.NamespaceID] = a.entityCountByNamespaceID[ent.NamespaceID] + 1
-			}
-
+			a.AddEntity(ent)
 		}
 	}
 	a.fragmentLock.Unlock()
@@ -590,13 +587,7 @@ func (a *ActivityLog) loadCurrentEntitySegment(ctx context.Context, startTime ti
 	}
 
 	for _, ent := range out.Entities {
-		//check if the entity already exists in the list of activeEntities this month
-		//if entity doesnot exist in active Entities, increment the namespaceID count
-		if _, ok := a.activeEntities[ent.EntityID]; !ok {
-			a.activeEntities[ent.EntityID] = struct{}{}
-			a.entityCountByNamespaceID[ent.NamespaceID] = a.entityCountByNamespaceID[ent.NamespaceID] + 1
-		}
-
+		a.AddEntity(ent)
 	}
 
 	return nil
@@ -1337,7 +1328,7 @@ func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, t
 			Timestamp:   timestamp,
 		})
 	//incrementing the entity by namespace id count map
-	a.entityCountByNamespaceID[namespaceID] = a.entityCountByNamespaceID[namespaceID] + 1
+	a.entityCountByNamespaceID[namespaceID] += 1
 	a.activeEntities[entityID] = struct{}{}
 }
 
@@ -1382,12 +1373,7 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	}
 
 	for _, e := range fragment.Entities {
-		//check if the entity already exists in the list of activeEntities this month
-		//if entity doesnot exist in active Entities, increment the namespaceID count
-		if _, ok := a.activeEntities[e.EntityID]; !ok {
-			a.activeEntities[e.EntityID] = struct{}{}
-			a.entityCountByNamespaceID[e.NamespaceID] = a.entityCountByNamespaceID[e.NamespaceID] + 1
-		}
+		a.AddEntity(e)
 	}
 
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
@@ -1826,27 +1812,96 @@ func (c *Core) activeEntityGaugeCollector(ctx context.Context) ([]metricsutil.Ga
 
 // partialMonthClientCount returns the number of clients used so far this month.
 // If activity log is not enabled, the response will be nil
-func (a *ActivityLog) partialMonthClientCount(ctx context.Context) map[string]interface{} {
-	q.Q("open source function called")
+func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]interface{}, error) {
 	a.fragmentLock.RLock()
 	defer a.fragmentLock.RUnlock()
 
 	if !a.enabled {
 		// nothing to count
-		return nil
+		return nil, nil
 	}
-
-	entityCount := len(a.activeEntities)
-	var tokenCount int
-	for _, countByNS := range a.currentSegment.tokenCount.CountByNamespaceID {
-		tokenCount += int(countByNS)
-	}
-	clientCount := entityCount + tokenCount
-
+	byNamespace := make([]*ClientCountInNamespace, 0)
 	responseData := make(map[string]interface{})
-	responseData["distinct_entities"] = entityCount
-	responseData["non_entity_tokens"] = tokenCount
-	responseData["clients"] = clientCount
+	totalEntities := 0
+	totalTokens := 0
 
-	return responseData
+	clientCountTable := createClientCountTable(a.entityCountByNamespaceID, a.currentSegment.tokenCount.CountByNamespaceID)
+
+	queryNS, err := namespace.FromContext(ctx)
+	if err != nil {
+		return responseData, err
+	}
+
+	for nsID, clients := range clientCountTable {
+
+		ns, err := NamespaceByID(ctx, nsID, a.core)
+		if err != nil {
+			return responseData, err
+		}
+
+		if a.includeInResponse(queryNS, ns) {
+			var displayPath string
+			if ns == nil {
+				displayPath = fmt.Sprintf("deleted namespace %q", nsID)
+			} else {
+				displayPath = ns.Path
+			}
+
+			byNamespace = append(byNamespace, &ClientCountInNamespace{
+				NamespaceID:   nsID,
+				NamespacePath: displayPath,
+				Counts: ClientCountResponse{
+					DistinctEntities: int(clients.distinctEntities),
+					NonEntityTokens:  int(clients.nonEntityTokens),
+					Clients:          int(clients.distinctEntities + clients.nonEntityTokens),
+				},
+			})
+			totalEntities += int(clients.distinctEntities)
+			totalTokens += int(clients.nonEntityTokens)
+
+		}
+	}
+
+	responseData["by_namespace"] = byNamespace
+	responseData["distinct_entities"] = totalEntities
+	responseData["non_entity_tokens"] = totalTokens
+	responseData["clients"] = totalEntities + totalTokens
+
+	q.Q(responseData)
+
+	return responseData, nil
+}
+
+//createClientCountTable maps the entitycount and token count to the namespace id
+func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uint64) map[string]*clients {
+	//add distinct entity count
+	clientCountTable := make(map[string]*clients)
+	for nsID, count := range entityMap {
+		if _, ok := clientCountTable[nsID]; !ok {
+			//client := &clients{distinctEntities: 0, nonEntityTokens: 0}
+			clientCountTable[nsID] = &clients{distinctEntities: 0, nonEntityTokens: 0}
+		}
+		clientCountTable[nsID].distinctEntities += count
+
+	}
+	//add non-entity token count
+	for nsID, count := range tokenMap {
+		if _, ok := clientCountTable[nsID]; !ok {
+			//client := &clients{distinctEntities: 0, nonEntityTokens: 0}
+			clientCountTable[nsID] = &clients{distinctEntities: 0, nonEntityTokens: 0}
+		}
+		clientCountTable[nsID].nonEntityTokens += count
+
+	}
+	return clientCountTable
+
+}
+
+//AddEntity updates the activeEntities list as well as the activityentities by namespace map
+func (a *ActivityLog) AddEntity(e *activity.EntityRecord) {
+	if _, ok := a.activeEntities[e.EntityID]; !ok {
+		a.activeEntities[e.EntityID] = struct{}{}
+		a.entityCountByNamespaceID[e.NamespaceID] += 1
+	}
+
 }
