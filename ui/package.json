@@ -176,7 +176,7 @@
     "kind-of": "^6.0.3",
     "lodash.defaultsdeep": "^4.6.1",
     "lodash.merge": "^4.6.2",
-    "lodash": "^4.17.13",
+    "lodash": "^4.17.21",
     "minimatch": "^3.0.2",
     "minimist": "^1.2.2",
     "node-notifier": "^8.0.1",
