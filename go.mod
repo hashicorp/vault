@@ -10,7 +10,7 @@ require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.6.0
-	github.com/Azure/azure-storage-blob-go v0.11.0
+	github.com/Azure/azure-storage-blob-go v0.13.0
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.11
 	github.com/Microsoft/hcsshim v0.8.14 // indirect
@@ -95,7 +95,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.4.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.2.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.2.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0

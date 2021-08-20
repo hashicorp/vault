@@ -206,7 +206,9 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
-	res, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+	clientOptions := azblob.ClientProvidedKeyOptions{}
+
+	res, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false, clientOptions)
 	if err != nil {
 		var e azblob.StorageError
 		if errors.As(err, &e) {
