@@ -176,7 +176,8 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error) {
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string,
+	role *awsRoleEntry) (*logical.Response, error) {
 
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
@@ -232,6 +233,17 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	}
 	if len(policyARNs) > 0 {
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
+	}
+	if len(role.IAMTags) > 0 {
+		var tags []*sts.Tag
+		var keys []*string
+		for key, value := range role.IAMTags {
+			k, v := key, value
+			keys = append(keys, &k)
+			tags = append(tags, &sts.Tag{Key: &k, Value: &v})
+		}
+		assumeRoleInput.SetTags(tags)
+		assumeRoleInput.SetTransitiveTagKeys(keys)
 	}
 	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
 	if err != nil {

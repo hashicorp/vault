@@ -499,7 +499,7 @@ type awsRoleEntry struct {
 	RoleArns                 []string          `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
 	PolicyDocument           string            `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
 	IAMGroups                []string          `json:"iam_groups"`                            // Names of IAM groups that generated IAM users will be added to
-	IAMTags                  map[string]string `json:"iam_tags"`                              // IAM tags that will be added to the generated IAM users
+	IAMTags                  map[string]string `json:"iam_tags"`                              // IAM tags that will be added to the generated IAM users or AssumedRole credentials
 	InvalidData              string            `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
 	ProhibitFlexibleCredPath bool              `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
 	Version                  int               `json:"version"`                               // Version number of the role format
