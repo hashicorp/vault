@@ -8,6 +8,414 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
+// be created without a key parameter
+func TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test client "test-client1" without a key param -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"the key parameter is required": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry tests that a client cannot be
+// created when a key parameter is provided but the key does not exist
+func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test client "test-client1" with a non-existent key -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"key \"test-key\" does not exist": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_UpdateKey tests that a client
+// does not allow key modification on Update operations
+func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test key "test-key2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key1",
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test client "test-client" -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key2",
+		},
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"key modification is not allowed": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_AssignmentDoesNotExist tests that a client
+// cannot be created with assignments that do not exist
+func TestOIDC_Path_OIDC_ProviderClient_AssignmentDoesNotExist(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":         "test-key",
+			"assignments": "my-assignment",
+		},
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"assignment \"my-assignment\" does not exist": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_ProviderClient tests CRUD operations for clients
+func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"redirect_uris":    []string{},
+		"assignments":      []string{},
+		"key":              "test-key",
+		"id_token_ttl":     0,
+		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Create a test assignment "my-assignment" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/my-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-client" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"redirect_uris":    "http://localhost:3456/callback",
+			"assignments":      "my-assignment",
+			"key":              "test-key",
+			"id_token_ttl":     0,
+			"access_token_ttl": 0,
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"redirect_uris":    []string{"http://localhost:3456/callback"},
+		"assignments":      []string{"my-assignment"},
+		"key":              "test-key",
+		"id_token_ttl":     0,
+		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Delete test-client -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" again and validate
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if resp != nil {
+		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_Update tests Update operations for clients
+func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test assignment "my-assignment" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/my-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test client "test-client" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"redirect_uris":    "http://localhost:3456/callback",
+			"assignments":      "my-assignment",
+			"key":              "test-key",
+			"id_token_ttl":     0,
+			"access_token_ttl": 0,
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"redirect_uris":    []string{"http://localhost:3456/callback"},
+		"assignments":      []string{"my-assignment"},
+		"key":              "test-key",
+		"id_token_ttl":     0,
+		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-client" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"redirect_uris": "http://localhost:3456/callback2",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"redirect_uris":    []string{"http://localhost:3456/callback2"},
+		"assignments":      []string{"my-assignment"},
+		"key":              "test-key",
+		"id_token_ttl":     0,
+		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_List tests the List operation for clients
+func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Prepare two clients, test-client1 and test-client2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+	})
+
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+	})
+
+	// list clients
+	respListClients, listErr := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListClients, listErr)
+
+	// validate list response
+	expectedStrings := map[string]interface{}{"test-client1": true, "test-client2": true}
+	expectStrings(t, respListClients.Data["keys"].([]string), expectedStrings)
+
+	// delete test-client2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client2",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+
+	// list clients again and validate response
+	respListClientAfterDelete, listErrAfterDelete := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListClientAfterDelete, listErrAfterDelete)
+
+	// validate list response
+	delete(expectedStrings, "test-client2")
+	expectStrings(t, respListClientAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
 // TestOIDC_Path_OIDC_ProviderScope_ReservedName tests that the reserved name
 // "openid" cannot be used when creating a scope
 func TestOIDC_Path_OIDC_ProviderScope_ReservedName(t *testing.T) {
@@ -288,6 +696,73 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	})
 	if resp != nil {
 		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient tests that an
+// assignment cannot be deleted when it is referenced by a client
+func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test assignment "test-assignment" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":         "test-key",
+			"assignments": []string{"test-assignment"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Delete test-assignment -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"unable to delete assignment \"test-assignment\" because it is currently referenced by these clients: test-client": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-assignment" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"groups":   []string{},
+		"entities": []string{},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

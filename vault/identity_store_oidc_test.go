@@ -455,6 +455,40 @@ func TestOIDC_Path_OIDCKey(t *testing.T) {
 	expectStrings(t, respListKeyAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
+// TestOIDC_Path_OIDCKey_DeleteWithExistingClient tests that a key cannot be
+// deleted if it is referenced by an existing client
+func TestOIDC_Path_OIDCKey_DeleteWithExistingClient(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Prepare test key test-key
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Delete test key "test-key" -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+}
+
 // TestOIDC_PublicKeys tests that public keys are updated by
 // key creation, rotation, and deletion
 func TestOIDC_PublicKeys(t *testing.T) {
