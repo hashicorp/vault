@@ -223,6 +223,31 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				}
 			}
 
+			// TODO: this consolidates all the different field filters into one place, but we also
+			// need to make changes to AllowOperation or whatever the function is that checks to
+			// see if something's actually allowed. That's where we utilize the JSON pointer, etc.
+			if len(pc.Permissions.FieldFilter) > 0 {
+				if len(existingPerms.FieldFilter) == 0 {
+					clonedFieldFilter, err := copystructure.Copy(pc.Permissions.FieldFilter)
+					if err != nil {
+						return nil, err
+					}
+					existingPerms.FieldFilter = clonedFieldFilter.(map[string][]interface{})
+				} else {
+					for key, value := range pc.Permissions.FieldFilter {
+						pcValue, ok := existingPerms.FieldFilter[key]
+						// If an empty array exist it should overwrite any other
+						// value.
+						if len(value) == 0 || (ok && len(pcValue) == 0) {
+							existingPerms.FieldFilter[key] = []interface{}{}
+						} else {
+							// Merge the two maps, appending values on key conflict.
+							existingPerms.FieldFilter[key] = append(value, existingPerms.FieldFilter[key]...)
+						}
+					}
+				}
+			}
+
 			if len(pc.Permissions.RequiredParameters) > 0 {
 				if len(existingPerms.RequiredParameters) == 0 {
 					existingPerms.RequiredParameters = pc.Permissions.RequiredParameters
