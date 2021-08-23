@@ -1196,7 +1196,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"cannot find scope test-scope": true,
+		"scope \"test-scope\" does not exist": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
