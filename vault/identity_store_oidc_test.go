@@ -469,7 +469,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key
+	// .well-known/keys should contain 2 public keys
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
@@ -479,8 +479,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// parse response
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// rotate test-key a few times, each rotate should increase the length of public keys returned
@@ -498,7 +498,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// .well-known/keys should contain 3 public keys
+	// .well-known/keys should contain 4 public keys
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
@@ -507,8 +507,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 3 {
-		t.Fatalf("expected 3 public keys but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 4 {
+		t.Fatalf("expected 4 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// create another named key
@@ -525,7 +525,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key, all of the public keys
+	// .well-known/keys should contain 2 public key, all of the public keys
 	// from named key "test-key" should have been deleted
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
@@ -535,8 +535,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public keys but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 }
 
@@ -699,6 +699,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				RotationPeriod:  1 * cyclePeriod,
 				KeyRing:         nil,
 				SigningKey:      jwk,
+				NextSigningKey:  jwk,
 				NextRotation:    time.Now(),
 			},
 			[]struct {
@@ -708,8 +709,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			}{
 				{1, 1, 1},
 				{2, 2, 2},
-				{3, 2, 2},
+				{3, 3, 3},
 				{4, 2, 2},
+				{5, 3, 3},
+				{6, 2, 2},
+				{7, 3, 3},
 			},
 		},
 	}
