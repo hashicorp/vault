@@ -588,10 +588,6 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 // pathOIDCDeleteScope is used to delete an scope
 func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, scopePath+name)
-	if err != nil {
-		return nil, err
-	}
 
 	targetScopeName := d.Get("name").(string)
 
@@ -605,6 +601,11 @@ func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Re
 			targetScopeName, strings.Join(providerNames, ", "))
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
+	err = req.Storage.Delete(ctx, scopePath+name)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -827,7 +828,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		}
 		// enforce scope existence on provider creation
 		if entry == nil {
-			return logical.ErrorResponse("cannot find scope %s", scopeName), nil
+			return logical.ErrorResponse("scope %q does not exist", scopeName), nil
 		}
 
 		// ensure no two templates have the same top-level keys

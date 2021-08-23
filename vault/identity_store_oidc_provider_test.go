@@ -856,14 +856,12 @@ func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
 	// Read "test-scope" again and validate
-	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
-	if resp != nil {
-		t.Fatalf("expected nil but got resp: %#v", resp)
-	}
+	expectSuccess(t, resp, err)
 }
 
 // TestOIDC_Path_OIDC_ProviderAssignment tests CRUD operations for assignments
