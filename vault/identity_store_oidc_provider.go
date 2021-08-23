@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"sort"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
@@ -22,10 +25,23 @@ type scope struct {
 	Description string `json:"description"`
 }
 
+type client struct {
+	RedirectURIs   []string `json:"redirect_uris"`
+	Assignments    []string `json:"assignments"`
+	Key            string   `json:"key"`
+	IDTokenTTL     int      `json:"id_token_ttl"`
+	AccessTokenTTL int      `json:"access_token_ttl"`
+
+	// used for OIDC endpoints
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
 const (
 	oidcProviderPrefix = "oidc_provider/"
 	assignmentPath     = oidcProviderPrefix + "assignment/"
 	scopePath          = oidcProviderPrefix + "scope/"
+	clientPath         = oidcProviderPrefix + "client/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -118,7 +134,154 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    "List OIDC scopes",
 			HelpDescription: "List all configured OIDC scopes in the identity backend.",
 		},
+		{
+			Pattern: "oidc/client/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the client.",
+				},
+				"redirect_uris": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Comma separated string or array of redirect URIs used by the client. One of these values must exactly match the redirect_uri parameter value used in each authentication request.",
+				},
+				"assignments": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Comma separated string or array of assignment resources.",
+				},
+				"key": {
+					Type:        framework.TypeString,
+					Description: "A reference to a named key resource. Cannot be modified after creation.",
+					Required:    true,
+				},
+				"id_token_ttl": {
+					Type:        framework.TypeDurationSecond,
+					Description: "The time-to-live for ID tokens obtained by the client.",
+				},
+				"access_token_ttl": {
+					Type:        framework.TypeDurationSecond,
+					Description: "The time-to-live for access tokens obtained by the client.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateClient,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateClient,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadClient,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathOIDCDeleteClient,
+				},
+			},
+			ExistenceCheck:  i.pathOIDCClientExistenceCheck,
+			HelpSynopsis:    "CRUD operations for OIDC clients.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC clients.",
+		},
+		{
+			Pattern: "oidc/client/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathOIDCListClient,
+				},
+			},
+			HelpSynopsis:    "List OIDC clients",
+			HelpDescription: "List all configured OIDC clients in the identity backend.",
+		},
 	}
+}
+
+// clientsReferencingTargetAssignmentName returns a map of client names to
+// clients referencing targetAssignmentName.
+func (i *IdentityStore) clientsReferencingTargetAssignmentName(ctx context.Context, req *logical.Request, targetAssignmentName string) (map[string]client, error) {
+	clientNames, err := req.Storage.List(ctx, clientPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempClient client
+	clients := make(map[string]client)
+	for _, clientName := range clientNames {
+		entry, err := req.Storage.Get(ctx, clientPath+clientName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempClient); err != nil {
+				return nil, err
+			}
+			for _, a := range tempClient.Assignments {
+				if a == targetAssignmentName {
+					clients[clientName] = tempClient
+				}
+			}
+		}
+	}
+
+	return clients, nil
+}
+
+// clientNamesReferencingTargetAssignmentName returns a slice of strings of client
+// names referencing targetAssignmentName.
+func (i *IdentityStore) clientNamesReferencingTargetAssignmentName(ctx context.Context, req *logical.Request, targetAssignmentName string) ([]string, error) {
+	clients, err := i.clientsReferencingTargetAssignmentName(ctx, req, targetAssignmentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for client, _ := range clients {
+		names = append(names, client)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+// clientsReferencingTargetKeyName returns a map of client names to
+// clients referencing targetKeyName.
+func (i *IdentityStore) clientsReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]client, error) {
+	clientNames, err := req.Storage.List(ctx, clientPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempClient client
+	clients := make(map[string]client)
+	for _, clientName := range clientNames {
+		entry, err := req.Storage.Get(ctx, clientPath+clientName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempClient); err != nil {
+				return nil, err
+			}
+			if tempClient.Key == targetKeyName {
+				clients[clientName] = tempClient
+			}
+		}
+	}
+
+	return clients, nil
+}
+
+// clientNamesReferencingTargetKeyName returns a slice of strings of client
+// names referencing targetKeyName.
+func (i *IdentityStore) clientNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
+	clients, err := i.clientsReferencingTargetKeyName(ctx, req, targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for client, _ := range clients {
+		names = append(names, client)
+	}
+	sort.Strings(names)
+	return names, nil
 }
 
 // pathOIDCCreateUpdateAssignment is used to create a new assignment or update an existing one
@@ -199,7 +362,19 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 // pathOIDCDeleteAssignment is used to delete an assignment
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, assignmentPath+name)
+
+	clientNames, err := i.clientNamesReferencingTargetAssignmentName(ctx, req, name)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(clientNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete assignment %q because it is currently referenced by these clients: %s",
+			name, strings.Join(clientNames, ", "))
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
+	err = req.Storage.Delete(ctx, assignmentPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +436,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 			String: scope.Template,
 			Entity: new(logical.Entity),
 			Groups: make([]*logical.Group, 0),
-			// namespace?
 		})
 		if err != nil {
 			return logical.ErrorResponse("error parsing template: %s", err.Error()), nil
@@ -339,6 +513,171 @@ func (i *IdentityStore) pathOIDCScopeExistenceCheck(ctx context.Context, req *lo
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, scopePath+name)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
+}
+
+// pathOIDCCreateUpdateClient is used to create a new client or update an existing one
+func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	var client client
+	if req.Operation == logical.UpdateOperation {
+		entry, err := req.Storage.Get(ctx, clientPath+name)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&client); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if redirectURIsRaw, ok := d.GetOk("redirect_uris"); ok {
+		client.RedirectURIs = redirectURIsRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		client.RedirectURIs = d.Get("redirect_uris").([]string)
+	}
+
+	if assignmentsRaw, ok := d.GetOk("assignments"); ok {
+		client.Assignments = assignmentsRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		client.Assignments = d.Get("assignments").([]string)
+	}
+
+	// enforce assignment existence
+	for _, assignment := range client.Assignments {
+		entry, err := req.Storage.Get(ctx, assignmentPath+assignment)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			return logical.ErrorResponse("assignment %q does not exist", assignment), nil
+		}
+	}
+
+	if keyRaw, ok := d.GetOk("key"); ok {
+		key := keyRaw.(string)
+		if req.Operation == logical.UpdateOperation && client.Key != key {
+			return logical.ErrorResponse("key modification is not allowed"), nil
+		}
+		client.Key = key
+	} else if req.Operation == logical.CreateOperation {
+		client.Key = d.Get("key").(string)
+	}
+
+	if client.Key == "" {
+		return logical.ErrorResponse("the key parameter is required"), nil
+	}
+
+	// enforce key existence on client creation
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+client.Key)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("key %q does not exist", client.Key), nil
+	}
+
+	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
+		client.IDTokenTTL = idTokenTTLRaw.(int)
+	} else if req.Operation == logical.CreateOperation {
+		client.IDTokenTTL = d.Get("id_token_ttl").(int)
+	}
+
+	if accessTokenTTLRaw, ok := d.GetOk("access_token_ttl"); ok {
+		client.AccessTokenTTL = accessTokenTTLRaw.(int)
+	} else if req.Operation == logical.CreateOperation {
+		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
+	}
+
+	if client.ClientID == "" {
+		// generate client_id
+		clientID, err := base62.Random(32)
+		if err != nil {
+			return nil, err
+		}
+		client.ClientID = clientID
+	}
+
+	if client.ClientSecret == "" {
+		// generate client_secret
+		clientSecret, err := base62.Random(64)
+		if err != nil {
+			return nil, err
+		}
+		client.ClientSecret = clientSecret
+	}
+
+	// store client
+	entry, err = logical.StorageEntryJSON(clientPath+name, client)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// pathOIDCListClient is used to list clients
+func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	clients, err := req.Storage.List(ctx, clientPath)
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(clients), nil
+}
+
+// pathOIDCReadClient is used to read an existing client
+func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, clientPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var client client
+	if err := entry.DecodeJSON(&client); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"redirect_uris":    client.RedirectURIs,
+			"assignments":      client.Assignments,
+			"key":              client.Key,
+			"id_token_ttl":     client.IDTokenTTL,
+			"access_token_ttl": client.AccessTokenTTL,
+			"client_id":        client.ClientID,
+			"client_secret":    client.ClientSecret,
+		},
+	}, nil
+}
+
+// pathOIDCDeleteClient is used to delete an client
+func (i *IdentityStore) pathOIDCDeleteClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	err := req.Storage.Delete(ctx, clientPath+name)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, clientPath+name)
 	if err != nil {
 		return false, err
 	}
