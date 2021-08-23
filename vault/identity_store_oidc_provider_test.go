@@ -1328,7 +1328,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 	expectError(t, resp, err)
 	// validate error message
 	expectedStrings := map[string]interface{}{
-		"two scopes cannot have the same top-level key; found scopes: test-scope2, test-scope1": true,
+		"scope templates cannot have conflicting top-level keys; found conflict \"groups\" in scopes \"test-scope2\", \"test-scope1\"": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
