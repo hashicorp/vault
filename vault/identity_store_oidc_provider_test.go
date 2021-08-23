@@ -752,6 +752,66 @@ func TestOIDC_Path_OIDC_ProviderScope_List(t *testing.T) {
 	expectStrings(t, respListScopeAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
+// TestOIDC_pathOIDCScopeExistenceCheck tests pathOIDCScopeExistenceCheck
+func TestOIDC_pathOIDCScopeExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	scopeName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCScopeExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": scopeName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a scope
+	scope := &scope{}
+	entry, _ := logical.StorageEntryJSON(scopePath+scopeName, scope)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCScopeExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": scopeName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider tests that a
 // Scope cannot be deleted when it is referenced by a provider
 func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
@@ -1057,6 +1117,66 @@ func TestOIDC_Path_OIDC_ProviderAssignment_List(t *testing.T) {
 	// validate list response
 	delete(expectedStrings, "test-assignment2")
 	expectStrings(t, respListAssignmentAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
+// TestOIDC_pathOIDCAssignmentExistenceCheck tests pathOIDCAssignmentExistenceCheck
+func TestOIDC_pathOIDCAssignmentExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	assignmentName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCAssignmentExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": assignmentName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a assignment
+	assignment := &assignment{}
+	entry, _ := logical.StorageEntryJSON(assignmentPath+assignmentName, assignment)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCAssignmentExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": assignmentName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
 }
 
 // TestOIDC_Path_OIDCProvider tests CRUD operations for providers
