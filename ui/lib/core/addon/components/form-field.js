@@ -18,7 +18,7 @@ import layout from '../templates/components/form-field';
  * ```
  *
  * @param [onChange=null] {Func} - Called whenever a value on the model changes via the component.
- * @param [onKeyUp=null] {Func} - A function passed through into MaskedInput to handle validation.
+ * @param [onKeyUp=null] {Func} - A function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
  * @param attr=null {Object} - This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
  * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
  * @param [disabled=false] {Boolean} - whether the field is disabled
