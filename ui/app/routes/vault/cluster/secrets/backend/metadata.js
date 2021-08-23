@@ -16,9 +16,9 @@ export default class MetadataShow extends Route {
       .then(record => {
         // ARG TODO remove when API is done
         record.customMetadata = {
-          foo: 'abc',
-          bar: '123',
-          baz: '5c07d823-3810-48f6-a147-4c06b5219e84',
+          // foo: 'abc',
+          // bar: '123',
+          // baz: '5c07d823-3810-48f6-a147-4c06b5219e84',
         };
         return record;
       });
