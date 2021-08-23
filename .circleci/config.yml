@@ -864,7 +864,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.4-buster \
+              testcontainer circleci/golang:1.15.15-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1069,7 +1069,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.4-buster \
+              testcontainer circleci/golang:1.15.15-buster \
               tail -f /dev/null
 
             # Run tests
@@ -1526,7 +1526,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.4-buster \
+              testcontainer circleci/golang:1.15.15-buster \
               tail -f /dev/null
 
             # Run tests
@@ -2107,7 +2107,7 @@ jobs:
               -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer circleci/golang:1.15.4-buster \
+              testcontainer circleci/golang:1.15.15-buster \
               tail -f /dev/null
 
             # Run tests
