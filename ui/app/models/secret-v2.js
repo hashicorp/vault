@@ -62,8 +62,9 @@ export default Model.extend(KeyMixin, Validations, {
 
   canListMetadata: alias('secretMetadataPath.canList'),
   canReadMetadata: alias('secretMetadataPath.canRead'),
-  canUpdateMetadata: alias('secretMetadataPath.canUpdate'), // ARG this work in edit-metadata, but not in secret-edit???
+  canUpdateMetadata: alias('secretMetadataPath.canUpdate'),
 
-  canUpdateMetadataRoot: belongsTo('secret-engine'),
-  canListMetadataMeep: alias('secretMetadataPath.canUpdate'),
+  canReadSecretData: alias('secretDataPath.canRead'),
+  canEditSecretData: alias('secretDataPath.canUpdate'),
+  canDeleteSecretData: alias('secretDataPath.canDelete'),
 });

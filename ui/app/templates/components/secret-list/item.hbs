@@ -45,7 +45,7 @@
                       </button>
                     </li>
                   {{else}}
-                    {{#if @item.canRead}}
+                    {{#if @item.canReadSecretData}}
                       <li class="action">
                         <SecretLink
                           @mode="show"
@@ -65,7 +65,7 @@
                         </li>
                       {{/if}}
                     {{/if}}
-                    {{#if @item.canEdit}}
+                    {{#if @item.canEditSecretData}}
                       <li class="action">
                         <SecretLink
                           @mode="edit"
@@ -78,7 +78,7 @@
                         </SecretLink>
                       </li>
                     {{/if}}
-                    {{#if @item.canDelete}}
+                    {{#if @item.canDeleteSecretData}}
                       <li class="action">
                         <c.Message
                           @id={{@item.id}}

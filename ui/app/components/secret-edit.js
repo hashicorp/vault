@@ -4,12 +4,10 @@
  *
  * @example
  * ```js
- * <SecretEdit @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <SecretEdit @model={{model}}/>
  * ```
-//  * ARG TODO FINISH THIS
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+/
+ * @param {object} model - Model returned from route secret-v2
  */
 
 import { inject as service } from '@ember/service';
@@ -112,7 +110,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canDeleteSecretMetadata: alias('checkMetadataCapabilities.canDelete'),
-  canUpdateSecretMetadata: alias('checkMetadataCapabilities.canUpdate'),
   canCreateSecretMetadata: alias('checkMetadataCapabilities.canCreate'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
@@ -153,14 +150,6 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   }),
 
   actions: {
-    // ARG TODO couldn't find this being used anywhere
-    // deleteKey() {
-    //   let { id } = this.model;
-    //   this.model.destroyRecord().then(() => {
-    //     this.navToNearestAncestor.perform(id);
-    //   });
-    // },
-
     refresh() {
       this.onRefresh();
     },
