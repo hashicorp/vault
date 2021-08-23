@@ -110,8 +110,8 @@
     warning=attr.options.warning
     helpText=attr.options.helpText
     subText=attr.options.subText
-    small-label=(if (eq valuePath 'customMetadata') true false )
-    formSection=(if (eq valuePath 'customMetadata') false true )
+    small-label=(if (eq mode "create") true false )
+    formSection=(if (eq mode "customMetadata") false true )
     name=valuePath
     onKeyUp=onKeyUp
     validationMessages=validationMessages

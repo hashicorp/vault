@@ -37,7 +37,7 @@ export default Model.extend(KeyMixin, Validations, {
   }),
   maxVersions: attr('number', {
     defaultValue: 10,
-    label: 'Maximum Number of Versions',
+    label: 'Maximum number of versions',
     subText:
       'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted.',
   }),
