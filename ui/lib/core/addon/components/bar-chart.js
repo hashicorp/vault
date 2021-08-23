@@ -23,7 +23,7 @@ import { axisLeft } from 'd3-axis';
 import { transition } from 'd3-transition';
 import { format } from 'd3-format';
 
-const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 };
+const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 }; // makes space for y-axis legend
 const BAR_COLORS = ['#BFD4FF', '#8AB1FF'];
 class BarChart extends Component {
   // make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
@@ -114,9 +114,9 @@ class BarChart extends Component {
           .style('opacity', 1)
           .text(
             ` 
-        ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
-        ${data.unique} unique entities, ${data.count} active tokens.
-        `
+          ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+          ${data.unique} unique entities, ${data.count} active tokens.
+          `
           )
           .style('color', 'white')
           .style('background', '#525761')
@@ -133,8 +133,8 @@ class BarChart extends Component {
       })
       .on('mousemove', function() {
         select('.chart-tooltip')
-          .style('left', `${event.pageX - 110}px`)
-          .style('top', `${event.pageY - 145}px`);
+          .style('left', `${xScale(event.pageX - 150)}%`)
+          .style('top', `${event.pageY - 140}px`);
       });
 
     let totalNumbers = [];
@@ -179,26 +179,26 @@ class BarChart extends Component {
     legendSvg
       .append('circle')
       .attr('cx', '60%')
-      .attr('cy', '20%')
+      .attr('cy', '50%')
       .attr('r', 6)
       .style('fill', '#BFD4FF');
     legendSvg
       .append('text')
       .attr('x', '62%')
-      .attr('y', '20%')
+      .attr('y', '50%')
       .text(`${this.variableA}`)
       .style('font-size', '.8rem')
       .attr('alignment-baseline', 'middle');
     legendSvg
       .append('circle')
       .attr('cx', '83%')
-      .attr('cy', '20%')
+      .attr('cy', '50%')
       .attr('r', 6)
       .style('fill', '#8AB1FF');
     legendSvg
       .append('text')
       .attr('x', '85%')
-      .attr('y', '20%')
+      .attr('y', '50%')
       .text(`${this.variableB}`)
       .style('font-size', '.8rem')
       .attr('alignment-baseline', 'middle');

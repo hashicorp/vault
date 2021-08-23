@@ -1,48 +1,57 @@
-.container {
+.test-container {
   display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 3fr;
+}
+.bar-chart-div {
+  border: 1px solid #dce0e6;
+  border-radius: 4px;
+  padding: $spacing-l $spacing-l $spacing-s $spacing-l;
+  height: 100%;
+  width: 100%;
 
-  .bar-chart-div {
-    border: 1px solid #dce0e6;
-    border-radius: 4px;
-    padding: 24px, 24px, 12px, 24px;
-
-    > div.is-border {
-      border: 0.3px solid #dce0e6;
-      width: 94%;
-      margin-left: 3%;
-    }
+  > div.is-border {
+    border: 0.3px solid #dce0e6;
+    width: 94%;
+    margin-left: 3%;
   }
+}
 
-  .chart-header {
-    margin: 24px 0px 0px 24px;
-  }
+.chart-header {
+  margin: 24px 0px 0px 24px;
+}
 
-  .chart-title {
-    font-size: $size-5;
-    font-weight: $font-weight-bold;
-    line-height: normal;
-  }
+.chart-title {
+  font-size: $size-5;
+  font-weight: $font-weight-bold;
+  line-height: normal;
+}
 
-  .chart-description {
+.chart-description {
+  font-size: $size-8;
+  font-weight: $font-weight-normal;
+  color: $ui-gray-700;
+  margin-bottom: $spacing-xs;
+}
+
+.bar-chart {
+  width: 100%;
+  padding: $spacing-m $spacing-l $spacing-m $spacing-l;
+
+  .tick > text {
+    font-weight: $font-weight-semibold;
     font-size: $size-8;
-    font-weight: $font-weight-normal;
-    color: $ui-gray-700;
-    margin-bottom: 8px;
   }
+}
 
-  .bar-chart {
-    width: 100%;
-    height: 100%;
-    padding: 17px 24px 20px 24px;
+.legend-container {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  margin-top: $spacing-s;
+}
 
-    .tick > text {
-      font-weight: $font-weight-semibold;
-      font-size: $size-8;
-    }
-  }
-
-  .legend {
-    width: 100%;
-    height: 100%;
-  }
+.legend {
+  width: 100%;
+  height: 100%;
 }

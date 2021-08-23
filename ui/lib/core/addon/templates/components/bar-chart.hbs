@@ -1,13 +1,20 @@
-<div class="bar-chart-div">
-  <div class="chart-header">
-    <h2 class="chart-title">{{@title}}</h2>
-    <p class="chart-description">{{@description}}</p>
-  </div>
+<div class="test-container"> 
+  <div>First Div</div>
+  <div>Second Div</div>
+  <div class="bar-chart-div">
+    <div class="chart-header">
+      <h2 class="chart-title">{{@title}}</h2>
+      <p class="chart-description">{{@description}}</p>
+    </div>
+      <div class="is-border"></div>
+    <div class="bar-chart-container">
+    {{!-- add conditional here to check for data --}}
+      <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
+    </div>
     <div class="is-border"></div>
-  <div class="bar-chart-container">
-  {{!-- add conditional here to check for data --}}
-    <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
+    <div class="legend-container">
+      <svg class="legend"></svg>
+    </div>
   </div>
-  <div class="is-border"></div>
-  <svg class="legend"></svg>
+  <div>Fourth Div</div>
 </div>
