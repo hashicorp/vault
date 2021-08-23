@@ -3,7 +3,7 @@ package transit
 import (
 	"context"
 	"errors"
-
+	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -48,6 +48,13 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 	if cacheSize < 0 {
 		return logical.ErrorResponse("size must be greater or equal to 0"), logical.ErrInvalidRequest
 	}
+   // minCacheSize := 10
+	var resp = &logical.Response{}
+
+    if cacheSize < minCacheSize {
+		resp.AddWarning(fmt.Sprintf("size %d is less than default minimum %d. Cache size is set to %d", cacheSize, minCacheSize, minCacheSize))
+		cacheSize = minCacheSize
+	}
 
 	// store cache size
 	entry, err := logical.StorageEntryJSON("config/cache", &configCache{
@@ -60,9 +67,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	resp := &logical.Response{
-		Warnings: []string{"cache configurations will be applied when this backend is restarted"},
-	}
+	resp.AddWarning("cache configurations will be applied when this backend is restarted")
 
 	return resp, nil
 }
