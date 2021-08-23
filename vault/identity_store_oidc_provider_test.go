@@ -1,10 +1,13 @@
 package vault
 
 import (
+	"encoding/base64"
+	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -416,6 +419,66 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 	expectStrings(t, respListClientAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
+// TestOIDC_pathOIDCClientExistenceCheck tests pathOIDCClientExistenceCheck
+func TestOIDC_pathOIDCClientExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	clientName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCClientExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": clientName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a client
+	client := &client{}
+	entry, _ := logical.StorageEntryJSON(clientPath+clientName, client)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCClientExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": clientName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderScope_ReservedName tests that the reserved name
 // "openid" cannot be used when creating a scope
 func TestOIDC_Path_OIDC_ProviderScope_ReservedName(t *testing.T) {
@@ -435,6 +498,67 @@ func TestOIDC_Path_OIDC_ProviderScope_ReservedName(t *testing.T) {
 		"the \"openid\" scope name is reserved": true,
 	}
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_ProviderScope_TemplateValidation tests that the template
+// validation does not allow restricted claims
+func TestOIDC_Path_OIDC_ProviderScope_TemplateValidation(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	testCases := []struct {
+		templ         string
+		restrictedKey string
+	}{
+		{
+			templ:         `{"aud": "client-12345", "other": "test"}`,
+			restrictedKey: "aud",
+		},
+		{
+			templ:         `{"exp": 1311280970, "other": "test"}`,
+			restrictedKey: "exp",
+		},
+		{
+			templ:         `{"iat": 1311280970, "other": "test"}`,
+			restrictedKey: "iat",
+		},
+		{
+			templ:         `{"iss": "https://openid.c2id.com", "other": "test"}`,
+			restrictedKey: "iss",
+		},
+		{
+			templ:         `{"namespace": "n-0S6_WzA2Mj", "other": "test"}`,
+			restrictedKey: "namespace",
+		},
+		{
+			templ:         `{"sub": "alice", "other": "test"}`,
+			restrictedKey: "sub",
+		},
+	}
+	for _, tc := range testCases {
+		encodedTempl := base64.StdEncoding.EncodeToString([]byte(tc.templ))
+		// Create a test scope "test-scope" -- should fail
+		resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/scope/test-scope",
+			Operation: logical.CreateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"template":    encodedTempl,
+				"description": "my-description",
+			},
+		})
+		expectError(t, resp, err)
+		errString := fmt.Sprintf(
+			"top level key %q not allowed. Restricted keys: iat, aud, exp, iss, sub, namespace",
+			tc.restrictedKey,
+		)
+		// validate error message
+		expectedStrings := map[string]interface{}{
+			errString: true,
+		}
+		expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+	}
 }
 
 // TestOIDC_Path_OIDC_ProviderScope tests CRUD operations for scopes
@@ -466,12 +590,14 @@ func TestOIDC_Path_OIDC_ProviderScope(t *testing.T) {
 		t.Fatal(diff)
 	}
 
+	templ := `{ "groups": {{identity.entity.groups.names}} }`
+	encodedTempl := base64.StdEncoding.EncodeToString([]byte(templ))
 	// Update "test-scope" -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template":    "eyAiZ3JvdXBzIjoge3tpZGVudGl0eS5lbnRpdHkuZ3JvdXBzLm5hbWVzfX0gfQ==",
+			"template":    encodedTempl,
 			"description": "my-description",
 		},
 		Storage: storage,
@@ -486,7 +612,7 @@ func TestOIDC_Path_OIDC_ProviderScope(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"template":    "{ \"groups\": {{identity.entity.groups.names}} }",
+		"template":    templ,
 		"description": "my-description",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
@@ -518,13 +644,15 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
+	templ := `{ "groups": {{identity.entity.groups.names}} }`
+	encodedTempl := base64.StdEncoding.EncodeToString([]byte(templ))
 	// Create a test scope "test-scope" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"template":    "eyAiZ3JvdXBzIjoge3tpZGVudGl0eS5lbnRpdHkuZ3JvdXBzLm5hbWVzfX0gfQ==",
+			"template":    encodedTempl,
 			"description": "my-description",
 		},
 	})
@@ -538,7 +666,7 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"template":    "{ \"groups\": {{identity.entity.groups.names}} }",
+		"template":    templ,
 		"description": "my-description",
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
@@ -550,7 +678,7 @@ func TestOIDC_Path_OIDC_ProviderScope_Update(t *testing.T) {
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template":    "eyAiZ3JvdXBzIjoge3tpZGVudGl0eS5lbnRpdHkuZ3JvdXBzLm5hbWVzfX0gfQ==",
+			"template":    encodedTempl,
 			"description": "my-description-2",
 		},
 		Storage: storage,
@@ -622,6 +750,66 @@ func TestOIDC_Path_OIDC_ProviderScope_List(t *testing.T) {
 	// validate list response
 	delete(expectedStrings, "test-scope2")
 	expectStrings(t, respListScopeAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
+// TestOIDC_pathOIDCScopeExistenceCheck tests pathOIDCScopeExistenceCheck
+func TestOIDC_pathOIDCScopeExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	scopeName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCScopeExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": scopeName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a scope
+	scope := &scope{}
+	entry, _ := logical.StorageEntryJSON(scopePath+scopeName, scope)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCScopeExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": scopeName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
 }
 
 // TestOIDC_Path_OIDC_ProviderAssignment tests CRUD operations for assignments
@@ -875,4 +1063,64 @@ func TestOIDC_Path_OIDC_ProviderAssignment_List(t *testing.T) {
 	// validate list response
 	delete(expectedStrings, "test-assignment2")
 	expectStrings(t, respListAssignmentAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
+// TestOIDC_pathOIDCAssignmentExistenceCheck tests pathOIDCAssignmentExistenceCheck
+func TestOIDC_pathOIDCAssignmentExistenceCheck(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	assignmentName := "test"
+
+	// Expect nil with empty storage
+	exists, err := c.identityStore.pathOIDCAssignmentExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": assignmentName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if exists {
+		t.Fatalf("Expected existence check to return false but instead returned: %t", exists)
+	}
+
+	// Populte storage with a assignment
+	assignment := &assignment{}
+	entry, _ := logical.StorageEntryJSON(assignmentPath+assignmentName, assignment)
+	if err := storage.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Expect true with a populated storage
+	exists, err = c.identityStore.pathOIDCAssignmentExistenceCheck(
+		ctx,
+		&logical.Request{
+			Storage: storage,
+		},
+		&framework.FieldData{
+			Raw: map[string]interface{}{"name": assignmentName},
+			Schema: map[string]*framework.FieldSchema{
+				"name": {
+					Type: framework.TypeString,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("Error during existence check on an expected nil entry, err:\n%#v", err)
+	}
+	if !exists {
+		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
+	}
 }
