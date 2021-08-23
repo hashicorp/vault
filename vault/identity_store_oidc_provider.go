@@ -38,7 +38,6 @@ type client struct {
 }
 
 type provider struct {
-	name             string
 	Issuer           string   `json:"issuer"`
 	AllowedClientIDs []string `json:"allowed_client_ids"`
 	Scopes           []string `json:"scopes"`
@@ -826,7 +825,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		if err != nil {
 			return nil, err
 		}
-		// enforce scope existence on provider creation
+		// enforce scope existence on provider create and update
 		if entry == nil {
 			return logical.ErrorResponse("scope %q does not exist", scopeName), nil
 		}
@@ -843,11 +842,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		}
 
 		for keyName := range jsonTemplate {
-			if _, ok := scopeTemplateKeyNames[keyName]; !ok {
-				scopeTemplateKeyNames[keyName] = scopeName
-			} else if val, ok := scopeTemplateKeyNames[keyName]; ok && val != scopeName {
-				return logical.ErrorResponse("two scopes cannot have the same top-level key; found scopes: %s, %s", scopeName, val), nil
+			val, ok := scopeTemplateKeyNames[keyName]
+			if ok && val != scopeName {
+				return logical.ErrorResponse("scope templates cannot have conflicting top-level keys; found conflict %q in scopes %q, %q", keyName, scopeName, val), nil
 			}
+
+			scopeTemplateKeyNames[keyName] = scopeName
 		}
 	}
 
