@@ -55,8 +55,8 @@ class BarChart extends Component {
     let stackFunction = stack().keys(['count', 'unique']);
     let stackedData = stackFunction(dataset); // returns an array of coordinates for each rectangle group, first group is for counts (left), second for unique (right)
     let container = select('.bar-chart-container');
-    // container.attr('viewBox', '0 0 751 405');
 
+    // creates and appends tooltip
     container
       .append('div')
       .attr('class', 'chart-tooltip')
@@ -74,7 +74,8 @@ class BarChart extends Component {
 
     let yScale = scaleBand()
       .domain(dataset.map(d => d.label))
-      .range([0, dataset.length * 24]) // each bar element has a thickness (bar + padding) of 24 pixels
+      // each bar element (bar + padding) has a thickness  of 24 pixels
+      .range([0, dataset.length * 24])
       // paddingInner takes a number between 0 and 1
       // it tells the scale the percent of the total width it should reserve for white space between bars
       .paddingInner(0.765);
@@ -82,7 +83,7 @@ class BarChart extends Component {
     let chartSvg = select(element);
     chartSvg.attr('height', (dataset.length + 1) * 24);
 
-    // append background bars first so behind data bars
+    // must append background bars first so they are behind data bars
     let backgroundBars = chartSvg
       .selectAll('.background-bar')
       .data(dataset)
@@ -109,16 +110,16 @@ class BarChart extends Component {
           .transition()
           .duration(200)
           .style('opacity', 1).text(` 
-            ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
-            ${data.unique} unique entities, ${data.count} active tokens.
-            `);
+      ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+      ${data.unique} unique entities, ${data.count} active tokens.
+      `);
       })
       .on('mouseout', function() {
         select(this).style('opacity', 0);
-        let bars = event.relatedTarget.querySelectorAll(`g > [y="${this.getAttribute('y')}"]`);
-        bars.forEach((bar, i) => {
-          select(bar).style('fill', `${BAR_COLORS_UNSELECTED[i]}`);
+        let bars = chartSvg.selectAll('rect.data-bar').filter(function() {
+          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
         });
+        bars.style('fill', (b, i) => `${BAR_COLORS_UNSELECTED[i]}`);
         select('.chart-tooltip').style('opacity', 0);
       })
       .on('mousemove', function() {
@@ -170,7 +171,7 @@ class BarChart extends Component {
       totalCountText.push(textDatum);
     });
 
-    let text = groups
+    groups
       .selectAll('text')
       .data(totalCountText)
       .enter()
@@ -181,10 +182,7 @@ class BarChart extends Component {
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
       .attr('y', d => `${d.y}`)
-      .attr('x', d => {
-        // let translateRight = d.x + 1;
-        return `${d.x + 1}%`;
-      });
+      .attr('x', d => `${d.x + 1}%`);
 
     // remove axes lines
     groups.selectAll('.domain, .tick line').remove();
