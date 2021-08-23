@@ -231,7 +231,6 @@ export default class SecretCreateOrUpdate extends Component {
   }
 
   //submit on shift + enter
-  // ARG TODO come back and fix this.
   @action
   handleKeyDown(e) {
     e.stopPropagation();

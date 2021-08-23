@@ -52,7 +52,7 @@ export default class SecretEditMetadata extends Component {
       this.save();
       return;
     }
-    // ARG TODO else validation error?
+    // ARG TODO when API figure out if changed is false what to do, likely a validation error with disable save button.
   }
   @action onKeyUp(name, value) {
     if (value) {

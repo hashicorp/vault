@@ -1,4 +1,3 @@
-// ARG TODO turn into Glimmer
 /**
  * @module SecretEditToolbar
  * SecretEditToolbar component is the toolbar component displaying the JSON toggle and the actions like delete in the show mode.
@@ -38,64 +37,72 @@
  * @param {object} editActions - actions passed from parent to child
  */
 
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { not } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+export default class SecretEditToolbar extends Component {
+  @service store;
+  @service flashMessages;
 
-export default Component.extend({
-  store: service(),
+  @tracked wrappedData = null;
+  @tracked isWrapping = false;
+  @not('wrappedData') showWrapButton;
 
-  wrappedData: null,
-  isWrapping: false,
-  showWrapButton: not('wrappedData'),
+  @action
+  handleWrapClick() {
+    this.isWrapping = true;
+    if (this.args.isV2) {
+      this.store
+        .adapterFor('secret-v2-version')
+        .queryRecord(this.args.modelForData.id, { wrapTTL: 1800 })
+        .then(resp => {
+          this.wrappedData = resp.wrap_info.token;
+          console.log(this.wrappedData, 'wrapped data');
+          this.flashMessages.success('Secret Successfully Wrapped!');
+        })
+        .catch(() => {
+          this.flashMessages.danger('Could Not Wrap Secret');
+        })
+        .finally(() => {
+          this.isWrapping = false;
+        });
+    } else {
+      this.store
+        .adapterFor('secret')
+        .queryRecord(null, null, {
+          backend: this.args.model.backend,
+          id: this.args.modelForData.id,
+          wrapTTL: 1800,
+        })
+        .then(resp => {
+          this.wrappedData = resp.wrap_info.token;
+          this.flashMessages.success('Secret Successfully Wrapped!');
+        })
+        .catch(() => {
+          this.flashMessages.danger('Could Not Wrap Secret');
+        })
+        .finally(() => {
+          this.isWrapping = false;
+        });
+    }
+  }
 
-  actions: {
-    handleWrapClick() {
-      this.set('isWrapping', true);
-      if (this.isV2) {
-        this.store
-          .adapterFor('secret-v2-version')
-          .queryRecord(this.modelForData.id, { wrapTTL: 1800 })
-          .then(resp => {
-            this.set('wrappedData', resp.wrap_info.token);
-            this.flashMessages.success('Secret Successfully Wrapped!');
-          })
-          .catch(() => {
-            this.flashMessages.danger('Could Not Wrap Secret');
-          })
-          .finally(() => {
-            this.set('isWrapping', false);
-          });
-      } else {
-        this.store
-          .adapterFor('secret')
-          .queryRecord(null, null, { backend: this.model.backend, id: this.modelForData.id, wrapTTL: 1800 })
-          .then(resp => {
-            this.set('wrappedData', resp.wrap_info.token);
-            this.flashMessages.success('Secret Successfully Wrapped!');
-          })
-          .catch(() => {
-            this.flashMessages.danger('Could Not Wrap Secret');
-          })
-          .finally(() => {
-            this.set('isWrapping', false);
-          });
-      }
-    },
+  @action
+  clearWrappedData() {
+    this.wrappedData = null;
+  }
 
-    clearWrappedData() {
-      console.log(this.wrappedData, 'meep');
-      this.set('wrappedData', null);
-    },
+  @action
+  handleCopySuccess() {
+    this.flashMessages.success('Copied Wrapped Data!');
+    this.send('clearWrappedData');
+  }
 
-    handleCopySuccess() {
-      this.flashMessages.success('Copied Wrapped Data!');
-      this.send('clearWrappedData');
-    },
-
-    handleCopyError() {
-      this.flashMessages.danger('Could Not Copy Wrapped Data');
-      this.send('clearWrappedData');
-    },
-  },
-});
+  @action
+  handleCopyError() {
+    this.flashMessages.danger('Could Not Copy Wrapped Data');
+    this.send('clearWrappedData');
+  }
+}

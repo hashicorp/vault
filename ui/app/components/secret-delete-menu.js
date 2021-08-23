@@ -58,7 +58,7 @@ export default class SecretDeleteMenu extends Component {
   )
   destroyVersionPath;
   @alias('destroyVersionPath.canUpdate') canDestroyVersion;
-  // ARG TODO try and move this to the model, after merge.
+
   @maybeQueryRecord(
     'capabilities',
     context => {
