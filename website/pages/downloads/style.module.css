@@ -1,5 +1,5 @@
 .root {
-  composes: .g-container from global;
+  composes: .g-grid-container from global;
   margin-top: 72px;
   margin-bottom: 72px;
 }
@@ -15,7 +15,7 @@
 
 .merchandisingSlot {
   width: 100%;
-  border: 1px solid var(--gray-6);
+  border: 1px solid var(--gray-5);
   padding: 16px;
   display: flex;
   justify-content: center;

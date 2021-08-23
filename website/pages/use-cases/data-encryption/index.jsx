@@ -20,7 +20,7 @@ export default function DataEncryptionUseCase({ content }) {
   return (
     <main id="use-cases" className="g-section-block page-wrap">
       {/* Header / Buttons */}
-      <section className="g-container">
+      <section className="g-grid-container">
         <SectionHeader
           headline="Encrypt Application Data in Low Trust Networks"
           description="Keep application data secure with one centralized workflow to encrypt data in flight and at rest"
@@ -45,7 +45,7 @@ export default function DataEncryptionUseCase({ content }) {
 
       {/* Before/After Diagram */}
       <section>
-        <div className="g-container">
+        <div className="g-grid-container">
           <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
