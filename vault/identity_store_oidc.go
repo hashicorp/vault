@@ -556,10 +556,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	}
 
-	// TKTK storing the cache control max value in the i.oidcCache,
-	// and populating it only in the periodicFunc background worker means
-	// up to 60 seconds of `Cache-control: none` at Vault startup and
-	// anytime a key configuration isn't changed, which is a problem
 	if err := i.oidcCache.Flush(ns); err != nil {
 		return nil, err
 	}
@@ -1697,9 +1693,6 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
-// TKTK consider offsetting nextRun to be 60 seconds early and then
-// TKTK sleepingthe remaining upto 60 seconds until the actual rotation time
-// TKTK but only if this function is called in a non blocking way
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	var nextRun time.Time
 	now := time.Now()
