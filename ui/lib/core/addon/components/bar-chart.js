@@ -15,7 +15,7 @@ import Component from '@glimmer/component';
 import layout from '../templates/components/bar-chart';
 import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
-import { select, event, selection } from 'd3-selection';
+import { select, event, selection, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { max } from 'd3-array';
 import { stack } from 'd3-shape';
@@ -53,7 +53,7 @@ class BarChart extends Component {
     let dataset = this.dataset.sort((a, b) => a.count + a.unique - (b.count + b.unique)).reverse();
     let totalActive = this.totalActive;
     let stackFunction = stack().keys(['count', 'unique']);
-    let stackedData = stackFunction(dataset); // returns an array of coordinates for each rectangle group, first group is for counts (left), second for unique (right)
+    let stackedData = stackFunction(dataset); // returns an array of coordinates for each group of rectangles, first group is for counts (left), second for unique (right)
     let container = select('.bar-chart-container');
 
     // creates and appends tooltip
@@ -69,8 +69,8 @@ class BarChart extends Component {
       .style('border-radius', '4px');
 
     let xScale = scaleLinear()
-      .domain([0, max(dataset, d => d.count + d.unique)]) // min and max values of dataset
-      .range([0, 75]); // range in percent (30% reserved for margins)
+      .domain([0, max(dataset, d => d.count + d.unique)])
+      .range([0, 70]); // 30% reserved for margins
 
     let yScale = scaleBand()
       .domain(dataset.map(d => d.label))
@@ -98,6 +98,7 @@ class BarChart extends Component {
       .style('fill', '#EBEEF2')
       .style('opacity', '0');
 
+    // MOUSE EVENT TO HIGHLIGHT BARS
     backgroundBars
       .on('mouseover', function(data) {
         select(this).style('opacity', 1);
@@ -128,16 +129,16 @@ class BarChart extends Component {
           .style('top', `${event.pageY - 145}px`);
       });
 
-    // add a group for each array of stackedData
+    // creates group for each array of stackedData
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
       .enter()
       .append('g')
+      // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
       .style('fill', (d, i) => BAR_COLORS_UNSELECTED[i]);
 
-    // yAxis legend
     let yAxis = axisLeft(yScale);
     yAxis(groups.append('g'));
 
@@ -155,25 +156,26 @@ class BarChart extends Component {
       .attr('rx', 3)
       .attr('ry', 3);
 
+    // TO DO: fix this inflexible business
     let totalNumbers = [];
     stackedData[1].forEach(e => {
       let n = e[1];
       totalNumbers.push(n);
     });
 
-    let totalCountText = [];
+    let totalCountData = [];
     rects.each(function(d, i) {
       let textDatum = {
         text: totalNumbers[i],
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
         y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
       };
-      totalCountText.push(textDatum);
+      totalCountData.push(textDatum);
     });
 
     groups
       .selectAll('text')
-      .data(totalCountText)
+      .data(totalCountData)
       .enter()
       .append('text')
       .text(d => d.text)
@@ -184,11 +186,10 @@ class BarChart extends Component {
       .attr('y', d => `${d.y}`)
       .attr('x', d => `${d.x + 1}%`);
 
-    // remove axes lines
+    // removes axes lines
     groups.selectAll('.domain, .tick line').remove();
 
     let legendSvg = select('.legend');
-
     legendSvg
       .append('circle')
       .attr('cx', '60%')
