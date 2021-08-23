@@ -89,7 +89,7 @@ module('Integration | Component | masked input', function(hooks) {
     assert.dom('.masked-value').hasClass('masked-font');
   });
 
-  test('it does not remove value on tab meep', async function(assert) {
+  test('it does not remove value on tab', async function(assert) {
     this.set('value', 'hello');
     await render(hbs`{{masked-input value=value}}`);
     await triggerKeyEvent('[data-test-textarea]', 'keydown', 9);
