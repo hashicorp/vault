@@ -74,21 +74,6 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.Logger().Warn("size %d is less than default minimum %d. Cache size is set to %d", cacheSize, minCacheSize, minCacheSize)
 			cacheSize = minCacheSize
 		}
-		// store cache size
-		entry, err := logical.StorageEntryJSON("config/cache", &configCache{
-			Size: cacheSize,
-		})
-		if err != nil {
-			return nil, err:
-
-		}
-
-		//var req *logical.Request
-		//var storage logical.Storage
-		if err := conf.StorageView.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-
 	}
 
 	var err error
