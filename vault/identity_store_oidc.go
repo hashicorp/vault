@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
+	mathrand "math/rand"
 	"net/url"
 	"sort"
 	"strings"
@@ -1228,12 +1228,9 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 
 		if ok {
 			maxDuration := int64(maxJwksClientCache.(time.Duration))
-			randDuration, err := rand.Int(rand.Reader, big.NewInt(maxDuration))
-			if err != nil {
-				return nil, err
-			}
+			randDuration := mathrand.Int63n(maxDuration)
 			// truncate to seconds
-			durationInSeconds := time.Duration(randDuration.Int64()).Seconds()
+			durationInSeconds := time.Duration(randDuration).Seconds()
 			durationInString := fmt.Sprintf("max-age=%.0f", durationInSeconds)
 			resp.Data[logical.HTTPRawCacheControl] = durationInString
 		} else {
