@@ -50,7 +50,6 @@ class BarChart extends Component {
   createToolTipText(data) {
     let total = data.reduce((prev, acc) => prev + acc, 0);
     return `${total / this.totalActive}%`;
-    // console.log(percent)
   }
 
   @action
@@ -59,13 +58,19 @@ class BarChart extends Component {
     let totalActive = this.totalActive;
     let stackFunction = stack().keys(['count', 'unique']);
     let stackedData = stackFunction(dataset); // returns an array of coordinates for each rectangle group, first group is for counts (left), second for unique (right)
-
     let container = select('.bar-chart-container');
-    container.attr('viewBox', '0 0 751 405');
+    // container.attr('viewBox', '0 0 751 405');
+
     container
       .append('div')
       .attr('class', 'chart-tooltip')
-      .attr('style', 'position: absolute; opacity: 0;');
+      .attr('style', 'position: absolute; opacity: 0;')
+      .style('color', 'white')
+      .style('background', '#525761')
+      .style('max-width', '200px')
+      .style('font-size', '.929rem')
+      .style('padding', '10px')
+      .style('border-radius', '4px');
 
     let xScale = scaleLinear()
       .domain([0, max(dataset, d => d.count + d.unique)]) // min and max values of dataset
@@ -81,7 +86,47 @@ class BarChart extends Component {
     let chartSvg = select(element);
     chartSvg.attr('height', (dataset.length + 1) * 24);
 
-    // add a group for each row of data
+    let backgroundBars = chartSvg
+      .selectAll('.background-bar')
+      .data(dataset)
+      .enter()
+      .append('rect')
+      .style('cursor', 'pointer')
+      .attr('class', 'background-bar')
+      .attr('width', '100%')
+      .attr('height', '24px')
+      .attr('x', '0')
+      .attr('y', ({ label }) => yScale(label))
+      .style('fill', '#EBEEF2')
+      .style('opacity', '0')
+      .on('mouseover', function(data) {
+        select(this).style('opacity', 1);
+        select('.chart-tooltip')
+          .transition()
+          .duration(200)
+          .style('opacity', 1)
+          // TOOLTIP TEXT:
+          .text(
+            ` 
+          ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+          ${data.unique} unique entities, ${data.count} active tokens.
+          `
+          );
+      })
+      .on('mouseout', function(d) {
+        select(this).style('opacity', 0);
+        select('.chart-tooltip').style('opacity', 0);
+        select(this).attr('fill', function() {
+          d[0] === 0 ? `${BAR_COLORS[0]}` : `${BAR_COLORS[1]}`;
+        });
+      })
+      .on('mousemove', function() {
+        select('.chart-tooltip')
+          .style('left', `${xScale(event.pageX - 150)}%`)
+          .style('top', `${event.pageY - 140}px`);
+      });
+
+    // add a group for each array of stackedData
     let groups = chartSvg
       .selectAll('g')
       .data(stackedData)
@@ -99,43 +144,37 @@ class BarChart extends Component {
       .data(d => d)
       .enter()
       .append('rect')
-      .style('cursor', 'pointer')
       .attr('width', data => `${xScale(data[1] - data[0] - 6)}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', data => `${xScale(data[0])}%`)
       .attr('y', ({ data }) => yScale(data.label))
       .attr('rx', 3)
-      .attr('ry', 3)
-      .on('mouseover', function({ data }) {
-        select(this).attr('fill', '#1563FF');
-        select('.chart-tooltip')
-          .transition()
-          .duration(200)
-          .style('opacity', 1)
-          .text(
-            ` 
-          ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
-          ${data.unique} unique entities, ${data.count} active tokens.
-          `
-          )
-          .style('color', 'white')
-          .style('background', '#525761')
-          .style('max-width', '200px')
-          .style('font-size', '.929rem')
-          .style('padding', '10px')
-          .style('border-radius', '4px');
-      })
-      .on('mouseout', function(d) {
-        select('.chart-tooltip').style('opacity', 0);
-        select(this).attr('fill', function() {
-          d[0] === 0 ? `${BAR_COLORS[0]}` : `${BAR_COLORS[1]}`;
-        });
-      })
-      .on('mousemove', function() {
-        select('.chart-tooltip')
-          .style('left', `${xScale(event.pageX - 150)}%`)
-          .style('top', `${event.pageY - 140}px`);
-      });
+      .attr('ry', 3);
+    // .on('mouseover', function({ data }) {
+    //   select(this).attr('fill', '#1563FF');
+    //   select('.chart-tooltip')
+    //     .transition()
+    //     .duration(200)
+    //     .style('opacity', 1)
+    //     // TOOLTIP TEXT:
+    //     .text(
+    //       `
+    //     ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+    //     ${data.unique} unique entities, ${data.count} active tokens.
+    //     `
+    //     )
+    // })
+    // .on('mouseout', function(d) {
+    //   select('.chart-tooltip').style('opacity', 0);
+    //   select(this).attr('fill', function() {
+    //     d[0] === 0 ? `${BAR_COLORS[0]}` : `${BAR_COLORS[1]}`;
+    //   });
+    // })
+    // .on('mousemove', function() {
+    //   select('.chart-tooltip')
+    //     .style('left', `${xScale(event.pageX - 150)}%`)
+    //     .style('top', `${event.pageY - 140}px`);
+    // });
 
     let totalNumbers = [];
     stackedData[1].forEach(e => {
