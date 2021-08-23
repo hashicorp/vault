@@ -102,10 +102,10 @@ class BarChart extends Component {
     backgroundBars
       .on('mouseover', function(data) {
         select(this).style('opacity', 1);
-        let bars = chartSvg.selectAll('rect.data-bar').filter(function() {
+        let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
           return select(this).attr('y') === `${event.target.getAttribute('y')}`;
         });
-        bars.style('fill', (b, i) => `${BAR_COLORS_SELECTED[i]}`);
+        dataBars.style('fill', (b, i) => `${BAR_COLORS_SELECTED[i]}`);
         // TOOLTIP TEXT:
         select('.chart-tooltip')
           .transition()
@@ -117,10 +117,10 @@ class BarChart extends Component {
       })
       .on('mouseout', function() {
         select(this).style('opacity', 0);
-        let bars = chartSvg.selectAll('rect.data-bar').filter(function() {
+        let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
           return select(this).attr('y') === `${event.target.getAttribute('y')}`;
         });
-        bars.style('fill', (b, i) => `${BAR_COLORS_UNSELECTED[i]}`);
+        dataBars.style('fill', (b, i) => `${BAR_COLORS_UNSELECTED[i]}`);
         select('.chart-tooltip').style('opacity', 0);
       })
       .on('mousemove', function() {
@@ -155,6 +155,43 @@ class BarChart extends Component {
       .attr('y', ({ data }) => yScale(data.label))
       .attr('rx', 3)
       .attr('ry', 3);
+
+    // MOUSE EVENT TO HIGHLIGHT BARS
+    rects
+      .on('mouseover', function({ data }) {
+        let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
+          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+        });
+        dataBars.style('fill', (b, i) => `${BAR_COLORS_SELECTED[i]}`);
+        let backgroundBar = chartSvg.selectAll('rect.background-bar').filter(function() {
+          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+        });
+        backgroundBar.style('opacity', 1);
+        // TOOLTIP TEXT:
+        select('.chart-tooltip')
+          .transition()
+          .duration(200)
+          .style('opacity', 1).text(` 
+      ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+      ${data.unique} unique entities, ${data.count} active tokens.
+      `);
+      })
+      .on('mouseout', function() {
+        let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
+          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+        });
+        dataBars.style('fill', (b, i) => `${BAR_COLORS_UNSELECTED[i]}`);
+        let backgroundBar = chartSvg.selectAll('rect.background-bar').filter(function() {
+          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+        });
+        backgroundBar.style('opacity', 1);
+        select('.chart-tooltip').style('opacity', 0);
+      })
+      .on('mousemove', function() {
+        select('.chart-tooltip')
+          .style('left', `${xScale(event.pageX + 20)}%`)
+          .style('top', `${event.pageY - 145}px`);
+      });
 
     // TO DO: fix this inflexible business
     let totalNumbers = [];
