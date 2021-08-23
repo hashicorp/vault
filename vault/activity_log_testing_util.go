@@ -36,6 +36,29 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]struct{}
 	return activeEntities, tokens
 }
 
+// InjectActivityLogDataThisMonth populates the in-memory client store
+// with some entities and tokens for root namespace , overriding what was already there
+// It is currently used for API integration tests
+func (c *Core) InjectActivityLogDataThisMonthRootNS(t *testing.T) (map[string]uint64, map[string]uint64) {
+	t.Helper()
+
+	entitiesByNS := map[string]uint64{
+		"root": 1,
+	}
+	tokens := map[string]uint64{
+		"root": 5,
+	}
+
+	c.activityLog.l.Lock()
+	defer c.activityLog.l.Unlock()
+	c.activityLog.fragmentLock.Lock()
+	defer c.activityLog.fragmentLock.Unlock()
+
+	c.activityLog.currentSegment.tokenCount.CountByNamespaceID = tokens
+	c.activityLog.entityCountByNamespaceID = entitiesByNS
+	return entitiesByNS, tokens
+}
+
 // Return the in-memory activeEntities from an activity log
 func (c *Core) GetActiveEntities() map[string]struct{} {
 	out := make(map[string]struct{})

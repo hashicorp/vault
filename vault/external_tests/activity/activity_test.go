@@ -87,7 +87,7 @@ func TestActivityLog_MonthlyActivityApi(t *testing.T) {
 	validateClientCounts(t, resp, 0, 0)
 
 	// inject some data and query the API
-	entities, tokens := core.InjectActivityLogDataThisMonth(t)
+	entities, tokens := core.InjectActivityLogDataThisMonthRootNS(t)
 	expectedEntities := len(entities)
 	var expectedTokens int
 	for _, tokenCount := range tokens {
