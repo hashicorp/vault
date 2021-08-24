@@ -12,6 +12,7 @@
  * ```
  * @param {string} value - the value is captured from the model.
  * @param {function} onChange - function that captures the value on change
+ * @param {function} onKeyUp - function passed in that handles the dom keyup event. Used for validation on the kv custom metadata.
  * @param {string} [label] - label displayed over key value inputs
  * @param {string} [warning] - warning that is displayed
  * @param {string} [helpText] - helper text. In tooltip.

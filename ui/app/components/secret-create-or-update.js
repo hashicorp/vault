@@ -15,12 +15,12 @@
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
- * @param {object} model -  the route model, comes from secret-v2 ember record
+ * @param {object} model - the route model, comes from secret-v2 ember record
  * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
- * @param {boolean} isV2 - whether or not KV 1 or KV 2
+ * @param {boolean} isV2 - whether or not KV1 or KV2
  * @param {object} secretData - class that is created in secret-edit
- * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If create access.
+ * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret create access.
  */
 
 import Component from '@glimmer/component';
@@ -39,6 +39,7 @@ import { task, waitForEvent } from 'ember-concurrency';
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+
 export default class SecretCreateOrUpdate extends Component {
   @tracked codemirrorString = null;
   @tracked error = null;
@@ -74,7 +75,6 @@ export default class SecretCreateOrUpdate extends Component {
       this.addRow();
     }
   }
-
   checkRows() {
     if (this.args.secretData.length === 0) {
       this.addRow();
@@ -181,7 +181,6 @@ export default class SecretCreateOrUpdate extends Component {
   }
   @action
   codemirrorUpdated(val, codemirror) {
-    console;
     this.error = null;
     codemirror.performLint();
     const noErrors = codemirror.state.lint.marked.length === 0;
@@ -220,16 +219,13 @@ export default class SecretCreateOrUpdate extends Component {
   }
   @action
   formatJSON() {
-    console.log('formatJson in secret create upate');
     this.codemirrorString = this.args.secretData.toJSONString(true);
   }
   @action
   handleChange() {
-    console.log('handleChange in secret create upate');
     this.codemirrorString = this.args.secretData.toJSONString(true);
     set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
   }
-
   //submit on shift + enter
   @action
   handleKeyDown(e) {

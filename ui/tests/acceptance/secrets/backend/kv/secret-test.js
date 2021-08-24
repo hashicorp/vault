@@ -43,7 +43,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('it creates a secret and redirects', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
-
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 

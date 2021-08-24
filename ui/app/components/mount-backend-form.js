@@ -126,11 +126,9 @@ export default Component.extend({
           let number = Number(value);
           this.mountModel.set('maxVersions', number);
         }
-        if (!this.mountModel.validations.attrs.maxVersions.isValid) {
-          set(this.validationMessages, name, this.mountModel.validations.attrs.maxVersions.message);
-        } else {
-          set(this.validationMessages, name, '');
-        }
+        this.mountModel.validations.attrs.maxVersions.isValid
+          ? set(this.validationMessages, name, '')
+          : set(this.validationMessages, name, this.mountModel.validations.attrs.maxVersions.message);
       }
     },
     onTypeChange(path, value) {

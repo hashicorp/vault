@@ -42,6 +42,7 @@ import { action } from '@ember/object';
 import { not } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+
 export default class SecretEditToolbar extends Component {
   @service store;
   @service flashMessages;
@@ -49,6 +50,23 @@ export default class SecretEditToolbar extends Component {
   @tracked wrappedData = null;
   @tracked isWrapping = false;
   @not('wrappedData') showWrapButton;
+
+  @action
+  clearWrappedData() {
+    this.wrappedData = null;
+  }
+
+  @action
+  handleCopyError() {
+    this.flashMessages.danger('Could Not Copy Wrapped Data');
+    this.send('clearWrappedData');
+  }
+
+  @action
+  handleCopySuccess() {
+    this.flashMessages.success('Copied Wrapped Data!');
+    this.send('clearWrappedData');
+  }
 
   @action
   handleWrapClick() {
@@ -59,7 +77,6 @@ export default class SecretEditToolbar extends Component {
         .queryRecord(this.args.modelForData.id, { wrapTTL: 1800 })
         .then(resp => {
           this.wrappedData = resp.wrap_info.token;
-          console.log(this.wrappedData, 'wrapped data');
           this.flashMessages.success('Secret Successfully Wrapped!');
         })
         .catch(() => {
@@ -87,22 +104,5 @@ export default class SecretEditToolbar extends Component {
           this.isWrapping = false;
         });
     }
-  }
-
-  @action
-  clearWrappedData() {
-    this.wrappedData = null;
-  }
-
-  @action
-  handleCopySuccess() {
-    this.flashMessages.success('Copied Wrapped Data!');
-    this.send('clearWrappedData');
-  }
-
-  @action
-  handleCopyError() {
-    this.flashMessages.danger('Could Not Copy Wrapped Data');
-    this.send('clearWrappedData');
   }
 }
