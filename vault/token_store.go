@@ -192,6 +192,17 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
+			Pattern: "tokens",
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: ts.handleTokenList,
+			},
+
+			HelpSynopsis:    tokenListHelp,
+			HelpDescription: tokenListHelp,
+		},
+
+		{
 			Pattern: "lookup-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
@@ -3030,6 +3041,56 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	return resp, nil
 }
 
+func (ts *TokenStore) handleTokenList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find namespace in context: %w", err)
+	}
+
+	entries, err := ts.idView(ns).List(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain token entries: %w", err)
+	}
+
+	resp := &logical.Response{}
+	var ret []map[string]interface{}
+
+	for _, entry := range entries {
+		token, err := ts.lookupInternal(ctx, entry, true, false)
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Found a token entry that could not be successfully decoded; associated error is %q", err.Error()))
+			continue
+		}
+
+		info := map[string]interface{}{
+			"accessor":     token.Accessor,
+			"display_name": token.DisplayName,
+			"role":         token.Role,
+			"ttl":          int64(0),
+			"policies":     token.Policies,
+		}
+
+		// Fetch the last renewal time
+		leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, token)
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Could not fetch lease times for token entry; associated error is %q", err.Error()))
+			continue
+		}
+
+		if leaseTimes != nil && !leaseTimes.ExpireTime.IsZero() {
+			info["ttl"] = leaseTimes.ttl()
+		}
+
+		ret = append(ret, info)
+	}
+
+	resp.Data = map[string]interface{}{
+		"tokens": ret,
+	}
+
+	return resp, nil
+}
+
 func (ts *TokenStore) handleRenewSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	data.Raw["token"] = req.ClientToken
 	return ts.handleRenew(ctx, req, data)
@@ -3762,6 +3823,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp          = `The token create path is used to create new tokens.`
 	tokenCreateOrphanHelp    = `The token create path is used to create new orphan tokens.`
 	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
+	tokenListHelp            = `This endpoint will list the information of each token.`
 	tokenListRolesHelp       = `This endpoint lists configured roles.`
 	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenRenewAccessorHelp   = `This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.`

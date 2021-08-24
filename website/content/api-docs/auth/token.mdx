@@ -163,6 +163,48 @@ $ curl \
 }
 ```
 
+## List Tokens
+
+Returns information about each token.
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `GET`  | `/auth/token/tokens` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/token/tokens
+```
+
+### Sample Response
+
+```json
+{
+  "secret": null,
+  "auth": null,
+  "data": {
+    "tokens": [
+      {
+        "accessor": "47tazCwv0DtT76EQ0td3FbLk",
+        "display_name": "example-token",
+        "policies": [
+          "default"
+        ],
+        "role": "",
+        "ttl": 0
+      }
+    ]
+  },
+  "redirect": "",
+  "warnings": null,
+  "wrap_info": null,
+  "headers": null
+}
+```
+
 ## Lookup a Token
 
 Returns information about the client token.

@@ -1,6 +1,11 @@
 package api
 
-import "context"
+import (
+	"context"
+	"errors"
+
+	"github.com/mitchellh/mapstructure"
+)
 
 // TokenAuth is used to perform token backend operations on Vault
 type TokenAuth struct {
@@ -80,6 +85,39 @@ func (c *TokenAuth) Lookup(token string) (*Secret, error) {
 	defer resp.Body.Close()
 
 	return ParseSecret(resp.Body)
+}
+
+func (c *TokenAuth) ListTokens() ([]*TokenInfo, error) {
+	r := c.c.NewRequest("GET", "/v1/auth/token/tokens")
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	tokens, ok := secret.Data["tokens"]
+	if !ok {
+		return nil, errors.New("tokens field is missing from server response")
+	}
+
+	tokenInfo := []*TokenInfo{}
+	err = mapstructure.Decode(tokens, &tokenInfo)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tokenInfo, nil
 }
 
 func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
@@ -293,4 +331,12 @@ type TokenCreateRequest struct {
 	Renewable       *bool             `json:"renewable,omitempty"`
 	Type            string            `json:"type"`
 	EntityAlias     string            `json:"entity_alias"`
+}
+
+type TokenInfo struct {
+	Policies    []string `json:"policies" mapstructure:"policies"`
+	TTL         int      `json:"ttl" mapstructure:"ttl"`
+	DisplayName string   `json:"display_name" mapstructure:"display_name"`
+	Role        string   `json:"role" mapstructure:"role"`
+	Accessor    string   `json:"accessor" mapstructure:"accessor"`
 }
