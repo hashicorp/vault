@@ -8,6 +8,7 @@ import (
 )
 
 const targetCacheSize = 12345
+const smallCacheSize = 3
 
 func TestTransit_CacheConfig(t *testing.T) {
 	b1, storage := createBackendWithSysView(t)
@@ -58,6 +59,15 @@ func TestTransit_CacheConfig(t *testing.T) {
 		},
 	}
 
+	writeSmallCacheSizeReq := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "cache-config",
+		Data: map[string]interface{}{
+			"size": smallCacheSize,
+		},
+	}
+
 	readReq := &logical.Request{
 		Storage:   storage,
 		Operation: logical.ReadOperation,
@@ -77,4 +87,10 @@ func TestTransit_CacheConfig(t *testing.T) {
 	// b3 enables transit without a cache, trying to read it should error
 	b3 := createBackendWithForceNoCacheWithSysViewWithStorage(t, storage)
 	doErrReq(b3, readReq)
+
+	// b4 should spin up with a size less than minimum cache size (10)
+	b4, storage := createBackendWithSysView(t)
+	doErrReq(b4, writeSmallCacheSizeReq)
+
+
 }

@@ -10,6 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// Minimum cache size for transit backend
+const minCacheSize = 10
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
 	if err != nil {
@@ -69,9 +72,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			return nil, fmt.Errorf("Error retrieving cache size from storage: %w", err)
 		}
 
-		minCacheSize := 10
 		if cacheSize != 0 && cacheSize < minCacheSize {
-			b.Logger().Warn("size %d is less than default minimum %d. Cache size is set to %d", cacheSize, minCacheSize, minCacheSize)
+			b.Logger().Warn("size %d is less than minimum %d. Cache size is set to %d", cacheSize, minCacheSize, minCacheSize)
 			cacheSize = minCacheSize
 		}
 	}
