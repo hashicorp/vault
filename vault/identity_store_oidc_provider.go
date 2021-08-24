@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -39,6 +41,7 @@ type client struct {
 
 type provider struct {
 	Issuer           string   `json:"issuer"`
+	EffectiveIssuer  string   `json:"effective_issuer"`
 	AllowedClientIDs []string `json:"allowed_client_ids"`
 	Scopes           []string `json:"scopes"`
 }
@@ -786,6 +789,7 @@ func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *l
 
 // pathOIDCCreateUpdateProvider is used to create a new named provider or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var resp *logical.Response
 	name := d.Get("name").(string)
 
 	var provider provider
@@ -819,6 +823,49 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
 
+	if provider.Issuer != "" {
+		// verify that issuer is the correct format:
+		//   - http or https
+		//   - host name
+		//   - optional port
+		//   - nothing more
+		valid := false
+		if u, err := url.Parse(provider.Issuer); err == nil {
+			u2 := url.URL{
+				Scheme: u.Scheme,
+				Host:   u.Host,
+			}
+			valid = (*u == u2) &&
+				(u.Scheme == "http" || u.Scheme == "https") &&
+				u.Host != ""
+		}
+
+		if !valid {
+			return logical.ErrorResponse(
+				"invalid issuer, which must include only a scheme, host, " +
+					"and optional port (e.g. https://example.com:8200)"), nil
+		}
+
+		resp = &logical.Response{
+			Warnings: []string{`If "issuer" is set explicitly, all tokens must be ` +
+				`validated against that address, including those issued by secondary ` +
+				`clusters. Setting issuer to "" will restore the default behavior of ` +
+				`using the cluster's api_addr as the issuer.`},
+		}
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	provider.EffectiveIssuer = provider.Issuer
+	if provider.EffectiveIssuer == "" {
+		provider.EffectiveIssuer = i.core.redirectAddr
+	}
+
+	provider.EffectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
+
 	scopeTemplateKeyNames := make(map[string]string)
 	for _, scopeName := range provider.Scopes {
 		entry, err := req.Storage.Get(ctx, scopePath+scopeName)
@@ -836,15 +883,25 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 			return nil, err
 		}
 
+		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:   identitytpl.JSONTemplating,
+			String: storedScope.Template,
+			Entity: new(logical.Entity),
+			Groups: make([]*logical.Group, 0),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error parsing template for scope %q: %s", scopeName, err.Error())
+		}
+
 		jsonTemplate := make(map[string]interface{})
-		if err = json.Unmarshal([]byte(storedScope.Template), &jsonTemplate); err != nil {
+		if err = json.Unmarshal([]byte(populatedTemplate), &jsonTemplate); err != nil {
 			return nil, err
 		}
 
 		for keyName := range jsonTemplate {
 			val, ok := scopeTemplateKeyNames[keyName]
 			if ok && val != scopeName {
-				return logical.ErrorResponse("scope templates cannot have conflicting top-level keys; found conflict %q in scopes %q, %q", keyName, scopeName, val), nil
+				resp.AddWarning(fmt.Sprintf("scope templates cannot have conflicting top-level keys; found conflict %q in scopes %q, %q", keyName, scopeName, val))
 			}
 
 			scopeTemplateKeyNames[keyName] = scopeName
@@ -857,7 +914,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		return nil, err
 	}
 
-	return nil, req.Storage.Put(ctx, entry)
+	return resp, req.Storage.Put(ctx, entry)
 }
 
 // pathOIDCListProvider is used to list named providers
