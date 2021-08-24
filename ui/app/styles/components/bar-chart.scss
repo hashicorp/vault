@@ -14,11 +14,12 @@
     border: 0.3px solid #dce0e6;
     width: 94%;
     margin-left: 3%;
+    margin-bottom: $spacing-xxs;
   }
 }
 
 .chart-header {
-  margin: 24px 0px 0px 24px;
+  margin-left: $spacing-l;
 }
 
 .chart-title {
@@ -34,11 +35,11 @@
   margin-bottom: $spacing-xs;
 }
 
-.bar-chart {
-  height: 70%;
-  width: 100%;
+.bar-chart-container {
   padding: $spacing-m $spacing-l $spacing-m $spacing-l;
+}
 
+.bar-chart {
   .tick > text {
     font-weight: $font-weight-semibold;
     font-size: $size-8;
@@ -46,10 +47,8 @@
 }
 
 .legend-container {
-  display: flex;
-  align-items: center;
-  height: 30px;
-  margin-top: $spacing-s;
+  height: $spacing-l;
+  margin-top: $spacing-xs;
 }
 
 .legend {
