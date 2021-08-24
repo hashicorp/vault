@@ -1384,7 +1384,6 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 		return err
 	}
 
-	logger.Debug("jmf here")
 	logger.Debug("rotated OIDC public key. now using", "key_id", k.SigningKey.Public().KeyID)
 	return nil
 }
