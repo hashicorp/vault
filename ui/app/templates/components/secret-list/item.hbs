@@ -78,7 +78,7 @@
                         </SecretLink>
                       </li>
                     {{/if}}
-                    {{#if @item.canDeleteSecretData}}
+                    {{#if (or @item.canDeleteSecretData @item.canDelete)}}
                       <li class="action">
                         <c.Message
                           @id={{@item.id}}
