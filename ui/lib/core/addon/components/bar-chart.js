@@ -98,7 +98,7 @@ class BarChart extends Component {
       .style('fill', '#EBEEF2')
       .style('opacity', '0');
 
-    // MOUSE EVENT TO HIGHLIGHT BARS
+    // BACKGROUND BAR MOUSEOVER EVENT
     backgroundBars
       .on('mouseover', function(data) {
         select(this).style('opacity', 1);
@@ -125,8 +125,8 @@ class BarChart extends Component {
       })
       .on('mousemove', function() {
         select('.chart-tooltip')
-          .style('left', `${xScale(event.pageX + 20)}%`)
-          .style('top', `${event.pageY - 145}px`);
+          .style('left', `${xScale(event.pageX - 200)}%`)
+          .style('top', `${event.pageY - 143}px`);
       });
 
     // creates group for each array of stackedData
@@ -156,7 +156,7 @@ class BarChart extends Component {
       .attr('rx', 3)
       .attr('ry', 3);
 
-    // MOUSE EVENT TO HIGHLIGHT BARS
+    // THIN RECTANGLE MOUSEOVER EVENT
     rects
       .on('mouseover', function({ data }) {
         let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
@@ -189,8 +189,8 @@ class BarChart extends Component {
       })
       .on('mousemove', function() {
         select('.chart-tooltip')
-          .style('left', `${xScale(event.pageX + 20)}%`)
-          .style('top', `${event.pageY - 145}px`);
+          .style('left', `${xScale(event.pageX - 200)}%`)
+          .style('top', `${event.pageY - 143}px`);
       });
 
     // TO DO: fix this inflexible business
