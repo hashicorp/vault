@@ -32,9 +32,9 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
       retentionMonths: 24,
       defaultReportMonths: 12,
       configAttrs: [
-        createAttr('enabled', 'boolean'),
-        createAttr('retentionMonths', 'string'),
-        createAttr('defaultReportMonths', 'string'),
+        createAttr('enabled', 'string', { editType: 'boolean' }),
+        createAttr('retentionMonths', 'number'),
+        createAttr('defaultReportMonths', 'number'),
       ],
       changedAttributes: () => ({}),
       save: () => {},
@@ -76,8 +76,9 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
     `);
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
-    const fields = document.querySelectorAll('[data-test-field] input');
-    assert.equal(fields.length, 3, 'renders 3 input fields');
+    const fields = document.querySelectorAll('[data-test-field]');
+    console.log(fields);
+    assert.equal(fields.length, 3, 'renders 3 fields');
   });
 
   test('it shows a modal with correct messaging when disabling', async function(assert) {
