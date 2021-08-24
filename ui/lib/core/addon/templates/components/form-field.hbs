@@ -191,10 +191,8 @@
     @value={{or (get model valuePath) attr.options.defaultValue}}
     @allowCopy="true"
     @onChange={{action (action "setAndBroadcast" valuePath)}}
-    onkeyup={{action
-      (action "handleKeyUp" attr.name)
-      value="target.value"
-    }}
+    @name={{attr.name}}
+    @onKeyUp={{@onKeyUp}}
   />
   {{#if (get validationMessages attr.name)}}
     <AlertInline 
