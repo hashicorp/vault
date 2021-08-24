@@ -49,7 +49,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("size must be greater or equal to 0"), logical.ErrInvalidRequest
 	}
     minCacheSize := 10
-	var resp = &logical.Response{}
+    var resp = &logical.Response{}
     if cacheSize != 0 && cacheSize < minCacheSize {
 		resp.AddWarning(fmt.Sprintf("size %d is less than default minimum %d. Cache size is set to %d", cacheSize, minCacheSize, minCacheSize))
 		cacheSize = minCacheSize

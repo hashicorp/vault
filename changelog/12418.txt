@@ -1,0 +1,3 @@
+```release-note:bug
+Enforce minimum cache size for transit backend
+```
