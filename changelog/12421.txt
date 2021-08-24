@@ -1,0 +1,3 @@
+```release-note:feature
+command: Add a no-op check for HTTP listener configuration validity
+```
