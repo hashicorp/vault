@@ -12,7 +12,11 @@
             <input data-test-field type="checkbox" id="{{attr.name}}" name={{attr.name}} class="switch is-rounded is-success is-small" checked={{eq (get @model attr.name) attr.options.trueValue}} 
             onchange={{action (action "updateBooleanValue" attr) value="target.checked"}} />
             <label for="{{attr.name}}">
-              {{ attr.options.label }}
+              {{#if (eq @model.enabled "Off")}}
+                Data collection is off
+              {{else}}
+                Data collection is on
+              {{/if}}
             </label>
           </div>
           {{else if (eq attr.type "number")}}
