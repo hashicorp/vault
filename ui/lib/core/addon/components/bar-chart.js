@@ -4,11 +4,13 @@
  *
  * @example
  * ```js
- * <BarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}} @onClick/>
+ * <BarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}} @onClick= @labelKey=/>
  * ```
  * @param {object} requiredParam - requiredParam is...
+ * @param {string} labelKey - labelKey is the key name the dataset uses to label each bar on the y-axis (i.e. "namespace_path" if the object passed in was: { namespace_path: "top-namespace", count: 4000 })
  * @param {string} [optionalParam] - optionalParam is...
  * @param {string} [param1=defaultValue] - param1 is...
+ *
  */
 
 import Component from '@glimmer/component';
@@ -20,24 +22,22 @@ import { scaleLinear, scaleBand } from 'd3-scale';
 import { max } from 'd3-array';
 import { stack } from 'd3-shape';
 import { axisLeft } from 'd3-axis';
+import { transition } from 'd3-transition';
 
 const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 }; // makes space for y-axis legend
 const BAR_COLORS_UNSELECTED = ['#BFD4FF', '#8AB1FF'];
 const BAR_COLORS_SELECTED = ['#1563FF', '#0F4FD1'];
 class BarChart extends Component {
   // TODO: make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
-  variableA = 'Active direct tokens';
-  variableB = 'Unique entities';
-  mapKey = [{ key: 'count', label: 'Active direct tokens' }, { key: 'unique', label: 'Unique entities' }];
-  // can pass in @labelKey but default will be 'label'
-  get labelKey() {
-    return this.args.labelKey || 'label';
-  }
-
+  // mapLegend = [{ key: 'count', label: 'Active direct tokens' }, { key: 'unique', label: 'Unique entities' }];
+  mapLegend = [
+    { key: 'non_entity_tokens', label: 'Active direct tokens' },
+    { key: 'distinct_entities', label: 'Unique entities' },
+  ];
   realData = [
     {
       namespace_id: 'root',
-      namespace_path: '',
+      namespace_path: 'root',
       counts: {
         distinct_entities: 268,
         non_entity_tokens: 985,
@@ -46,7 +46,7 @@ class BarChart extends Component {
     },
     {
       namespace_id: 'O0i4m',
-      namespace_path: 'admin/',
+      namespace_path: 'top-namespace',
       counts: {
         distinct_entities: 648,
         non_entity_tokens: 220,
@@ -55,7 +55,7 @@ class BarChart extends Component {
     },
     {
       namespace_id: '1oihz',
-      namespace_path: 'ns1/',
+      namespace_path: 'anotherNamespace',
       counts: {
         distinct_entities: 547,
         non_entity_tokens: 337,
@@ -64,7 +64,7 @@ class BarChart extends Component {
     },
     {
       namespace_id: '1oihz',
-      namespace_path: 'ns1/',
+      namespace_path: 'someOtherNamespace',
       counts: {
         distinct_entities: 8078,
         non_entity_tokens: 5349,
@@ -73,10 +73,31 @@ class BarChart extends Component {
     },
   ];
 
+  // is the key name the dataset uses to label each bar on the y-axis
+  get labelKey() {
+    return this.args.labelKey || 'label';
+  }
+
+  get chartData() {
+    return this.args.chartData || ['count', 'unique', 'total'];
+  }
+
+  // TODO: turn this into a get function that responds to arguments passed to component
+  flattenedData() {
+    return this.realData.map(d => {
+      return {
+        label: d['namespace_path'],
+        distinct_entities: d['counts']['distinct_entities'],
+        non_entity_tokens: d['counts']['non_entity_tokens'],
+        total: d['counts']['clients'],
+      };
+    });
+  }
+
   dataset = [
     { label: 'top-namespace', count: 1212, unique: 300, total: 1512 },
     { label: 'namespace2', count: 650, unique: 550, total: 1200 },
-    { label: 'longnamenamespace', count: 200, unique: 1000, total: 1200 },
+    { label: 'longnamenamespaceakwgkwflwefklwef', count: 200, unique: 1000, total: 1200 },
     { label: 'namespacesomething', count: 400, unique: 400, total: 950 },
     { label: 'anothernamespace', count: 400, unique: 550, total: 1100 },
     { label: 'namespace5', count: 800, unique: 300, total: 800 },
@@ -86,20 +107,21 @@ class BarChart extends Component {
     { label: 'path/to/namespace', count: 200, unique: 100, total: 300 },
   ];
 
-  totalCount = this.dataset.reduce((previousValue, currentValue) => previousValue + currentValue.count, 0);
-  totalUnique = this.dataset.reduce((previousValue, currentValue) => previousValue + currentValue.unique, 0);
-  totalActive = this.totalCount + this.totalUnique;
+  // TODO: separate into function for specifically creating tooltip text
+  totalCount = this.realData.reduce(
+    (previousValue, currentValue) => previousValue + currentValue.counts.clients,
+    0
+  );
 
   @action
   renderBarChart(element) {
-    let dataset = this.dataset.sort((a, b) => a.count + a.unique - (b.count + b.unique)).reverse();
-    let totalActive = this.totalActive;
-    let stackFunction = stack().keys(this.mapKey.map(l => l.key));
-    let stackedData = stackFunction(dataset); // returns an array of coordinates for each group of rectangles, first group is for counts (left), second for unique (right)
+    let totalCount = this.totalCount;
+    let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
+    let stackedData = stackFunction(this.flattenedData()); // returns an array of coordinates for each group of rectangles (first left, then right)
     let container = select('.bar-chart-container');
     let handleClick = this.args.onClick;
-    let keys = this.mapKey.map(e => e.key);
     let labelKey = this.labelKey;
+    let dataset = this.flattenedData();
     // creates and appends tooltip
     container
       .append('div')
@@ -113,10 +135,19 @@ class BarChart extends Component {
       .style('border-radius', '4px');
 
     let xScale = scaleLinear()
-      .domain([0, max(dataset, d => keys.reduce((prevValue, currValue) => prevValue + d[currValue], 0))])
+      .domain([0, max(dataset.map(d => d.total))])
       .range([0, 75]); // 25% reserved for margins
 
+    let truncate = function(string, limit) {
+      console.log(string, 'string');
+      if (string.length <= limit) {
+        return string;
+      }
+      return string.slice(0, limit - 5) + '...';
+    };
+
     let yScale = scaleBand()
+      // .domain(dataset.map(d => truncate( d[labelKey], 19)))
       .domain(dataset.map(d => d[labelKey]))
       // each bar element (bar + padding) has a thickness  of 24 pixels
       .range([0, dataset.length * 24])
@@ -148,7 +179,8 @@ class BarChart extends Component {
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
       .attr('width', data => `${xScale(data[1] - data[0] - 6)}%`)
-      .attr('height', yScale.bandwidth())
+      .attr('height', 6)
+      // .attr('height', yScale.bandwidth())
       .attr('x', data => `${xScale(data[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
@@ -187,7 +219,7 @@ class BarChart extends Component {
           .transition()
           .duration(200)
           .style('opacity', 1).text(` 
-      ${Math.round((data.total * 100) / totalActive)}% of total client counts: \n
+      ${Math.round((data.total * 100) / totalCount)}% of total client counts: \n
       ${data.unique} unique entities, ${data.count} active tokens.
       `);
       })
@@ -206,20 +238,21 @@ class BarChart extends Component {
       });
 
     // TODO: fix this inflexible business
-    let totalNumbers = [];
-    stackedData[1].forEach(e => {
-      let n = e[1];
-      totalNumbers.push(n);
-    });
+    // let totalNumbers = [];
+    // this.flattenedData.forEach(e => {
+    //   let n = e["total"];
+    //   totalNumbers.push(n);
+    // });
+    // console.log(totalNumbers)
+    // let totalCountData = [];
 
-    let totalCountData = [];
-    rects.each(function(d, i) {
+    rects.each(function(d) {
       let textDatum = {
-        text: totalNumbers[i],
+        text: d.data.total,
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
         y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
       };
-      totalCountData.push(textDatum);
+      // totalCountData.push(textDatum);
     });
 
     groups
@@ -232,7 +265,9 @@ class BarChart extends Component {
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
-      .attr('y', d => `${d.y}`)
+      .attr('y', d => {
+        return `${d.y}`;
+      })
       .attr('x', d => `${d.x + 1}%`);
 
     // removes axes lines
@@ -240,9 +275,9 @@ class BarChart extends Component {
 
     // TODO: y needs to change when move onto another line
     // 20% of map key is reserved for each symbol + label, calculates starting x coord
-    let startingXCoordinate = 100 - this.mapKey.length * 20;
+    let startingXCoordinate = 100 - this.mapLegend.length * 20;
     let legendSvg = select('.legend');
-    this.mapKey.map((v, i) => {
+    this.mapLegend.map((v, i) => {
       let xCoordinate = startingXCoordinate + i * 20;
       legendSvg
         .append('circle')
