@@ -925,6 +925,9 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	if provider == nil {
+		return nil, nil
+	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
