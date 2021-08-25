@@ -1434,7 +1434,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"issuer": "https://changedUrl.com:8750",
+			"issuer": "https://changedurl.com",
 		},
 		Storage: storage,
 	})
@@ -1448,7 +1448,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "https://changedUrl.com:8750",
+		"issuer":             "https://changedurl.com",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes":             []string{},
 	}
