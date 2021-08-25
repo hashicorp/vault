@@ -78,6 +78,8 @@ func testConfig(t *testing.T) *ConfigEntry {
 		TLSMaxVersion:  "tls12",
 		TLSMinVersion:  "tls12",
 		RequestTimeout: 30,
+		ClientTLSCert:  "",
+		ClientTLSKey:   "",
 	}
 }
 
@@ -128,17 +130,17 @@ Beq3QOqp2+dga36IzQybzPQ8QtotrpSJ3q82zztEvyWiJ7E=
 -----END CERTIFICATE-----
 `
 
-var jsonConfig = []byte(`
-{
+var jsonConfig = []byte(`{
 	"url": "ldap://138.91.247.105",
 	"userdn": "example,com",
 	"binddn": "kitty",
 	"bindpass": "cats",
 	"tls_max_version": "tls12",
 	"tls_min_version": "tls12",
-	"request_timeout": 30
-}
-`)
+	"request_timeout": 30,
+	"ClientTLSCert":  "",
+	"ClientTLSKey":   ""
+}`)
 
 var jsonConfigDefault = []byte(`
 {
