@@ -789,7 +789,7 @@ func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *l
 
 // pathOIDCCreateUpdateProvider is used to create a new named provider or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var resp *logical.Response
+	resp := &logical.Response{}
 	name := d.Get("name").(string)
 
 	var provider provider
@@ -846,12 +846,11 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 					"and optional port (e.g. https://example.com:8200)"), nil
 		}
 
-		resp = &logical.Response{
-			Warnings: []string{`If "issuer" is set explicitly, all tokens must be ` +
-				`validated against that address, including those issued by secondary ` +
-				`clusters. Setting issuer to "" will restore the default behavior of ` +
-				`using the cluster's api_addr as the issuer.`},
-		}
+		resp.AddWarning(`If "issuer" is set explicitly, all tokens must be ` +
+			`validated against that address, including those issued by secondary ` +
+			`clusters. Setting issuer to "" will restore the default behavior of ` +
+			`using the cluster's api_addr as the issuer.`)
+
 	}
 
 	ns, err := namespace.FromContext(ctx)

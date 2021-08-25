@@ -1229,7 +1229,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 		Path:      "oidc/scope/test-scope",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
 			"description": "my-description",
 		},
 		Storage: storage,
@@ -1241,7 +1241,6 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"issuer":             "test-issuer",
 			"allowed_client_ids": []string{"test-client-id"},
 			"scopes":             []string{"test-scope"},
 		},
@@ -1257,7 +1256,50 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "test-issuer",
+		"issuer":             "",
+		"allowed_client_ids": []string{"test-client-id"},
+		"scopes":             []string{"test-scope"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-provider" -- should fail issuer validation
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"issuer": "test-issuer",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings = map[string]interface{}{
+		"invalid issuer, which must include only a scheme, host, and optional port (e.g. https://example.com:8200)": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Update "test-provider" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"issuer": "https://example.com:8200",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"issuer":             "https://example.com:8200",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes":             []string{"test-scope"},
 	}
@@ -1296,7 +1338,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 		Path:      "oidc/scope/test-scope1",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
 			"description": "desc1",
 		},
 		Storage: storage,
@@ -1308,7 +1350,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 		Path:      "oidc/scope/test-scope2",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
 			"description": "desc2",
 		},
 		Storage: storage,
@@ -1325,19 +1367,17 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 		},
 		Storage: storage,
 	})
-	expectError(t, resp, err)
-	// validate error message
-	expectedStrings := map[string]interface{}{
-		"scope templates cannot have conflicting top-level keys; found conflict \"groups\" in scopes \"test-scope2\", \"test-scope1\"": true,
+	expectSuccess(t, resp, err)
+	if resp.Warnings[0] != "scope templates cannot have conflicting top-level keys; found conflict \"groups\" in scopes \"test-scope2\", \"test-scope1\"" {
+		t.Fatalf("expected a warning for conflicting keys, got %s", resp.Warnings[0])
 	}
-	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 
 	// // Update "test-scope1" -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/scope/test-scope1",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"template": `{"roles": "{{identity.entity.groups.names}}"}`,
+			"template": `{"roles": {{identity.entity.groups.names}} }`,
 		},
 		Storage: storage,
 	})
@@ -1367,7 +1407,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"issuer":             "test-issuer",
+			"issuer":             "https://example.com:8200",
 			"allowed_client_ids": []string{"test-client-id"},
 		},
 	})
@@ -1381,7 +1421,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "test-issuer",
+		"issuer":             "https://example.com:8200",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes":             []string{},
 	}
@@ -1394,7 +1434,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"issuer": "test-issuer-2",
+			"issuer": "https://changedUrl.com:8750",
 		},
 		Storage: storage,
 	})
@@ -1408,7 +1448,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "test-issuer-2",
+		"issuer":             "https://changedUrl.com:8750",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes":             []string{},
 	}
