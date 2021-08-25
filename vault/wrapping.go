@@ -184,6 +184,11 @@ DONELISTHANDLING:
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
 	}
 
+	// Make secret_id_accessor available as a WrappedAccessor.
+	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok {
+		resp.WrapInfo.WrappedAccessor = secretIdAccessor.(string)
+	}
+
 	switch resp.WrapInfo.Format {
 	case "jwt":
 		// Create the JWT
