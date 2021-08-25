@@ -43,7 +43,6 @@ export default class PricingMetricsConfigComponent extends Component {
     ];
   }
 
-  @computed('args.model.enabled')
   get modalTitle() {
     let content = 'Turn usage tracking off?';
     if (this.args.model && this.args.model.enabled === 'On') {

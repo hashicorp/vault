@@ -77,7 +77,6 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
     const fields = document.querySelectorAll('[data-test-field]');
-    console.log(fields);
     assert.equal(fields.length, 3, 'renders 3 fields');
   });
 

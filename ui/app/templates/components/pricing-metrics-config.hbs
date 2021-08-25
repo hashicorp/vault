@@ -32,7 +32,6 @@
                   data-test-field
                   id={{attr.name}}
                   disabled={{eq @model.enabled "Off"}}
-                  readonly={{isReadOnly}}
                   autocomplete="off"
                   spellcheck="false"
                   onchange={{action (mut (get @model attr.name)) value="target.value"}}
