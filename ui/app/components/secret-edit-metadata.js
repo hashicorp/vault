@@ -12,7 +12,7 @@
  *
  * @param {object} model - name of the current cluster, passed from the parent.
  * @param {string} mode - if the mode is create, show, edit.
- * @param {Function} updateValidationErrorCount - function on parent that handles disabling the save button.
+ * @param {Function} [updateValidationErrorCount] - function on parent that handles disabling the save button.
  */
 
 import Component from '@glimmer/component';
@@ -48,18 +48,12 @@ export default class SecretEditMetadata extends Component {
   @action
   onSaveChanges(event) {
     event.preventDefault();
-    const changed = this.args.model.hasDirtyAttributes; // ARG TODO when API done double check this is working
-    if (changed) {
-      this.save();
-      return;
-    }
-    // ARG TODO when API figure out if changed is false what to do, likely a validation error with disable save button.
+    this.save();
+    return;
   }
   @action onKeyUp(name, value) {
     if (value) {
       if (name === 'customMetadata') {
-        // ARG TODO for now set this to hardcoded. Need to write test coverage for this.
-        // this.model.set('customMetadata', { key: 'meep', value: value });
         // cp validations won't work on an object so performing validations here
         /* eslint-disable no-useless-escape */
         let regex = /^[^\/]+$/g; // looking for a forward slash
@@ -78,7 +72,9 @@ export default class SecretEditMetadata extends Component {
 
     let values = Object.values(this.validationMessages);
     this.validationErrorCount = values.filter(Boolean).length;
-    // when mode is "update" this work, but on mode "create" we need to bubble up the count
-    this.args.updateValidationErrorCount(this.validationErrorCount);
+    // when mode is "update" this works, but on mode "create" we need to bubble up the count
+    if (this.args.updateValidationErrorCount) {
+      this.args.updateValidationErrorCount(this.validationErrorCount);
+    }
   }
 }
