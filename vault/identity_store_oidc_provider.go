@@ -41,9 +41,11 @@ type client struct {
 
 type provider struct {
 	Issuer           string   `json:"issuer"`
-	EffectiveIssuer  string   `json:"effective_issuer"`
 	AllowedClientIDs []string `json:"allowed_client_ids"`
 	Scopes           []string `json:"scopes"`
+	// effectiveIssuer is a calculated field and will be either Issuer (if
+	// that's set) or the Vault instance's api_addr.
+	effectiveIssuer string
 }
 
 const (
@@ -858,12 +860,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		return nil, err
 	}
 
-	provider.EffectiveIssuer = provider.Issuer
-	if provider.EffectiveIssuer == "" {
-		provider.EffectiveIssuer = i.core.redirectAddr
+	provider.effectiveIssuer = provider.Issuer
+	if provider.effectiveIssuer == "" {
+		provider.effectiveIssuer = i.core.redirectAddr
 	}
 
-	provider.EffectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
+	provider.effectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
 
 	scopeTemplateKeyNames := make(map[string]string)
 	for _, scopeName := range provider.Scopes {
@@ -900,7 +902,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		for keyName := range jsonTemplate {
 			val, ok := scopeTemplateKeyNames[keyName]
 			if ok && val != scopeName {
-				resp.AddWarning(fmt.Sprintf("scope templates cannot have conflicting top-level keys; found conflict %q in scopes %q, %q", keyName, scopeName, val))
+				resp.AddWarning(fmt.Sprintf("Found scope templates with conflicting top-level keys: "+
+					"conflict %q in scopes %q, %q. This may result in an error if the scopes are "+
+					"requested in an OIDC Authentication Request.", keyName, scopeName, val))
 			}
 
 			scopeTemplateKeyNames[keyName] = scopeName
