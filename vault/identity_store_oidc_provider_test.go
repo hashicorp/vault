@@ -1368,7 +1368,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	if resp.Warnings[0] != "scope templates cannot have conflicting top-level keys; found conflict \"groups\" in scopes \"test-scope2\", \"test-scope1\"" {
+	if resp.Warnings[0] != "Found scope templates with conflicting top-level keys: conflict \"groups\" in scopes \"test-scope2\", \"test-scope1\". This may result in an error if the scopes are requested in an OIDC Authentication Request." {
 		t.Fatalf("expected a warning for conflicting keys, got %s", resp.Warnings[0])
 	}
 

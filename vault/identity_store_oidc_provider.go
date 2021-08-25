@@ -855,18 +855,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 
 	}
 
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	provider.effectiveIssuer = provider.Issuer
-	if provider.effectiveIssuer == "" {
-		provider.effectiveIssuer = i.core.redirectAddr
-	}
-
-	provider.effectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
-
 	scopeTemplateKeyNames := make(map[string]string)
 	for _, scopeName := range provider.Scopes {
 		entry, err := req.Storage.Get(ctx, scopePath+scopeName)
@@ -933,7 +921,27 @@ func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.R
 func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	entry, err := req.Storage.Get(ctx, providerPath+name)
+	provider, err := i.getOIDCProvider(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"issuer":             provider.Issuer,
+			"allowed_client_ids": provider.AllowedClientIDs,
+			"scopes":             provider.Scopes,
+		},
+	}, nil
+}
+
+func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, name string) (*provider, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, err := s.Get(ctx, providerPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -941,17 +949,19 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 		return nil, nil
 	}
 
-	var storedNameProvider provider
-	if err := entry.DecodeJSON(&storedNameProvider); err != nil {
+	var provider provider
+	if err := entry.DecodeJSON(&provider); err != nil {
 		return nil, err
 	}
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"issuer":             storedNameProvider.Issuer,
-			"allowed_client_ids": storedNameProvider.AllowedClientIDs,
-			"scopes":             storedNameProvider.Scopes,
-		},
-	}, nil
+
+	provider.effectiveIssuer = provider.Issuer
+	if provider.effectiveIssuer == "" {
+		provider.effectiveIssuer = i.core.redirectAddr
+	}
+
+	provider.effectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
+
+	return &provider, nil
 }
 
 // pathOIDCDeleteProvider is used to delete an assignment
