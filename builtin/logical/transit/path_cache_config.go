@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -59,8 +60,11 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	resp := &logical.Response{
-		Warnings: []string{"cache configurations will be applied when this backend is restarted"},
+	resp := &logical.Response{}
+
+	b.lm, err = keysutil.NewLockManager(true, cacheSize)
+	if err != nil {
+		return nil, err
 	}
 
 	return resp, nil

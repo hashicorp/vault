@@ -78,7 +78,7 @@ func TestTransit_CacheConfig(t *testing.T) {
 	// b1 should spin up with an unlimited cache
 	validateResponse(doReq(b1, readReq), 0, false)
 	doReq(b1, writeReq)
-	validateResponse(doReq(b1, readReq), targetCacheSize, true)
+	validateResponse(doReq(b1, readReq), targetCacheSize, false)
 
 	// b2 should spin up with a configured cache
 	b2 := createBackendWithSysViewWithStorage(t, storage)
