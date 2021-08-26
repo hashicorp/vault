@@ -812,6 +812,58 @@ func TestOIDC_pathOIDCScopeExistenceCheck(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider tests that a
+// Scope cannot be deleted when it is referenced by a provider
+func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Delete test-scope -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"unable to delete scope \"test-scope\" because it is currently referenced by these providers: test-provider": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-scope" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+}
+
 // TestOIDC_Path_OIDC_ProviderAssignment tests CRUD operations for assignments
 func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -1123,4 +1175,335 @@ func TestOIDC_pathOIDCAssignmentExistenceCheck(t *testing.T) {
 	if !exists {
 		t.Fatalf("Expected existence check to return true but instead returned: %t", exists)
 	}
+}
+
+// TestOIDC_Path_OIDCProvider tests CRUD operations for providers
+func TestOIDC_Path_OIDCProvider(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test provider "test-provider" with non-existing scope
+	// Should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope"},
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"scope \"test-scope\" does not exist": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Create a test provider "test-provider" with no scopes -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"issuer":             "",
+		"allowed_client_ids": []string{},
+		"scopes":             []string{},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Create a test scope "test-scope" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-provider" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"allowed_client_ids": []string{"test-client-id"},
+			"scopes":             []string{"test-scope"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"issuer":             "",
+		"allowed_client_ids": []string{"test-client-id"},
+		"scopes":             []string{"test-scope"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-provider" -- should fail issuer validation
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"issuer": "test-issuer",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings = map[string]interface{}{
+		"invalid issuer, which must include only a scheme, host, and optional port (e.g. https://example.com:8200)": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Update "test-provider" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"issuer": "https://example.com:8200",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"issuer":             "https://example.com:8200",
+		"allowed_client_ids": []string{"test-client-id"},
+		"scopes":             []string{"test-scope"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Delete test-provider -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, _ = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	if resp != nil {
+		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
+// TestOIDC_Path_OIDCProvider_DuplicateTempalteKeys tests that no two
+// scopes have the same top-level keys when creating a provider
+func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope1" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
+			"description": "desc1",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create another test scope "test-scope2" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
+			"description": "desc2",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider" with scopes that have same top-level keys
+	// Should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope1", "test-scope2"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+	if resp.Warnings[0] != "Found scope templates with conflicting top-level keys: conflict \"groups\" in scopes \"test-scope2\", \"test-scope1\". This may result in an error if the scopes are requested in an OIDC Authentication Request." {
+		t.Fatalf("expected a warning for conflicting keys, got %s", resp.Warnings[0])
+	}
+
+	// // Update "test-scope1" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"template": `{"roles": {{identity.entity.groups.names}} }`,
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider" with updated scopes
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope1", "test-scope2"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+}
+
+// TestOIDC_Path_OIDCProvider_Update tests Update operations for providers
+func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test provider "test-provider" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer":             "https://example.com:8200",
+			"allowed_client_ids": []string{"test-client-id"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"issuer":             "https://example.com:8200",
+		"allowed_client_ids": []string{"test-client-id"},
+		"scopes":             []string{},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update "test-provider" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"issuer": "https://changedurl.com",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected = map[string]interface{}{
+		"issuer":             "https://changedurl.com",
+		"allowed_client_ids": []string{"test-client-id"},
+		"scopes":             []string{},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderList tests the List operation for providers
+func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Prepare two providers, test-provider1 and test-provider2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// list providers
+	respListProviders, listErr := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListProviders, listErr)
+
+	// validate list response
+	expectedStrings := map[string]interface{}{"test-provider1": true, "test-provider2": true}
+	expectStrings(t, respListProviders.Data["keys"].([]string), expectedStrings)
+
+	// delete test-provider2
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider2",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+
+	// list providers again and validate response
+	respListProvidersAfterDelete, listErrAfterDelete := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, respListProvidersAfterDelete, listErrAfterDelete)
+
+	// validate list response
+	delete(expectedStrings, "test-provider2")
+	expectStrings(t, respListProvidersAfterDelete.Data["keys"].([]string), expectedStrings)
 }

@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -37,11 +39,21 @@ type client struct {
 	ClientSecret string `json:"client_secret"`
 }
 
+type provider struct {
+	Issuer           string   `json:"issuer"`
+	AllowedClientIDs []string `json:"allowed_client_ids"`
+	Scopes           []string `json:"scopes"`
+	// effectiveIssuer is a calculated field and will be either Issuer (if
+	// that's set) or the Vault instance's api_addr.
+	effectiveIssuer string
+}
+
 const (
 	oidcProviderPrefix = "oidc_provider/"
 	assignmentPath     = oidcProviderPrefix + "assignment/"
 	scopePath          = oidcProviderPrefix + "scope/"
 	clientPath         = oidcProviderPrefix + "client/"
+	providerPath       = oidcProviderPrefix + "provider/"
 )
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -191,6 +203,54 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    "List OIDC clients",
 			HelpDescription: "List all configured OIDC clients in the identity backend.",
 		},
+		{
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the assignment",
+				},
+				"issuer": {
+					Type:        framework.TypeString,
+					Description: "Specifies what will be used for the iss claim of ID tokens.",
+				},
+				"allowed_client_ids": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "The client IDs that are permitted to use the provider",
+				},
+				"scopes": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "The scopes available for requesting on the provider",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateProvider,
+				},
+				logical.CreateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCCreateUpdateProvider,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadProvider,
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathOIDCDeleteProvider,
+				},
+			},
+			ExistenceCheck:  i.pathOIDCProviderExistenceCheck,
+			HelpSynopsis:    "CRUD operations for OIDC providers.",
+			HelpDescription: "Create, Read, Update, and Delete OIDC named providers.",
+		},
+		{
+			Pattern: "oidc/provider/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathOIDCListProvider,
+				},
+			},
+			HelpSynopsis:    "List OIDC providers",
+			HelpDescription: "List all configured OIDC providers in the identity backend.",
+		},
 	}
 }
 
@@ -282,6 +342,36 @@ func (i *IdentityStore) clientNamesReferencingTargetKeyName(ctx context.Context,
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+// providersReferencingTargetScopeName returns a list of provider names referencing targetScopeName.
+// Not threadsafe. To be called with lock already held.
+func (i *IdentityStore) providersReferencingTargetScopeName(ctx context.Context, req *logical.Request, targetScopeName string) ([]string, error) {
+	providerNames, err := req.Storage.List(ctx, providerPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempProvider provider
+	var providers []string
+	for _, providerName := range providerNames {
+		entry, err := req.Storage.Get(ctx, providerPath+providerName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempProvider); err != nil {
+				return nil, err
+			}
+			for _, a := range tempProvider.Scopes {
+				if a == targetScopeName {
+					providers = append(providers, providerName)
+				}
+			}
+		}
+	}
+
+	return providers, nil
 }
 
 // pathOIDCCreateUpdateAssignment is used to create a new assignment or update an existing one
@@ -502,10 +592,24 @@ func (i *IdentityStore) pathOIDCReadScope(ctx context.Context, req *logical.Requ
 // pathOIDCDeleteScope is used to delete an scope
 func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	err := req.Storage.Delete(ctx, scopePath+name)
+
+	targetScopeName := d.Get("name").(string)
+
+	providerNames, err := i.providersReferencingTargetScopeName(ctx, req, targetScopeName)
 	if err != nil {
 		return nil, err
 	}
+
+	if len(providerNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete scope %q because it is currently referenced by these providers: %s",
+			targetScopeName, strings.Join(providerNames, ", "))
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+	err = req.Storage.Delete(ctx, scopePath+name)
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -678,6 +782,201 @@ func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *l
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, clientPath+name)
+	if err != nil {
+		return false, err
+	}
+
+	return entry != nil, nil
+}
+
+// pathOIDCCreateUpdateProvider is used to create a new named provider or update an existing one
+func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{}
+	name := d.Get("name").(string)
+
+	var provider provider
+	if req.Operation == logical.UpdateOperation {
+		entry, err := req.Storage.Get(ctx, providerPath+name)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&provider); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if issuerRaw, ok := d.GetOk("issuer"); ok {
+		provider.Issuer = issuerRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		provider.Issuer = d.GetDefaultOrZero("issuer").(string)
+	}
+
+	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
+		provider.AllowedClientIDs = allowedClientIDsRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		provider.AllowedClientIDs = d.GetDefaultOrZero("allowed_client_ids").([]string)
+	}
+
+	if scopesRaw, ok := d.GetOk("scopes"); ok {
+		provider.Scopes = scopesRaw.([]string)
+	} else if req.Operation == logical.CreateOperation {
+		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
+	}
+
+	if provider.Issuer != "" {
+		// verify that issuer is the correct format:
+		//   - http or https
+		//   - host name
+		//   - optional port
+		//   - nothing more
+		valid := false
+		if u, err := url.Parse(provider.Issuer); err == nil {
+			u2 := url.URL{
+				Scheme: u.Scheme,
+				Host:   u.Host,
+			}
+			valid = (*u == u2) &&
+				(u.Scheme == "http" || u.Scheme == "https") &&
+				u.Host != ""
+		}
+
+		if !valid {
+			return logical.ErrorResponse(
+				"invalid issuer, which must include only a scheme, host, " +
+					"and optional port (e.g. https://example.com:8200)"), nil
+		}
+
+		resp.AddWarning(`If "issuer" is set explicitly, all tokens must be ` +
+			`validated against that address, including those issued by secondary ` +
+			`clusters. Setting issuer to "" will restore the default behavior of ` +
+			`using the cluster's api_addr as the issuer.`)
+
+	}
+
+	scopeTemplateKeyNames := make(map[string]string)
+	for _, scopeName := range provider.Scopes {
+		entry, err := req.Storage.Get(ctx, scopePath+scopeName)
+		if err != nil {
+			return nil, err
+		}
+		// enforce scope existence on provider create and update
+		if entry == nil {
+			return logical.ErrorResponse("scope %q does not exist", scopeName), nil
+		}
+
+		// ensure no two templates have the same top-level keys
+		var storedScope scope
+		if err := entry.DecodeJSON(&storedScope); err != nil {
+			return nil, err
+		}
+
+		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:   identitytpl.JSONTemplating,
+			String: storedScope.Template,
+			Entity: new(logical.Entity),
+			Groups: make([]*logical.Group, 0),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error parsing template for scope %q: %s", scopeName, err.Error())
+		}
+
+		jsonTemplate := make(map[string]interface{})
+		if err = json.Unmarshal([]byte(populatedTemplate), &jsonTemplate); err != nil {
+			return nil, err
+		}
+
+		for keyName := range jsonTemplate {
+			val, ok := scopeTemplateKeyNames[keyName]
+			if ok && val != scopeName {
+				resp.AddWarning(fmt.Sprintf("Found scope templates with conflicting top-level keys: "+
+					"conflict %q in scopes %q, %q. This may result in an error if the scopes are "+
+					"requested in an OIDC Authentication Request.", keyName, scopeName, val))
+			}
+
+			scopeTemplateKeyNames[keyName] = scopeName
+		}
+	}
+
+	// store named provider
+	entry, err := logical.StorageEntryJSON(providerPath+name, provider)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, req.Storage.Put(ctx, entry)
+}
+
+// pathOIDCListProvider is used to list named providers
+func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	providers, err := req.Storage.List(ctx, providerPath)
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(providers), nil
+}
+
+// pathOIDCReadProvider is used to read an existing provider
+func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	provider, err := i.getOIDCProvider(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if provider == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"issuer":             provider.Issuer,
+			"allowed_client_ids": provider.AllowedClientIDs,
+			"scopes":             provider.Scopes,
+		},
+	}, nil
+}
+
+func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, name string) (*provider, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, err := s.Get(ctx, providerPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var provider provider
+	if err := entry.DecodeJSON(&provider); err != nil {
+		return nil, err
+	}
+
+	provider.effectiveIssuer = provider.Issuer
+	if provider.effectiveIssuer == "" {
+		provider.effectiveIssuer = i.core.redirectAddr
+	}
+
+	provider.effectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
+
+	return &provider, nil
+}
+
+// pathOIDCDeleteProvider is used to delete an assignment
+func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	return nil, req.Storage.Delete(ctx, providerPath+name)
+}
+
+func (i *IdentityStore) pathOIDCProviderExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	name := d.Get("name").(string)
+
+	entry, err := req.Storage.Get(ctx, providerPath+name)
 	if err != nil {
 		return false, err
 	}
