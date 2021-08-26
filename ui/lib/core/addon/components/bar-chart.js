@@ -117,7 +117,7 @@ class BarChart extends Component {
     container
       .append('div')
       .attr('class', 'chart-tooltip')
-      .attr('style', 'position: absolute; opacity: 0;')
+      .attr('style', 'position: fixed; opacity: 0;')
       .style('color', 'white')
       .style('background', `${TOOLTIP_BACKGROUND}`)
       .style('max-width', '200px')
@@ -223,9 +223,11 @@ class BarChart extends Component {
         select('.chart-tooltip').style('opacity', 0);
       })
       .on('mousemove', function() {
+        console.log(event.pageX);
+        console.log(event.pageY);
         select('.chart-tooltip')
-          .style('left', `${event.pageX - 10}px`)
-          .style('top', `${event.pageY - 143}px`);
+          .style('left', `${event.pageX - 90}px`)
+          .style('top', `${event.pageY - 90}px`);
       });
 
     // creates total count text and coordinates to display to the right of data bars
@@ -238,7 +240,6 @@ class BarChart extends Component {
       };
       totalCountData.push(textDatum);
     });
-    console.log(totalCountData);
 
     groups
       .selectAll('text')
