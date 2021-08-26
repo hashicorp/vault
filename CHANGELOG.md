@@ -1,3 +1,53 @@
+## 1.7.4
+### 26 August 2021
+
+SECURITY:
+
+* *UI Secret Caching*: The Vault UI erroneously cached and exposed user-viewed secrets between authenticated sessions in a single shared browser, if the browser window / tab was not refreshed or closed between logout and a subsequent login. This vulnerability, CVE-2021-38554, was fixed in Vault 1.8.0 and will be addressed in pending 1.7.4 / 1.6.6 releases.
+
+CHANGES:
+
+* go: Update go version to 1.15.15 [[GH-12411](https://github.com/hashicorp/vault/pull/12411)]
+
+IMPROVEMENTS:
+
+* ui: Updated node to v14, latest stable build [[GH-12049](https://github.com/hashicorp/vault/pull/12049)]
+
+BUG FIXES:
+
+* replication (enterprise): Fix a panic that could occur when checking the last wal and the log shipper buffer is empty.
+* cli: vault debug now puts newlines after every captured log line. [[GH-12175](https://github.com/hashicorp/vault/pull/12175)]
+* database/couchbase: change default template to truncate username at 128 characters [[GH-12299](https://github.com/hashicorp/vault/pull/12299)]
+* physical/raft: Fix safeio.Rename error when restoring snapshots on windows [[GH-12377](https://github.com/hashicorp/vault/pull/12377)]
+* secrets/database/cassandra: Fixed issue where the PEM parsing logic of `pem_bundle` and `pem_json` didn't work for CA-only configurations [[GH-11861](https://github.com/hashicorp/vault/pull/11861)]
+* secrets/database: Fixed an issue that prevented external database plugin processes from restarting after a shutdown. [[GH-12087](https://github.com/hashicorp/vault/pull/12087)]
+* ui: Automatically refresh the page when user logs out [[GH-12035](https://github.com/hashicorp/vault/pull/12035)]
+* ui: Fix database role CG access [[GH-12111](https://github.com/hashicorp/vault/pull/12111)]
+* ui: Fixes metrics page when read on counter config not allowed [[GH-12348](https://github.com/hashicorp/vault/pull/12348)]
+* ui: fix control group access for database credential [[GH-12024](https://github.com/hashicorp/vault/pull/12024)]
+* ui: fix oidc login with Safari [[GH-11884](https://github.com/hashicorp/vault/pull/11884)]
+
+## 1.7.3
+### June 16th, 2021
+
+CHANGES:
+
+* go: Update go version to 1.15.13 [[GH-11857](https://github.com/hashicorp/vault/pull/11857)]
+
+IMPROVEMENTS:
+
+* db/cassandra: Added tls_server_name to specify server name for TLS validation [[GH-11820](https://github.com/hashicorp/vault/pull/11820)]
+* ui: Add specific error message if unseal fails due to license [[GH-11705](https://github.com/hashicorp/vault/pull/11705)]
+
+BUG FIXES:
+
+* auth/jwt: Updates the [hashicorp/cap](https://github.com/hashicorp/cap) library to `v0.1.0` to
+bring in a verification key caching fix. [[GH-11784](https://github.com/hashicorp/vault/pull/11784)]
+* core (enterprise): serialize access to HSM entropy generation to avoid errors in concurrent key generation.
+* secret: fix the bug where transit encrypt batch doesn't work with key_version [[GH-11628](https://github.com/hashicorp/vault/pull/11628)]
+* secrets/ad: Forward all creds requests to active node [[GH-76](https://github.com/hashicorp/vault-plugin-secrets-ad/pull/76)] [[GH-11836](https://github.com/hashicorp/vault/pull/11836)]
+* tokenutil: Perform the num uses check before token type. [[GH-11647](https://github.com/hashicorp/vault/pull/11647)]
+
 ## 1.7.2
 ### May 20th, 2021
 
