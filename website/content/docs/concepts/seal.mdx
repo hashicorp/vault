@@ -136,8 +136,7 @@ available during the migration. For example, migration from Auto Unseal to Shami
 seal will require that the service backing the Auto Unseal is accessible during
 the migration.
 
-~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type
-(e.g. AWSKMS to AWSKMS with a different key) is supported since Vault 1.6.0.
+~> **NOTE**: Seal migration from One Auto Unseal type (AWS KMS) to different Auto Unseal type (HSM, Azure KMS, etc. ) is supported since Vault 1.6.0.
 
 ### Migration post Vault 1.5.1
 
