@@ -20,7 +20,7 @@ export async function getStaticProps() {
 export default function SecretsManagmentUseCase({ content }) {
   return (
     <main id="use-cases" className="g-section-block page-wrap">
-      <section className="g-container">
+      <section className="g-grid-container">
         {/* Header / Buttons */}
 
         <SectionHeader
@@ -47,7 +47,7 @@ export default function SecretsManagmentUseCase({ content }) {
       {/* Before/After Diagram */}
 
       <section>
-        <div className="g-container">
+        <div className="g-grid-container">
           <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
