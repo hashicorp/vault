@@ -25,8 +25,13 @@ import { axisLeft } from 'd3-axis';
 import { transition } from 'd3-transition';
 
 const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 }; // makes space for y-axis legend
-const BAR_COLORS_UNSELECTED = ['#BFD4FF', '#8AB1FF'];
-const BAR_COLORS_SELECTED = ['#1563FF', '#0F4FD1'];
+
+// COLOR THEME:
+const BAR_COLOR_DEFAULT = ['#BFD4FF', '#8AB1FF'];
+const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
+const BACKGROUND_BAR_COLOR = '#EBEEF2';
+const TOOLTIP_BACKGROUND = '#525761';
+
 class BarChart extends Component {
   // TODO: make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
   // mapLegend = [{ key: 'count', label: 'Active direct tokens' }, { key: 'unique', label: 'Unique entities' }];
@@ -34,6 +39,7 @@ class BarChart extends Component {
     { key: 'non_entity_tokens', label: 'Active direct tokens' },
     { key: 'distinct_entities', label: 'Unique entities' },
   ];
+
   realData = [
     {
       namespace_id: 'root',
@@ -66,14 +72,14 @@ class BarChart extends Component {
       namespace_id: '1oihz',
       namespace_path: 'someOtherNamespace',
       counts: {
-        distinct_entities: 8078,
-        non_entity_tokens: 5349,
-        clients: 13427,
+        distinct_entities: 807,
+        non_entity_tokens: 234,
+        clients: 1041,
       },
     },
   ];
 
-  // is the key name the dataset uses to label each bar on the y-axis
+  // the key name the dataset uses to label each bar on the y-axis
   get labelKey() {
     return this.args.labelKey || 'label';
   }
@@ -87,31 +93,15 @@ class BarChart extends Component {
     return this.realData.map(d => {
       return {
         label: d['namespace_path'],
-        distinct_entities: d['counts']['distinct_entities'],
         non_entity_tokens: d['counts']['non_entity_tokens'],
+        distinct_entities: d['counts']['distinct_entities'],
         total: d['counts']['clients'],
       };
     });
   }
 
-  dataset = [
-    { label: 'top-namespace', count: 1212, unique: 300, total: 1512 },
-    { label: 'namespace2', count: 650, unique: 550, total: 1200 },
-    { label: 'longnamenamespaceakwgkwflwefklwef', count: 200, unique: 1000, total: 1200 },
-    { label: 'namespacesomething', count: 400, unique: 400, total: 950 },
-    { label: 'anothernamespace', count: 400, unique: 550, total: 1100 },
-    { label: 'namespace5', count: 800, unique: 300, total: 800 },
-    { label: 'namespace', count: 400, unique: 300, total: 700 },
-    { label: 'namespace999', count: 350, unique: 250, total: 650 },
-    { label: 'name-space', count: 450, unique: 200, total: 600 },
-    { label: 'path/to/namespace', count: 200, unique: 100, total: 300 },
-  ];
-
   // TODO: separate into function for specifically creating tooltip text
-  totalCount = this.realData.reduce(
-    (previousValue, currentValue) => previousValue + currentValue.counts.clients,
-    0
-  );
+  totalCount = this.realData.reduce((prevValue, currValue) => prevValue + currValue.counts.clients, 0);
 
   @action
   renderBarChart(element) {
@@ -122,13 +112,14 @@ class BarChart extends Component {
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
     let dataset = this.flattenedData();
+
     // creates and appends tooltip
     container
       .append('div')
       .attr('class', 'chart-tooltip')
       .attr('style', 'position: absolute; opacity: 0;')
       .style('color', 'white')
-      .style('background', '#525761')
+      .style('background', `${TOOLTIP_BACKGROUND}`)
       .style('max-width', '200px')
       .style('font-size', '.929rem')
       .style('padding', '10px')
@@ -166,7 +157,7 @@ class BarChart extends Component {
       .append('g')
       // shifts chart to accommodate y-axis legend
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
-      .style('fill', (d, i) => BAR_COLORS_UNSELECTED[i]);
+      .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
     let yAxis = axisLeft(yScale);
     yAxis(groups.append('g'));
@@ -180,7 +171,7 @@ class BarChart extends Component {
       .style('cursor', 'pointer')
       .attr('width', data => `${xScale(data[1] - data[0] - 6)}%`)
       .attr('height', 6)
-      // .attr('height', yScale.bandwidth())
+      // .attr('height', yScale.bandwidth()) <- don't want to scale because want bar width set at 6 pixels
       .attr('x', data => `${xScale(data[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
@@ -198,7 +189,7 @@ class BarChart extends Component {
       .attr('height', '24px')
       .attr('x', '0')
       .attr('y', ({ label }) => yScale(label))
-      .style('fill', '#EBEEF2')
+      .style('fill', `${BACKGROUND_BAR_COLOR}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
@@ -213,14 +204,14 @@ class BarChart extends Component {
         let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
           return select(this).attr('y') === `${event.target.getAttribute('y')}`;
         });
-        dataBars.style('fill', (b, i) => `${BAR_COLORS_SELECTED[i]}`);
+        dataBars.style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         // FUTURE TODO: Make tooltip text a function
         select('.chart-tooltip')
           .transition()
           .duration(200)
           .style('opacity', 1).text(` 
       ${Math.round((data.total * 100) / totalCount)}% of total client counts: \n
-      ${data.unique} unique entities, ${data.count} active tokens.
+      ${data.distinct_entities} unique entities, ${data.non_entity_tokens} active tokens.
       `);
       })
       .on('mouseout', function() {
@@ -228,32 +219,26 @@ class BarChart extends Component {
         let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
           return select(this).attr('y') === `${event.target.getAttribute('y')}`;
         });
-        dataBars.style('fill', (b, i) => `${BAR_COLORS_UNSELECTED[i]}`);
+        dataBars.style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
         select('.chart-tooltip').style('opacity', 0);
       })
       .on('mousemove', function() {
         select('.chart-tooltip')
-          .style('left', `${event.pageX - 30}px`)
+          .style('left', `${event.pageX - 10}px`)
           .style('top', `${event.pageY - 143}px`);
       });
 
-    // TODO: fix this inflexible business
-    // let totalNumbers = [];
-    // this.flattenedData.forEach(e => {
-    //   let n = e["total"];
-    //   totalNumbers.push(n);
-    // });
-    // console.log(totalNumbers)
-    // let totalCountData = [];
-
+    // creates total count text and coordinates to display to the right of data bars
+    let totalCountData = [];
     rects.each(function(d) {
       let textDatum = {
         text: d.data.total,
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
         y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
       };
-      // totalCountData.push(textDatum);
+      totalCountData.push(textDatum);
     });
+    console.log(totalCountData);
 
     groups
       .selectAll('text')
@@ -265,9 +250,7 @@ class BarChart extends Component {
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
-      .attr('y', d => {
-        return `${d.y}`;
-      })
+      .attr('y', d => `${d.y}`)
       .attr('x', d => `${d.x + 1}%`);
 
     // removes axes lines
@@ -284,7 +267,7 @@ class BarChart extends Component {
         .attr('cx', `${xCoordinate}%`)
         .attr('cy', '50%')
         .attr('r', 6)
-        .style('fill', `${BAR_COLORS_UNSELECTED[i]}`);
+        .style('fill', `${BAR_COLOR_DEFAULT[i]}`);
       legendSvg
         .append('text')
         .attr('x', `${xCoordinate + 2}%`)
