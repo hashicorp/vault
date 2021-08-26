@@ -23,6 +23,7 @@ import { max } from 'd3-array';
 import { stack } from 'd3-shape';
 import { axisLeft } from 'd3-axis';
 import { transition } from 'd3-transition';
+import { guidFor } from '@ember/object/internals';
 
 const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 }; // makes space for y-axis legend
 
@@ -112,7 +113,7 @@ class BarChart extends Component {
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
     let dataset = this.flattenedData();
-
+    let elementId = guidFor(element);
     // creates and appends tooltip
     container
       .append('div')
@@ -129,16 +130,7 @@ class BarChart extends Component {
       .domain([0, max(dataset.map(d => d.total))])
       .range([0, 75]); // 25% reserved for margins
 
-    let truncate = function(string, limit) {
-      console.log(string, 'string');
-      if (string.length <= limit) {
-        return string;
-      }
-      return string.slice(0, limit - 5) + '...';
-    };
-
     let yScale = scaleBand()
-      // .domain(dataset.map(d => truncate( d[labelKey], 19)))
       .domain(dataset.map(d => d[labelKey]))
       // each bar element (bar + padding) has a thickness  of 24 pixels
       .range([0, dataset.length * 24])
@@ -148,6 +140,7 @@ class BarChart extends Component {
 
     let chartSvg = select(element);
     chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * 24}`);
+    chartSvg.attr('id', elementId);
 
     // creates group for each array of stackedData
     let groups = chartSvg
@@ -161,6 +154,14 @@ class BarChart extends Component {
 
     let yAxis = axisLeft(yScale);
     yAxis(groups.append('g'));
+
+    let truncate = function(selection) {
+      selection.text(function(string) {
+        return string.length < 18 ? string : string.slice(0, 18 - 3) + '...';
+      });
+    };
+
+    chartSvg.selectAll('.tick text').call(truncate);
 
     let rects = groups
       .selectAll('rect')
@@ -179,12 +180,12 @@ class BarChart extends Component {
       .attr('border', 1);
 
     let actionBars = chartSvg
-      .selectAll('.foreground-bar')
+      .selectAll('.action-bar')
       .data(dataset)
       .enter()
       .append('rect')
       .style('cursor', 'pointer')
-      .attr('class', 'foreground-bar')
+      .attr('class', 'action-bar')
       .attr('width', '100%')
       .attr('height', '24px')
       .attr('x', '0')
@@ -206,13 +207,12 @@ class BarChart extends Component {
         });
         dataBars.style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         // FUTURE TODO: Make tooltip text a function
-        select('.chart-tooltip')
-          .transition()
-          .duration(200)
-          .style('opacity', 1).text(` 
-      ${Math.round((data.total * 100) / totalCount)}% of total client counts: \n
-      ${data.distinct_entities} unique entities, ${data.non_entity_tokens} active tokens.
-      `);
+        if (data.label.length >= 18 || event.pageX > 522) {
+          select('.chart-tooltip')
+            .transition()
+            .duration(200)
+            .style('opacity', 1);
+        }
       })
       .on('mouseout', function() {
         select(this).style('opacity', 0);
@@ -222,12 +222,25 @@ class BarChart extends Component {
         dataBars.style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
         select('.chart-tooltip').style('opacity', 0);
       })
-      .on('mousemove', function() {
-        console.log(event.pageX);
-        console.log(event.pageY);
-        select('.chart-tooltip')
-          .style('left', `${event.pageX - 90}px`)
-          .style('top', `${event.pageY - 90}px`);
+      .on('mousemove', function(data) {
+        if (event.pageX < 522) {
+          // don't hard code, but use y axis width to determine
+          if (data.label.length >= 18) {
+            select('.chart-tooltip')
+              .style('left', `${event.pageX}px`)
+              .style('top', `${event.pageY - 50}px`)
+              .text(`${data.label}`);
+          } else {
+            select('.chart-tooltip').style('opacity', 0);
+          }
+        } else {
+          select('.chart-tooltip')
+            .style('opacity', 1)
+            .style('left', `${event.pageX - 90}px`)
+            .style('top', `${event.pageY - 90}px`).text(` 
+                ${Math.round((data.total * 100) / totalCount)}% of total client counts:
+                ${data.distinct_entities} unique entities, ${data.non_entity_tokens} active tokens.`);
+        }
       });
 
     // creates total count text and coordinates to display to the right of data bars
@@ -257,7 +270,7 @@ class BarChart extends Component {
     // removes axes lines
     groups.selectAll('.domain, .tick line').remove();
 
-    // TODO: y needs to change when move onto another line
+    // TODO: y value needs to change when move onto another line
     // 20% of map key is reserved for each symbol + label, calculates starting x coord
     let startingXCoordinate = 100 - this.mapLegend.length * 20;
     let legendSvg = select('.legend');
