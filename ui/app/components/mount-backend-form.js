@@ -114,22 +114,21 @@ export default Component.extend({
         this.mountModel.validations.attrs.path.isValid
           ? set(this.validationMessages, 'path', '')
           : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
-
-        this.mountModel.validate().then(({ validations }) => {
-          this.set('isFormInvalid', !validations.isValid);
-        });
       }
       // check maxVersions is a number
       if (name === 'maxVersions') {
-        // checking for value because value which is blank on first load. No keyup event has occurred and default is 10.
-        if (value) {
-          let number = Number(value);
-          this.mountModel.set('maxVersions', number);
-        }
+        this.mountModel.set('maxVersions', value);
         this.mountModel.validations.attrs.maxVersions.isValid
-          ? set(this.validationMessages, name, '')
-          : set(this.validationMessages, name, this.mountModel.validations.attrs.maxVersions.message);
+          ? set(this.validationMessages, 'maxVersions', '')
+          : set(
+              this.validationMessages,
+              'maxVersions',
+              this.mountModel.validations.attrs.maxVersions.message
+            );
       }
+      this.mountModel.validate().then(({ validations }) => {
+        this.set('isFormInvalid', !validations.isValid);
+      });
     },
     onTypeChange(path, value) {
       if (path === 'type') {

@@ -15,7 +15,7 @@ const Validations = buildValidations({
   }),
   maxVersions: [
     validator('number', {
-      allowString: false,
+      allowString: true,
       integer: true,
       message: 'Maximum versions must be a number.',
     }),

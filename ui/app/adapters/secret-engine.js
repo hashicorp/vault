@@ -1,6 +1,7 @@
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { splitObject } from 'vault/helpers/split-object';
 
 export default ApplicationAdapter.extend({
   url(path) {
@@ -35,15 +36,9 @@ export default ApplicationAdapter.extend({
     // for kv2 we make two network requests
     if (data.type === 'kv' && data.options.version !== 1) {
       // data has both data for sys mount and the config, we need to separate them
-      let configData = (({ max_versions, delete_version_after, cas_required }) => ({
-        max_versions,
-        delete_version_after,
-        cas_required,
-      }))(data);
-      // remove extra params from data
-      /*eslint no-unused-vars: ["error", { "ignoreRestSiblings": true }]*/
-      let { max_versions, delete_version_after, cas_required, ...newData } = data;
-      data = newData;
+      let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
+      let configData = splitObjects[0];
+      data = splitObjects[1];
       // first create the engine
       return this.ajax(this.url(path), 'POST', { data })
         .then(() => {

@@ -62,8 +62,7 @@ export default class SecretEditMetadata extends Component {
           : set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');
       }
       if (name === 'maxVersions') {
-        let number = Number(value);
-        this.args.model.maxVersions = number;
+        this.args.model.maxVersions = value;
         this.args.model.validations.attrs.maxVersions.isValid
           ? set(this.validationMessages, name, '')
           : set(this.validationMessages, name, this.args.model.validations.attrs.maxVersions.message);
