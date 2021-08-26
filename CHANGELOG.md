@@ -1,3 +1,27 @@
+## 1.6.6
+### 26 August 2021
+
+SECURITY:
+
+* *UI Secret Caching*: The Vault UI erroneously cached and exposed user-viewed secrets between authenticated sessions in a single shared browser, if the browser window / tab was not refreshed or closed between logout and a subsequent login. This vulnerability, CVE-2021-38554, was fixed in Vault 1.8.0 and will be addressed in pending 1.7.4 / 1.6.6 releases.
+
+CHANGES:
+
+* go: Update go version to 1.15.15 [[GH-12423](https://github.com/hashicorp/vault/pull/12423)]
+
+IMPROVEMENTS:
+
+* db/cassandra: Added tls_server_name to specify server name for TLS validation [[GH-11820](https://github.com/hashicorp/vault/pull/11820)]
+
+BUG FIXES:
+
+* physical/raft: Fix safeio.Rename error when restoring snapshots on windows [[GH-12377](https://github.com/hashicorp/vault/pull/12377)]
+* secret: fix the bug where transit encrypt batch doesn't work with key_version [[GH-11628](https://github.com/hashicorp/vault/pull/11628)]
+* secrets/database: Fixed an issue that prevented external database plugin processes from restarting after a shutdown. [[GH-12087](https://github.com/hashicorp/vault/pull/12087)]
+* ui: Automatically refresh the page when user logs out [[GH-12035](https://github.com/hashicorp/vault/pull/12035)]
+* ui: Fixes metrics page when read on counter config not allowed [[GH-12348](https://github.com/hashicorp/vault/pull/12348)]
+* ui: fix oidc login with Safari [[GH-11884](https://github.com/hashicorp/vault/pull/11884)]
+
 ## 1.6.5
 ### May 20th, 2021
 
