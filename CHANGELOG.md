@@ -49,6 +49,7 @@ BUG FIXES:
 
 CHANGES:
 
+* Alpine: Docker images for Vault 1.6.6+, 1.7.4+, and 1.8.2+ are built with Alpine 3.14, due to CVE-2021-36159
 * go: Update go version to 1.16.7 [[GH-12408](https://github.com/hashicorp/vault/pull/12408)]
 
 BUG FIXES:
@@ -259,6 +260,7 @@ SECURITY:
 
 CHANGES:
 
+* Alpine: Docker images for Vault 1.6.6+, 1.7.4+, and 1.8.2+ are built with Alpine 3.14, due to CVE-2021-36159
 * go: Update go version to 1.15.15 [[GH-12411](https://github.com/hashicorp/vault/pull/12411)]
 
 IMPROVEMENTS:
@@ -540,6 +542,7 @@ SECURITY:
 
 CHANGES:
 
+* Alpine: Docker images for Vault 1.6.6+, 1.7.4+, and 1.8.2+ are built with Alpine 3.14, due to CVE-2021-36159
 * go: Update go version to 1.15.15 [[GH-12423](https://github.com/hashicorp/vault/pull/12423)]
 
 IMPROVEMENTS:
