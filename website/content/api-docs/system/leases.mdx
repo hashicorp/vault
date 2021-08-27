@@ -91,8 +91,10 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend.
-  This can be specified as part of the URL or as part of the request body.
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend. This 
+  parameter can either be specified in a json request, as shown below, or provided as
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  provided, the leaseID in the request json takes precedence.
 
 - `increment` `(int: 0)` – Specifies the requested amount of time (in seconds)
   to extend the lease.
