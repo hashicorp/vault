@@ -128,7 +128,7 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 			Username: "cassandra",
 			Password: "cassandra",
 		}
-		clusterConfig.Timeout = 30 * time.Second
+		clusterConfig.Timeout = 60 * time.Second
 		clusterConfig.ProtoVersion = 4
 		clusterConfig.Port = port
 
