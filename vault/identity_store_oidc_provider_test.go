@@ -2,6 +2,7 @@ package vault
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -891,7 +892,7 @@ func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
 	expectSuccess(t, resp, err)
 
 	// Create a test provider "test-provider"
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
@@ -1613,4 +1614,87 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	// validate list response
 	delete(expectedStrings, "test-provider2")
 	expectStrings(t, respListProvidersAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
+// TestOIDC_Path_OpenIDProviderConfig tests read operations for the
+// openid-configuration path
+func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test provider "test-provider"
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data:      map[string]interface{}{},
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Expect defaults from .well-known/openid-configuration
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	basePath := "/v1/identity/oidc/provider/test-provider"
+	expected := &providerDiscovery{
+		discovery: discovery{
+			Issuer:        basePath,
+			Keys:          basePath + "/.well-known/keys",
+			ResponseTypes: []string{"code"},
+			Subjects:      []string{"public"},
+			IDTokenAlgs:   supportedAlgs,
+		},
+		AuthorizationEndpoint: basePath + "/authorize",
+		TokenEndpoint:         basePath + "/token",
+		UserinfoEndpoint:      basePath + "/userinfo",
+	}
+	discoveryResp := &providerDiscovery{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
+	if diff := deep.Equal(expected, discoveryResp); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update provider issuer config
+	testIssuer := "https://example.com:1234"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer": testIssuer,
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Expect updates from .well-known/openid-configuration
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	// Validate
+	basePath = testIssuer + basePath
+	expected = &providerDiscovery{
+		discovery: discovery{
+			Issuer:        basePath,
+			Keys:          basePath + "/.well-known/keys",
+			ResponseTypes: []string{"code"},
+			Subjects:      []string{"public"},
+			IDTokenAlgs:   supportedAlgs,
+		},
+		AuthorizationEndpoint: basePath + "/authorize",
+		TokenEndpoint:         basePath + "/token",
+		UserinfoEndpoint:      basePath + "/userinfo",
+	}
+	discoveryResp = &providerDiscovery{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
+	if diff := deep.Equal(expected, discoveryResp); diff != nil {
+		t.Fatal(diff)
+	}
 }
