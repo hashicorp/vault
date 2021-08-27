@@ -7,7 +7,6 @@ CHANGES:
 
 FEATURES:
 
-* **OIDC Identity Provider**: Enable Vault to be an OpenID Connect identity provider. [[GH-12198](https://github.com/hashicorp/vault/pull/12198)]
 * secrets/kv: Add ability to specify version-agnostic custom key metadata [[GH-12218](https://github.com/hashicorp/vault/pull/12218)]
 * ui: Creates new StatText component [[GH-12295](https://github.com/hashicorp/vault/pull/12295)]
 
