@@ -34,6 +34,15 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
 
 - Go 1.16 has added support for darwin/arm64. Vault binaries for this platform are
   now available supporting the Apple M1 CPU.
+  
+## Alpine 3.14
+
+Docker images for Vault 1.8.2 and higher are built with Alpine 3.14, due to a security issue in Alpine 3.13.
+Some users on older versions of Docker may run into issues with these images.
+See the following for more details:
+
+- https://wiki.alpinelinux.org/wiki/Release_Notes_for_Alpine_3.14.0#faccessat2
+- https://about.gitlab.com/blog/2021/08/26/its-time-to-upgrade-docker-engine/
 
 ## Known Issues
 
