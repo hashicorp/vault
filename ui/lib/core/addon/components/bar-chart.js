@@ -26,8 +26,9 @@ import { transition } from 'd3-transition';
 import { guidFor } from '@ember/object/internals';
 
 // SIZING CONSTANTS
-const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 }; // makes space for y-axis legend
+const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
 const CHAR_LIMIT = 18; // character count limit (for label truncating)
+const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 // COLOR THEME:
 const BAR_COLOR_DEFAULT = ['#BFD4FF', '#8AB1FF'];
@@ -113,6 +114,7 @@ class BarChart extends Component {
     let labelKey = this.labelKey;
     let dataset = this.flattenedData();
     let elementId = guidFor(element);
+
     let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
     // creates an array of data for each map legend key
     // each array contains coordinates for each data bar
@@ -136,11 +138,11 @@ class BarChart extends Component {
 
     let yScale = scaleBand()
       .domain(dataset.map(d => d[labelKey]))
-      .range([0, dataset.length * 24]) // each bar w/ padding is 24 pixels wide
+      .range([0, dataset.length * LINE_HEIGHT])
       .paddingInner(0.765); // percent of the total width to reserve for white space between bars
 
     let chartSvg = select(element);
-    chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * 24}`);
+    chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * LINE_HEIGHT}`);
     chartSvg.attr('id', elementId);
 
     // creates group for each array of stackedData
@@ -185,69 +187,120 @@ class BarChart extends Component {
       .style('cursor', 'pointer')
       .attr('class', 'action-bar')
       .attr('width', '100%')
-      .attr('height', '24px')
+      .attr('height', `${LINE_HEIGHT}px`)
       .attr('x', '0')
       .attr('y', chartData => yScale(chartData[labelKey]))
       .style('fill', `${BACKGROUND_BAR_COLOR}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
+    let labelBars = chartSvg
+      .selectAll('.label-bar')
+      .data(dataset)
+      .enter()
+      .append('rect')
+      .style('cursor', 'pointer')
+      .attr('class', 'label-action-bar')
+      .attr('width', CHART_MARGIN.left)
+      .attr('height', `${LINE_HEIGHT}px`)
+      .attr('x', '0')
+      .attr('y', chartData => yScale(chartData[labelKey]))
+      .style('opacity', '0')
+      .style('mix-blend-mode', 'multiply');
+
     let dataBars = chartSvg.selectAll('rect.data-bar');
+    let actionBarSelection = chartSvg.selectAll('rect.action-bar');
+    let compareAttributes = (elementA, elementB, attr) =>
+      select(elementA).attr(`${attr}`) === elementB.getAttribute(`${attr}`);
+
     actionBars
       .on('click', function(chartData) {
         if (handleClick) {
           handleClick(chartData);
         }
       })
-      .on('mouseover', function(chartData) {
+      .on('mouseover', function() {
         select(this).style('opacity', 1);
         dataBars
           .filter(function() {
-            return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+            return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         // FUTURE TODO: Make tooltip text a function
-        if (chartData.label.length >= CHAR_LIMIT || event.pageX > 522) {
-          select('.chart-tooltip')
-            .transition()
-            .duration(200)
-            .style('opacity', 1);
-          if (chartData.label.length >= CHAR_LIMIT) {
-            select('.chart-tooltip').style('max-width', 'fit-content');
-          }
-        }
+        select('.chart-tooltip')
+          .transition()
+          .duration(200)
+          .style('opacity', 1);
       })
       .on('mouseout', function() {
         select(this).style('opacity', 0);
         select('.chart-tooltip').style('opacity', 0);
         dataBars
           .filter(function() {
-            return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+            return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
       })
       .on('mousemove', function(chartData) {
-        if (event.pageX < 522) {
-          // don't hard code, but use y axis width to determine
-          if (chartData.label.length >= CHAR_LIMIT) {
-            select('.chart-tooltip')
-              .style('left', `${event.pageX - 100}px`)
-              .style('top', `${event.pageY - 50}px`)
-              .text(`${chartData.label}`)
-              .style('max-width', 'fit-content');
-          } else {
-            select('.chart-tooltip').style('opacity', 0);
-          }
-        } else {
+        select('.chart-tooltip')
+          .style('opacity', 1)
+          .style('max-width', '200px')
+          .style('left', `${event.pageX - 90}px`)
+          .style('top', `${event.pageY - 90}px`)
+          .text(
+            `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
+            ${chartData.distinct_entities} unique entities, ${chartData.non_entity_tokens} active tokens.
+          `
+          );
+      });
+
+    labelBars
+      .on('click', function(chartData) {
+        if (handleClick) {
+          handleClick(chartData);
+        }
+      })
+      .on('mouseover', function(chartData) {
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '1');
+        if (chartData.label.length >= CHAR_LIMIT) {
           select('.chart-tooltip')
-            .style('opacity', 1)
-            .style('max-width', '200px')
-            .style('left', `${event.pageX - 90}px`)
-            .style('top', `${event.pageY - 90}px`).text(` 
-                ${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
-                ${chartData.distinct_entities} unique entities, ${
-            chartData.non_entity_tokens
-          } active tokens.`);
+            .transition()
+            .duration(200)
+            .style('opacity', 1);
+          // .style('max-width', 'fit-content');
+        }
+      })
+      .on('mouseout', function() {
+        select('.chart-tooltip').style('opacity', 0);
+        dataBars
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
+        actionBarSelection
+          .filter(function() {
+            return compareAttributes(this, event.target, 'y');
+          })
+          .style('opacity', '0');
+      })
+      .on('mousemove', function(chartData) {
+        if (chartData.label.length >= CHAR_LIMIT) {
+          select('.chart-tooltip')
+            .style('left', `${event.pageX - 100}px`)
+            .style('top', `${event.pageY - 50}px`)
+            .text(`${chartData.label}`)
+            .style('max-width', 'fit-content');
+        } else {
+          select('.chart-tooltip').style('opacity', 0);
         }
       });
 
@@ -255,7 +308,7 @@ class BarChart extends Component {
     let totalCountData = [];
     rects.each(function(d) {
       let textDatum = {
-        text: d.data.total,
+        total: d.data.total,
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
         y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
       };
@@ -267,7 +320,7 @@ class BarChart extends Component {
       .data(totalCountData)
       .enter()
       .append('text')
-      .text(d => d.text)
+      .text(d => d.total)
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
@@ -278,11 +331,11 @@ class BarChart extends Component {
     // removes axes lines
     groups.selectAll('.domain, .tick line').remove();
 
-    // TODO: y value needs to change when move onto another line
-    // 20% of map key is reserved for each symbol + label, calculates starting x coord
+    // TODO: make more flexible, y value needs to change when move onto another line
+    // 20% of legend SVG is reserved for each map key symbol + label, calculates starting x coord
     let startingXCoordinate = 100 - this.mapLegend.length * 20;
     let legendSvg = select('.legend');
-    this.mapLegend.map((v, i) => {
+    this.mapLegend.map((legend, i) => {
       let xCoordinate = startingXCoordinate + i * 20;
       legendSvg
         .append('circle')
@@ -294,7 +347,7 @@ class BarChart extends Component {
         .append('text')
         .attr('x', `${xCoordinate + 2}%`)
         .attr('y', '50%')
-        .text(`${v.label}`)
+        .text(`${legend.label}`)
         .style('font-size', '.8rem')
         .attr('alignment-baseline', 'middle');
     });
