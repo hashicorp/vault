@@ -25,7 +25,9 @@ import { axisLeft } from 'd3-axis';
 import { transition } from 'd3-transition';
 import { guidFor } from '@ember/object/internals';
 
+// SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, right: 24, bottom: 26, left: 137 }; // makes space for y-axis legend
+const CHAR_LIMIT = 18; // character count limit (for label truncating)
 
 // COLOR THEME:
 const BAR_COLOR_DEFAULT = ['#BFD4FF', '#8AB1FF'];
@@ -107,14 +109,17 @@ class BarChart extends Component {
   @action
   renderBarChart(element) {
     let totalCount = this.totalCount;
-    let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
-    let stackedData = stackFunction(this.flattenedData()); // returns an array of coordinates for each group of rectangles (first left, then right)
-    let container = select('.bar-chart-container');
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
     let dataset = this.flattenedData();
     let elementId = guidFor(element);
+    let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
+    // creates an array of data for each map legend key
+    // each array contains coordinates for each data bar
+    let stackedData = stackFunction(this.flattenedData());
+
     // creates and appends tooltip
+    let container = select('.bar-chart-container');
     container
       .append('div')
       .attr('class', 'chart-tooltip')
@@ -131,11 +136,8 @@ class BarChart extends Component {
 
     let yScale = scaleBand()
       .domain(dataset.map(d => d[labelKey]))
-      // each bar element (bar + padding) has a thickness  of 24 pixels
-      .range([0, dataset.length * 24])
-      // paddingInner takes a number between 0 and 1
-      // it tells the scale the percent of the total width it should reserve for white space between bars
-      .paddingInner(0.765);
+      .range([0, dataset.length * 24]) // each bar w/ padding is 24 pixels wide
+      .paddingInner(0.765); // percent of the total width to reserve for white space between bars
 
     let chartSvg = select(element);
     chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * 24}`);
@@ -154,11 +156,10 @@ class BarChart extends Component {
     let yAxis = axisLeft(yScale);
     yAxis(groups.append('g'));
 
-    let truncate = function(selection) {
-      selection.text(function(string) {
-        return string.length < 18 ? string : string.slice(0, 18 - 3) + '...';
-      });
-    };
+    let truncate = selection =>
+      selection.text(string =>
+        string.length < CHAR_LIMIT ? string : string.slice(0, CHAR_LIMIT - 3) + '...'
+      );
 
     chartSvg.selectAll('.tick text').call(truncate);
 
@@ -169,14 +170,12 @@ class BarChart extends Component {
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', data => `${xScale(data[1] - data[0] - 6)}%`)
-      .attr('height', 6)
-      // .attr('height', yScale.bandwidth()) <- don't want to scale because want bar width set at 6 pixels
-      .attr('x', data => `${xScale(data[0])}%`)
+      .attr('width', chartData => `${xScale(chartData[1] - chartData[0] - 5)}%`)
+      .attr('height', yScale.bandwidth())
+      .attr('x', chartData => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
       .attr('rx', 3)
-      .attr('ry', 3)
-      .attr('border', 1);
+      .attr('ry', 3);
 
     let actionBars = chartSvg
       .selectAll('.action-bar')
@@ -188,50 +187,53 @@ class BarChart extends Component {
       .attr('width', '100%')
       .attr('height', '24px')
       .attr('x', '0')
-      .attr('y', ({ label }) => yScale(label))
+      .attr('y', chartData => yScale(chartData[labelKey]))
       .style('fill', `${BACKGROUND_BAR_COLOR}`)
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
+    let dataBars = chartSvg.selectAll('rect.data-bar');
     actionBars
-      .on('click', function(barData) {
+      .on('click', function(chartData) {
         if (handleClick) {
-          handleClick(barData);
+          handleClick(chartData);
         }
       })
-      .on('mouseover', function(data) {
+      .on('mouseover', function(chartData) {
         select(this).style('opacity', 1);
-        let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
-          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
-        });
-        dataBars.style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
+        dataBars
+          .filter(function() {
+            return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
         // FUTURE TODO: Make tooltip text a function
-        if (data.label.length >= 18 || event.pageX > 522) {
+        if (chartData.label.length >= CHAR_LIMIT || event.pageX > 522) {
           select('.chart-tooltip')
             .transition()
             .duration(200)
             .style('opacity', 1);
-          if (data.label.length >= 18) {
+          if (chartData.label.length >= CHAR_LIMIT) {
             select('.chart-tooltip').style('max-width', 'fit-content');
           }
         }
       })
       .on('mouseout', function() {
         select(this).style('opacity', 0);
-        let dataBars = chartSvg.selectAll('rect.data-bar').filter(function() {
-          return select(this).attr('y') === `${event.target.getAttribute('y')}`;
-        });
-        dataBars.style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
         select('.chart-tooltip').style('opacity', 0);
+        dataBars
+          .filter(function() {
+            return select(this).attr('y') === `${event.target.getAttribute('y')}`;
+          })
+          .style('fill', (b, i) => `${BAR_COLOR_DEFAULT[i]}`);
       })
-      .on('mousemove', function(data) {
+      .on('mousemove', function(chartData) {
         if (event.pageX < 522) {
           // don't hard code, but use y axis width to determine
-          if (data.label.length >= 18) {
+          if (chartData.label.length >= CHAR_LIMIT) {
             select('.chart-tooltip')
               .style('left', `${event.pageX - 100}px`)
               .style('top', `${event.pageY - 50}px`)
-              .text(`${data.label}`)
+              .text(`${chartData.label}`)
               .style('max-width', 'fit-content');
           } else {
             select('.chart-tooltip').style('opacity', 0);
@@ -242,8 +244,10 @@ class BarChart extends Component {
             .style('max-width', '200px')
             .style('left', `${event.pageX - 90}px`)
             .style('top', `${event.pageY - 90}px`).text(` 
-                ${Math.round((data.total * 100) / totalCount)}% of total client counts:
-                ${data.distinct_entities} unique entities, ${data.non_entity_tokens} active tokens.`);
+                ${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
+                ${chartData.distinct_entities} unique entities, ${
+            chartData.non_entity_tokens
+          } active tokens.`);
         }
       });
 
