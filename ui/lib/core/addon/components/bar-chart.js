@@ -71,7 +71,7 @@ class BarChart extends Component {
     },
     {
       namespace_id: '1oihz',
-      namespace_path: 'someOtherNamespace',
+      namespace_path: 'someOtherNamespaceawgagawegawgawgawgaweg',
       counts: {
         distinct_entities: 807,
         non_entity_tokens: 234,
@@ -121,7 +121,6 @@ class BarChart extends Component {
       .attr('style', 'position: fixed; opacity: 0;')
       .style('color', 'white')
       .style('background', `${TOOLTIP_BACKGROUND}`)
-      .style('max-width', '200px')
       .style('font-size', '.929rem')
       .style('padding', '10px')
       .style('border-radius', '4px');
@@ -212,6 +211,9 @@ class BarChart extends Component {
             .transition()
             .duration(200)
             .style('opacity', 1);
+          if (data.label.length >= 18) {
+            select('.chart-tooltip').style('max-width', 'fit-content');
+          }
         }
       })
       .on('mouseout', function() {
@@ -227,15 +229,17 @@ class BarChart extends Component {
           // don't hard code, but use y axis width to determine
           if (data.label.length >= 18) {
             select('.chart-tooltip')
-              .style('left', `${event.pageX}px`)
+              .style('left', `${event.pageX - 100}px`)
               .style('top', `${event.pageY - 50}px`)
-              .text(`${data.label}`);
+              .text(`${data.label}`)
+              .style('max-width', 'fit-content');
           } else {
             select('.chart-tooltip').style('opacity', 0);
           }
         } else {
           select('.chart-tooltip')
             .style('opacity', 1)
+            .style('max-width', '200px')
             .style('left', `${event.pageX - 90}px`)
             .style('top', `${event.pageY - 90}px`).text(` 
                 ${Math.round((data.total * 100) / totalCount)}% of total client counts:
