@@ -9,6 +9,10 @@
  *    @description="Each namespace's client count includes clients in child namespaces."
  *    @labelKey="namespace_path"
  *    @dataset={{this.testData}}
+ *    @mapLegend={{ array
+ *        (hash key="non_entity_tokens" label="Active direct tokens")
+ *        (hash key="distinct_entities" label="Unique Entities")
+ *      }}
  *    @optionalParam={optionalParam}
  *    @param1={{param1}}
  *    @onClick= />
@@ -48,7 +52,8 @@ import Component from '@glimmer/component';
 import layout from '../templates/components/bar-chart';
 import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
-import { select, event, selection, selectAll } from 'd3-selection';
+// eslint-disable-next-line no-unused-vars
+import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { max } from 'd3-array';
 import { stack } from 'd3-shape';
@@ -68,14 +73,7 @@ const BACKGROUND_BAR_COLOR = '#EBEEF2';
 const TOOLTIP_BACKGROUND = '#525761';
 
 class BarChart extends Component {
-  // TODO: make xValue and yValue consts? i.e. yValue = dataset.map(d => d.label)
-  // mapLegend = [{ key: 'count', label: 'Active direct tokens' }, { key: 'unique', label: 'Unique entities' }];
-  mapLegend = [
-    { key: 'non_entity_tokens', label: 'Active direct tokens' },
-    { key: 'distinct_entities', label: 'Unique entities' },
-  ];
-
-  realData = [
+  dataset = [
     {
       namespace_id: 'root',
       namespace_path: 'root',
@@ -114,18 +112,21 @@ class BarChart extends Component {
     },
   ];
 
-  // the key name the dataset uses to label each bar on the y-axis
   get labelKey() {
     return this.args.labelKey || 'label';
   }
 
-  get chartData() {
-    return this.args.chartData || ['count', 'unique', 'total'];
+  get mapLegend() {
+    return this.args.mapLegend || null;
+  }
+
+  get chartKeys() {
+    return this.args.chartKeys || null;
   }
 
   // TODO: turn this into a get function that responds to arguments passed to component
   flattenedData() {
-    return this.realData.map(d => {
+    return this.dataset.map(d => {
       return {
         label: d['namespace_path'],
         non_entity_tokens: d['counts']['non_entity_tokens'],
@@ -136,7 +137,7 @@ class BarChart extends Component {
   }
 
   // TODO: separate into function for specifically creating tooltip text
-  totalCount = this.realData.reduce((prevValue, currValue) => prevValue + currValue.counts.clients, 0);
+  totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.counts.clients, 0);
 
   @action
   renderBarChart(element) {
