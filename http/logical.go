@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"strconv"
@@ -49,6 +50,13 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	var origBody io.ReadCloser
 	var passHTTPReq bool
 	var responseWriter http.ResponseWriter
+	var patchType logical.PatchType
+	var ok bool
+
+	jsonPatchLookup := map[string]logical.PatchType{
+		"application/merge-patch+json": logical.JSONMergePatch,
+		"application/json-patch+json":  logical.JSONPatch,
+	}
 
 	// Determine the operation
 	var op logical.Operation
@@ -154,37 +162,29 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
-		// Sample the first bytes to determine whether this should be parsed as
-		// a form or as JSON. The amount to look ahead (512 bytes) is arbitrary
-		// but extremely tolerant (i.e. allowing 511 bytes of leading whitespace
-		// and an incorrect content-type).
-		head, err := bufferedBody.Peek(512)
-		if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
+		contentTypeHeader := r.Header.Get("Content-Type")
+		contentType, _, err := mime.ParseMediaType(contentTypeHeader)
+		if err != nil {
 			status := http.StatusBadRequest
 			logical.AdjustErrorStatusCode(&status, err)
-			return nil, nil, status, fmt.Errorf("error reading data")
+			return nil, nil, status, err
 		}
 
-		if isForm(head, r.Header.Get("Content-Type")) {
-			formData, err := parseFormRequest(r)
-			if err != nil {
-				status := http.StatusBadRequest
-				logical.AdjustErrorStatusCode(&status, err)
-				return nil, nil, status, fmt.Errorf("error parsing form data")
-			}
+		patchType, ok = jsonPatchLookup[contentType]
 
-			data = formData
-		} else {
-			origBody, err = parseJSONRequest(perfStandby, r, w, &data)
-			if err == io.EOF {
-				data = nil
-				err = nil
-			}
-			if err != nil {
-				status := http.StatusBadRequest
-				logical.AdjustErrorStatusCode(&status, err)
-				return nil, nil, status, fmt.Errorf("error parsing JSON")
-			}
+		if !ok {
+			return nil, nil, http.StatusBadRequest, fmt.Errorf("PATCH requires Content-Type of application/json-patch+json or application/merge-patch+json, provided %s", contentType)
+		}
+
+		origBody, err = parseJSONRequest(perfStandby, r, w, &data)
+		if err == io.EOF {
+			data = nil
+			err = nil
+		}
+		if err != nil {
+			status := http.StatusBadRequest
+			logical.AdjustErrorStatusCode(&status, err)
+			return nil, nil, status, fmt.Errorf("error parsing JSON")
 		}
 
 	case "OPTIONS", "HEAD":
@@ -204,6 +204,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		Data:       data,
 		Connection: getConnection(r),
 		Headers:    r.Header,
+		PatchType:  patchType,
 	}
 
 	if passHTTPReq {

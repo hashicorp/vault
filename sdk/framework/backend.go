@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy"
@@ -632,6 +634,40 @@ func (t FieldType) Zero() interface{} {
 	default:
 		panic("unknown type: " + t.String())
 	}
+}
+
+func HandlePatchOperation(req *logical.Request, d *FieldData, marshaledResource []byte) ([]byte, error) {
+	var modified []byte
+
+	switch req.PatchType {
+	case logical.JSONPatch:
+		patchJSON, err := json.Marshal(d.Raw["patch_json"])
+		if err != nil {
+			return nil, err
+		}
+
+		patch, err := jsonpatch.DecodePatch(patchJSON)
+		if err != nil {
+			return nil, err
+		}
+
+		modified, err = patch.Apply(marshaledResource)
+		if err != nil {
+			return nil, err
+		}
+
+	case logical.JSONMergePatch:
+		patchJSON, err := json.Marshal(d.Raw)
+		if err != nil {
+			return nil, err
+		}
+
+		modified, err = jsonpatch.MergePatch(marshaledResource, patchJSON)
+	default:
+		return nil, nil
+	}
+
+	return modified, nil
 }
 
 type rootHelpTemplateData struct {

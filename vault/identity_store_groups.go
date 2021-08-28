@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -95,6 +96,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				logical.UpdateOperation: i.pathGroupNameUpdate(),
 				logical.ReadOperation:   i.pathGroupNameRead(),
 				logical.DeleteOperation: i.pathGroupNameDelete(),
+				logical.PatchOperation:  i.pathGroupNamePatch(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-name"][0]),
@@ -287,6 +289,59 @@ func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
 		}
 
 		return i.handleGroupReadCommon(ctx, group)
+	}
+}
+
+func (i *IdentityStore) pathGroupNamePatch() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		groupName := d.Get("name").(string)
+
+		if groupName == "" {
+			return logical.ErrorResponse("empty group name"), nil
+		}
+
+		group, err := i.MemDBGroupByName(ctx, groupName, false)
+		if err != nil {
+			return nil, err
+		}
+
+		if group == nil {
+			// TODO: I think we discussed having PATCH requests also act as upserts like PUT requests do
+			return logical.ErrorResponse("group name does not exist"), nil
+		}
+
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ns.ID != group.NamespaceID {
+			return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		}
+
+		groupJSON, err := json.Marshal(group)
+
+		if err != nil {
+			return nil, err
+		}
+
+		updatedGroupJSON, err := framework.HandlePatchOperation(req, d, groupJSON)
+		if err != nil {
+			return nil, err
+		}
+
+		updatedGroup := new(identity.Group)
+		err = json.Unmarshal(updatedGroupJSON, &updatedGroup)
+		if err != nil {
+			return nil, err
+		}
+
+		err = i.sanitizeAndUpsertGroup(ctx, updatedGroup, group, nil)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 }
 
