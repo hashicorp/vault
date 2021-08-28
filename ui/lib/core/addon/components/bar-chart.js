@@ -4,12 +4,43 @@
  *
  * @example
  * ```js
- * <BarChart @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}} @onClick= @labelKey=/>
+ * <BarChart
+ *    @title="Top 10 Namespaces"
+ *    @description="Each namespace's client count includes clients in child namespaces."
+ *    @labelKey="namespace_path"
+ *    @dataset={{this.testData}}
+ *    @optionalParam={optionalParam}
+ *    @param1={{param1}}
+ *    @onClick= />
+ *
+ * sampleData = [
+ *   {
+ *     namespace_id: 'root',
+ *     namespace_path: 'root',
+ *     counts: {
+ *       distinct_entities: 268,
+ *       non_entity_tokens: 985,
+ *       clients: 1253,
+ *     },
+ *   },
+ *   {
+ *     namespace_id: 'O0i4m',
+ *     namespace_path: 'top-namespace',
+ *     counts: {
+ *       distinct_entities: 648,
+ *       non_entity_tokens: 220,
+ *       clients: 868,
+ *     },
+ *  }]
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} labelKey - labelKey is the key name the dataset uses to label each bar on the y-axis (i.e. "namespace_path" if the object passed in was: { namespace_path: "top-namespace", count: 4000 })
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ *
+ * @param {string} title - title of the chart
+ * @param {string} [description] - description of the chart
+ * @param {object} dataset - dataset for the chart
+ * @param {function} flattenData - function to flatten object so data isn't nested
+ * @param {array} chartKeys - array of key names associated with the data to display
+ * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend ( i.e. { key: 'non_entity_tokens', label: 'Active direct tokens' })
+ * @param {string} [labelKey=label] - labelKey is the key name in the data that corresponds to the value labeling the y-axis (i.e. "namespace_path" in sampleData)
  *
  */
 
