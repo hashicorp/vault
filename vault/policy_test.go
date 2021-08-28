@@ -371,6 +371,42 @@ func TestPolicy_ParseControlGroupWrongCaps(t *testing.T) {
 	}
 }
 
+func TestPolicy_ParseFieldFilters(t *testing.T) {
+	pol, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	name = "fieldfilters"
+    path "secret/*" {
+		capabilities = ["read", "patch"]
+		field_filters = [
+			{
+				filter_on = ["patch"]
+				fields = ["options/*", "/data/internal/foo"]
+			},
+			{
+				filter_on = ["read"]
+				fields = ["/data/internal/foo", "/metadata/*"]
+			}
+		]
+	}
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	filters := pol.Paths[0].Permissions.FieldFilters
+	if diff := deep.Equal(filters[0].FilterOn, []string{"patch"}); diff != nil {
+		t.Error(diff)
+	}
+	if diff := deep.Equal(filters[0].Fields, []string{"options/*", "/data/internal/foo"}); diff != nil {
+		t.Error(diff)
+	}
+	if diff := deep.Equal(filters[1].FilterOn, []string{"read"}); diff != nil {
+		t.Error(diff)
+	}
+	if diff := deep.Equal(filters[1].Fields, []string{"/data/internal/foo", "/metadata/*"}); diff != nil {
+		t.Error(diff)
+	}
+}
+
 func TestPolicy_ParseControlGroup(t *testing.T) {
 	pol, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
 	name = "controlgroups"

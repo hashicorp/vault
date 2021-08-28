@@ -136,7 +136,12 @@ type PathRules struct {
 	RequiredParametersHCL []string                 `hcl:"required_parameters"`
 	MFAMethodsHCL         []string                 `hcl:"mfa_methods"`
 	ControlGroupHCL       *ControlGroupHCL         `hcl:"control_group"`
-	FieldFilterHCL        map[string][]interface{} `hcl:"field_filter"`
+	FieldFilterHCL        []*FieldFilter           `hcl:"field_filters"`
+}
+
+type FieldFilter struct {
+	FilterOn []string `hcl:"filter_on"`
+	Fields   []string `hcl:"fields"`
 }
 
 type ControlGroupHCL struct {
@@ -170,7 +175,7 @@ type ACLPermissions struct {
 	RequiredParameters []string
 	MFAMethods         []string
 	ControlGroup       *ControlGroup
-	FieldFilter        map[string][]interface{}
+	FieldFilters       []*FieldFilter
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
@@ -328,7 +333,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			"max_wrapping_ttl",
 			"mfa_methods",
 			"control_group",
-			"field_filter",
+			"field_filters",
 		}
 		if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -417,11 +422,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			}
 		}
 		if pc.FieldFilterHCL != nil {
-			pc.Permissions.FieldFilter = make(map[string][]interface{}, len(pc.FieldFilterHCL))
-
-			for key, val := range pc.FieldFilterHCL {
-				pc.Permissions.FieldFilter[strings.ToLower(key)] = val
-			}
+			pc.Permissions.FieldFilters = pc.FieldFilterHCL
 		}
 		if pc.MinWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MinWrappingTTLHCL)
