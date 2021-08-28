@@ -52,14 +52,15 @@ import Component from '@glimmer/component';
 import layout from '../templates/components/bar-chart';
 import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
-// eslint-disable-next-line no-unused-vars
-import { select, event, selectAll } from 'd3-selection';
+import { guidFor } from '@ember/object/internals';
 import { scaleLinear, scaleBand } from 'd3-scale';
+import { axisLeft } from 'd3-axis';
 import { max } from 'd3-array';
 import { stack } from 'd3-shape';
-import { axisLeft } from 'd3-axis';
+// eslint-disable-next-line no-unused-vars
+import { select, event, selectAll } from 'd3-selection';
+// eslint-disable-next-line no-unused-vars
 import { transition } from 'd3-transition';
-import { guidFor } from '@ember/object/internals';
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
