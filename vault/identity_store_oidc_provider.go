@@ -293,7 +293,7 @@ func (i *IdentityStore) clientNamesReferencingTargetAssignmentName(ctx context.C
 	}
 
 	var names []string
-	for client, _ := range clients {
+	for client := range clients {
 		names = append(names, client)
 	}
 	sort.Strings(names)
@@ -337,7 +337,7 @@ func (i *IdentityStore) clientNamesReferencingTargetKeyName(ctx context.Context,
 	}
 
 	var names []string
-	for client, _ := range clients {
+	for client := range clients {
 		names = append(names, client)
 	}
 	sort.Strings(names)
@@ -959,7 +959,7 @@ func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, 
 
 	provider.effectiveIssuer = provider.Issuer
 	if provider.effectiveIssuer == "" {
-		provider.effectiveIssuer = i.core.redirectAddr
+		provider.effectiveIssuer = i.redirectAddr
 	}
 
 	provider.effectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
