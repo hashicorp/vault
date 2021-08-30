@@ -259,7 +259,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderClient tests CRUD operations for clients
+// TestOIDC_Path_OIDC_ProviderClient_DeDuplication tests that a
+// client doesn't have duplicate redirect URIs or Assignments
 func TestOIDC_Path_OIDC_ProviderClient_DeDuplication(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
@@ -1472,7 +1473,7 @@ func TestOIDC_Path_OIDCProvider_DeDuplication(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Create a test provider "test-provider" with duplicate allowed_client_ids
+	// Create a test provider "test-provider" with duplicates
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
