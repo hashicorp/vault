@@ -653,6 +653,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.Assignments = d.Get("assignments").([]string)
 	}
 
+	// Ensure there are no duplicate assignments or URIs
+	client.Assignments = strutil.RemoveDuplicates(client.Assignments, false)
+	client.RedirectURIs = strutil.RemoveDuplicates(client.RedirectURIs, false)
+
 	// enforce assignment existence
 	for _, assignment := range client.Assignments {
 		entry, err := req.Storage.Get(ctx, assignmentPath+assignment)

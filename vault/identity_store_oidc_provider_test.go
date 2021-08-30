@@ -259,6 +259,64 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	}
 }
 
+// TestOIDC_Path_OIDC_ProviderClient tests CRUD operations for clients
+func TestOIDC_Path_OIDC_ProviderClient_DeDuplication(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test assignment "test-assignment1" -- should succeed
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":           "test-key",
+			"assignments":   []string{"test-assignment1", "test-assignment1"},
+			"redirect_uris": []string{"http://example.com", "http://notduplicate.com", "http://example.com"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"redirect_uris":    []string{"http://example.com", "http://notduplicate.com"},
+		"assignments":      []string{"test-assignment1"},
+		"key":              "test-key",
+		"id_token_ttl":     0,
+		"access_token_ttl": 0,
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderClient_Update tests Update operations for clients
 func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
