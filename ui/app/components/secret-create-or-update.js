@@ -169,8 +169,8 @@ export default class SecretCreateOrUpdate extends Component {
     }
     if (
       !model.failedServerRead &&
-      !model.selectedVersion.failedServerRead &&
-      model.selectedVersion.version !== model.currentVersion
+      !model.selectedVersion?.failedServerRead &&
+      model.selectedVersion?.version !== model.currentVersion
     ) {
       return true;
     }
