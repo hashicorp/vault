@@ -3,11 +3,19 @@
   <div>Second Div</div>
   <div class="bar-chart-wrapper">
     <div class="chart-header">
-      <h2 class="chart-title">{{@title}}</h2>
-      <p class="chart-description">{{@description}}</p>
-      {{#if hasExport}}
-      <button>EXPORT!!!!</button>
-      {{/if}}
+      <div class="header-left">
+        <h2 class="chart-title">{{@title}}</h2>
+        <p class="chart-description">{{@description}}</p>
+      </div>
+      <div class="header-right">
+        {{#if @hasExport}}
+          <button 
+            type="button"
+            class="link export-button">
+            {{this.buttonText}}
+          </button>
+        {{/if}}
+      </div>
     </div>
       <div class="is-border"></div>
     <div class="bar-chart-container">

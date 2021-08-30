@@ -20,6 +20,8 @@
 
 .chart-header {
   margin-left: $spacing-l;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
 }
 
 .chart-title {
@@ -33,6 +35,12 @@
   font-weight: $font-weight-normal;
   color: $ui-gray-700;
   margin-bottom: $spacing-xs;
+}
+
+.export-button {
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .bar-chart-container {
