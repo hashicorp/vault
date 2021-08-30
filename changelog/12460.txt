@@ -1,3 +1,0 @@
-```release-note:improvement
-**OIDC Identity Provider**: Add deduplication to OIDC Provider API fields
-```
