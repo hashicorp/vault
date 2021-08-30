@@ -13,8 +13,6 @@
  *        (hash key="non_entity_tokens" label="Active direct tokens")
  *        (hash key="distinct_entities" label="Unique Entities")
  *      }}
- *    @optionalParam={optionalParam}
- *    @param1={{param1}}
  *    @onClick= />
  *
  * sampleData = [
@@ -200,6 +198,7 @@ class BarChartComponent extends Component {
     let compareAttributes = (elementA, elementB, attr) =>
       select(elementA).attr(`${attr}`) === elementB.getAttribute(`${attr}`);
 
+    // handles click and mouseover/out/move event for data bars
     actionBars
       .on('click', function(chartData) {
         if (handleClick) {
@@ -240,6 +239,7 @@ class BarChartComponent extends Component {
           );
       });
 
+    // handles mouseover/out/move event for y axis legend
     yLegendBars
       .on('click', function(chartData) {
         if (handleClick) {
@@ -262,7 +262,6 @@ class BarChartComponent extends Component {
             .transition()
             .duration(200)
             .style('opacity', 1);
-          // .style('max-width', 'fit-content');
         }
       })
       .on('mouseout', function() {
@@ -318,7 +317,7 @@ class BarChartComponent extends Component {
     groups.selectAll('.domain, .tick line').remove();
 
     // TODO: make more flexible, y value needs to change when move onto another line
-    // 20% of legend SVG is reserved for each map key symbol + label, calculates starting x coord
+    // 20% of legend SVG is reserved for each map key symbol + label, calculates starting x-coord
     let startingXCoordinate = 100 - this.mapLegend.length * 20;
     let legendSvg = select('.legend');
     this.mapLegend.map((legend, i) => {
