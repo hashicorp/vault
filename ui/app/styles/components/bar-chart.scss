@@ -22,24 +22,32 @@
   margin-left: $spacing-l;
   display: grid;
   grid-template-columns: 3fr 1fr;
-}
 
-.chart-title {
-  font-size: $size-5;
-  font-weight: $font-weight-bold;
-  line-height: normal;
-}
+  .header-left {
+    .chart-title {
+      font-size: $size-5;
+      font-weight: $font-weight-bold;
+      line-height: normal;
+    }
 
-.chart-description {
-  font-size: $size-8;
-  font-weight: $font-weight-normal;
-  color: $ui-gray-700;
-  margin-bottom: $spacing-xs;
-}
+    .chart-description {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      margin-bottom: $spacing-xs;
+    }
+  }
 
-.export-button {
-  &:hover {
-    text-decoration: underline;
+  .header-right {
+    text-align: center;
+
+    .export-button {
+      font-size: $size-8;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
   }
 }
 

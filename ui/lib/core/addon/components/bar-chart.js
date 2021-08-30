@@ -119,7 +119,7 @@ class BarChart extends Component {
     return this.args.labelKey || 'label';
   }
 
-  get buttonText() {
+  get getButtonText() {
     return this.args.buttonText || 'Export data';
   }
 
@@ -131,7 +131,7 @@ class BarChart extends Component {
     return this.args.chartKeys || null;
   }
 
-  // TODO: turn this into a get function that responds to arguments passed to component
+  // TODO: take in arguments passed to component
   flattenedData() {
     return this.dataset.map(d => {
       return {
