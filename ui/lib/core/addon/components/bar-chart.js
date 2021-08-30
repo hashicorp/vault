@@ -45,6 +45,8 @@
  * @param {array} chartKeys - array of key names associated with the data to display
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend ( i.e. { key: 'non_entity_tokens', label: 'Active direct tokens' })
  * @param {string} [labelKey=label] - labelKey is the key name in the data that corresponds to the value labeling the y-axis (i.e. "namespace_path" in sampleData)
+ * @param {boolean} [hasExport] - to display export button in top right corner
+ * @param {string} [buttonText=Export data] - text for export button
  *
  */
 
@@ -115,6 +117,10 @@ class BarChart extends Component {
 
   get labelKey() {
     return this.args.labelKey || 'label';
+  }
+
+  get buttonText() {
+    return this.args.buttonText || 'Export data';
   }
 
   get mapLegend() {
