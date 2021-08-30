@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <BarChart
+ * <BarChartComponent
  *    @title="Top 10 Namespaces"
  *    @description="Each namespace's client count includes clients in child namespaces."
  *    @labelKey="namespace_path"
@@ -41,7 +41,6 @@
  * @param {string} title - title of the chart
  * @param {string} [description] - description of the chart
  * @param {object} dataset - dataset for the chart
- * @param {function} flattenData - function to flatten object so data isn't nested
  * @param {array} chartKeys - array of key names associated with the data to display
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend ( i.e. { key: 'non_entity_tokens', label: 'Active direct tokens' })
  * @param {string} [labelKey=label] - labelKey is the key name in the data that corresponds to the value labeling the y-axis (i.e. "namespace_path" in sampleData)
@@ -75,46 +74,7 @@ const BAR_COLOR_HOVER = ['#1563FF', '#0F4FD1'];
 const BACKGROUND_BAR_COLOR = '#EBEEF2';
 const TOOLTIP_BACKGROUND = '#525761';
 
-class BarChart extends Component {
-  dataset = [
-    {
-      namespace_id: 'root',
-      namespace_path: 'root',
-      counts: {
-        distinct_entities: 268,
-        non_entity_tokens: 985,
-        clients: 1253,
-      },
-    },
-    {
-      namespace_id: 'O0i4m',
-      namespace_path: 'top-namespace',
-      counts: {
-        distinct_entities: 648,
-        non_entity_tokens: 220,
-        clients: 868,
-      },
-    },
-    {
-      namespace_id: '1oihz',
-      namespace_path: 'anotherNamespace',
-      counts: {
-        distinct_entities: 547,
-        non_entity_tokens: 337,
-        clients: 884,
-      },
-    },
-    {
-      namespace_id: '1oihz',
-      namespace_path: 'someOtherNamespaceawgagawegawgawgawgaweg',
-      counts: {
-        distinct_entities: 807,
-        non_entity_tokens: 234,
-        clients: 1041,
-      },
-    },
-  ];
-
+class BarChartComponent extends Component {
   get labelKey() {
     return this.args.labelKey || 'label';
   }
@@ -127,37 +87,25 @@ class BarChart extends Component {
     return this.args.mapLegend || null;
   }
 
-  get chartKeys() {
-    return this.args.chartKeys || null;
+  // TODO: if no data render empty state "No data to display"
+  get dataset() {
+    return this.args.dataset || null;
   }
 
-  // TODO: take in arguments passed to component
-  flattenedData() {
-    return this.dataset.map(d => {
-      return {
-        label: d['namespace_path'],
-        non_entity_tokens: d['counts']['non_entity_tokens'],
-        distinct_entities: d['counts']['distinct_entities'],
-        total: d['counts']['clients'],
-      };
-    });
-  }
-
-  // TODO: separate into function for specifically creating tooltip text
-  totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.counts.clients, 0);
+  // TODO: separate into function for specifically creating tooltip text (tooltip text creation should happen in parent?)
+  totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
 
   @action
   renderBarChart(element) {
+    let elementId = guidFor(element);
     let totalCount = this.totalCount;
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
-    let dataset = this.flattenedData();
-    let elementId = guidFor(element);
-
+    let dataset = this.dataset;
     let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
     // creates an array of data for each map legend key
     // each array contains coordinates for each data bar
-    let stackedData = stackFunction(this.flattenedData());
+    let stackedData = stackFunction(dataset);
 
     // creates and appends tooltip
     let container = select('.bar-chart-container');
@@ -233,7 +181,7 @@ class BarChart extends Component {
       .style('opacity', '0')
       .style('mix-blend-mode', 'multiply');
 
-    let labelBars = chartSvg
+    let yLegendBars = chartSvg
       .selectAll('.label-bar')
       .data(dataset)
       .enter()
@@ -265,7 +213,6 @@ class BarChart extends Component {
             return compareAttributes(this, event.target, 'y');
           })
           .style('fill', (b, i) => `${BAR_COLOR_HOVER[i]}`);
-        // FUTURE TODO: Make tooltip text a function
         select('.chart-tooltip')
           .transition()
           .duration(200)
@@ -293,7 +240,7 @@ class BarChart extends Component {
           );
       });
 
-    labelBars
+    yLegendBars
       .on('click', function(chartData) {
         if (handleClick) {
           handleClick(chartData);
@@ -393,4 +340,4 @@ class BarChart extends Component {
   }
 }
 
-export default setComponentTemplate(layout, BarChart);
+export default setComponentTemplate(layout, BarChartComponent);

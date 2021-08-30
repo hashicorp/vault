@@ -1,31 +1,26 @@
-<div class="test-container"> 
-  <div>First Div</div>
-  <div>Second Div</div>
-  <div class="bar-chart-wrapper">
-    <div class="chart-header">
-      <div class="header-left">
-        <h2 class="chart-title">{{@title}}</h2>
+<div class="bar-chart-wrapper">
+  <div class="chart-header">
+    <div class="header-left">
+      <h2 class="chart-title">{{@title}}</h2>
+      {{#if @description}}
         <p class="chart-description">{{@description}}</p>
-      </div>
-      <div class="header-right">
-        {{#if @hasExport}}
-          <button 
-            type="button"
-            class="link export-button">
-            {{this.getButtonText}}
-          </button>
-        {{/if}}
-      </div>
-    </div>
-      <div class="is-border"></div>
-    <div class="bar-chart-container">
-    {{!-- add conditional here to check for data --}}
-      <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
-    </div>
-    <div class="is-border"></div>
-    <div class="legend-container">
-      <svg class="legend"></svg>
+      {{/if}}
+    </div> 
+    <div class="header-right">
+      {{#if @hasExport}}
+        <button type="button" class="link">
+          {{this.getButtonText}}
+        </button>
+      {{/if}}
     </div>
   </div>
-  <div>Fourth Div</div>
+  <div class="is-border"></div>
+  <div class="bar-chart-container">
+  {{!-- add conditional here to check for data --}}
+    <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
+  </div>
+  <div class="is-border"></div>
+  <div class="legend-container">
+    <svg class="legend"></svg>
+  </div>
 </div>

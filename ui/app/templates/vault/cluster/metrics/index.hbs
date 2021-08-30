@@ -6,18 +6,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<BarChart 
-  @title="Top 10 namespaces" 
-  @description="Each namespace's client count includes clients in child namespaces."
-  @dataset={{this.testData}}
-  @chartKeys={{array "non_entity_tokens" "distinct_entities" "clients"}}
-  @mapLegend={{ array
-    (hash key="non_entity_tokens" label="Active direct tokens") 
-    (hash key="distinct_entities" label="Unique Entities") 
-    }} 
-  @hasExport={{true}}
-  @getButtonText="Export all namespace data"
-  />
+<DummyParent/>
 
 <br><br><br><br>
 <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
