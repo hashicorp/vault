@@ -653,6 +653,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.Assignments = d.Get("assignments").([]string)
 	}
 
+	// remove duplicate assignments and redirect URIs
+	client.Assignments = strutil.RemoveDuplicates(client.Assignments, false)
+	client.RedirectURIs = strutil.RemoveDuplicates(client.RedirectURIs, false)
+
 	// enforce assignment existence
 	for _, assignment := range client.Assignments {
 		entry, err := req.Storage.Get(ctx, assignmentPath+assignment)
@@ -824,6 +828,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 	} else if req.Operation == logical.CreateOperation {
 		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
+
+	// remove duplicate allowed client IDs and scopes
+	provider.AllowedClientIDs = strutil.RemoveDuplicates(provider.AllowedClientIDs, false)
+	provider.Scopes = strutil.RemoveDuplicates(provider.Scopes, false)
 
 	if provider.Issuer != "" {
 		// verify that issuer is the correct format:
