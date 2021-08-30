@@ -1,13 +1,46 @@
-{{#if (eq mode "edit")}}
+{{#if (eq @mode "edit")}}
   <form onsubmit={{action "onSaveChanges"}} data-test-pricing-metrics-config-form>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <MessageError @model={{model}} @errorMessage={{error}} />
-      {{#each model.configAttrs as |attr|}}
-        <FormField
-          data-test-field
-          @attr={{attr}}
-          @model={{model}}
-        />
+      <MessageError @model={{@model}} @errorMessage={{this.error}} />
+      {{#each @model.configAttrs as |attr|}}
+        {{#if (and (eq attr.type "string") (eq attr.options.editType "boolean"))}}
+          <label class="is-label">Usage data collection</label>
+          {{#if attr.options.helpText}}
+              <p class="sub-text">{{attr.options.helpText}} {{#if attr.options.docLink}}<a href="{{attr.options.docLink}}" target="_blank" rel="noopener noreferrer">See our documentation</a> for help.{{/if}}</p>
+          {{/if}}
+          <div class="control is-flex has-bottom-margin-l">
+            <input data-test-field type="checkbox" id="{{attr.name}}" name={{attr.name}} class="switch is-rounded is-success is-small" checked={{eq (get @model attr.name) attr.options.trueValue}} 
+            onchange={{action (action "updateBooleanValue" attr) value="target.checked"}} />
+            <label for="{{attr.name}}">
+              {{#if (eq @model.enabled "Off")}}
+                Data collection is off
+              {{else}}
+                Data collection is on
+              {{/if}}
+            </label>
+          </div>
+          {{else if (eq attr.type "number")}}
+            <div class="has-top-margin-s">
+              <label for="{{attr.name}}" class="is-label">
+                {{ attr.options.label }}
+              </label>
+              {{#if attr.options.subText}}
+                <p class="sub-text">{{attr.options.subText}} {{#if attr.options.docLink}}<a href="{{attr.options.docLink}}" target="_blank" rel="noopener noreferrer">See our documentation</a> for help.{{/if}}</p>
+              {{/if}}
+              <div class="control">
+                <input 
+                  data-test-field
+                  id={{attr.name}}
+                  disabled={{eq @model.enabled "Off"}}
+                  autocomplete="off"
+                  spellcheck="false"
+                  onchange={{action (mut (get @model attr.name)) value="target.value"}}
+                  value={{or (get @model attr.name) attr.options.defaultValue}}
+                  class="input"
+                  maxLength={{attr.options.characterLimit}} />
+              </div>
+            </div>
+        {{/if}}
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
@@ -29,14 +62,14 @@
     </div>
   </form>
   <Modal
-    @title={{modalTitle}}
-    @onClose={{action (mut modalOpen) false}}
-    @isActive={{modalOpen}}
+    @title={{this.modalTitle}}
+    @onClose={{action (mut this.modalOpen) false}}
+    @isActive={{this.modalOpen}}
     @type="warning"
     @showCloseButton={{true}}
   >
     <section class="modal-card-body">
-      {{#if (eq model.enabled "On")}}
+      {{#if (eq @model.enabled "On")}}
         <p class="has-bottom-margin-s">Vault will start tracking data starting from today’s date, {{date-format (now) "d MMMM yyyy"}}. You will not be able to see or query usage until the end of the month.</p>
         <p>If you’ve previously enabled usage tracking, that historical data will still be available to you.</p>
       {{else}}
@@ -56,7 +89,7 @@
       <button
         type="button"
         class="button is-primary"
-        onclick={{perform save}}
+        onclick={{perform this.save}}
       >
         Continue
       </button>
@@ -64,11 +97,11 @@
   </Modal>
 {{else}}
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics-config-table>
-    {{#each infoRows as |item|}}
+    {{#each this.infoRows as |item|}}
       <InfoTableRow
         @label={{item.label}}
         @helperText={{item.helperText}}
-        @value={{get model item.valueKey}}
+        @value={{get @model item.valueKey}}
       />
     {{/each}}
   </div>
