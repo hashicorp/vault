@@ -653,7 +653,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		client.Assignments = d.Get("assignments").([]string)
 	}
 
-	// Ensure there are no duplicate assignments or URIs
+	// remove duplicate assignments and redirect URIs
 	client.Assignments = strutil.RemoveDuplicates(client.Assignments, false)
 	client.RedirectURIs = strutil.RemoveDuplicates(client.RedirectURIs, false)
 
@@ -829,7 +829,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
 
-	// Ensure that there are no duplicates
+	// remove duplicate allowed client IDs and scopes
 	provider.AllowedClientIDs = strutil.RemoveDuplicates(provider.AllowedClientIDs, false)
 	provider.Scopes = strutil.RemoveDuplicates(provider.Scopes, false)
 

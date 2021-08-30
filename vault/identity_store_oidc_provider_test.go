@@ -261,7 +261,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 
 // TestOIDC_Path_OIDC_ProviderClient_DeDuplication tests that a
 // client doesn't have duplicate redirect URIs or Assignments
-func TestOIDC_Path_OIDC_ProviderClient_DeDuplication(t *testing.T) {
+func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
@@ -1456,7 +1456,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 
 // TestOIDC_Path_OIDCProvider_DeDuplication tests that a
 // provider doensn't have duplicate scopes or client IDs
-func TestOIDC_Path_OIDCProvider_DeDuplication(t *testing.T) {
+func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
