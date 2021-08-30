@@ -5,14 +5,10 @@ export function splitObject(originalObject, array) {
   let object2 = {};
   // convert object to key's array
   let keys = Object.keys(originalObject);
-  // iterate over keys to see if they match values in the array
   keys.forEach(key => {
-    array.forEach(item => {
-      if (key === item) {
-        object1[key] = originalObject[key];
-      }
-    });
-    if (!array.includes(key)) {
+    if (array.includes(key)) {
+      object1[key] = originalObject[key];
+    } else {
       object2[key] = originalObject[key];
     }
   });

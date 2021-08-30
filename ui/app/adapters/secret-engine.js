@@ -37,8 +37,8 @@ export default ApplicationAdapter.extend({
     if (data.type === 'kv' && data.options.version !== 1) {
       // data has both data for sys mount and the config, we need to separate them
       let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
-      let configData = splitObjects[0];
-      data = splitObjects[1];
+      let configData;
+      [configData, data] = splitObjects;
       // first create the engine
       return this.ajax(this.url(path), 'POST', { data })
         .then(() => {

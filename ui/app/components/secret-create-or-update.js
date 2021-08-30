@@ -125,7 +125,7 @@ export default class SecretCreateOrUpdate extends Component {
           if (isV2) {
             secret.set('id', key);
           }
-          if (isV2 && Object.keys(secret.changedAttributes()).length) {
+          if (isV2 && Object.keys(secret.changedAttributes()).length > 0) {
             // save secret metadata
             secret
               .save()
@@ -133,7 +133,11 @@ export default class SecretCreateOrUpdate extends Component {
                 this.saveComplete(successCallback, key);
               })
               .catch(e => {
-                this.e = e.errors.join(' ');
+                // when mode is not create the metadata error is handled in secret-edit-metadata
+                if (this.mode === 'create') {
+                  this.error = e.errors.join(' ');
+                }
+                return;
               });
           } else {
             this.saveComplete(successCallback, key);
@@ -156,6 +160,21 @@ export default class SecretCreateOrUpdate extends Component {
   }
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
+  }
+
+  get isCreateNewVersionFromOldVersion() {
+    let model = this.args.model;
+    if (!model) {
+      return false;
+    }
+    if (
+      !model.failedServerRead &&
+      !model.selectedVersion.failedServerRead &&
+      model.selectedVersion.version !== model.currentVersion
+    ) {
+      return true;
+    }
+    return false;
   }
 
   @(task(function*(name, value) {

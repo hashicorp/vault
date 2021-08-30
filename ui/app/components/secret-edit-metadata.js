@@ -39,8 +39,9 @@ export default class SecretEditMetadata extends Component {
     let model = this.args.model;
     try {
       await model.save();
-    } catch (err) {
-      // error
+    } catch (e) {
+      this.error = e;
+      return;
     }
     this.router.transitionTo('vault.cluster.secrets.backend.metadata', this.args.model.id);
   }
@@ -48,18 +49,17 @@ export default class SecretEditMetadata extends Component {
   @action
   onSaveChanges(event) {
     event.preventDefault();
-    this.save();
-    return;
+    return this.save();
   }
   @action onKeyUp(name, value) {
     if (value) {
       if (name === 'customMetadata') {
         // cp validations won't work on an object so performing validations here
         /* eslint-disable no-useless-escape */
-        let regex = /^[^\/]+$/g; // looking for a forward slash
+        let regex = /^[^\\]+$/g; // looking for a backward slash
         value.match(regex)
           ? set(this.validationMessages, name, '')
-          : set(this.validationMessages, name, 'Custom values cannot contain a forward slash.');
+          : set(this.validationMessages, name, 'Custom values cannot contain a backward slash.');
       }
       if (name === 'maxVersions') {
         this.args.model.maxVersions = value;
