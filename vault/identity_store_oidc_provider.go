@@ -825,6 +825,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		provider.Scopes = d.GetDefaultOrZero("scopes").([]string)
 	}
 
+	// Ensure that there are no duplicates
+	provider.AllowedClientIDs = strutil.RemoveDuplicates(provider.AllowedClientIDs, false)
+	provider.Scopes = strutil.RemoveDuplicates(provider.Scopes, false)
+
 	if provider.Issuer != "" {
 		// verify that issuer is the correct format:
 		//   - http or https

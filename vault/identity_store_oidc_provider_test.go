@@ -1395,6 +1395,54 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 }
 
+// TestOIDC_Path_OIDCProvider_DeDuplication tests that a
+// provider doensn't have duplicate scopes or client IDs
+func TestOIDC_Path_OIDCProvider_DeDuplication(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope1" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
+			"description": "desc1",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider" with duplicate allowed_client_ids
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes":             []string{"test-scope1", "test-scope1"},
+			"allowed_client_ids": []string{"test-id1", "test-id2", "test-id1"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"issuer":             "",
+		"allowed_client_ids": []string{"test-id1", "test-id2"},
+		"scopes":             []string{"test-scope1"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 // TestOIDC_Path_OIDCProvider_Update tests Update operations for providers
 func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
