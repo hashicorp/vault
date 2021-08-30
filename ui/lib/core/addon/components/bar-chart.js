@@ -120,7 +120,7 @@ class BarChart extends Component {
   }
 
   get getButtonText() {
-    return this.args.buttonText || 'Export data';
+    return this.args.getButtonText || 'Export data';
   }
 
   get mapLegend() {
