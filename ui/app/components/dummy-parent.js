@@ -55,7 +55,9 @@ class DummyParentComponent extends Component {
     },
   ];
 
-  formattedData = this.flattenData(this.dataset);
+  get formattedData() {
+    return this.flattenData(this.dataset);
+  }
 
   // data sent to bar chart component must be flattened
   flattenData(data) {

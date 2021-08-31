@@ -42,7 +42,6 @@
  * @param {array} chartKeys - array of key names associated with the data to display
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend ( i.e. { key: 'non_entity_tokens', label: 'Active direct tokens' })
  * @param {string} [labelKey=label] - labelKey is the key name in the data that corresponds to the value labeling the y-axis (i.e. "namespace_path" in sampleData)
- * @param {boolean} [hasExport] - to display export button in top right corner
  * @param {string} [buttonText=Export data] - text for export button
  *
  */
@@ -50,6 +49,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/bar-chart';
 import { setComponentTemplate } from '@ember/component';
+import { assert } from '@ember/debug';
 import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import { scaleLinear, scaleBand } from 'd3-scale';
@@ -77,26 +77,20 @@ class BarChartComponent extends Component {
     return this.args.labelKey || 'label';
   }
 
-  get getButtonText() {
-    return this.args.getButtonText || 'Export data';
-  }
-
+  // make sure array has keys labeled "key" and "value", helper function
   get mapLegend() {
+    assert('map legend is required', !!this.args.mapLegend || Array.isArray(this.args.mapLegend));
     return this.args.mapLegend || null;
   }
 
-  // TODO: if no data render empty state "No data to display"
   get dataset() {
     return this.args.dataset || null;
   }
 
-  // TODO: separate into function for specifically creating tooltip text (tooltip text creation should happen in parent?)
-  totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
-
   @action
   renderBarChart(element) {
     let elementId = guidFor(element);
-    let totalCount = this.totalCount;
+    let totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
     let dataset = this.dataset;
@@ -318,6 +312,8 @@ class BarChartComponent extends Component {
 
     // TODO: make more flexible, y value needs to change when move onto another line
     // 20% of legend SVG is reserved for each map key symbol + label, calculates starting x-coord
+    // make legend div
+    // each map key/value as own div
     let startingXCoordinate = 100 - this.mapLegend.length * 20;
     let legendSvg = select('.legend');
     this.mapLegend.map((legend, i) => {
