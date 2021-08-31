@@ -574,6 +574,17 @@ type Core struct {
 	enableResponseHeaderRaftNodeID bool
 }
 
+func (c *Core) HAState() consts.HAState {
+	switch {
+	case c.perfStandby:
+		return consts.PerfStandby
+	case c.standby:
+		return consts.Standby
+	default:
+		return consts.Active
+	}
+}
+
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
 	entCoreConfig

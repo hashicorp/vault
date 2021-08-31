@@ -346,7 +346,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		aliasMap["creation_time"] = ptypes.TimestampString(group.Alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(group.Alias.LastUpdateTime)
 
-		if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+		if mountValidationResp := i.router.ValidateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_path"] = mountValidationResp.MountPath
 			aliasMap["mount_type"] = mountValidationResp.MountType
 		}
@@ -516,7 +516,7 @@ func (i *IdentityStore) handleGroupListCommon(ctx context.Context, byID bool) (*
 				entry["mount_path"] = mi.MountPath
 			} else {
 				mi = mountInfo{}
-				if mountValidationResp := i.core.router.validateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
+				if mountValidationResp := i.router.ValidateMountByAccessor(group.Alias.MountAccessor); mountValidationResp != nil {
 					mi.MountType = mountValidationResp.MountType
 					mi.MountPath = mountValidationResp.MountPath
 					entry["mount_type"] = mi.MountType
