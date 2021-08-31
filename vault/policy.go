@@ -232,6 +232,16 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 		ret.ControlGroup = clonedControlGroup.(*ControlGroup)
 	}
 
+	switch {
+	case p.FieldFilters == nil:
+	default:
+		clonedFieldFilters, err := copystructure.Copy(p.FieldFilters)
+		if err != nil {
+			return nil, err
+		}
+		ret.FieldFilters = clonedFieldFilters.([]*FieldFilter)
+	}
+
 	return ret, nil
 }
 
@@ -407,7 +417,6 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
 			}
 		}
-
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
 			for key, val := range pc.AllowedParametersHCL {
@@ -422,6 +431,23 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			}
 		}
 		if pc.FieldFilterHCL != nil {
+			// check to make sure they're not filtering on a capability they haven't enabled
+			for _, ff := range pc.FieldFilterHCL {
+				for _, fon := range ff.FilterOn {
+					fcap := cap2Int[fon]
+
+					// invalid capability
+					if fcap == 0 {
+						return fmt.Errorf("path %q: invalid filter_on key: %q", key, fon)
+					}
+
+					// this capability isn't enabled
+					if pc.Permissions.CapabilitiesBitmap&fcap == 0 {
+						return fmt.Errorf("path %q: filter_on capability %q not enabled", key, fon)
+					}
+				}
+			}
+
 			pc.Permissions.FieldFilters = pc.FieldFilterHCL
 		}
 		if pc.MinWrappingTTLHCL != nil {

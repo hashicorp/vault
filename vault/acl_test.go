@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -830,11 +831,91 @@ func TestACL_CreationRace(t *testing.T) {
 	wg.Wait()
 }
 
+func TestACL_FieldFilters(t *testing.T) {
+	ns := namespace.RootNamespace
+	policy, err := ParseACLPolicy(ns, strings.TrimSpace(fieldFilterPolicy))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type tcase struct {
+		path       string
+		parameters []string
+		values     []interface{}
+		op         logical.Operation
+		allowed    bool
+	}
+
+	tcases := []tcase{
+		{"secret/foo", []string{"bar"}, []interface{}{"baz"}, logical.CreateOperation, true},
+		{"secret/foo", []string{"bar"}, []interface{}{"baz"}, logical.ReadOperation, true},
+		{"secret/foo", []string{"bar"}, []interface{}{"baz"}, logical.PatchOperation, true},
+		{"secret/foo", []string{"bar"}, []interface{}{map[string]interface{}{"baz": map[string]string{"quux": "wibble"}}}, logical.PatchOperation, true},
+		{"secret/foo", []string{"bar"}, []interface{}{"baz"}, logical.UpdateOperation, false},
+		{"secret/foo", []string{"quux"}, []interface{}{"wibble"}, logical.PatchOperation, false},
+		{"secret/foo", []string{"quux"}, []interface{}{"wibble"}, logical.ReadOperation, false},
+	}
+
+	for _, tc := range tcases {
+		request := &logical.Request{
+			Path:      tc.path,
+			Operation: tc.op,
+			Data:      make(map[string]interface{}),
+		}
+		ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+		for i, parameter := range tc.parameters {
+			request.Data[parameter] = tc.values[i]
+		}
+
+		authResults := acl.AllowOperation(ctx, request, false)
+		if authResults.Allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
+		}
+	}
+}
+
 var tokenCreationPolicy = `
 name = "tokenCreation"
 path "auth/token/create*" {
 	capabilities = ["update", "create", "sudo"]
 }
+`
+
+var fieldFilterPolicy = `
+	name = "fieldfilters"
+    path "secret/*" {
+		capabilities = ["read", "patch", "create"]
+		field_filters = [
+			{
+				filter_on = ["patch"]
+				fields = ["/bar", "/bar/baz"]
+			},
+			{
+				filter_on = ["read"]
+				fields = ["/bar", "/metadata/*"]
+			}
+		]
+	}
+`
+
+var badFieldFilterPolicy = `
+	name = "badfieldfilters"
+    path "secret/*" {
+		capabilities = ["read"]
+		field_filters = [
+			{
+				filter_on = ["update"]
+				fields = ["/bar", "/bar/baz"]
+			}
+		]
+	}
 `
 
 var aclPolicy = `

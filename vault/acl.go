@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/pointerstructure"
 )
 
 // ACL is used to wrap a set of policies to provide
@@ -223,29 +225,25 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				}
 			}
 
-			// TODO: redo this to account for our new parsing structure
-			// TODO: then complete the code in AllowOperation
-			//if len(pc.Permissions.FieldFilter) > 0 {
-			//	if existingPerms.FieldFilter == nil {
-			//		clonedFieldFilter, err := copystructure.Copy(pc.Permissions.FieldFilter)
-			//		if err != nil {
-			//			return nil, err
-			//		}
-			//		existingPerms.FieldFilter = clonedFieldFilter.(map[string][]interface{})
-			//	} else {
-			//		for key, value := range pc.Permissions.FieldFilter {
-			//			pcValue, ok := existingPerms.FieldFilter[key]
-			//			// If an empty array exist it should overwrite any other
-			//			// value.
-			//			if len(value) == 0 || (ok && len(pcValue) == 0) {
-			//				existingPerms.FieldFilter[key] = []interface{}{}
-			//			} else {
-			//				// Merge the two maps, appending values on key conflict.
-			//				existingPerms.FieldFilter[key] = append(value, existingPerms.FieldFilter[key]...)
-			//			}
-			//		}
-			//	}
-			//}
+			// Merge the existing field filters with the new ones
+			if len(pc.Permissions.FieldFilters) > 0 {
+				if existingPerms.FieldFilters == nil {
+					existingPerms.FieldFilters = pc.Permissions.FieldFilters
+				} else {
+					additionalFieldFilters := make([]*FieldFilter, 0)
+					for _, ff := range pc.Permissions.FieldFilters {
+						for _, eff := range existingPerms.FieldFilters {
+							if !strutil.EquivalentSlices(ff.FilterOn, eff.FilterOn) || !strutil.EquivalentSlices(ff.Fields, eff.Fields) {
+								additionalFieldFilters = append(additionalFieldFilters, ff)
+							}
+						}
+					}
+
+					if len(additionalFieldFilters) > 0 {
+						existingPerms.FieldFilters = append(existingPerms.FieldFilters, additionalFieldFilters...)
+					}
+				}
+			}
 
 			if len(pc.Permissions.RequiredParameters) > 0 {
 				if len(existingPerms.RequiredParameters) == 0 {
@@ -482,6 +480,33 @@ CHECK:
 			return
 		}
 
+		// Process field filters
+		if len(permissions.FieldFilters) > 0 {
+			for _, ff := range permissions.FieldFilters {
+				if strutil.StrListContains(ff.FilterOn, string(op)) {
+					for _, ptr := range ff.Fields {
+						_, err := pointerstructure.Get(req.Data, ptr)
+
+						// if the error is nil, that means we found it, so allow it
+						if err == nil {
+							ret.Allowed = true
+							return
+						} else {
+							// this will happen if the value isn't found OR the pointer is malformed.
+							// if the value isn't found, deny it
+							// if the value is malformed, we should probably catch that earlier in this process?
+							// for now, we punt
+							if errors.Is(err, pointerstructure.ErrNotFound) {
+								return
+							} else {
+								continue
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if len(permissions.DeniedParameters) == 0 {
 			goto ALLOWED_PARAMETERS
 		}
@@ -527,11 +552,6 @@ CHECK:
 				return
 			}
 		}
-
-		// TODO: complete this part
-		// Process field filters
-		//if len(permissions.FieldFilter) > 0 {
-		//}
 	}
 
 	ret.Allowed = true
