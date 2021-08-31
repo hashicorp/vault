@@ -527,7 +527,6 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 			return nil, err
 		}
 
-		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 		key.SigningKey = signingKey
 		key.KeyRing = append(key.KeyRing, &expireableKey{
 			KeyID:    signingKey.Public().KeyID,
@@ -537,13 +536,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
 		}
+		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 
 		nextSigningKey, err := generateKeys(key.Algorithm)
 		if err != nil {
 			return nil, err
 		}
 
-		i.Logger().Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
 		key.NextSigningKey = nextSigningKey
 		key.KeyRing = append(key.KeyRing, &expireableKey{
 			KeyID:    nextSigningKey.Public().KeyID,
@@ -553,7 +552,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		if err := saveOIDCPublicKey(ctx, req.Storage, nextSigningKey.Public()); err != nil {
 			return nil, err
 		}
-
+		i.Logger().Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
 	}
 
 	if err := i.oidcCache.Flush(ns); err != nil {
@@ -1185,6 +1184,39 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 	return resp, nil
 }
 
+// getKeysCacheControlHeader returns the cache control header for all public
+// keys at the .well-known/keys endpoint
+func (i *IdentityStore) getKeysCacheControlHeader() (string, error) {
+	// if maxJwksClientCache is set use that, otherwise fall back on the
+	// more conservative nextRun values
+	maxJwksClientCache, ok, err := i.oidcCache.Get(noNamespace, "maxJwksClientCache")
+	if err != nil {
+		return "", err
+	}
+
+	if ok {
+		maxDuration := int64(maxJwksClientCache.(time.Duration))
+		randDuration := mathrand.Int63n(maxDuration)
+		durationInSeconds := time.Duration(randDuration).Seconds()
+		return fmt.Sprintf("max-age=%.0f", durationInSeconds), nil
+	}
+
+	nextRun, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
+	if err != nil {
+		return "", err
+	}
+
+	if ok {
+		now := time.Now()
+		expireAt := nextRun.(time.Time)
+		if expireAt.After(now) {
+			expireInSeconds := expireAt.Sub(time.Now()).Seconds()
+			return fmt.Sprintf("max-age=%.0f", expireInSeconds), nil
+		}
+	}
+	return "", nil
+}
+
 // pathOIDCReadPublicKeys is used to retrieve all public keys so that clients can
 // verify the validity of a signed OIDC token.
 func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1234,35 +1266,13 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		return nil, err
 	}
 	if len(keys) > 0 {
-		// if maxJwksClientCache is set use that, otherwise fall back on the more conservative
-		// nextRun values
-		maxJwksClientCache, ok, err := i.oidcCache.Get(noNamespace, "maxJwksClientCache")
+		header, err := i.getKeysCacheControlHeader()
 		if err != nil {
 			return nil, err
 		}
 
-		if ok {
-			maxDuration := int64(maxJwksClientCache.(time.Duration))
-			randDuration := mathrand.Int63n(maxDuration)
-			// truncate to seconds
-			durationInSeconds := time.Duration(randDuration).Seconds()
-			durationInString := fmt.Sprintf("max-age=%.0f", durationInSeconds)
-			resp.Data[logical.HTTPRawCacheControl] = durationInString
-		} else {
-			v, ok, err := i.oidcCache.Get(noNamespace, "nextRun")
-			if err != nil {
-				return nil, err
-			}
-
-			if ok {
-				now := time.Now()
-				expireAt := v.(time.Time)
-				if expireAt.After(now) {
-					expireInSeconds := expireAt.Sub(time.Now()).Seconds()
-					expireInString := fmt.Sprintf("max-age=%.0f", expireInSeconds)
-					resp.Data[logical.HTTPRawCacheControl] = expireInString
-				}
-			}
+		if header != "" {
+			resp.Data[logical.HTTPRawCacheControl] = header
 		}
 	}
 

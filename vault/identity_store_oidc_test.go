@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -1246,6 +1248,62 @@ func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
 
 	if err := cache.Flush(nil); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// get default value
+	header, err := c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedHeader := ""
+	if header != expectedHeader {
+		t.Fatalf("expected %s, got %s", expectedHeader, header)
+	}
+
+	// set nextRun
+	nextRun := time.Now().Add(24 * time.Hour)
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedNextRun := "max-age=86400"
+	if header != expectedNextRun {
+		t.Fatalf("expected %s, got %s", expectedNextRun, header)
+	}
+
+	// set maxJwksClientCache
+	maxJwksClientCache := time.Duration(60) * time.Second
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "maxJwksClientCache", maxJwksClientCache); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	if header == "" {
+		t.Fatalf("expected header to be set, got %s", header)
+	}
+
+	maxAgeValue := strings.Split(header, "=")[1]
+	headerVal, err := strconv.Atoi(maxAgeValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// headerVal will be a random value between 0 and maxJwksClientCache
+	if headerVal > int(maxJwksClientCache) {
+		t.Fatalf("unexpected header value, got %d", headerVal)
 	}
 }
 
