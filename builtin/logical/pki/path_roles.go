@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	"strings"
@@ -420,6 +421,7 @@ for "generate_lease".`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
 			logical.UpdateOperation: b.pathRoleCreate(pathRolesValidator()),
+			logical.PatchOperation: b.pathRolePatch(pathRolesValidator()),
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -583,7 +585,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.OperationFunc {
-	return func(ctx context.Context, req * logical.Request, data * framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		var err error
 		name := data.Get("name").(string)
 
@@ -650,9 +652,55 @@ func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.Ope
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
-		
+
 		// Store it
 		jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	}
+}
+
+func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+		if name == "" {
+			return logical.ErrorResponse("missing role name"), nil
+		}
+
+		role, err := b.getRole(ctx, req.Storage, name)
+		if err != nil {
+			return nil, err
+		}
+
+		roleJSON, err := json.Marshal(role)
+		if err != nil {
+			return nil, err
+		}
+
+		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, roleJSON)
+		if err != nil {
+			return nil, err
+		}
+
+		var patchedRole *roleEntry
+		err = json.Unmarshal(patchedRoleJSON, &patchedRole)
+		if err != nil {
+			return nil, err
+		}
+
+		err = validate(patchedRole)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		// Store it
+		jsonEntry, err := logical.StorageEntryJSON("role/"+name, role)
 		if err != nil {
 			return nil, err
 		}

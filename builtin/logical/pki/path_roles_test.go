@@ -748,7 +748,7 @@ func TestPki_CertsLease(t *testing.T) {
 	}
 }
 
-func TestPki_Validation(t *testing.T) {
+func TestPki_CreateValidation(t *testing.T) {
 	var resp *logical.Response
 	var roleData map[string]interface{}
 	var err error
@@ -774,6 +774,87 @@ func TestPki_Validation(t *testing.T) {
 		Path:      "roles/testrole",
 		Storage:   storage,
 		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || !resp.IsError() {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	errSubStrings := []string{
+		"5 errors occurred",
+		"RSA keys < 2048 bits are unsafe and not supported",
+		"ttl value must be less than max_ttl value",
+		fmt.Sprintf("unsupported bit length for RSA key: %d", rsaKeyBitLength),
+		fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", extKeyUsageOID),
+		fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", policyIdentifier),
+	}
+
+	respError := resp.Error().Error()
+
+	for _, subString := range errSubStrings {
+		if !strings.Contains(respError, subString) {
+			t.Fatalf("Expected error to include %q, resp: %#v", subString, resp)
+		}
+	}
+
+	ecKeyBitLength := 128
+
+	roleData = map[string]interface{}{
+		"allowed_domains": "myvault.com",
+		"ttl":             "5h",
+		"key_type":        "ec",
+		"key_bits":        ecKeyBitLength,
+	}
+
+	roleReq.Data = roleData
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || !resp.IsError() {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	errSubStrings = []string{
+		"1 error occurred",
+		fmt.Sprintf("unsupported bit length for EC key: %d", ecKeyBitLength),
+	}
+
+	respError = resp.Error().Error()
+
+	for _, subString := range errSubStrings {
+		if !strings.Contains(respError, subString) {
+			t.Fatalf("Expected error to include %q, resp: %#v", subString, resp)
+		}
+	}
+}
+
+func TestPki_MergePatchValidationNotExists(t *testing.T) {
+	var resp *logical.Response
+	var roleData map[string]interface{}
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	rsaKeyBitLength := 1024
+	extKeyUsageOID := "foo"
+	policyIdentifier := "bar"
+
+	roleData = map[string]interface{}{
+		"allowed_domains":    "myvault.com",
+		"ttl":                "5h",
+		"max_ttl":            "2h",
+		"key_type":           "rsa",
+		"key_bits":           rsaKeyBitLength,
+		"ext_key_usage_oids": []string{extKeyUsageOID},
+		"policy_identifiers": []string{policyIdentifier},
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.PatchOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+		PatchType: logical.JSONMergePatch,
 	}
 
 	resp, err = b.HandleRequest(context.Background(), roleReq)
