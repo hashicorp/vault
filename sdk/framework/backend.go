@@ -564,6 +564,7 @@ type FieldSchema struct {
 	Default     interface{}
 	Description string
 	Required    bool
+	Immutable   bool
 	Deprecated  bool
 
 	// Query indicates this field will be sent as a query parameter:
@@ -582,6 +583,7 @@ type FieldSchema struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
@@ -663,7 +665,11 @@ func HandlePatchOperation(req *logical.Request, d *FieldData, marshaledResource 
 		}
 
 		modified, err = jsonpatch.MergePatch(marshaledResource, patchJSON)
+		if err != nil {
+			return nil, err
+		}
 	default:
+		//TODO: this should probably return an error
 		return nil, nil
 	}
 

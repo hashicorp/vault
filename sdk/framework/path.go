@@ -46,6 +46,8 @@ func PathAppend(paths ...[]*Path) []*Path {
 	return result
 }
 
+type ValidatorFunc func(interface{}) error
+
 // Path is a single path that the backend responds to.
 type Path struct {
 	// Pattern is the pattern of the URL that matches this path.
