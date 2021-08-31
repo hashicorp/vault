@@ -127,8 +127,8 @@ advertise the correct address to other nodes.
 
 - `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
   skipped from the _rear_ of the set of hops. For instance, for a header value
-  of `1.2.3.4, 2.3.4.5, 3.4.5.6`, if this value is set to `"1"`, the address that
-  will be used as the originating client IP is `2.3.4.5`.
+  of `1.2.3.4, 2.3.4.5, 3.4.5.6, 4.5.6.7`, if this value is set to `"1"`, the address that
+  will be used as the originating client IP is `3.4.5.6`.
 
 - `x_forwarded_for_reject_not_authorized` `(string: "true")` – If set false,
   if there is an X-Forwarded-For header in a connection from an unauthorized
