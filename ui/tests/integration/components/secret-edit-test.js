@@ -94,6 +94,7 @@ module('Integration | Component | secret edit', function(hooks) {
         null: 'null',
         float: '1.234',
       },
+      canReadSecretData: true,
     });
 
     await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
