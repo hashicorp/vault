@@ -160,9 +160,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       savedMaxVersion,
       'displays the max version set when configuring the secret-engine'
     );
-    assert.equal(cas, 'Yes', 'displays the cas set when configuring the secret-engine');
+    assert.equal(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
     assert.equal(
-      deleteVersionAfter,
+      deleteVersionAfter.trim(),
       '1s',
       'displays the delete version after set when configuring the secret-engine'
     );
