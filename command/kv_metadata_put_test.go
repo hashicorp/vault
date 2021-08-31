@@ -1,11 +1,11 @@
 package command
 
 import (
-	"strings"
-	"testing"
-
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
+	"strings"
+	"testing"
 )
 
 func testKVMetadataPutCommand(tb testing.TB) (*cli.MockUi, *KVMetadataPutCommand) {
@@ -75,5 +75,82 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 	}
 	if secret.Data["delete_version_after"] != "0s" {
 		t.Fatalf("expected 0s but received %q", secret.Data["delete_version_after"])
+	}
+}
+
+func TestKvMetadataPutCommandCustomMetadata(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	basePath := t.Name() + "/"
+	secretPath := basePath + "secret/my-secret"
+
+	if err := client.Sys().Mount(basePath, &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount error: %#v", err)
+	}
+
+	ui, cmd := testKVMetadataPutCommand(t)
+	cmd.client = client
+
+	exitStatus := cmd.Run([]string{"-custom-metadata=foo=abc", "-custom-metadata=bar=123", secretPath})
+
+	if exitStatus != 0 {
+		t.Fatalf("Expected 0 exit status but received %d", exitStatus)
+	}
+
+	metaFullPath := basePath + "metadata/secret/my-secret"
+	commandOutput := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	expectedOutput := "Success! Data written to: " + metaFullPath
+
+	if !strings.Contains(commandOutput, expectedOutput) {
+		t.Fatalf("Expected command output %q but received %q", expectedOutput, commandOutput)
+	}
+
+	metadata, err := client.Logical().Read(metaFullPath)
+
+	if err != nil {
+		t.Fatalf("Metadata read error: %#v", err)
+	}
+
+	// JSON output from read decoded into map[string]interface{}
+	expectedCustomMetadata := map[string]interface{}{
+		"foo": "abc",
+		"bar": "123",
+	}
+
+	if diff := deep.Equal(metadata.Data["custom_metadata"], expectedCustomMetadata); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+
+	ui, cmd = testKVMetadataPutCommand(t)
+	cmd.client = client
+
+	// Overwrite entire custom metadata with a single key
+	exitStatus = cmd.Run([]string{"-custom-metadata=baz=abc123", secretPath})
+
+	if exitStatus != 0 {
+		t.Fatalf("Expected 0 exit status but received %d", exitStatus)
+	}
+
+	commandOutput = ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+	if !strings.Contains(commandOutput, expectedOutput) {
+		t.Fatalf("Expected command output %q but received %q", expectedOutput, commandOutput)
+	}
+
+	metadata, err = client.Logical().Read(metaFullPath)
+
+	if err != nil {
+		t.Fatalf("Metadata read error: %#v", err)
+	}
+
+	expectedCustomMetadata = map[string]interface{}{
+		"baz": "abc123",
+	}
+
+	if diff := deep.Equal(metadata.Data["custom_metadata"], expectedCustomMetadata); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 }

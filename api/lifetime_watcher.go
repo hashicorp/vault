@@ -377,7 +377,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 // assumptions given the total lease time; it also adds some jitter to not have
 // clients be in sync.
 func (r *LifetimeWatcher) calculateGrace(leaseDuration time.Duration) {
-	if leaseDuration == 0 {
+	if leaseDuration <= 0 {
 		r.grace = 0
 		return
 	}
