@@ -264,7 +264,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     //check for metadata tab should not exist on KV version 1
