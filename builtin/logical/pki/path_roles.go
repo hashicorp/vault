@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"strings"
 	"time"
 
@@ -24,6 +25,51 @@ func pathListRoles(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathListRolesHelpSyn,
 		HelpDescription: pathListRolesHelpDesc,
+	}
+}
+
+func pathRolesValidator() framework.ValidatorFunc {
+	return func(resource interface{}) error {
+		var errs *multierror.Error
+		entry := resource.(*roleEntry)
+
+		if entry.NoStore && *entry.GenerateLease {
+			errs = multierror.Append(errs, fmt.Errorf("no_store and generate_lease cannot both be true"))
+		}
+
+		// This check seems redundant since ValidateKeyTypeLength contains a whitelist of bit lengths
+		if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
+			errs = multierror.Append(errs, fmt.Errorf("RSA keys < 2048 bits are unsafe and not supported"))
+		}
+
+		if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
+			errs = multierror.Append(errs, fmt.Errorf("ttl value must be less than max_ttl value"))
+		}
+
+		if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
+			fmt.Println(err.Error())
+			errs = multierror.Append(errs, err)
+		}
+
+		if len(entry.ExtKeyUsageOIDs) > 0 {
+			for _, oidstr := range entry.ExtKeyUsageOIDs {
+				_, err := certutil.StringToOid(oidstr)
+				if err != nil {
+					errs = multierror.Append(errs, fmt.Errorf("%q could not be parsed as a valid oid for an extended key usage", oidstr))
+				}
+			}
+		}
+
+		if len(entry.PolicyIdentifiers) > 0 {
+			for _, oidstr := range entry.PolicyIdentifiers {
+				_, err := certutil.StringToOid(oidstr)
+				if err != nil {
+					errs = multierror.Append(errs, fmt.Errorf("%q could not be parsed as a valid oid for a policy identifier", oidstr))
+				}
+			}
+		}
+
+		return errs.ErrorOrNil()
 	}
 }
 
@@ -373,7 +419,7 @@ for "generate_lease".`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleCreate,
+			logical.UpdateOperation: b.pathRoleCreate(pathRolesValidator()),
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -536,111 +582,86 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var err error
-	name := data.Get("name").(string)
+func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.OperationFunc {
+	return func(ctx context.Context, req * logical.Request, data * framework.FieldData) (*logical.Response, error) {
+		var err error
+		name := data.Get("name").(string)
 
-	entry := &roleEntry{
-		MaxTTL:                        time.Duration(data.Get("max_ttl").(int)) * time.Second,
-		TTL:                           time.Duration(data.Get("ttl").(int)) * time.Second,
-		AllowLocalhost:                data.Get("allow_localhost").(bool),
-		AllowedDomains:                data.Get("allowed_domains").([]string),
-		AllowedDomainsTemplate:        data.Get("allowed_domains_template").(bool),
-		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
-		AllowSubdomains:               data.Get("allow_subdomains").(bool),
-		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
-		AllowAnyName:                  data.Get("allow_any_name").(bool),
-		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
-		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
-		AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
-		ServerFlag:                    data.Get("server_flag").(bool),
-		ClientFlag:                    data.Get("client_flag").(bool),
-		CodeSigningFlag:               data.Get("code_signing_flag").(bool),
-		EmailProtectionFlag:           data.Get("email_protection_flag").(bool),
-		KeyType:                       data.Get("key_type").(string),
-		KeyBits:                       data.Get("key_bits").(int),
-		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
-		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
-		KeyUsage:                      data.Get("key_usage").([]string),
-		ExtKeyUsage:                   data.Get("ext_key_usage").([]string),
-		ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
-		OU:                            data.Get("ou").([]string),
-		Organization:                  data.Get("organization").([]string),
-		Country:                       data.Get("country").([]string),
-		Locality:                      data.Get("locality").([]string),
-		Province:                      data.Get("province").([]string),
-		StreetAddress:                 data.Get("street_address").([]string),
-		PostalCode:                    data.Get("postal_code").([]string),
-		GenerateLease:                 new(bool),
-		NoStore:                       data.Get("no_store").(bool),
-		RequireCN:                     data.Get("require_cn").(bool),
-		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
-		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
-		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
-		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
-	}
+		entry := &roleEntry{
+			MaxTTL:                        time.Duration(data.Get("max_ttl").(int)) * time.Second,
+			TTL:                           time.Duration(data.Get("ttl").(int)) * time.Second,
+			AllowLocalhost:                data.Get("allow_localhost").(bool),
+			AllowedDomains:                data.Get("allowed_domains").([]string),
+			AllowedDomainsTemplate:        data.Get("allowed_domains_template").(bool),
+			AllowBareDomains:              data.Get("allow_bare_domains").(bool),
+			AllowSubdomains:               data.Get("allow_subdomains").(bool),
+			AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
+			AllowAnyName:                  data.Get("allow_any_name").(bool),
+			EnforceHostnames:              data.Get("enforce_hostnames").(bool),
+			AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
+			AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
+			ServerFlag:                    data.Get("server_flag").(bool),
+			ClientFlag:                    data.Get("client_flag").(bool),
+			CodeSigningFlag:               data.Get("code_signing_flag").(bool),
+			EmailProtectionFlag:           data.Get("email_protection_flag").(bool),
+			KeyType:                       data.Get("key_type").(string),
+			KeyBits:                       data.Get("key_bits").(int),
+			UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
+			UseCSRSANs:                    data.Get("use_csr_sans").(bool),
+			KeyUsage:                      data.Get("key_usage").([]string),
+			ExtKeyUsage:                   data.Get("ext_key_usage").([]string),
+			ExtKeyUsageOIDs:               data.Get("ext_key_usage_oids").([]string),
+			OU:                            data.Get("ou").([]string),
+			Organization:                  data.Get("organization").([]string),
+			Country:                       data.Get("country").([]string),
+			Locality:                      data.Get("locality").([]string),
+			Province:                      data.Get("province").([]string),
+			StreetAddress:                 data.Get("street_address").([]string),
+			PostalCode:                    data.Get("postal_code").([]string),
+			GenerateLease:                 new(bool),
+			NoStore:                       data.Get("no_store").(bool),
+			RequireCN:                     data.Get("require_cn").(bool),
+			AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
+			PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
+			BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
+			NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		}
 
-	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
-	switch {
-	case len(allowedOtherSANs) == 0:
-	case len(allowedOtherSANs) == 1 && allowedOtherSANs[0] == "*":
-	default:
-		_, err := parseOtherSANs(allowedOtherSANs)
+		allowedOtherSANs := data.Get("allowed_other_sans").([]string)
+		switch {
+		case len(allowedOtherSANs) == 0:
+		case len(allowedOtherSANs) == 1 && allowedOtherSANs[0] == "*":
+		default:
+			_, err := parseOtherSANs(allowedOtherSANs)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Errorf("error parsing allowed_other_sans: %w", err).Error()), nil
+			}
+		}
+		entry.AllowedOtherSANs = allowedOtherSANs
+
+		// no_store implies generate_lease := false
+		if entry.NoStore {
+			*entry.GenerateLease = false
+		} else {
+			*entry.GenerateLease = data.Get("generate_lease").(bool)
+		}
+
+		err = validate(entry)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Errorf("error parsing allowed_other_sans: %w", err).Error()), nil
+			return logical.ErrorResponse(err.Error()), nil
 		}
-	}
-	entry.AllowedOtherSANs = allowedOtherSANs
-
-	// no_store implies generate_lease := false
-	if entry.NoStore {
-		*entry.GenerateLease = false
-	} else {
-		*entry.GenerateLease = data.Get("generate_lease").(bool)
-	}
-
-	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
-		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
-	}
-
-	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
-		return logical.ErrorResponse(
-			`"ttl" value must be less than "max_ttl" value`,
-		), nil
-	}
-
-	if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	if len(entry.ExtKeyUsageOIDs) > 0 {
-		for _, oidstr := range entry.ExtKeyUsageOIDs {
-			_, err := certutil.StringToOid(oidstr)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
-			}
+		
+		// Store it
+		jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+		if err != nil {
+			return nil, err
 		}
-	}
-
-	if len(entry.PolicyIdentifiers) > 0 {
-		for _, oidstr := range entry.PolicyIdentifiers {
-			_, err := certutil.StringToOid(oidstr)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
-			}
+		if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+			return nil, err
 		}
-	}
 
-	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
-	if err != nil {
-		return nil, err
+		return nil, nil
 	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
 }
 
 func parseKeyUsages(input []string) int {
