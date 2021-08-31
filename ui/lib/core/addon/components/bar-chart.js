@@ -63,7 +63,7 @@ import { transition } from 'd3-transition';
 
 // SIZING CONSTANTS
 const CHART_MARGIN = { top: 10, left: 137 }; // makes space for y-axis legend
-const CHAR_LIMIT = 18; // character count limit (for label truncating)
+const CHAR_LIMIT = 18; // character count limit for y-axis labels to trigger truncating
 const LINE_HEIGHT = 24; // each bar w/ padding is 24 pixels thick
 
 // COLOR THEME:
@@ -77,14 +77,31 @@ class BarChartComponent extends Component {
     return this.args.labelKey || 'label';
   }
 
-  // make sure array has keys labeled "key" and "value", helper function
+  /**
+   * mapLegendSample = [{
+   *    key: "api_key_for_label",
+   *    label: "Label Displayed on Legend"
+   *  }]
+   */
   get mapLegend() {
-    assert('map legend is required', !!this.args.mapLegend || Array.isArray(this.args.mapLegend));
-    return this.args.mapLegend || null;
+    assert(
+      'map legend is required, must be an array of objects with key names of "key" and "label"',
+      this.hasLegend()
+    );
+    return this.args.mapLegend;
   }
 
   get dataset() {
     return this.args.dataset || null;
+  }
+
+  hasLegend() {
+    if (!this.args.mapLegend || !Array.isArray(this.args.mapLegend)) {
+      return false;
+    } else {
+      let legendKeys = this.args.mapLegend.map(obj => Object.keys(obj));
+      return legendKeys.map(array => array.includes('key', 'label')).every(element => element === true);
+    }
   }
 
   @action
@@ -118,7 +135,7 @@ class BarChartComponent extends Component {
     let yScale = scaleBand()
       .domain(dataset.map(d => d[labelKey]))
       .range([0, dataset.length * LINE_HEIGHT])
-      .paddingInner(0.765); // percent of the total width to reserve for white space between bars
+      .paddingInner(0.765); // percent of the total width to reserve for padding between bars
 
     let chartSvg = select(element);
     chartSvg.attr('viewBox', `0 0 710 ${(dataset.length + 1) * LINE_HEIGHT}`);
@@ -233,7 +250,7 @@ class BarChartComponent extends Component {
           );
       });
 
-    // handles mouseover/out/move event for y axis legend
+    // handles mouseover/out/move event for y-axis legend
     yLegendBars
       .on('click', function(chartData) {
         if (handleClick) {
@@ -283,6 +300,7 @@ class BarChartComponent extends Component {
         }
       });
 
+    // TODO: these render twice, need to only render and append once per line
     // creates total count text and coordinates to display to the right of data bars
     let totalCountData = [];
     rects.each(function(d) {
@@ -310,11 +328,9 @@ class BarChartComponent extends Component {
     // removes axes lines
     groups.selectAll('.domain, .tick line').remove();
 
-    // TODO: make more flexible, y value needs to change when move onto another line
-    // 20% of legend SVG is reserved for each map key symbol + label, calculates starting x-coord
-    // make legend div
-    // each map key/value as own div
-    let startingXCoordinate = 100 - this.mapLegend.length * 20;
+    // TODO: make more flexible, make legend a div instead of svg?
+    // each map key symbol & label takes up 20% of legend SVG width
+    let startingXCoordinate = 100 - this.mapLegend.length * 20; // subtract from 100% to find starting x-coordinate
     let legendSvg = select('.legend');
     this.mapLegend.map((legend, i) => {
       let xCoordinate = startingXCoordinate + i * 20;
