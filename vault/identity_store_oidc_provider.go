@@ -283,6 +283,9 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 	if err != nil {
 		return nil, err
 	}
+	if p == nil {
+		return nil, nil
+	}
 
 	disc := providerDiscovery{
 		discovery: discovery{

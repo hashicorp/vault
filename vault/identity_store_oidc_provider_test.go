@@ -1698,3 +1698,24 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+// TestOIDC_Path_OpenIDProviderConfig_ProviderDoesNotExist tests read
+// operations for the openid-configuration path when the provider does not
+// exist
+func TestOIDC_Path_OpenIDProviderConfig_ProviderDoesNotExist(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Expect defaults from .well-known/openid-configuration
+	// test-provider does not exist
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectedResp := &logical.Response{}
+	if resp != expectedResp && err != nil {
+		t.Fatalf("expected empty response but got success; error:\n%v\nresp: %#v", err, resp)
+	}
+}
