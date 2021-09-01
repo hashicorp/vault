@@ -221,5 +221,5 @@ func TestRateLimitQuota_Update(t *testing.T) {
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 
-	require.Nil(t, quota.close())
+	require.Nil(t, quota.close(context.Background()))
 }
