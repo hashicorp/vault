@@ -693,10 +693,18 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
-	// Validate the signature
-	claims := &jwt.Claims{}
-	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
-		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	keyCount := len(responseJWKS.Keys)
+	errorCount := 0
+	for _, key := range responseJWKS.Keys {
+		// Validate the signature
+		claims := &jwt.Claims{}
+		if err := parsedToken.Claims(key, claims); err != nil {
+			t.Logf("unable to validate signed token, err:\n%#v", err)
+			errorCount += 1
+		}
+	}
+	if errorCount == keyCount {
+		t.Fatalf("unable to validate signed token with any of the .well-known keys")
 	}
 }
 

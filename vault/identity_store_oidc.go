@@ -528,10 +528,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		}
 
 		key.SigningKey = signingKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{
-			KeyID:    signingKey.Public().KeyID,
-			ExpireAt: now.Add(key.RotationPeriod).Add(key.VerificationTTL),
-		})
+		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
 
 		if err := saveOIDCPublicKey(ctx, req.Storage, signingKey.Public()); err != nil {
 			return nil, err
@@ -544,10 +541,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		}
 
 		key.NextSigningKey = nextSigningKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{
-			KeyID:    nextSigningKey.Public().KeyID,
-			ExpireAt: now.Add(key.RotationPeriod).Add(key.RotationPeriod).Add(key.VerificationTTL),
-		})
+		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: nextSigningKey.Public().KeyID})
 
 		if err := saveOIDCPublicKey(ctx, req.Storage, nextSigningKey.Public()); err != nil {
 			return nil, err
@@ -1187,15 +1181,15 @@ func (i *IdentityStore) pathOIDCDiscovery(ctx context.Context, req *logical.Requ
 // getKeysCacheControlHeader returns the cache control header for all public
 // keys at the .well-known/keys endpoint
 func (i *IdentityStore) getKeysCacheControlHeader() (string, error) {
-	// if maxJwksClientCache is set use that, otherwise fall back on the
+	// if jwksCacheControlMaxAge is set use that, otherwise fall back on the
 	// more conservative nextRun values
-	maxJwksClientCache, ok, err := i.oidcCache.Get(noNamespace, "maxJwksClientCache")
+	jwksCacheControlMaxAge, ok, err := i.oidcCache.Get(noNamespace, "jwksCacheControlMaxAge")
 	if err != nil {
 		return "", err
 	}
 
 	if ok {
-		maxDuration := int64(maxJwksClientCache.(time.Duration))
+		maxDuration := int64(jwksCacheControlMaxAge.(time.Duration))
 		randDuration := mathrand.Int63n(maxDuration)
 		durationInSeconds := time.Duration(randDuration).Seconds()
 		return fmt.Sprintf("max-age=%.0f", durationInSeconds), nil
@@ -1389,13 +1383,15 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 	logger.Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
 
 	now := time.Now()
-	k.KeyRing = append(k.KeyRing, &expireableKey{
-		KeyID: nextSigningKey.KeyID,
-		// this token won't start being used for 1 rotation period,
-		// will be used for 1 rotation period after that,
-		// and should be deleted verificationTTL after it is no longer used
-		ExpireAt: now.Add(k.RotationPeriod).Add(k.RotationPeriod).Add(verificationTTL),
-	})
+	// set the previous public key's expiry time
+	for _, key := range k.KeyRing {
+		if key.KeyID == k.SigningKey.KeyID {
+			key.ExpireAt = now.Add(verificationTTL)
+			break
+		}
+	}
+
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: nextSigningKey.KeyID})
 	k.SigningKey = k.NextSigningKey
 	k.NextSigningKey = nextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
@@ -1409,7 +1405,7 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 		return err
 	}
 
-	logger.Debug("rotated OIDC public key. now using", "key_id", k.SigningKey.Public().KeyID)
+	logger.Debug("rotated OIDC public key, now using", "key_id", k.SigningKey.Public().KeyID)
 	return nil
 }
 
@@ -1642,21 +1638,21 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	return nextExpiration, nil
 }
 
-func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (nextRotation time.Time, maxJwksClientCacheDuration time.Duration, err error) {
+func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (time.Time, time.Duration, error) {
 	// soonestRotation will be the soonest rotation time of all keys. Initialize
 	// here to a relatively distant time.
 	now := time.Now()
 	soonestRotation := now.Add(24 * time.Hour)
 
-	// the OIDC JWKS endpoint returns a Cache-Control HTTP header time
-	// between 0 and the minimum verificationTTL or minimum rotationPeriod out
-	// of all keys, whichever value is lower.
+	// the OIDC JWKS endpoint returns a Cache-Control HTTP header time between
+	// 0 and the minimum verificationTTL or minimum rotationPeriod out of all
+	// keys, whichever value is lower.
 	//
 	// This smooths calls from services validating JWTs to Vault, while
-	// ensuring that operators can assert that servers honoring the Cache-Control
-	// header will always have a superset of all valid keys, and not trust
-	// any keys longer than a jwksCacheControlMax duration after a key is rotated
-	// out of signing use
+	// ensuring that operators can assert that servers honoring the
+	// Cache-Control header will always have a superset of all valid keys, and
+	// not trust any keys longer than a jwksCacheControlMaxAge duration after a
+	// key is rotated out of signing use
 	jwksClientCacheDuration := time.Duration(math.MaxInt64)
 
 	i.oidcLock.Lock()
@@ -1779,8 +1775,8 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 			i.Logger().Error("error setting oidc cache", "err", err)
 		}
 		if minJwksClientCacheDuration < math.MaxInt64 {
-			if err := i.oidcCache.SetDefault(noNamespace, "maxJwksClientCache", minJwksClientCacheDuration); err != nil {
-				i.Logger().Error("error setting maxJwksClientCache in oidc cache", "err", err)
+			if err := i.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", minJwksClientCacheDuration); err != nil {
+				i.Logger().Error("error setting jwksCacheControlMaxAge in oidc cache", "err", err)
 			}
 		}
 
