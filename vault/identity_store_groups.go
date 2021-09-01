@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -318,19 +319,26 @@ func (i *IdentityStore) pathGroupNamePatch() framework.OperationFunc {
 			return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
 		}
 
-		groupJSON, err := json.Marshal(group)
+		updatedGroupJSON, err := framework.HandlePatchOperation(req, d, group, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		var updatedGroupMap map[string]interface{}
+		err = json.Unmarshal(updatedGroupJSON, &updatedGroupMap)
 
 		if err != nil {
 			return nil, err
 		}
 
-		updatedGroupJSON, err := framework.HandlePatchOperation(req, d, groupJSON)
+		var groupMap map[string]interface{}
+		err = mapstructure.Decode(group, &groupMap)
 		if err != nil {
 			return nil, err
 		}
 
-		updatedGroup := new(identity.Group)
-		err = json.Unmarshal(updatedGroupJSON, &updatedGroup)
+		var updatedGroup *identity.Group
+		err = mapstructure.Decode(updatedGroupMap, &updatedGroup)
 		if err != nil {
 			return nil, err
 		}

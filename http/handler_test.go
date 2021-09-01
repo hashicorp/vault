@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -816,5 +818,70 @@ func TestHandler_Parse_Form(t *testing.T) {
 	}
 	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestHandler_HttpPatch(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": pki.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	var err error
+	err = c.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	role := map[string]interface{}{
+		"key_type": "rsa",
+		"key_bits": json.Number("2048"),
+	}
+
+	resp, err := c.Logical().Write("pki/roles/foo", role)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = c.Logical().Read("pki/roles/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	role = resp.Data
+	role["key_type"] = "ec"
+	role["key_bits"] = json.Number("521")
+
+	resp, err = c.Logical().JSONMergePatch("pki/roles/foo", role)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = c.Logical().Read("pki/roles/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := deep.Equal(role, resp.Data); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }

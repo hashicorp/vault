@@ -583,7 +583,6 @@ type FieldSchema struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
-
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
@@ -638,8 +637,36 @@ func (t FieldType) Zero() interface{} {
 	}
 }
 
-func HandlePatchOperation(req *logical.Request, d *FieldData, marshaledResource []byte) ([]byte, error) {
+type MarshalPreProcessor func(interface{}) (interface{}, error)
+
+func preProcessAndMarshal(input interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
+	var err error
+	if preProcessor != nil {
+		input, err = preProcessor(input)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	result, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func HandlePatchOperation(req *logical.Request, d *FieldData, resource interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
 	var modified []byte
+
+	marshaledResource, err := preProcessAndMarshal(resource, preProcessor)
+	if err != nil {
+		return nil, err
+	}
+
+	if string(marshaledResource) == "null" {
+		marshaledResource = []byte(`{}`)
+	}
 
 	switch req.PatchType {
 	case logical.JSONPatch:
@@ -659,7 +686,7 @@ func HandlePatchOperation(req *logical.Request, d *FieldData, marshaledResource 
 		}
 
 	case logical.JSONMergePatch:
-		patchJSON, err := json.Marshal(d.Raw)
+		patchJSON, err := preProcessAndMarshal(d.Raw, preProcessor)
 		if err != nil {
 			return nil, err
 		}

@@ -421,7 +421,7 @@ for "generate_lease".`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
 			logical.UpdateOperation: b.pathRoleCreate(pathRolesValidator()),
-			logical.PatchOperation: b.pathRolePatch(pathRolesValidator()),
+			logical.PatchOperation:  b.pathRolePatch(pathRolesValidator()),
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -666,6 +666,29 @@ func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.Ope
 	}
 }
 
+func pathRolePatchPreProcessor() framework.MarshalPreProcessor {
+	return func(resource interface{}) (interface{}, error) {
+		result := resource.(map[string]interface{})
+
+		renameKeys := map[string]string{
+			"allowed_domains": "allowed_domains_list",
+			"key_usage":       "key_usage_list",
+			"ext_key_usage":   "extended_key_usage_list",
+			"ttl":             "ttl_duration",
+			"max_ttl":         "max_ttl_duration",
+			"organization":    "organization_list",
+			"ou":              "ou_list",
+		}
+
+		for original, rename := range renameKeys {
+			result[rename] = result[original]
+			delete(result, original)
+		}
+
+		return result, nil
+	}
+}
+
 func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
@@ -678,12 +701,7 @@ func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.Oper
 			return nil, err
 		}
 
-		roleJSON, err := json.Marshal(role)
-		if err != nil {
-			return nil, err
-		}
-
-		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, roleJSON)
+		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, role.ToResponseData(), pathRolePatchPreProcessor())
 		if err != nil {
 			return nil, err
 		}
@@ -699,8 +717,12 @@ func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.Oper
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
+		patchedRole.TTL = patchedRole.TTL * time.Second
+		patchedRole.MaxTTL = patchedRole.MaxTTL * time.Second
+		patchedRole.NotBeforeDuration = patchedRole.NotBeforeDuration * time.Second
+
 		// Store it
-		jsonEntry, err := logical.StorageEntryJSON("role/"+name, role)
+		jsonEntry, err := logical.StorageEntryJSON("role/"+name, patchedRole)
 		if err != nil {
 			return nil, err
 		}
