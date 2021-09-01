@@ -297,7 +297,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 		// Bail unless it's just a case change
-		if existingAlias != nil && !strings.EqualFold(existingAlias.Name, name) {
+		if existingAlias != nil && existingAlias.ID != alias.ID {
 			return logical.ErrorResponse("alias with combination of mount accessor and name already exists"), nil
 		}
 
@@ -332,7 +332,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 			return logical.ErrorResponse("given 'canonical_id' associated with entity in a different namespace from the alias"), logical.ErrPermissionDenied
 		}
 
-		// Update the canonical ID value and move it from the current enitity to the new one
+		// Update the canonical ID value and move it from the current entity to the new one
 		alias.CanonicalID = newEntity.ID
 		newEntity.Aliases = append(newEntity.Aliases, alias)
 		for aliasIndex, item := range currentEntity.Aliases {
