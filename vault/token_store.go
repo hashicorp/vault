@@ -1687,21 +1687,36 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 	return nil
 }
 
-func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
+func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, tokenType, path string) (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 
+	isBatch := func(tokType string) bool {
+		return tokType == "batch"
+	}
 	if c.tokenStore == nil {
 		return false, fmt.Errorf("no token store")
 	}
 
-	name := strings.TrimPrefix(path, "auth/token/create/")
-	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
-	if err != nil {
-		return false, err
+	// If the path is create-orphan, there is no need to worry about deriving the token type
+	// from a role.
+	if strings.HasPrefix(path, "auth/token/create-orphan/") {
+		return isBatch(tokenType), nil
 	}
+
+	name := strings.TrimPrefix(path, "auth/token/create/")
+
+	// Only if we explicitly have no role do we rely on the token type in the request body
+	if name == "" {
+		return isBatch(tokenType), nil
+	}
+
+	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
 	if roleEntry == nil {
 		return false, fmt.Errorf("unknown role")
+	}
+	if err != nil {
+		return false, err
 	}
 	return roleEntry.TokenType == logical.TokenTypeBatch, nil
 }

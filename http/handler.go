@@ -746,8 +746,19 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			case !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path):
 				handler.ServeHTTP(w, r)
 				return
-			case strings.HasPrefix(path, "auth/token/create/"):
-				isBatch, err := core.IsBatchTokenCreationRequest(r.Context(), path)
+			case strings.HasPrefix(path, "auth/token/create/") || strings.HasPrefix(path, "auth/token/create-orphan/"):
+				// All token create requests are POST requests currently, but in case
+				// that changes, we want to ensure new verbs do not break the handler
+				// and instead result solely in token/create requests being forwarded.
+				// This means the customer loses some optimization, but does not lose
+				// functionality. The same logic can be applied in the case where we
+				// extend the API to allow POST request parameters to be parsed as
+				// query parameters.
+				var tokenType string
+				if r.Method == "POST" || r.Method == "PATCH" || r.Method == "PUT" {
+					tokenType = r.PostFormValue("type")
+				}
+				isBatch, err := core.IsBatchTokenCreationRequest(r.Context(), tokenType, path)
 				if err == nil && isBatch {
 					handler.ServeHTTP(w, r)
 					return
