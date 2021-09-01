@@ -177,7 +177,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		}
 
 		// Look up the alias by factors; if it's found it's an update
-		mountEntry := i.core.router.MatchingMountByAccessor(mountAccessor)
+		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 		}
@@ -281,7 +281,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	// namespace.
 	if name != alias.Name || mountAccessor != alias.MountAccessor {
 		// Check here to see if such an alias already exists, if so bail
-		mountEntry := i.core.router.MatchingMountByAccessor(mountAccessor)
+		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 		}
@@ -413,7 +413,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 	respData["namespace_id"] = alias.NamespaceID
 
-	if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+	if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 		respData["mount_path"] = mountValidationResp.MountPath
 		respData["mount_type"] = mountValidationResp.MountType
 	}

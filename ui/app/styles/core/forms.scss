@@ -58,6 +58,10 @@ label {
   margin-left: $size-10;
 }
 
+.b-checkbox > .sub-text {
+  padding-left: 2rem;
+}
+
 .help {
   &.is-danger {
     font-weight: $weight-bold;
