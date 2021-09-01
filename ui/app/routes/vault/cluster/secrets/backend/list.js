@@ -149,6 +149,7 @@ export default Route.extend({
     let backend = this.enginePathParam();
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let has404 = this.has404;
+    let capabilities = this.store.findRecord('capabilities', `${backend}/data/`);
     // only clear store cache if this is a new model
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
@@ -161,6 +162,7 @@ export default Route.extend({
       backendModel,
       baseKey: { id: secret },
       backendType: backendModel.get('engineType'),
+      capabilities,
     });
     if (!has404) {
       const pageFilter = secretParams.pageFilter;
