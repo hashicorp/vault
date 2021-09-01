@@ -1,6 +1,6 @@
 .bar-chart-wrapper {
-  border: 1px solid $ui-gray-200;
-  border-radius: 4px;
+  border: $light-border;
+  border-radius: $radius-large;
   padding: $spacing-l $spacing-l $spacing-s $spacing-l;
   height: 100%;
   width: 100%;
