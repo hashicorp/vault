@@ -4,7 +4,7 @@
   <BarChart 
     @title="Top 10 namespaces" 
     @description="Each namespace's client count includes clients in child namespaces."
-    {{!-- @dataset={{this.formattedData}} --}}
+    @dataset={{this.formattedData}}
     @mapLegend={{ array
       (hash key="non_entity_tokens" label="Active direct tokens") 
       (hash key="distinct_entities" label="Unique Entities") 

@@ -1,48 +1,27 @@
 /**
  * @module BarChart
- * BarChart components are used to...
+ * BarChart components are used to display data in the form of a stacked bar chart, with accompanying legend and tooltip. Anything passed into the block will display in the top right of the chart header.
  *
  * @example
  * ```js
- * <BarChartComponent
- *    @title="Top 10 Namespaces"
- *    @description="Each namespace's client count includes clients in child namespaces."
- *    @labelKey="namespace_path"
- *    @dataset={{this.testData}}
- *    @mapLegend={{ array
- *        (hash key="non_entity_tokens" label="Active direct tokens")
- *        (hash key="distinct_entities" label="Unique Entities")
- *      }}
- *    @onClick= />
+ * <BarChartComponent @title="Top 10 Namespaces" @description="Each namespace's client count includes clients in child namespaces." @labelKey="namespace_path" @dataset={{this.testData}} @mapLegend={{ array (hash key="non_entity_tokens" label="Active direct tokens") (hash key="distinct_entities" label="Unique Entities") }} @onClick={{this.onClick}} >
+ *    <button type="button" class="link">
+ *      Export all namespace data
+ *    </button>/>
+ * </BarChartComponent>
  *
- * sampleData = [
- *   {
- *     namespace_id: 'root',
- *     namespace_path: 'root',
- *     counts: {
- *       distinct_entities: 268,
- *       non_entity_tokens: 985,
- *       clients: 1253,
- *     },
- *   },
- *   {
- *     namespace_id: 'O0i4m',
- *     namespace_path: 'top-namespace',
- *     counts: {
- *       distinct_entities: 648,
- *       non_entity_tokens: 220,
- *       clients: 868,
- *     },
- *  }]
+ *  mapLegendSample = [{
+ *     key: "api_key_for_label",
+ *     label: "Label Displayed on Legend"
+ *   }]
  * ```
  *
  * @param {string} title - title of the chart
- * @param {string} [description] - description of the chart
+ * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend
  * @param {object} dataset - dataset for the chart
- * @param {array} chartKeys - array of key names associated with the data to display
- * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend ( i.e. { key: 'non_entity_tokens', label: 'Active direct tokens' })
- * @param {string} [labelKey=label] - labelKey is the key name in the data that corresponds to the value labeling the y-axis (i.e. "namespace_path" in sampleData)
- * @param {string} [buttonText=Export data] - text for export button
+ * @param {string} [description] - description of the chart
+ * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis
+ * @param {function} [onClick] - takes function from parent and passes it to click event on data bars
  *
  */
 
@@ -77,12 +56,6 @@ class BarChartComponent extends Component {
     return this.args.labelKey || 'label';
   }
 
-  /**
-   * mapLegendSample = [{
-   *    key: "api_key_for_label",
-   *    label: "Label Displayed on Legend"
-   *  }]
-   */
   get mapLegend() {
     assert(
       'map legend is required, must be an array of objects with key names of "key" and "label"',
