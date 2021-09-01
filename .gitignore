@@ -56,7 +56,7 @@ Vagrantfile
 
 .DS_Store
 .idea
-.vscode
+# .vscode - Don't ignore as there are now customizations
 
 dist/*
 
