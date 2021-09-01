@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -696,8 +697,7 @@ func HandlePatchOperation(req *logical.Request, d *FieldData, resource interface
 			return nil, err
 		}
 	default:
-		//TODO: this should probably return an error
-		return nil, nil
+		return nil, errors.New("patch type not supported")
 	}
 
 	return modified, nil

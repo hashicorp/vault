@@ -855,6 +855,16 @@ func TestHandler_HttpPatch(t *testing.T) {
 	role := map[string]interface{}{
 		"key_type": "rsa",
 		"key_bits": json.Number("2048"),
+		"country":         []string{"c1", "c2"},
+		"ou":              []string{"abc", "123"},
+		"organization":    []string{"org1", "org2"},
+		"locality":        []string{"foocity", "bartown"},
+		"province":        []string{"bar", "foo"},
+		"street_address":  []string{"123 foo street", "789 bar avenue"},
+		"postal_code":     []string{"f00", "b4r"},
+		"key_usage":       []string{"KeyEncipherment", "DigitalSignature"},
+		"ext_key_usage":   []string{"KeyEncipherment", "DigitalSignature"},
+		"allowed_domains": []string{"foobar.com", "*example.com"},
 	}
 
 	resp, err := c.Logical().Write("pki/roles/foo", role)
@@ -867,11 +877,18 @@ func TestHandler_HttpPatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	role = resp.Data
-	role["key_type"] = "ec"
-	role["key_bits"] = json.Number("521")
+	updatedKeyType := "ec"
+	updatedKeyBits := json.Number("521")
+	expectedRole := resp.Data
+	expectedRole["key_type"] = updatedKeyType
+	expectedRole["key_bits"] = updatedKeyBits
 
-	resp, err = c.Logical().JSONMergePatch("pki/roles/foo", role)
+	rolePatch := map[string]interface{}{
+		"key_type": updatedKeyType,
+		"key_bits": json.Number("521"),
+	}
+
+	resp, err = c.Logical().JSONMergePatch("pki/roles/foo", rolePatch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -881,7 +898,7 @@ func TestHandler_HttpPatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := deep.Equal(role, resp.Data); len(diff) > 0 {
+	if diff := deep.Equal(expectedRole, resp.Data); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
 }

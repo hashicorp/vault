@@ -681,8 +681,14 @@ func pathRolePatchPreProcessor() framework.MarshalPreProcessor {
 		}
 
 		for original, rename := range renameKeys {
-			result[rename] = result[original]
-			delete(result, original)
+			originalValue, ok := result[original]
+
+			// Only add a renamed key if the original exists to prevent a null value being
+			// propagated to the JSON patch which will ultimately remove a field
+			if ok {
+				result[rename] = originalValue
+				delete(result, original)
+			}
 		}
 
 		return result, nil
@@ -720,7 +726,7 @@ func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.Oper
 		patchedRole.TTL = patchedRole.TTL * time.Second
 		patchedRole.MaxTTL = patchedRole.MaxTTL * time.Second
 		patchedRole.NotBeforeDuration = patchedRole.NotBeforeDuration * time.Second
-
+		
 		// Store it
 		jsonEntry, err := logical.StorageEntryJSON("role/"+name, patchedRole)
 		if err != nil {
