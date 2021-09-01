@@ -110,5 +110,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
       return true;
     },
+    loading(transition) {
+      // eslint-disable-next-line ember/no-controller-access-in-routes
+      let controller = this.controllerFor('vault.cluster');
+      controller.set('currentlyLoading', true);
+
+      transition.finally(function() {
+        controller.set('currentlyLoading', false);
+      });
+    },
   },
 });
