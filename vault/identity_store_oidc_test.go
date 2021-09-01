@@ -1289,9 +1289,9 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 		t.Fatalf("expected %s, got %s", expectedNextRun, header)
 	}
 
-	// set maxJwksClientCache
-	maxJwksClientCache := time.Duration(60) * time.Second
-	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "maxJwksClientCache", maxJwksClientCache); err != nil {
+	// set jwksCacheControlMaxAge
+	jwksCacheControlMaxAge := time.Duration(60) * time.Second
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1309,8 +1309,8 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// headerVal will be a random value between 0 and maxJwksClientCache
-	if headerVal > int(maxJwksClientCache) {
+	// headerVal will be a random value between 0 and jwksCacheControlMaxAge
+	if headerVal > int(jwksCacheControlMaxAge) {
 		t.Fatalf("unexpected header value, got %d", headerVal)
 	}
 }
