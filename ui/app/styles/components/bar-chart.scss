@@ -1,12 +1,12 @@
 .bar-chart-wrapper {
-  border: 1px solid #dce0e6;
+  border: 1px solid $ui-gray-200;
   border-radius: 4px;
   padding: $spacing-l $spacing-l $spacing-s $spacing-l;
   height: 100%;
   width: 100%;
 
   > div.is-border {
-    border: 0.3px solid #dce0e6;
+    border: 0.3px solid $ui-gray-200;
     width: 94%;
     margin-left: 3%;
     margin-bottom: $spacing-xxs;
