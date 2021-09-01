@@ -2507,6 +2507,10 @@ func (c *Core) IsDRSecondary() bool {
 	return c.ReplicationState().HasState(consts.ReplicationDRSecondary)
 }
 
+func (c *Core) IsPerfSecondary() bool {
+	return c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+}
+
 func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
