@@ -28,7 +28,8 @@ max_lease_ttl        768h
 token_type           default-service
 ```
 
-Tune the default lease for the auth method enabled at "github/" to be 72 hours.
+The default lease for the auth method enabled at "github/" is currently set to
+768 hours. Tune this value to 72 hours.
 
 ```shell-session
 $ vault auth tune -default-lease-ttl=72h github/
