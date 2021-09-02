@@ -1623,12 +1623,26 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	// Create a test provider "test-provider"
+	// Create a test scope "test-scope-1" -- should succeed
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope-1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
-		Data:      map[string]interface{}{},
-		Storage:   storage,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope-1"},
+		},
+		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
 
@@ -1642,13 +1656,12 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 
 	basePath := "/v1/identity/oidc/provider/test-provider"
 	expected := &providerDiscovery{
-		discovery: discovery{
-			Issuer:        basePath,
-			Keys:          basePath + "/.well-known/keys",
-			ResponseTypes: []string{"code"},
-			Subjects:      []string{"public"},
-			IDTokenAlgs:   supportedAlgs,
-		},
+		Issuer:                basePath,
+		Keys:                  basePath + "/.well-known/keys",
+		ResponseTypes:         []string{"code"},
+		Scopes:                []string{"test-scope-1", "openid"},
+		Subjects:              []string{"public"},
+		IDTokenAlgs:           supportedAlgs,
 		AuthorizationEndpoint: basePath + "/authorize",
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
@@ -1659,6 +1672,18 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		t.Fatal(diff)
 	}
 
+	// Create a test scope "test-scope-2" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope-2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
 	// Update provider issuer config
 	testIssuer := "https://example.com:1234"
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -1667,6 +1692,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"issuer": testIssuer,
+			"scopes": []string{"test-scope-2"},
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1681,13 +1707,12 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 	// Validate
 	basePath = testIssuer + basePath
 	expected = &providerDiscovery{
-		discovery: discovery{
-			Issuer:        basePath,
-			Keys:          basePath + "/.well-known/keys",
-			ResponseTypes: []string{"code"},
-			Subjects:      []string{"public"},
-			IDTokenAlgs:   supportedAlgs,
-		},
+		Issuer:                basePath,
+		Keys:                  basePath + "/.well-known/keys",
+		ResponseTypes:         []string{"code"},
+		Scopes:                []string{"test-scope-2", "openid"},
+		Subjects:              []string{"public"},
+		IDTokenAlgs:           supportedAlgs,
 		AuthorizationEndpoint: basePath + "/authorize",
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",

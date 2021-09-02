@@ -49,11 +49,15 @@ type provider struct {
 }
 
 type providerDiscovery struct {
-	discovery
-
-	AuthorizationEndpoint string `json:"authorization_endpoint"`
-	TokenEndpoint         string `json:"token_endpoint"`
-	UserinfoEndpoint      string `json:"userinfo_endpoint"`
+	AuthorizationEndpoint string   `json:"authorization_endpoint"`
+	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
+	Issuer                string   `json:"issuer"`
+	Keys                  string   `json:"jwks_uri"`
+	ResponseTypes         []string `json:"response_types_supported"`
+	Scopes                []string `json:"scopes_supported"`
+	Subjects              []string `json:"subject_types_supported"`
+	TokenEndpoint         string   `json:"token_endpoint"`
+	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
 }
 
 const (
@@ -287,15 +291,17 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 		return nil, nil
 	}
 
+	// the "openid" scope is reserved and is included for every provider
+	scopes := append(p.Scopes, "openid")
+
 	disc := providerDiscovery{
-		discovery: discovery{
-			Issuer:        p.effectiveIssuer,
-			Keys:          p.effectiveIssuer + "/.well-known/keys",
-			ResponseTypes: []string{"code"},
-			Subjects:      []string{"public"},
-			IDTokenAlgs:   supportedAlgs,
-		},
 		AuthorizationEndpoint: p.effectiveIssuer + "/authorize",
+		IDTokenAlgs:           supportedAlgs,
+		Issuer:                p.effectiveIssuer,
+		Keys:                  p.effectiveIssuer + "/.well-known/keys",
+		ResponseTypes:         []string{"code"},
+		Scopes:                scopes,
+		Subjects:              []string{"public"},
 		TokenEndpoint:         p.effectiveIssuer + "/token",
 		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
 	}
