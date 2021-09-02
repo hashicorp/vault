@@ -667,9 +667,7 @@ func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.Ope
 }
 
 func pathRolePatchPreProcessor() framework.MarshalPreProcessor {
-	return func(resource interface{}) (interface{}, error) {
-		result := resource.(map[string]interface{})
-
+	return func(resource map[string]interface{}) (map[string]interface{}, error) {
 		renameKeys := map[string]string{
 			"allowed_domains": "allowed_domains_list",
 			"key_usage":       "key_usage_list",
@@ -681,17 +679,17 @@ func pathRolePatchPreProcessor() framework.MarshalPreProcessor {
 		}
 
 		for original, rename := range renameKeys {
-			originalValue, ok := result[original]
+			originalValue, ok := resource[original]
 
 			// Only add a renamed key if the original exists to prevent a null value being
 			// propagated to the JSON patch which will ultimately remove a field
 			if ok {
-				result[rename] = originalValue
-				delete(result, original)
+				resource[rename] = originalValue
+				delete(resource, original)
 			}
 		}
 
-		return result, nil
+		return resource, nil
 	}
 }
 
@@ -707,7 +705,7 @@ func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.Oper
 			return nil, err
 		}
 
-		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, role.ToResponseData(), pathRolePatchPreProcessor())
+		patchedRoleJSON, err := framework.HandlePatchOperation(req, data.Raw, role.ToResponseData(), pathRolePatchPreProcessor())
 		if err != nil {
 			return nil, err
 		}

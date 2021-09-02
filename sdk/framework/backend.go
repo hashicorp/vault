@@ -638,9 +638,9 @@ func (t FieldType) Zero() interface{} {
 	}
 }
 
-type MarshalPreProcessor func(interface{}) (interface{}, error)
+type MarshalPreProcessor func(map[string]interface{}) (map[string]interface{}, error)
 
-func preProcessAndMarshal(input interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
+func preProcessAndMarshal(input map[string]interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
 	var err error
 	if preProcessor != nil {
 		input, err = preProcessor(input)
@@ -657,7 +657,7 @@ func preProcessAndMarshal(input interface{}, preProcessor MarshalPreProcessor) (
 	return result, nil
 }
 
-func HandlePatchOperation(req *logical.Request, d *FieldData, resource interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
+func HandlePatchOperation(req *logical.Request, inputData map[string]interface{}, resource map[string]interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
 	var modified []byte
 
 	marshaledResource, err := preProcessAndMarshal(resource, preProcessor)
@@ -671,7 +671,7 @@ func HandlePatchOperation(req *logical.Request, d *FieldData, resource interface
 
 	switch req.PatchType {
 	case logical.JSONPatch:
-		patchJSON, err := json.Marshal(d.Raw["patch_json"])
+		patchJSON, err := json.Marshal(inputData["patch_json"])
 		if err != nil {
 			return nil, err
 		}
@@ -687,7 +687,7 @@ func HandlePatchOperation(req *logical.Request, d *FieldData, resource interface
 		}
 
 	case logical.JSONMergePatch:
-		patchJSON, err := preProcessAndMarshal(d.Raw, preProcessor)
+		patchJSON, err := preProcessAndMarshal(inputData, preProcessor)
 		if err != nil {
 			return nil, err
 		}
