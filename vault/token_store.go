@@ -788,19 +788,19 @@ func (ts *TokenStore) tokenStoreAccessorListDetails(ctx context.Context, req *lo
 		}
 
 		if aEntry.NamespaceID == nsID {
-			tokenEntry, _ := ts.lookupInternal(ctx, aEntry.TokenID, false, true)
-			leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, tokenEntry)
-			if err != nil {
-				resp.AddWarning(fmt.Sprintf("Could not fetch lease times for token entry; associated error is %q", err.Error()))
-				continue
-			}
-
 			info := map[string]interface{}{
 				"accessor_id":        aEntry.AccessorID,
 				"token_display_name": aEntry.TokenDisplayName,
 				"token_role":         aEntry.TokenRole,
 				"token_ttl":          int64(0),
 				"token_policies":     aEntry.TokenPolicies,
+			}
+
+			tokenEntry, _ := ts.lookupInternal(ctx, aEntry.TokenID, false, true)
+			leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, tokenEntry)
+			if err != nil {
+				resp.AddWarning(fmt.Sprintf("Could not fetch lease times for token entry; associated error is %q", err.Error()))
+				continue
 			}
 
 			if leaseTimes != nil && !leaseTimes.ExpireTime.IsZero() {
