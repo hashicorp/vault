@@ -867,7 +867,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	leaseGenerated := false
-	quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
 		NamespacePath: ns.Path,
