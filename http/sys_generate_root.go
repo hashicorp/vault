@@ -14,6 +14,12 @@ import (
 
 func handleSysGenerateRootAttempt(core *vault.Core, generateStrategy vault.GenerateRootStrategy) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Getting custom headers from listener's config
+		la := w.Header().Get("X-Vault-Listener-Add")
+		lc, err := core.GetCustomResponseHeaders(la)
+		if err != nil {
+			core.Logger().Debug("failed to get custom headers from listener config")
+		}
 		switch r.Method {
 		case "GET":
 			handleSysGenerateRootAttemptGet(core, w, r, "")
@@ -22,7 +28,7 @@ func handleSysGenerateRootAttempt(core *vault.Core, generateStrategy vault.Gener
 		case "DELETE":
 			handleSysGenerateRootAttemptDelete(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil)
+			respondError(w, http.StatusMethodNotAllowed, nil, lc)
 		}
 	})
 }
@@ -31,14 +37,21 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 	ctx, cancel := core.GetContext()
 	defer cancel()
 
+	// Getting custom headers from listener's config
+	la := w.Header().Get("X-Vault-Listener-Add")
+	lc, err := core.GetCustomResponseHeaders(la)
+	if err != nil {
+		core.Logger().Debug("failed to get custom headers from listener config")
+	}
+
 	// Get the current seal configuration
 	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, http.StatusInternalServerError, err, lc)
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), lc)
 		return
 	}
 
@@ -46,7 +59,7 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 	if core.SealAccess().RecoveryKeySupported() {
 		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
+			respondError(w, http.StatusInternalServerError, err, lc)
 			return
 		}
 	}
@@ -54,14 +67,14 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 	// Get the generation configuration
 	generationConfig, err := core.GenerateRootConfiguration()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, http.StatusInternalServerError, err, lc)
 		return
 	}
 
 	// Get the progress
 	progress, err := core.GenerateRootProgress()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, http.StatusInternalServerError, err, lc)
 		return
 	}
 
@@ -80,14 +93,21 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 		status.PGPFingerprint = generationConfig.PGPFingerprint
 	}
 
-	respondOk(w, status)
+	respondOk(w, status, lc)
 }
 
 func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r *http.Request, generateStrategy vault.GenerateRootStrategy) {
+	// Getting custom headers from listener's config
+	la := w.Header().Get("X-Vault-Listener-Add")
+	lc, errNew := core.GetCustomResponseHeaders(la)
+	if errNew != nil {
+		core.Logger().Debug("failed to get custom headers from listener config")
+	}
+
 	// Parse the request
 	var req GenerateRootInitRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
-		respondError(w, http.StatusBadRequest, err)
+		respondError(w, http.StatusBadRequest, err, lc)
 		return
 	}
 
@@ -100,14 +120,14 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 		genned = true
 		req.OTP, err = base62.Random(vault.TokenLength + 2)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
+			respondError(w, http.StatusInternalServerError, err, lc)
 			return
 		}
 	}
 
 	// Attemptialize the generation
 	if err := core.GenerateRootInit(req.OTP, req.PGPKey, generateStrategy); err != nil {
-		respondError(w, http.StatusBadRequest, err)
+		respondError(w, http.StatusBadRequest, err, lc)
 		return
 	}
 
@@ -120,26 +140,40 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 }
 
 func handleSysGenerateRootAttemptDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	err := core.GenerateRootCancel()
+	// Getting custom headers from listener's config
+	la := w.Header().Get("X-Vault-Listener-Add")
+	lc, err := core.GetCustomResponseHeaders(la)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		core.Logger().Debug("failed to get custom headers from listener config")
+	}
+
+	errNew := core.GenerateRootCancel()
+	if errNew != nil {
+		respondError(w, http.StatusInternalServerError, errNew, lc)
 		return
 	}
-	respondOk(w, nil)
+	respondOk(w, nil, lc)
 }
 
 func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.GenerateRootStrategy) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Getting custom headers from listener's config
+		la := w.Header().Get("X-Vault-Listener-Add")
+		lc, errNew := core.GetCustomResponseHeaders(la)
+		if errNew != nil {
+			core.Logger().Debug("failed to get custom headers from listener config")
+		}
 		// Parse the request
 		var req GenerateRootUpdateRequest
 		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-			respondError(w, http.StatusBadRequest, err)
+			respondError(w, http.StatusBadRequest, err, lc)
 			return
 		}
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must be specified in request body as JSON"))
+				errors.New("'key' must be specified in request body as JSON"),
+				lc)
 			return
 		}
 
@@ -154,7 +188,8 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 			if err != nil {
 				respondError(
 					w, http.StatusBadRequest,
-					errors.New("'key' must be a valid hex or base64 string"))
+					errors.New("'key' must be a valid hex or base64 string"),
+					lc)
 				return
 			}
 		}
@@ -165,7 +200,7 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 		// Use the key to make progress on root generation
 		result, err := core.GenerateRootUpdate(ctx, key, req.Nonce, generateStrategy)
 		if err != nil {
-			respondError(w, http.StatusBadRequest, err)
+			respondError(w, http.StatusBadRequest, err, lc)
 			return
 		}
 
@@ -183,7 +218,7 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 			resp.EncodedRootToken = result.EncodedToken
 		}
 
-		respondOk(w, resp)
+		respondOk(w, resp, lc)
 	})
 }
 

@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"net/http"
 	"strings"
 
@@ -37,15 +38,22 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 			h.ServeHTTP(w, req)
 			return
 		}
-
+		// Getting custom headers from listener's config
+		la := w.Header().Get("X-Vault-Listener-Add")
+		lc, err := core.GetCustomResponseHeaders(la)
+		if err != nil {
+			core.Logger().Debug("failed to get custom headers from listener config")
+		}
 		// Return a 403 if the origin is not allowed to make cross-origin requests.
 		if !corsConf.IsValidOrigin(origin) {
-			respondError(w, http.StatusForbidden, fmt.Errorf("origin not allowed"))
+			respondError(w, http.StatusForbidden, fmt.Errorf("origin not allowed"), lc)
 			return
 		}
 
 		if req.Method == http.MethodOptions && !strutil.StrListContains(allowedMethods, requestMethod) {
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			status := http.StatusMethodNotAllowed
+			listenerutil.SetCustomResponseHeaders(lc, w, status)
+			w.WriteHeader(status)
 			return
 		}
 

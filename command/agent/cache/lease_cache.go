@@ -576,7 +576,10 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			if err == io.EOF {
 				err = errors.New("empty JSON provided")
 			}
-			logical.RespondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse JSON input: %w", err))
+			status := http.StatusBadRequest
+			errNew := fmt.Errorf("failed to parse JSON input: %w", err)
+			logical.AdjustErrorStatusCode(&status, errNew)
+			logical.RespondError(w, status, errNew)
 			return
 		}
 
@@ -585,7 +588,10 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 		in, err := parseCacheClearInput(req)
 		if err != nil {
 			c.logger.Error("unable to parse clear input", "error", err)
-			logical.RespondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse clear input: %w", err))
+			status := http.StatusBadRequest
+			errNew := fmt.Errorf("failed to parse clear input: %w", err)
+			logical.AdjustErrorStatusCode(&status, errNew)
+			logical.RespondError(w, status, errNew)
 			return
 		}
 
@@ -596,7 +602,9 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			if err == errInvalidType {
 				httpStatus = http.StatusBadRequest
 			}
-			logical.RespondError(w, httpStatus, fmt.Errorf("failed to clear cache: %w", err))
+			errNew := fmt.Errorf("failed to clear cache: %w", err)
+			logical.AdjustErrorStatusCode(&httpStatus, errNew)
+			logical.RespondError(w, httpStatus, errNew)
 			return
 		}
 

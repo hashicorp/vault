@@ -11,36 +11,55 @@ import (
 
 func handleSysInit(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Getting custom headers from listener's config
+		la := w.Header().Get("X-Vault-Listener-Add")
+		lc, err := core.GetCustomResponseHeaders(la)
+		if err != nil {
+			core.Logger().Debug("failed to get custom headers from listener config")
+		}
 		switch r.Method {
 		case "GET":
 			handleSysInitGet(core, w, r)
 		case "PUT", "POST":
 			handleSysInitPut(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil)
+			respondError(w, http.StatusMethodNotAllowed, nil, lc)
 		}
 	})
 }
 
 func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	// Getting custom headers from listener's config
+	la := w.Header().Get("X-Vault-Listener-Add")
+	lc, err := core.GetCustomResponseHeaders(la)
+	if err != nil {
+		core.Logger().Debug("failed to get custom headers from listener config")
+	}
 	init, err := core.Initialized(context.Background())
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, http.StatusInternalServerError, err, lc)
 		return
 	}
 
 	respondOk(w, &InitStatusResponse{
 		Initialized: init,
-	})
+	}, lc)
 }
 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	// Getting custom headers from listener's config
+	la := w.Header().Get("X-Vault-Listener-Add")
+	lc, err := core.GetCustomResponseHeaders(la)
+	if err != nil {
+		core.Logger().Debug("failed to get custom headers from listener config")
+	}
+
 	ctx := context.Background()
 
 	// Parse the request
 	var req InitRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-		respondError(w, http.StatusBadRequest, err)
+		respondError(w, http.StatusBadRequest, err, lc)
 		return
 	}
 
@@ -67,7 +86,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	result, initErr := core.Initialize(ctx, initParams)
 	if initErr != nil {
 		if vault.IsFatalError(initErr) {
-			respondError(w, http.StatusBadRequest, initErr)
+			respondError(w, http.StatusBadRequest, initErr, lc)
 			return
 		} else {
 			// Add a warnings field? The error will be logged in the vault log
@@ -99,11 +118,11 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := core.UnsealWithStoredKeys(ctx); err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondError(w, http.StatusInternalServerError, err, lc)
 		return
 	}
 
-	respondOk(w, resp)
+	respondOk(w, resp, lc)
 }
 
 type InitRequest struct {

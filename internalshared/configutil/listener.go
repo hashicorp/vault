@@ -28,6 +28,17 @@ type ListenerProfiling struct {
 	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
 }
 
+// TODO: remove this
+type CH struct {
+	X interface{}	`hcl:",key,alias:unknown"`
+	//UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
+	Defaults     interface{}  `hcl:"-"`
+	DefaultsRaw  interface{}  `hcl:"default,alias:default"`
+	R307 map[string]string `hcl:"-"`
+	R307Raw interface{} `hcl:"307,alias:R307"`
+
+}
+
 // Listener is the listener configuration for the server.
 type Listener struct {
 	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -99,6 +110,11 @@ type Listener struct {
 	CorsAllowedOrigins    []string    `hcl:"cors_allowed_origins"`
 	CorsAllowedHeaders    []string    `hcl:"-"`
 	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers,alias:cors_allowed_headers"`
+
+	// Custom Http response headers
+	CustomResponseHeaders 	 map[string]map[string]string `hcl:"-"`
+	CustomResponseHeadersRaw interface{}   				  `hcl:"custom_response_headers,alias:custom_response_headers"`
+
 }
 
 func (l *Listener) GoString() string {
@@ -358,6 +374,18 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				for _, header := range l.CorsAllowedHeadersRaw {
 					l.CorsAllowedHeaders = append(l.CorsAllowedHeaders, textproto.CanonicalMIMEHeaderKey(header))
 				}
+			}
+		}
+
+		// HTTP Headers
+		{
+			if l.CustomResponseHeadersRaw != nil {
+				customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
+				if err != nil {
+					return multierror.Prefix(fmt.Errorf("failed to parse custom_response_headers:%w", err), fmt.Sprintf("listeners.%d", i))
+				}
+				l.CustomResponseHeaders = customHeadersMap
+				l.CustomResponseHeadersRaw = nil
 			}
 		}
 

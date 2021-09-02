@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"net/http"
 	"os"
 
@@ -27,11 +28,17 @@ func featureFlagIsSet(name string) bool {
 
 func handleSysInternalFeatureFlags(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Getting custom headers from listener's config
+		la := w.Header().Get("X-Vault-Listener-Add")
+		lc, err := core.GetCustomResponseHeaders(la)
+		if err != nil {
+			core.Logger().Debug("failed to get custom headers from listener config")
+		}
 		switch r.Method {
 		case "GET":
 			break
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil)
+			respondError(w, http.StatusMethodNotAllowed, nil, lc)
 		}
 
 		response := &FeatureFlagsResponse{}
@@ -43,7 +50,9 @@ func handleSysInternalFeatureFlags(core *vault.Core) http.Handler {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		status := http.StatusOK
+		listenerutil.SetCustomResponseHeaders(lc, w, status)
+		w.WriteHeader(status)
 
 		// Generate the response
 		enc := json.NewEncoder(w)

@@ -878,9 +878,10 @@ func (c *AgentCommand) Run(args []string) int {
 func verifyRequestHeader(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
-			logical.RespondError(w,
-				http.StatusPreconditionFailed,
-				errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName)))
+			err := errors.New(fmt.Sprintf("missing '%s' header", consts.RequestHeaderName))
+			status := http.StatusPreconditionFailed
+			logical.AdjustErrorStatusCode(&status, err)
+			logical.RespondError(w,	status,	err)
 			return
 		}
 

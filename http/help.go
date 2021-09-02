@@ -26,9 +26,15 @@ func wrapHelpHandler(h http.Handler, core *vault.Core) http.Handler {
 }
 
 func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	// Getting custom headers from listener's config
+	la := w.Header().Get("X-Vault-Listener-Add")
+	lc, err := core.GetCustomResponseHeaders(la)
+	if err != nil {
+		core.Logger().Debug("failed to get custom headers from listener config")
+	}
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
-		respondError(w, http.StatusBadRequest, nil)
+		respondError(w, http.StatusBadRequest, nil, lc)
 		return
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
@@ -42,9 +48,9 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	resp, err := core.HandleRequest(r.Context(), req)
 	if err != nil {
-		respondErrorCommon(w, req, resp, err)
+		respondErrorCommon(w, req, resp, err, lc)
 		return
 	}
 
-	respondOk(w, resp.Data)
+	respondOk(w, resp.Data, lc)
 }

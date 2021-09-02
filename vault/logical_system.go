@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/headerutil"
 	"hash"
 	"net/http"
 	"path"
@@ -2620,12 +2622,23 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 		return logical.ErrorResponse("X-Vault headers cannot be set"), logical.ErrInvalidRequest
 	}
 
+	// Getting custom headers from listener's config
+	la := req.ResponseWriter.Header().Get("X-Vault-Listener-Add")
+	lc, err := b.Core.GetCustomResponseHeaders(la)
+	if err != nil {
+		b.Core.Logger().Debug("failed to get custom headers from listener config")
+	}
+
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
+		chv, _ := listenerutil.FetchCustomResponseHeaderValue(lc, header, headerutil.DefaultStatus)
+		if chv != "" {
+			return logical.ErrorResponse("header already exist in server configuration file"), logical.ErrInvalidRequest
+		}
 		value.Add(header, v)
 	}
-	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
+	err = b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
 	if err != nil {
 		return nil, err
 	}

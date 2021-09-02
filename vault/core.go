@@ -42,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -2630,6 +2631,85 @@ func (c *Core) SetConfig(conf *server.Config) {
 	}
 
 	c.logger.Debug("set config", "sanitized config", string(bz))
+}
+
+func (c *Core) GetCustomResponseHeaders(la string) (map[string]map[string]string, error) {
+
+	ln, err := c.GetListenersConf(la)
+	if err != nil {
+		c.Logger().Trace(err.Error())
+		return nil, fmt.Errorf("listener config with address %v was not found:%w", la, err)
+	}
+	// TODO: maybe copy the ln.CustomResponseHeaders and return the copy?
+	return ln.CustomResponseHeaders, nil
+}
+
+func (c *Core) GetListenersConf(address string) (*configutil.Listener, error) {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil, errors.New("failed to load config")
+	}
+	lns := conf.(*server.Config).Listeners
+	for _, ln := range lns{
+		if ln.Address == address {
+			return ln, nil
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("no listener with the given address found: %v", address))
+}
+
+func (c *Core) ReloadCustomHeadersListenerConf() error {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return fmt.Errorf("failed to Reload config")
+	}
+	lns := conf.(*server.Config).Listeners
+	for _, ln := range lns{
+		if ln.CustomResponseHeadersRaw != nil {
+			customHeadersMap, err := configutil.ParseCustomResponseHeaders(ln.CustomResponseHeadersRaw)
+			if err != nil {
+				return fmt.Errorf("failed to parse custom_response_headers:%w", err)
+			}
+			ln.CustomResponseHeaders = customHeadersMap
+			ln.CustomResponseHeadersRaw = nil
+		}
+	}
+	return nil
+}
+
+
+// SanitizedCustomResponseHeader sanitizes listener config from invalid custom headers
+func (c *Core) SanitizedCustomResponseHeader(conf *server.Config)  {
+	hm := make(map[string]map[string]string)
+	userHeaders, err := c.UIHeaders()
+	if err != nil {
+		c.Logger().Trace("failed to get ui headers", "error:", err.Error())
+	}
+
+	for _, ln := range conf.Listeners {
+		for sc, ch := range ln.CustomResponseHeaders {
+			hv := make(map[string]string)
+			for h, v := range ch {
+				// X-Vault- prefix is reserved for Vault internal processes
+				if strings.HasPrefix(h, "X-Vault-") {
+					c.Logger().Error("Custom headers starting with X-Vault are not valid", "header", h)
+					continue
+				}
+
+				// Checking for UI headers, if any common header exist, HCL headers take precedence
+				if userHeaders != nil {
+					exist := userHeaders.Get(h)
+					if exist != "" {
+						c.Logger().Error("found a duplicate header in UI, note that config file headers take precedence.", "header:", h)
+					}
+				}
+				hv[h] = v
+			}
+			hm[sc] = hv
+		}
+		ln.CustomResponseHeaders = hm
+	}
+
 }
 
 // SanitizedConfig returns a sanitized version of the current config.

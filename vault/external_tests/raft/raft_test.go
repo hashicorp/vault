@@ -1205,3 +1205,83 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		verifyInitStatus(i, true)
 	}
 }
+
+
+func TestRaft_SnapshotRestoreOnStandby(t *testing.T) {
+	t.Parallel()
+	cluster := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	leaderClient := cluster.Cores[0].Client
+
+	// Write a few keys
+	for i := 0; i < 10; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			"test": "data",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{
+		Transport: transport,
+	}
+
+	// Take a snapshot
+	req := leaderClient.NewRequest("GET", "/v1/sys/storage/raft/snapshot")
+	httpReq, err := req.ToHTTP()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	snap, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap) == 0 {
+		t.Fatal("no snapshot returned")
+	}
+
+	// Write a few more keys
+	for i := 10; i < 20; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			"test": "data",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Restore snapshot
+	req = leaderClient.NewRequest("POST", "/v1/sys/storage/raft/snapshot")
+	req.Body = bytes.NewBuffer(snap)
+	httpReq, err = req.ToHTTP()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = client.Do(httpReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// List kv to make sure we removed the extra keys
+	secret, err := leaderClient.Logical().List("secret/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(secret.Data["keys"].([]interface{})) != 10 {
+		t.Fatal("snapshot didn't apply correctly")
+	}
+}

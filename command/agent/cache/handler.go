@@ -37,8 +37,11 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		// Parse and reset body.
 		reqBody, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			logger.Error("failed to read request body")
-			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			errRet := errors.New("failed to read request body")
+			logger.Error(errRet.Error())
+			status := http.StatusInternalServerError
+			logical.AdjustErrorStatusCode(&status, errRet)
+			logical.RespondError(w, status, errRet)
 			return
 		}
 		if r.Body != nil {
@@ -59,14 +62,20 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 				w.WriteHeader(resp.Response.StatusCode)
 				io.Copy(w, resp.Response.Body)
 			} else {
-				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
+				status := http.StatusInternalServerError
+				errNew := fmt.Errorf("failed to get the response: %w", err)
+				logical.AdjustErrorStatusCode(&status, errNew)
+				logical.RespondError(w, status, errNew)
 			}
 			return
 		}
 
 		err = processTokenLookupResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
-			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to process token lookup response: %w", err))
+			status := http.StatusInternalServerError
+			errNew := fmt.Errorf("failed to process token lookup response: %w", err)
+			logical.AdjustErrorStatusCode(&status, errNew)
+			logical.RespondError(w, status, errNew)
 			return
 		}
 

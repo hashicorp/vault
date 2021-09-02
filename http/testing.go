@@ -62,5 +62,5 @@ func TestServerAuth(tb testing.TB, addr string, token string) {
 }
 
 func testHandleAuth(w http.ResponseWriter, req *http.Request) {
-	respondOk(w, nil)
+	respondOk(w, nil, nil)
 }

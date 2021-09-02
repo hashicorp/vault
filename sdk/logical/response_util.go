@@ -158,7 +158,7 @@ func AdjustErrorStatusCode(status *int, err error) {
 }
 
 func RespondError(w http.ResponseWriter, status int, err error) {
-	AdjustErrorStatusCode(&status, err)
+	//AdjustErrorStatusCode(&status, err)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

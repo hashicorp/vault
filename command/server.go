@@ -1341,6 +1341,9 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Sanitizing listener config from invalid custom headers
+	core.SanitizedCustomResponseHeader(config)
+
 	status, lns, clusterAddrs, errMsg := c.InitListeners(config, disableClustering, &infoKeys, &info)
 
 	if status != 0 {
@@ -1570,6 +1573,15 @@ func (c *ServerCommand) Run(args []string) int {
 			if err = vault.LicenseReload(core); err != nil {
 				c.UI.Error(err.Error())
 			}
+
+			// Reload Custom headers
+			if err = core.ReloadCustomHeadersListenerConf(); err != nil {
+				c.UI.Error(err.Error())
+			}
+			// Sanitizing listener config from invalid patterns
+			core.SanitizedCustomResponseHeader(config)
+			core.Logger().Info("**** Listern config after sanitization", "Li", config.Listeners)
+
 
 			select {
 			case c.licenseReloadedCh <- err:
