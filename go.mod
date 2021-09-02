@@ -99,7 +99,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.4.1
+	github.com/hashicorp/vault-plugin-database-couchbase v0.3.1-0.20210902192635-c3ee7c5bc378
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.2.1
