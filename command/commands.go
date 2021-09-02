@@ -615,11 +615,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"token list": func() (cli.Command, error) {
-			return &TokenListCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"token renew": func() (cli.Command, error) {
 			return &TokenRenewCommand{
 				BaseCommand: getBaseCommand(),

@@ -48,6 +48,56 @@ $ curl \
 }
 ```
 
+## List Details of Each Token Accessor
+
+Returns information about each token accessor.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `GET`  | `/auth/token/accessors/detail` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/token/accessors/detail
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "ae66f314-9933-1047-74d9-23a8ec87f755",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "accessors": [
+      {
+        "accessor_id": "QoXSVZpzmL9AkPYvgxR1SxfH",
+        "token_display_name": "token",
+        "token_policies": [
+          "root"
+        ],
+        "token_role": "test-role",
+        "token_ttl": 45
+      },
+      {
+        "accessor_id": "aMlFUgL0xmQ4qNcftb9gyAsg",
+        "token_display_name": "root",
+        "token_policies": [
+          "root"
+        ],
+        "token_role": "",
+        "token_ttl": 0
+      }
+    ]
+  },
+  "warnings": null
+}
+```
+
 ## Create Token
 
 Creates a new token. Certain options are only available when called by a
@@ -160,48 +210,6 @@ $ curl \
     "token_type": "service",
     "orphan": false
   }
-}
-```
-
-## List Tokens
-
-Returns information about each token.
-
-| Method | Path                 |
-| :----- | :------------------- |
-| `GET`  | `/auth/token/tokens` |
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/auth/token/tokens
-```
-
-### Sample Response
-
-```json
-{
-  "secret": null,
-  "auth": null,
-  "data": {
-    "tokens": [
-      {
-        "accessor": "47tazCwv0DtT76EQ0td3FbLk",
-        "display_name": "example-token",
-        "policies": [
-          "default"
-        ],
-        "role": "",
-        "ttl": 0
-      }
-    ]
-  },
-  "redirect": "",
-  "warnings": null,
-  "wrap_info": null,
-  "headers": null
 }
 ```
 

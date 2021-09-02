@@ -133,6 +133,17 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
+			Pattern: "accessors/detail",
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: ts.tokenStoreAccessorListDetails,
+			},
+
+			HelpSynopsis:    tokenListAccessorsDetailsHelp,
+			HelpDescription: tokenListAccessorsDetailsHelp,
+		},
+
+		{
 			Pattern: "create-orphan$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -189,17 +200,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
 			HelpDescription: strings.TrimSpace(tokenLookupHelp),
-		},
-
-		{
-			Pattern: "tokens",
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: ts.handleTokenList,
-			},
-
-			HelpSynopsis:    tokenListHelp,
-			HelpDescription: tokenListHelp,
 		},
 
 		{
@@ -660,9 +660,12 @@ type tsRoleEntry struct {
 }
 
 type accessorEntry struct {
-	TokenID     string `json:"token_id"`
-	AccessorID  string `json:"accessor_id"`
-	NamespaceID string `json:"namespace_id"`
+	TokenID          string   `json:"token_id"`
+	AccessorID       string   `json:"accessor_id"`
+	NamespaceID      string   `json:"namespace_id"`
+	TokenDisplayName string   `json:"token_display_name"`
+	TokenRole        string   `json:"token_role"`
+	TokenPolicies    []string `json:"token_policies"`
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -757,6 +760,64 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 	return resp, nil
 }
 
+func (ts *TokenStore) tokenStoreAccessorListDetails(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	nsID := ns.ID
+
+	entries, err := ts.accessorView(ns).List(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{}
+	var ret []map[string]interface{}
+
+	for _, entry := range entries {
+		aEntry, err := ts.lookupByAccessor(ctx, entry, true, false)
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
+			continue
+		}
+
+		if aEntry.TokenID == "" {
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry missing a token: %v", aEntry.AccessorID))
+			continue
+		}
+
+		if aEntry.NamespaceID == nsID {
+			tokenEntry, _ := ts.lookupInternal(ctx, aEntry.TokenID, false, true)
+			leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, tokenEntry)
+			if err != nil {
+				resp.AddWarning(fmt.Sprintf("Could not fetch lease times for token entry; associated error is %q", err.Error()))
+				continue
+			}
+
+			info := map[string]interface{}{
+				"accessor_id":        aEntry.AccessorID,
+				"token_display_name": aEntry.TokenDisplayName,
+				"token_role":         aEntry.TokenRole,
+				"token_ttl":          int64(0),
+				"token_policies":     aEntry.TokenPolicies,
+			}
+
+			if leaseTimes != nil && !leaseTimes.ExpireTime.IsZero() {
+				info["token_ttl"] = leaseTimes.ttl()
+			}
+
+			ret = append(ret, info)
+		}
+	}
+
+	resp.Data = map[string]interface{}{
+		"accessors": ret,
+	}
+
+	return resp, nil
+}
+
 // createAccessor is used to create an identifier for the token ID.
 // A storage index, mapping the accessor to the token ID is also created.
 func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEntry) error {
@@ -789,9 +850,12 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 	}
 
 	aEntry := &accessorEntry{
-		TokenID:     entry.ID,
-		AccessorID:  entry.Accessor,
-		NamespaceID: entry.NamespaceID,
+		TokenID:          entry.ID,
+		AccessorID:       entry.Accessor,
+		NamespaceID:      entry.NamespaceID,
+		TokenRole:        entry.Role,
+		TokenPolicies:    entry.Policies,
+		TokenDisplayName: entry.DisplayName,
 	}
 
 	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
@@ -1791,6 +1855,9 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 			aEntry.TokenID = te.ID
 			aEntry.AccessorID = te.Accessor
 			aEntry.NamespaceID = te.NamespaceID
+			aEntry.TokenDisplayName = te.DisplayName
+			aEntry.TokenRole = te.Role
+			aEntry.TokenPolicies = te.Policies
 		}
 	}
 
@@ -3041,56 +3108,6 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	return resp, nil
 }
 
-func (ts *TokenStore) handleTokenList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find namespace in context: %w", err)
-	}
-
-	entries, err := ts.idView(ns).List(ctx, "")
-	if err != nil {
-		return nil, fmt.Errorf("failed to obtain token entries: %w", err)
-	}
-
-	resp := &logical.Response{}
-	var ret []map[string]interface{}
-
-	for _, entry := range entries {
-		token, err := ts.lookupInternal(ctx, entry, true, false)
-		if err != nil {
-			resp.AddWarning(fmt.Sprintf("Found a token entry that could not be successfully decoded; associated error is %q", err.Error()))
-			continue
-		}
-
-		info := map[string]interface{}{
-			"accessor":     token.Accessor,
-			"display_name": token.DisplayName,
-			"role":         token.Role,
-			"ttl":          int64(0),
-			"policies":     token.Policies,
-		}
-
-		// Fetch the last renewal time
-		leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, token)
-		if err != nil {
-			resp.AddWarning(fmt.Sprintf("Could not fetch lease times for token entry; associated error is %q", err.Error()))
-			continue
-		}
-
-		if leaseTimes != nil && !leaseTimes.ExpireTime.IsZero() {
-			info["ttl"] = leaseTimes.ttl()
-		}
-
-		ret = append(ret, info)
-	}
-
-	resp.Data = map[string]interface{}{
-		"tokens": ret,
-	}
-
-	return resp, nil
-}
-
 func (ts *TokenStore) handleRenewSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	data.Raw["token"] = req.ClientToken
 	return ts.handleRenew(ctx, req, data)
@@ -3823,7 +3840,6 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenCreateHelp          = `The token create path is used to create new tokens.`
 	tokenCreateOrphanHelp    = `The token create path is used to create new orphan tokens.`
 	tokenCreateRoleHelp      = `This token create path is used to create new tokens adhering to the given role.`
-	tokenListHelp            = `This endpoint will list the information of each token.`
 	tokenListRolesHelp       = `This endpoint lists configured roles.`
 	tokenLookupAccessorHelp  = `This endpoint will lookup a token associated with the given accessor and its properties. Response will not contain the token ID.`
 	tokenRenewAccessorHelp   = `This endpoint will renew a token associated with the given accessor and its properties. Response will not contain the token ID.`
@@ -3869,4 +3885,5 @@ or revoke them. Because this can be used to
 cause a denial of service, this endpoint
 requires 'sudo' capability in addition to
 'list'.`
+	tokenListAccessorsDetailsHelp = `This endpoint will list the details of each token accessor.`
 )

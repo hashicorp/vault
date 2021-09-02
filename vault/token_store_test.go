@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -744,24 +743,23 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 	}
 }
 
-func TestTokenStore_HandleRequest_ListTokens(t *testing.T) {
+func TestTokenStore_HandleRequest_ListAccessorsDetails(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	// Create the tokens
 	testTokens := []string{"token1", "token2", "token3", "token4"}
-	for _, testToken := range testTokens {
-		testMakeServiceTokenViaBackend(t, ts, root, testToken, "60s", []string{"foo"})
+	for _, tokenName := range testTokens {
+		testMakeServiceTokenViaBackend(t, ts, root, tokenName, "60s", []string{"foo"})
 	}
 
-	// Revoke root token to make the number of tokens match
+	// Revoke root to make the number of accessors match
 	salted, err := ts.SaltID(namespace.RootContext(nil), root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ts.revokeInternal(namespace.RootContext(nil), salted, false)
 
-	req := logical.TestRequest(t, logical.ReadOperation, "tokens")
+	req := logical.TestRequest(t, logical.ReadOperation, "accessors/detail")
 
 	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -771,57 +769,57 @@ func TestTokenStore_HandleRequest_ListTokens(t *testing.T) {
 		t.Fatalf("response should contain data")
 	}
 
-	tokens := resp.Data["tokens"].([]map[string]interface{})
-	if len(tokens) != len(testTokens) {
-		t.Fatalf("wrong number of tokens found")
+	data, ok := resp.Data["accessors"]
+	if !ok {
+		t.Fatalf("accessor field does not exist in data")
+	}
+	if data == nil {
+		t.Fatalf("accessors should not be empty")
+	}
+	accessors := data.([]map[string]interface{})
+	if len(accessors) != len(testTokens) {
+		t.Fatalf("wrong number of accessors found")
 	}
 	if len(resp.Warnings) != 0 {
 		t.Fatalf("got warnings:\n%#v", resp.Warnings)
 	}
 
-	// helper function to find the token information given the token's accessor
-	findByTokenAccessor := func(tokenAccessor string) (map[string]interface{}, error) {
-		for _, token := range tokens {
-			accessor, ok := token["accessor"]
-			if !ok {
-				return nil, errors.New("token information struct is missing the accessor field")
-			}
-			if accessor == tokenAccessor {
-				return token, nil
-			}
+	// Test upgrade from old struct method of accessor storage (of token id)
+	for _, accessor := range accessors {
+		accessorID, ok := accessor["accessor_id"].(string)
+		if !ok {
+			t.Fatalf("missing accessor_id field")
 		}
-		return nil, nil
-	}
-
-	for _, testToken := range testTokens {
-		out, err := ts.Lookup(namespace.RootContext(nil), testToken)
+		aEntry, err := ts.lookupByAccessor(namespace.RootContext(nil), accessorID, false, false)
 		if err != nil {
-			t.Fatalf("failed to lookup token: %s", err)
+			t.Fatal(err)
+		}
+		if aEntry.TokenID == "" || aEntry.AccessorID == "" {
+			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
 		}
 
-		token, err := findByTokenAccessor(out.Accessor)
-		if err != nil {
-			t.Fatalf("failed to find token in response, %s", err)
+		tokenDisplayName, ok := accessor["token_display_name"].(string)
+		if !ok {
+			t.Fatalf("missing token_display_name field")
+		}
+		if tokenDisplayName != aEntry.TokenDisplayName {
+			t.Fatalf("wrong value found for the token_display_name field")
 		}
 
-		if token == nil {
-			t.Fatalf("could not find token in the response data")
+		tokenRole, ok := accessor["token_role"].(string)
+		if !ok {
+			t.Fatalf("missing token_role field")
+		}
+		if tokenRole != aEntry.TokenRole {
+			t.Fatalf("wrong value found for the token_role field")
 		}
 
-		tokenPolicies := token["policies"].([]string)
-		tokenRole := token["role"].(string)
-		tokenDisplayName := token["display_name"].(string)
-
-		if !reflect.DeepEqual(tokenPolicies, out.Policies) {
-			t.Fatalf("token policies is incorrect for token %s", testToken)
+		tokenPolicies, ok := accessor["token_policies"].([]string)
+		if !ok {
+			t.Fatalf("missing token_policies field")
 		}
-
-		if tokenRole != out.Role {
-			t.Fatalf("token role is incorrect for token %s", testToken)
-		}
-
-		if tokenDisplayName != out.DisplayName {
-			t.Fatalf("token display name is incorrect for token %s", testToken)
+		if !reflect.DeepEqual(tokenPolicies, aEntry.TokenPolicies) {
+			t.Fatalf("wrong value found for the token_policies field")
 		}
 	}
 }
