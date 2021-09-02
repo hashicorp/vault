@@ -90,11 +90,20 @@ export default Component.extend({
   mountBackend: task(function*() {
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
+    // because user might not have access to config, do a capabilities check with the path name here
+    let capabilities = this.store.findRecord('capabilities', `${path}/config`);
     try {
       yield mountModel.save();
     } catch (err) {
-      // err will display via model state
-      return;
+      if (!capabilities.get('canUpdate')) {
+        // policy must have update in order to set config endpoint.
+        this.flashMessages.warning(
+          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+        );
+      } else {
+        // err will display via model state
+        return;
+      }
     }
 
     let mountType = this.mountType;
