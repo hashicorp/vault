@@ -1,4 +1,4 @@
-const withHashicorp = require('@hashicorp/nextjs-scripts')
+const withHashicorp = require('@hashicorp/platform-nextjs-plugin')
 const redirects = require('./redirects.next')
 
 module.exports = withHashicorp({

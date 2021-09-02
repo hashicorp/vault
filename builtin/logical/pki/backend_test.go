@@ -30,12 +30,12 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -90,6 +90,9 @@ func TestPKI_RequireCN(t *testing.T) {
 		"allow_subdomains":   true,
 		"max_ttl":            "2h",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
@@ -115,6 +118,9 @@ func TestPKI_RequireCN(t *testing.T) {
 		"max_ttl":            "2h",
 		"require_cn":         false,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Issue a cert with require_cn set to false and without supplying the
 	// common name. It should succeed.
@@ -1412,6 +1418,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				}
 				cert := parsedCertBundle.Certificate
 				foundOthers, err := getOtherSANsFromX509Extensions(cert.Extensions)
+				if err != nil {
+					return err
+				}
 				var emptyOthers []otherNameUtf8
 				var expected []otherNameUtf8 = append(emptyOthers, expectedOthers...)
 				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
@@ -3007,6 +3016,9 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
 		"serial_number": intermediateCertSerial,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Revoke adds a fixed 2s buffer, so we sleep for a bit longer to ensure
 	// the revocation time is past the current time.

@@ -1450,6 +1450,10 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
+	sort.Slice(byNamespace, func(i, j int) bool {
+		return byNamespace[i].Counts.Clients > byNamespace[j].Counts.Clients
+	})
+
 	responseData["by_namespace"] = byNamespace
 	responseData["total"] = &ClientCountResponse{
 		DistinctEntities: totalEntities,
@@ -1498,6 +1502,9 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 	return config, nil
 }
 
+// HandleTokenCreation adds the TokenEntry to the current fragment of the activity log.
+// This currently occurs on token creation (for tokens without entities)
+// or token usage (for tokens associated with entities)
 func (a *ActivityLog) HandleTokenCreation(entry *logical.TokenEntry) {
 	// enabled state is checked in both of these functions,
 	// because we have to grab a mutex there anyway.

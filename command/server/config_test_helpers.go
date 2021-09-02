@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
+func boolPointer(x bool) *bool {
+	return &x
+}
+
 func testConfigRaftRetryJoin(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
 	if err != nil {

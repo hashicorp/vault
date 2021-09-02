@@ -35,7 +35,7 @@ The top level `template` block has multiple configurations entries:
 - `source` `(string: "")` - Path on disk to use as the input template. This
   option is required if not using the `contents` option.
 - `destination` `(string: required)` - Path on disk where the rendered secrets should
-  be created. If the parent directories If the parent directories do not exist, Vault
+  be created. If the parent directories do not exist, Vault
   Agent will attempt to create them, unless `create_dest_dirs` is false.
 - `create_dest_dirs` `(bool: true)` - This option tells Vault Agent to create
   the parent directories of the destination path if they do not exist.
@@ -141,8 +141,9 @@ of the secret's lease duration has elapsed.
 
 ### Non-Renewable Secrets
 
-If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes. This is not
-configurable. Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
+If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes.
+This can be configured using Template config [static_secret_render_interval](/docs/agent/template-config#static_secret_render_interval) (requires Vault 1.8+).
+Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
 
 ### Non-Renewable Leased Secrets
 

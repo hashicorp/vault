@@ -19,11 +19,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -458,6 +458,20 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 		}
 	}
 	go c.expiration.Restore(errorFunc)
+
+	quit := c.expiration.quitCh
+	go func() {
+		t := time.NewTimer(24 * time.Hour)
+		for {
+			select {
+			case <-quit:
+				return
+			case <-t.C:
+				c.expiration.attemptIrrevocableLeasesRevoke()
+				t.Reset(24 * time.Hour)
+			}
+		}
+	}()
 
 	return nil
 }
@@ -947,6 +961,39 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 	m.updatePending(le)
 
 	return nil
+}
+
+// should be run on a schedule. something like once a day, maybe once a week
+func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		le := v.(*leaseEntry)
+
+		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
+			// if we get an error (or no namespace) note it, but continue attempting
+			// to revoke other leases
+			leaseNS, err := m.getNamespaceFromLeaseID(m.core.activeContext, leaseID)
+			if err != nil {
+				m.logger.Debug("could not get lease namespace from ID", "error", err)
+				return true
+			}
+			if leaseNS == nil {
+				m.logger.Debug("could not get lease namespace from ID: nil namespace")
+				return true
+			}
+
+			ctxWithNS := namespace.ContextWithNamespace(m.core.activeContext, leaseNS)
+			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
+			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
+				// on failure, force some delay to mitigate resource spike while
+				// this is running. if revocations succeed, we are okay with
+				// the higher resource consumption.
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+
+		return true
+	})
 }
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
@@ -1976,7 +2023,6 @@ func (m *ExpirationManager) loadEntry(ctx context.Context, leaseID string) (*lea
 		m.deleteLockForLease(leaseID)
 	}
 	return leaseEntry, err
-
 }
 
 // loadEntryInternal is used when you need to load an entry but also need to
@@ -2537,7 +2583,6 @@ func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID s
 	return mountAccessor
 }
 
-// TODO SW if keep counts as a map, should update the RFC
 func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
 	requestNS, err := namespace.FromContext(ctx)
 	if err != nil {

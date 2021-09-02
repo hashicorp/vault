@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	"github.com/hashicorp/errwrap"
 )
@@ -371,8 +371,6 @@ type ConfigEntry struct {
 	UPNDomain                string `json:"upndomain"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
-	ClientTLSCert            string `json:"client_tls_cert`
-	ClientTLSKey             string `json:"client_tls_key`
 	InsecureTLS              bool   `json:"insecure_tls"`
 	StartTLS                 bool   `json:"starttls"`
 	BindDN                   string `json:"binddn"`
@@ -385,11 +383,13 @@ type ConfigEntry struct {
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
 
-	// This json tag deviates from snake case because there was a past issue
-	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
+	// These json tags deviate from snake case because there was a past issue
+	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
 	// To continue reading in users' previously stored values,
 	// we chose to carry that forward.
-	CaseSensitiveNames *bool `json:"CaseSensitiveNames,omitempty"`
+	CaseSensitiveNames *bool  `json:"CaseSensitiveNames,omitempty"`
+	ClientTLSCert      string `json:"ClientTLSCert"`
+	ClientTLSKey       string `json:"ClientTLSKey"`
 }
 
 func (c *ConfigEntry) Map() map[string]interface{} {

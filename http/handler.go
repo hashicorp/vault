@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"mime"
 	"net"
@@ -19,15 +20,14 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -109,6 +109,7 @@ func init() {
 	alwaysRedirectPaths.AddPaths([]string{
 		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
+		"!sys/storage/raft/snapshot-auto/config",
 	})
 }
 
@@ -350,6 +351,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			return
 		}
 
+		// Setting the namespace in the header to be included in the error message
+		ns := r.Header.Get(consts.NamespaceHeaderName)
+		if ns != "" {
+			w.Header().Set(consts.NamespaceHeaderName, ns)
+		}
+
 		h.ServeHTTP(w, r)
 
 		cancelFunc()
@@ -574,17 +581,18 @@ func handleUIRedirect() http.Handler {
 }
 
 type UIAssetWrapper struct {
-	FileSystem *assetfs.AssetFS
+	FileSystem http.FileSystem
 }
 
-func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
-	file, err := fs.FileSystem.Open(name)
+func (fsw *UIAssetWrapper) Open(name string) (http.File, error) {
+	file, err := fsw.FileSystem.Open(name)
 	if err == nil {
 		return file, nil
 	}
 	// serve index.html instead of 404ing
-	if err == os.ErrNotExist {
-		return fs.FileSystem.Open("index.html")
+	if errors.Is(err, fs.ErrNotExist) {
+		file, err := fsw.FileSystem.Open("index.html")
+		return file, err
 	}
 	return nil, err
 }
