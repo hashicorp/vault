@@ -50,7 +50,7 @@
       @queryEnd={{model.queryEnd}}
       @resultStart={{model.activity.startTime}}
       @resultEnd={{model.activity.endTime}}
-      @defaultSpan={{model.config.defaultReportMonths}}
+      @defaultSpan={{or model.config.defaultReportMonths 12}}
       @retentionMonths={{model.config.retentionMonths}}
     />
     {{#unless model.activity.total}}

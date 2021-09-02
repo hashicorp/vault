@@ -1,3 +1,26 @@
+/**
+ * @module KvObjectEditor
+ * KvObjectEditor components are called in FormFields when the editType on the model is kv.  They are used to show a key-value input field.
+ *
+ * @example
+ * ```js
+ * <KvObjectEditor
+ *  @value={{get model valuePath}}
+ *  @onChange={{action "setAndBroadcast" valuePath }}
+ *  @label="some label"
+   />
+ * ```
+ * @param {string} value - the value is captured from the model.
+ * @param {function} onChange - function that captures the value on change
+ * @param {function} onKeyUp - function passed in that handles the dom keyup event. Used for validation on the kv custom metadata.
+ * @param {string} [label] - label displayed over key value inputs
+ * @param {string} [warning] - warning that is displayed
+ * @param {string} [helpText] - helper text. In tooltip.
+ * @param {string} [subText] - placed under label.
+ * @param {boolean} [small-label]- change label size.
+ * @param {boolean} [formSection] - if false the component is meant to live outside of a form, like in the customMetadata which is nested already inside a form-section.
+ */
+
 import { isNone } from '@ember/utils';
 import { assert } from '@ember/debug';
 import Component from '@ember/component';
@@ -7,12 +30,15 @@ import KVObject from 'vault/lib/kv-object';
 
 export default Component.extend({
   'data-test-component': 'kv-object-editor',
-  classNames: ['field', 'form-section'],
+  classNames: ['field'],
+  classNameBindings: ['formSection:form-section'],
+  formSection: true,
   // public API
   // Ember Object to mutate
   value: null,
   label: null,
   helpText: null,
+  subText: null,
   // onChange will be called with the changed Value
   onChange() {},
 
@@ -64,6 +90,13 @@ export default Component.extend({
       assert('object guids match', guidFor(oldObj) === guidFor(object));
       data.removeAt(index);
       this.onChange(data.toJSON());
+    },
+
+    handleKeyUp(name, value) {
+      if (!this.onKeyUp) {
+        return;
+      }
+      this.onKeyUp(name, value);
     },
   },
 });

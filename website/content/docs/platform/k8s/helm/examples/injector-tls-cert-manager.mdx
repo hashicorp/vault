@@ -131,13 +131,7 @@ injector-tls   kubernetes.io/tls   3      6m59s
 Now that a certificate authority and a signed certificate have been created, we can now configure
 Helm and the Vault Agent Injector to use them.
 
-First, collect the base64-encoded CA from the Certificate secret:
-
-```shell
-$ export CA_BUNDLE=$(kubectl -n vault get secrets injector-tls -o json | jq -r '.data."ca.crt"')
-```
-
-Next, install the Vault Agent Injector with the following custom values:
+Install the Vault Agent Injector with the following custom values:
 
 ```shell
 $ helm install vault hashicorp/vault \
@@ -145,5 +139,5 @@ $ helm install vault hashicorp/vault \
   --set injector.replicas=2 \
   --set injector.leaderElector.enabled=false \
   --set injector.certs.secretName=injector-tls \
-  --set injector.certs.caBundle=${CA_BUNDLE?}
+  --set injector.webhookAnnotations="cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/injector-tls"
 ```

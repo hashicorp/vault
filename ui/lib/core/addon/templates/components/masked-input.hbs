@@ -18,6 +18,10 @@
       rows=1 wrap="off"
       onkeydown={{action onKeyDown}}
       onchange={{action "updateValue"}}
+      onkeyup={{action
+        (action "handleKeyUp" name)
+        value="target.value"
+      }}
       value={{value}}
       data-test-textarea 
     />
