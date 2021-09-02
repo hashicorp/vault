@@ -821,6 +821,11 @@ func TestTokenStore_HandleRequest_ListAccessorsDetails(t *testing.T) {
 		if !reflect.DeepEqual(tokenPolicies, aEntry.TokenPolicies) {
 			t.Fatalf("wrong value found for the token_policies field")
 		}
+
+		_, ok = accessor["token_ttl"]
+		if !ok {
+			t.Fatalf("missing token_ttl field")
+		}
 	}
 }
 
