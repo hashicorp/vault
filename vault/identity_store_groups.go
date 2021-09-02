@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -97,7 +95,6 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				logical.UpdateOperation: i.pathGroupNameUpdate(),
 				logical.ReadOperation:   i.pathGroupNameRead(),
 				logical.DeleteOperation: i.pathGroupNameDelete(),
-				logical.PatchOperation:  i.pathGroupNamePatch(),
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-by-name"][0]),
@@ -290,66 +287,6 @@ func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
 		}
 
 		return i.handleGroupReadCommon(ctx, group)
-	}
-}
-
-func (i *IdentityStore) pathGroupNamePatch() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		groupName := d.Get("name").(string)
-
-		if groupName == "" {
-			return logical.ErrorResponse("empty group name"), nil
-		}
-
-		group, err := i.MemDBGroupByName(ctx, groupName, false)
-		if err != nil {
-			return nil, err
-		}
-
-		if group == nil {
-			// TODO: I think we discussed having PATCH requests also act as upserts like PUT requests do
-			return logical.ErrorResponse("group name does not exist"), nil
-		}
-
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if ns.ID != group.NamespaceID {
-			return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
-		}
-
-		updatedGroupJSON, err := framework.HandlePatchOperation(req, d, group, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		var updatedGroupMap map[string]interface{}
-		err = json.Unmarshal(updatedGroupJSON, &updatedGroupMap)
-
-		if err != nil {
-			return nil, err
-		}
-
-		var groupMap map[string]interface{}
-		err = mapstructure.Decode(group, &groupMap)
-		if err != nil {
-			return nil, err
-		}
-
-		var updatedGroup *identity.Group
-		err = mapstructure.Decode(updatedGroupMap, &updatedGroup)
-		if err != nil {
-			return nil, err
-		}
-
-		err = i.sanitizeAndUpsertGroup(ctx, updatedGroup, group, nil)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, nil
 	}
 }
 
