@@ -53,11 +53,6 @@ const flattenData = () => {
   });
 };
 
-const sampleMapLegend = [
-  { key: 'non_entity_tokens', label: 'Active direct tokens' },
-  { key: 'distinct_entities', label: 'Unique Entities' },
-];
-
 storiesOf('BarChart', module)
   .addParameters({ options: { showPanel: true } })
   .addDecorator(withKnobs())
