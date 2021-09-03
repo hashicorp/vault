@@ -111,7 +111,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return true;
     },
     loading(transition) {
-      if (transition.queryParamsOnly) {
+      if (transition.queryParamsOnly || Ember.testing) {
         return;
       }
       // eslint-disable-next-line ember/no-controller-access-in-routes
