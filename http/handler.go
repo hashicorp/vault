@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/headerutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -514,7 +513,7 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 
 		// just setting all default headers in the config file.
 		// This might overwrite some headers there already set
-		listenerutil.SetCustomResponseHeaders(lc, w, headerutil.DefaultStatus)
+		listenerutil.SetCustomResponseHeaders(lc, w, listenerutil.DefaultStatus)
 		// TODO: Setting 200 series as well
 
 		h.ServeHTTP(w, req)

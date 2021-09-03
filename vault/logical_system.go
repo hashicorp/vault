@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/sdk/helper/headerutil"
 	"hash"
 	"net/http"
 	"path"
@@ -2632,7 +2631,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
-		chv, _ := listenerutil.FetchCustomResponseHeaderValue(lc, header, headerutil.DefaultStatus)
+		chv, _ := listenerutil.FetchCustomResponseHeaderValue(lc, header, listenerutil.DefaultStatus)
 		if chv != "" {
 			return logical.ErrorResponse("header already exist in server configuration file"), logical.ErrInvalidRequest
 		}

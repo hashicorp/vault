@@ -1,0 +1,3 @@
+```release-note:feature
+http: Enable users to customize HTTP response headers
+```
