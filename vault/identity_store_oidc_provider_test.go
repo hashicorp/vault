@@ -1662,7 +1662,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Scopes:                []string{"test-scope-1", "openid"},
 		Subjects:              []string{"public"},
 		IDTokenAlgs:           supportedAlgs,
-		AuthorizationEndpoint: basePath + "/authorize",
+		AuthorizationEndpoint: "/ui/vault/identity/oidc/provider/test-provider/authorize",
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 	}
@@ -1713,7 +1713,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Scopes:                []string{"test-scope-2", "openid"},
 		Subjects:              []string{"public"},
 		IDTokenAlgs:           supportedAlgs,
-		AuthorizationEndpoint: basePath + "/authorize",
+		AuthorizationEndpoint: testIssuer + "/ui/vault/identity/oidc/provider/test-provider/authorize",
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 	}

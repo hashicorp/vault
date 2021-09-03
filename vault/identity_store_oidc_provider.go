@@ -295,7 +295,7 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 	scopes := append(p.Scopes, "openid")
 
 	disc := providerDiscovery{
-		AuthorizationEndpoint: p.effectiveIssuer + "/authorize",
+		AuthorizationEndpoint: strings.Replace(p.effectiveIssuer, "/v1/", "/ui/vault/", 1) + "/authorize",
 		IDTokenAlgs:           supportedAlgs,
 		Issuer:                p.effectiveIssuer,
 		Keys:                  p.effectiveIssuer + "/.well-known/keys",
