@@ -7,20 +7,77 @@ module('Integration | Component | bar-chart', function(hooks) {
   setupRenderingTest(hooks);
 
   test('it renders', async function(assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
+    let dataset = [
+      {
+        namespace_id: 'root',
+        namespace_path: 'root',
+        counts: {
+          distinct_entities: 268,
+          non_entity_tokens: 985,
+          clients: 1253,
+        },
+      },
+      {
+        namespace_id: 'O0i4m',
+        namespace_path: 'top-namespace',
+        counts: {
+          distinct_entities: 648,
+          non_entity_tokens: 220,
+          clients: 868,
+        },
+      },
+      {
+        namespace_id: '1oihz',
+        namespace_path: 'anotherNamespace',
+        counts: {
+          distinct_entities: 547,
+          non_entity_tokens: 337,
+          clients: 884,
+        },
+      },
+      {
+        namespace_id: '1oihz',
+        namespace_path: 'someOtherNamespaceawgagawegawgawgawgaweg',
+        counts: {
+          distinct_entities: 807,
+          non_entity_tokens: 234,
+          clients: 1041,
+        },
+      },
+    ];
 
-    await render(hbs`<BarChart />`);
+    let flattenData = () => {
+      return dataset.map(d => {
+        return {
+          label: d['namespace_path'],
+          non_entity_tokens: d['counts']['non_entity_tokens'],
+          distinct_entities: d['counts']['distinct_entities'],
+          total: d['counts']['clients'],
+        };
+      });
+    };
 
-    assert.equal(this.element.textContent.trim(), '');
+    this.set('title', 'Top Namespaces');
+    this.set('description', 'Each namespaces client count includes clients in child namespaces.');
+    this.set('dataset', flattenData());
 
-    // Template block usage:
     await render(hbs`
-      <BarChart>
-        template block text
+      <BarChart 
+        @title={{title}}
+        @description={{description}}
+        @dataset={{dataset}}
+        @mapLegend={{array
+        (hash key="non_entity_tokens" label="Active direct tokens")
+        (hash key="distinct_entities" label="Unique Entities")}}
+        >    
+          <button type="button" class="link">
+          Export all namespace data
+          </button>
       </BarChart>
     `);
 
-    assert.equal(this.element.textContent.trim(), 'template block text');
+    await this.pauseTest();
+
+    assert.dom('.bar-chart-wrapper').exists('it renders');
   });
 });
