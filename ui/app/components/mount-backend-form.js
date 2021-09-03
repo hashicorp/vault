@@ -91,7 +91,9 @@ export default Component.extend({
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
     // because user might not have access to config, do a capabilities check with the path name here
-    let capabilities = this.store.findRecord('capabilities', `${path}/config`);
+    console.log('before');
+    let capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
+    console.log('this was called');
     try {
       yield mountModel.save();
     } catch (err) {

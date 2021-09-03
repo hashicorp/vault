@@ -8,7 +8,4 @@ export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
   model() {
     return {};
   },
-  activate() {
-    this.store.unloadAll('secret-engine');
-  },
 });

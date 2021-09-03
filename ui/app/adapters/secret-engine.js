@@ -40,19 +40,27 @@ export default ApplicationAdapter.extend({
       let configData;
       [configData, data] = splitObjects;
       // first create the engine
+      console.log(data.id, 'data.id');
+      if (!data.id) {
+        data.id = path;
+      }
       return this.ajax(this.url(path), 'POST', { data })
         .then(() => {
           // second modify config on engine
           return this.ajax(this.urlForConfig(path), 'POST', { data: configData });
         })
-        .then(() => {
+        .catch(e => {
+          this.store.findRecord('secret-engine', null).then(record => {
+            this.store.unloadRecord(record);
+          });
+          console.log(e, 'error');
+        })
+        .finally(() => {
           // ember data doesn't like 204s if it's not a DELETE
+          console.log(data.id, 'data.id');
           return {
             data: assign({}, data, { path: path + '/', id: path }),
           };
-        })
-        .catch(e => {
-          console.log(e, 'error');
         });
     } else {
       return this.ajax(this.url(path), 'POST', { data }).then(() => {
