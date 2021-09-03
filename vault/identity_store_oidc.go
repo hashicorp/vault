@@ -1252,9 +1252,7 @@ func (i *IdentityStore) pathOIDCReadPublicKeys(ctx context.Context, req *logical
 		},
 	}
 
-	// set a Cache-Control header only if there are keys, if there aren't keys
-	// then nextRun should not be used to set Cache-Control header because it chooses
-	// a time in the future that isn't based on key rotation/expiration values
+	// set a Cache-Control header only if there are keys
 	keys, err := listOIDCPublicKeys(ctx, req.Storage)
 	if err != nil {
 		return nil, err
