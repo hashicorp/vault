@@ -76,8 +76,6 @@ module('Integration | Component | bar-chart', function(hooks) {
       </BarChart>
     `);
 
-    await this.pauseTest();
-
     assert.dom('.bar-chart-wrapper').exists('it renders');
   });
 });
