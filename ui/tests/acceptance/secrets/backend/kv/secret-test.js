@@ -77,11 +77,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
-    await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', secretPath);
+    await editPage.startCreateSecret();
+    await editPage.path(secretPath);
     await editPage.toggleMetadata();
     await settled();
-    await fillIn('[data-test-input="maxVersions"]', maxVersions);
+    await editPage.maxVersion(maxVersions);
     await settled();
     await editPage.save();
     await settled();
@@ -113,8 +113,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
-    await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', secretPath);
+    await editPage.startCreateSecret();
+    await editPage.path(secretPath);
     await editPage.toggleMetadata();
     await settled();
     await typeIn('[data-test-kv-value]', 'invalid\\/');
@@ -175,8 +175,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
-    await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', secretPath);
+    await editPage.startCreateSecret();
+    await editPage.path(secretPath);
     await editPage.toggleMetadata();
     await settled();
     await fillIn('[data-test-input="maxVersions"]', maxVersions);
@@ -198,7 +198,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
-    await click('[data-test-secret-create="true"]');
+    await editPage.startCreateSecret();
     await typeIn('[data-test-secret-path="true"]', 'beep');
     assert
       .dom('[data-test-inline-error-message]')
@@ -217,7 +217,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
     await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
-    await fillIn('[data-test-secret-path="true"]', 'meep');
+    await editPage.path('meep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     await click('[data-test-secret-save="true"]');
     assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');

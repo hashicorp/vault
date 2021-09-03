@@ -3,7 +3,7 @@ import { isPresent, clickable, visitable, create, fillable } from 'ember-cli-pag
 import { codeFillable } from 'vault/tests/pages/helpers/codemirror';
 export default create({
   ...Base,
-  path: fillable('[data-test-secret-path]'),
+  path: fillable('[data-test-secret-path="true"]'),
   secretKey: fillable('[data-test-secret-key]'),
   secretValue: fillable('[data-test-secret-value] textarea'),
   save: clickable('[data-test-secret-save]'),
@@ -15,6 +15,8 @@ export default create({
   toggleMetadata: clickable('[data-test-show-metadata-toggle]'),
   metadataTab: clickable('[data-test-secret-metadata-tab]'),
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
+  maxVersion: fillable('[data-test-input="maxVersions"]'),
+  startCreateSecret: clickable('[data-test-secret-create="true"]'),
   editor: {
     fillIn: codeFillable('[data-test-component="json-editor"]'),
   },
