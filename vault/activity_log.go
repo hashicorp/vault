@@ -1831,7 +1831,7 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	for nsID, clients := range clientCountTable {
 		ns, err := NamespaceByID(ctx, nsID, a.core)
 		if err != nil {
-			return responseData, err
+			return nil, err
 		}
 
 		// Only include namespaces that are the queryNS or within it.  If queryNS is the
