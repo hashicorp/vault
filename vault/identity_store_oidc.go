@@ -313,7 +313,7 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 		},
 	}
 
-	if i.core.redirectAddr == "" && c.Issuer == "" {
+	if i.redirectAddr == "" && c.Issuer == "" {
 		resp.AddWarning(`Both "issuer" and Vault's "api_addr" are empty. ` +
 			`The issuer claim in generated tokens will not be network reachable.`)
 	}
@@ -416,7 +416,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer = c.Issuer
 	if c.effectiveIssuer == "" {
-		c.effectiveIssuer = i.core.redirectAddr
+		c.effectiveIssuer = i.redirectAddr
 	}
 
 	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
@@ -576,7 +576,9 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
-// rolesReferencingTargetKeyName returns a map of role names to roles referenced by targetKeyName.
+// rolesReferencingTargetKeyName returns a map of role names to roles
+// referencing targetKeyName.
+//
 // Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) rolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]role, error) {
 	roleNames, err := req.Storage.List(ctx, roleConfigPath)
@@ -605,7 +607,8 @@ func (i *IdentityStore) rolesReferencingTargetKeyName(ctx context.Context, req *
 }
 
 // roleNamesReferencingTargetKeyName returns a slice of strings of role
-// names referenced by targetKeyName.
+// names referencing targetKeyName.
+//
 // Note: this is not threadsafe. It is to be called with Lock already held.
 func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
 	roles, err := i.rolesReferencingTargetKeyName(ctx, req, targetKeyName)
@@ -640,6 +643,18 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 	if len(roleNames) > 0 {
 		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
 			targetKeyName, strings.Join(roleNames, ", "))
+		i.oidcLock.Unlock()
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
+	}
+
+	clientNames, err := i.clientNamesReferencingTargetKeyName(ctx, req, targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(clientNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these clients: %s",
+			targetKeyName, strings.Join(clientNames, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -1652,10 +1667,10 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
 
-		for _, ns := range i.listNamespaces() {
+		for _, ns := range i.namespacer.ListNamespaces() {
 			nsPath := ns.Path
 
-			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
+			s := i.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
 			if s == nil {
 				continue
