@@ -1825,11 +1825,10 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 
 	queryNS, err := namespace.FromContext(ctx)
 	if err != nil {
-		return responseData, err
+		return nil, err
 	}
 
 	for nsID, clients := range clientCountTable {
-
 		ns, err := NamespaceByID(ctx, nsID, a.core)
 		if err != nil {
 			return responseData, err
@@ -1875,7 +1874,6 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 
 //createClientCountTable maps the entitycount and token count to the namespace id
 func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uint64) map[string]*clients {
-	//add distinct entity count
 	clientCountTable := make(map[string]*clients)
 	for nsID, count := range entityMap {
 		if _, ok := clientCountTable[nsID]; !ok {
@@ -1884,7 +1882,7 @@ func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uin
 		clientCountTable[nsID].distinctEntities += count
 
 	}
-	//add non-entity token count
+
 	for nsID, count := range tokenMap {
 		if _, ok := clientCountTable[nsID]; !ok {
 			clientCountTable[nsID] = &clients{distinctEntities: 0, nonEntityTokens: 0}
@@ -1893,7 +1891,6 @@ func createClientCountTable(entityMap map[string]uint64, tokenMap map[string]uin
 
 	}
 	return clientCountTable
-
 }
 
 func (et *EntityTracker) addEntity(e *activity.EntityRecord) {

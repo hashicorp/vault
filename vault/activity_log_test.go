@@ -2530,7 +2530,7 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	results, err := a.partialMonthClientCount(ctx)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	if results == nil {
 		t.Fatal("no results to test")
@@ -2544,7 +2544,7 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	clientCountResponse := make([]*ClientCountInNamespace, 0)
 	err = mapstructure.Decode(byNamespace, &clientCountResponse)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 
 	for _, clientCount := range clientCountResponse {
