@@ -2634,11 +2634,12 @@ func (c *Core) SetConfig(conf *server.Config) {
 }
 
 func (c *Core) GetCustomResponseHeaders(la string) (map[string]map[string]string, error) {
-
+	if la == "" {
+		return nil, nil
+	}
 	ln, err := c.GetListenersConf(la)
-	if err != nil {
-		c.Logger().Trace(err.Error())
-		return nil, fmt.Errorf("listener config with address %v was not found:%w", la, err)
+	if err != nil || ln == nil {
+		return nil, err
 	}
 	// TODO: maybe copy the ln.CustomResponseHeaders and return the copy?
 	return ln.CustomResponseHeaders, nil
@@ -2647,7 +2648,7 @@ func (c *Core) GetCustomResponseHeaders(la string) (map[string]map[string]string
 func (c *Core) GetListenersConf(address string) (*configutil.Listener, error) {
 	conf := c.rawConfig.Load()
 	if conf == nil {
-		return nil, errors.New("failed to load config")
+		return nil, fmt.Errorf("failed to load config")
 	}
 	lns := conf.(*server.Config).Listeners
 	for _, ln := range lns{
@@ -2655,28 +2656,8 @@ func (c *Core) GetListenersConf(address string) (*configutil.Listener, error) {
 			return ln, nil
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("no listener with the given address found: %v", address))
+	return nil, fmt.Errorf("failed to find listener config with address %v", address)
 }
-
-func (c *Core) ReloadCustomHeadersListenerConf() error {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return fmt.Errorf("failed to Reload config")
-	}
-	lns := conf.(*server.Config).Listeners
-	for _, ln := range lns{
-		if ln.CustomResponseHeadersRaw != nil {
-			customHeadersMap, err := configutil.ParseCustomResponseHeaders(ln.CustomResponseHeadersRaw)
-			if err != nil {
-				return fmt.Errorf("failed to parse custom_response_headers:%w", err)
-			}
-			ln.CustomResponseHeaders = customHeadersMap
-			ln.CustomResponseHeadersRaw = nil
-		}
-	}
-	return nil
-}
-
 
 // SanitizedCustomResponseHeader sanitizes listener config from invalid custom headers
 func (c *Core) SanitizedCustomResponseHeader(conf *server.Config)  {

@@ -343,13 +343,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 
 		// Setting listener address so that we could get the config from core
-		w.Header().Set("X-Vault-Listener-Add", props.ListenerConfig.Address)
-
+		var la string
+		if props.ListenerConfig != nil {
+			la = props.ListenerConfig.Address
+		}
+		// Setting a header so that we could set customized headers
+		// configured in the corresponding listener stanza
+		w.Header().Set("X-Vault-Listener-Add", la)
 		// Getting custom headers from listener's config
-		lc, err := core.GetCustomResponseHeaders(props.ListenerConfig.Address)
+		lc, err := core.GetCustomResponseHeaders(la)
 		if err != nil {
 			core.Logger().Debug("failed to get custom headers from listener config")
 		}
+
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
@@ -941,8 +947,8 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 
 	// Getting custom headers from listener's config
 	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, err := core.GetCustomResponseHeaders(la)
-	if err != nil {
+	lc, errNew := core.GetCustomResponseHeaders(la)
+	if errNew != nil {
 		core.Logger().Debug("failed to get custom headers from listener config")
 	}
 	if respondErrorCommon(w, r, resp, err, lc) {
