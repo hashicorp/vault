@@ -12,10 +12,9 @@ export default create({
   visitEdit: visitable('/vault/secrets/:backend/edit/:id'),
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
   toggleJSON: clickable('[data-test-toggle-input="json"]'),
+  toggleMetadata: clickable('[data-test-show-metadata-toggle]'),
+  metadataTab: clickable('[data-test-secret-metadata-tab]'),
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
-  showsNoCASWarning: isPresent('[data-test-v2-no-cas-warning]'),
-  showsV2WriteWarning: isPresent('[data-test-v2-write-without-read]'),
-  showsV1WriteWarning: isPresent('[data-test-v1-write-without-read]'),
   editor: {
     fillIn: codeFillable('[data-test-component="json-editor"]'),
   },
