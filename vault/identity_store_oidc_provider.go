@@ -277,7 +277,21 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    "Query OIDC configurations",
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
+		{
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/keys",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: i.pathOIDCReadProviderPublicKeys,
+			},
+			HelpSynopsis:    "Retrieve public keys",
+			HelpDescription: "Returns the public portion of keys for a named OIDC provider. Clients can use them to validate the authenticity of an ID token.",
+		},
 	}
+}
+
+// pathOIDCReadProviderPublicKeys is used to retrieve all public keys for a
+// named provider so that clients can verify the validity of a signed OIDC token.
+func (i *IdentityStore) pathOIDCReadProviderPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return nil, nil
 }
 
 func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
