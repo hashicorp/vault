@@ -3,6 +3,7 @@ package listenerutil
 import (
 	"fmt"
 	"net/http"
+	"net/textproto"
 	"strconv"
 )
 
@@ -35,7 +36,7 @@ func SetCustomResponseHeaders(hm map[string]map[string]string, w http.ResponseWr
 	// Setting the default headers first
 	setter(hm["default"])
 
-	// for NoStatus, we only set the default headers
+	// for DefaultStatus, we only set the default headers
 	if status == DefaultStatus {
 		return nil
 	}
@@ -68,8 +69,24 @@ func FetchCustomResponseHeaderValue(hm map[string]map[string]string, th string, 
 		h = hm[strconv.Itoa(sc)]
 	}
 
-	if v, ok := h[th]; ok {
+	hn := textproto.CanonicalMIMEHeaderKey(th)
+	if v, ok := h[hn]; ok {
 		return v, nil
 	}
 	return "", nil
+}
+
+func ExistHeader(hm map[string]map[string]string, th string, sl []int) bool {
+	if len(sl) == 0 {
+		return false
+	}
+
+	for _, s := range sl {
+		chv, _ := FetchCustomResponseHeaderValue(hm, th, s)
+		if chv != "" {
+			return true
+		}
+	}
+
+	return false
 }

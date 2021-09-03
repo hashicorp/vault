@@ -517,10 +517,11 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 			}
 		}
 
-		// just setting all default headers in the config file.
-		// This might overwrite some headers there already set
-		listenerutil.SetCustomResponseHeaders(lc, w, listenerutil.DefaultStatus)
-		// TODO: Setting 200 series as well
+		// This function wraps handleUI and handleUIStub which do not set the
+		// status code specifically, instead, a call to w.Write is called which
+		// internally also sets the status code to 200.
+		// Just setting the headers for status code 200.
+		listenerutil.SetCustomResponseHeaders(lc, w, 200)
 
 		h.ServeHTTP(w, req)
 	})
@@ -973,7 +974,6 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, req *http.Request) 
 		if err == vault.ErrHANotEnabled {
 			// Standalone node, serve 503
 			err = errors.New("node is not active")
-			// TODO: set headers before all these responseError
 			respondError(w, http.StatusServiceUnavailable, err, lc)
 			return
 		}

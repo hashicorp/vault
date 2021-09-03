@@ -99,6 +99,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
+		// response writer is needed when updating ui headers to make sure it
+		// does not interfere with custom response headers set in the configuration file
+		if strings.HasPrefix(path,"sys/config/ui") {
+			responseWriter = w
+		}
 		// If we are uploading a snapshot we don't want to parse it. Instead
 		// we will simply add the HTTP request to the logical request object
 		// for later consumption.
@@ -358,7 +363,6 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 		if resp.Redirect != "" {
 			// If we have a redirect, redirect! We use a 307 code
 			// because we don't actually know if its permanent.
-			// TODO: need to set custom headers before calling the redirect
 			status := 307
 			listenerutil.SetCustomResponseHeaders(lc, w, status)
 			http.Redirect(w, r, resp.Redirect, status)
