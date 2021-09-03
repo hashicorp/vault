@@ -144,9 +144,7 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 
 	results, err := a.partialMonthClientCount(ctx)
 	if err != nil {
-		return &logical.Response{
-			Data: results,
-		}, err
+		return nil, err
 	}
 	if results == nil {
 		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
