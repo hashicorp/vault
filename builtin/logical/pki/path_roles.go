@@ -681,7 +681,25 @@ func (b *backend) pathRolePatch() framework.OperationFunc {
 			return nil, err
 		}
 
-		patchedRoleJSON, err := framework.HandlePatchOperation(req, data.Raw, role.ToResponseData(), pathRolePatchPreProcessor())
+		var roleMap map[string]interface{}
+
+		if role != nil {
+			roleMap = role.ToResponseData()
+		}
+
+		preProcessRules := framework.PatchPreProcessRules{
+			FieldRenameMapping: map[string]string{
+				"allowed_domains": "allowed_domains_list",
+				"key_usage":       "key_usage_list",
+				"ext_key_usage":   "extended_key_usage_list",
+				"ttl":             "ttl_duration",
+				"max_ttl":         "max_ttl_duration",
+				"organization":    "organization_list",
+				"ou":              "ou_list",
+			},
+		}
+
+		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, roleMap, preProcessRules)
 		if err != nil {
 			return nil, err
 		}
@@ -702,7 +720,7 @@ func (b *backend) pathRolePatch() framework.OperationFunc {
 		patchedRole.TTL = patchedRole.TTL * time.Second
 		patchedRole.MaxTTL = patchedRole.MaxTTL * time.Second
 		patchedRole.NotBeforeDuration = patchedRole.NotBeforeDuration * time.Second
-		
+
 		// Store it
 		jsonEntry, err := logical.StorageEntryJSON("role/"+name, patchedRole)
 		if err != nil {

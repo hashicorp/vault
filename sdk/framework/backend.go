@@ -641,40 +641,81 @@ func (t FieldType) Zero() interface{} {
 	}
 }
 
-type MarshalPreProcessor func(map[string]interface{}) (map[string]interface{}, error)
+type PatchPreProcessRules struct {
+	FieldRenameMapping map[string]string
+	DataKey            string
+}
 
-func preProcessAndMarshal(input map[string]interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
-	var err error
-	if preProcessor != nil {
-		input, err = preProcessor(input)
-		if err != nil {
-			return nil, err
+// HandleFieldRenameMapping will rename fields in input data based
+// on PatchPreProcessRules.FieldRenameMapping
+// Example:
+//  original data:      {"foo": 123, "bar": "abc"}
+//  FieldRenameMapping: {"foo": "baz"}
+//  result data:        {"baz": 123, "bar": "abc"}
+func (rules PatchPreProcessRules) HandleFieldRenameMapping(input map[string]interface{}) map[string]interface{} {
+	if rules.FieldRenameMapping == nil {
+		return input
+	}
+
+	for original, rename := range rules.FieldRenameMapping {
+		originalValue, ok := input[original]
+
+		// Only add a renamed key if the original exists to prevent a null value being
+		// propagated to the JSON patch which will ultimately remove a field
+		if ok {
+			input[rename] = originalValue
+			delete(input, original)
 		}
 	}
 
-	result, err := json.Marshal(input)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return input
 }
 
-func HandlePatchOperation(req *logical.Request, inputData map[string]interface{}, resource map[string]interface{}, preProcessor MarshalPreProcessor) ([]byte, error) {
-	var modified []byte
+func preProcessAndMarshal(input map[string]interface{}, rules PatchPreProcessRules) ([]byte, error) {
+	result := rules.HandleFieldRenameMapping(input)
 
-	marshaledResource, err := preProcessAndMarshal(resource, preProcessor)
+	marshaledResult, err := json.Marshal(result)
 	if err != nil {
 		return nil, err
 	}
 
-	if string(marshaledResource) == "null" {
+	return marshaledResult, nil
+}
+
+func HandlePatchOperation(req *logical.Request, inputData *FieldData, resource map[string]interface{}, rules PatchPreProcessRules) ([]byte, error) {
+	var modified []byte
+	var err error
+	var marshaledResource []byte
+
+	inputMap := map[string]interface{}{}
+
+	// Marshal resource and parse inputData based on associated FieldSchema
+	if resource == nil {
+		// Ensure patch succeeds by using an empty object for
+		// the non-existent resource
 		marshaledResource = []byte(`{}`)
+
+		// Get all fields from FieldSchema to ensure defaults are
+		// handled properly since inputMap will be a new resource
+		for key := range inputData.Schema {
+			inputMap[key] = inputData.Get(key)
+		}
+	} else {
+		marshaledResource, err = preProcessAndMarshal(resource, rules)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse all fields to ensure proper data types are
+		// handled properly according to the FieldSchema
+		for key := range inputData.Raw {
+			inputMap[key] = inputData.Get(key)
+		}
 	}
 
 	switch req.PatchType {
 	case logical.JSONPatch:
-		patchJSON, err := json.Marshal(inputData["patch_json"])
+		patchJSON, err := json.Marshal(inputData.Raw["patch_json"])
 		if err != nil {
 			return nil, err
 		}
@@ -690,7 +731,17 @@ func HandlePatchOperation(req *logical.Request, inputData map[string]interface{}
 		}
 
 	case logical.JSONMergePatch:
-		patchJSON, err := preProcessAndMarshal(inputData, preProcessor)
+		patchMap := map[string]interface{}{}
+
+		// Ignore fields that are not meant to be stored by isolating
+		// the resource data prior to preprocessing and marshaling
+		if rules.DataKey != "" {
+			patchMap = inputMap[rules.DataKey].(map[string]interface{})
+		} else {
+			patchMap = inputMap
+		}
+
+		patchJSON, err := preProcessAndMarshal(patchMap, rules)
 		if err != nil {
 			return nil, err
 		}

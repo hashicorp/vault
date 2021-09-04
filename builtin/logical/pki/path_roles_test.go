@@ -774,6 +774,7 @@ func TestPki_CreateValidation(t *testing.T) {
 		Path:      "roles/testrole",
 		Storage:   storage,
 		Data:      roleData,
+		Validate:  pathRolesValidator(),
 	}
 
 	resp, err = b.HandleRequest(context.Background(), roleReq)
@@ -854,6 +855,7 @@ func TestPki_MergePatchValidationNotExists(t *testing.T) {
 		Path:      "roles/testrole",
 		Storage:   storage,
 		Data:      roleData,
+		Validate:  pathRolesValidator(),
 		PatchType: logical.JSONMergePatch,
 	}
 
