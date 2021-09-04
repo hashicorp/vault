@@ -274,6 +274,9 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
+	// Allow request to self-validate based on the validator func defined for entire path
+	req.Validate = path.Validator
+
 	return callback(ctx, req, &fd)
 }
 

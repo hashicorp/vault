@@ -86,6 +86,8 @@ const (
 	JSONMergePatch
 )
 
+type ValidatorFunc func(interface{}) error
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -213,6 +215,8 @@ type Request struct {
 	// ResponseWriter if set can be used to stream a response value to the http
 	// request that generated this logical.Request object.
 	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
+
+	Validate ValidatorFunc
 
 	// requiredState is used internally to propagate the X-Vault-Index request
 	// header to later levels of request processing that operate only on

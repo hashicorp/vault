@@ -29,7 +29,7 @@ func pathListRoles(b *backend) *framework.Path {
 	}
 }
 
-func pathRolesValidator() framework.ValidatorFunc {
+func pathRolesValidator() logical.ValidatorFunc {
 	return func(resource interface{}) error {
 		var errs *multierror.Error
 		entry := resource.(*roleEntry)
@@ -48,7 +48,6 @@ func pathRolesValidator() framework.ValidatorFunc {
 		}
 
 		if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
-			fmt.Println(err.Error())
 			errs = multierror.Append(errs, err)
 		}
 
@@ -418,10 +417,11 @@ for "generate_lease".`,
 			},
 		},
 
+		Validator: pathRolesValidator(),
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleCreate(pathRolesValidator()),
-			logical.PatchOperation:  b.pathRolePatch(pathRolesValidator()),
+			logical.UpdateOperation: b.pathRoleCreate(),
+			logical.PatchOperation:  b.pathRolePatch(),
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
 
@@ -584,7 +584,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.OperationFunc {
+func (b *backend) pathRoleCreate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		var err error
 		name := data.Get("name").(string)
@@ -648,9 +648,12 @@ func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.Ope
 			*entry.GenerateLease = data.Get("generate_lease").(bool)
 		}
 
-		err = validate(entry)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+		if req.Validate != nil {
+			err = req.Validate(entry)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+
 		}
 
 		// Store it
@@ -666,34 +669,7 @@ func (b *backend) pathRoleCreate(validate framework.ValidatorFunc) framework.Ope
 	}
 }
 
-func pathRolePatchPreProcessor() framework.MarshalPreProcessor {
-	return func(resource map[string]interface{}) (map[string]interface{}, error) {
-		renameKeys := map[string]string{
-			"allowed_domains": "allowed_domains_list",
-			"key_usage":       "key_usage_list",
-			"ext_key_usage":   "extended_key_usage_list",
-			"ttl":             "ttl_duration",
-			"max_ttl":         "max_ttl_duration",
-			"organization":    "organization_list",
-			"ou":              "ou_list",
-		}
-
-		for original, rename := range renameKeys {
-			originalValue, ok := resource[original]
-
-			// Only add a renamed key if the original exists to prevent a null value being
-			// propagated to the JSON patch which will ultimately remove a field
-			if ok {
-				resource[rename] = originalValue
-				delete(resource, original)
-			}
-		}
-
-		return resource, nil
-	}
-}
-
-func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.OperationFunc {
+func (b *backend) pathRolePatch() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
@@ -716,9 +692,11 @@ func (b *backend) pathRolePatch(validate framework.ValidatorFunc) framework.Oper
 			return nil, err
 		}
 
-		err = validate(patchedRole)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+		if req.Validate != nil {
+			err = req.Validate(patchedRole)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
 		}
 
 		patchedRole.TTL = patchedRole.TTL * time.Second

@@ -46,8 +46,6 @@ func PathAppend(paths ...[]*Path) []*Path {
 	return result
 }
 
-type ValidatorFunc func(interface{}) error
-
 // Path is a single path that the backend responds to.
 type Path struct {
 	// Pattern is the pattern of the URL that matches this path.
@@ -118,6 +116,8 @@ type Path struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+
+	Validator logical.ValidatorFunc
 }
 
 // OperationHandler defines and describes a specific operation handler.
