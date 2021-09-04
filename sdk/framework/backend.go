@@ -709,7 +709,13 @@ func HandlePatchOperation(req *logical.Request, inputData *FieldData, resource m
 		// Parse all fields to ensure proper data types are
 		// handled properly according to the FieldSchema
 		for key := range inputData.Raw {
-			inputMap[key] = inputData.Get(key)
+			val, ok := inputData.GetOk(key)
+
+			// Only accept fields in the schema, this also
+			// ensures that the patch_json field for JSONPatch isn't parsed
+			if ok {
+				inputMap[key] = val
+			}
 		}
 	}
 
