@@ -660,12 +660,9 @@ type tsRoleEntry struct {
 }
 
 type accessorEntry struct {
-	TokenID          string   `json:"token_id"`
-	AccessorID       string   `json:"accessor_id"`
-	NamespaceID      string   `json:"namespace_id"`
-	TokenDisplayName string   `json:"token_display_name"`
-	TokenRole        string   `json:"token_role"`
-	TokenPolicies    []string `json:"token_policies"`
+	TokenID     string `json:"token_id"`
+	AccessorID  string `json:"accessor_id"`
+	NamespaceID string `json:"namespace_id"`
 }
 
 // SetExpirationManager is used to provide the token store with
@@ -788,19 +785,24 @@ func (ts *TokenStore) tokenStoreAccessorListDetails(ctx context.Context, req *lo
 		}
 
 		if aEntry.NamespaceID == nsID {
-			info := map[string]interface{}{
-				"accessor_id":        aEntry.AccessorID,
-				"token_display_name": aEntry.TokenDisplayName,
-				"token_role":         aEntry.TokenRole,
-				"token_ttl":          int64(0),
-				"token_policies":     aEntry.TokenPolicies,
+			tokenEntry, err := ts.lookupInternal(ctx, aEntry.TokenID, false, true)
+			if err != nil {
+				resp.AddWarning(fmt.Sprintf("Could not fetch token; associated error is %q", err.Error()))
+				continue
 			}
 
-			tokenEntry, _ := ts.lookupInternal(ctx, aEntry.TokenID, false, true)
 			leaseTimes, err := ts.expiration.FetchLeaseTimesByToken(ctx, tokenEntry)
 			if err != nil {
 				resp.AddWarning(fmt.Sprintf("Could not fetch lease times for token entry; associated error is %q", err.Error()))
 				continue
+			}
+
+			info := map[string]interface{}{
+				"accessor_id":        aEntry.AccessorID,
+				"token_display_name": tokenEntry.DisplayName,
+				"token_role":         tokenEntry.Role,
+				"token_ttl":          int64(0),
+				"token_policies":     tokenEntry.Policies,
 			}
 
 			if leaseTimes != nil && !leaseTimes.ExpireTime.IsZero() {
@@ -850,12 +852,9 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 	}
 
 	aEntry := &accessorEntry{
-		TokenID:          entry.ID,
-		AccessorID:       entry.Accessor,
-		NamespaceID:      entry.NamespaceID,
-		TokenRole:        entry.Role,
-		TokenPolicies:    entry.Policies,
-		TokenDisplayName: entry.DisplayName,
+		TokenID:     entry.ID,
+		AccessorID:  entry.Accessor,
+		NamespaceID: entry.NamespaceID,
 	}
 
 	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
@@ -1855,9 +1854,6 @@ func (ts *TokenStore) lookupByAccessor(ctx context.Context, id string, salted, t
 			aEntry.TokenID = te.ID
 			aEntry.AccessorID = te.Accessor
 			aEntry.NamespaceID = te.NamespaceID
-			aEntry.TokenDisplayName = te.DisplayName
-			aEntry.TokenRole = te.Role
-			aEntry.TokenPolicies = te.Policies
 		}
 	}
 

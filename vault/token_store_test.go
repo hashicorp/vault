@@ -798,11 +798,16 @@ func TestTokenStore_HandleRequest_ListAccessorsDetails(t *testing.T) {
 			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
 		}
 
+		tokenEntry, err := ts.lookupInternal(namespace.RootContext(nil), aEntry.TokenID, false, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		tokenDisplayName, ok := accessor["token_display_name"].(string)
 		if !ok {
 			t.Fatalf("missing token_display_name field")
 		}
-		if tokenDisplayName != aEntry.TokenDisplayName {
+		if tokenDisplayName != tokenEntry.DisplayName {
 			t.Fatalf("wrong value found for the token_display_name field")
 		}
 
@@ -810,7 +815,7 @@ func TestTokenStore_HandleRequest_ListAccessorsDetails(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing token_role field")
 		}
-		if tokenRole != aEntry.TokenRole {
+		if tokenRole != tokenEntry.Role {
 			t.Fatalf("wrong value found for the token_role field")
 		}
 
@@ -818,7 +823,7 @@ func TestTokenStore_HandleRequest_ListAccessorsDetails(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing token_policies field")
 		}
-		if !reflect.DeepEqual(tokenPolicies, aEntry.TokenPolicies) {
+		if !reflect.DeepEqual(tokenPolicies, tokenEntry.Policies) {
 			t.Fatalf("wrong value found for the token_policies field")
 		}
 
