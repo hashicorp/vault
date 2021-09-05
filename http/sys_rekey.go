@@ -17,20 +17,15 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r)
+			respondStandby(core, w, r.URL)
 			return
 		}
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
+
 		repState := core.ReplicationState()
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
 				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"),
-				lc)
+				core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -39,7 +34,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
-			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), lc)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), core.SetCustomResponseHeaders)
 		case r.Method == "GET":
 			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
@@ -47,38 +42,32 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		case r.Method == "DELETE":
 			handleSysRekeyInitDelete(ctx, core, recovery, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 		}
 	})
 }
 
 func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, errNew := core.GetCustomResponseHeaders(la)
-	if errNew != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
 	if barrierConfErr != nil {
-		respondError(w, http.StatusInternalServerError, barrierConfErr, lc)
+		respondError(w, http.StatusInternalServerError, barrierConfErr, core.SetCustomResponseHeaders)
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), lc)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), core.SetCustomResponseHeaders)
 		return
 	}
 
 	// Get the rekey configuration
 	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
 
 	sealThreshold, err := core.RekeyThreshold(ctx, recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -93,7 +82,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		// Get the progress
 		started, progress, err := core.RekeyProgress(recovery, false)
 		if err != nil {
-			respondError(w, err.Code(), err, lc)
+			respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -107,37 +96,31 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
-				respondError(w, http.StatusInternalServerError, err, lc)
+				respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 				return
 			}
 			status.PGPFingerprints = pgpFingerprints
 			status.Backup = rekeyConf.Backup
 		}
 	}
-	respondOk(w, status, lc)
+	respondOk(w, status, core.SetCustomResponseHeaders)
 }
 
 func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, errNew := core.GetCustomResponseHeaders(la)
-	if errNew != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	// Parse the request
 	var req RekeyRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-		respondError(w, http.StatusBadRequest, err, lc)
+		respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 		return
 	}
 
 	if req.Backup && len(req.PGPKeys) == 0 {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"), lc)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"), core.SetCustomResponseHeaders)
 		return
 	}
 
 	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"), lc)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"), core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -151,7 +134,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 		VerificationRequired: req.RequireVerification,
 	}, recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -159,44 +142,32 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 }
 
 func handleSysRekeyInitDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, err := core.GetCustomResponseHeaders(la)
-	if err != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	if err := core.RekeyCancel(recovery); err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
-	respondOk(w, nil, lc)
+	respondOk(w, nil, core.SetCustomResponseHeaders)
 }
 
 func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, errNew := core.GetCustomResponseHeaders(la)
-		if errNew != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r)
+			respondStandby(core, w, r.URL)
 			return
 		}
 
 		// Parse the request
 		var req RekeyUpdateRequest
 		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-			respondError(w, http.StatusBadRequest, err, lc)
+			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 			return
 		}
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
 				errors.New("'key' must be specified in request body as JSON"),
-				lc)
+				core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -212,7 +183,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 				respondError(
 					w, http.StatusBadRequest,
 					errors.New("'key' must be a valid hex or base64 string"),
-					lc)
+					core.SetCustomResponseHeaders)
 				return
 			}
 		}
@@ -223,7 +194,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		// Use the key to make progress on rekey
 		result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
 		if rekeyErr != nil {
-			respondError(w, rekeyErr.Code(), rekeyErr, lc)
+			respondError(w, rekeyErr.Code(), rekeyErr, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -246,7 +217,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			}
 			resp.Keys = keys
 			resp.KeysB64 = keysB64
-			respondOk(w, resp, lc)
+			respondOk(w, resp, core.SetCustomResponseHeaders)
 		} else {
 			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		}
@@ -255,15 +226,9 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 
 func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r)
+			respondStandby(core, w, r.URL)
 			return
 		}
 
@@ -271,7 +236,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
 				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"),
-				lc)
+				core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -280,7 +245,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
-			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), lc)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), core.SetCustomResponseHeaders)
 		case r.Method == "GET":
 			handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
@@ -288,43 +253,37 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		case r.Method == "DELETE":
 			handleSysRekeyVerifyDelete(ctx, core, recovery, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 		}
 	})
 }
 
 func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, errNew := core.GetCustomResponseHeaders(la)
-	if errNew != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
 	if barrierConfErr != nil {
-		respondError(w, http.StatusInternalServerError, barrierConfErr, lc)
+		respondError(w, http.StatusInternalServerError, barrierConfErr, core.SetCustomResponseHeaders)
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), lc)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), core.SetCustomResponseHeaders)
 		return
 	}
 
 	// Get the rekey configuration
 	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
 	if rekeyConf == nil {
-		respondError(w, http.StatusBadRequest, errors.New("no rekey configuration found"), lc)
+		respondError(w, http.StatusBadRequest, errors.New("no rekey configuration found"), core.SetCustomResponseHeaders)
 		return
 	}
 
 	// Get the progress
 	started, progress, err := core.RekeyProgress(recovery, true)
 	if err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -336,18 +295,12 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 		N:        rekeyConf.SecretShares,
 		Progress: progress,
 	}
-	respondOk(w, status, lc)
+	respondOk(w, status, core.SetCustomResponseHeaders)
 }
 
 func handleSysRekeyVerifyDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, errNew := core.GetCustomResponseHeaders(la)
-	if errNew != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	if err := core.RekeyVerifyRestart(recovery); err != nil {
-		respondError(w, err.Code(), err, lc)
+		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -355,23 +308,17 @@ func handleSysRekeyVerifyDelete(ctx context.Context, core *vault.Core, recovery 
 }
 
 func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, err := core.GetCustomResponseHeaders(la)
-	if err != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	// Parse the request
 	var req RekeyVerificationUpdateRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-		respondError(w, http.StatusBadRequest, err, lc)
+		respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 		return
 	}
 	if req.Key == "" {
 		respondError(
 			w, http.StatusBadRequest,
 			errors.New("'key' must be specified in request body as JSON"),
-			lc)
+			core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -387,7 +334,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 			respondError(
 				w, http.StatusBadRequest,
 				errors.New("'key' must be a valid hex or base64 string"),
-				lc)
+				core.SetCustomResponseHeaders)
 			return
 		}
 	}
@@ -398,7 +345,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	// Use the key to make progress on rekey
 	result, rekeyErr := core.RekeyVerify(ctx, key, req.Nonce, recovery)
 	if rekeyErr != nil {
-		respondError(w, rekeyErr.Code(), rekeyErr, lc)
+		respondError(w, rekeyErr.Code(), rekeyErr, core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -407,7 +354,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	if result != nil {
 		resp.Complete = true
 		resp.Nonce = result.Nonce
-		respondOk(w, resp, lc)
+		respondOk(w, resp, core.SetCustomResponseHeaders)
 	} else {
 		handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
 	}

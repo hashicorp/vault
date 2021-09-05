@@ -15,25 +15,19 @@ import (
 
 func handleSysRaftBootstrap(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		switch r.Method {
 		case "POST", "PUT":
 			if core.Sealed() {
-				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"), lc)
+				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"), core.SetCustomResponseHeaders)
 			}
 
 			if err := core.RaftBootstrap(context.Background(), false); err != nil {
-				respondError(w, http.StatusInternalServerError, err, lc)
+				respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 				return
 			}
 
 		default:
-			respondError(w, http.StatusBadRequest, nil, lc)
+			respondError(w, http.StatusBadRequest, nil, core.SetCustomResponseHeaders)
 		}
 	})
 }
@@ -44,33 +38,21 @@ func handleSysRaftJoin(core *vault.Core) http.Handler {
 		case "POST", "PUT":
 			handleSysRaftJoinPost(core, w, r)
 		default:
-			// Getting custom headers from listener's config
-			la := w.Header().Get("X-Vault-Listener-Add")
-			lc, err := core.GetCustomResponseHeaders(la)
-			if err != nil {
-				core.Logger().Debug("failed to get custom headers from listener config")
-			}
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 		}
 	})
 }
 
 func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, errNew := core.GetCustomResponseHeaders(la)
-	if errNew != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	// Parse the request
 	var req JoinRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
-		respondError(w, http.StatusBadRequest, err, lc)
+		respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 		return
 	}
 
 	if req.NonVoter && !nonVotersAllowed {
-		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"), lc)
+		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"), core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -79,14 +61,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	if len(req.LeaderCACert) != 0 || len(req.LeaderClientCert) != 0 || len(req.LeaderClientKey) != 0 {
 		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
 		if err != nil {
-			respondError(w, http.StatusBadRequest, err, lc)
+			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 			return
 		}
 		tlsConfig.ServerName = req.LeaderTLSServerName
 	}
 
 	if req.AutoJoinScheme != "" && (req.AutoJoinScheme != "http" && req.AutoJoinScheme != "https") {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme), lc)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme), core.SetCustomResponseHeaders)
 		return
 	}
 
@@ -103,14 +85,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 
 	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, lc)
+		respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 		return
 	}
 
 	resp := JoinResponse{
 		Joined: joined,
 	}
-	respondOk(w, resp, lc)
+	respondOk(w, resp, core.SetCustomResponseHeaders)
 }
 
 type JoinResponse struct {

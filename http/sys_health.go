@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,19 +16,13 @@ import (
 
 func handleSysHealth(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		switch r.Method {
 		case "GET":
 			handleSysHealthGet(core, w, r)
 		case "HEAD":
 			handleSysHealthHead(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 		}
 	})
 }
@@ -48,26 +41,20 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 }
 
 func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, err := core.GetCustomResponseHeaders(la)
-	if err != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
-		respondError(w, code, nil, lc)
+		respondError(w, code, nil, core.SetCustomResponseHeaders)
 		return
 	}
 
 	if body == nil {
-		respondError(w, code, nil, lc)
+		respondError(w, code, nil, core.SetCustomResponseHeaders)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	listenerutil.SetCustomResponseHeaders(lc, w, code)
+	core.SetCustomResponseHeaders(w, code)
 	w.WriteHeader(code)
 
 	// Generate the response
@@ -81,13 +68,8 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if body != nil {
 		w.Header().Set("Content-Type", "application/json")
 	}
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, err := core.GetCustomResponseHeaders(la)
-	if err != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
-	listenerutil.SetCustomResponseHeaders(lc, w, code)
+
+	core.SetCustomResponseHeaders(w, code)
 	w.WriteHeader(code)
 }
 

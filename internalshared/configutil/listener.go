@@ -28,17 +28,6 @@ type ListenerProfiling struct {
 	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
 }
 
-// TODO: remove this
-type CH struct {
-	X interface{}	`hcl:",key,alias:unknown"`
-	//UnusedKeys   UnusedKeyMap `hcl:",unusedKeyPositions"`
-	Defaults     interface{}  `hcl:"-"`
-	DefaultsRaw  interface{}  `hcl:"default,alias:default"`
-	R307 map[string]string `hcl:"-"`
-	R307Raw interface{} `hcl:"307,alias:R307"`
-
-}
-
 // Listener is the listener configuration for the server.
 type Listener struct {
 	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`

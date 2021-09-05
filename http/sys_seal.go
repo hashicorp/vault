@@ -15,22 +15,16 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		req, _, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
-			respondError(w, statusCode, err, lc)
+			respondError(w, statusCode, err, core.SetCustomResponseHeaders)
 			return
 		}
 
 		switch req.Operation {
 		case logical.UpdateOperation:
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -38,78 +32,66 @@ func handleSysSeal(core *vault.Core) http.Handler {
 		// We use context.Background since there won't be a request context if the node isn't active
 		if err := core.SealWithRequest(r.Context(), req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-				respondError(w, http.StatusForbidden, err, lc)
+				respondError(w, http.StatusForbidden, err, core.SetCustomResponseHeaders)
 				return
 			}
-			respondError(w, http.StatusInternalServerError, err, lc)
+			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 			return
 		}
 
-		respondOk(w, nil, lc)
+		respondOk(w, nil, core.SetCustomResponseHeaders)
 	})
 }
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		req, _, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
-			respondError(w, statusCode, err, lc)
+			respondError(w, statusCode, err, core.SetCustomResponseHeaders)
 			return
 		}
 
 		switch req.Operation {
 		case logical.UpdateOperation:
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 			return
 		}
 
 		// Seal with the token above
 		if err := core.StepDown(r.Context(), req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-				respondError(w, http.StatusForbidden, err, lc)
+				respondError(w, http.StatusForbidden, err, core.SetCustomResponseHeaders)
 				return
 			}
-			respondError(w, http.StatusInternalServerError, err, lc)
+			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 			return
 		}
 
-		respondOk(w, nil, lc)
+		respondOk(w, nil, core.SetCustomResponseHeaders)
 	})
 }
 
 func handleSysUnseal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		switch r.Method {
 		case "PUT":
 		case "POST":
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 			return
 		}
 
 		// Parse the request
 		var req UnsealRequest
 		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-			respondError(w, http.StatusBadRequest, err, lc)
+			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 			return
 		}
 
 		if req.Reset {
 			if !core.Sealed() {
-				respondError(w, http.StatusBadRequest, errors.New("vault is unsealed"), lc)
+				respondError(w, http.StatusBadRequest, errors.New("vault is unsealed"), core.SetCustomResponseHeaders)
 				return
 			}
 			core.ResetUnsealProcess()
@@ -121,7 +103,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			respondError(
 				w, http.StatusBadRequest,
 				errors.New("'key' must be specified in request body as JSON, or 'reset' set to true"),
-				lc)
+				core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -137,7 +119,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 				respondError(
 					w, http.StatusBadRequest,
 					errors.New("'key' must be a valid hex or base64 string"),
-					lc)
+					core.SetCustomResponseHeaders)
 				return
 			}
 		}
@@ -157,10 +139,10 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			case errwrap.Contains(err, vault.ErrBarrierSealed.Error()):
 			case errwrap.Contains(err, consts.ErrStandby.Error()):
 			default:
-				respondError(w, http.StatusInternalServerError, err, lc)
+				respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 				return
 			}
-			respondError(w, http.StatusBadRequest, err, lc)
+			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -171,14 +153,8 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 func handleSysSealStatus(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		if r.Method != "GET" {
-			respondError(w, http.StatusMethodNotAllowed, nil, lc)
+			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -187,20 +163,14 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 }
 
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-	// Getting custom headers from listener's config
-	la := w.Header().Get("X-Vault-Listener-Add")
-	lc, err := core.GetCustomResponseHeaders(la)
-	if err != nil {
-		core.Logger().Debug("failed to get custom headers from listener config")
-	}
 	ctx := context.Background()
 	status, err := core.GetSealStatus(ctx)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, lc)
+		respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 		return
 	}
 
-	respondOk(w, status, lc)
+	respondOk(w, status, core.SetCustomResponseHeaders)
 }
 
 // Note: because we didn't provide explicit tagging in the past we can't do it

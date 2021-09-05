@@ -42,7 +42,6 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -517,6 +516,8 @@ type Core struct {
 
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
+
+	customListenerHeader *ListenersCustomHeaderList
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -1001,6 +1002,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
+
+	uiHeaders, _ := c.UIHeaders()
+	customHeaderLogger := conf.Logger.Named("customHeader")
+	c.allLoggers = append(c.allLoggers, customHeaderLogger)
+	c.customListenerHeader = NewListenerCustomHeader(conf.RawConfig.Listeners, customHeaderLogger, uiHeaders)
 
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
@@ -2621,6 +2627,18 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
+func (c *Core) GetLogger(name string) log.Logger {
+	c.allLoggersLock.Lock()
+	defer c.allLoggersLock.Unlock()
+	for _, logger := range c.allLoggers {
+		ln := logger.Name()
+		if ln == name {
+			return logger
+		}
+	}
+	return nil
+}
+
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
@@ -2633,64 +2651,51 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
-func (c *Core) GetCustomResponseHeaders(la string) (map[string]map[string]string, error) {
-	if la == "" {
-		return nil, nil
+func (c *Core) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
+	if c.customListenerHeader == nil {
+		c.logger.Debug("custom response headers not configured")
+		return
 	}
-	ln, err := c.GetListenersConf(la)
-	if err != nil || ln == nil {
-		return nil, err
-	}
-	// TODO: maybe copy the ln.CustomResponseHeaders and return the copy?
-	return ln.CustomResponseHeaders, nil
+
+	c.customListenerHeader.SetCustomResponseHeaders(w, status)
 }
 
-func (c *Core) GetListenersConf(address string) (*configutil.Listener, error) {
+func (c *Core) ExistCustomResponseHeader(header string, statusCodeList []int, la string) bool {
+	if c.customListenerHeader == nil {
+		c.logger.Debug("custom response headers not configured")
+		return false
+	}
+
+	return c.customListenerHeader.ExistHeader(header, statusCodeList, la)
+}
+
+func (c *Core) ReloadCustomListenerHeader() error {
+
 	conf := c.rawConfig.Load()
 	if conf == nil {
-		return nil, fmt.Errorf("failed to load config")
+		return fmt.Errorf("failed to load core raw config")
 	}
+
+	tempLH := c.customListenerHeader
+	c.customListenerHeader = nil
+
+	uiHeaders, _ := c.UIHeaders()
+
+	customHeaderLogger := c.GetLogger("customHeader")
+	if customHeaderLogger == nil {
+		customHeaderLogger = c.Logger().Named("customHeader")
+		c.AddLogger(customHeaderLogger)
+	}
+
 	lns := conf.(*server.Config).Listeners
-	for _, ln := range lns{
-		if ln.Address == address {
-			return ln, nil
-		}
-	}
-	return nil, fmt.Errorf("failed to find listener config with address %v", address)
-}
+	c.customListenerHeader = NewListenerCustomHeader(lns, customHeaderLogger, uiHeaders)
 
-// SanitizedCustomResponseHeader sanitizes listener config from invalid custom headers
-func (c *Core) SanitizedCustomResponseHeader(conf *server.Config)  {
-	hm := make(map[string]map[string]string)
-	userHeaders, err := c.UIHeaders()
-	if err != nil {
-		c.Logger().Trace("failed to get ui headers", "error:", err.Error())
+	if c.customListenerHeader == nil {
+		c.logger.Error("failed to reload custom headers, reverting back the old configuration")
+		c.customListenerHeader = tempLH
 	}
 
-	for _, ln := range conf.Listeners {
-		for sc, ch := range ln.CustomResponseHeaders {
-			hv := make(map[string]string)
-			for h, v := range ch {
-				// X-Vault- prefix is reserved for Vault internal processes
-				if strings.HasPrefix(h, "X-Vault-") {
-					c.Logger().Error("Custom headers starting with X-Vault are not valid", "header", h)
-					continue
-				}
-
-				// Checking for UI headers, if any common header exist, HCL headers take precedence
-				if userHeaders != nil {
-					exist := userHeaders.Get(h)
-					if exist != "" {
-						c.Logger().Error("found a duplicate header in UI, note that config file headers take precedence.", "header:", h)
-					}
-				}
-				hv[h] = v
-			}
-			hm[sc] = hv
-		}
-		ln.CustomResponseHeaders = hm
-	}
-
+	return nil
 }
 
 // SanitizedConfig returns a sanitized version of the current config.

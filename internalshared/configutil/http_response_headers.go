@@ -7,7 +7,7 @@ import (
     "strings"
 )
 
-var defaultHeaderNames = []string {
+var DefaultHeaderNames = []string {
     "Content-Security-Policy",
     "X-XSS-Protection",
     "X-Frame-Options",
@@ -16,7 +16,7 @@ var defaultHeaderNames = []string {
     "Content-Type",
 }
 
-var validStatusCodeCollection = []string {
+var ValidCustomStatusCodeCollection = []string {
     "default",
     "1xx",
     "2xx",
@@ -34,7 +34,7 @@ const (
     contentType = "text/plain; charset=utf-8"
 )
 
-func parseDefaultHeaders(h string) string {
+func ParseDefaultHeaders(h string) string {
     switch h {
     case "Content-Security-Policy":
         return contentSecurityPolicy
@@ -60,11 +60,11 @@ func setDefaultResponseHeaders(c map[string]string) map[string]string {
         defaults[k] = v
     }
 
-    for _, hn := range defaultHeaderNames {
+    for _, hn := range DefaultHeaderNames {
         if _, ok := c[hn]; ok {
             continue
         }
-        hv := parseDefaultHeaders(hn)
+        hv := ParseDefaultHeaders(hn)
         if hv != "" {
             defaults[hn] = hv
         }
@@ -128,7 +128,7 @@ func isValidList(in interface{}) bool {
 
 // checking for status codes outside the boundary
 func isValidStatusCode(sc string) bool {
-    for _, v := range validStatusCodeCollection {
+    for _, v := range ValidCustomStatusCodeCollection {
         if sc == v {
             return true
         }

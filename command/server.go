@@ -1341,9 +1341,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	// Sanitizing listener config from invalid custom headers
-	core.SanitizedCustomResponseHeader(config)
-
 	status, lns, clusterAddrs, errMsg := c.InitListeners(config, disableClustering, &infoKeys, &info)
 
 	if status != 0 {
@@ -1543,8 +1540,9 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			core.SetConfig(config)
-			// Sanitizing listener config from invalid patterns
-			core.SanitizedCustomResponseHeader(config)
+			if err = core.ReloadCustomListenerHeader(); err != nil {
+				c.UI.Error(err.Error())
+			}
 
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
@@ -2636,7 +2634,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 		})
 
 		if len(ln.Config.XForwardedForAuthorizedAddrs) > 0 {
-			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config)
+			handler = vaulthttp.WrapForwardedForHandler(handler, ln.Config, core.SetCustomResponseHeaders)
 		}
 
 		// server defaults

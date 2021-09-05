@@ -33,15 +33,9 @@ var (
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Getting custom headers from listener's config
-		la := w.Header().Get("X-Vault-Listener-Add")
-		lc, err := core.GetCustomResponseHeaders(la)
-		if err != nil {
-			core.Logger().Debug("failed to get custom headers from listener config")
-		}
 		ns, err := namespace.FromContext(r.Context())
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err, lc)
+			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -50,7 +44,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		// again, which is not desired.
 		path, status, err := buildLogicalPath(r)
 		if err != nil || status != 0 {
-			respondError(w, status, err, lc)
+			respondError(w, status, err, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -63,7 +57,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		})
 		if err != nil {
 			core.Logger().Error("failed to apply quota", "path", path, "error", err)
-			respondError(w, http.StatusUnprocessableEntity, err, lc)
+			respondError(w, http.StatusUnprocessableEntity, err, core.SetCustomResponseHeaders)
 			return
 		}
 
@@ -75,7 +69,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 
 		if !quotaResp.Allowed {
 			quotaErr := fmt.Errorf("request path %q: %w", path, quotas.ErrRateLimitQuotaExceeded)
-			respondError(w, http.StatusTooManyRequests, quotaErr, lc)
+			respondError(w, http.StatusTooManyRequests, quotaErr, core.SetCustomResponseHeaders)
 
 			if core.Logger().IsTrace() {
 				core.Logger().Trace("request rejected due to rate limit quota violation", "request_path", path)
@@ -84,7 +78,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			if core.RateLimitAuditLoggingEnabled() {
 				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 				if err != nil || status != 0 {
-					respondError(w, status, err, lc)
+					respondError(w, status, err, core.SetCustomResponseHeaders)
 					return
 				}
 
