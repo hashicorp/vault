@@ -11,38 +11,42 @@ export default Route.extend({
     }
     // if KV2 then we pull in specific attrs from the config endpoint saved on the secret-engine record and display them
     // and only set if they haven't already been set
-    if (backend.isV2KV && backend.attrs[backend.attrs.length - 1].name !== 'maxVersions') {
-      let secretEngineRecord = this.store.peekRecord('secret-engine', backend.id);
-      // create objects like you would normally pull from the model
-      let casRequired = {
-        name: 'casRequired',
-        options: {
-          label: 'Check-and-Set required',
-        },
-      };
-      let deleteVersionAfter = {
-        name: 'deleteVersionAfter',
-        options: {
-          label: 'Delete version after',
-        },
-      };
-      let maxVersions = {
-        name: 'maxVersions',
-        options: {
-          label: 'Maximum versions',
-        },
-      };
-
-      backend.attrs.pushObject(casRequired);
-      backend.attrs.pushObject(deleteVersionAfter);
-      backend.attrs.pushObject(maxVersions);
-
-      backend.set('casRequired', secretEngineRecord.casRequired ? secretEngineRecord.casRequired : 'False');
-      backend.set(
-        'deleteVersionAfter',
-        secretEngineRecord.deleteVersionAfter ? secretEngineRecord.deleteVersionAfter : 'Never delete'
-      );
-      backend.set('maxVersions', secretEngineRecord.maxVersions ? secretEngineRecord.maxVersions : 'Not set');
+    if (backend.isV2KV) {
+      console.log(backend.id, 'backend.id');
+      let secretEngineRecord = this.store.queryRecord('secret-engine', backend.id);
+      // create objects like you would normally pull from the model only if they don't already exist on the model
+      if (backend.attrs[backend.attrs.length - 1].name !== 'maxVersions') {
+        let casRequired = {
+          name: 'casRequired',
+          options: {
+            label: 'Check-and-Set required',
+          },
+        };
+        let deleteVersionAfter = {
+          name: 'deleteVersionAfter',
+          options: {
+            label: 'Delete version after',
+          },
+        };
+        let maxVersions = {
+          name: 'maxVersions',
+          options: {
+            label: 'Maximum versions',
+          },
+        };
+        backend.attrs.pushObject(casRequired);
+        backend.attrs.pushObject(deleteVersionAfter);
+        backend.attrs.pushObject(maxVersions);
+        backend.set('casRequired', secretEngineRecord.casRequired ? secretEngineRecord.casRequired : 'False');
+        backend.set(
+          'deleteVersionAfter',
+          secretEngineRecord.deleteVersionAfter ? secretEngineRecord.deleteVersionAfter : 'Never delete'
+        );
+        backend.set(
+          'maxVersions',
+          secretEngineRecord.maxVersions ? secretEngineRecord.maxVersions : 'Not set'
+        );
+      }
     }
     return backend;
   },

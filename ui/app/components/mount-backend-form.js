@@ -94,6 +94,12 @@ export default Component.extend({
     const { type, path } = mountModel;
     // because user might not have access to config, do a capabilities check with the path name here
     let capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
+    if (!capabilities.get('canUpdate')) {
+      // if there is no sys/mount issue then error is config endpoint.
+      this.flashMessages.warning(
+        'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+      );
+    }
     try {
       yield mountModel.save();
     } catch (err) {
@@ -105,15 +111,8 @@ export default Component.extend({
         );
         return;
       }
-      if (!capabilities.get('canUpdate')) {
-        // if there is no sys/mount issue then error is config endpoint.
-        this.flashMessages.warning(
-          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-        );
-      } else {
-        this.set('errorMessage', 'You are attempting to set a path name that already exist.');
-        return;
-      }
+      this.set('errorMessage', 'You are attempting to set a path name that already exist.');
+      return;
     }
 
     let mountType = this.mountType;

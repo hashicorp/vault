@@ -53,7 +53,7 @@ export default ApplicationAdapter.extend({
             throw new Error('configIssue');
           });
         })
-        .finally(() => {
+        .then(() => {
           return {
             data: assign({}, data, { path: path + '/', id: path }),
           };
@@ -61,8 +61,10 @@ export default ApplicationAdapter.extend({
         .catch(e => {
           // if not mount error and already returned then you need to assign the id
           if (e.message === 'configIssue') {
-            // but still proceed with mount sys call and do not throw mountIssue error
-            return;
+            // still proceed with mount sys call and do not throw mountIssue error. The flash message warning is handled before saving
+            return {
+              data: assign({}, data, { path: path + '/', id: path }),
+            };
           }
           // if they do not hit a config error then it's a sys/mount error and they should not proceed.
           if (e.httpStatus === 400) {
