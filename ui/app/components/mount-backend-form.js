@@ -108,11 +108,24 @@ export default Component.extend({
 
   actions: {
     onKeyUp(name, value) {
-      this.mountModel.set('path', value);
-      this.mountModel.validations.attrs.path.isValid
-        ? set(this.validationMessages, 'path', '')
-        : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
-
+      // validate path
+      if (name === 'path') {
+        this.mountModel.set('path', value);
+        this.mountModel.validations.attrs.path.isValid
+          ? set(this.validationMessages, 'path', '')
+          : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
+      }
+      // check maxVersions is a number
+      if (name === 'maxVersions') {
+        this.mountModel.set('maxVersions', value);
+        this.mountModel.validations.attrs.maxVersions.isValid
+          ? set(this.validationMessages, 'maxVersions', '')
+          : set(
+              this.validationMessages,
+              'maxVersions',
+              this.mountModel.validations.attrs.maxVersions.message
+            );
+      }
       this.mountModel.validate().then(({ validations }) => {
         this.set('isFormInvalid', !validations.isValid);
       });

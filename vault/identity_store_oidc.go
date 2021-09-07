@@ -313,7 +313,7 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 		},
 	}
 
-	if i.core.redirectAddr == "" && c.Issuer == "" {
+	if i.redirectAddr == "" && c.Issuer == "" {
 		resp.AddWarning(`Both "issuer" and Vault's "api_addr" are empty. ` +
 			`The issuer claim in generated tokens will not be network reachable.`)
 	}
@@ -416,7 +416,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer = c.Issuer
 	if c.effectiveIssuer == "" {
-		c.effectiveIssuer = i.core.redirectAddr
+		c.effectiveIssuer = i.redirectAddr
 	}
 
 	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
@@ -1667,10 +1667,10 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
 
-		for _, ns := range i.listNamespaces() {
+		for _, ns := range i.namespacer.ListNamespaces() {
 			nsPath := ns.Path
 
-			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
+			s := i.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
 			if s == nil {
 				continue
