@@ -47,6 +47,8 @@ export default Component.extend({
   validationMessages: null,
   isFormInvalid: false,
 
+  mountIssue: false,
+
   init() {
     this._super(...arguments);
     const type = this.mountType;
@@ -91,23 +93,32 @@ export default Component.extend({
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
     // because user might not have access to config, do a capabilities check with the path name here
-    console.log('before');
     let capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
-    console.log('this was called');
     try {
       yield mountModel.save();
     } catch (err) {
       if (!capabilities.get('canUpdate')) {
-        // policy must have update in order to set config endpoint.
-        this.flashMessages.warning(
-          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-        );
+        // first check there wasn't a mount issue
+        if (err.message === 'mountIssue') {
+          this.mountIssue = true;
+        } else {
+          // if there is no sys/mount issue then error is config endpoint.
+          this.flashMessages.warning(
+            'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+          );
+        }
       } else {
         // err will display via model state
         return;
       }
     }
-
+    if (this.mountIssue) {
+      this.set('isFormInvalid', this.mountIssue);
+      this.flashMessages.danger(
+        'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+      );
+      return;
+    }
     let mountType = this.mountType;
     mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
     this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);

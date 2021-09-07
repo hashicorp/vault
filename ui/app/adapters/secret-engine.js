@@ -29,7 +29,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.internalURL(query.path), 'GET');
   },
 
-  createRecord(store, type, snapshot) {
+  async createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
@@ -39,28 +39,28 @@ export default ApplicationAdapter.extend({
       let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
       let configData;
       [configData, data] = splitObjects;
-      // first create the engine
-      console.log(data.id, 'data.id');
+
       if (!data.id) {
         data.id = path;
       }
-      return this.ajax(this.url(path), 'POST', { data })
+      // first create the engine
+      await this.ajax(this.url(path), 'POST', { data })
         .then(() => {
-          // second modify config on engine
-          return this.ajax(this.urlForConfig(path), 'POST', { data: configData });
-        })
-        .catch(e => {
-          this.store.findRecord('secret-engine', null).then(record => {
-            this.store.unloadRecord(record);
+          // second create the config request
+          this.ajax(this.urlForConfig(path), 'POST', { data: configData }).catch(() => {
+            // error here means you do not have update capabilities to config endpoint. If that's the case we show a flash message in the component and continue with the transition.
+            // the error is handled by mount-backend-form component because the save method returns an error and we filter through the error to determine if we should proceed or not.
           });
-          console.log(e, 'error');
         })
-        .finally(() => {
-          // ember data doesn't like 204s if it's not a DELETE
-          console.log(data.id, 'data.id');
+        .then(() => {
           return {
             data: assign({}, data, { path: path + '/', id: path }),
           };
+        })
+        .catch(() => {
+          // if error here it's because they don't have access to mount engine and should not proceed. Return them out of function.
+          // if not mount error and already returned then you need to assign the id
+          throw new Error('mountIssue');
         });
     } else {
       return this.ajax(this.url(path), 'POST', { data }).then(() => {
