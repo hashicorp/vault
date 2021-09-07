@@ -48,6 +48,18 @@ type provider struct {
 	effectiveIssuer string
 }
 
+type providerDiscovery struct {
+	AuthorizationEndpoint string   `json:"authorization_endpoint"`
+	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
+	Issuer                string   `json:"issuer"`
+	Keys                  string   `json:"jwks_uri"`
+	ResponseTypes         []string `json:"response_types_supported"`
+	Scopes                []string `json:"scopes_supported"`
+	Subjects              []string `json:"subject_types_supported"`
+	TokenEndpoint         string   `json:"token_endpoint"`
+	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+}
+
 const (
 	oidcProviderPrefix = "oidc_provider/"
 	assignmentPath     = oidcProviderPrefix + "assignment/"
@@ -208,7 +220,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
-					Description: "Name of the assignment",
+					Description: "Name of the provider",
 				},
 				"issuer": {
 					Type:        framework.TypeString,
@@ -251,7 +263,64 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    "List OIDC providers",
 			HelpDescription: "List all configured OIDC providers in the identity backend.",
 		},
+		{
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/openid-configuration",
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the provider",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: i.pathOIDCProviderDiscovery,
+			},
+			HelpSynopsis:    "Query OIDC configurations",
+			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
+		},
 	}
+}
+
+func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	p, err := i.getOIDCProvider(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, nil
+	}
+
+	// the "openid" scope is reserved and is included for every provider
+	scopes := append(p.Scopes, "openid")
+
+	disc := providerDiscovery{
+		AuthorizationEndpoint: strings.Replace(p.effectiveIssuer, "/v1/", "/ui/vault/", 1) + "/authorize",
+		IDTokenAlgs:           supportedAlgs,
+		Issuer:                p.effectiveIssuer,
+		Keys:                  p.effectiveIssuer + "/.well-known/keys",
+		ResponseTypes:         []string{"code"},
+		Scopes:                scopes,
+		Subjects:              []string{"public"},
+		TokenEndpoint:         p.effectiveIssuer + "/token",
+		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
+	}
+
+	data, err := json.Marshal(disc)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:      200,
+			logical.HTTPRawBody:         data,
+			logical.HTTPContentType:     "application/json",
+			logical.HTTPRawCacheControl: "max-age=3600",
+		},
+	}
+
+	return resp, nil
 }
 
 // clientsReferencingTargetAssignmentName returns a map of client names to
