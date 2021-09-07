@@ -29,7 +29,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.internalURL(query.path), 'GET');
   },
 
-  async createRecord(store, type, snapshot) {
+  createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
@@ -44,22 +44,30 @@ export default ApplicationAdapter.extend({
         data.id = path;
       }
       // first create the engine
-      await this.ajax(this.url(path), 'POST', { data })
+      return this.ajax(this.url(path), 'POST', { data })
         .then(() => {
           // second create the config request
-          this.ajax(this.urlForConfig(path), 'POST', { data: configData }).catch(() => {
+          return this.ajax(this.urlForConfig(path), 'POST', { data: configData }).catch(() => {
             // error here means you do not have update capabilities to config endpoint. If that's the case we show a flash message in the component and continue with the transition.
             // the error is handled by mount-backend-form component because the save method returns an error and we filter through the error to determine if we should proceed or not.
+            throw new Error('configIssue');
           });
         })
-        .then(() => {
+        .finally(() => {
           return {
             data: assign({}, data, { path: path + '/', id: path }),
           };
         })
-        .catch(() => {
-          // if error here it's because they don't have access to mount engine and should not proceed. Return them out of function.
+        .catch(e => {
           // if not mount error and already returned then you need to assign the id
+          if (e.message === 'configIssue') {
+            // but still proceed with mount sys call and do not throw mountIssue error
+            return;
+          }
+          // if they do not hit a config error then it's a sys/mount error and they should not proceed.
+          if (e.httpStatus === 400) {
+            throw new Error('samePath');
+          }
           throw new Error('mountIssue');
         });
     } else {

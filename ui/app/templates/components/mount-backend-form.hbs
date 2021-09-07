@@ -29,7 +29,7 @@
       @mode="enable"
       @noun={{if (eq mountType "auth") "Auth Method" "Secret Engine"}}
      />
-    <MessageError @model={{model}} />
+    <MessageError @model={{model}} @errorMessage={{this.errorMessage}} />
     {{#if showEnable}}
       <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="default" @validationMessages={{validationMessages}} @onKeyUp={{action "onKeyUp"}} />
       <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />

@@ -97,28 +97,25 @@ export default Component.extend({
     try {
       yield mountModel.save();
     } catch (err) {
+      if (err.message === 'mountIssue') {
+        this.mountIssue = true;
+        this.set('isFormInvalid', this.mountIssue);
+        this.flashMessages.danger(
+          'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+        );
+        return;
+      }
       if (!capabilities.get('canUpdate')) {
-        // first check there wasn't a mount issue
-        if (err.message === 'mountIssue') {
-          this.mountIssue = true;
-        } else {
-          // if there is no sys/mount issue then error is config endpoint.
-          this.flashMessages.warning(
-            'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
-          );
-        }
+        // if there is no sys/mount issue then error is config endpoint.
+        this.flashMessages.warning(
+          'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+        );
       } else {
-        // err will display via model state
+        this.set('errorMessage', 'You are attempting to set a path name that already exist.');
         return;
       }
     }
-    if (this.mountIssue) {
-      this.set('isFormInvalid', this.mountIssue);
-      this.flashMessages.danger(
-        'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
-      );
-      return;
-    }
+
     let mountType = this.mountType;
     mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
     this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);

@@ -112,6 +112,5 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await configPage.visit({ backend: backend });
     await settled();
     assert.dom('[data-test-row-value="Maximum versions"]').hasText('Not set');
-    await this.pauseTest();
   });
 });
