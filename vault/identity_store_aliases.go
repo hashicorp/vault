@@ -3,9 +3,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"strings"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -14,6 +11,8 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"reflect"
+	"strings"
 )
 
 const maxCustomMetadataKeys = 64
