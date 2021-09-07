@@ -163,10 +163,13 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			// If they provide an ID it must be an update. Find the alias, perform
 			// due diligence, call the update function.
 			if id != "" {
+				q.Q(" before get alias by id ")
 				alias, err := i.MemDBAliasByID(id, true, false)
 				if err != nil {
 					return nil, err
 				}
+				q.Q("get alias by id ")
+				q.Q(alias)
 				if alias == nil {
 					return logical.ErrorResponse("invalid alias ID provided"), nil
 				}
@@ -181,7 +184,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 						// Nothing to do, so be idempotent
 						return nil, nil
 					}
-
+					q.Q("before name 1")
 					name = alias.Name
 					mountAccessor = alias.MountAccessor
 					customMetadata = alias.CustomMetadata
@@ -189,7 +192,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				case mountAccessor == "":
 					// No change to mount accessor
 					mountAccessor = alias.MountAccessor
-
+					q.Q("before name ")
 				case name == "":
 					// No change to mount name
 					name = alias.Name
@@ -201,7 +204,8 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				default:
 					// mountAccessor,name and customMetadata  provided
 				}
-
+				q.Q("here 1")
+				q.Q(name)
 				return i.handleAliasUpdate(ctx, req, canonicalID, name, mountAccessor, alias, customMetadata)
 			}
 		}
