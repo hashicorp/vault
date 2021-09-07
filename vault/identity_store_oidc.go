@@ -1204,6 +1204,7 @@ func (i *IdentityStore) getKeysCacheControlHeader() (string, error) {
 		now := time.Now()
 		expireAt := nextRun.(time.Time)
 		if expireAt.After(now) {
+			i.Logger().Debug("use nextRun value for Cache Control header", "nextRun", nextRun)
 			expireInSeconds := expireAt.Sub(time.Now()).Seconds()
 			return fmt.Sprintf("max-age=%.0f", expireInSeconds), nil
 		}
@@ -1636,21 +1637,16 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 	return nextExpiration, nil
 }
 
+// oidcKeyRotation will rotate any keys that are due to be rotated.
+//
+// It will return the time of the soonest rotation and the minimum
+// verificationTTL or minimum rotationPeriod out of all the current keys.
 func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) (time.Time, time.Duration, error) {
 	// soonestRotation will be the soonest rotation time of all keys. Initialize
 	// here to a relatively distant time.
 	now := time.Now()
 	soonestRotation := now.Add(24 * time.Hour)
 
-	// the OIDC JWKS endpoint returns a Cache-Control HTTP header time between
-	// 0 and the minimum verificationTTL or minimum rotationPeriod out of all
-	// keys, whichever value is lower.
-	//
-	// This smooths calls from services validating JWTs to Vault, while
-	// ensuring that operators can assert that servers honoring the
-	// Cache-Control header will always have a superset of all valid keys, and
-	// not trust any keys longer than a jwksCacheControlMaxAge duration after a
-	// key is rotated out of signing use
 	jwksClientCacheDuration := time.Duration(math.MaxInt64)
 
 	i.oidcLock.Lock()
@@ -1710,6 +1706,7 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
+	i.Logger().Debug("begin oidcPeriodicFunc")
 	var nextRun time.Time
 	now := time.Now()
 
@@ -1769,10 +1766,21 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 				minJwksClientCacheDuration = jwksClientCacheDuration
 			}
 		}
+
 		if err := i.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
 			i.Logger().Error("error setting oidc cache", "err", err)
 		}
+
 		if minJwksClientCacheDuration < math.MaxInt64 {
+			// the OIDC JWKS endpoint returns a Cache-Control HTTP header time between
+			// 0 and the minimum verificationTTL or minimum rotationPeriod out of all
+			// keys, whichever value is lower.
+			//
+			// This smooths calls from services validating JWTs to Vault, while
+			// ensuring that operators can assert that servers honoring the
+			// Cache-Control header will always have a superset of all valid keys, and
+			// not trust any keys longer than a jwksCacheControlMaxAge duration after a
+			// key is rotated out of signing use
 			if err := i.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", minJwksClientCacheDuration); err != nil {
 				i.Logger().Error("error setting jwksCacheControlMaxAge in oidc cache", "err", err)
 			}
