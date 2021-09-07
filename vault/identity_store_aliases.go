@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"q"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -17,8 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-//TODO : ask correct place to add these consts
 
 const maxCustomMetadataKeys = 64
 const maxCustomMetadataKeyLength = 128
@@ -56,7 +52,6 @@ This field is deprecated, use canonical_id.`,
 					Type:        framework.TypeString,
 					Description: "Name of the alias; unused for a modify",
 				},
-				//TODO : add cutom metadata here
 				"custom_metadata": {
 					Type:        framework.TypeKVPairs,
 					Description: "User-provided key-value pairs",
@@ -94,7 +89,6 @@ This field is deprecated, use canonical_id.`,
 					Type:        framework.TypeString,
 					Description: "(Unused)",
 				},
-				//TODO : add cutom metadata here
 				"custom_metadata": {
 					Type:        framework.TypeKVPairs,
 					Description: "User-provided key-value pairs",
@@ -125,7 +119,7 @@ This field is deprecated, use canonical_id.`,
 func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		var err error
-		q.Q("Create update alias function")
+
 		ns, err := namespace.FromContext(ctx)
 		if err != nil {
 			return nil, err
@@ -181,7 +175,6 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				switch {
 				case mountAccessor == "" && name == "" && customMetadata == nil:
 					// Just a canonical ID update, maybe
-					//TODO: need to also check for custom metadata befor returning
 					if canonicalID == "" {
 						// Nothing to do, so be idempotent
 						return nil, nil
@@ -244,8 +237,6 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 }
 
 func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, customMetadata map[string]string) (*logical.Response, error) {
-	q.Q("Alias Creation ")
-
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -309,7 +300,6 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 }
 
 func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
-	q.Q("Alias Update function")
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
 		(canonicalID == alias.CanonicalID || canonicalID == "") && (reflect.DeepEqual(customMetadata, alias.CustomMetadata)) {
@@ -504,7 +494,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["canonical_id"] = alias.CanonicalID
 	respData["mount_accessor"] = alias.MountAccessor
 	respData["metadata"] = alias.Metadata
-	respData["customMetadata"] = alias.CustomMetadata
+	respData["custom_metadata"] = alias.CustomMetadata
 	respData["name"] = alias.Name
 	respData["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 	respData["namespace_id"] = alias.NamespaceID
