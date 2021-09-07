@@ -335,13 +335,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			w.Header().Set("X-Vault-Hostname", hostname)
 		}
 
-		// Setting listener address so that we could get the config from core
+		// Setting the listener address as a header so that we could set customized
+		// headers configured in the corresponding listener stanza
 		var la string
 		if props.ListenerConfig != nil {
 			la = props.ListenerConfig.Address
 		}
-		// Setting a header so that we could set customized headers
-		// configured in the corresponding listener stanza
 		w.Header().Set("X-Vault-Listener-Add", la)
 
 		switch {

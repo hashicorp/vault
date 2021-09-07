@@ -102,7 +102,7 @@ type Listener struct {
 
 	// Custom Http response headers
 	CustomResponseHeaders 	 map[string]map[string]string `hcl:"-"`
-	CustomResponseHeadersRaw interface{}   				  `hcl:"custom_response_headers,alias:custom_response_headers"`
+	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers,alias:custom_response_headers"`
 
 }
 

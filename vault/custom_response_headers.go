@@ -11,11 +11,7 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
-// DefaultCustomResponseStatus is used to set default headers early before having a status code,
-// for example, for /ui headers
-const DefaultCustomResponseStatus = 1
-
-type ListenersCustomHeaderList struct {
+type ListenersCustomResponseHeadersList struct {
 	logger log.Logger
 	CustomHeadersList []*ListenerCustomHeaders
 }
@@ -30,13 +26,13 @@ type CustomHeader struct {
 	Value string
 }
 
-func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHeaders http.Header) *ListenersCustomHeaderList {
+func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHeaders http.Header) *ListenersCustomResponseHeadersList {
 
 	if ln == nil {
 		return nil
 	}
 
-	ll := &ListenersCustomHeaderList{
+	ll := &ListenersCustomResponseHeadersList{
 		logger: logger,
 	}
 
@@ -48,14 +44,14 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 		for sc, hv := range l.CustomResponseHeaders {
 			var chl []*CustomHeader
 			for h, v := range hv {
-
+				// Sanitizing custom headers
 				// X-Vault- prefix is reserved for Vault internal processes
 				if strings.HasPrefix(h, "X-Vault-") {
 					logger.Error("Custom headers starting with X-Vault are not valid", "header", h)
 					continue
 				}
 
-				// Checking for UI headers, if any common header exist, HCL headers take precedence
+				// Checking for UI headers, if any common header exists, we just log an error
 				if uiHeaders != nil {
 					exist := uiHeaders.Get(h)
 					if exist != "" {
@@ -78,7 +74,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 	return ll
 }
 
-func (c *ListenersCustomHeaderList) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
+func (c *ListenersCustomResponseHeadersList) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
 	if w == nil {
 		c.logger.Error("No ResponseWriter provided")
 	}
@@ -97,7 +93,7 @@ func (c *ListenersCustomHeaderList) SetCustomResponseHeaders(w http.ResponseWrit
 
 	lch := c.getListenerMap(la)
     if lch == nil {
-    	c.logger.Warn("no listener config found")
+        c.logger.Warn("no listener config found", "address", la)
     	return
 	}
 
@@ -109,18 +105,13 @@ func (c *ListenersCustomHeaderList) SetCustomResponseHeaders(w http.ResponseWrit
 	}
 
 	// Checking the validity of the status code
-	if status >= 600 || (status < 100 && status != DefaultCustomResponseStatus) {
+	if status >= 600 || status < 100 {
 		c.logger.Error("invalid status code")
 		return
 	}
 
 	// Setting the default headers first
 	setter(lch["default"])
-
-	// for DefaultCustomResponseStatus, we only set the default headers
-	if status == DefaultCustomResponseStatus {
-		return
-	}
 
 	// setting the Xyy pattern first
 	d := fmt.Sprintf("%vxx", status / 100)
@@ -135,7 +126,7 @@ func (c *ListenersCustomHeaderList) SetCustomResponseHeaders(w http.ResponseWrit
 	return
 }
 
-func (c *ListenersCustomHeaderList) getListenerMap(address string) map[string][]*CustomHeader {
+func (c *ListenersCustomResponseHeadersList) getListenerMap(address string) map[string][]*CustomHeader {
 	if c.CustomHeadersList == nil {
 		return nil
 	}
@@ -147,54 +138,53 @@ func (c *ListenersCustomHeaderList) getListenerMap(address string) map[string][]
 	return nil
 }
 
-func (c *ListenersCustomHeaderList) findCustomHeaderMatchStatusCode(hm map[string][]*CustomHeader, sc int) ([]*CustomHeader, error) {
+func (c *ListenersCustomResponseHeadersList) findCustomHeaderMatchStatusCode(hm map[string][]*CustomHeader, sc int, hn string) string {
 
-	if sc == DefaultCustomResponseStatus {
-		return hm["default"], nil
+	getHeader := func(ch []*CustomHeader) string {
+		for _, h := range ch {
+			if h.Name == hn {
+				return h.Value
+			}
+		}
+		return ""
 	}
 
-	if h, ok := hm[strconv.Itoa(sc)]; ok {
-		return h, nil
+	// starting with the most specific status code
+	if ch, ok := hm[strconv.Itoa(sc)]; ok {
+		h := getHeader(ch)
+		if h != "" {
+			return h
+		}
 	}
 
-	d := fmt.Sprintf("%vxx", sc / 100)
-	for _, s := range configutil.ValidCustomStatusCodeCollection {
-		if s == d {
-			if h, ok := hm[s]; ok {
-				return h, nil
+	s := fmt.Sprintf("%vxx", sc/100)
+	if configutil.IsValidStatusCodeCollection(s) {
+		if ch, ok := hm[s]; ok {
+			h := getHeader(ch)
+			if h != "" {
+				return h
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("failed to find a match for the given status code:%v", sc)
+	// At this point, we could not find a match for the given status code in the config file
+	// so, we just return the "default" ones
+	h := getHeader(hm["default"])
+	if h != ""{
+		return h
+	}
+
+	return ""
 }
 
-func (c *ListenersCustomHeaderList) FetchCustomResponseHeaderValue(header string, sc int, la string) ([]string, error) {
+func (c *ListenersCustomResponseHeadersList) FetchCustomResponseHeaderValue(header string, sc int, la string) ([]string, error) {
 
 	if header == "" {
 		return nil, fmt.Errorf("invalid target header")
 	}
 
-	getHeader := func(hm map[string][]*CustomHeader) (string, error){
-		ch, err := c.findCustomHeaderMatchStatusCode(hm, sc)
-		if err != nil {
-			return "", err
-		}
-
-		if ch == nil {
-			return "", nil
-		}
-
-		hn := textproto.CanonicalMIMEHeaderKey(header)
-		for _, h := range ch {
-			if h.Name == hn {
-				return h.Value, nil
-			}
-		}
-
-		return "", nil
-	}
-
+	// either looking for a specific listener, or if listener address isn't given,
+	// checking for all available listeners
 	var lch []*ListenerCustomHeaders
 	if la == "" {
 		lch = c.CustomHeadersList
@@ -211,9 +201,10 @@ func (c *ListenersCustomHeaderList) FetchCustomResponseHeaderValue(header string
 
 	var headers []string
 	var err error
+	hn := textproto.CanonicalMIMEHeaderKey(header)
 	for _, l := range lch {
-		h, err := getHeader(l.StatusCodeHeaderMap)
-		if err != nil || h == "" {
+		h := c.findCustomHeaderMatchStatusCode(l.StatusCodeHeaderMap, sc, hn)
+		if h == "" {
 			continue
 		}
 		headers = append(headers, h)
@@ -222,16 +213,15 @@ func (c *ListenersCustomHeaderList) FetchCustomResponseHeaderValue(header string
 	return headers, err
 }
 
-func(c *ListenersCustomHeaderList) ExistHeader(th string, sl []int, la string) bool {
-	if len(sl) == 0 {
+func(c *ListenersCustomResponseHeadersList) ExistHeader(th string, sc int, la string) bool {
+	if !configutil.IsValidStatusCode(strconv.Itoa(sc)) {
+		c.logger.Error("failed to check if a header exist in config file due to invalid status code")
 		return false
 	}
 
-	for _, s := range sl {
-		chv, _ := c.FetchCustomResponseHeaderValue(th, s, la)
-		if chv != nil {
-			return true
-		}
+	chv, _ := c.FetchCustomResponseHeaderValue(th, sc, la)
+	if chv != nil {
+		return true
 	}
 
 	return false

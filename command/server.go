@@ -1540,7 +1540,10 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			core.SetConfig(config)
-			if err = core.ReloadCustomListenerHeader(); err != nil {
+
+			// reloading custom response headers to make sure we have
+			// the most up to date headers after reloading the config file
+			if err = core.ReloadCustomResponseHeaders(); err != nil {
 				c.UI.Error(err.Error())
 			}
 

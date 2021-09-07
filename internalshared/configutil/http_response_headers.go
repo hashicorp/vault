@@ -60,6 +60,8 @@ func setDefaultResponseHeaders(c map[string]string) map[string]string {
         defaults[k] = v
     }
 
+    // setting all default headers that are not included in the config
+    // file under the "default" category
     for _, hn := range DefaultHeaderNames {
         if _, ok := c[hn]; ok {
             continue
@@ -69,7 +71,7 @@ func setDefaultResponseHeaders(c map[string]string) map[string]string {
             defaults[hn] = hv
         }
     }
-    fmt.Printf("Default headers are %v", defaults)
+
     return defaults
 }
 
@@ -87,7 +89,7 @@ func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, er
                 return nil, fmt.Errorf("invalid response header type")
             }
 
-            if !isValidStatusCode(sc) {
+            if !IsValidStatusCode(sc) {
                 return nil, fmt.Errorf("invalid status code found in the config file: %v", sc)
             }
 
@@ -126,12 +128,20 @@ func isValidList(in interface{}) bool {
     return false
 }
 
-// checking for status codes outside the boundary
-func isValidStatusCode(sc string) bool {
+func IsValidStatusCodeCollection(sc string) bool {
     for _, v := range ValidCustomStatusCodeCollection {
         if sc == v {
             return true
         }
+    }
+
+    return false
+}
+
+// IsValidStatusCode checking for status codes outside the boundary
+func IsValidStatusCode(sc string) bool {
+    if IsValidStatusCodeCollection(sc) {
+        return true
     }
 
     i, err := strconv.Atoi(sc)
@@ -164,7 +174,7 @@ func parseHeaders(in map[string]interface{}) (map[string]string, error) {
 func parseHeaderValues(h interface{}) (string, error) {
     var sl []string
     if !isValidList(h) {
-        return "", fmt.Errorf("failed to parse custom_response_headers3")
+        return "", fmt.Errorf("failed to parse header values")
     }
     vli := h.([]interface{})
     for _, vh := range vli {

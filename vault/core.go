@@ -517,7 +517,7 @@ type Core struct {
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
-	customListenerHeader *ListenersCustomHeaderList
+	customListenerHeader *ListenersCustomResponseHeadersList
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -2660,16 +2660,16 @@ func (c *Core) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
 	c.customListenerHeader.SetCustomResponseHeaders(w, status)
 }
 
-func (c *Core) ExistCustomResponseHeader(header string, statusCodeList []int, la string) bool {
+func (c *Core) ExistCustomResponseHeader(header string, statusCode int, la string) bool {
 	if c.customListenerHeader == nil {
 		c.logger.Debug("custom response headers not configured")
 		return false
 	}
 
-	return c.customListenerHeader.ExistHeader(header, statusCodeList, la)
+	return c.customListenerHeader.ExistHeader(header, statusCode, la)
 }
 
-func (c *Core) ReloadCustomListenerHeader() error {
+func (c *Core) ReloadCustomResponseHeaders() error {
 
 	conf := c.rawConfig.Load()
 	if conf == nil {
