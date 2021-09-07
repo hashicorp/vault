@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"q"
 	"reflect"
 	"strings"
 	"testing"
@@ -38,8 +37,6 @@ func TestIdentityStore_DuplicateAliases(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
 	aliasID := resp.Data["id"].(string)
-
-	q.Q(aliasID)
 
 	// Create another entity without an alias
 	resp, err = c.identityStore.HandleRequest(namespace.RootContext(nil), &logical.Request{

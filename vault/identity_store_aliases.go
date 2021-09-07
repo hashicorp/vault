@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"q"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -147,7 +145,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		}
 
 		//validate customMetadata if provided
-		if customMetadata != nil {
+		if len(customMetadata) != 0 {
 
 			err := validateCustomMetadata(customMetadata)
 			if err != nil {
@@ -163,28 +161,23 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			// If they provide an ID it must be an update. Find the alias, perform
 			// due diligence, call the update function.
 			if id != "" {
-				q.Q(" before get alias by id ")
 				alias, err := i.MemDBAliasByID(id, true, false)
 				if err != nil {
 					return nil, err
 				}
-				q.Q("get alias by id ")
-				q.Q(alias)
 				if alias == nil {
 					return logical.ErrorResponse("invalid alias ID provided"), nil
 				}
 				if alias.NamespaceID != ns.ID {
 					return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
 				}
-
 				switch {
-				case mountAccessor == "" && name == "" && customMetadata == nil:
+				case mountAccessor == "" && name == "" && len(customMetadata) == 0:
 					// Just a canonical ID update, maybe
 					if canonicalID == "" {
 						// Nothing to do, so be idempotent
 						return nil, nil
 					}
-					q.Q("before name 1")
 					name = alias.Name
 					mountAccessor = alias.MountAccessor
 					customMetadata = alias.CustomMetadata
@@ -192,20 +185,16 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				case mountAccessor == "":
 					// No change to mount accessor
 					mountAccessor = alias.MountAccessor
-					q.Q("before name ")
 				case name == "":
 					// No change to mount name
 					name = alias.Name
-
-				case customMetadata == nil:
+				case len(customMetadata) == 0:
 					// No change to custom metadata
 					customMetadata = alias.CustomMetadata
 
 				default:
 					// mountAccessor,name and customMetadata  provided
 				}
-				q.Q("here 1")
-				q.Q(name)
 				return i.handleAliasUpdate(ctx, req, canonicalID, name, mountAccessor, alias, customMetadata)
 			}
 		}
@@ -243,8 +232,6 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 }
 
 func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, customMetadata map[string]string) (*logical.Response, error) {
-
-	q.Q("alias creation")
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -255,8 +242,7 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 		Name:           name,
 		CustomMetadata: customMetadata,
 	}
-	q.Q("alias")
-	q.Q(alias)
+
 	entity := &identity.Entity{}
 
 	// If a canonical ID is provided pull up the entity and make sure we're in
@@ -310,13 +296,6 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 }
 
 func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
-	q.Q("alias update")
-
-	q.Q(req)
-	q.Q(canonicalID)
-	q.Q(name)
-	q.Q(mountAccessor)
-	q.Q(alias)
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
 		(canonicalID == alias.CanonicalID || canonicalID == "") && (reflect.DeepEqual(customMetadata, alias.CustomMetadata)) {
@@ -329,7 +308,6 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	// If we're changing one or the other or both of these, make sure that
 	// there isn't a matching alias already, and make sure it's in the same
 	// namespace.
-	q.Q("1")
 	if name != alias.Name || mountAccessor != alias.MountAccessor || !reflect.DeepEqual(customMetadata, alias.CustomMetadata) {
 		// Check here to see if such an alias already exists, if so bail
 		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
@@ -342,11 +320,9 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		if mountEntry.NamespaceID != alias.NamespaceID {
 			return logical.ErrorResponse("given mount accessor is not in the same namespace as the existing alias"), logical.ErrPermissionDenied
 		}
-		q.Q("2")
 
 		existingAlias, err := i.MemDBAliasByFactors(mountAccessor, name, false, false)
 		if err != nil {
-			q.Q(err.Error())
 			return nil, err
 		}
 
@@ -360,14 +336,12 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		alias.MountAccessor = mountAccessor
 		alias.CustomMetadata = customMetadata
 	}
-	q.Q("3")
 	// Get our current entity, which may be the same as the new one if the
 	// canonical ID hasn't changed
 	currentEntity, err := i.MemDBEntityByAliasID(alias.ID, true)
 	if err != nil {
 		return nil, err
 	}
-	q.Q(currentEntity)
 	if currentEntity == nil {
 		return logical.ErrorResponse("given alias is not associated with an entity"), nil
 	}
