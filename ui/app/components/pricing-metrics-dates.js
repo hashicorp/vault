@@ -18,16 +18,7 @@
 import { set, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import {
-  differenceInSeconds,
-  isValid,
-  subMonths,
-  startOfToday,
-  format,
-  endOfMonth,
-  startOfMonth,
-  isBefore,
-} from 'date-fns';
+import { subMonths, startOfToday, format, endOfMonth, startOfMonth, isBefore } from 'date-fns';
 import layout from '../templates/components/pricing-metrics-dates';
 import { parseDateString } from 'vault/helpers/parse-date-string';
 
@@ -67,35 +58,6 @@ export default Component.extend({
     } catch (e) {
       return null;
     }
-  }),
-
-  // We don't want the warning to show when inputs are being updated before query is made
-  /* eslint-disable-next-line ember/require-computed-property-dependencies */
-  showResultsWarning: computed('resultEnd', 'resultStart', function() {
-    if (!this.queryStart || !this.queryEnd || !this.resultStart || !this.resultEnd) {
-      return false;
-    }
-    const resultStart = new Date(this.resultStart);
-    const resultEnd = new Date(this.resultEnd);
-    let queryStart, queryEnd;
-    try {
-      queryStart = parseDateString(this.queryStart, '-');
-      queryEnd = parseDateString(this.queryEnd, '-');
-    } catch (e) {
-      // Log error for debugging purposes
-      console.debug(e);
-    }
-
-    if (!queryStart || !queryEnd || !isValid(resultStart) || !isValid(resultEnd)) {
-      return false;
-    }
-    if (Math.abs(differenceInSeconds(queryStart, resultStart)) >= 86400) {
-      return true;
-    }
-    if (Math.abs(differenceInSeconds(resultEnd, endOfMonth(queryEnd))) >= 86400) {
-      return true;
-    }
-    return false;
   }),
 
   error: computed('end', 'endDate', 'retentionMonths', 'start', 'startDate', function() {

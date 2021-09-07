@@ -17,7 +17,6 @@ Router.map(function() {
       this.route('license');
       this.route('metrics', function() {
         this.route('index', { path: '/' });
-        this.route('config');
         this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });

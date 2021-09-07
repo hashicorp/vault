@@ -57,7 +57,7 @@ export default class PricingMetricsConfigComponent extends Component {
       this.error = err.message;
       return;
     }
-    this.router.transitionTo('vault.cluster.metrics.config');
+    this.router.transitionTo('vault.cluster.metrics.index');
   }).drop())
   save;
 

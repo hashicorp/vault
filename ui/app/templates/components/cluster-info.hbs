@@ -119,7 +119,7 @@
         {{#if ( and (has-permission 'metrics' routeParams='activity') (not @cluster.dr.isSecondary) this.auth.currentToken)}}
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="vault.cluster.metrics" @invokeAction={{@onLinkClick}}>
+              <LinkTo @route="vault.cluster.metrics" @query={{hash tab="current"}} @invokeAction={{@onLinkClick}}>
                 <div class="level is-mobile">
                   <span class="level-left">Metrics</span>
                   <Chevron class="has-text-grey-light level-right" />
