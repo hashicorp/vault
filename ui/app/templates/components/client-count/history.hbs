@@ -60,17 +60,17 @@
             </div>
             <hr>
             <div class="columns">
-                <div class="column">
-                <StatText @label="Total active Clients" @value={{@model.activity.total.clients}} @size="l" 
-                    @subText="The sum of unique entities and active direct tokens; Vault's primary billing metric."/>
-                </div>
-                <div class="column">
-                <StatText class="column" @label="Unique entities" @value={{@model.activity.total.distinct_entities}} @size="l" 
-                    @subText="Representation of a particular user, client or application that created a token via login."/>
-                </div>
-                <div class="column">
-                <StatText class="column" @label="Active direct tokens" @value={{@model.activity.total.non_entity_tokens}} @size="l" 
-                    @subText="Tokens created via a method that is not associated with an entity."/>
+                <div class="column" data-test-client-count-stats>
+                    <StatText @label="Total active Clients" @value={{@model.activity.total.clients}} @size="l" 
+                        @subText="The sum of unique entities and active direct tokens; Vault's primary billing metric."/>
+                    </div>
+                    <div class="column">
+                    <StatText class="column" @label="Unique entities" @value={{@model.activity.total.distinct_entities}} @size="l" 
+                        @subText="Representation of a particular user, client or application that created a token via login."/>
+                    </div>
+                    <div class="column">
+                    <StatText class="column" @label="Active direct tokens" @value={{@model.activity.total.non_entity_tokens}} @size="l" 
+                        @subText="Tokens created via a method that is not associated with an entity."/>
                 </div>
             </div>
             </div>
