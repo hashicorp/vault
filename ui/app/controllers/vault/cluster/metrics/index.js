@@ -1,8 +1,7 @@
 import Controller from '@ember/controller';
-
-export default Controller.extend({
-  queryParams: ['start', 'end'],
-
-  start: null,
-  end: null,
-});
+export default class MetricsController extends Controller {
+  queryParams = ['tab', 'start', 'end'];
+  tab = null;
+  start = null;
+  end = null;
+}
