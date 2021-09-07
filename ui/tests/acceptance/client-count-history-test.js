@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, findAll } from '@ember/test-helpers';
+import { visit, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import setupMirage from 'ember-cli-mirage/test-support/setup-mirage';
 import { create } from 'ember-cli-page-object';
@@ -19,7 +19,7 @@ const tokenWithPolicy = async function(name, policy) {
   return consoleComponent.lastLogOutput;
 };
 
-module('Acceptance | usage metrics', function(hooks) {
+module('Acceptance | client count history', function(hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -33,39 +33,39 @@ module('Acceptance | usage metrics', function(hooks) {
 
   test('it shows empty state when disabled and no data available', async function(assert) {
     server.create('metrics/config', { enabled: 'disable' });
-    await visit('/vault/metrics');
+    await visit('/vault/metrics?tab=history');
 
-    assert.equal(currentURL(), '/vault/metrics');
+    assert.equal(currentURL(), '/vault/metrics?tab=history');
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
-    assert.dom('[data-test-empty-state-title]').hasText('No data is being received');
+    assert.dom('[data-test-empty-state-title]').hasText('Data tracking is disabled');
   });
 
   test('it shows empty state when enabled and no data available', async function(assert) {
     server.create('metrics/config', { enabled: 'enable' });
-    await visit('/vault/metrics');
+    await visit('/vault/metrics?tab=history');
 
-    assert.equal(currentURL(), '/vault/metrics');
+    assert.equal(currentURL(), '/vault/metrics?tab=history');
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
-    assert.dom('[data-test-empty-state-title]').hasText('No data is being received');
+    assert.dom('[data-test-empty-state-title]').hasText('No monthly history');
   });
 
   test('it shows empty state when data available but not returned', async function(assert) {
     server.create('metrics/config', { queries_available: true });
-    await visit('/vault/metrics');
+    await visit('/vault/metrics?tab=history');
 
-    assert.equal(currentURL(), '/vault/metrics');
+    assert.equal(currentURL(), '/vault/metrics?tab=history');
     assert.dom('[data-test-pricing-metrics-form]').exists('Pricing metrics date form exists');
     assert.dom('[data-test-pricing-result-dates]').doesNotExist('Pricing metric result dates are not shown');
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
-    assert.dom('[data-test-empty-state-title]').hasText('No data found');
+    assert.dom('[data-test-empty-state-title]').hasText('No data received');
   });
 
   test('it shows warning when disabled and data available', async function(assert) {
     server.create('metrics/config', { queries_available: true, enabled: 'disable' });
     server.create('metrics/activity');
-    await visit('/vault/metrics');
+    await visit('/vault/metrics?tab=history');
 
-    assert.equal(currentURL(), '/vault/metrics');
+    assert.equal(currentURL(), '/vault/metrics?tab=history');
     assert.dom('[data-test-pricing-metrics-form]').exists('Pricing metrics date form exists');
     assert.dom('[data-test-tracking-disabled]').exists('Flash message exists');
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
@@ -74,13 +74,13 @@ module('Acceptance | usage metrics', function(hooks) {
   test('it shows data when available from query', async function(assert) {
     server.create('metrics/config', { queries_available: true });
     server.create('metrics/activity');
-    await visit('/vault/metrics');
+    await visit('/vault/metrics?tab=history');
 
-    assert.equal(currentURL(), '/vault/metrics');
+    assert.equal(currentURL(), '/vault/metrics?tab=history');
     assert.dom('[data-test-pricing-metrics-form]').exists('Pricing metrics date form exists');
     assert.dom('[data-test-configuration-tab]').exists('Metrics config tab exists');
     assert.dom('[data-test-tracking-disabled]').doesNotExist('Flash message does not exists');
-    assert.ok(findAll('.selectable-card').length === 3, 'renders the counts');
+    assert.dom('[data-test-client-count-stats]').exists('Client count metrics exists');
   });
 
   test('it shows metrics even if config endpoint not allowed', async function(assert) {
@@ -95,12 +95,12 @@ module('Acceptance | usage metrics', function(hooks) {
     await logout.visit();
     await authPage.login(userToken);
 
-    await visit('/vault/metrics');
+    await visit('/vault/metrics?tab=history');
 
-    assert.equal(currentURL(), '/vault/metrics');
+    assert.equal(currentURL(), '/vault/metrics?tab=history');
     assert.dom('[data-test-pricing-metrics-form]').exists('Pricing metrics date form exists');
     assert.dom('[data-test-configuration-tab]').doesNotExist('Metrics config tab does not exist');
     assert.dom('[data-test-tracking-disabled]').doesNotExist('Flash message does not exists');
-    assert.ok(findAll('.selectable-card').length === 3, 'renders the counts');
+    assert.dom('[data-test-client-count-stats]').exists('Client count metrics exists');
   });
 });
