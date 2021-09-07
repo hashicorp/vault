@@ -3,15 +3,27 @@ package vault
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
+	"q"
+
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+//TODO : ask correct place to add these consts
+
+const maxCustomMetadataKeys = 64
+const maxCustomMetadataKeyLength = 128
+const maxCustomMetadataValueLength = 512
+const customMetadataValidationErrorPrefix = "custom_metadata validation failed"
 
 // aliasPaths returns the API endpoints to operate on aliases.
 // Following are the paths supported:
@@ -43,6 +55,11 @@ This field is deprecated, use canonical_id.`,
 				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the alias; unused for a modify",
+				},
+				//TODO : add cutom metadata here
+				"custom_metadata": {
+					Type:        framework.TypeKVPairs,
+					Description: "User-provided key-value pairs",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -77,6 +94,11 @@ This field is deprecated, use canonical_id.`,
 					Type:        framework.TypeString,
 					Description: "(Unused)",
 				},
+				//TODO : add cutom metadata here
+				"custom_metadata": {
+					Type:        framework.TypeKVPairs,
+					Description: "User-provided key-value pairs",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleAliasCreateUpdate(),
@@ -103,7 +125,7 @@ This field is deprecated, use canonical_id.`,
 func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		var err error
-
+		q.Q("Create update alias function")
 		ns, err := namespace.FromContext(ctx)
 		if err != nil {
 			return nil, err
@@ -118,11 +140,23 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		// Get ID, if any
 		id := d.Get("id").(string)
 
+		// Get custom metadata, if any
+		customMetadata := d.Get("custom_metadata").(map[string]string)
+
 		// Get entity id
 		canonicalID := d.Get("canonical_id").(string)
 		if canonicalID == "" {
 			// For backwards compatibility
 			canonicalID = d.Get("entity_id").(string)
+		}
+
+		//validate customMetadata if provided
+		if customMetadata != nil {
+
+			err := validateCustomMetadata(customMetadata)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		i.lock.Lock()
@@ -145,8 +179,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				}
 
 				switch {
-				case mountAccessor == "" && name == "":
+				case mountAccessor == "" && name == "" && customMetadata == nil:
 					// Just a canonical ID update, maybe
+					//TODO: need to also check for custom metadata befor returning
 					if canonicalID == "" {
 						// Nothing to do, so be idempotent
 						return nil, nil
@@ -154,6 +189,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 
 					name = alias.Name
 					mountAccessor = alias.MountAccessor
+					customMetadata = alias.CustomMetadata
 
 				case mountAccessor == "":
 					// No change to mount accessor
@@ -163,11 +199,15 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 					// No change to mount name
 					name = alias.Name
 
+				case customMetadata == nil:
+					// No change to custom metadata
+					customMetadata = alias.CustomMetadata
+
 				default:
-					// Both provided
+					// mountAccessor,name and customMetadata  provided
 				}
 
-				return i.handleAliasUpdate(ctx, req, canonicalID, name, mountAccessor, alias)
+				return i.handleAliasUpdate(ctx, req, canonicalID, name, mountAccessor, alias, customMetadata)
 			}
 		}
 
@@ -196,23 +236,25 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
 			}
 
-			return i.handleAliasUpdate(ctx, req, alias.CanonicalID, name, mountAccessor, alias)
+			return i.handleAliasUpdate(ctx, req, alias.CanonicalID, name, mountAccessor, alias, customMetadata)
 		}
-
 		// At this point we know it's a new creation request
-		return i.handleAliasCreate(ctx, req, canonicalID, name, mountAccessor)
+		return i.handleAliasCreate(ctx, req, canonicalID, name, mountAccessor, customMetadata)
 	}
 }
 
-func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, customMetadata map[string]string) (*logical.Response, error) {
+	q.Q("Alias Creation ")
+
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	alias := &identity.Alias{
-		MountAccessor: mountAccessor,
-		Name:          name,
+		MountAccessor:  mountAccessor,
+		Name:           name,
+		CustomMetadata: customMetadata,
 	}
 	entity := &identity.Entity{}
 
@@ -266,10 +308,11 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 	}, nil
 }
 
-func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, alias *identity.Alias) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
+	q.Q("Alias Update function")
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
-		(canonicalID == alias.CanonicalID || canonicalID == "") {
+		(canonicalID == alias.CanonicalID || canonicalID == "") && (reflect.DeepEqual(customMetadata, alias.CustomMetadata)) {
 		// Nothing to do; return nil to be idempotent
 		return nil, nil
 	}
@@ -279,7 +322,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	// If we're changing one or the other or both of these, make sure that
 	// there isn't a matching alias already, and make sure it's in the same
 	// namespace.
-	if name != alias.Name || mountAccessor != alias.MountAccessor {
+	if name != alias.Name || mountAccessor != alias.MountAccessor || !reflect.DeepEqual(customMetadata, alias.CustomMetadata) {
 		// Check here to see if such an alias already exists, if so bail
 		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
@@ -296,14 +339,16 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		if err != nil {
 			return nil, err
 		}
-		// Bail unless it's just a case change
-		if existingAlias != nil && !strings.EqualFold(existingAlias.Name, name) {
+
+		// Bail unless it's just a case change or no custom meta data change
+		if existingAlias != nil && !strings.EqualFold(existingAlias.Name, name) && reflect.DeepEqual(customMetadata, alias.CustomMetadata) {
 			return logical.ErrorResponse("alias with combination of mount accessor and name already exists"), nil
 		}
 
 		// Update the values in the alias
 		alias.Name = name
 		alias.MountAccessor = mountAccessor
+		alias.CustomMetadata = customMetadata
 	}
 
 	// Get our current entity, which may be the same as the new one if the
@@ -373,6 +418,56 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	}, nil
 }
 
+//TODO: ask if we can use the same validation code from kv secrets plugin
+func validateCustomMetadata(customMetadata map[string]string) error {
+	var errs *multierror.Error
+
+	if keyCount := len(customMetadata); keyCount > maxCustomMetadataKeys {
+		errs = multierror.Append(errs, fmt.Errorf("%s: payload must contain at most %d keys, provided %d",
+			customMetadataValidationErrorPrefix,
+			maxCustomMetadataKeys,
+			keyCount))
+
+		return errs.ErrorOrNil()
+	}
+
+	// Perform validation on each key and value and return ALL errors
+	for key, value := range customMetadata {
+		if keyLen := len(key); 0 == keyLen || keyLen > maxCustomMetadataKeyLength {
+			errs = multierror.Append(errs, fmt.Errorf("%s: length of key %q is %d but must be 0 < len(key) <= %d",
+				customMetadataValidationErrorPrefix,
+				key,
+				keyLen,
+				maxCustomMetadataKeyLength))
+		}
+
+		if valueLen := len(value); 0 == valueLen || valueLen > maxCustomMetadataValueLength {
+			errs = multierror.Append(errs, fmt.Errorf("%s: length of value for key %q is %d but must be 0 < len(value) <= %d",
+				customMetadataValidationErrorPrefix,
+				key,
+				valueLen,
+				maxCustomMetadataValueLength))
+		}
+
+		if !strutil.Printable(key) {
+			// Include unquoted format (%s) to also include the string without the unprintable
+			//  characters visible to allow for easier debug and key identification
+			errs = multierror.Append(errs, fmt.Errorf("%s: key %q (%s) contains unprintable characters",
+				customMetadataValidationErrorPrefix,
+				key,
+				key))
+		}
+
+		if !strutil.Printable(value) {
+			errs = multierror.Append(errs, fmt.Errorf("%s: value for key %q contains unprintable characters",
+				customMetadataValidationErrorPrefix,
+				key))
+		}
+	}
+
+	return errs.ErrorOrNil()
+}
+
 // pathAliasIDRead returns the properties of an alias for a given
 // alias ID
 func (i *IdentityStore) pathAliasIDRead() framework.OperationFunc {
@@ -409,6 +504,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["canonical_id"] = alias.CanonicalID
 	respData["mount_accessor"] = alias.MountAccessor
 	respData["metadata"] = alias.Metadata
+	respData["customMetadata"] = alias.CustomMetadata
 	respData["name"] = alias.Name
 	respData["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 	respData["namespace_id"] = alias.NamespaceID
