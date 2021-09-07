@@ -51,6 +51,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github v17.0.0+incompatible
@@ -183,7 +184,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
-	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
+	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.27.1
