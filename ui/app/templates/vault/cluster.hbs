@@ -77,10 +77,11 @@
           <div class="{{if (is-active-route 'vault.cluster.metrics') 'is-active'}}">
             {{#link-to
               "vault.cluster.metrics"
+              (query-params tab="history")
               current-when="vault.cluster.metrics"
               data-test-navbar-item='metrics'
             }}
-              Metrics
+              Client count
             {{/link-to}}
           </div>
         </div>
