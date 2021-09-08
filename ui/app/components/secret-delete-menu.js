@@ -20,30 +20,6 @@ export default class SecretDeleteMenu extends Component {
   @maybeQueryRecord(
     'capabilities',
     context => {
-      if (!context.args.model) {
-        return;
-      }
-      let backend = context.args.model.backend;
-      let id = context.args.model.id;
-      let path = context.args.isV2
-        ? `${encodeURIComponent(backend)}/data/${encodeURIComponent(id)}`
-        : `${encodeURIComponent(backend)}/${encodeURIComponent(id)}`;
-      return {
-        id: path,
-      };
-    },
-    'isV2',
-    'model',
-    'model.id',
-    'mode'
-  )
-  updatePath;
-  @alias('updatePath.canDelete') canDelete;
-  @alias('updatePath.canUpdate') canUpdate;
-
-  @maybeQueryRecord(
-    'capabilities',
-    context => {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
@@ -100,6 +76,29 @@ export default class SecretDeleteMenu extends Component {
   v2UpdatePath;
   @alias('v2UpdatePath.canDelete') canDestroyAllVersions;
 
+  @maybeQueryRecord(
+    'capabilities',
+    context => {
+      if (!context.args.model || context.args.mode === 'create') {
+        return;
+      }
+      let backend = context.args.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      let id = context.args.model.id;
+      let path = context.args.isV2
+        ? `${encodeURIComponent(backend)}/data/${encodeURIComponent(id)}`
+        : `${encodeURIComponent(backend)}/${encodeURIComponent(id)}`;
+      return {
+        id: path,
+      };
+    },
+    'isV2',
+    'model',
+    'model.id',
+    'mode'
+  )
+  secretDataPath;
+  @alias('secretDataPath.canDelete') canDeleteSecretData;
+
   get isLatestVersion() {
     let { model } = this.args;
     if (!model) return false;
@@ -113,13 +112,16 @@ export default class SecretDeleteMenu extends Component {
 
   @action
   handleDelete(deleteType) {
-    // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions'
+    // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-all-versions', 'v1'
     if (!deleteType) {
       return;
     }
     if (deleteType === 'destroy-all-versions' || deleteType === 'v1') {
       let { id } = this.args.model;
       this.args.model.destroyRecord().then(() => {
+        if (deleteType === 'v1') {
+          return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+        }
         this.args.navToNearestAncestor.perform(id);
       });
     } else {

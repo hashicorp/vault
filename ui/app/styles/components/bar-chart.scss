@@ -1,0 +1,68 @@
+.bar-chart-wrapper {
+  border: $light-border;
+  border-radius: $radius-large;
+  padding: $spacing-l $spacing-l $spacing-s $spacing-l;
+  height: 100%;
+  width: 100%;
+
+  > div.is-border {
+    border: 0.3px solid $ui-gray-200;
+    width: 94%;
+    margin-left: 3%;
+    margin-bottom: $spacing-xxs;
+  }
+}
+
+.chart-header {
+  margin-left: $spacing-l;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+
+  .header-left {
+    .chart-title {
+      font-size: $size-5;
+      font-weight: $font-weight-bold;
+      line-height: normal;
+    }
+
+    .chart-description {
+      font-size: $size-8;
+      font-weight: $font-weight-normal;
+      color: $ui-gray-700;
+      margin-bottom: $spacing-xs;
+    }
+  }
+
+  .header-right {
+    text-align: center;
+
+    > button {
+      font-size: $size-8;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.bar-chart-container {
+  padding: $spacing-m $spacing-l $spacing-m $spacing-l;
+}
+
+.bar-chart {
+  .tick > text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-8;
+  }
+}
+
+.legend-container {
+  height: $spacing-l;
+  margin-top: $spacing-xs;
+}
+
+.legend {
+  width: 100%;
+  height: 100%;
+}

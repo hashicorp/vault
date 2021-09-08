@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fix issue where on MaskedInput on auth methods if tab it would clear the value.
+```
