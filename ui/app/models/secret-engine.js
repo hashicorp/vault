@@ -80,8 +80,9 @@ export default Model.extend(Validations, {
 
   isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
 
-  formFields: computed('engineType', function() {
+  formFields: computed('engineType', 'options.version', function() {
     let type = this.engineType;
+    let version = this.options?.version;
     let fields = [
       'type',
       'path',
@@ -93,6 +94,9 @@ export default Model.extend(Validations, {
     ];
     if (type === 'kv' || type === 'generic') {
       fields.push('options.{version}');
+    }
+    if (type === 'kv' && version === 2) {
+      fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     return fields;
   }),
