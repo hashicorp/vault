@@ -56,7 +56,7 @@ Vagrantfile
 
 .DS_Store
 .idea
-# .vscode - Don't ignore as there are now customizations
+# .vscode - We intentionally commit .vscode in order to share project-specific settings
 
 dist/*
 
