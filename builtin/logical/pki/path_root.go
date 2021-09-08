@@ -478,21 +478,12 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}, nil
 }
 
-var (
-	oidSignatureECDSAWithSHA256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 2}
-	oidSignatureECDSAWithSHA384 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 3}
-	oidSignatureECDSAWithSHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
-	oidSignatureSHA256WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
-	oidSignatureEd25519         = asn1.ObjectIdentifier{1, 3, 101, 112}
-)
-
-// Adapted from x509.go, may need to be updated!
+// Adapted from x509.go, may need to be updated in the future
 func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAlgo x509.SignatureAlgorithm, err error) {
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
 		pubType = x509.RSA
 		sigAlgo = x509.SHA256WithRSA
-
 	case *ecdsa.PublicKey:
 		pubType = x509.ECDSA
 
@@ -506,7 +497,6 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		default:
 			err = errors.New("x509: unknown elliptic curve")
 		}
-
 	case ed25519.PublicKey:
 		pubType = x509.Ed25519
 		sigAlgo = x509.PureEd25519
