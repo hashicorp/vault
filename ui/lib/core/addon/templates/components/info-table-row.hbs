@@ -11,7 +11,7 @@
       <Icon @size="s" @glyph="minus-plain"/>
     {{/if}}
   </div>
-  <div class="column is-flex" data-test-value-div>
+  <div class="column is-flex" data-test-value-div="{{label}}">
     {{#if (has-block)}}
       {{yield}}
     {{else if valueIsBoolean}}
@@ -21,6 +21,7 @@
           class="icon-true"
           @size="l"
           @glyph="check-circle-outline"
+          data-test-boolean-true
         /> Yes
       {{else}}
         <Icon

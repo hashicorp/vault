@@ -898,6 +898,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -1564,7 +1571,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
 		headers := rawVal.([]string)
-
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
@@ -1869,6 +1875,31 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func expandStringValsWithCommas(configMap map[string]interface{}) error {
+	configParamNameSlice := []string{
+		"audit_non_hmac_request_keys",
+		"audit_non_hmac_response_keys",
+		"passthrough_request_headers",
+		"allowed_response_headers",
+	}
+	for _, paramName := range configParamNameSlice {
+		if raw, ok := configMap[paramName]; ok {
+			switch t := raw.(type) {
+			case string:
+				// To be consistent with auth tune, and in cases where a single comma separated strings
+				// is provided in the curl command, we split the entries by the commas.
+				rawNew := raw.(string)
+				res, err := parseutil.ParseCommaStringSlice(rawNew)
+				if err != nil {
+					return fmt.Errorf("invalid input parameter %v of type %v", paramName, t)
+				}
+				configMap[paramName] = res
+			}
+		}
+	}
+	return nil
+}
+
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1895,6 +1926,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {

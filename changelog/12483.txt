@@ -1,0 +1,3 @@
+```release-note:improvement
+plugin: update the couchbase gocb version in the couchbase plugin
+```
