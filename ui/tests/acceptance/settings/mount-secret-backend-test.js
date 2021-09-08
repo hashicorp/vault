@@ -1,4 +1,4 @@
-import { currentRouteName, settled, find } from '@ember/test-helpers';
+import { currentRouteName, settled, find, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -71,7 +71,41 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
-  test('version 2 with no update to config endpoint still allows mount of secret engine meep', async function(assert) {
+  test('it throws error if setting duplicate path name meep', async function(assert) {
+    const path = `kv-duplicate`;
+
+    await consoleComponent.runCommands([
+      // delete any kv-duplicate previously written here so that tests can be re-run
+      `delete sys/mounts/${path}`,
+    ]);
+
+    await page.visit();
+
+    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+    await page.selectType('kv');
+    await page
+      .next()
+      .path(path)
+      .submit();
+    await page.secretList();
+    await settled();
+    await page.enableEngine();
+    await page.selectType('kv');
+    await page
+      .next()
+      .path(path)
+      .submit();
+    assert.dom('.alert-banner-message-body').hasText('This mount path already exist.');
+    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+
+    await page.secretList();
+    await settled();
+    assert
+      .dom(`[data-test-secret-backend-row=${path}]`)
+      .exists({ count: 1 }, 'renders only one instance of the engine');
+  });
+
+  test('version 2 with no update to config endpoint still allows mount of secret engine', async function(assert) {
     let backend = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${backend}/*" {
@@ -112,5 +146,50 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await configPage.visit({ backend: backend });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
+  });
+
+  test('version 2 with no create to sys/mounts endpoint does not allows mounting of secret engine', async function(assert) {
+    let backend = `kv-noMount-${new Date().getTime()}`;
+    const V2_POLICY = `
+      path "${backend}/*" {
+        capabilities = ["update","list","create","read","sudo","delete"]
+      }
+      path "sys/mounts/*"
+      {
+        capabilities = ["read", "delete", "list", "sudo"]
+      }
+
+      # List existing secrets engines.
+      path "sys/mounts"
+      {
+        capabilities = ["read"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+    // create the engine
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await mountSecrets
+      .next()
+      .path(backend)
+      .setMaxVersion(101)
+      .submit();
+    await settled();
+    assert.ok(
+      find('[data-test-flash-message]').textContent.trim(),
+      `You do not have access to the sys/mounts endpoint. The secret engine was not mounted.`
+    );
+    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
+
+    await page.secretList();
+    await settled();
+    assert.dom(`[data-test-secret-backend-row=${backend}]`).doesNotExist();
   });
 });

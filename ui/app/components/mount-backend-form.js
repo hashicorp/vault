@@ -117,7 +117,7 @@ export default Component.extend({
         );
         return;
       }
-      this.set('errorMessage', 'You are attempting to set a path name that already exist.');
+      this.set('errorMessage', 'This mount path already exist.');
       return;
     }
 

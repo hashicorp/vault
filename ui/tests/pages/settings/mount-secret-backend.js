@@ -11,6 +11,8 @@ export default create({
   maxTTLVal: fillable('[data-test-ttl-value="Max Lease TTL"]'),
   maxTTLUnit: fillable('[data-test-ttl-unit="Max Lease TTL"] [data-test-select="ttl-unit"]'),
   enableDefaultTtl: clickable('[data-test-toggle-input="Default Lease TTL"]'),
+  enableEngine: clickable('[data-test-enable-engine]'),
+  secretList: clickable('[data-test-navbar-item="secrets"]'),
   defaultTTLVal: fillable('input[data-test-ttl-value="Default Lease TTL"]'),
   defaultTTLUnit: fillable('[data-test-ttl-unit="Default Lease TTL"] [data-test-select="ttl-unit"]'),
   enable: async function(type, path) {
