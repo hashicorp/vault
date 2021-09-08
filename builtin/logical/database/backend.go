@@ -101,9 +101,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		BackendType:       logical.TypeLogical,
 	}
 
-	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
-
+	b.logger = conf.Logger
+	b.dbm = NewDatabaseManager(conf.Logger)
 	b.roleLocks = locksutil.CreateLocks()
 
 	return &b
@@ -111,6 +111,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 type databaseBackend struct {
 	connections map[string]*dbPluginInstance
+	dbm         DatabaseManager
 	logger      log.Logger
 
 	*framework.Backend
@@ -259,7 +260,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		return nil, err
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
+	dbw, err := b.dbm.newDatabaseWrapper(ctx, name, config.PluginName, b.System())
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}

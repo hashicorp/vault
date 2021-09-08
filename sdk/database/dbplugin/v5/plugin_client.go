@@ -32,9 +32,12 @@ func (dc *DatabasePluginClient) Close() error {
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-	// pluginSets is the map of plugins we can dispense.
+	// dbPluginSet is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		5: {
+			"database": new(GRPCDatabasePlugin),
+		},
+		6: {
 			"database": new(GRPCDatabasePlugin),
 		},
 	}
@@ -68,7 +71,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var db Database
 	switch raw.(type) {
 	case gRPCClient:
-		db = raw.(gRPCClient)
+		db = raw.(*gRPCClient)
 	default:
 		return nil, errors.New("unsupported client type")
 	}

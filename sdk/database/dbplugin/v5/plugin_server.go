@@ -10,22 +10,22 @@ import (
 // Serve is called from within a plugin and wraps the provided
 // Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
-func Serve(db Database) {
-	plugin.Serve(ServeConfig(db))
+func Serve(dbFactory func() (Database, error)) {
+	plugin.Serve(ServeConfig(dbFactory))
 }
 
-func ServeConfig(db Database) *plugin.ServeConfig {
+func ServeConfig(dbFactory func() (Database, error)) *plugin.ServeConfig {
 	err := pluginutil.OptionallyEnableMlock()
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
 
-	// pluginSets is the map of plugins we can dispense.
+	// dbPluginSet is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
-		5: {
+		6: {
 			"database": &GRPCDatabasePlugin{
-				Impl: db,
+				DBFactory: dbFactory,
 			},
 		},
 	}

@@ -10,6 +10,7 @@ import "google/protobuf/timestamp.proto";
 // Initialize()
 /////////////////
 message InitializeRequest {
+    string ID = 3;
     google.protobuf.Struct config_data = 1;
     bool verify_connection = 2;
 }
@@ -22,6 +23,7 @@ message InitializeResponse {
 /////////////////
 
 message NewUserRequest {
+    string ID = 6;
     UsernameConfig username_config = 1;
     string password = 2;
     google.protobuf.Timestamp expiration = 3;
@@ -42,6 +44,7 @@ message NewUserResponse {
 // UpdateUser()
 /////////////////
 message UpdateUserRequest {
+    string ID = 4;
     string username = 1;
     ChangePassword password = 2;
     ChangeExpiration expiration = 3;
@@ -63,6 +66,7 @@ message UpdateUserResponse {}
 // DeleteUser()
 /////////////////
 message DeleteUserRequest {
+    string ID = 3;
     string username = 1;
     Statements statements = 2;
 }
@@ -75,6 +79,15 @@ message DeleteUserResponse {}
 message TypeResponse {
     string Type = 1;
 }
+
+/////////////////
+// Close()
+/////////////////
+message CloseRequest {
+    string ID = 1;
+}
+
+message CloseResponse {}
 
 /////////////////
 // General purpose
@@ -91,5 +104,5 @@ service Database {
     rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
     rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
     rpc Type(Empty) returns (TypeResponse);
-    rpc Close(Empty) returns (Empty);
+    rpc Close(CloseRequest) returns (CloseResponse);
 }

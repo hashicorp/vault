@@ -313,7 +313,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Create a database plugin and initialize it.
-		dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
+		dbw, err := b.dbm.newDatabaseWrapper(ctx, name, config.PluginName, b.System())
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}

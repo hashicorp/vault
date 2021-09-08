@@ -3,6 +3,7 @@ package dbplugin
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -11,22 +12,72 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ proto.DatabaseServer = gRPCServer{}
+var _ proto.DatabaseServer = (*gRPCServer)(nil)
 
 type gRPCServer struct {
-	impl Database
+	mu *sync.RWMutex
+
+	dbFactory func() (Database, error)
+	dbType    string
+	dbs       map[string]Database
+}
+
+func (g *gRPCServer) getDatabase(id string) (Database, error) {
+	g.mu.RLock()
+	db, exists := g.dbs[id]
+	if exists {
+		g.mu.RUnlock()
+		return db, nil
+	}
+
+	// Upgrade to a write lock
+	g.mu.RUnlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Check if another goroutine has added it to the cache
+	db, exists = g.dbs[id]
+	if exists {
+		return db, nil
+	}
+
+	db, err := g.dbFactory()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database instance: %w", err)
+	}
+	g.dbs[id] = db
+
+	if g.dbType != "" {
+		return db, nil
+	}
+
+	dbType, err := db.Type()
+	if err != nil {
+		// Failed to get the DB type, close it and return - this is a developer error on the plugin side
+		db.Close()
+		delete(g.dbs, id)
+		return nil, fmt.Errorf("failed to get database type: %w", err)
+	}
+
+	g.dbType = dbType
+	return db, nil
 }
 
 // Initialize the database plugin
-func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeRequest) (*proto.InitializeResponse, error) {
-	rawConfig := structToMap(request.ConfigData)
+func (g *gRPCServer) Initialize(ctx context.Context, req *proto.InitializeRequest) (*proto.InitializeResponse, error) {
+	rawConfig := structToMap(req.ConfigData)
 
 	dbReq := InitializeRequest{
 		Config:           rawConfig,
-		VerifyConnection: request.VerifyConnection,
+		VerifyConnection: req.VerifyConnection,
 	}
 
-	dbResp, err := g.impl.Initialize(ctx, dbReq)
+	db, err := g.getDatabase(req.ID)
+	if err != nil {
+		return &proto.InitializeResponse{}, status.Errorf(codes.Internal, "failed to get Database instance: %w", err)
+	}
+
+	dbResp, err := db.Initialize(ctx, dbReq)
 	if err != nil {
 		return &proto.InitializeResponse{}, status.Errorf(codes.Internal, "failed to initialize: %s", err)
 	}
@@ -43,7 +94,7 @@ func (g gRPCServer) Initialize(ctx context.Context, request *proto.InitializeReq
 	return resp, nil
 }
 
-func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*proto.NewUserResponse, error) {
+func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*proto.NewUserResponse, error) {
 	if req.GetUsernameConfig() == nil {
 		return &proto.NewUserResponse{}, status.Errorf(codes.InvalidArgument, "missing username config")
 	}
@@ -69,7 +120,12 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
 	}
 
-	dbResp, err := g.impl.NewUser(ctx, dbReq)
+	db, err := g.getDatabase(req.ID)
+	if err != nil {
+		return &proto.NewUserResponse{}, status.Errorf(codes.Internal, "failed to get Database instance: %w", err)
+	}
+
+	dbResp, err := db.NewUser(ctx, dbReq)
 	if err != nil {
 		return &proto.NewUserResponse{}, status.Errorf(codes.Internal, "unable to create new user: %s", err)
 	}
@@ -80,7 +136,7 @@ func (g gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*pr
 	return resp, nil
 }
 
-func (g gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
+func (g *gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest) (*proto.UpdateUserResponse, error) {
 	if req.GetUsername() == "" {
 		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
 	}
@@ -90,7 +146,12 @@ func (g gRPCServer) UpdateUser(ctx context.Context, req *proto.UpdateUserRequest
 		return &proto.UpdateUserResponse{}, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
-	_, err = g.impl.UpdateUser(ctx, dbReq)
+	db, err := g.getDatabase(req.ID)
+	if err != nil {
+		return &proto.UpdateUserResponse{}, status.Errorf(codes.Internal, "failed to get Database instance: %w", err)
+	}
+
+	_, err = db.UpdateUser(ctx, dbReq)
 	if err != nil {
 		return &proto.UpdateUserResponse{}, status.Errorf(codes.Internal, "unable to update user: %s", err)
 	}
@@ -142,7 +203,7 @@ func hasChange(dbReq UpdateUserRequest) bool {
 	return false
 }
 
-func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest) (*proto.DeleteUserResponse, error) {
+func (g *gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest) (*proto.DeleteUserResponse, error) {
 	if req.GetUsername() == "" {
 		return &proto.DeleteUserResponse{}, status.Errorf(codes.InvalidArgument, "no username provided")
 	}
@@ -151,31 +212,85 @@ func (g gRPCServer) DeleteUser(ctx context.Context, req *proto.DeleteUserRequest
 		Statements: getStatementsFromProto(req.GetStatements()),
 	}
 
-	_, err := g.impl.DeleteUser(ctx, dbReq)
+	db, err := g.getDatabase(req.ID)
+	if err != nil {
+		return &proto.DeleteUserResponse{}, status.Errorf(codes.Internal, "failed to get Database instance: %w", err)
+	}
+
+	_, err = db.DeleteUser(ctx, dbReq)
 	if err != nil {
 		return &proto.DeleteUserResponse{}, status.Errorf(codes.Internal, "unable to delete user: %s", err)
 	}
 	return &proto.DeleteUserResponse{}, nil
 }
 
-func (g gRPCServer) Type(ctx context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
-	t, err := g.impl.Type()
-	if err != nil {
-		return &proto.TypeResponse{}, status.Errorf(codes.Internal, "unable to retrieve type: %s", err)
+func (g *gRPCServer) Type(_ context.Context, _ *proto.Empty) (*proto.TypeResponse, error) {
+	// Attempt to load a previously set DB type
+	g.mu.RLock()
+	dbType := g.dbType
+	if dbType != "" {
+		g.mu.RUnlock()
+		resp := &proto.TypeResponse{
+			Type: dbType,
+		}
+		return resp, nil
 	}
 
+	// Upgrade to a write lock
+	g.mu.RUnlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Check if a different goroutine has updated the type
+	dbType = g.dbType
+	if dbType != "" {
+		g.mu.RUnlock()
+		resp := &proto.TypeResponse{
+			Type: dbType,
+		}
+		return resp, nil
+	}
+
+	// Create a database instance so we can get the type from it.
+	// Then immediately close it since we only need the type and don't
+	// want to pollute the cache
+	db, err := g.dbFactory()
+	if err != nil {
+		return &proto.TypeResponse{}, status.Errorf(codes.Internal, "failed to create database instance: %s", err)
+	}
+
+	dbType, err = db.Type()
+	db.Close() // Cleanup before error checking
+	if err != nil {
+		return &proto.TypeResponse{}, status.Errorf(codes.Internal, "failed to get database type: %s", err)
+	}
+
+	g.dbType = dbType
 	resp := &proto.TypeResponse{
-		Type: t,
+		Type: dbType,
 	}
 	return resp, nil
 }
 
-func (g gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, error) {
-	err := g.impl.Close()
-	if err != nil {
-		return &proto.Empty{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
+func (g *gRPCServer) Close(_ context.Context, req *proto.CloseRequest) (*proto.CloseResponse, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	db, exists := g.dbs[req.ID]
+	if !exists {
+		// Database has already been removed, just return immediately
+		return &proto.CloseResponse{}, nil
 	}
-	return &proto.Empty{}, nil
+
+	// Delete from the cache before trying to close so the cache is kept clean in the event of an error
+	delete(g.dbs, req.ID)
+
+	err := db.Close()
+	if err != nil {
+		return &proto.CloseResponse{}, status.Errorf(codes.Internal, "unable to close database plugin: %s", err)
+	}
+
+	return &proto.CloseResponse{}, nil
 }
 
 func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {

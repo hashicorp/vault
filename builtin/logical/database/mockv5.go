@@ -19,19 +19,14 @@ type MockDatabaseV5 struct {
 var _ v5.Database = &MockDatabaseV5{}
 
 // New returns a new in-memory instance
-func New() (interface{}, error) {
+func New() (v5.Database, error) {
 	db := MockDatabaseV5{}
 	return db, nil
 }
 
-// Run instantiates a MongoDB object, and runs the RPC server for the plugin
+// Run instantiates a Mock object, and runs the RPC server for the plugin
 func RunV5() error {
-	dbType, err := New()
-	if err != nil {
-		return err
-	}
-
-	v5.Serve(dbType.(v5.Database))
+	v5.Serve(New)
 
 	return nil
 }

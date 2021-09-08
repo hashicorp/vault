@@ -20,21 +20,37 @@ type databaseVersionWrapper struct {
 	v5 v5.Database
 }
 
+type DatabaseManager struct {
+	logger log.Logger
+	dbm    *v5.DatabaseManager
+}
+
+// TODO: Figure out better naming
+func NewDatabaseManager(logger log.Logger) DatabaseManager {
+	d := DatabaseManager{
+		logger: logger,
+		dbm:    v5.NewDatabaseManager(logger),
+	}
+	return d
+}
+
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin.
-func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
-	newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
-	if err == nil {
-		dbw = databaseVersionWrapper{
-			v5: newDB,
-		}
-		return dbw, nil
-	}
+func (dbm DatabaseManager) newDatabaseWrapper(ctx context.Context, id string, pluginName string, sys pluginutil.LookRunnerUtil) (dbw databaseVersionWrapper, err error) {
+	// newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
+	// if err == nil {
+	// 	dbw = databaseVersionWrapper{
+	// 		v5: newDB,
+	// 	}
+	// 	return dbw, nil
+	// }
+
+	dbm.dbm.Get(ctx, id, pluginName, sys)
 
 	merr := &multierror.Error{}
 	merr = multierror.Append(merr, err)
 
-	legacyDB, err := v4.PluginFactory(ctx, pluginName, sys, logger)
+	legacyDB, err := v4.PluginFactory(ctx, pluginName, sys, dbm.logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v4: legacyDB,

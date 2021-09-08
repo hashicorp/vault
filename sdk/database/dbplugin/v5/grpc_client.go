@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	_ Database = gRPCClient{}
+	_ Database = (*gRPCClient)(nil)
 
 	ErrPluginShutdown = errors.New("plugin shutdown")
 )
@@ -20,10 +20,12 @@ var (
 type gRPCClient struct {
 	client  proto.DatabaseClient
 	doneCtx context.Context
+
+	id string
 }
 
-func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
-	rpcReq, err := initReqToProto(req)
+func (c *gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {
+	rpcReq, err := c.initReqToProto(req)
 	if err != nil {
 		return InitializeResponse{}, err
 	}
@@ -36,13 +38,14 @@ func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (Init
 	return initRespFromProto(rpcResp)
 }
 
-func initReqToProto(req InitializeRequest) (*proto.InitializeRequest, error) {
+func (c *gRPCClient) initReqToProto(req InitializeRequest) (*proto.InitializeRequest, error) {
 	config, err := mapToStruct(req.Config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal config: %w", err)
 	}
 
 	rpcReq := &proto.InitializeRequest{
+		ID:               c.id,
 		ConfigData:       config,
 		VerifyConnection: req.VerifyConnection,
 	}
@@ -58,13 +61,13 @@ func initRespFromProto(rpcResp *proto.InitializeResponse) (InitializeResponse, e
 	return resp, nil
 }
 
-func (c gRPCClient) NewUser(ctx context.Context, req NewUserRequest) (NewUserResponse, error) {
+func (c *gRPCClient) NewUser(ctx context.Context, req NewUserRequest) (NewUserResponse, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
 	defer close(quitCh)
 	defer cancel()
 
-	rpcReq, err := newUserReqToProto(req)
+	rpcReq, err := c.newUserReqToProto(req)
 	if err != nil {
 		return NewUserResponse{}, err
 	}
@@ -80,7 +83,7 @@ func (c gRPCClient) NewUser(ctx context.Context, req NewUserRequest) (NewUserRes
 	return newUserRespFromProto(rpcResp)
 }
 
-func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
+func (c *gRPCClient) newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 	if req.Password == "" {
 		return nil, fmt.Errorf("missing password")
 	}
@@ -91,6 +94,7 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 	}
 
 	rpcReq := &proto.NewUserRequest{
+		ID: c.id,
 		UsernameConfig: &proto.UsernameConfig{
 			DisplayName: req.UsernameConfig.DisplayName,
 			RoleName:    req.UsernameConfig.RoleName,
@@ -114,8 +118,8 @@ func newUserRespFromProto(rpcResp *proto.NewUserResponse) (NewUserResponse, erro
 	return resp, nil
 }
 
-func (c gRPCClient) UpdateUser(ctx context.Context, req UpdateUserRequest) (UpdateUserResponse, error) {
-	rpcReq, err := updateUserReqToProto(req)
+func (c *gRPCClient) UpdateUser(ctx context.Context, req UpdateUserRequest) (UpdateUserResponse, error) {
+	rpcReq, err := c.updateUserReqToProto(req)
 	if err != nil {
 		return UpdateUserResponse{}, err
 	}
@@ -132,7 +136,7 @@ func (c gRPCClient) UpdateUser(ctx context.Context, req UpdateUserRequest) (Upda
 	return updateUserRespFromProto(rpcResp)
 }
 
-func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, error) {
+func (c *gRPCClient) updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, error) {
 	if req.Username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -158,6 +162,7 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 	}
 
 	rpcReq := &proto.UpdateUserRequest{
+		ID:         c.id,
 		Username:   req.Username,
 		Password:   password,
 		Expiration: expiration,
@@ -189,8 +194,8 @@ func expirationToProto(exp *ChangeExpiration) (*proto.ChangeExpiration, error) {
 	return changeExp, nil
 }
 
-func (c gRPCClient) DeleteUser(ctx context.Context, req DeleteUserRequest) (DeleteUserResponse, error) {
-	rpcReq, err := deleteUserReqToProto(req)
+func (c *gRPCClient) DeleteUser(ctx context.Context, req DeleteUserRequest) (DeleteUserResponse, error) {
+	rpcReq, err := c.deleteUserReqToProto(req)
 	if err != nil {
 		return DeleteUserResponse{}, err
 	}
@@ -206,12 +211,13 @@ func (c gRPCClient) DeleteUser(ctx context.Context, req DeleteUserRequest) (Dele
 	return deleteUserRespFromProto(rpcResp)
 }
 
-func deleteUserReqToProto(req DeleteUserRequest) (*proto.DeleteUserRequest, error) {
+func (c *gRPCClient) deleteUserReqToProto(req DeleteUserRequest) (*proto.DeleteUserRequest, error) {
 	if req.Username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
 
 	rpcReq := &proto.DeleteUserRequest{
+		ID:       c.id,
 		Username: req.Username,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
@@ -225,7 +231,7 @@ func deleteUserRespFromProto(rpcResp *proto.DeleteUserResponse) (DeleteUserRespo
 	return DeleteUserResponse{}, nil
 }
 
-func (c gRPCClient) Type() (string, error) {
+func (c *gRPCClient) Type() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -239,11 +245,14 @@ func (c gRPCClient) Type() (string, error) {
 	return typeResp.GetType(), nil
 }
 
-func (c gRPCClient) Close() error {
+func (c *gRPCClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	_, err := c.client.Close(ctx, &proto.Empty{})
+	req := &proto.CloseRequest{
+		ID: c.id,
+	}
+	_, err := c.client.Close(ctx, req)
 	if err != nil {
 		if c.doneCtx.Err() != nil {
 			return ErrPluginShutdown
