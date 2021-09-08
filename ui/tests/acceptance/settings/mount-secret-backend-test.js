@@ -71,7 +71,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
-  test('it throws error if setting duplicate path name meep', async function(assert) {
+  test('it throws error if setting duplicate path name', async function(assert) {
     const path = `kv-duplicate`;
 
     await consoleComponent.runCommands([
