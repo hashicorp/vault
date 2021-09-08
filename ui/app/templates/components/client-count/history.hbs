@@ -47,7 +47,7 @@
                 <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
         {{/if}}
     {{else}}
-        <div class="card">
+        <div class="card has-bottom-margin-m">
             <div class="card-content">
             <div class="is-flex is-flex-center">
                 <div class="is-flex-1">
@@ -73,6 +73,17 @@
                         @subText="Tokens created via a method that is not associated with an entity."/>
                 </div>
             </div>
+            </div>
+        </div>
+        <div class="columns has-bottom-margin-m">
+            <div class="column is-two-thirds">
+                <BarChart @title="Top 10 Namespaces" @description="Each namespace's client count includes clients in child namespaces." 
+                    @dataset={{this.dataset}} 
+                    @mapLegend={{ array (hash key="non_entity_tokens" label="Active direct tokens") (hash key="distinct_entities" label="Unique Entities") }}>
+                </BarChart>
+            </div>
+            <div class="column">
+                
             </div>
         </div>
     {{/unless}}

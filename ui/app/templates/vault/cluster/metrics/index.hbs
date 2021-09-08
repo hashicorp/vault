@@ -41,7 +41,7 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  <PricingMetricsConfig @model={{model.config}} />
+  <ClientCount::Config @model={{model.config}} />
 {{else}}
   <ClientCount::History @tab={{tab}} @model={{model}} />
 {{/if}}
