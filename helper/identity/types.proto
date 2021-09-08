@@ -172,6 +172,11 @@ message Alias {
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
 	string namespace_id = 11;
+
+	// Custom Metadata
+	map<string, string> customMetadata = 12;
+
+
 }
 
 // Deprecated. Retained for backwards compatibility.
