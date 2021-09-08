@@ -443,11 +443,11 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	// to that of the signing key
 	signingPubType, signingAlgorithm, err := publicKeyType(signingBundle.Certificate.PublicKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("error determining signing certificate algorithm type", err)
+		return nil, fmt.Errorf("error determining signing certificate algorithm type: %e", err)
 	}
 	certPubType, _, err := publicKeyType(cert.PublicKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("error determining template algorithm type", err)
+		return nil, fmt.Errorf("error determining template algorithm type: %e", err)
 	}
 
 	if signingPubType != certPubType {
