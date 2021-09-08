@@ -117,7 +117,7 @@
     },
     {
       "textSplit": {
-        "heading": "Next-gen Privileged Access Management ",
+        "heading": "Secure Remote Access",
         "content": "Direct integration with HashiCorp Boundary for human-to-machine authentication and authorization.",
         "textSide": "right"
       },
