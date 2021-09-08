@@ -68,8 +68,8 @@ management tool.
     $ vault auth enable kubernetes
     ```
 
-1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use `kubectl cluster-info` to validate the Kubernetes host address and TCP port. For the
-    list of available configuration options, please see the API documentation.
+1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use `kubectl cluster-info` to validate the Kubernetes host address and TCP port. Kubernetes 1.21+ clusters may require setting the service account `issuer`, [as described here](/docs/platform/k8s/csi#setting-issuer-for-kubernetes-authentication). For the
+    list of available configuration options, please see the [API documentation](/api/auth/kubernetes).
 
     ```text
     $ vault write auth/kubernetes/config \
@@ -99,8 +99,8 @@ management tool.
     This role authorizes the "vault-auth" service account in the default
     namespace and it gives it the default policy.
 
-    For the complete list of configuration options, please see the API
-    documentation.
+    For the complete list of configuration options, please see the [API
+    documentation](/api/auth/kubernetes).
 
 ## Configuring Kubernetes
 
