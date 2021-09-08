@@ -7,7 +7,13 @@ export default class HistoryComponent extends Component {
     if (!this.args.model.activity || !this.args.model.activity.by_namespace) {
       return null;
     }
-    let dataset = this.args.model.activity.by_namespace.slice(0, this.max_namespaces);
+    let dataset = this.args.model.activity.by_namespace;
+    // Filter out root data
+    dataset = dataset.filter(item => {
+      return item.namespace_id != 'root';
+    });
+    // Show only top 10 namespaces
+    dataset = dataset.slice(0, this.max_namespaces);
     return dataset.map(d => {
       return {
         label: d['namespace_path'],
