@@ -243,6 +243,7 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 				"key": {
 					Type:        framework.TypeString,
 					Description: "The OIDC key to use for generating tokens. The specified key must already exist.",
+					Required:    true,
 				},
 				"template": {
 					Type:        framework.TypeString,
@@ -942,6 +943,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	name := d.Get("name").(string)
 
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
+
 	var role role
 	if req.Operation == logical.UpdateOperation {
 		entry, err := req.Storage.Get(ctx, roleConfigPath+name)
@@ -959,6 +963,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.Key = key.(string)
 	} else if req.Operation == logical.CreateOperation {
 		role.Key = d.Get("key").(string)
+	}
+
+	if role.Key == "" {
+		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
 	if template, ok := d.GetOk("template"); ok {
@@ -1010,14 +1018,15 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	if err != nil {
 		return nil, err
 	}
-	if entry != nil {
-		if err := entry.DecodeJSON(&key); err != nil {
-			return nil, err
-		}
+	if entry == nil {
+		return logical.ErrorResponse("cannot find key %q", role.Key), nil
+	}
 
-		if role.TokenTTL > key.VerificationTTL {
-			return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
-		}
+	if err := entry.DecodeJSON(&key); err != nil {
+		return nil, err
+	}
+	if role.TokenTTL > key.VerificationTTL {
+		return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
 	}
 
 	if clientID, ok := d.GetOk("client_id"); ok {
