@@ -14,7 +14,7 @@ export default Route.extend({
       backend.set('casRequired', backend.casRequired ? backend.casRequired : 'False');
       backend.set(
         'deleteVersionAfter',
-        backend.deleteVersionAfter ? backend.deleteVersionAfter : 'Never delete'
+        backend.deleteVersionAfter !== '0s' ? backend.deleteVersionAfter : 'Never delete'
       );
       backend.set('maxVersions', backend.maxVersions ? backend.maxVersions : 'Not set');
     }

@@ -30,6 +30,7 @@ export default ApplicationAdapter.extend({
     try {
       mountModel = await this.ajax(this.internalURL(query.path), 'GET');
       // if kv2 then add the config data to the mountModel
+      // version comes in as a string
       if (mountModel.data.type === 'kv' && mountModel.data.options.version === '2') {
         configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
         let data = mountModel.data;
@@ -47,9 +48,7 @@ export default ApplicationAdapter.extend({
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
     // for kv2 we make two network requests
-    // ARG TODO make sure to have it equal 2 and it might be a string. Need to double check.
-    if (data.type === 'kv' && data.options.version !== 1) {
-      console.log('here');
+    if (data.type === 'kv' && data.options.version === 2) {
       // data has both data for sys mount and the config, we need to separate them
       let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
       let configData;

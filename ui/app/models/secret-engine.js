@@ -95,6 +95,7 @@ export default Model.extend(Validations, {
     if (type === 'kv' || type === 'generic') {
       fields.push('options.{version}');
     }
+    // version comes in as number not string
     if (type === 'kv' && version === 2) {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
