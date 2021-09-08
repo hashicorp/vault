@@ -2660,13 +2660,13 @@ func (c *Core) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
 	c.customListenerHeader.SetCustomResponseHeaders(w, status)
 }
 
-func (c *Core) ExistCustomResponseHeader(header string, statusCode int, la string) bool {
+func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
 	if c.customListenerHeader == nil {
 		c.logger.Debug("custom response headers not configured")
 		return false
 	}
 
-	return c.customListenerHeader.ExistHeader(header, statusCode, la)
+	return c.customListenerHeader.ExistCustomResponseHeader(header, la)
 }
 
 func (c *Core) ReloadCustomResponseHeaders() error {
