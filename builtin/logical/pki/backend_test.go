@@ -2295,7 +2295,8 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"certificate": ss,
+			"certificate":                         ss,
+			"allow_different_signature_algorithm": "true",
 		},
 	})
 	if err != nil {
