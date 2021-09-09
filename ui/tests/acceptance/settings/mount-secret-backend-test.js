@@ -1,4 +1,4 @@
-import { currentRouteName, settled, find, click } from '@ember/test-helpers';
+import { currentRouteName, settled, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
