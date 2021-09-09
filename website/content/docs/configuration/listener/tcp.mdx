@@ -225,7 +225,14 @@ listener "tcp" {
 
 ### Configuring custom http response headers
 
-This example shows configuring custom http response headers.
+This example shows configuring custom http response headers. Operators can configure
+`"custom_response_headers"` sub-stanza in the listener stanza to set custom http
+headers appropriate to their applications. Examples of such headers are `"Strict-Transport-Security"`
+and `"Content-Security-Policy"` which are known HTTP headers, and could be configured to harden
+the security of an application communicating with the Vault endpoints. Note that vulnerability
+scans often examine such security related HTTP headers. In addition, an Application specific
+custom headers can also be configured. For example, `"X-Custom-Header"` has been configured
+in the example below.
 
 ```hcl
 listener "tcp" {
@@ -233,6 +240,7 @@ listener "tcp" {
     "default" = {
       "Strict-Transport-Security" = ["max-age=31536000","includeSubDomains"],
       "Content-Security-Policy" = ["connect-src https://clusterA.vault.external/"],
+      "X-Custom-Header" = ["Custom Header Default Value"],
     },
     "2xx" = {
       "Content-Security-Policy" = ["connect-src https://clusterB.vault.external/"],
