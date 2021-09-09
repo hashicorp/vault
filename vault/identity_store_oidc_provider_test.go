@@ -90,8 +90,8 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// Create a test key "test-key-2"
@@ -125,8 +125,8 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 
 	responseJWKS = &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 2 {
-		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 4 {
+		t.Fatalf("expected 4 public key but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// Update the test provider "test-provider" to only allow test-client-1 -- should succeed
@@ -150,8 +150,8 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 
 	responseJWKS = &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
 	}
 }
 
