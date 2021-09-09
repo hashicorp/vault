@@ -59,7 +59,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 				if uiHeaders != nil {
 					exist := uiHeaders.Get(h)
 					if exist != "" {
-						logger.Error("found a duplicate header in UI, note that config file headers take precedence.", "header:", h)
+						logger.Warn("found a duplicate header in UI, note that config file headers take precedence.", "header:", h)
 					}
 				}
 

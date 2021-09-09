@@ -2653,7 +2653,7 @@ func (c *Core) SetConfig(conf *server.Config) {
 
 func (c *Core) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
 	if c.customListenerHeader == nil {
-		c.logger.Debug("custom response headers not configured")
+		c.logger.Debug("failed to find the custom response headers configuration")
 		return
 	}
 
@@ -2662,7 +2662,7 @@ func (c *Core) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
 
 func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
 	if c.customListenerHeader == nil {
-		c.logger.Debug("custom response headers not configured")
+		c.logger.Debug("failed to find the custom response headers configuration")
 		return false
 	}
 

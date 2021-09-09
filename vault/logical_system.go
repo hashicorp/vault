@@ -2629,7 +2629,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	for _, v := range values {
 		la := req.ResponseWriter.Header().Get("X-Vault-Listener-Add")
 		if b.Core.ExistCustomResponseHeader(header, la) {
-			return logical.ErrorResponse("header already exist in server configuration file"), logical.ErrInvalidRequest
+			return logical.ErrorResponse(fmt.Sprintf("header already exist in server configuration file: %v", header)), logical.ErrInvalidRequest
 		}
 		value.Add(header, v)
 	}

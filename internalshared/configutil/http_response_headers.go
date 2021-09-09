@@ -77,7 +77,7 @@ func setDefaultResponseHeaders(c map[string]string) map[string]string {
 
 func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, error) {
     if !isValidListDict(r) {
-        return nil, fmt.Errorf("invalid input type: %T", r)
+        return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a map")
     }
 
     customResponseHeader := r.([]map[string]interface{})
@@ -174,7 +174,7 @@ func parseHeaders(in map[string]interface{}) (map[string]string, error) {
 func parseHeaderValues(h interface{}) (string, error) {
     var sl []string
     if !isValidList(h) {
-        return "", fmt.Errorf("failed to parse header values")
+        return "", fmt.Errorf("headers must be given in a list of strings")
     }
     vli := h.([]interface{})
     for _, vh := range vli {
