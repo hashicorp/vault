@@ -149,6 +149,24 @@ advertise the correct address to other nodes.
 - `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/pprof` endpoint.
 
+### `custom_response_headers` Parameters
+
+- `default` `(key-value-map: {})` - A map of string header names to an array of
+ string values. The default headers are set on all endpoints regardless of
+ the status code value. For an example, please refer to the
+ "Configuring custom http response headers" section.
+
+- `<specific status code>` `(key-value-map: {})` - A map of string header names
+ to an array of string values. These headers are set only when the specific status
+ code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+ is set when the http response status code is `"200"`.
+
+- `<collective status code>` `(key-value-map: {})` - A map of string header names
+ to an array of string values. These headers are set only when the response status
+ code falls under the collective status code.
+ For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+ is set when the http response status code is `"200"`, `"204"`, etc.
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS
@@ -200,6 +218,30 @@ This example shows enabling unauthenticated profiling access.
 listener "tcp" {
   profiling {
     unauthenticated_pprof_access = true
+  }
+}
+```
+
+
+### Configuring custom http response headers
+
+This example shows configuring custom http response headers.
+
+```hcl
+listener "tcp" {
+  custom_response_headers {
+    "default" = {
+      "Strict-Transport-Security" = ["max-age=31536000","includeSubDomains"],
+      "Content-Security-Policy" = ["connect-src https://clusterA.vault.external/"],
+    },
+    "2xx" = {
+      "Content-Security-Policy" = ["connect-src https://clusterB.vault.external/"],
+      "X-Custom-Header" = ["Custom Header Value 1", "Custom Header Value 2"],
+    },
+    "301" = {
+      "Strict-Transport-Security" = ["max-age=31536000"],
+      “Content-Security-Policy" = ["connect-src https://clusterC.vault.external/"],
+    },
   }
 }
 ```
