@@ -361,7 +361,6 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 				return nil, err
 			}
 
-			i.Logger().Debug("==>", "client", client)
 			if client != nil {
 				keyNames = append(keyNames, client.Key)
 			}
