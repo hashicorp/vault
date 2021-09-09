@@ -2295,8 +2295,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"certificate":                         ss,
-			"allow_different_signature_algorithm": "true",
+			"certificate": ss,
 		},
 	})
 	if err != nil {
@@ -2316,6 +2315,20 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"certificate": ss,
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error due to different signature algo but not opted-in")
+	}
+
+	ss, ssCert = getSelfSigned(t, template, template, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate":                         ss,
+			"allow_different_signature_algorithm": "true",
 		},
 	})
 	if err != nil {
