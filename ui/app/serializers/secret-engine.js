@@ -53,6 +53,10 @@ export default ApplicationSerializer.extend({
   serialize(snapshot) {
     let type = snapshot.record.get('engineType');
     let data = this._super(...arguments);
+    // These items are on the model, but used by the kv-v2 config endpoint only
+    delete data.max_versions;
+    delete data.cas_required;
+    delete data.delete_version_after;
     // only KV uses options
     if (type !== 'kv' && type !== 'generic') {
       delete data.options;
