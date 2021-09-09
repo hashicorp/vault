@@ -184,8 +184,8 @@ DONELISTHANDLING:
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
 	}
 
-	// Make secret_id_accessor available as a WrappedAccessor.
-	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok {
+	// Store the accessor of the approle secret in WrappedAccessor
+	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok && resp.Auth == nil {
 		resp.WrapInfo.WrappedAccessor = secretIdAccessor.(string)
 	}
 
