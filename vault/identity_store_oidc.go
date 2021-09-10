@@ -1798,9 +1798,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	}
 }
 
-func newOIDCCache() *oidcCache {
+func newOIDCCache(defaultExpiration, cleanupInterval time.Duration) *oidcCache {
 	return &oidcCache{
-		c: cache.New(cache.NoExpiration, cache.NoExpiration),
+		c: cache.New(defaultExpiration, cleanupInterval),
 	}
 }
 

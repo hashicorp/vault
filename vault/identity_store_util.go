@@ -39,7 +39,11 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		return c.identityStore.loadGroups(ctx)
+		err = c.identityStore.loadGroups(ctx)
+		if err != nil {
+			return err
+		}
+		return c.identityStore.loadOIDCClients(ctx)
 	}
 
 	if !c.loadCaseSensitiveIdentityStore {
@@ -76,6 +80,40 @@ func (i *IdentityStore) sanitizeName(name string) string {
 		return name
 	}
 	return strings.ToLower(name)
+}
+
+func (i *IdentityStore) loadOIDCClients(ctx context.Context) error {
+	i.logger.Debug("identity loading OIDC clients")
+
+	clients, err := i.view.List(ctx, clientPath)
+	if err != nil {
+		return err
+	}
+
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+	for _, name := range clients {
+		entry, err := i.view.Get(ctx, clientPath+name)
+		if err != nil {
+			return err
+		}
+		if entry == nil {
+			continue
+		}
+
+		var client client
+		if err := entry.DecodeJSON(&client); err != nil {
+			return err
+		}
+
+		// TODO: should this use MemDBUpsertClientInTxn instead?
+		if err := txn.Insert(oidcClientsTable, &client); err != nil {
+			return err
+		}
+	}
+	txn.Commit()
+
+	return nil
 }
 
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
