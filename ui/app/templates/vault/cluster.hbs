@@ -113,16 +113,20 @@
     {{/flash-message}}
   {{/each}}
 </div>
-{{#if showNav}}
-  <UiWizard>
-    <section class="section">
-      <div class="container is-widescreen">
-        <TokenExpireWarning @expirationDate={{auth.tokenExpirationDate}}>
-          {{outlet}}
-        </TokenExpireWarning>
-      </div>
-    </section>
-  </UiWizard>
+{{#if currentlyLoading}}
+  <LogoSplash />
 {{else}}
-  {{outlet}}
+  {{#if showNav}}
+    <UiWizard>
+      <section class="section">
+        <div class="container is-widescreen">
+          <TokenExpireWarning @expirationDate={{auth.tokenExpirationDate}}>
+            {{outlet}}
+          </TokenExpireWarning>
+        </div>
+      </section>
+    </UiWizard>
+  {{else}}
+    {{outlet}}
+  {{/if}}
 {{/if}}

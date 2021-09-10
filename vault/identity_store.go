@@ -26,7 +26,6 @@ const (
 
 var (
 	caseSensitivityKey           = "casesensitivity"
-	sendGroupUpgrade             = func(context.Context, *IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
 )
@@ -48,9 +47,15 @@ func (i *IdentityStore) resetDB(ctx context.Context) error {
 
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
-		view:   config.StorageView,
-		logger: logger,
-		core:   core,
+		view:          config.StorageView,
+		logger:        logger,
+		router:        core.router,
+		redirectAddr:  core.redirectAddr,
+		localNode:     core,
+		namespacer:    core,
+		metrics:       core.MetricSink(),
+		totpPersister: core,
+		groupUpdater:  core,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -392,7 +397,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		persistNeeded = true
 	}
 
-	if persistNeeded && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if persistNeeded && !i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		entityAsAny, err := ptypes.MarshalAny(&entity)
 		if err != nil {
 			return nil, err
@@ -495,7 +500,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, fmt.Errorf("empty alias name")
 	}
 
-	mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor)
+	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
 	if mountValidationResp == nil {
 		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
@@ -571,14 +576,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		}
 
 		// Emit a metric for the new entity
-		ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+		ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
 		var nsLabel metrics.Label
 		if err != nil {
 			nsLabel = metrics.Label{"namespace", "unknown"}
 		} else {
 			nsLabel = metricsutil.NamespaceLabel(ns)
 		}
-		i.core.MetricSink().IncrCounterWithLabels(
+		i.metrics.IncrCounterWithLabels(
 			[]string{"identity", "entity", "creation"},
 			1,
 			[]metrics.Label{
