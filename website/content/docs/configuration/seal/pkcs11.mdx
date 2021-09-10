@@ -43,7 +43,7 @@ file by providing all the required values:
 ```hcl
 seal "pkcs11" {
   lib            = "/usr/vault/lib/libCryptoki2_64.so"
-  slot           = "0"
+  slot           = "2305843009213693953"
   pin            = "AAAA-BBBB-CCCC-DDDD"
   key_label      = "vault-hsm-key"
   hmac_key_label = "vault-hsm-hmac-key"
@@ -56,14 +56,21 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `lib` `(string: <required>)`: The path to the PKCS#11 library shared object
   file. May also be specified by the `VAULT_HSM_LIB` environment variable.
-  **Note:** Depending on your HSM, this may be either a binary or a dynamic
+
+  ~> **Note:** Depending on your HSM, this may be either a binary or a dynamic
   library, and its use may require other libraries depending on which system the
   Vault binary is currently running on (e.g.: a Linux system may require other
   libraries to interpret Windows .dll files).
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
-  specified as a string (e.g. `"0"`). May also be specified by the `VAULT_HSM_SLOT`
-  environment variable.
+  specified as a string (e.g. `"2305843009213693953"`). May also be specified by 
+  the `VAULT_HSM_SLOT` environment variable.
+
+  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup 
+  utility and their decimal equivalent is what should be used. For example using the 
+  HSM command-line `pkcs11-tool` a slot listed as `0x2000000000000001`in hex is equal 
+  to `2305843009213693953` in decimal; these values may be listed in shorter or 
+  differently as determined by the HSM in use.
 
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
   use. May also be specified by the `VAULT_HSM_TOKEN_LABEL` environment variable.
