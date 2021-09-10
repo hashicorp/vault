@@ -1417,11 +1417,6 @@
         "path": "upgrading/plugins"
       },
       {
-        "title": "Upgrade to 1.9.0",
-        "path": "upgrading/upgrade-to-1.9.0",
-        "hidden": true
-      },
-      {
         "title": "Upgrade to 1.8.0",
         "path": "upgrading/upgrade-to-1.8.0"
       },
