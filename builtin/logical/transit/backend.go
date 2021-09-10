@@ -3,7 +3,9 @@ package transit
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -90,6 +92,9 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 type backend struct {
 	*framework.Backend
 	lm *keysutil.LockManager
+	// Lock to make changes to any of the backend's cache configuration.
+	configMutex sync.RWMutex
+	cacheSizeChanged bool
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -108,7 +113,34 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 	return size, nil
 }
 
-func (b *backend) invalidate(_ context.Context, key string) {
+// Update cache size and get policy
+func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, rand io.Reader) (retP *keysutil.Policy, retUpserted bool, retErr error) {
+	if b.lm.GetUseCache() && b.cacheSizeChanged {
+		var err error
+		currentCacheSize := b.lm.GetCacheSize()
+		storedCacheSize, err := GetCacheSizeFromStorage(ctx, polReq.Storage)
+		if err != nil {
+			return nil, false, err
+		}
+		if currentCacheSize != storedCacheSize {
+			err = b.lm.RefreshCache(storedCacheSize)
+			if err != nil {
+				return nil, false, err
+			}
+		}
+		// Acquire the lock to modify cacheSizeChanged
+		b.configMutex.Lock()
+		defer b.configMutex.Unlock()
+		b.cacheSizeChanged = false
+	}
+	p, _, err := b.lm.GetPolicy(ctx, polReq, rand)
+	if err != nil {
+		return p, false, err
+	}
+	return p, true, nil
+}
+
+func (b *backend) invalidate(ctx context.Context, key string) {
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("invalidating key", "key", key)
 	}
@@ -116,5 +148,10 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	case strings.HasPrefix(key, "policy/"):
 		name := strings.TrimPrefix(key, "policy/")
 		b.lm.InvalidatePolicy(name)
+	case strings.HasPrefix(key, "cache-config/"):
+		// Acquire the lock to set the flag to indicate that cache size needs to be refreshed from storage
+		b.configMutex.Lock()
+		defer b.configMutex.Unlock()
+		b.cacheSizeChanged = true
 	}
 }

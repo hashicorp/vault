@@ -101,6 +101,24 @@ func (lm *LockManager) InvalidatePolicy(name string) {
 	}
 }
 
+func (lm *LockManager) RefreshCache(cacheSize int) error {
+	if lm.useCache {
+		switch {
+		case cacheSize < 0:
+			return errors.New("cache size must be greater or equal to zero")
+		case cacheSize == 0:
+			lm.cache = NewTransitSyncMap()
+		case cacheSize > 0:
+			newLRUCache, err := NewTransitLRU(cacheSize)
+			if err != nil {
+				return errwrap.Wrapf("failed to create cache: {{err}}", err)
+			}
+			lm.cache = newLRUCache
+		}
+	}
+	return nil
+}
+
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
 func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) error {
