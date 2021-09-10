@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -626,7 +628,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key
+	// .well-known/keys should contain 2 public keys
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
@@ -636,8 +638,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// parse response
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// rotate test-key a few times, each rotate should increase the length of public keys returned
@@ -655,7 +657,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// .well-known/keys should contain 3 public keys
+	// .well-known/keys should contain 4 public keys
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
@@ -664,8 +666,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 3 {
-		t.Fatalf("expected 3 public keys but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 4 {
+		t.Fatalf("expected 4 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// create another named key
@@ -682,7 +684,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key, all of the public keys
+	// .well-known/keys should contain 2 public key, all of the public keys
 	// from named key "test-key" should have been deleted
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
@@ -692,8 +694,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public keys but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 }
 
@@ -814,10 +816,18 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
-	// Validate the signature
-	claims := &jwt.Claims{}
-	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
-		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	keyCount := len(responseJWKS.Keys)
+	errorCount := 0
+	for _, key := range responseJWKS.Keys {
+		// Validate the signature
+		claims := &jwt.Claims{}
+		if err := parsedToken.Claims(key, claims); err != nil {
+			t.Logf("unable to validate signed token, err:\n%#v", err)
+			errorCount += 1
+		}
+	}
+	if errorCount == keyCount {
+		t.Fatalf("unable to validate signed token with any of the .well-known keys")
 	}
 }
 
@@ -856,6 +866,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				RotationPeriod:  1 * cyclePeriod,
 				KeyRing:         nil,
 				SigningKey:      jwk,
+				NextSigningKey:  jwk,
 				NextRotation:    time.Now(),
 			},
 			[]struct {
@@ -865,8 +876,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			}{
 				{1, 1, 1},
 				{2, 2, 2},
-				{3, 2, 2},
-				{4, 2, 2},
+				{3, 3, 3},
+				{4, 3, 3},
+				{5, 3, 3},
+				{6, 3, 3},
+				{7, 3, 3},
 			},
 		},
 	}
@@ -1365,6 +1379,62 @@ func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
 
 	if err := cache.Flush(nil); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// get default value
+	header, err := c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedHeader := ""
+	if header != expectedHeader {
+		t.Fatalf("expected %s, got %s", expectedHeader, header)
+	}
+
+	// set nextRun
+	nextRun := time.Now().Add(24 * time.Hour)
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedNextRun := "max-age=86400"
+	if header != expectedNextRun {
+		t.Fatalf("expected %s, got %s", expectedNextRun, header)
+	}
+
+	// set jwksCacheControlMaxAge
+	jwksCacheControlMaxAge := time.Duration(60) * time.Second
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	if header == "" {
+		t.Fatalf("expected header to be set, got %s", header)
+	}
+
+	maxAgeValue := strings.Split(header, "=")[1]
+	headerVal, err := strconv.Atoi(maxAgeValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// headerVal will be a random value between 0 and jwksCacheControlMaxAge
+	if headerVal > int(jwksCacheControlMaxAge) {
+		t.Fatalf("unexpected header value, got %d", headerVal)
 	}
 }
 
