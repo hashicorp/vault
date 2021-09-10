@@ -42,6 +42,7 @@ const (
 	EnvVaultToken         = "VAULT_TOKEN"
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
+	EnvHttpProxy          = "VAULT_HTTP_PROXY"
 )
 
 // Deprecated values
@@ -78,6 +79,8 @@ type Config struct {
 	// that client and modify as needed rather than start with an empty client
 	// (or http.DefaultClient).
 	HttpClient *http.Client
+
+	HttpProxy string
 
 	// MinRetryWait controls the minimum time to wait before retrying when a 5xx
 	// error occurs. Defaults to 1000 milliseconds.
@@ -173,17 +176,31 @@ func DefaultConfig() *Config {
 		Backoff:      retryablehttp.LinearJitterBackoff,
 	}
 
+	if err := config.ReadEnvironment(); err != nil {
+		config.Error = err
+		return config
+	}
+
+	if config.HttpProxy != "" {
+		url, err := url.Parse(config.HttpProxy)
+		if err != nil {
+			config.Error = err
+			return config
+		}
+
+		proxied_transport := cleanhttp.DefaultPooledTransport()
+		proxied_transport.Proxy = http.ProxyURL(url)
+		config.HttpClient = &http.Client{
+			Transport: proxied_transport,
+		}
+	}
+
 	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
-		config.Error = err
-		return config
-	}
-
-	if err := config.ReadEnvironment(); err != nil {
 		config.Error = err
 		return config
 	}
@@ -271,6 +288,7 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
+	var envHttpProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -339,6 +357,10 @@ func (c *Config) ReadEnvironment() error {
 		envTLSServerName = v
 	}
 
+	if v := os.Getenv(EnvHttpProxy); v != "" {
+		envHttpProxy = v
+	}
+
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
@@ -373,6 +395,10 @@ func (c *Config) ReadEnvironment() error {
 
 	if envClientTimeout != 0 {
 		c.Timeout = envClientTimeout
+	}
+
+	if envHttpProxy != "" {
+		c.HttpProxy = envHttpProxy
 	}
 
 	return nil
