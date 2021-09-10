@@ -11,10 +11,10 @@ import (
 	metrics "github.com/armon/go-metrics"
 	radix "github.com/armon/go-radix"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -59,7 +59,7 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
-type validateMountResponse struct {
+type ValidateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
@@ -75,9 +75,9 @@ func (r *Router) reset() {
 	r.mountAccessorCache = radix.New()
 }
 
-// validateMountByAccessor returns the mount type and ID for a given mount
+// ValidateMountByAccessor returns the mount type and ID for a given mount
 // accessor
-func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse {
+func (r *Router) ValidateMountByAccessor(accessor string) *ValidateMountResponse {
 	if accessor == "" {
 		return nil
 	}
@@ -92,7 +92,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		mountPath = credentialRoutePrefix + mountPath
 	}
 
-	return &validateMountResponse{
+	return &ValidateMountResponse{
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,

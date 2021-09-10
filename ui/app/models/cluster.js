@@ -15,7 +15,7 @@ export default Model.extend({
   license: attr('object'),
 
   /* Licensing concerns */
-  licenseExpiry: alias('license.expiry'),
+  licenseExpiry: alias('license.expiry_time'),
   licenseState: alias('license.state'),
 
   needsInit: computed('nodes', 'nodes.@each.initialized', function() {

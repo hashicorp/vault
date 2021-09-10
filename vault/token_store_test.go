@@ -16,13 +16,13 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -1665,8 +1665,11 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 	// Make sure batch tokens can't do limited use counts
 	req.Data["type"] = "batch"
 	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
 	if resp == nil || !resp.IsError() {
-		t.Fatalf("expected error: resp: %#v", resp)
+		t.Fatalf("expected response error: resp: %#v ", resp)
 	}
 
 	delete(req.Data, "type")
@@ -1743,8 +1746,11 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	// Make sure batch tokens won't automatically assign root
 	req.Data["type"] = "batch"
 	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
 	if resp == nil || !resp.IsError() {
-		t.Fatalf("expected error: resp: %#v", resp)
+		t.Fatalf("expected response error: resp: %#v", resp)
 	}
 
 	delete(req.Data, "type")
@@ -2803,6 +2809,9 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 			"entity_alias": entityAliasName,
 		},
 	})
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
 	if respMixedCase.Auth.EntityID != entityID {
 		t.Fatalf("expected '%s' got '%s'", entityID, respMixedCase.Auth.EntityID)
 	}
@@ -2816,6 +2825,9 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 			"entity_alias": entityAliasNameLower,
 		},
 	})
+	if err != nil {
+		t.Fatalf("error handling request: %v", err)
+	}
 
 	// A token created with the mixed case alias should return the same entity
 	// id as the normal case response.

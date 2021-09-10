@@ -1,4 +1,4 @@
-import { click, fillIn, settled, visit } from '@ember/test-helpers';
+import { click, fillIn, settled, visit, triggerKeyEvent } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -31,7 +31,9 @@ module('Acceptance | userpass secret backend', function(hooks) {
     await visit(`/vault/access/${path1}/item/user/create`);
     await settled();
     await fillIn('[data-test-input="username"]', user1);
+    await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user1);
+    await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
     await click('[data-test-save-config="true"]');
     await settled();
 
@@ -53,7 +55,9 @@ module('Acceptance | userpass secret backend', function(hooks) {
     await click('[data-test-create="user"]');
     await settled();
     await fillIn('[data-test-input="username"]', user2);
+    await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user2);
+    await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
     await click('[data-test-save-config="true"]');
     await settled();
 

@@ -650,7 +650,8 @@ func TestHandler_requestAuth(t *testing.T) {
 	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
 		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 		r = r.WithContext(rootCtx)
-		req, err = requestAuth(core, r, req)
+		requestAuth(r, req)
+		err = core.PopulateTokenEntry(rootCtx, req)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -675,24 +676,13 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 
-	req, err = requestAuth(core, rNothing, req)
+	requestAuth(rNothing, req)
+	err = core.PopulateTokenEntry(rootCtx, req)
 	if err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	}
 	if req.ClientToken != "" {
 		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
-	}
-
-	rFragmentedHeader, err := http.NewRequest("GET", "v1/test/path", nil)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	rFragmentedHeader.Header.Set("Authorization", "Bearer something somewhat")
-	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
-
-	_, err = requestAuth(core, rFragmentedHeader, req)
-	if err == nil {
-		t.Fatalf("expected an error, got none")
 	}
 }
 

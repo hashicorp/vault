@@ -13,15 +13,20 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
+
+var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
+	return nil
+}
 
 // Config is the configuration for the vault server.
 type Config struct {
 	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	FoundKeys  []string                `hcl:",decodedFields"`
 	entConfig
 
 	*configutil.SharedConfig `hcl:"-"`
@@ -88,7 +93,18 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	if c.Telemetry != nil {
 		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
 	}
+	if c.ServiceRegistration != nil {
+		results = append(results, c.ServiceRegistration.Validate(sourceFilePath)...)
+	}
+	for _, l := range c.Listeners {
+		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	results = append(results, c.validateEnt(sourceFilePath)...)
 	return results
+}
+
+func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
+	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -126,7 +142,6 @@ ui = true
 
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
-	UnusedKeys        []string `hcl:",unusedKeys"`
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -140,8 +155,13 @@ func (b *Storage) GoString() string {
 
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
-	Type   string
-	Config map[string]string
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	Type       string
+	Config     map[string]string
+}
+
+func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
 }
 
 func (b *ServiceRegistration) GoString() string {
@@ -462,10 +482,12 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "storage")
 		if err := ParseStorage(result, o, "storage"); err != nil {
 			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
 	} else {
+		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
 				return nil, fmt.Errorf("error parsing 'backend': %w", err)
@@ -474,11 +496,13 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "ha_storage")
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
 			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
+			delete(result.UnusedKeys, "ha_backend")
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
 				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
@@ -487,6 +511,7 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	// Parse service discovery
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
 			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
@@ -498,7 +523,7 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 
 	// Remove all unused keys from Config that were satisfied by SharedConfig.
-	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, sharedConfig.UnusedKeys, append(result.FoundKeys, sharedConfig.FoundKeys...))
+	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, nil, append(result.FoundKeys, sharedConfig.FoundKeys...))
 	// Assign file info
 	for _, v := range result.UnusedKeys {
 		for _, p := range v {
@@ -850,6 +875,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
 		l.RawConfig = nil
+		l.UnusedKeys = nil
 	}
 	c.FoundKeys = nil
 	c.UnusedKeys = nil

@@ -1,4 +1,12 @@
-import { click, visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import {
+  click,
+  visit,
+  settled,
+  currentURL,
+  currentRouteName,
+  fillIn,
+  triggerKeyEvent,
+} from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -35,11 +43,16 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('it creates a secret and redirects', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
     await listPage.create();
+    await settled();
+    await editPage.toggleMetadata();
+    await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
+    await settled();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
@@ -54,6 +67,92 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  test('it can create a secret with a non default max version', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'maxVersions';
+    let maxVersions = 101;
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await settled();
+    await click('[data-test-secret-create="true"]');
+    await fillIn('[data-test-secret-path="true"]', secretPath);
+    await editPage.toggleMetadata();
+    await settled();
+    await fillIn('[data-test-input="maxVersions"]', maxVersions);
+    await settled();
+    await editPage.save();
+    await settled();
+    await editPage.metadataTab();
+    await settled();
+    // convert to number for IE11 browserstack test
+    let savedMaxVersions = Number(document.querySelectorAll('[data-test-value-div]')[0].innerText);
+    assert.equal(
+      maxVersions,
+      savedMaxVersions,
+      'max_version displays the saved number set when creating the secret'
+    );
+  });
+  // ARG TOD add test here that adds custom metadata
+
+  test('it disables save when validation errors occur', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await settled();
+    await click('[data-test-secret-create="true"]');
+    await fillIn('[data-test-secret-path="true"]', 'beep');
+    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText(
+        'A secret with this path already exists.',
+        'when duplicate path it shows correct error message'
+      );
+
+    await editPage.toggleMetadata();
+    await settled();
+    document.querySelector('#maxVersions').value = 'abc';
+    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await settled();
+    assert
+      .dom('[data-test-input="maxVersions"]')
+      .hasClass('has-error-border', 'shows border error on input with error');
+    assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
+    await fillIn('[data-test-input="maxVersions"]', 20);
+    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await fillIn('[data-test-secret-path="true"]', 'meep');
+    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    await click('[data-test-secret-save="true"]');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');
+  });
+
+  test('it navigates to version history and to a specific version', async function(assert) {
+    const path = `kv-path-${new Date().getTime()}`;
+    await listPage.visitRoot({ backend: 'secret' });
+    await settled();
+    await listPage.create();
+    await settled();
+    await editPage.createSecret(path, 'foo', 'bar');
+    await click('[data-test-popup-menu-trigger="version"]');
+    await settled();
+    await click('[data-test-version-history]');
+    await settled();
+    assert
+      .dom('[data-test-list-item-content]')
+      .hasText('Version 1 Current', 'shows version one data on the version history as current');
+    assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
+
+    await click('.linked-block');
+    await settled();
+    await settled();
+    assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/secret/show/${path}?version=1`,
+      'redirects to the show page with queryParam version=1'
+    );
   });
 
   test('version 1 performs the correct capabilities lookup', async function(assert) {
@@ -130,6 +229,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'navigates to the ancestor created earlier'
     );
   });
+
   test('first level secrets redirect properly upon deletion', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'test';
@@ -246,7 +346,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
     await editPage.editSecret('bar', 'baz');
-
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -486,7 +586,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-    assert.ok(editPage.showsNoCASWarning, 'shows no CAS write warning');
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -505,7 +604,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-    assert.ok(editPage.showsV2WriteWarning, 'shows v2 warning');
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -523,8 +621,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    assert.ok(editPage.showsV1WriteWarning, 'shows v1 warning');
-
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
   });

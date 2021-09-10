@@ -22,6 +22,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
@@ -1387,6 +1388,9 @@ vault {
   tls_skip_verify = true
 }
 %s
+template_config {
+  exit_on_retry_failure = true
+}
 `, methodConf, serverClient.Address(), retryConf, templateConfig)
 
 			configPath := makeTempFile(t, "config.hcl", config)
@@ -1688,6 +1692,310 @@ vault {
 
 			close(cmd.ShutdownCh)
 			wg.Wait()
+		})
+	}
+}
+
+func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			// Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores:    1,
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	autoAuthConfig, cleanup := prepAgentApproleKV(t, serverClient)
+	defer cleanup()
+
+	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
+		Options: map[string]string{
+			"version": "2",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = serverClient.Logical().Write("secret/data/otherapp", map[string]interface{}{
+		"data": map[string]interface{}{
+			"username": "barstuff",
+			"password": "zap",
+			"cert":     "something",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+
+	// Note that missing key is different from a non-existent secret. A missing
+	// key (2xx response with missing keys in the response map) can still yield
+	// a successful render unless error_on_missing_key is specified, whereas a
+	// missing secret (4xx response) always results in an error.
+	missingKeyTemplateContent := `{{- with secret "secret/otherapp"}}{"secret": "other",
+{{- if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{- end }}}
+{{- end }}`
+	missingKeyTemplateRender := `{"secret": "other",}`
+
+	badTemplateContent := `{{- with secret "secret/non-existent"}}{"secret": "other",
+{{- if .Data.data.foo}}"foo":"{{ .Data.data.foo}}"{{- end }}}
+{{- end }}`
+
+	testCases := map[string]struct {
+		exitOnRetryFailure        *bool
+		templateContents          string
+		expectTemplateRender      string
+		templateErrorOnMissingKey bool
+		expectError               bool
+		expectExitFromError       bool
+	}{
+		"true, no template error": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(true),
+			templateContents:          templateContents(0),
+			expectTemplateRender:      templateRendered(0),
+			templateErrorOnMissingKey: false,
+			expectError:               false,
+			expectExitFromError:       false,
+		},
+		"true, with non-existent secret": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(true),
+			templateContents:          badTemplateContent,
+			expectTemplateRender:      "",
+			templateErrorOnMissingKey: false,
+			expectError:               true,
+			expectExitFromError:       true,
+		},
+		"true, with missing key": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(true),
+			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      missingKeyTemplateRender,
+			templateErrorOnMissingKey: false,
+			expectError:               false,
+			expectExitFromError:       false,
+		},
+		"true, with missing key, with error_on_missing_key": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(true),
+			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      "",
+			templateErrorOnMissingKey: true,
+			expectError:               true,
+			expectExitFromError:       true,
+		},
+		"false, no template error": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(false),
+			templateContents:          templateContents(0),
+			expectTemplateRender:      templateRendered(0),
+			templateErrorOnMissingKey: false,
+			expectError:               false,
+			expectExitFromError:       false,
+		},
+		"false, with non-existent secret": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(false),
+			templateContents:          badTemplateContent,
+			expectTemplateRender:      "",
+			templateErrorOnMissingKey: false,
+			expectError:               true,
+			expectExitFromError:       false,
+		},
+		"false, with missing key": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(false),
+			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      missingKeyTemplateRender,
+			templateErrorOnMissingKey: false,
+			expectError:               false,
+			expectExitFromError:       false,
+		},
+		"false, with missing key, with error_on_missing_key": {
+			exitOnRetryFailure:        pointerutil.BoolPtr(false),
+			templateContents:          missingKeyTemplateContent,
+			expectTemplateRender:      missingKeyTemplateRender,
+			templateErrorOnMissingKey: true,
+			expectError:               true,
+			expectExitFromError:       false,
+		},
+		"missing": {
+			exitOnRetryFailure:        nil,
+			templateContents:          templateContents(0),
+			expectTemplateRender:      templateRendered(0),
+			templateErrorOnMissingKey: false,
+			expectError:               false,
+			expectExitFromError:       false,
+		},
+	}
+
+	for tcName, tc := range testCases {
+		t.Run(tcName, func(t *testing.T) {
+			// create temp dir for this test run
+			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcName)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			listenAddr := "127.0.0.1:18123"
+			listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+			var exitOnRetryFailure string
+			if tc.exitOnRetryFailure != nil {
+				exitOnRetryFailure = fmt.Sprintf("exit_on_retry_failure = %t", *tc.exitOnRetryFailure)
+			}
+			templateConfig := fmt.Sprintf(`
+template_config = {
+	%s
+}
+`, exitOnRetryFailure)
+
+			template := fmt.Sprintf(`
+template {
+	contents = <<EOF
+%s
+EOF
+	destination = "%s/render_0.json"
+	error_on_missing_key = %t
+}
+`, tc.templateContents, tmpDir, tc.templateErrorOnMissingKey)
+
+			config := fmt.Sprintf(`
+# auto-auth stanza
+%s
+
+vault {
+	address = "%s"
+	tls_skip_verify = true
+	retry {
+		num_retries = 3
+	}
+}
+
+# listener stanza
+%s
+
+# template_config stanza
+%s
+
+# template stanza
+%s
+`, autoAuthConfig, serverClient.Address(), listenConfig, templateConfig, template)
+
+			configPath := makeTempFile(t, "config.hcl", config)
+			defer os.Remove(configPath)
+
+			// Start the agent
+			ui, cmd := testAgentCommand(t, logger)
+			cmd.startedCh = make(chan struct{})
+
+			// Channel to let verify() know to stop early if agent
+			// has exited
+			cmdRunDoneCh := make(chan struct{})
+			var exitedEarly bool
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			var code int
+			go func() {
+				code = cmd.Run([]string{"-config", configPath})
+				close(cmdRunDoneCh)
+				wg.Done()
+			}()
+
+			verify := func() error {
+				t.Helper()
+				// We need to poll for a bit to give Agent time to render the
+				// templates. Without this this, the test will attempt to read
+				// the temp dir before Agent has had time to render and will
+				// likely fail the test
+				tick := time.Tick(1 * time.Second)
+				timeout := time.After(15 * time.Second)
+				var err error
+				for {
+					select {
+					case <-cmdRunDoneCh:
+						exitedEarly = true
+						return nil
+					case <-timeout:
+						return fmt.Errorf("timed out waiting for templates to render, last error: %w", err)
+					case <-tick:
+					}
+					// Check for files rendered in the directory and break
+					// early for shutdown if we do have all the files
+					// rendered
+
+					//----------------------------------------------------
+					// Perform the tests
+					//----------------------------------------------------
+
+					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
+						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
+						continue
+					}
+
+					fileName := filepath.Join(tmpDir, "render_0.json")
+					var c []byte
+					c, err = ioutil.ReadFile(fileName)
+					if err != nil {
+						continue
+					}
+					if strings.TrimSpace(string(c)) != tc.expectTemplateRender {
+						err = fmt.Errorf("expected='%s', got='%s'", tc.expectTemplateRender, strings.TrimSpace(string(c)))
+						continue
+					}
+					return nil
+				}
+			}
+
+			err = verify()
+			close(cmd.ShutdownCh)
+			wg.Wait()
+
+			switch {
+			case (code != 0 || err != nil) && tc.expectError:
+				if exitedEarly != tc.expectExitFromError {
+					t.Fatalf("expected program exit due to error to be '%t', got '%t'", tc.expectExitFromError, exitedEarly)
+				}
+			case code == 0 && err == nil && !tc.expectError:
+				if exitedEarly {
+					t.Fatalf("did not expect program to exit before verify completes")
+				}
+			default:
+				if code != 0 {
+					t.Logf("output from agent:\n%s", ui.OutputWriter.String())
+					t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
+				}
+				t.Fatalf("expectError=%v error=%v code=%d", tc.expectError, err, code)
+			}
 		})
 	}
 }

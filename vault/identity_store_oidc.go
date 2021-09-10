@@ -11,17 +11,18 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/ed25519"
@@ -312,7 +313,7 @@ func (i *IdentityStore) pathOIDCReadConfig(ctx context.Context, req *logical.Req
 		},
 	}
 
-	if i.core.redirectAddr == "" && c.Issuer == "" {
+	if i.redirectAddr == "" && c.Issuer == "" {
 		resp.AddWarning(`Both "issuer" and Vault's "api_addr" are empty. ` +
 			`The issuer claim in generated tokens will not be network reachable.`)
 	}
@@ -415,7 +416,7 @@ func (i *IdentityStore) getOIDCConfig(ctx context.Context, s logical.Storage) (*
 
 	c.effectiveIssuer = c.Issuer
 	if c.effectiveIssuer == "" {
-		c.effectiveIssuer = i.core.redirectAddr
+		c.effectiveIssuer = i.redirectAddr
 	}
 
 	c.effectiveIssuer += "/v1/" + ns.Path + issuerPath
@@ -470,6 +471,25 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 
 	if key.VerificationTTL > 10*key.RotationPeriod {
 		return logical.ErrorResponse("verification_ttl cannot be longer than 10x rotation_period"), nil
+	}
+
+	if req.Operation == logical.UpdateOperation {
+		// ensure any roles referencing this key do not already have a token_ttl
+		// greater than the key's verification_ttl
+		roles, err := i.rolesReferencingTargetKeyName(ctx, req, name)
+		if err != nil {
+			return nil, err
+		}
+		for _, role := range roles {
+			if role.TokenTTL > key.VerificationTTL {
+				errorMessage := fmt.Sprintf(
+					"unable to update key %q because it is currently referenced by one or more roles with a token ttl greater than %d seconds",
+					name,
+					key.VerificationTTL/time.Second,
+				)
+				return logical.ErrorResponse(errorMessage), nil
+			}
+		}
 	}
 
 	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {
@@ -556,6 +576,54 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
+// rolesReferencingTargetKeyName returns a map of role names to roles
+// referencing targetKeyName.
+//
+// Note: this is not threadsafe. It is to be called with Lock already held.
+func (i *IdentityStore) rolesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) (map[string]role, error) {
+	roleNames, err := req.Storage.List(ctx, roleConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var tempRole role
+	roles := make(map[string]role)
+	for _, roleName := range roleNames {
+		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempRole); err != nil {
+				return nil, err
+			}
+			if tempRole.Key == targetKeyName {
+				roles[roleName] = tempRole
+			}
+		}
+	}
+
+	return roles, nil
+}
+
+// roleNamesReferencingTargetKeyName returns a slice of strings of role
+// names referencing targetKeyName.
+//
+// Note: this is not threadsafe. It is to be called with Lock already held.
+func (i *IdentityStore) roleNamesReferencingTargetKeyName(ctx context.Context, req *logical.Request, targetKeyName string) ([]string, error) {
+	roles, err := i.rolesReferencingTargetKeyName(ctx, req, targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for key, _ := range roles {
+		names = append(names, key)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 // handleOIDCDeleteKey is used to delete a key
 func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -567,35 +635,26 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	i.oidcLock.Lock()
 
-	// it is an error to delete a key that is actively referenced by a role
-	roleNames, err := req.Storage.List(ctx, roleConfigPath)
+	roleNames, err := i.roleNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
-		i.oidcLock.Unlock()
 		return nil, err
 	}
 
-	var role *role
-	rolesReferencingTargetKeyName := make([]string, 0)
-	for _, roleName := range roleNames {
-		entry, err := req.Storage.Get(ctx, roleConfigPath+roleName)
-		if err != nil {
-			i.oidcLock.Unlock()
-			return nil, err
-		}
-		if entry != nil {
-			if err := entry.DecodeJSON(&role); err != nil {
-				i.oidcLock.Unlock()
-				return nil, err
-			}
-			if role.Key == targetKeyName {
-				rolesReferencingTargetKeyName = append(rolesReferencingTargetKeyName, roleName)
-			}
-		}
+	if len(roleNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
+			targetKeyName, strings.Join(roleNames, ", "))
+		i.oidcLock.Unlock()
+		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 
-	if len(rolesReferencingTargetKeyName) > 0 {
-		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these roles: %s",
-			targetKeyName, strings.Join(rolesReferencingTargetKeyName, ", "))
+	clientNames, err := i.clientNamesReferencingTargetKeyName(ctx, req, targetKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(clientNames) > 0 {
+		errorMessage := fmt.Sprintf("unable to delete key %q because it is currently referenced by these clients: %s",
+			targetKeyName, strings.Join(clientNames, ", "))
 		i.oidcLock.Unlock()
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
@@ -747,13 +806,21 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, err
 	}
 
+	retResp := &logical.Response{}
+	expiry := role.TokenTTL
+	if expiry > key.VerificationTTL {
+		expiry = key.VerificationTTL
+		retResp.AddWarning(fmt.Sprintf("a role's token ttl cannot be longer "+
+			"than the verification_ttl of the key it references, setting token ttl to %d", expiry))
+	}
+
 	now := time.Now()
 	idToken := idToken{
 		Issuer:    config.effectiveIssuer,
 		Namespace: ns.ID,
 		Subject:   req.EntityID,
 		Audience:  role.ClientID,
-		Expiry:    now.Add(role.TokenTTL).Unix(),
+		Expiry:    now.Add(expiry).Unix(),
 		IssuedAt:  now.Unix(),
 	}
 
@@ -782,13 +849,12 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, fmt.Errorf("error signing OIDC token: %w", err)
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"token":     signedIdToken,
-			"client_id": role.ClientID,
-			"ttl":       int64(role.TokenTTL.Seconds()),
-		},
-	}, nil
+	retResp.Data = map[string]interface{}{
+		"token":     signedIdToken,
+		"client_id": role.ClientID,
+		"ttl":       int64(role.TokenTTL.Seconds()),
+	}
+	return retResp, nil
 }
 
 func (tok *idToken) generatePayload(logger hclog.Logger, template string, entity *identity.Entity, groups []*identity.Group) ([]byte, error) {
@@ -867,7 +933,7 @@ func (i *IdentityStore) pathOIDCRoleExistenceCheck(ctx context.Context, req *log
 	return role != nil, nil
 }
 
-// handleOIDCCreateRole is used to create a new role or update an existing one
+// pathOIDCCreateUpdateRole is used to create a new role or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -938,6 +1004,22 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		role.TokenTTL = time.Duration(d.Get("ttl").(int)) * time.Second
 	}
 
+	// get the key referenced by this role if it exists
+	var key namedKey
+	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+role.Key)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		if err := entry.DecodeJSON(&key); err != nil {
+			return nil, err
+		}
+
+		if role.TokenTTL > key.VerificationTTL {
+			return logical.ErrorResponse("a role's token ttl cannot be longer than the verification_ttl of the key it references"), nil
+		}
+	}
+
 	if clientID, ok := d.GetOk("client_id"); ok {
 		role.ClientID = clientID.(string)
 	}
@@ -952,7 +1034,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 	}
 
 	// store role (which was either just created or updated)
-	entry, err := logical.StorageEntryJSON(roleConfigPath+name, role)
+	entry, err = logical.StorageEntryJSON(roleConfigPath+name, role)
 	if err != nil {
 		return nil, err
 	}
@@ -1585,10 +1667,10 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		// based on key rotation times.
 		nextRun = now.Add(24 * time.Hour)
 
-		for _, ns := range i.listNamespaces() {
+		for _, ns := range i.namespacer.ListNamespaces() {
 			nsPath := ns.Path
 
-			s := i.core.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
+			s := i.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")
 
 			if s == nil {
 				continue

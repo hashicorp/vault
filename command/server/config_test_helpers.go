@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
+func boolPointer(x bool) *bool {
+	return &x
+}
+
 func testConfigRaftRetryJoin(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
 	if err != nil {
@@ -468,11 +472,11 @@ func testUnknownFieldValidation(t *testing.T) {
 
 	expected := []configutil.ConfigError{
 		{
-			Problem: "unknown field bad_value found in configuration",
+			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   603,
-				Line:     35,
+				Offset:   583,
+				Line:     34,
 				Column:   5,
 			},
 		},
@@ -481,8 +485,12 @@ func testUnknownFieldValidation(t *testing.T) {
 
 	for _, er1 := range errors {
 		found := false
+		if strings.Contains(er1.String(), "sentinel") {
+			//This happens on OSS, and is fine
+			continue
+		}
 		for _, ex := range expected {
-			// Only test the string, pos may change
+			// TODO: Only test the string, pos may change
 			if ex.Problem == er1.Problem && reflect.DeepEqual(ex.Position, er1.Position) {
 				found = true
 				break

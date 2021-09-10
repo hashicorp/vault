@@ -91,6 +91,54 @@ func TestActivityLog_Creation(t *testing.T) {
 	}
 }
 
+func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+
+	a := core.activityLog
+	a.SetEnable(true)
+
+	if a == nil {
+		t.Fatal("no activity log found")
+	}
+	if a.logger == nil || a.view == nil {
+		t.Fatal("activity log not initialized")
+	}
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("activity log already has fragment")
+	}
+	a.fragmentLock.Unlock()
+	const namespace_id = "ns123"
+
+	a.HandleTokenCreation(&logical.TokenEntry{
+		Path:         "test",
+		Policies:     []string{responseWrappingPolicyName},
+		CreationTime: time.Now().Unix(),
+		TTL:          3600,
+		NamespaceID:  namespace_id,
+	})
+
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("fragment created")
+	}
+	a.fragmentLock.Unlock()
+
+	a.HandleTokenCreation(&logical.TokenEntry{
+		Path:         "test",
+		Policies:     []string{controlGroupPolicyName},
+		CreationTime: time.Now().Unix(),
+		TTL:          3600,
+		NamespaceID:  namespace_id,
+	})
+
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("fragment created")
+	}
+	a.fragmentLock.Unlock()
+}
+
 func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string) {
 	t.Helper()
 

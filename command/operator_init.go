@@ -448,7 +448,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Vault does not store the generated master key. Without at least %d "+
-				"key to reconstruct the master key, Vault will remain permanently "+
+				"keys to reconstruct the master key, Vault will remain permanently "+
 				"sealed!",
 			req.SecretThreshold)))
 

@@ -12,13 +12,13 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -105,13 +105,13 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
-			ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
+			ns, err := i.namespacer.NamespaceByID(ctx, group.NamespaceID)
 			if err != nil {
 				return err
 			}
 			if ns == nil {
 				// Remove dangling groups
-				if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+				if !(i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.localNode.HAState() == consts.PerfStandby) {
 					// Group's namespace doesn't exist anymore but the group
 					// from the namespace still exists.
 					i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
@@ -273,13 +273,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					continue
 				}
 
-				ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+				ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
 				if err != nil {
 					return err
 				}
 				if ns == nil {
 					// Remove dangling entities
-					if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+					if !(i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.localNode.HAState() == consts.PerfStandby) {
 						// Entity's namespace doesn't exist anymore but the
 						// entity from the namespace still exists.
 						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
@@ -1435,7 +1435,7 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 			Message: groupAsAny,
 		}
 
-		sent, err := sendGroupUpgrade(ctx, i, group)
+		sent, err := i.groupUpdater.SendGroupUpdate(ctx, group)
 		if err != nil {
 			return err
 		}
@@ -2091,7 +2091,7 @@ func (i *IdentityStore) handleAliasListCommon(ctx context.Context, groupAlias bo
 			aliasInfoEntry["mount_path"] = mi.MountPath
 		} else {
 			mi = mountInfo{}
-			if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+			if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 				mi.MountType = mountValidationResp.MountType
 				mi.MountPath = mountValidationResp.MountPath
 				aliasInfoEntry["mount_type"] = mi.MountType
