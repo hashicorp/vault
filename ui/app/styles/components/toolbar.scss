@@ -83,6 +83,8 @@
   border: 0;
   color: $black;
   transition: background-color $speed;
+  display: flex;
+  justify-content: space-between;
 
   &:hover {
     background-color: $ui-gray-100;
@@ -105,4 +107,8 @@
   height: 32px;
   margin: 0 $spacing-xs;
   width: 0;
+}
+
+.toolbar-button-spacer {
+  margin-left: 4px; // Note: We should give a reco what spacing we want, when inline with text
 }
