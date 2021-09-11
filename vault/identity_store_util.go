@@ -106,8 +106,7 @@ func (i *IdentityStore) loadOIDCClients(ctx context.Context) error {
 			return err
 		}
 
-		// TODO: should this use MemDBUpsertClientInTxn instead?
-		if err := txn.Insert(oidcClientsTable, &client); err != nil {
+		if err := i.MemDBUpsertClientInTxn(txn, &client); err != nil {
 			return err
 		}
 	}

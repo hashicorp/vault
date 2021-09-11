@@ -1208,76 +1208,88 @@ func (i *IdentityStore) pathOIDCProviderExistenceCheck(ctx context.Context, req 
 func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errors.New(ErrAuthServerError)
+		return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 	}
 
 	// Get the OIDC provider
 	name := d.Get("name").(string)
 	provider, err := i.getOIDCProvider(ctx, req.Storage, name)
 	if err != nil {
-		return nil, errors.New(ErrAuthServerError)
+		return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 	}
 	if provider == nil {
-		return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+		return logical.ErrorResponse("%s: provider not found", ErrAuthInvalidRequest), nil
 	}
 
 	// Validate that a scope parameter is present and contains the openid scope value
 	scopes := strutil.ParseStringSlice(d.Get("scope").(string), " ")
 	if len(scopes) == 0 || !strutil.StrListContains(scopes, openIDScope) {
-		return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+		return logical.ErrorResponse("%s: scope parameter must contain the %q value",
+			ErrAuthInvalidRequest, openIDScope), nil
 	}
 
 	// Validate the response type
 	responseType := d.Get("response_type").(string)
 	if responseType == "" {
-		return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+		return logical.ErrorResponse("%s: response_type parameter is required",
+			ErrAuthInvalidRequest), nil
 	}
 	if responseType != "code" {
-		return logical.ErrorResponse(ErrAuthUnsupportedResponseType), nil
+		return logical.ErrorResponse("%s: unsupported response_type value",
+			ErrAuthUnsupportedResponseType), nil
 	}
 
 	// Validate the client ID
 	clientID := d.Get("client_id").(string)
 	if clientID == "" {
-		return logical.ErrorResponse(ErrAuthInvalidClientID), nil
+		return logical.ErrorResponse("%s: client_id parameter is required",
+			ErrAuthInvalidClientID), nil
 	}
 	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
-		return nil, errors.New(ErrAuthServerError)
+		return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 	}
 	if client == nil {
-		return logical.ErrorResponse(ErrAuthInvalidClientID), nil
+		return logical.ErrorResponse("%s: client with client_id not found",
+			ErrAuthInvalidClientID), nil
 	}
 	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
 		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
-		return logical.ErrorResponse(ErrAuthUnauthorizedClient), nil
+		return logical.ErrorResponse("%s: client is not authorized to use the provider",
+			ErrAuthUnauthorizedClient), nil
 	}
 
 	// Validate the redirect URI
 	redirectURI := d.Get("redirect_uri").(string)
 	if redirectURI == "" {
-		return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+		return logical.ErrorResponse("%s: redirect_uri parameter is required",
+			ErrAuthInvalidRequest), nil
 	}
 	if !strutil.StrListContains(client.RedirectURIs, redirectURI) {
-		return logical.ErrorResponse(ErrAuthInvalidRedirectURI), nil
+		return logical.ErrorResponse("%s: redirect_uri is not allowed for the client",
+			ErrAuthInvalidRedirectURI), nil
 	}
 
 	// Validate the state
 	state := d.Get("state").(string)
 	if state == "" {
-		return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+		return logical.ErrorResponse("%s: state parameter is required", ErrAuthInvalidRequest), nil
 	}
 
 	// Validate the nonce
 	nonce := d.Get("nonce").(string)
 	if nonce == "" {
-		return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+		return logical.ErrorResponse("%s: nonce parameter is required", ErrAuthInvalidRequest), nil
 	}
 
 	// Validate that there is an identity entity associated with the request
-	entityID := req.EntityID
-	if entityID == "" {
-		return logical.ErrorResponse(ErrAuthAccessDenied), nil
+	entity, err := i.MemDBEntityByID(req.EntityID, false)
+	if err != nil {
+		return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
+	}
+	if entity == nil {
+		return logical.ErrorResponse("%s: identity entity must be associated with the request",
+			ErrAuthAccessDenied), nil
 	}
 
 	// Validate that the identity entity associated with the request
@@ -1286,14 +1298,17 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 AssignmentsLoop:
 	for _, a := range client.Assignments {
 		assignment, err := i.getOIDCAssignment(ctx, req.Storage, a)
-		if err != nil || assignment == nil {
-			return nil, errors.New(ErrAuthServerError)
+		if err != nil {
+			return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
+		}
+		if assignment == nil {
+			return nil, fmt.Errorf("%s: client assignment %q not found", ErrAuthServerError, a)
 		}
 
 		// Get the group names that the entity is a member of
-		entityGroups, err := i.MemDBGroupsByMemberEntityID(entityID, true, false)
+		entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
 		if err != nil {
-			return nil, errors.New(ErrAuthServerError)
+			return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 		}
 		entityGroupNames := make(map[string]bool)
 		for _, group := range entityGroups {
@@ -1309,18 +1324,19 @@ AssignmentsLoop:
 		}
 
 		// Check if the entity is a member of the assignment's entities
-		if strutil.StrListContains(assignment.Entities, entityID) {
+		if strutil.StrListContains(assignment.Entities, entity.GetName()) {
 			entityHasAssignment = true
 			break
 		}
 	}
 	if !entityHasAssignment {
-		return logical.ErrorResponse(ErrAuthAccessDenied), nil
+		return logical.ErrorResponse("%s: identity entity not authorized by client assignment",
+			ErrAuthAccessDenied), nil
 	}
 
 	// Create the auth code cache entry
 	authCodeEntry := &authCodeCacheEntry{
-		entityID: entityID,
+		entityID: entity.GetID(),
 		nonce:    nonce,
 		scopes:   scopes,
 	}
@@ -1333,20 +1349,23 @@ AssignmentsLoop:
 	if maxAgeRaw, ok := d.GetOk("max_age"); ok {
 		maxAge := maxAgeRaw.(int)
 		if maxAge < 0 {
-			return logical.ErrorResponse(ErrAuthInvalidRequest), nil
+			return logical.ErrorResponse("%s: max_age must be greater than zero",
+				ErrAuthInvalidRequest), nil
 		}
 		if maxAge == 0 {
 			// TODO: solve for the potential UI loop here or make max_age=0 invalid
-			return logical.ErrorResponse(ErrAuthMaxAgeReAuthenticate), nil
+			return logical.ErrorResponse("%s: active re-authentication is required by max_age",
+				ErrAuthMaxAgeReAuthenticate), nil
 		}
 
 		// Look up the token associated with the request
 		te, err := i.tokenStorer.LookupToken(ctx, req.ClientToken)
 		if err != nil {
-			return nil, errors.New(ErrAuthServerError)
+			return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 		}
 		if te == nil {
-			return logical.ErrorResponse(ErrAuthAccessDenied), nil
+			return logical.ErrorResponse("%s: token associated with request not found",
+				ErrAuthAccessDenied), nil
 		}
 
 		// Check if the token creation time violates the max age requirement
@@ -1354,7 +1373,8 @@ AssignmentsLoop:
 		lastAuthTime := time.Unix(te.CreationTime, 0).UTC()
 		secondsSince := int(now.Sub(lastAuthTime).Seconds())
 		if secondsSince > maxAge {
-			return logical.ErrorResponse(ErrAuthMaxAgeReAuthenticate), nil
+			return logical.ErrorResponse("%s: active re-authentication is required by max_age",
+				ErrAuthMaxAgeReAuthenticate), nil
 		}
 
 		// Set the auth time to use for the auth_time claim in the token exchange
@@ -1364,12 +1384,12 @@ AssignmentsLoop:
 	// Generate the authorization code
 	code, err := base62.Random(32)
 	if err != nil {
-		return nil, errors.New(ErrAuthServerError)
+		return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 	}
 
 	// Cache the authorization code for a subsequent token exchange
 	if err := i.oidcAuthCodeCache.SetDefault(ns, code, authCodeEntry); err != nil {
-		return nil, errors.New(ErrAuthServerError)
+		return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
 	}
 
 	return &logical.Response{
