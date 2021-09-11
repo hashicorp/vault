@@ -8,6 +8,26 @@ description: |-
 
 # Vault Agent
 
+Nearly all requests to Vault must be accompanied by a valid client token. This
+includes all API requests, as well as via the Vault CLI and other libraries.
+Therefore, Vault clients must first authenticate with Vault to acquire a token,
+and Vault provides a number of different authentication methods to assist in the
+delivery of this initial token.
+
+![](/img/dialog-vault-agent.png)
+
+If the client can securely get the token, all subsequent requests (e.g. request
+database credentials, read key/value secrets) can be processed based on the
+trust established by the successful authentication.
+
+This meand that the client application must invoke the Vault API to authenticate
+with Vault and manage the acquired token in addition to invoking the API to
+request secrets from Vault. This implies code changes; therefore, additional
+testing and maintenance of the application. Vault Agent aims to remove the
+initial hurdle to adopt Vault.
+
+## What is Vault Agent?
+
 Vault Agent is a client daemon that provides the following features:
 
 - [Auto-Auth][autoauth] - Automatically authenticate to Vault and manage the token renewal process for locally-retrieved dynamic secrets.
