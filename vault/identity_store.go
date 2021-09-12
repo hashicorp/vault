@@ -184,7 +184,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			i.logger.Error("failed to load groups during invalidation", "error", err)
 			return
 		}
-		// TODO: do we need to do this?
 		if err := i.loadOIDCClients(ctx); err != nil {
 			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
 			return

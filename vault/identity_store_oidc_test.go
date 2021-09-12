@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/patrickmn/go-cache"
 	gocache "github.com/patrickmn/go-cache"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -1307,7 +1308,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 }
 
 func TestOIDC_Flush(t *testing.T) {
-	c := newOIDCCache()
+	c := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 	ns := []*namespace.Namespace{
 		noNamespace, // ns[0] is nilNamespace
 		{ID: "ns1"},
@@ -1367,7 +1368,7 @@ func TestOIDC_Flush(t *testing.T) {
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
-	cache := newOIDCCache()
+	cache := newOIDCCache(cache.NoExpiration, cache.NoExpiration)
 
 	if _, _, err := cache.Get(nil, "foo"); err == nil {
 		t.Fatal("expected error, got nil")
