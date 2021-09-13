@@ -2,11 +2,7 @@ import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-// import {pki} from 'node-forge';
-// const cert = pki.certificateFromPem(this.model.certificate);
-// const commonName = cert.subject.getField('CN')
-// const issueDate = cert.validity.notBefore
-// const expiryDate = cert.validity.notAfter
+import { pki } from 'node-forge';
 
 export default RESTSerializer.extend({
   keyForAttribute: function(attr) {
@@ -43,9 +39,21 @@ export default RESTSerializer.extend({
     return payload;
   },
 
+  getMetadata(response) {
+    const cert = pki.certificateFromPem(response.certificate);
+    const commonName = cert.subject.getField('CN');
+    const issueDate = cert.validity.notBefore;
+    const expiryDate = cert.validity.notAfter;
+    console.log(cert);
+    console.log(cert.subject, 'here');
+    console.log(issueDate, 'issueDate');
+    console.log(expiryDate, 'expiryDate');
+  },
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
+    this.getMetadata(responseJSON);
     // const certMetadata = getMetadata(responseJSON.certificate), return object with
     // getMetadata is a function (make a helper...later) use forge to parse the cert
     // get info we want, and always return an object so wrap in a try
@@ -55,7 +63,6 @@ export default RESTSerializer.extend({
       expiry_date: 'expiry date',
     };
     let transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
-    console.log({ responseJSON });
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 
