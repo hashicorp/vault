@@ -2,6 +2,11 @@ import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
+// import {pki} from 'node-forge';
+// const cert = pki.certificateFromPem(this.model.certificate);
+// const commonName = cert.subject.getField('CN')
+// const issueDate = cert.validity.notBefore
+// const expiryDate = cert.validity.notAfter
 
 export default RESTSerializer.extend({
   keyForAttribute: function(attr) {
@@ -41,7 +46,16 @@ export default RESTSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
-    let transformedPayload = { [modelName]: responseJSON };
+    // const certMetadata = getMetadata(responseJSON.certificate), return object with
+    // getMetadata is a function (make a helper...later) use forge to parse the cert
+    // get info we want, and always return an object so wrap in a try
+    const certMetadata = {
+      common_name: 'name',
+      issue_date: 'issue date',
+      expiry_date: 'expiry date',
+    };
+    let transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
+    console.log({ responseJSON });
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 

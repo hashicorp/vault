@@ -25,6 +25,7 @@ export default Certificate.extend({
     possibleValues: ['root', 'intermediate'],
     defaultValue: 'root',
     label: 'CA Type',
+
     readOnly: true,
   }),
   uploadPemBundle: attr('boolean', {
