@@ -345,7 +345,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		name := strings.TrimPrefix(key, clientPath)
 
 		// Invalidate the cached client in memdb
-		if err := i.MemDBDeleteClientByName(ctx, name); err != nil {
+		if err := i.memDBDeleteClientByName(ctx, name); err != nil {
 			i.logger.Error("error invalidating client", "error", err, "key", key)
 			return
 		}

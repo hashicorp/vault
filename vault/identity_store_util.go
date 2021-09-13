@@ -106,7 +106,7 @@ func (i *IdentityStore) loadOIDCClients(ctx context.Context) error {
 			return err
 		}
 
-		if err := i.MemDBUpsertClientInTxn(txn, &client); err != nil {
+		if err := i.memDBUpsertClientInTxn(txn, &client); err != nil {
 			return err
 		}
 	}

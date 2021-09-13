@@ -902,7 +902,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	}
 
 	// invalidate the cached client in memdb
-	if err := i.MemDBDeleteClientByName(ctx, name); err != nil {
+	if err := i.memDBDeleteClientByName(ctx, name); err != nil {
 		return nil, err
 	}
 
@@ -931,51 +931,25 @@ func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Req
 func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	resp := func(client *client) *logical.Response {
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"redirect_uris":    client.RedirectURIs,
-				"assignments":      client.Assignments,
-				"key":              client.Key,
-				"id_token_ttl":     client.IDTokenTTL,
-				"access_token_ttl": client.AccessTokenTTL,
-				"client_id":        client.ClientID,
-				"client_secret":    client.ClientSecret,
-			},
-		}
-	}
-
-	// Read the client from memdb
-	client, err := i.MemDBClientByName(ctx, name)
+	client, err := i.clientByName(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if client != nil {
-		return resp(client), nil
-	}
-
-	// Fall back to reading the client from storage
-	entry, err := req.Storage.Get(ctx, clientPath+name)
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
+	if client == nil {
 		return nil, nil
 	}
-	if err := entry.DecodeJSON(&client); err != nil {
-		return nil, err
-	}
 
-	// Upsert the cached client in memdb
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-	if err := i.MemDBUpsertClientInTxn(txn, client); err != nil {
-		i.logger.Debug("failed to upsert client in memdb", "error", err)
-		return resp(client), nil
-	}
-	txn.Commit()
-
-	return resp(client), nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"redirect_uris":    client.RedirectURIs,
+			"assignments":      client.Assignments,
+			"key":              client.Key,
+			"id_token_ttl":     client.IDTokenTTL,
+			"access_token_ttl": client.AccessTokenTTL,
+			"client_id":        client.ClientID,
+			"client_secret":    client.ClientSecret,
+		},
+	}, nil
 }
 
 // pathOIDCDeleteClient is used to delete an client
@@ -983,7 +957,7 @@ func (i *IdentityStore) pathOIDCDeleteClient(ctx context.Context, req *logical.R
 	name := d.Get("name").(string)
 
 	// Delete the client from memdb
-	if err := i.MemDBDeleteClientByName(ctx, name); err != nil {
+	if err := i.memDBDeleteClientByName(ctx, name); err != nil {
 		return nil, err
 	}
 
@@ -1399,10 +1373,10 @@ AssignmentsLoop:
 	}, nil
 }
 
-// clientByID returns the client with the given ID or an error.
+// clientByID returns the client with the given ID.
 func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id string) (*client, error) {
-	// Look up the client from memdb
-	client, err := i.MemDBClientByID(id)
+	// Read the client from memdb
+	client, err := i.memDBClientByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -1410,7 +1384,7 @@ func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id st
 		return client, nil
 	}
 
-	// Fall back to looking up the client from storage
+	// Fall back to reading the client from storage
 	client, err = i.storageClientByID(ctx, s, id)
 	if err != nil {
 		return nil, err
@@ -1419,10 +1393,10 @@ func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id st
 		return nil, nil
 	}
 
-	// Upsert the cached client in memdb
+	// Upsert the client in memdb
 	txn := i.db.Txn(true)
 	defer txn.Abort()
-	if err := i.MemDBUpsertClientInTxn(txn, client); err != nil {
+	if err := i.memDBUpsertClientInTxn(txn, client); err != nil {
 		i.logger.Debug("failed to upsert client in memdb", "error", err)
 		return client, nil
 	}
@@ -1431,19 +1405,51 @@ func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id st
 	return client, nil
 }
 
-// MemDBClientByID returns the client with the given ID.
-func (i *IdentityStore) MemDBClientByID(id string) (*client, error) {
+// clientByName returns the client with the given name.
+func (i *IdentityStore) clientByName(ctx context.Context, s logical.Storage, name string) (*client, error) {
+	// Read the client from memdb
+	client, err := i.memDBClientByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if client != nil {
+		return client, nil
+	}
+
+	// Fall back to reading the client from storage
+	client, err = i.storageClientByName(ctx, s, name)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, nil
+	}
+
+	// Upsert the client in memdb
+	txn := i.db.Txn(true)
+	defer txn.Abort()
+	if err := i.memDBUpsertClientInTxn(txn, client); err != nil {
+		i.logger.Debug("failed to upsert client in memdb", "error", err)
+		return client, nil
+	}
+	txn.Commit()
+
+	return client, nil
+}
+
+// memDBClientByID returns the client with the given ID from memdb.
+func (i *IdentityStore) memDBClientByID(id string) (*client, error) {
 	if id == "" {
 		return nil, fmt.Errorf("missing client ID")
 	}
 
 	txn := i.db.Txn(false)
 
-	return i.MemDBClientByIDInTxn(txn, id)
+	return i.memDBClientByIDInTxn(txn, id)
 }
 
-// MemDBClientByIDInTxn returns the client with the given ID using the given txn.
-func (i *IdentityStore) MemDBClientByIDInTxn(txn *memdb.Txn, id string) (*client, error) {
+// memDBClientByIDInTxn returns the client with the given ID from memdb using the given txn.
+func (i *IdentityStore) memDBClientByIDInTxn(txn *memdb.Txn, id string) (*client, error) {
 	if id == "" {
 		return nil, fmt.Errorf("missing client ID")
 	}
@@ -1468,19 +1474,19 @@ func (i *IdentityStore) MemDBClientByIDInTxn(txn *memdb.Txn, id string) (*client
 	return client, nil
 }
 
-// MemDBClientByName returns the client with the given name.
-func (i *IdentityStore) MemDBClientByName(ctx context.Context, name string) (*client, error) {
+// memDBClientByName returns the client with the given name from memdb.
+func (i *IdentityStore) memDBClientByName(ctx context.Context, name string) (*client, error) {
 	if name == "" {
 		return nil, fmt.Errorf("missing client name")
 	}
 
 	txn := i.db.Txn(false)
 
-	return i.MemDBClientByNameInTxn(ctx, txn, name)
+	return i.memDBClientByNameInTxn(ctx, txn, name)
 }
 
-// MemDBClientByNameInTxn returns the client with the given ID using the given txn.
-func (i *IdentityStore) MemDBClientByNameInTxn(ctx context.Context, txn *memdb.Txn, name string) (*client, error) {
+// memDBClientByNameInTxn returns the client with the given ID from memdb using the given txn.
+func (i *IdentityStore) memDBClientByNameInTxn(ctx context.Context, txn *memdb.Txn, name string) (*client, error) {
 	if name == "" {
 		return nil, errors.New("missing client name")
 	}
@@ -1510,8 +1516,8 @@ func (i *IdentityStore) MemDBClientByNameInTxn(ctx context.Context, txn *memdb.T
 	return client, nil
 }
 
-// MemDBDeleteClientByName deletes the client with the given name.
-func (i *IdentityStore) MemDBDeleteClientByName(ctx context.Context, name string) error {
+// memDBDeleteClientByName deletes the client with the given name from memdb.
+func (i *IdentityStore) memDBDeleteClientByName(ctx context.Context, name string) error {
 	if name == "" {
 		return fmt.Errorf("missing client name")
 	}
@@ -1519,7 +1525,7 @@ func (i *IdentityStore) MemDBDeleteClientByName(ctx context.Context, name string
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	if err := i.MemDBDeleteClientByNameInTxn(ctx, txn, name); err != nil {
+	if err := i.memDBDeleteClientByNameInTxn(ctx, txn, name); err != nil {
 		return err
 	}
 
@@ -1528,8 +1534,8 @@ func (i *IdentityStore) MemDBDeleteClientByName(ctx context.Context, name string
 	return nil
 }
 
-// MemDBDeleteClientByNameInTxn deletes the client with name using the given txn.
-func (i *IdentityStore) MemDBDeleteClientByNameInTxn(ctx context.Context, txn *memdb.Txn, name string) error {
+// memDBDeleteClientByNameInTxn deletes the client with name from memdb using the given txn.
+func (i *IdentityStore) memDBDeleteClientByNameInTxn(ctx context.Context, txn *memdb.Txn, name string) error {
 	if name == "" {
 		return nil
 	}
@@ -1538,7 +1544,7 @@ func (i *IdentityStore) MemDBDeleteClientByNameInTxn(ctx context.Context, txn *m
 		return fmt.Errorf("txn is nil")
 	}
 
-	client, err := i.MemDBClientByNameInTxn(ctx, txn, name)
+	client, err := i.memDBClientByNameInTxn(ctx, txn, name)
 	if err != nil {
 		return err
 	}
@@ -1553,8 +1559,8 @@ func (i *IdentityStore) MemDBDeleteClientByNameInTxn(ctx context.Context, txn *m
 	return nil
 }
 
-// MemDBUpsertClientInTxn creates or updates the given client using the given txn.
-func (i *IdentityStore) MemDBUpsertClientInTxn(txn *memdb.Txn, client *client) error {
+// memDBUpsertClientInTxn creates or updates the given client in memdb using the given txn.
+func (i *IdentityStore) memDBUpsertClientInTxn(txn *memdb.Txn, client *client) error {
 	if txn == nil {
 		return fmt.Errorf("nil txn")
 	}
@@ -1582,7 +1588,25 @@ func (i *IdentityStore) MemDBUpsertClientInTxn(txn *memdb.Txn, client *client) e
 	return nil
 }
 
-// storageClientByID returns the client with the ID from the given logical storage.
+// storageClientByName returns the client with name from the given logical storage.
+func (i *IdentityStore) storageClientByName(ctx context.Context, s logical.Storage, name string) (*client, error) {
+	entry, err := s.Get(ctx, clientPath+name)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var client client
+	if err := entry.DecodeJSON(&client); err != nil {
+		return nil, err
+	}
+
+	return &client, nil
+}
+
+// storageClientByID returns the client with ID from the given logical storage.
 func (i *IdentityStore) storageClientByID(ctx context.Context, s logical.Storage, id string) (*client, error) {
 	clients, err := s.List(ctx, clientPath)
 	if err != nil {
@@ -1590,21 +1614,16 @@ func (i *IdentityStore) storageClientByID(ctx context.Context, s logical.Storage
 	}
 
 	for _, name := range clients {
-		entry, err := s.Get(ctx, clientPath+name)
+		client, err := i.storageClientByName(ctx, s, name)
 		if err != nil {
 			return nil, err
 		}
-		if entry == nil {
+		if client == nil {
 			continue
 		}
 
-		var client client
-		if err := entry.DecodeJSON(&client); err != nil {
-			return nil, err
-		}
-
 		if client.ClientID == id {
-			return &client, nil
+			return client, nil
 		}
 	}
 
