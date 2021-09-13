@@ -123,6 +123,10 @@ type InvalidateFunc func(context.Context, string)
 // Initialize() just after a plugin has been mounted.
 type InitializeFunc func(context.Context, *logical.InitializationRequest) error
 
+// PatchPreProcessorFunc is used by HandlePatchOperation in order to shape
+// the input as defined by request handler prior to JSON marshaling
+type PatchPreProcessorFunc func(map[string]interface{}) (map[string]interface{}, error)
+
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	if b.InitializeFunc != nil {
@@ -682,40 +686,45 @@ func preProcessAndMarshal(input map[string]interface{}, rules PatchPreProcessRul
 	return marshaledResult, nil
 }
 
-func HandlePatchOperation(req *logical.Request, inputData *FieldData, resource map[string]interface{}, rules PatchPreProcessRules) ([]byte, error) {
+// HandlePatchOperation is responsible for performing the patch operation on the inputData
+// provided to a PatchOperation handler and the resource read from storage. Resources read
+// from storage may not always need to be preprocessed, especially when the stored resource's
+// structure does not match the input. If the resource must be preprocessed, that must be done
+// by the handler as that rule cannot be safely assumed across all endpoints.
+//func HandlePatchOperation(req *logical.Request, inputData *FieldData, resource map[string]interface{}, rules PatchPreProcessRules) ([]byte, error) {
+func HandlePatchOperation(req *logical.Request, inputData *FieldData, resource map[string]interface{}, preProcessorFunc PatchPreProcessorFunc) ([]byte, error) {
 	var modified []byte
 	var err error
-	var marshaledResource []byte
+
+	if resource == nil {
+		return nil, errors.New("resource does not exist")
+	}
+
+	// Marshal resource and parse inputData based on associated FieldSchema
+	//marshaledResource, err = preProcessAndMarshal(resource, rules)
+	marshaledResource, err := json.Marshal(resource)
+	if err != nil {
+		return nil, err
+	}
 
 	inputMap := map[string]interface{}{}
 
-	// Marshal resource and parse inputData based on associated FieldSchema
-	if resource == nil {
-		// Ensure patch succeeds by using an empty object for
-		// the non-existent resource
-		marshaledResource = []byte(`{}`)
+	// Parse all fields to ensure proper data types are
+	// handled properly according to the FieldSchema
+	for key := range inputData.Raw {
+		val, ok := inputData.GetOk(key)
 
-		// Get all fields from FieldSchema to ensure defaults are
-		// handled properly since inputMap will be a new resource
-		for key := range inputData.Schema {
-			inputMap[key] = inputData.Get(key)
+		// Only accept fields in the schema, this also
+		// ensures that the patch_json field for JSONPatch isn't parsed
+		if ok {
+			inputMap[key] = val
 		}
-	} else {
-		marshaledResource, err = preProcessAndMarshal(resource, rules)
+	}
+
+	if preProcessorFunc != nil {
+		inputMap, err = preProcessorFunc(inputMap)
 		if err != nil {
 			return nil, err
-		}
-
-		// Parse all fields to ensure proper data types are
-		// handled properly according to the FieldSchema
-		for key := range inputData.Raw {
-			val, ok := inputData.GetOk(key)
-
-			// Only accept fields in the schema, this also
-			// ensures that the patch_json field for JSONPatch isn't parsed
-			if ok {
-				inputMap[key] = val
-			}
 		}
 	}
 
@@ -737,17 +746,20 @@ func HandlePatchOperation(req *logical.Request, inputData *FieldData, resource m
 		}
 
 	case logical.JSONMergePatch:
-		patchMap := map[string]interface{}{}
+		// COMMENTING OUT TO TEST PatchPreProcessorFunc OVER PatchPreProcessRules
+		//patchMap := map[string]interface{}{}
+		//
+		//// Ignore fields that are not meant to be stored by isolating
+		//// the resource data prior to preprocessing and marshaling
+		//if rules.DataKey != "" {
+		//	patchMap = inputMap[rules.DataKey].(map[string]interface{})
+		//} else {
+		//	patchMap = inputMap
+		//}
+		//
+		//patchJSON, err := preProcessAndMarshal(patchMap, rules)
 
-		// Ignore fields that are not meant to be stored by isolating
-		// the resource data prior to preprocessing and marshaling
-		if rules.DataKey != "" {
-			patchMap = inputMap[rules.DataKey].(map[string]interface{})
-		} else {
-			patchMap = inputMap
-		}
-
-		patchJSON, err := preProcessAndMarshal(patchMap, rules)
+		patchJSON, err := json.Marshal(inputMap)
 		if err != nil {
 			return nil, err
 		}
