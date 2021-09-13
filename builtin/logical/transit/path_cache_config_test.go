@@ -96,7 +96,7 @@ func TestTransit_CacheConfig(t *testing.T) {
 	// Change the cache size to 1000 to mock the scenario where
 	// current cache size and stored cache size are different and
 	// a cache update is needed
-	b1.lm.RefreshCache(1000)
+	b1.lm.InitCache(1000)
 
 	// Write a new policy which in its code path detects that cache size has changed
 	// and refreshes the cache to 12345

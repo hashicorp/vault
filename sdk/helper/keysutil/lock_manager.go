@@ -101,7 +101,7 @@ func (lm *LockManager) InvalidatePolicy(name string) {
 	}
 }
 
-func (lm *LockManager) RefreshCache(cacheSize int) error {
+func (lm *LockManager) InitCache(cacheSize int) error {
 	if lm.useCache {
 		switch {
 		case cacheSize < 0:

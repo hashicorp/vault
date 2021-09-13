@@ -1,3 +1,4 @@
 ```release-note:bug
-Enforce minimum cache size for transit backend
+Enforce minimum cache size for transit backend.
+Init cache size on transit backend without restart.
 ```

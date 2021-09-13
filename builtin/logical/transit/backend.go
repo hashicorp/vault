@@ -115,6 +115,8 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 
 // Update cache size and get policy
 func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, rand io.Reader) (retP *keysutil.Policy, retUpserted bool, retErr error) {
+	// Acquire read lock to read cacheSizeChanged
+	b.configMutex.RLock()
 	if b.lm.GetUseCache() && b.cacheSizeChanged {
 		var err error
 		currentCacheSize := b.lm.GetCacheSize()
@@ -123,12 +125,13 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 			return nil, false, err
 		}
 		if currentCacheSize != storedCacheSize {
-			err = b.lm.RefreshCache(storedCacheSize)
+			err = b.lm.InitCache(storedCacheSize)
 			if err != nil {
 				return nil, false, err
 			}
 		}
-		// Acquire the lock to modify cacheSizeChanged
+		// Release the read lock and acquire the write lock
+		b.configMutex.RUnlock()
 		b.configMutex.Lock()
 		defer b.configMutex.Unlock()
 		b.cacheSizeChanged = false

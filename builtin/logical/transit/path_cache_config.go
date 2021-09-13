@@ -59,7 +59,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	err = b.lm.RefreshCache(cacheSize)
+	err = b.lm.InitCache(cacheSize)
 	if err != nil {
 		return nil, err
 	}
