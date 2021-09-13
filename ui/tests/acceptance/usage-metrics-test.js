@@ -2,9 +2,22 @@ import { module, test } from 'qunit';
 import { visit, currentURL, findAll } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import setupMirage from 'ember-cli-mirage/test-support/setup-mirage';
+import { create } from 'ember-cli-page-object';
 
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
+const consoleComponent = create(consoleClass);
+
+const tokenWithPolicy = async function(name, policy) {
+  await consoleComponent.runCommands([
+    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
+    `write -field=client_token auth/token/create policies=${name}`,
+  ]);
+
+  return consoleComponent.lastLogOutput;
+};
 
 module('Acceptance | usage metrics', function(hooks) {
   setupApplicationTest(hooks);
@@ -65,6 +78,28 @@ module('Acceptance | usage metrics', function(hooks) {
 
     assert.equal(currentURL(), '/vault/metrics');
     assert.dom('[data-test-pricing-metrics-form]').exists('Pricing metrics date form exists');
+    assert.dom('[data-test-configuration-tab]').exists('Metrics config tab exists');
+    assert.dom('[data-test-tracking-disabled]').doesNotExist('Flash message does not exists');
+    assert.ok(findAll('.selectable-card').length === 3, 'renders the counts');
+  });
+
+  test('it shows metrics even if config endpoint not allowed', async function(assert) {
+    server.create('metrics/activity');
+    const deny_config_policy = `
+    path "sys/internal/counters/config" {
+      capabilities = ["deny"]
+    },
+    `;
+
+    const userToken = await tokenWithPolicy('no-metrics-config', deny_config_policy);
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await visit('/vault/metrics');
+
+    assert.equal(currentURL(), '/vault/metrics');
+    assert.dom('[data-test-pricing-metrics-form]').exists('Pricing metrics date form exists');
+    assert.dom('[data-test-configuration-tab]').doesNotExist('Metrics config tab does not exist');
     assert.dom('[data-test-tracking-disabled]').doesNotExist('Flash message does not exists');
     assert.ok(findAll('.selectable-card').length === 3, 'renders the counts');
   });

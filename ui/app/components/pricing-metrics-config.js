@@ -10,19 +10,19 @@
  * @param {string} [mode=show] - mode is either show or edit. Show results in a table with the config, show has a form.
  */
 
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 
-export default Component.extend({
-  router: service(),
-  mode: 'show',
-  model: null,
+export default class PricingMetricsConfigComponent extends Component {
+  @service router;
+  @tracked mode = 'show';
+  @tracked modalOpen = false;
+  error = null;
 
-  error: null,
-  modalOpen: false,
-  infoRows: computed(function() {
+  get infoRows() {
     return [
       {
         label: 'Usage data collection',
@@ -40,35 +40,41 @@ export default Component.extend({
         valueKey: 'defaultReportMonths',
       },
     ];
-  }),
-  modalTitle: computed('model.enabled', function() {
+  }
+
+  get modalTitle() {
     let content = 'Turn usage tracking off?';
-    if (this.model.enabled === 'On') {
+    if (this.args.model && this.args.model.enabled === 'On') {
       content = 'Turn usage tracking on?';
     }
     return content;
-  }),
+  }
 
-  save: task(function*() {
-    let model = this.model;
+  @(task(function*() {
     try {
-      yield model.save();
+      yield this.args.model.save();
     } catch (err) {
-      this.set('error', err.message);
+      this.error = err.message;
       return;
     }
     this.router.transitionTo('vault.cluster.metrics.config');
-  }).drop(),
+  }).drop())
+  save;
 
-  actions: {
-    onSaveChanges: function(evt) {
-      evt.preventDefault();
-      const changed = this.model.changedAttributes();
-      if (!changed.enabled) {
-        this.save.perform();
-        return;
-      }
-      this.set('modalOpen', true);
-    },
-  },
-});
+  @action
+  updateBooleanValue(attr, value) {
+    let valueToSet = value === true ? attr.options.trueValue : attr.options.falseValue;
+    this.args.model[attr.name] = valueToSet;
+  }
+
+  @action
+  onSaveChanges(evt) {
+    evt.preventDefault();
+    const changed = this.args.model.changedAttributes();
+    if (!changed.enabled) {
+      this.save.perform();
+      return;
+    }
+    this.modalOpen = true;
+  }
+}

@@ -947,39 +947,28 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 			case leaderInfo.AutoJoin != "":
-				addrs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
+				scheme := leaderInfo.AutoJoinScheme
+				if scheme == "" {
+					// default to HTTPS when no scheme is provided
+					scheme = "https"
+				}
+				port := leaderInfo.AutoJoinPort
+				if port == 0 {
+					// default to 8200 when no port is provided
+					port = 8200
+				}
+				// Addrs returns either IPv4 or IPv6 address sans scheme or port
+				clusterIPs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
 				if err != nil {
 					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
-
-				for _, addr := range addrs {
-					u, err := url.Parse(addr)
-					if err != nil {
-						c.logger.Error("failed to parse discovered address", "error", err)
-						continue
+				for _, ip := range clusterIPs {
+					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "["){
+						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
+						ip = fmt.Sprintf("[%s]", ip)
 					}
-
-					if u.Scheme == "" {
-						scheme := leaderInfo.AutoJoinScheme
-						if scheme == "" {
-							// default to HTTPS when no scheme is provided
-							scheme = "https"
-						}
-
-						addr = fmt.Sprintf("%s://%s", scheme, addr)
-					}
-
-					if u.Port() == "" {
-						port := leaderInfo.AutoJoinPort
-						if port == 0 {
-							// default to 8200 when no port is provided
-							port = 8200
-						}
-
-						addr = fmt.Sprintf("%s:%d", addr, port)
-					}
-
-					if err := joinLeader(leaderInfo, addr); err != nil {
+					u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
+					if err := joinLeader(leaderInfo, u); err != nil {
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader

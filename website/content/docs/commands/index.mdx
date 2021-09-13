@@ -172,6 +172,10 @@ Or specify the contents of a file as a value:
 $ vault kv put secret/password value=@data.txt
 ```
 
+Note that if an argument is supplied in a @key=value format, Vault will treat that as a 
+kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
+does not support filenames with `=` in them.
+
 ### Reading Data
 
 After data is persisted, read it back using `vault kv get`:
