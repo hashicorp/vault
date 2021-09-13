@@ -39,10 +39,8 @@ export default ApplicationAdapter.extend({
       }
     } catch (error) {
       // control groups will throw a 403 permission denied error. If this happens return the mountModel
-      if (error.httpStatus === 403) {
-        return mountModel;
-      }
-      throw new Error(error);
+      // error is handled on routing
+      console.log(error);
     }
     return mountModel;
   },

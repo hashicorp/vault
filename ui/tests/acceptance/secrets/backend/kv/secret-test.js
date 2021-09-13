@@ -29,7 +29,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create meep', function(hooks) {
+module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -88,7 +88,7 @@ module('Acceptance | secrets/secret/create meep', function(hooks) {
     await editPage.metadataTab();
     await settled();
     let savedMaxVersions = Number(
-      document.querySelector('[data-test-value-div="Maximum number of versions"]').innerText
+      document.querySelector('[data-test-value-div="Maximum versions"]').innerText
     );
     assert.equal(
       maxVersions,
