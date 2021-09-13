@@ -51,11 +51,12 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/go-test/deep v1.0.7
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/consul-template v0.26.0
+	github.com/hashicorp/consul-template v0.27.0
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -99,7 +100,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.4.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.3.1-0.20210902192635-c3ee7c5bc378
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.2.1
@@ -159,7 +160,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sasha-s/go-deadlock v0.2.0
-	github.com/sethvargo/go-limiter v0.3.0
+	github.com/sethvargo/go-limiter v0.7.0
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
@@ -183,7 +184,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
-	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
+	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
 	google.golang.org/api v0.29.0
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.27.1
