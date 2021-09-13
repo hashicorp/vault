@@ -669,6 +669,33 @@ func (b *backend) pathRoleCreate() framework.OperationFunc {
 	}
 }
 
+func rolePatchPreProcessor() framework.PatchPreProcessorFunc {
+	return func(input map[string]interface{}) (map[string]interface{}, error) {
+		fieldRenamesMapping := map[string]string{
+			"allowed_domains": "allowed_domains_list",
+			"key_usage":       "key_usage_list",
+			"ext_key_usage":   "extended_key_usage_list",
+			"ttl":             "ttl_duration",
+			"max_ttl":         "max_ttl_duration",
+			"organization":    "organization_list",
+			"ou":              "ou_list",
+		}
+
+		for original, rename := range fieldRenamesMapping {
+			originalValue, ok := input[original]
+
+			// Only add a renamed key if the original exists to prevent a null value being
+			// propagated to the JSON patch which will ultimately remove a field
+			if ok {
+				input[rename] = originalValue
+				delete(input, original)
+			}
+		}
+
+		return input, nil
+	}
+}
+
 func (b *backend) pathRolePatch() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
@@ -681,25 +708,35 @@ func (b *backend) pathRolePatch() framework.OperationFunc {
 			return nil, err
 		}
 
-		var roleMap map[string]interface{}
-
-		if role != nil {
-			roleMap = role.ToResponseData()
+		if role == nil {
+			return nil, nil
 		}
 
-		preProcessRules := framework.PatchPreProcessRules{
-			FieldRenameMapping: map[string]string{
-				"allowed_domains": "allowed_domains_list",
-				"key_usage":       "key_usage_list",
-				"ext_key_usage":   "extended_key_usage_list",
-				"ttl":             "ttl_duration",
-				"max_ttl":         "max_ttl_duration",
-				"organization":    "organization_list",
-				"ou":              "ou_list",
-			},
+		patchPreProcessor := rolePatchPreProcessor()
+
+		// Resources read from storage may not always need to be preprocessed,
+		// especially when the stored resource's structure does not match the
+		// input. Stored roles and inputs need to be preprocessed in the same way
+		roleMap, err := patchPreProcessor(role.ToResponseData())
+		if err != nil {
+			return nil, err
 		}
 
-		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, roleMap, preProcessRules)
+		//preProcessRules := framework.PatchPreProcessRules{
+		//	FieldRenameMapping: map[string]string{
+		//		"allowed_domains": "allowed_domains_list",
+		//		"key_usage":       "key_usage_list",
+		//		"ext_key_usage":   "extended_key_usage_list",
+		//		"ttl":             "ttl_duration",
+		//		"max_ttl":         "max_ttl_duration",
+		//		"organization":    "organization_list",
+		//		"ou":              "ou_list",
+		//	},
+		//}
+
+		// COMMENTING OUT TO TEST PatchPreProcessorFunc OVER PatchPreProcessRules
+		//patchedRoleJSON, err := framework.HandlePatchOperation(req, data, roleMap, preProcessRules)
+		patchedRoleJSON, err := framework.HandlePatchOperation(req, data, roleMap, rolePatchPreProcessor())
 		if err != nil {
 			return nil, err
 		}
@@ -730,7 +767,11 @@ func (b *backend) pathRolePatch() framework.OperationFunc {
 			return nil, err
 		}
 
-		return nil, nil
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"success": true,
+			},
+		}, nil
 	}
 }
 
