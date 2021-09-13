@@ -219,7 +219,11 @@ func (b *BoltStorage) GetAutoAuthToken(ctx context.Context) ([]byte, error) {
 		if meta == nil {
 			return fmt.Errorf("bucket %q not found", metaBucketName)
 		}
-		encryptedToken = meta.Get([]byte(AutoAuthToken))
+		value := meta.Get([]byte(AutoAuthToken))
+		if value != nil {
+			encryptedToken = make([]byte, len(value))
+			copy(encryptedToken, value)
+		}
 		return nil
 	})
 	if err != nil {
@@ -247,7 +251,11 @@ func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
 		if keyBucket == nil {
 			return fmt.Errorf("bucket %q not found", metaBucketName)
 		}
-		token = keyBucket.Get([]byte(RetrievalTokenMaterial))
+		value := keyBucket.Get([]byte(RetrievalTokenMaterial))
+		if value != nil {
+			token = make([]byte, len(value))
+			copy(token, value)
+		}
 		return nil
 	})
 	if err != nil {
