@@ -29,7 +29,7 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-module('Acceptance | secrets/secret/create', function(hooks) {
+module('Acceptance | secrets/secret/create meep', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
@@ -88,7 +88,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.metadataTab();
     await settled();
     let savedMaxVersions = Number(
-      document.querySelector('[data-test-value-div="Maximum versions"]').innerText
+      document.querySelector('[data-test-value-div="Maximum number of versions"]').innerText
     );
     assert.equal(
       maxVersions,
@@ -150,10 +150,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-configuration-tab]');
     await settled();
-
-    let cas = document.querySelector('[data-test-value-div="Check-and-Set required"]').innerText;
-    let deleteVersionAfter = document.querySelector('[data-test-value-div="Delete version after"]').innerText;
-    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum versions"]').innerText;
+    let cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
+    let deleteVersionAfter = document.querySelector('[data-test-value-div="Automate secret deletion"]')
+      .innerText;
+    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum number of versions"]')
+      .innerText;
 
     assert.equal(
       maxVersion,
