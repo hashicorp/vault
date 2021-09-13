@@ -18,15 +18,15 @@ export default Model.extend({
     // check here for ordering
     return [
       'certificate',
+      'commonName',
       'issuingCa',
       'caChain',
       'privateKey',
       'privateKeyType',
-      'serialNumber',
       'revocationTime',
-      'commonName',
       'expiryDate',
       'issueDate',
+      'serialNumber',
     ];
   }),
 

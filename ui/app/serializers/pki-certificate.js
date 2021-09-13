@@ -3,6 +3,7 @@ import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 import { pki } from 'node-forge';
+import { format, sub } from 'date-fns';
 
 export default RESTSerializer.extend({
   keyForAttribute: function(attr) {
@@ -39,29 +40,27 @@ export default RESTSerializer.extend({
     return payload;
   },
 
-  getMetadata(response) {
-    const cert = pki.certificateFromPem(response.certificate);
-    const commonName = cert.subject.getField('CN');
-    const issueDate = cert.validity.notBefore;
-    const expiryDate = cert.validity.notAfter;
-    console.log(cert);
-    console.log(cert.subject, 'here');
-    console.log(issueDate, 'issueDate');
-    console.log(expiryDate, 'expiryDate');
+  getMetadata(model) {
+    // model is the responseJSON from the payload
+    const cert = pki.certificateFromPem(model.certificate);
+    const commonName = cert.subject.getField('CN').value;
+    const issueDate = format(cert.validity.notBefore, 'MMM d, yyyy hh:mm:ssa');
+    const expiryDate = format(cert.validity.notAfter, 'MMM d, yyyy hh:mm:ssa');
+    const certMetadata = {
+      common_name: commonName,
+      issue_date: issueDate,
+      expiry_date: expiryDate,
+    };
+    return certMetadata;
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
-    this.getMetadata(responseJSON);
+    const certMetadata = this.getMetadata(responseJSON);
     // const certMetadata = getMetadata(responseJSON.certificate), return object with
     // getMetadata is a function (make a helper...later) use forge to parse the cert
     // get info we want, and always return an object so wrap in a try
-    const certMetadata = {
-      common_name: 'name',
-      issue_date: 'issue date',
-      expiry_date: 'expiry date',
-    };
     let transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
