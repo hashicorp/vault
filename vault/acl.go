@@ -485,7 +485,33 @@ CHECK:
 			for _, ff := range permissions.FieldFilters {
 				if strutil.StrListContains(ff.FilterOn, string(op)) {
 					for _, ptr := range ff.Fields {
-						_, err := pointerstructure.Get(req.Data, ptr)
+						// strip the leading slash, if there is one, otherwise we get an empty first element when we split
+						if ptr[0] == '/' {
+							ptr = ptr[1:]
+						}
+
+						// the very first element of the JSON pointer is the top level key, so verify that first,
+						// then replace it with "data", since that's how the submitted value will look.
+						ptrParts := strings.Split(ptr, "/")
+						pathParts := strings.Split(path, "/")
+
+						// if the last part of the path doesn't match the first part of the pointer, then skip it,
+						// this rule doesn't apply.
+						if pathParts[len(pathParts)-1] != ptrParts[0] {
+							continue
+						}
+
+						// now that we know this pointer is for this key, slice the key off and look it up
+						ptrParts = ptrParts[1:]
+						newPtr := strings.Join(ptrParts, "/")
+
+						// the first char probably isn't a / any more because of the above mumbo jumbo so
+						// put one back on if necessary. failure to do this means pointerstructure will barf.
+						if newPtr[0] != '/' {
+							newPtr = "/" + newPtr
+						}
+
+						_, err := pointerstructure.Get(req.Data, newPtr)
 
 						// if the error is nil, that means we found it, so allow it
 						if err == nil {
@@ -493,18 +519,22 @@ CHECK:
 							return
 						} else {
 							// this will happen if the value isn't found OR the pointer is malformed.
-							// if the value isn't found, deny it
-							// if the value is malformed, we should probably catch that earlier in this process?
-							// for now, we punt
+							// if the value isn't found, continue, because it might show up on the next field
+							// if the value is malformed, error (although a better UX would be to catch malformed
+							// pointers when we upload the policy).
 							if errors.Is(err, pointerstructure.ErrNotFound) {
-								return
-							} else {
 								continue
+							} else {
+								return
 							}
 						}
 					}
 				}
 			}
+
+			// if we make it here, it means no field filters matched anything, despite having filters,
+			// so deny it.
+			return
 		}
 
 		if len(permissions.DeniedParameters) == 0 {

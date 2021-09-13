@@ -431,7 +431,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			}
 		}
 		if pc.FieldFilterHCL != nil {
-			// check to make sure they're not filtering on a capability they haven't enabled
+			// patch is the only capability that is compatible with field filters, so error on anything else
 			for _, ff := range pc.FieldFilterHCL {
 				for _, fon := range ff.FilterOn {
 					fcap := cap2Int[fon]
@@ -441,9 +441,8 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 						return fmt.Errorf("path %q: invalid filter_on key: %q", key, fon)
 					}
 
-					// this capability isn't enabled
-					if pc.Permissions.CapabilitiesBitmap&fcap == 0 {
-						return fmt.Errorf("path %q: filter_on capability %q not enabled", key, fon)
+					if fon != PatchCapability {
+						return fmt.Errorf("path %q: filter_on capability %q not allowed, only 'patch' is allowed.", key, fon)
 					}
 				}
 			}

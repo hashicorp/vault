@@ -26,10 +26,10 @@ func TestKVV2_Patch_FieldFilters(t *testing.T) {
 
 	core := cluster.Cores[0]
 	vault.TestWaitActive(t, core.Core)
-	client := core.Client
+	rootClient := core.Client
 
 	// Enable KVv2
-	err := client.Sys().Mount("kv", &api.MountInput{
+	err := rootClient.Sys().Mount("kv", &api.MountInput{
 		Type: "kv-v2",
 	})
 	if err != nil {
@@ -47,17 +47,17 @@ path "kv/metadata/*" {
 }
 `
 
-	_, err = client.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz", "quux": map[string]interface{}{"wibble": "wobble"}, "wibble": "wobble"}})
+	_, err = rootClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz", "quux": map[string]interface{}{"wibble": "wobble"}, "wibble": "wobble"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = client.Sys().PutPolicy("my-policy", policy)
+	err = rootClient.Sys().PutPolicy("my-policy", policy)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+	secret, err := rootClient.Auth().Token().Create(&api.TokenCreateRequest{
 		Policies: []string{"my-policy"},
 	})
 	if err != nil {
@@ -65,6 +65,10 @@ path "kv/metadata/*" {
 	}
 
 	token := secret.Auth.ClientToken
+	client, err := rootClient.Clone()
+	if err != nil {
+		t.Fatal(err)
+	}
 	client.SetToken(token)
 
 	// run through the Amex use cases
@@ -111,15 +115,14 @@ path "kv/metadata/*" {
 		t.Fatalf("expected 2 versions but got %v", secret.Data["current_version"])
 	}
 
-	// 6. reading sub-keys from a top level key works
-	// first update the policy to include field filters
+	// 6. field filters should only work on patch requests. anything else errors.
 	newPolicy := `
 path "kv/*" {
 	capabilities = ["create", "patch", "list"]
 
 	field_filters = [
 		{
-			filter_on = ["read"]
+			filter_on = ["create"]
 			fields = ["/foo/bar", "/foo/quux/wibble"]
 		}
 	]
@@ -130,12 +133,75 @@ path "kv/metadata/*" {
 }
 `
 
-	err = client.Sys().PutPolicy("my-policy", newPolicy)
+	err = rootClient.Sys().PutPolicy("my-policy", newPolicy)
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	// 7. field filters allow you to specify which fields are available for patching.
+	// this policy specifies that the "bar" and "quux/wibble" sub keys can be patched,
+	// but nothing else.
+	newerPolicy := `
+path "kv/*" {
+	capabilities = ["create", "patch", "list", "read"]
+
+	field_filters = [
+		{
+			filter_on = ["patch"]
+			fields = ["/foo/data/bar", "/foo/data/quux/wibble"]
+		}
+	]
+}
+
+path "kv/metadata/*" {
+	capabilities = ["read", "list"]
+}
+`
+
+	err = rootClient.Sys().PutPolicy("my-policy", newerPolicy)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// reading /foo/bar should work
-	// reading /foo/quux/wibble should work
-	// reading /foo/wibble should not work
+	// patching /foo/bar should work
+	_, err = client.Logical().JSONMergePatch("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "lol"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Logical().Read("kv/data/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Data["data"].(map[string]interface{})["bar"] != "lol" {
+		t.Fatal("expected the kv patch to work but it didn't")
+	}
+
+	// patching /foo/quux/wibble should work
+	_, err = client.Logical().JSONMergePatch("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"quux": map[string]interface{}{"wibble": "lawl"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Logical().Read("kv/data/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Data["data"].(map[string]interface{})["quux"].(map[string]interface{})["wibble"] != "lawl" {
+		t.Fatal("expected the kv patch to work but it didn't")
+	}
+
+	// patching /foo/wibble should not work
+	_, err = client.Logical().JSONMergePatch("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"wibble": "lol"}})
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+	secret, err = client.Logical().Read("kv/data/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Data["data"].(map[string]interface{})["wibble"] != "wobble" {
+		t.Fatal("expected the kv patch to work but it didn't")
+	}
 }
