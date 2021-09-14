@@ -100,3 +100,7 @@
 .toggle[type='checkbox'].is-success:checked + label::before {
   background: $blue;
 }
+
+.toggle-label {
+  width: 100%;
+}

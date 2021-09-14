@@ -19,7 +19,7 @@ export default Controller.extend({
         transition = this.transitionToRoute('vault.cluster.secrets.backends');
       }
       return transition.followRedirects().then(() => {
-        this.get('wizard').transitionFeatureMachine(this.get('wizard.featureState'), 'CONTINUE', type);
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', type);
       });
     },
     onConfigError: function(modelId) {

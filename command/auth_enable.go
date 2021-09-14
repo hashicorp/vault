@@ -13,8 +13,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuthEnableCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
+var (
+	_ cli.Command             = (*AuthEnableCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
+)
 
 type AuthEnableCommand struct {
 	*BaseCommand

@@ -140,6 +140,18 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	return err
 }
 
+func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	var buf bytes.Buffer
+	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+		return err
+	}
+
+	// Send to syslog
+	_, err := b.logger.Write(buf.Bytes())
+	return err
+}
+
 func (b *Backend) Reload(_ context.Context) error {
 	return nil
 }

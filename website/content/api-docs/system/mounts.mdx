@@ -1,0 +1,297 @@
+---
+layout: api
+page_title: /sys/mounts - HTTP API
+description: The `/sys/mounts` endpoint is used manage secrets engines in Vault.
+---
+
+# `/sys/mounts`
+
+The `/sys/mounts` endpoint is used manage secrets engines in Vault.
+
+## List Mounted Secrets Engines
+
+This endpoints lists all the mounted secrets engines.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/mounts` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/mounts
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "48d2c601-97a0-3904-f549-4fcbc740d718",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "cubbyhole/": {
+      "accessor": "cubbyhole_eb4503de",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0
+      },
+      "description": "per-token private secret storage",
+      "external_entropy_access": false,
+      "local": true,
+      "options": null,
+      "seal_wrap": false,
+      "type": "cubbyhole",
+      "uuid": "79ddaa52-fa07-6f19-653a-f0777f6439fd"
+    },
+    "identity/": {
+      "accessor": "identity_68a03448",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0
+      },
+      "description": "identity store",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "identity",
+      "uuid": "45f79a67-58f7-3f87-892c-9032084e7801"
+    },
+    "secret/": {
+      "accessor": "kv_aedd93c1",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0
+      },
+      "description": "key/value secret storage",
+      "external_entropy_access": false,
+      "local": false,
+      "options": {
+        "version": "2"
+      },
+      "seal_wrap": false,
+      "type": "kv",
+      "uuid": "8074a73f-6921-c0cd-589a-016405dc46ec"
+    },
+    "sys/": {
+      "accessor": "system_f8df2902",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0,
+        "passthrough_request_headers": ["Accept"]
+      },
+      "description": "system endpoints used for control, policy and debugging",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "seal_wrap": false,
+      "type": "system",
+      "uuid": "c79f4f66-4cfa-4521-9d31-b1238b0a6800"
+    }
+  },
+  "warnings": null
+}
+```
+
+`default_lease_ttl` or `max_lease_ttl` values of 0 mean that the system defaults
+are used by this backend.
+
+## Enable Secrets Engine
+
+This endpoint enables a new secrets engine at the given path.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `POST` | `/sys/mounts/:path` |
+
+### Parameters
+
+- `path` `(string: <required>)` – Specifies the path where the secrets engine
+  will be mounted. This is specified as part of the URL.
+
+  !> **NOTE:** Use ASCII printable characters to specify the desired path.
+
+- `type` `(string: <required>)` – Specifies the type of the backend, such as
+  "aws".
+
+- `description` `(string: "")` – Specifies the human-friendly description of the
+  mount.
+
+- `config` `(map<string|string>: nil)` – Specifies configuration options for
+  this mount; if set on a specific mount, values will override any global
+  defaults (e.g. the system TTL/Max TTL)
+
+  - `default_lease_ttl` `(string: "")` - The default lease duration, specified
+    as a string duration like "5s" or "30m".
+
+  - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
+    string duration like "5s" or "30m".
+
+  - `force_no_cache` `(bool: false)` - Disable caching.
+
+  - `audit_non_hmac_request_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the request data object.
+
+  - `audit_non_hmac_response_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the response data object.
+
+  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or
+    `"hidden"`. If not set, behaves like `"hidden"`.
+
+  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+    and pass from the request to the plugin.
+
+  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+    allowing a plugin to include them in the response.
+
+- `options` `(map<string|string>: nil)` - Specifies mount type specific options
+  that are passed to the backend.
+
+  _Key/Value (KV)_
+
+  - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
+    KV v2.
+
+Additionally, the following options are allowed in Vault open-source, but
+relevant functionality is only supported in Vault Enterprise:
+
+- `local` `(bool: false)` – Specifies if the secrets engine is a local mount
+  only. Local mounts are not replicated nor (if a secondary) removed by
+  replication.
+
+- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
+  values stored by the mount to be wrapped by the seal's encryption capability.
+
+- `external_entropy_access` `(bool: false)` - Enable the secrets engine to access
+  Vault's external entropy source.
+
+### Sample Payload
+
+```json
+{
+  "type": "aws",
+  "config": {
+    "force_no_cache": true
+  }
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
+```
+
+## Disable Secrets Engine
+
+This endpoint disables the mount point specified in the URL.
+
+| Method   | Path                |
+| :------- | :------------------ | ------------------ |
+| `DELETE` | `/sys/mounts/:path` | `204 (empty body)` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount
+```
+
+## Read Mount Configuration
+
+This endpoint reads the given mount's configuration. Unlike the `mounts`
+endpoint, this will return the current time in seconds for each TTL, which may
+be the system default or a mount-specific value.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `GET`  | `/sys/mounts/:path/tune` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
+```
+
+### Sample Response
+
+```json
+{
+  "default_lease_ttl": 3600,
+  "max_lease_ttl": 7200,
+  "force_no_cache": false
+}
+```
+
+## Tune Mount Configuration
+
+This endpoint tunes configuration parameters for a given mount point.
+
+| Method | Path                     |
+| :----- | :----------------------- |
+| `POST` | `/sys/mounts/:path/tune` |
+
+### Parameters
+
+- `default_lease_ttl` `(int: 0)` – Specifies the default time-to-live. This
+  overrides the global default. A value of `0` is equivalent to the system
+  default TTL.
+
+- `max_lease_ttl` `(int: 0)` – Specifies the maximum time-to-live. This
+  overrides the global default. A value of `0` are equivalent and set to the
+  system max TTL.
+
+- `description` `(string: "")` – Specifies the description of the mount. This
+  overrides the current stored value, if any.
+
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the request data object.
+
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the response data object.
+
+- `listing_visibility` `(string: "")` - Specifies whether to show this mount in
+  the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
+  If not set, behaves like `"hidden"`.
+
+- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  and pass from the request to the plugin.
+
+- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  allowing a plugin to include them in the response.
+
+### Sample Payload
+
+```json
+{
+  "default_lease_ttl": 1800,
+  "max_lease_ttl": 3600
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
+```

@@ -3,7 +3,7 @@ import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, blur, render, find } from '@ember/test-helpers';
+import { click, fillIn, blur, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -158,11 +158,9 @@ module('Integration | Component | replication actions', function(hooks) {
       );
 
       let selector = oldVersion ? 'h4' : `[data-test-${action}-replication] h4`;
-      assert.equal(
-        find(selector).textContent.trim(),
-        headerText,
-        `${testKey}: renders the correct component header (${oldVersion})`
-      );
+      assert
+        .dom(selector)
+        .hasText(headerText, `${testKey}: renders the correct component header (${oldVersion})`);
 
       if (oldVersion) {
         await click('[data-test-confirm-action-trigger]');

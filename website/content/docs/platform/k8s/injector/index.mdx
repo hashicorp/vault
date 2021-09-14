@@ -1,0 +1,195 @@
+---
+layout: docs
+page_title: Agent Sidecar Injector Overview
+description: >-
+  The Vault Agent Sidecar Injector is a Kubernetes admission webhook that adds
+  Vault Agent containers to pods for consuming Vault secrets.
+---
+
+# Agent Sidecar Injector
+
+The Vault Agent Injector alters pod specifications to include Vault Agent
+containers that render Vault secrets to a shared memory volume using
+[Vault Agent Templates](/docs/agent/template).
+By rendering secrets to a shared volume, containers within the pod can consume
+Vault secrets without being Vault aware.
+
+The injector is a [Kubernetes Mutation Webhook Controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
+The controller intercepts pod events and applies mutations to the pod if annotations exist within
+the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s)
+project and can be automatically installed and configured using the
+[Vault Helm](https://github.com/hashicorp/vault-helm) chart.
+
+## Overview
+
+The Vault Agent Injector works by intercepting pod `CREATE` and `UPDATE`
+events in Kubernetes. The controller parses the event and looks for the metadata
+annotation `vault.hashicorp.com/agent-inject: true`. If found, the controller will
+alter the pod specification based on other annotations present.
+
+### Mutations
+
+At a minimum, every container in the pod will be configured to mount a shared
+memory volume. This volume is mounted to `/vault/secrets` and will be used by the Vault
+Agent containers for sharing secrets with the other containers in the pod.
+
+Next, two types of Vault Agent containers can be injected: init and sidecar. The
+init container will prepopulate the shared memory volume with the requested
+secrets prior to the other containers starting. The sidecar container will
+continue to authenticate and render secrets to the same location as the pod runs.
+Using annotations, the initialization and sidecar containers may be disabled.
+
+Last, two additional types of volumes can be optionally mounted to the Vault Agent
+containers. The first is secret volume containing TLS requirements such as client
+and CA (certificate authority) certificates and keys. This volume is useful when
+communicating and verifying the Vault server's authenticity using TLS. The second
+is a configuration map containing Vault Agent configuration files. This volume is
+useful to customize Vault Agent beyond what the provided annotations offer.
+
+### Authenticating with Vault
+
+The primary method of authentication with Vault when using the Vault Agent Injector
+is the service account attached to the pod. Other authentication methods can be configured
+using annotations.
+
+For Kubernetes authentication, the service account must be bound to a Vault role and a
+policy granting access to the secrets desired.
+
+A service account must be present to use the Vault Agent Injector with the Kubernetes
+authentication method. It is _not_ recommended to bind Vault roles to the default service
+account provided to pods if no service account is defined.
+
+### Requesting Secrets
+
+There are two methods of configuring the Vault Agent containers to render secrets:
+
+- the `vault.hashicorp.com/agent-inject-secret` annotation, or
+- a configuration map containing Vault Agent configuration files.
+
+Only one of these methods may be used at any time.
+
+#### Secrets via Annotations
+
+To configure secret injection using annotations, the user must supply:
+
+- one or more _secret_ annotations, and
+- the Vault role used to access those secrets.
+
+The annotation must have the format:
+
+```yaml
+vault.hashicorp.com/agent-inject-secret-<unique-name>: /path/to/secret
+```
+
+The unique name will be the filename of the rendered secret and must be unique if
+multiple secrets are defined by the user. For example, consider the following
+secret annotations:
+
+```yaml
+vault.hashicorp.com/agent-inject-secret-foo: database/roles/app
+vault.hashicorp.com/agent-inject-secret-bar: consul/creds/app
+vault.hashicorp.com/role: 'app'
+```
+
+The first annotation will be rendered to `/vault/secrets/foo` and the second
+annotation will be rendered to `/vault/secrets/bar`.
+
+It's possible to set the file format of the rendered secret using the annotation. For example the
+following secret will be rendered to `/vault/secrets/foo.txt`:
+
+```yaml
+vault.hashicorp.com/agent-inject-secret-foo.txt: database/roles/app
+vault.hashicorp.com/role: 'app'
+```
+
+The secret unique name must consist of alphanumeric characters, `.`, `_` or `-`.
+
+##### Secret Templates
+
+~> Vault Agent uses the Consul Template project to render secrets. For more information
+on writing templates, see the [Consul Template documentation](https://github.com/hashicorp/consul-template).
+
+How the secret is rendered to the file is also configurable. To configure the template
+used, the user must supply a _template_ annotation using the same unique name of
+the secret. The annotation must have the following format:
+
+```yaml
+vault.hashicorp.com/agent-inject-template-<unique-name>: |
+  <
+    TEMPLATE
+    HERE
+  >
+```
+
+For example, consider the following:
+
+```yaml
+vault.hashicorp.com/agent-inject-secret-foo: 'database/roles/app'
+vault.hashicorp.com/agent-inject-template-foo: |
+  {{- with secret "database/creds/db-app" -}}
+  postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable
+  {{- end }}
+vault.hashicorp.com/role: 'app'
+```
+
+The rendered secret would look like this within the container:
+
+```shell-session
+$ cat /vault/secrets/foo
+postgres://v-kubernet-pg-app-q0Z7WPfVN:A1a-BUEuQR52oAqPrP1J@postgres:5432/mydb?sslmode=disable
+```
+
+~> The default left and right template delimiters are `{{` and `}}`.
+
+If no template is provided the following generic template is used:
+
+```
+{{ with secret "/path/to/secret" }}
+    {{ range $k, $v := .Data }}
+        {{ $k }}: {{ $v }}
+    {{ end }}
+{{ end }}
+```
+
+For example, the following annotation will use the default template to render
+PostgreSQL secrets found at the configured path:
+
+```yaml
+vault.hashicorp.com/agent-inject-secret-foo: 'database/roles/pg-app'
+vault.hashicorp.com/role: 'app'
+```
+
+The rendered secret would look like this within the container:
+
+```shell-session
+$ cat /vault/secrets/foo
+password: A1a-BUEuQR52oAqPrP1J
+username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
+```
+
+~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
+
+### Renewals and Updating Secrets
+
+For more information on when Vault Agent fetches and renews secrets, see the
+[Agent documentation](/docs/agent/template#renewals-and-updating-secrets).
+
+### Vault Agent Configuration Map
+
+For advanced use cases, it may be required to define Vault Agent configuration
+files to mount instead of using secret and template annotations. The Vault Agent
+Injector supports mounting ConfigMaps by specifying the name using the `vault.hashicorp.com/agent-configmap`
+annotation. The configuration files will be mounted to `/vault/configs`.
+
+The configuration map must contain either one or both of the following files:
+
+- **config-init.hcl** used by the init container. This must have `exit_after_auth` set to `true`.
+- **config.hcl** used by the sidecar container. This must have `exit_after_auth` set to `false`.
+
+An example of mounting a Vault Agent configmap [can be found here](/docs/platform/k8s/injector/examples#configmap-example).
+
+## Learn
+
+Refer to the [Injecting Secrets into Kubernetes Pods via Vault Helm
+Sidecar](https://learn.hashicorp.com/vault/getting-started-k8s/sidecar) guide
+for a step-by-step tutorial.

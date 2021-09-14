@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
-import { currentURL, visit, settled } from '@ember/test-helpers';
+import { click, currentURL, visit, settled } from '@ember/test-helpers';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
@@ -70,9 +70,10 @@ module('Acceptance | auth', function(hooks) {
       await component.login();
       let lastRequest = this.server.passthroughRequests[this.server.passthroughRequests.length - 1];
       let body = JSON.parse(lastRequest.requestBody);
+      // Note: x-vault-token used to be lowercase prior to upgrade
       if (backend.type === 'token') {
         assert.ok(
-          Object.keys(lastRequest.requestHeaders).includes('x-vault-token'),
+          Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
           'token uses vault token header'
         );
       } else if (backend.type === 'github') {
@@ -103,5 +104,18 @@ module('Acceptance | auth', function(hooks) {
 
     await visit('/vault/access');
     assert.dom('[data-test-allow-expiration="true"]').doesNotExist('hides beacon when the api is used again');
+  });
+
+  test('it shows the push notification warning only for okta auth method after submit', async function(assert) {
+    await visit('/vault/auth');
+    await component.selectMethod('token');
+    await click('[data-test-auth-submit="true"]');
+    assert
+      .dom('[data-test-auth-message="push"]')
+      .doesNotExist('message is not shown for other authentication methods');
+
+    await component.selectMethod('okta');
+    await click('[data-test-auth-submit="true"]');
+    assert.dom('[data-test-auth-message="push"]').exists('shows push notification message');
   });
 });

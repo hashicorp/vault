@@ -1,10 +1,8 @@
+import { belongsTo, attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
-import DS from 'ember-data';
 import identityCapabilities from 'vault/macros/identity-capabilities';
-
-const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
   parentType: 'group',

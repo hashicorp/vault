@@ -47,7 +47,7 @@ export default Route.extend({
   setupController(controller, model) {
     const params = this.paramsFor(this.routeName);
     const prefix = params.prefix ? params.prefix : '';
-    const has404 = this.get('has404');
+    const has404 = this.has404;
     controller.set('hasModel', true);
     controller.setProperties({
       model: model.leases,
@@ -82,6 +82,7 @@ export default Route.extend({
       const { prefix } = this.paramsFor(this.routeName);
 
       set(error, 'keyId', prefix);
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model
       if (hasModel && error.httpStatus === 404) {

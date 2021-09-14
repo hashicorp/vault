@@ -80,6 +80,7 @@ func TestBackendConfig() *BackendConfig {
 	bc := &BackendConfig{
 		Logger: logging.NewVaultLogger(log.Trace),
 		System: TestSystemView(),
+		Config: make(map[string]string),
 	}
 
 	return bc

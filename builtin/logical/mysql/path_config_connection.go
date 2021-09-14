@@ -14,24 +14,24 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"connection_url": &framework.FieldSchema{
+			"connection_url": {
 				Type:        framework.TypeString,
 				Description: "DB connection string",
 			},
-			"value": &framework.FieldSchema{
+			"value": {
 				Type: framework.TypeString,
 				Description: `DB connection string. Use 'connection_url' instead.
 This name is deprecated.`,
 			},
-			"max_open_connections": &framework.FieldSchema{
+			"max_open_connections": {
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
 			},
-			"max_idle_connections": &framework.FieldSchema{
+			"max_idle_connections": {
 				Type:        framework.TypeInt,
 				Description: "Maximum number of idle connections to the database; a zero uses the value of max_open_connections and a negative value disables idle connections. If larger than max_open_connections it will be reduced to the same size.",
 			},
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: "If set, connection_url is verified by actually connecting to the database",
@@ -100,7 +100,6 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 	if verifyConnection {
 		// Verify the string
 		db, err := sql.Open("mysql", connURL)
-
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"error validating connection info: %s", err)), nil

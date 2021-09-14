@@ -4,10 +4,42 @@
       Sign in to Vault
     </h1>
   </Page.header>
-  {{#if (has-feature "Namespaces")}}
+  {{#if managedNamespaceRoot}}
+    <Page.sub-header>
+      <Toolbar>
+        <div class="toolbar-namespace-picker" data-test-managed-namespace-toolbar>
+          <div class="field is-horizontal">
+            <div class="field-label">
+              <label class="is-label" for="namespace">Namespace</label>
+            </div>
+            <div class="field-label">
+              <span class="has-text-grey" data-test-managed-namespace-root>/{{managedNamespaceRoot}}</span>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  <input
+                    value={{managedNamespaceChild}}
+                    placeholder="/ (Default)"
+                    oninput={{perform updateManagedNamespace value="target.value"}}
+                    autocomplete="off"
+                    spellcheck="false"
+                    name="namespace"
+                    id="namespace"
+                    class="input"
+                    type="text"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Toolbar>
+    </Page.sub-header>
+  {{else if (has-feature "Namespaces")}}
     <Page.sub-header>
       <Toolbar class="toolbar-namespace-picker">
-        <div class="field is-horizontal">
+        <div class="field is-horizontal" data-test-namespace-toolbar>
           <div class="field-label is-normal">
             <label class="is-label" for="namespace">Namespace</label>
           </div>

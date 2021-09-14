@@ -1,0 +1,37 @@
+---
+layout: docs
+page_title: Transform
+description: >-
+  Part of Vault's Advanced Data Protection solution, protecting sensitive information
+  stored outside of Vault.
+---
+
+# Transform Secrets Engine
+
+Part of Vault's Advanced Data Protection solutions, Transform provides mechanisms
+for _transforming_ sensitive information to protect it even as it lives outside
+Vault's sphere.
+
+Transform consists of three modes, called _transformations_. Format Preserving
+Encryption (**FPE**) for encrypting and decrypting values while retaining their
+formats. **Masking** for replacing sensitive information with masking
+characters. And **Tokenization** which replaces sensitive information with
+mathematically unrelated tokens.
+
+## Comparison to Transit
+
+Transit implements many traditional cryptographic primitives, such as AES encryption and
+RSA signatures (among others). Transform implements solutions to protect sensitive
+values in more narrow, but still critical use cases.
+
+## What Solution When?
+
+When should one use a particular transform or transit encryption? Based on your
+use case and its requirements, this flowchart can help you choose the right
+solution.
+
+![Transit vs Transform](/img/transit-or-transform.png)
+
+Keep in mind that unlike all other solutions, Tokenization is stateful, and all
+values must be stored either within Vault or a supported external store. As such
+all other solutions will outperform and outscale tokenization.

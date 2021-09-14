@@ -3,12 +3,12 @@
     <AlertBanner
       @type="danger"
       @message="Your auth token expired on
-        {{date-format expirationDate "MMMM Do YYYY, h:mm:ss a"}}
+        {{date-format expirationDate "MMMM do yyyy, h:mm:ss a"}}
          . You will need to re-authenticate."
     >
-      {{#link-to "vault.cluster.logout" class="button link"}}
+      <LinkTo @route="vault.cluster.logout" class="button link">
         Reauthenticate
-      {{/link-to}}
+      </LinkTo>
     </AlertBanner>
   </div>
 {{else}}

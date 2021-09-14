@@ -1,30 +1,28 @@
-{{#if model.groupIds}}
-  {{#each model.directGroupIds as |gid|}}
-    {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
-      class="list-item-row"
-    }}<Icon
+{{#if @model.groupIds}}
+  {{#each @model.directGroupIds as |gid|}}
+    <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="list-item-row">
+      <Icon
         @glyph="folder-outline"
         class="has-text-grey-light"
       />{{gid}}
-    {{/link-to}}
+    </LinkTo>
   {{/each}}
-  {{#each model.inheritedGroupIds as |gid|}}
+  {{#each @model.inheritedGroupIds as |gid|}}
     {{#linked-block
        "vault.cluster.access.identity.show" "groups" gid "details"
         class="list-item-row"
     }}
-      {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
-         class="has-text-black"
-      }}<Icon
+      <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="has-text-black">
+        <Icon
           @glyph="folder-outline"
           class="has-text-grey-light"
         />{{gid}}
-      {{/link-to}}
+      </LinkTo>
       <span class="tag has-text-grey is-size-8">inherited</span>
     {{/linked-block}}
   {{/each}}
 {{else}}
   <EmptyState
-    @title="{{model.name}} is not a member of any groups."
+    @title="{{@model.name}} is not a member of any groups."
   />
 {{/if}}

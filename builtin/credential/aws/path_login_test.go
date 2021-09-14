@@ -306,6 +306,19 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 			ExpectErr: missingHeaderErr,
 		},
 		{
+			Name: "Map-illegal-header",
+			Header: map[string]interface{}{
+				"Content-Length":            "43",
+				"Content-Type":              "application/x-www-form-urlencoded; charset=utf-8",
+				"User-Agent":                "aws-sdk-go/1.14.24 (go1.11; darwin; amd64)",
+				"X-Amz-Date":                "20180910T203328Z",
+				"Authorization":             "AWS4-HMAC-SHA256 Credential=AKIAJPQ466AIIQW4LPSQ/20180910/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=cdef5819b2e97f1ff0f3e898fd2621aa03af00a4ec3e019122c20e5482534bf4",
+				"X-Vault-Aws-Iam-Server-Id": "VaultAcceptanceTesting",
+				"X-Amz-Mallory-Header":      "<?xml><h4ck0r/>",
+			},
+			ExpectErr: errors.New("invalid request header: X-Amz-Mallory-Header"),
+		},
+		{
 			Name: "JSON-complete",
 			Header: `{
 				"Content-Length":"43",
@@ -543,7 +556,8 @@ func setupIAMTestServer() *httptest.Server {
   <ResponseMetadata>
     <RequestId>7f4fc40c-853a-11e6-8848-8d035d01eb87</RequestId>
   </ResponseMetadata>
-</GetCallerIdentityResponse>`
+</GetCallerIdentityResponse>
+`
 
 		auth := r.Header.Get("Authorization")
 		parts := strings.Split(auth, ",")
@@ -566,6 +580,7 @@ func setupIAMTestServer() *httptest.Server {
 		if matchingCount != len(expectedAuthParts) {
 			responseString = "missing auth parts"
 		}
+		w.Header().Add("Content-Type", "text/xml")
 		fmt.Fprintln(w, responseString)
 	}))
 }

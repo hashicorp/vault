@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	kerberos "github.com/hashicorp/vault-plugin-auth-kerberos"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -46,15 +47,26 @@ func NewKerberosAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	disableFast := false
+	disableFastRaw, ok := conf.Config["disable_fast_negotiation"]
+	if ok {
+		disableFast, err = parseutil.ParseBool(disableFastRaw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'disable_fast_negotiation': %s", err)
+		}
+	}
+
 	return &kerberosMethod{
 		logger:    conf.Logger,
 		mountPath: conf.MountPath,
 		loginCfg: &kerberos.LoginCfg{
-			Username:     username,
-			Service:      service,
-			Realm:        realm,
-			KeytabPath:   keytabPath,
-			Krb5ConfPath: krb5ConfPath,
+			Username:               username,
+			Service:                service,
+			Realm:                  realm,
+			KeytabPath:             keytabPath,
+			Krb5ConfPath:           krb5ConfPath,
+			DisableFASTNegotiation: disableFast,
 		},
 	}, nil
 }

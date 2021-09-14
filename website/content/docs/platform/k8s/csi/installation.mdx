@@ -1,0 +1,51 @@
+---
+layout: docs
+page_title: Vault CSI Provider Installation
+description: The Vault CSI Provider can be installed using Vault Helm.
+---
+
+# Installing the Vault CSI Provider
+
+## Prerequisites
+
+* Kubernetes 1.16+ for both the master and worker nodes (Linux-only)
+* [Secrets store CSI driver](https://secrets-store-csi-driver.sigs.k8s.io/getting-started/installation.html) installed
+* `TokenRequest` endpoint available, which requires setting the flags
+  `--service-account-signing-key-file` and `--service-account-issuer` for
+  `kube-apiserver`. Set by default from 1.20+ and earlier in most managed services.
+
+## Installation using helm
+
+The [Vault Helm chart](/docs/platform/k8s/helm) is the recommended way to
+install and configure the Vault CSI Provider in Kubernetes.
+
+To install a new instance of Vault and the Vault CSI Provider, first add the
+HashiCorp helm repository and ensure you have access to the chart:
+
+~> Vault CSI Provider Helm installation requires Vault Helm 0.10.0+.
+
+```shell-session
+$ helm repo add hashicorp https://helm.releases.hashicorp.com
+"hashicorp" has been added to your repositories
+
+$ helm search repo hashicorp/vault
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.10.0       	1.7.0      	Official HashiCorp Vault Chart
+```
+
+Then install the chart and enable the CSI feature by setting the
+`csi.enabled` value to `true`:
+
+```bash
+# Note: this will also install the Vault server and Agent Injector.
+helm install vault hashicorp/vault --set="csi.enabled=true"
+```
+
+Upgrades may be performed with `helm upgrade` on an existing install. Please
+always run Helm with `--dry-run` before any install or upgrade to verify
+changes.
+
+You can see all the available values settings by running `helm inspect values hashicorp/vault` or by reading the [Vault Helm Configuration
+Docs](/docs/platform/k8s/helm/configuration). Commonly used values in the Helm
+chart include limiting the namespaces the Vault CSI Provider runs in, TLS options and
+more.

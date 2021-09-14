@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
@@ -32,6 +31,10 @@ type mongoDBConnectionProducer struct {
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" structs:"-" mapstructure:"tls_certificate_key"`
 	TLSCAData             []byte `json:"tls_ca"              structs:"-" mapstructure:"tls_ca"`
 
+	SocketTimeout          time.Duration `json:"socket_timeout"           structs:"-" mapstructure:"socket_timeout"`
+	ConnectTimeout         time.Duration `json:"connect_timeout"          structs:"-" mapstructure:"connect_timeout"`
+	ServerSelectionTimeout time.Duration `json:"server_selection_timeout" structs:"-" mapstructure:"server_selection_timeout"`
+
 	Initialized   bool
 	RawConfig     map[string]interface{}
 	Type          string
@@ -49,64 +52,46 @@ type writeConcern struct {
 	J        bool   // Sync via the journal if present
 }
 
-func (c *mongoDBConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	_, err := c.Init(ctx, conf, verifyConnection)
-	return err
-}
-
-// Initialize parses connection configuration.
-func (c *mongoDBConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.RawConfig = conf
-
-	err := mapstructure.WeakDecode(conf, c)
+func (c *mongoDBConnectionProducer) loadConfig(cfg map[string]interface{}) error {
+	err := mapstructure.WeakDecode(cfg, c)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if len(c.ConnectionURL) == 0 {
-		return nil, fmt.Errorf("connection_url cannot be empty")
+		return fmt.Errorf("connection_url cannot be empty")
 	}
 
-	writeOpts, err := c.getWriteConcern()
+	if c.SocketTimeout < 0 {
+		return fmt.Errorf("socket_timeout must be >= 0")
+	}
+	if c.ConnectTimeout < 0 {
+		return fmt.Errorf("connect_timeout must be >= 0")
+	}
+	if c.ServerSelectionTimeout < 0 {
+		return fmt.Errorf("server_selection_timeout must be >= 0")
+	}
+
+	opts, err := c.makeClientOpts()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	authOpts, err := c.getTLSAuth()
-	if err != nil {
-		return nil, err
-	}
+	c.clientOptions = opts
 
-	c.clientOptions = options.MergeClientOptions(writeOpts, authOpts)
-
-	// Set initialized to true at this point since all fields are set,
-	// and the connection can be established at a later time.
-	c.Initialized = true
-
-	if verifyConnection {
-		if _, err := c.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-
-		if err := c.client.Ping(ctx, readpref.Primary()); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
-		}
-	}
-
-	return conf, nil
+	return nil
 }
 
 // Connection creates or returns an existing a database connection. If the session fails
 // on a ping check, the session will be closed and then re-created.
-// This method does not lock the mutex and it is intended that this is the callers
-// responsibility.
-func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
+// This method does locks the mutex on its own.
+func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (*mongo.Client, error) {
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
 	}
+
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
 
 	if c.client != nil {
 		if err := c.client.Ping(ctx, readpref.Primary()); err == nil {
@@ -116,8 +101,7 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}
 		_ = c.client.Disconnect(ctx)
 	}
 
-	connURL := c.getConnectionURL()
-	client, err := createClient(ctx, connURL, c.clientOptions)
+	client, err := c.createClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -125,14 +109,14 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (interface{}
 	return c.client, nil
 }
 
-func createClient(ctx context.Context, connURL string, clientOptions *options.ClientOptions) (client *mongo.Client, err error) {
-	if clientOptions == nil {
-		clientOptions = options.Client()
+func (c *mongoDBConnectionProducer) createClient(ctx context.Context) (client *mongo.Client, err error) {
+	if !c.Initialized {
+		return nil, fmt.Errorf("failed to create client: connection producer is not initialized")
 	}
-	clientOptions.SetSocketTimeout(1 * time.Minute)
-	clientOptions.SetConnectTimeout(1 * time.Minute)
-
-	client, err = mongo.Connect(ctx, options.MergeClientOptions(options.Client().ApplyURI(connURL), clientOptions))
+	if c.clientOptions == nil {
+		return nil, fmt.Errorf("missing client options")
+	}
+	client, err = mongo.Connect(ctx, options.MergeClientOptions(options.Client().ApplyURI(c.getConnectionURL()), c.clientOptions))
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +141,8 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func (c *mongoDBConnectionProducer) secretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (c *mongoDBConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
 		c.Password: "[password]",
 	}
 }
@@ -169,6 +153,26 @@ func (c *mongoDBConnectionProducer) getConnectionURL() (connURL string) {
 		"password": c.Password,
 	})
 	return connURL
+}
+
+func (c *mongoDBConnectionProducer) makeClientOpts() (*options.ClientOptions, error) {
+	writeOpts, err := c.getWriteConcern()
+	if err != nil {
+		return nil, err
+	}
+
+	authOpts, err := c.getTLSAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	timeoutOpts, err := c.timeoutOpts()
+	if err != nil {
+		return nil, err
+	}
+
+	opts := options.MergeClientOptions(writeOpts, authOpts, timeoutOpts)
+	return opts, nil
 }
 
 func (c *mongoDBConnectionProducer) getWriteConcern() (opts *options.ClientOptions, err error) {
@@ -188,7 +192,7 @@ func (c *mongoDBConnectionProducer) getWriteConcern() (opts *options.ClientOptio
 	concern := &writeConcern{}
 	err = json.Unmarshal([]byte(input), concern)
 	if err != nil {
-		return nil, errwrap.Wrapf("error unmarshalling write_concern: {{err}}", err)
+		return nil, fmt.Errorf("error unmarshalling write_concern: %w", err)
 	}
 
 	// Translate write concern to mongo options
@@ -255,5 +259,31 @@ func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, e
 	}
 
 	opts.SetTLSConfig(tlsConfig)
+	return opts, nil
+}
+
+func (c *mongoDBConnectionProducer) timeoutOpts() (opts *options.ClientOptions, err error) {
+	opts = options.Client()
+
+	if c.SocketTimeout < 0 {
+		return nil, fmt.Errorf("socket_timeout must be >= 0")
+	}
+
+	if c.SocketTimeout == 0 {
+		opts.SetSocketTimeout(1 * time.Minute)
+	} else {
+		opts.SetSocketTimeout(c.SocketTimeout)
+	}
+
+	if c.ConnectTimeout == 0 {
+		opts.SetConnectTimeout(1 * time.Minute)
+	} else {
+		opts.SetConnectTimeout(c.ConnectTimeout)
+	}
+
+	if c.ServerSelectionTimeout != 0 {
+		opts.SetServerSelectionTimeout(c.ServerSelectionTimeout)
+	}
+
 	return opts, nil
 }

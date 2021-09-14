@@ -84,7 +84,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		default:
 			b.Fatalf("bad status code: %d, resp: %s", w.StatusCode(), w.Body().String())
 		}
-		//b.Log(w.Body().String())
+		// b.Log(w.Body().String())
 		numOps++
 	}
 

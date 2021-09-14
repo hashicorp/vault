@@ -1,0 +1,3 @@
+```release-note:bug
+auth/aws: Remove warning stating AWS Token TTL will be capped by the Default Lease TTL.
+```

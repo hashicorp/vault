@@ -51,7 +51,6 @@ vault secrets enable aws
 vault secrets enable azure
 vault secrets enable cassandra
 vault secrets enable consul
-vault secrets enable couchbase
 vault secrets enable database
 vault secrets enable gcp
 vault secrets enable gcpkms
@@ -66,6 +65,7 @@ vault secrets enable pki
 vault secrets enable postgresql
 vault secrets enable rabbitmq
 vault secrets enable ssh
+vault secrets enable terraform
 vault secrets enable totp
 vault secrets enable transit
 

@@ -1,26 +1,21 @@
 <div class="auth-form">
-  {{#if showLoading}}
-    <div class="vault-loader">
-      <VaultLogoSpinner />
-    </div>
-  {{/if}}
   {{#if hasMethodsWithPath}}
     <nav class="tabs is-marginless">
       <ul>
         {{#each methodsToShow as |method|}}
           {{#with (or method.path method.type) as |methodKey|}}
               <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
-                {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
+                <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with=methodKey}} data-test-auth-method-link={{method.type}}>
                   {{or method.id (capitalize method.type)}}
-                {{/link-to}}
+                </LinkTo>
               </li>
           {{/with}}
         {{/each}}
         {{#if hasMethodsWithPath}}
-          <li class="{{if (not selectedAuthIsPath) 'is-active' ''}}" data-test-auth-method>
-            {{#link-to 'vault.cluster.auth' cluster.name (query-params with='token') data-test-auth-method-link="other"}}
+          <li class="{{unless selectedAuthIsPath 'is-active' ''}}" data-test-auth-method>
+            <LinkTo @route="vault.cluster.auth" @model={{cluster.name}} @query={{hash with='token'}} data-test-auth-method-link="other">
               Other
-            {{/link-to}}
+            </LinkTo>
           </li>
         {{/if}}
       </ul>
@@ -31,6 +26,10 @@
       @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
       data-test-auth-error
     />
+    <div class="has-bottom-margin-s ">
+      <p class="is-label">{{this.selectedAuthBackend.path}}</p>
+      <span class="description has-text-grey" data-test-description={{true}}>{{this.selectedAuthBackend.mountDescription}}</span>
+    </div>
     {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
       <Select
         @label='Method'
@@ -56,7 +55,7 @@
       @roleName={{this.roleName}}
       @selectedAuthType={{this.selectedAuthBackend.type}}
       @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-      @disabled={{authenticate.isRunning}}
+      @disabled={{or authenticate.isRunning this.isLoading}}
     >
       <AuthFormOptions
         @customPath={{this.customPath}}
@@ -69,7 +68,34 @@
       id="auth-form"
       onsubmit={{action "doSubmit"}}
     >
-        {{partial providerPartialName}}
+        {{#if (eq providerName 'github')}}
+          <div class="field">
+            <label for="token" class="is-label">GitHub token</label>
+            <div class="control">
+              <Input @type="password" @value={{token}} @name="token" @id="token" class="input" data-test-token={{true}} @autocomplete="off" @spellcheck="false" />
+            </div>
+          </div>
+        {{else if (eq providerName 'token')}}
+          <div class="field">
+            <label for="token" class="is-label">Token</label>
+            <div class="control">
+              <Input @type="password" @value={{token}} @name="token" class="input" @autocomplete="off" @spellcheck="false" data-test-token={{true}} />
+            </div>
+          </div>
+        {{else}}
+          <div class="field">
+            <label for="username" class="is-label">Username</label>
+            <div class="control">
+              <Input @value={{username}} @name="username" @id="username" class="input" @autocomplete="off" @spellcheck="false" data-test-username={{true}} />
+            </div>
+          </div>
+          <div class="field">
+            <label for="password" class="is-label">Password</label>
+            <div class="control">
+              <Input @value={{password}} @name="password" @id="password" @type="password" class="input" @autocomplete="off" @spellcheck="false" data-test-password={{true}} />
+            </div>
+          </div>
+        {{/if}}
         {{#if (not-eq selectedAuthBackend.type "token")}}
           <AuthFormOptions
             @customPath={{this.customPath}}
@@ -80,7 +106,16 @@
         <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
           Sign In
         </button>
+        {{#if (and delayAuthMessageReminder.isIdle showLoading)}}
+          <AlertInline
+            @paddingTop=true
+            @sizeSmall=true
+            @type="info"
+            @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
+            data-test-auth-message="push"
+          />
+        {{/if}}
     </form>
   {{/if}}
-</div>
+  </div>
 </div>

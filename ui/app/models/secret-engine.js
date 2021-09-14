@@ -1,15 +1,33 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
+import { validator, buildValidations } from 'ember-cp-validations';
 
 //identity will be managed separately and the inclusion
 //of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
-export default DS.Model.extend({
+const Validations = buildValidations({
+  path: validator('presence', {
+    presence: true,
+    message: "Path can't be blank.",
+  }),
+  maxVersions: [
+    validator('number', {
+      allowString: true,
+      integer: true,
+      message: 'Maximum versions must be a number.',
+    }),
+    validator('length', {
+      min: 1,
+      max: 16,
+      message: 'You cannot go over 16 characters.',
+    }),
+  ],
+});
+
+export default Model.extend(Validations, {
   path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
@@ -29,10 +47,30 @@ export default DS.Model.extend({
     helpText:
       'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
   }),
+  // KV 2 additional config default options
+  maxVersions: attr('number', {
+    defaultValue: 10,
+    label: 'Maximum number of versions',
+    subText:
+      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value.',
+  }),
+  casRequired: attr('boolean', {
+    defaultValue: false,
+    label: 'Require Check and Set',
+    subText:
+      'If checked, all keys will require the cas parameter to be set on all write requests. A key’s metadata settings can overwrite this value.',
+  }),
+  deleteVersionAfter: attr({
+    defaultValue: 0,
+    editType: 'ttl',
+    label: 'Automate secret deletion',
+    helperTextDisabled: 'A secret’s version must be manually deleted.',
+    helperTextEnabled: 'Delete all new versions of this secret after',
+  }),
 
   modelTypeForKV: computed('engineType', 'options.version', function() {
-    let type = this.get('engineType');
-    let version = this.get('options.version');
+    let type = this.engineType;
+    let version = this.options?.version;
     let modelType = 'secret';
     if ((type === 'kv' || type === 'generic') && version === 2) {
       modelType = 'secret-v2';
@@ -40,12 +78,10 @@ export default DS.Model.extend({
     return modelType;
   }),
 
-  isV2KV: computed('modelTypeForKV', function() {
-    return this.modelTypeForKV === 'secret-v2';
-  }),
+  isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
 
   formFields: computed('engineType', function() {
-    let type = this.get('engineType');
+    let type = this.engineType;
     let fields = [
       'type',
       'path',
@@ -62,45 +98,65 @@ export default DS.Model.extend({
   }),
 
   formFieldGroups: computed('engineType', function() {
-    let type = this.get('engineType');
-    let defaultGroup = { default: ['path'] };
-    if (type === 'kv' || type === 'generic') {
-      defaultGroup.default.push('options.{version}');
+    let type = this.engineType;
+    let defaultGroup;
+    // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
+    if (type === 'kv') {
+      defaultGroup = { default: ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'] };
+    } else {
+      defaultGroup = { default: ['path'] };
     }
-    return [
-      defaultGroup,
-      {
-        'Method Options': [
-          'description',
-          'config.listingVisibility',
-          'local',
-          'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-        ],
-      },
-    ];
+    let optionsGroup = {
+      'Method Options': [
+        'description',
+        'config.listingVisibility',
+        'local',
+        'sealWrap',
+        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ],
+    };
+    if (type === 'kv' || type === 'generic') {
+      optionsGroup['Method Options'].unshift('options.{version}');
+    }
+    if (type === 'database') {
+      // For the Database Secret Engine we want to highlight the defaultLeaseTtl and maxLeaseTtl, removing them from the options object
+      defaultGroup.default.push('config.{defaultLeaseTtl}', 'config.{maxLeaseTtl}');
+      return [
+        defaultGroup,
+        {
+          'Method Options': [
+            'description',
+            'config.listingVisibility',
+            'local',
+            'sealWrap',
+            'config.{auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          ],
+        },
+      ];
+    }
+    return [defaultGroup, optionsGroup];
   }),
 
   attrs: computed('formFields', function() {
-    return expandAttributeMeta(this, this.get('formFields'));
+    return expandAttributeMeta(this, this.formFields);
   }),
 
   fieldGroups: computed('formFieldGroups', function() {
-    return fieldToAttrs(this, this.get('formFieldGroups'));
+    return fieldToAttrs(this, this.formFieldGroups);
   }),
 
   // namespaces introduced types with a `ns_` prefix for built-in engines
   // so we need to strip that to normalize the type
   engineType: computed('type', function() {
-    return (this.get('type') || '').replace(/^ns_/, '');
+    return (this.type || '').replace(/^ns_/, '');
   }),
 
   shouldIncludeInList: computed('engineType', function() {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.get('engineType'));
+    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
   }),
 
   localDisplay: computed('local', function() {
-    return this.get('local') ? 'local' : 'replicated';
+    return this.local ? 'local' : 'replicated';
   }),
 
   // ssh specific ones
@@ -111,7 +167,7 @@ export default DS.Model.extend({
   }),
 
   saveCA(options) {
-    if (this.get('type') !== 'ssh') {
+    if (this.type !== 'ssh') {
       return;
     }
     if (options.isDelete) {

@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*SecretsMoveCommand)(nil)
-var _ cli.CommandAutocomplete = (*SecretsMoveCommand)(nil)
+var (
+	_ cli.Command             = (*SecretsMoveCommand)(nil)
+	_ cli.CommandAutocomplete = (*SecretsMoveCommand)(nil)
+)
 
 type SecretsMoveCommand struct {
 	*BaseCommand

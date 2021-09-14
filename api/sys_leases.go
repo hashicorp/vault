@@ -27,6 +27,27 @@ func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+func (c *Sys) Lookup(id string) (*Secret, error) {
+	r := c.c.NewRequest("PUT", "/v1/sys/leases/lookup")
+
+	body := map[string]interface{}{
+		"lease_id": id,
+	}
+	if err := r.SetJSONBody(body); err != nil {
+		return nil, err
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 func (c *Sys) Revoke(id string) error {
 	r := c.c.NewRequest("PUT", "/v1/sys/leases/revoke")
 	body := map[string]interface{}{

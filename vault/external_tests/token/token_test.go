@@ -353,7 +353,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		//t.Logf("%#v", *secret)
+		// t.Logf("%#v", *secret)
 		var resp logical.Response
 		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &resp); err != nil {
 			t.Fatal(err)
@@ -585,6 +585,9 @@ func TestTokenStore_RevocationOnStartup(t *testing.T) {
 	// Fake times in the past
 	for _, lease := range leases {
 		secret, err = client.Logical().Read(leasePath + lease.(string))
+		if err != nil {
+			t.Fatal(err)
+		}
 		var entry leaseEntry
 		if err := jsonutil.DecodeJSON([]byte(secret.Data["value"].(string)), &entry); err != nil {
 			t.Fatal(err)

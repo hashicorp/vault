@@ -1,12 +1,12 @@
 import { inject as service } from '@ember/service';
 import { equal } from '@ember/object/computed';
-import { getProperties, get, computed } from '@ember/object';
+import { get, computed } from '@ember/object';
 import Component from '@ember/component';
 import layout from '../templates/components/replication-mode-summary';
 
 const replicationAttr = function(attr) {
-  return computed('mode', `cluster.{dr,performance}.${attr}`, function() {
-    const { mode, cluster } = getProperties(this, 'mode', 'cluster');
+  return computed(`cluster.{dr,performance}.${attr}`, 'cluster', 'mode', function() {
+    const { mode, cluster } = this;
     return get(cluster, `${mode}.${attr}`);
   });
 };
@@ -19,19 +19,26 @@ export default Component.extend({
   attributeBindings: ['href', 'target'],
   display: 'banner',
   isMenu: equal('display', 'menu'),
-  href: computed('display', 'mode', 'replicationEnabled', 'version.hasPerfReplication', function() {
-    const display = this.get('display');
-    const mode = this.get('mode');
-    if (mode === 'performance' && display === 'menu' && this.get('version.hasPerfReplication') === false) {
-      return 'https://www.hashicorp.com/products/vault';
+  href: computed(
+    'cluster.id',
+    'display',
+    'mode',
+    'replicationEnabled',
+    'version.hasPerfReplication',
+    function() {
+      const display = this.display;
+      const mode = this.mode;
+      if (mode === 'performance' && display === 'menu' && this.version.hasPerfReplication === false) {
+        return 'https://www.hashicorp.com/products/vault';
+      }
+      if (this.replicationEnabled || display === 'menu') {
+        return this.router.urlFor('vault.cluster.replication.mode.index', this.cluster.id, mode);
+      }
+      return null;
     }
-    if (this.get('replicationEnabled') || display === 'menu') {
-      return this.get('router').urlFor('vault.cluster.replication.mode.index', this.get('cluster.id'), mode);
-    }
-    return null;
-  }),
+  ),
   target: computed('isPerformance', 'version.hasPerfReplication', function() {
-    if (this.get('isPerformance') && this.get('version.hasPerfReplication') === false) {
+    if (this.isPerformance && this.version.hasPerfReplication === false) {
       return '_blank';
     }
     return null;

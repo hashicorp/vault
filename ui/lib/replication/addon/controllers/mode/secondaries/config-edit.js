@@ -21,10 +21,10 @@ export default Controller.extend({
     saveConfig(config) {
       // if the mode is null, we want no filtering, so we should delete any existing config
       let isDelete = config.mode === null;
-      const flash = this.get('flashMessages');
+      const flash = this.flashMessages;
       const id = config.id;
       const redirectArgs = isDelete
-        ? ['mode.secondaries', this.get('replicationMode')]
+        ? ['mode.secondaries', this.replicationMode]
         : ['mode.secondaries.config-show', id];
       const modelMethod = isDelete ? config.destroyRecord : config.save;
 

@@ -1,0 +1,308 @@
+---
+layout: api
+page_title: /sys/internal/counters - HTTP API
+description: >-
+  The `/sys/internal/counters` endpoints are used to return data about Vault usage.
+---
+
+# `/sys/internal/counters`
+
+The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault.
+
+~> **NOTE**: These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
+
+## Entities
+
+This endpoint returns the total number of Entities.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `GET`  | `/sys/internal/counters/entities` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/entities
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "counters": {
+      "entities": {
+        "total": 1
+      }
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Tokens
+
+This endpoint returns the total number of Tokens.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET`  | `/sys/internal/counters/tokens` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/tokens
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "counters": {
+      "service_tokens": {
+        "total": 1
+      }
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Client Count
+
+This endpoint returns the number of clients per namespace, as the sum of active entities and non-entity tokens.
+An "active entity" is a distinct entity that has created one or more tokens in the given time period.
+A "non-entity token" is a token with no attached entity ID.
+
+A time period may be specified; otherwise it reports on a default reporting period, such as the
+previous twelve calendar months. Reports are only available with month granularity, after each month
+has completed. The response includes the actual time period covered, which may not exactly match
+the query parameters due to the monthly granularity of the data, or missing months in the requested
+time range.
+
+The response will include all child namespaces of the namespace in which the request was made.
+If some namespace has subsequently been deleted, its path will be listed as "deleted namespace :ID:".
+Deleted namespaces are reported only for queries in the root namespace, because the information about
+the namespace path is unknown.
+
+This endpoint was added in Vault 1.6.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `GET`  | `/sys/internal/counters/activity` |
+
+### Parameters
+
+- `start_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the start of the
+  period for which client counts will be reported. If no start time is specified, the `default_report_months`
+  prior to the `end_time` will be used.
+- `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
+  for which client counts will be reported. If no end time is specified, the end of the previous calendar
+  month will be used.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca647d5",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "start_time": "2019-11-01T00:00:00Z",
+    "end_time": "2020-10-31T23:59:59Z",
+    "total": {
+      "distinct_entities": 90,
+      "non_entity_tokens": 130,
+      "clients": 220
+    },
+    "by_namespace": [
+      {
+        "namespace_id": "root",
+        "namespace_path": "",
+        "counts": {
+          "distinct_entities": 85,
+          "non_entity_tokens": 15,
+          "clients": 100
+        }
+      },
+      {
+        "namespace_id": "DochC",
+        "namespace_path": "ns2/",
+        "counts": {
+          "distinct_entities": 0,
+          "non_entity_tokens": 100,
+          "clients": 100
+        }
+      },
+      {
+        "namespace_id": "RtgpW",
+        "namespace_path": "ns1/",
+        "counts": {
+          "distinct_entities": 5,
+          "non_entity_tokens": 15,
+          "clients": 20
+        }
+      }
+    ]
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+### Sample request for a single month
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z
+```
+
+## Partial Month Client Count
+
+This endpoint returns the number of clients for the current month, as the sum of active entities and non-entity tokens.
+An "active entity" is a distinct entity that has created one or more tokens in the given time period.
+A "non-entity token" is a token with no attached entity ID.
+
+The time period is from the start of the current month, up until the time that this request was made.
+
+Note: the client count may be inaccurate in the moments following a Vault reboot, or leadership change.
+The estimate will stabilize when background loading of client data has completed.
+
+This endpoint was added in Vault 1.7.
+
+| Method | Path                                      |
+| :----- | :---------------------------------------- |
+| `GET`  | `/sys/internal/counters/activity/monthly` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity/monthly
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "26be5ab9-dcac-9237-ec12-269a8ca64742",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "distinct_entities": 100,
+    "non_entity_tokens": 120,
+    "clients": 220
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Update the Client Count Configuration
+
+The `/sys/internal/counters/config` endpoint is used to configure logging of active clients.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `POST` | `/sys/internal/counters/config` |
+
+### Parameters
+
+- `default_report_months` `(integer: 12)` - The number of months to report if no `start_time` is specified in a query.
+- `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
+  counts are enabled on Enterprise builds and disabled on OSS builds. Disabling the feature during the middle of a month will
+  discard any data recorded for that month, but does not delete previous months.
+- `retention_months` `(integer: 24)` - The number of months of history to retain.
+
+Any missing parameters are left at their existing value.
+
+### Sample Payload
+
+```json
+{
+  "enabled": "enable",
+  "default_report_months": 3,
+  "retention_months": 12
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request POST
+    --header "X-Vault-Token: ..." \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/internal/counters/config
+```
+
+## Read the Client Count Configuration
+
+Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
+
+- `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the configuration is `default`.
+- `queries_available` `(bool)` - indicates whether any usage report is available. This will initially be
+  false until the end of the first calendar month after the feature is enabled.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request GET
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/counters/config
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "25a94b99-b49a-c4ac-cb7b-5ba0eb390a25",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "default_report_months": 12,
+    "enabled": "default-enabled",
+    "queries_available": true,
+    "retention_months": 24
+  },
+  "warnings": null
+}
+```

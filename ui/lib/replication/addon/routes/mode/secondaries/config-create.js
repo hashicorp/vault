@@ -8,7 +8,7 @@ export default Base.extend({
   modelPath: 'model.config',
 
   findOrCreate(id) {
-    const flash = this.get('flashMessages');
+    const flash = this.flashMessages;
     return this.store
       .findRecord('path-filter-config', id)
       .then(() => {
@@ -36,9 +36,9 @@ export default Base.extend({
 
   redirect(model) {
     const cluster = model.cluster;
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.replicationMode;
     if (
-      !this.get('version.hasPerfReplication') ||
+      !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')

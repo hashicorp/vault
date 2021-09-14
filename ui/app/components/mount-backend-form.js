@@ -1,9 +1,9 @@
 import { inject as service } from '@ember/service';
-import { computed } from '@ember/object';
+import { computed, set } from '@ember/object';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
 
 const METHODS = methods();
 const ENGINES = engines();
@@ -43,29 +43,36 @@ export default Component.extend({
 
   showEnable: false,
 
+  // cp-validation related properties
+  validationMessages: null,
+  isFormInvalid: false,
+
   init() {
     this._super(...arguments);
     const type = this.mountType;
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
     this.set('mountModel', model);
+
+    this.set('validationMessages', {
+      path: '',
+    });
   },
 
-  mountTypes: computed('mountType', function() {
+  mountTypes: computed('engines', 'mountType', function() {
     return this.mountType === 'secret' ? this.engines : METHODS;
   }),
 
-  engines: computed('version.features[]', function() {
-    if (this.version.hasFeature('KMIP')) {
-      return ENGINES.concat([KMIP]);
-    } else {
-      return ENGINES;
+  engines: computed('version.{features[],isEnterprise}', function() {
+    if (this.version.isEnterprise) {
+      return ENGINES.concat([KMIP, TRANSFORM]);
     }
+    return ENGINES;
   }),
 
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
-    this.get('mountModel').rollbackAttributes();
+    this.mountModel.rollbackAttributes();
   },
 
   checkPathChange(type) {
@@ -82,7 +89,7 @@ export default Component.extend({
 
   mountBackend: task(function*() {
     const mountModel = this.mountModel;
-    const { type, path } = mountModel.getProperties('type', 'path');
+    const { type, path } = mountModel;
     try {
       yield mountModel.save();
     } catch (err) {
@@ -100,6 +107,29 @@ export default Component.extend({
     .withTestWaiter(),
 
   actions: {
+    onKeyUp(name, value) {
+      // validate path
+      if (name === 'path') {
+        this.mountModel.set('path', value);
+        this.mountModel.validations.attrs.path.isValid
+          ? set(this.validationMessages, 'path', '')
+          : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
+      }
+      // check maxVersions is a number
+      if (name === 'maxVersions') {
+        this.mountModel.set('maxVersions', value);
+        this.mountModel.validations.attrs.maxVersions.isValid
+          ? set(this.validationMessages, 'maxVersions', '')
+          : set(
+              this.validationMessages,
+              'maxVersions',
+              this.mountModel.validations.attrs.maxVersions.message
+            );
+      }
+      this.mountModel.validate().then(({ validations }) => {
+        this.set('isFormInvalid', !validations.isValid);
+      });
+    },
     onTypeChange(path, value) {
       if (path === 'type') {
         this.wizard.set('componentState', value);

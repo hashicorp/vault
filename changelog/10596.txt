@@ -1,0 +1,4 @@
+```release-note:bug
+ui: Fix bug that double encodes secret route when there are spaces in the path and makes you unable to view the version history.
+```
+

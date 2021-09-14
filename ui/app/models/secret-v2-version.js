@@ -1,8 +1,6 @@
+import { belongsTo, attr } from '@ember-data/model';
 import Secret from './secret';
-import DS from 'ember-data';
 import { computed } from '@ember/object';
-
-const { attr, belongsTo } = DS;
 
 export default Secret.extend({
   failedServerRead: attr('boolean'),
@@ -13,7 +11,7 @@ export default Secret.extend({
   deletionTime: attr('string'),
   createdTime: attr('string'),
   deleted: computed('deletionTime', function() {
-    const deletionTime = new Date(this.get('deletionTime'));
+    const deletionTime = new Date(this.deletionTime);
     const now = new Date();
     return deletionTime <= now;
   }),

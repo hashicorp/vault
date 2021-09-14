@@ -1,10 +1,16 @@
-// env: node
+/* eslint-disable no-undef */
+
+'use strict';
+
 module.exports = {
   parser: 'babel-eslint',
   root: true,
   parserOptions: {
     ecmaVersion: 2018,
     sourceType: 'module',
+    ecmaFeatures: {
+      legacyDecorators: true,
+    },
   },
   plugins: ['ember', 'prettier'],
   extends: ['eslint:recommended', 'plugin:ember/recommended', 'prettier'],
@@ -13,13 +19,9 @@ module.exports = {
     es6: true,
   },
   rules: {
-    'no-unused-vars': ['error', { ignoreRestSiblings: true }],
-    'prettier/prettier': 'error',
-    'ember/no-jquery': 'error',
-  },
-  globals: {
-    TextEncoderLite: true,
-    TextDecoderLite: true,
+    // TODO revisit once figure out how to replace, added during upgrade to 3.20
+    'ember/no-new-mixins': 'off',
+    'ember/no-mixins': 'off',
   },
   overrides: [
     // node files
@@ -40,6 +42,13 @@ module.exports = {
       env: {
         browser: false,
         node: true,
+      },
+      plugins: ['node'],
+      extends: ['plugin:node/recommended'],
+      rules: {
+        // this can be removed once the following is fixed
+        // https://github.com/mysticatea/eslint-plugin-node/issues/77
+        'node/no-unpublished-require': 'off',
       },
     },
   ],

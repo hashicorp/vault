@@ -24,28 +24,30 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 	var expected map[string]interface{}
 
 	configResp := map[string]interface{}{
-		"api_addr":                     "",
-		"cache_size":                   json.Number("0"),
-		"cluster_addr":                 "",
-		"cluster_cipher_suites":        "",
-		"cluster_name":                 "",
-		"default_lease_ttl":            json.Number("0"),
-		"default_max_request_duration": json.Number("0"),
-		"disable_cache":                false,
-		"disable_clustering":           false,
-		"disable_indexing":             false,
-		"disable_mlock":                false,
-		"disable_performance_standby":  false,
-		"disable_printable_check":      false,
-		"disable_sealwrap":             false,
-		"raw_storage_endpoint":         false,
-		"disable_sentinel_trace":       false,
-		"enable_ui":                    false,
-		"log_format":                   "",
-		"log_level":                    "",
-		"max_lease_ttl":                json.Number("0"),
-		"pid_file":                     "",
-		"plugin_directory":             "",
+		"api_addr":                            "",
+		"cache_size":                          json.Number("0"),
+		"cluster_addr":                        "",
+		"cluster_cipher_suites":               "",
+		"cluster_name":                        "",
+		"default_lease_ttl":                   json.Number("0"),
+		"default_max_request_duration":        json.Number("0"),
+		"disable_cache":                       false,
+		"disable_clustering":                  false,
+		"disable_indexing":                    false,
+		"disable_mlock":                       false,
+		"disable_performance_standby":         false,
+		"disable_printable_check":             false,
+		"disable_sealwrap":                    false,
+		"raw_storage_endpoint":                false,
+		"disable_sentinel_trace":              false,
+		"enable_ui":                           false,
+		"log_format":                          "",
+		"log_level":                           "",
+		"max_lease_ttl":                       json.Number("0"),
+		"pid_file":                            "",
+		"plugin_directory":                    "",
+		"enable_response_header_hostname":     false,
+		"enable_response_header_raft_node_id": false,
 	}
 
 	expected = map[string]interface{}{
@@ -64,5 +66,4 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 	if diff := deep.Equal(actual, expected); len(diff) > 0 {
 		t.Fatalf("bad mismatch response body: diff: %v", diff)
 	}
-
 }

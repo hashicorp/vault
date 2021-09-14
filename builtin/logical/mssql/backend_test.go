@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	_ "github.com/denisenkom/go-mssqldb"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -105,7 +105,6 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 			testAccStepReadLease(t),
 		},
 	})
-
 }
 
 func testAccPreCheckFunc(t *testing.T, connectionURL string) func() {

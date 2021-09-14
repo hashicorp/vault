@@ -11,18 +11,16 @@ import (
 	metrics "github.com/armon/go-metrics"
 	radix "github.com/armon/go-radix"
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	deniedPassthroughRequestHeaders = []string{
-		consts.AuthHeaderName,
-	}
-)
+var deniedPassthroughRequestHeaders = []string{
+	consts.AuthHeaderName,
+}
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
@@ -61,7 +59,7 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
-type validateMountResponse struct {
+type ValidateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
@@ -77,9 +75,9 @@ func (r *Router) reset() {
 	r.mountAccessorCache = radix.New()
 }
 
-// validateMountByAccessor returns the mount type and ID for a given mount
+// ValidateMountByAccessor returns the mount type and ID for a given mount
 // accessor
-func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse {
+func (r *Router) ValidateMountByAccessor(accessor string) *ValidateMountResponse {
 	if accessor == "" {
 		return nil
 	}
@@ -94,7 +92,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		mountPath = credentialRoutePrefix + mountPath
 	}
 
-	return &validateMountResponse{
+	return &ValidateMountResponse{
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,
@@ -346,9 +344,11 @@ func (r *Router) MountConflict(ctx context.Context, path string) string {
 func (r *Router) MatchingStorageByAPIPath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, true)
 }
+
 func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, false)
 }
+
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -512,8 +512,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
-	defer metrics.MeasureSince([]string{"route", string(req.Operation),
-		strings.Replace(mount, "/", "-", -1)}, time.Now())
+	defer metrics.MeasureSince([]string{
+		"route", string(req.Operation),
+		strings.Replace(mount, "/", "-", -1),
+	}, time.Now())
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend

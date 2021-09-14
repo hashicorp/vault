@@ -40,7 +40,7 @@ export default ApplicationAdapter.extend({
   query(store, type, query) {
     return this.ajax(this.urlForQuery(query, type.modelName), 'GET').then(resp => {
       // remove pagination query items here
-      const { size, page, responsePath, pageFilter, ...modelAttrs } = query;
+      const { ...modelAttrs } = query;
       resp._requestQuery = modelAttrs;
       return resp;
     });

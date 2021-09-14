@@ -1,5 +1,7 @@
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
+import { filterBy } from '@ember/object/computed';
+
 import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
@@ -28,20 +30,14 @@ export default Service.extend({
   adapter() {
     return getOwner(this).lookup('adapter:console');
   },
-  commandHistory: computed('log.[]', function() {
-    return this.get('log').filterBy('type', 'command');
-  }),
+  commandHistory: filterBy('log', 'type', 'command'),
   log: computed(function() {
     return [];
   }),
   commandIndex: null,
 
   shiftCommandIndex(keyCode, setCommandFn = () => {}) {
-    let [newIndex, newCommand] = shiftCommandIndex(
-      keyCode,
-      this.get('commandHistory'),
-      this.get('commandIndex')
-    );
+    let [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
     if (newCommand !== undefined && newIndex !== undefined) {
       this.set('commandIndex', newIndex);
       setCommandFn(newCommand);
@@ -49,10 +45,10 @@ export default Service.extend({
   },
 
   clearLog(clearAll = false) {
-    let log = this.get('log');
+    let log = this.log;
     let history;
     if (!clearAll) {
-      history = this.get('commandHistory').slice();
+      history = this.commandHistory.slice();
       history.setEach('hidden', true);
     }
     log.clear();
@@ -62,7 +58,7 @@ export default Service.extend({
   },
 
   logAndOutput(command, logContent) {
-    let log = this.get('log');
+    let log = this.log;
     if (command) {
       log.pushObject({ type: 'command', content: command });
       this.set('commandIndex', null);

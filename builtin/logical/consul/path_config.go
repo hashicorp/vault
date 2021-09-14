@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -13,12 +12,12 @@ func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
-			"address": &framework.FieldSchema{
+			"address": {
 				Type:        framework.TypeString,
 				Description: "Consul server address",
 			},
 
-			"scheme": &framework.FieldSchema{
+			"scheme": {
 				Type:        framework.TypeString,
 				Description: "URI scheme for the Consul address",
 
@@ -28,24 +27,24 @@ func pathConfigAccess(b *backend) *framework.Path {
 				Default: "http",
 			},
 
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
 
-			"ca_cert": &framework.FieldSchema{
+			"ca_cert": {
 				Type: framework.TypeString,
 				Description: `CA certificate to use when verifying Consul server certificate,
 must be x509 PEM encoded.`,
 			},
 
-			"client_cert": &framework.FieldSchema{
+			"client_cert": {
 				Type: framework.TypeString,
 				Description: `Client certificate used for Consul's TLS communication,
 must be x509 PEM encoded and if this is set you need to also set client_key.`,
 			},
 
-			"client_key": &framework.FieldSchema{
+			"client_key": {
 				Type: framework.TypeString,
 				Description: `Client key used for Consul's TLS communication,
 must be x509 PEM encoded and if this is set you need to also set client_cert.`,
@@ -70,7 +69,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 
 	conf := &accessConfig{}
 	if err := entry.DecodeJSON(conf); err != nil {
-		return nil, nil, errwrap.Wrapf("error reading consul access configuration: {{err}}", err)
+		return nil, nil, fmt.Errorf("error reading consul access configuration: %w", err)
 	}
 
 	return conf, nil, nil

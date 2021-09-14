@@ -10,6 +10,7 @@
 
   <div class="action-block-action">
     <button
+      type="button"
       class="button is-tertiary"
       onclick={{action (mut isModalActive) true}}
       data-test-replication-action-trigger
@@ -77,6 +78,7 @@
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
+      type="button"
       class="button is-primary"
       disabled={{if (and (eq replicationMode "dr") (not dr_operation_token_promote)) true}}
       onclick={{action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash dr_operation_token_promote=dr_operation_token_promote primary_cluster_addr=primary_cluster_addr force=force)}}
@@ -85,6 +87,7 @@
       Promote
     </button>
     <button
+      type="button"
       class="button is-secondary"
       onclick={{action (mut isModalActive) false}}
       data-test-promote-cancel-button>

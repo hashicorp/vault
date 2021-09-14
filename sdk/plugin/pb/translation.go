@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -23,6 +23,7 @@ const (
 	ErrTypeInvalidRequest
 	ErrTypePermissionDenied
 	ErrTypeMultiAuthzPending
+	ErrTypeUnrecoverable
 )
 
 func ProtoErrToErr(e *ProtoError) error {
@@ -52,6 +53,8 @@ func ProtoErrToErr(e *ProtoError) error {
 		err = logical.ErrPermissionDenied
 	case ErrTypeMultiAuthzPending:
 		err = logical.ErrMultiAuthzPending
+	case ErrTypeUnrecoverable:
+		err = logical.ErrUnrecoverable
 	}
 
 	return err
@@ -89,6 +92,8 @@ func ErrToProtoErr(e error) *ProtoError {
 		pbErr.ErrType = ErrTypePermissionDenied
 	case e == logical.ErrMultiAuthzPending:
 		pbErr.ErrType = ErrTypeMultiAuthzPending
+	case e == logical.ErrUnrecoverable:
+		pbErr.ErrType = ErrTypeUnrecoverable
 	}
 
 	return pbErr

@@ -5,16 +5,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 )
 
-var (
-	// logicalBackendAdjustmentFactor is set to 1 for the database backend
-	// which is a plugin but not found in go.mod files
-	logicalBackendAdjustmentFactor = 1
-)
+// logicalBackendAdjustmentFactor is set to 1 for the database backend
+// which is a plugin but not found in go.mod files
+var logicalBackendAdjustmentFactor = 1
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
@@ -109,6 +108,11 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			"-description", "The best kind of test",
 			"-default-lease-ttl", "30m",
 			"-max-lease-ttl", "1h",
+			"-audit-non-hmac-request-keys", "foo,bar",
+			"-audit-non-hmac-response-keys", "foo,bar",
+			"-passthrough-request-headers", "authorization,authentication",
+			"-passthrough-request-headers", "www-authentication",
+			"-allowed-response-headers", "authorization",
 			"-force-no-cache",
 			"pki",
 		})
@@ -146,6 +150,19 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if exp := true; mountInfo.Config.ForceNoCache != exp {
 			t.Errorf("expected %t to be %t", mountInfo.Config.ForceNoCache, exp)
 		}
+		if diff := deep.Equal([]string{"authorization,authentication", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
+		}
+		if diff := deep.Equal([]string{"authorization"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+		}
+		if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+		}
+		if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+		}
+
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {

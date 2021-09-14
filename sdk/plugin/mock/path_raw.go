@@ -25,5 +25,4 @@ func (b *backend) pathRawRead(ctx context.Context, req *logical.Request, data *f
 			logical.HTTPStatusCode:  200,
 		},
 	}, nil
-
 }

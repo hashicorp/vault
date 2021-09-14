@@ -1,0 +1,3 @@
+```release-note:feature
+sdk: Private key generation in the certutil package now allows custom io.Readers to be used. 
+```

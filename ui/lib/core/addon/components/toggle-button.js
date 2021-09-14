@@ -36,19 +36,19 @@ export default Component.extend({
   closedLabel: 'More options',
   init() {
     this._super(...arguments);
-    const toggleAttr = this.get('toggleAttr');
+    const toggleAttr = this.toggleAttr;
     defineProperty(
       this,
       'isOpen',
-      computed(`toggleTarget.${toggleAttr}`, () => {
-        const props = this.getProperties('toggleTarget', 'toggleAttr');
+      computed(`toggleTarget.${toggleAttr}`, 'toggleAttr', 'toggleTarget', function() {
+        const props = { toggleTarget: this.toggleTarget, toggleAttr: this.toggleAttr };
         return get(props.toggleTarget, props.toggleAttr);
       })
     );
   },
   click() {
-    const target = this.get('toggleTarget');
-    const attr = this.get('toggleAttr');
+    const target = this.toggleTarget;
+    const attr = this.toggleAttr;
     const current = get(target, attr);
     set(target, attr, !current);
   },

@@ -24,6 +24,6 @@ export default Component.extend({
   }),
 
   computedClasses: computed('classNames', function() {
-    return this.get('classNames').join(' ');
+    return this.classNames.join(' ');
   }),
 });

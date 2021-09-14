@@ -3,7 +3,7 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function() {
   this.route('configuration');
   this.route('configure');
-  this.route('scopes', { path: '/scopes' }, function() {
+  this.route('scopes', function() {
     this.route('index', { path: '/' });
     this.route('create');
   });

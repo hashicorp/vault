@@ -1,0 +1,129 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq mode "create") }}
+        Create transformation
+      {{else if (eq mode 'edit')}}
+        Edit transformation
+      {{else}}
+        Transformation <code>{{model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
+        <div class="toolbar-separator" />
+      {{/if}}
+      {{#if capabilities.canDelete}}
+        {{#if (gt model.allowed_roles.length 0)}}
+          <ToolTip
+            @verticalPosition="above"
+            @horizontalPosition="center"
+            as |T|>
+            <T.trigger @tabindex="-1">
+              <button
+              class="toolbar-link"
+              aria-disabled="true"
+              type="button"
+              disabled
+              >
+                Delete transformation
+              </button>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                This transformation is in use by a role and can’t be deleted.
+              </div>
+            </T.content>
+          </ToolTip>
+        {{else}}
+        <button
+          class="toolbar-link"
+          onclick={{action (mut isDeleteModalActive) true}}
+          type="button"
+        >
+          Delete transformation
+        </button>
+        {{/if}}
+      {{/if}}
+      {{#if capabilities.canUpdate }}
+        {{#if (gt model.allowed_roles.length 0)}}
+          <button
+            class="toolbar-link"
+            onclick={{action (mut isEditModalActive) true}}
+            type="button"
+            data-test-edit-link
+          >
+            Edit transformation
+          </button>
+        {{else}}
+          <ToolbarSecretLink
+            @secret={{model.id}}
+            @mode="edit"
+            @data-test-edit-link=true
+            @replace=true
+          >
+            Edit transformation
+          </ToolbarSecretLink>
+        {{/if}}
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (eq mode 'edit')}}
+  <TransformEditForm @mode={{mode}} @model={{model}} />
+{{else if (eq mode 'create')}}
+  <TransformCreateForm @mode={{mode}} @model={{model}} />
+{{else}}
+  <TransformShowTransformation
+    @model={{model}}
+  />
+{{/if}}
+
+<ConfirmationModal
+  @title="Delete transformation"
+  @onClose={{action (mut isDeleteModalActive) false}}
+  @isActive={{isDeleteModalActive}}
+  @confirmText={{model.name}}
+  @toConfirmMsg="Type {{model.name}} to confirm deleting the transformation."
+  @onConfirm={{action "delete"}}
+>
+  <p class="has-bottom-margin-m">
+    Deleting the <strong>{{model.name}}</strong> transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and cannot be decoded.
+  </p>
+  <MessageError @model={{model}} @errorMessage={{error}} />
+</ConfirmationModal>
+
+<Modal
+  @title="Edit transformation"
+  @onClose={{action (mut isEditModalActive) false}}
+  @isActive={{isEditModalActive}}
+  @type="warning"
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <p>
+      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode operations stop working. Are you sure?
+    </p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{model.id}} @tagName="button" class="button is-primary" data-test-edit-confirm-button={{true}}>
+      Confirm
+    </LinkTo>
+    <button
+      type="button"
+      class="button is-secondary"
+      onclick={{action (mut isEditModalActive) false}}
+    >
+      Cancel
+    </button>
+  </footer>
+</Modal>

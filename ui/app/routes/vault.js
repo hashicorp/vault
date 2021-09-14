@@ -9,7 +9,7 @@ const SPLASH_DELAY = Ember.testing ? 0 : 300;
 export default Route.extend({
   version: service(),
   beforeModel() {
-    return this.get('version').fetchVersion();
+    return this.version.fetchVersion();
   },
   model() {
     // hardcode single cluster
