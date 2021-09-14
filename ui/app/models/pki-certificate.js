@@ -33,19 +33,13 @@ export default Model.extend({
   // add missing attributes commonName, issueDate, expiryDate
   // object key names in serializer need to match new attributes
   // issueDate = issue_date in serializer
-  issueDate: attr('string', {
-    label: 'Issue Date',
-  }),
-  expiryDate: attr('string', {
-    label: 'Expiry Date',
-  }),
+  issueDate: attr('string'),
+  expiryDate: attr('string'),
   role: attr('object', {
     readOnly: true,
   }),
   revocationTime: attr('number'),
-  commonName: attr('string', {
-    label: 'Common Name',
-  }),
+  commonName: attr('string'),
   altNames: attr('string', {
     label: 'DNS/Email Subject Alternative Names (SANs)',
   }),

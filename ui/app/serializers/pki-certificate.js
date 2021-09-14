@@ -3,7 +3,7 @@ import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 import { pki } from 'node-forge';
-import { format, sub } from 'date-fns';
+import { format } from 'date-fns';
 
 export default RESTSerializer.extend({
   keyForAttribute: function(attr) {
