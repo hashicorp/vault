@@ -90,7 +90,7 @@ func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, er
             }
 
             if !IsValidStatusCode(statusCode) {
-                return nil, fmt.Errorf("invalid status code found in the config file: %v", statusCode)
+                return nil, fmt.Errorf("invalid status code found in the server configuration: %v", statusCode)
             }
 
             hvl := responseHeader.([]map[string]interface{})

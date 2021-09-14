@@ -2626,7 +2626,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 		// ExistCustomResponseHeader support checking for custom headers per listener address
 		// If address is an empty string, it checks all listeners for the header.
 		if b.Core.ExistCustomResponseHeader(header, "") {
-			return logical.ErrorResponse(fmt.Sprintf("header already exist in server configuration file: %v", header)), logical.ErrInvalidRequest
+			return logical.ErrorResponse(fmt.Sprintf("This header already exist in server configuration. %v", header)), logical.ErrInvalidRequest
 		}
 		value.Add(header, v)
 	}

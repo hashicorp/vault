@@ -33,7 +33,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 				// Sanitizing custom headers
 				// X-Vault- prefix is reserved for Vault internal processes
 				if strings.HasPrefix(h, "X-Vault-") {
-					logger.Warn("Custom headers starting with X-Vault are not valid", "header", h)
+					logger.Warn("custom headers starting with X-Vault are not valid", "header", h)
 					continue
 				}
 
@@ -41,7 +41,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 				if uiHeaders != nil {
 					exist := uiHeaders.Get(h)
 					if exist != "" {
-						logger.Warn("found a duplicate header in UI, note that config file headers take precedence.", "header:", h)
+						logger.Warn("found a duplicate header in UI. Headers defined in the server configuration take precedence.", "header:", h)
 					}
 				}
 
