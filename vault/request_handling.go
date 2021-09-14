@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -730,7 +729,6 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 	if shouldForward(c, resp, err) {
 		return forward(ctx, c, req)
 	}
-	atomic.AddUint64(c.counters.requests, 1)
 	return resp, err
 }
 
@@ -869,7 +867,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	leaseGenerated := false
-	quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
 		NamespacePath: ns.Path,
@@ -1266,7 +1264,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// The request successfully authenticated itself. Run the quota checks
 		// before creating lease.
-		quotaResp, quotaErr := c.applyLeaseCountQuota(&quotas.Request{
+		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
 			NamespacePath: ns.Path,

@@ -18,7 +18,7 @@
  * @param {string} description=null - will truncate if wider than parent div
  * @param {string} glyphText=null - tooltip for glyph
  * @param {string} glyph=null - will display as icon beside the title
- * @param {string} titl=null - if @link object is passed in then title will link to @link.route
+ * @param {string} title=null - if @link object is passed in then title will link to @link.route
  */
 
 import Component from '@glimmer/component';

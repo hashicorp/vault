@@ -1,14 +1,18 @@
 package vault
 
 import (
+	"context"
 	"regexp"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -72,12 +76,17 @@ type IdentityStore struct {
 	// buckets
 	groupPacker *storagepacker.StoragePacker
 
-	// core is the pointer to Vault's core
-	core *Core
-
 	// disableLowerCaseNames indicates whether or not identity artifacts are
 	// operated case insensitively
 	disableLowerCasedNames bool
+
+	router        *Router
+	redirectAddr  string
+	localNode     LocalNode
+	namespacer    Namespacer
+	metrics       metricsutil.Metrics
+	totpPersister TOTPPersister
+	groupUpdater  GroupUpdater
 }
 
 type groupDiff struct {
@@ -89,3 +98,29 @@ type groupDiff struct {
 type casesensitivity struct {
 	DisableLowerCasedNames bool `json:"disable_lower_cased_names"`
 }
+
+type LocalNode interface {
+	ReplicationState() consts.ReplicationState
+	HAState() consts.HAState
+}
+
+var _ LocalNode = &Core{}
+
+type Namespacer interface {
+	NamespaceByID(context.Context, string) (*namespace.Namespace, error)
+	ListNamespaces() []*namespace.Namespace
+}
+
+var _ Namespacer = &Core{}
+
+type TOTPPersister interface {
+	PersistTOTPKey(ctx context.Context, configID string, entityID string, key string) error
+}
+
+var _ TOTPPersister = &Core{}
+
+type GroupUpdater interface {
+	SendGroupUpdate(ctx context.Context, group *identity.Group) (bool, error)
+}
+
+var _ GroupUpdater = &Core{}

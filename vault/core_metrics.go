@@ -24,7 +24,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 		identityCountTimer = nil
 	}
 
-	writeTimer := time.Tick(c.counters.syncInterval)
+	writeTimer := time.Tick(time.Second * 30)
 	// Do not process the writeTimer on DR Secondary nodes
 	if c.IsDRSecondary() {
 		writeTimer = nil
@@ -104,23 +104,12 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				// should trigger
 				continue
 			}
-			if c.perfStandby { // already have lock here, do not re-acquire
-				err := syncCounters(c)
+			// Ship barrier encryption counts if a perf standby or the active node
+			// on a performance secondary cluster
+			if c.perfStandby || c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) { // already have lock here, do not re-acquire
+				err := syncBarrierEncryptionCounter(c)
 				if err != nil {
-					c.logger.Error("writing syncing counters", "err", err)
-				}
-			} else if !c.standby {
-				// Perf standbys will have synced above, but active nodes on a secondary cluster still need to ship
-				// barrier encryption counts
-				if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-					err := syncBarrierEncryptionCounter(c)
-					if err != nil {
-						c.logger.Error("writing syncing encryption counts", "err", err)
-					}
-				}
-				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
-				if err != nil {
-					c.logger.Error("writing request counters to barrier", "err", err)
+					c.logger.Error("writing syncing encryption counters", "err", err)
 				}
 			}
 			c.stateLock.RUnlock()

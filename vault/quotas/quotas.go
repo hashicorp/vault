@@ -168,7 +168,7 @@ type Manager struct {
 // Quota represents the common properties of every quota type
 type Quota interface {
 	// allow checks the if the request is allowed by the quota type implementation.
-	allow(*Request) (Response, error)
+	allow(context.Context, *Request) (Response, error)
 
 	// quotaID is the identifier of the quota rule
 	quotaID() string
@@ -181,7 +181,7 @@ type Quota interface {
 
 	// close defines any cleanup behavior that needs to be executed when a quota
 	// rule is deleted.
-	close() error
+	close(context.Context) error
 
 	// handleRemount takes in the new mount path in the quota
 	handleRemount(string)
@@ -287,7 +287,7 @@ func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota,
 	// If there already exists an entry in the db, remove that first.
 	if raw != nil {
 		quota := raw.(Quota)
-		if err := quota.close(); err != nil {
+		if err := quota.close(ctx); err != nil {
 			return err
 		}
 		err = txn.Delete(qType, raw)
@@ -518,7 +518,7 @@ func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) er
 	}
 
 	quota := raw.(Quota)
-	if err := quota.close(); err != nil {
+	if err := quota.close(ctx); err != nil {
 		return err
 	}
 
@@ -541,7 +541,7 @@ func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) er
 // ApplyQuota runs the request against any quota rule that is applicable to it. If
 // there are multiple quota rule that matches the request parameters, rule that
 // takes precedence will be used to allow/reject the request.
-func (m *Manager) ApplyQuota(req *Request) (Response, error) {
+func (m *Manager) ApplyQuota(ctx context.Context, req *Request) (Response, error) {
 	var resp Response
 
 	quota, err := m.QueryQuota(req)
@@ -562,7 +562,7 @@ func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 		return resp, nil
 	}
 
-	return quota.allow(req)
+	return quota.allow(ctx, req)
 }
 
 // SetEnableRateLimitAuditLogging updates the operator preference regarding the
@@ -765,7 +765,7 @@ func (m *Manager) Invalidate(key string) {
 	default:
 		splitKeys := strings.Split(key, "/")
 		if len(splitKeys) != 2 {
-			m.logger.Error("incorrect key while invalidating quota rule")
+			m.logger.Error("incorrect key while invalidating quota rule", "key", key)
 			return
 		}
 		qType := splitKeys[0]
@@ -987,7 +987,8 @@ func (m *Manager) HandleRemount(ctx context.Context, nsPath, fromPath, toPath st
 }
 
 // HandleBackendDisabling updates the quota subsystem with the disabling of auth
-// or secret engine disabling.
+// or secret engine disabling. This should only be called on the primary cluster
+// node.
 func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()

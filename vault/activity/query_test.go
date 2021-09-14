@@ -67,6 +67,9 @@ func TestQueryStore_Inventory(t *testing.T) {
 	}
 
 	storedEndTimes, err := qs.listEndTimes(ctx, startTimes[1])
+	if err != nil {
+		t.Fatal(err)
+	}
 	expected := endTimes[1:]
 	if len(storedEndTimes) != len(expected) {
 		t.Fatalf("bad length, expected %v got %v", len(expected), storedEndTimes)
