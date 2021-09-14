@@ -40,13 +40,13 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 
 		// Return a 403 if the origin is not allowed to make cross-origin requests.
 		if !corsConf.IsValidOrigin(origin) {
-			respondError(w, http.StatusForbidden, fmt.Errorf("origin not allowed"), core.SetCustomResponseHeaders)
+			respondError(w, http.StatusForbidden, fmt.Errorf("origin not allowed"), req)
 			return
 		}
 
 		if req.Method == http.MethodOptions && !strutil.StrListContains(allowedMethods, requestMethod) {
 			status := http.StatusMethodNotAllowed
-			core.SetCustomResponseHeaders(w, status)
+			SetCustomResponseHeaders(w, status, req)
 			w.WriteHeader(status)
 			return
 		}

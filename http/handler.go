@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
@@ -195,7 +196,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	}
 
 	// Wrap the handler in another handler to trigger all help paths.
-	helpWrappedHandler := wrapHelpHandler(mux, core)
+	unregisteredPathsHandler := wrapUnregisteredPathsHandler(mux, core)
+	helpWrappedHandler := wrapHelpHandler(unregisteredPathsHandler, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
 	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
@@ -248,7 +250,7 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 
 		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 		if err != nil || status != 0 {
-			respondError(w, status, err, core.SetCustomResponseHeaders)
+			respondError(w, status, err, r)
 			return
 		}
 		if origBody != nil {
@@ -259,7 +261,7 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		}
 		err = core.AuditLogger().AuditRequest(r.Context(), input)
 		if err != nil {
-			respondError(w, status, err, core.SetCustomResponseHeaders)
+			respondError(w, status, err, r)
 			return
 		}
 		cw := newCopyResponseWriter(w)
@@ -273,8 +275,26 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		input.Response = logical.HTTPResponseToLogicalResponse(httpResp)
 		err = core.AuditLogger().AuditResponse(r.Context(), input)
 		if err != nil {
-			respondError(w, status, err, core.SetCustomResponseHeaders)
+			respondError(w, status, err, r)
 		}
+		return
+	})
+}
+
+// wrapUnregisteredPathsHandler is the last layer before the endpoint direct handlers
+// This is to prevent response headers being overwritten unintentionally
+func wrapUnregisteredPathsHandler(h http.Handler, core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// According to the net/http package, if a subtree has been registered and a request
+		// is received naming the subtree root without its trailing slash, ServeMux
+		// redirects that request to the subtree root (adding the trailing slash).
+		// Calling "/v1/sys" endpoint will be redirected to "/v1/sys/" with status
+		// 301 (Moved Permanently), however, the status code is set inside the net/http
+		// package. So, we set the custom response headers here instead.
+		if r.URL.Path == "/v1/sys" {
+			SetCustomResponseHeaders(w, 301, r)
+		}
+		h.ServeHTTP(w, r)
 		return
 	})
 }
@@ -294,6 +314,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	}
 	if maxRequestSize == 0 {
 		maxRequestSize = DefaultMaxRequestSize
+	}
+
+	var listenerCustomHeaders *listenerutil.ListenerCustomHeaders
+	if props.ListenerConfig != nil {
+		la := props.ListenerConfig.Address
+		listenerCustomHeaders = core.GetListenerCustomResponseHeaders(la)
 	}
 
 	// Swallow this error since we don't want to pollute the logs and we also don't want to
@@ -320,6 +346,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
+
+		if listenerCustomHeaders != nil {
+			ctx = context.WithValue(ctx, "X-Vault-Listener-Custom-Headers-Struct", listenerCustomHeaders)
+		}
+
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
@@ -335,19 +366,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			w.Header().Set("X-Vault-Hostname", hostname)
 		}
 
-		// Setting the listener address as a header so that we could set customized
-		// headers configured in the corresponding listener stanza
-		var la string
-		if props.ListenerConfig != nil {
-			la = props.ListenerConfig.Address
-		}
-		w.Header().Set("X-Vault-Listener-Add", la)
-
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			newR, status := adjustRequest(core, r)
 			if status != 0 {
-				respondError(w, status, nil, core.SetCustomResponseHeaders)
+				respondError(w, status, nil, r)
 				cancelFunc()
 				return
 			}
@@ -355,7 +378,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
-			respondError(w, http.StatusNotFound, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusNotFound, nil, r)
 			cancelFunc()
 			return
 		}
@@ -373,7 +396,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	})
 }
 
-func WrapForwardedForHandler(h http.Handler, l *configutil.Listener, hs customResponseHeaderSetter) http.Handler {
+func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handler {
 	rejectNotPresent := l.XForwardedForRejectNotPresent
 	hopSkips := l.XForwardedForHopSkips
 	authorizedAddrs := l.XForwardedForAuthorizedAddrs
@@ -385,7 +408,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener, hs customRe
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, fmt.Errorf("missing x-forwarded-for header and configured to reject when not present"), hs)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("missing x-forwarded-for header and configured to reject when not present"), r)
 			return
 		}
 
@@ -398,7 +421,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener, hs customRe
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, fmt.Errorf("error parsing client hostport: %w", err), hs)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("error parsing client hostport: %w", err), r)
 			return
 		}
 
@@ -409,7 +432,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener, hs customRe
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, fmt.Errorf("error parsing client address: %w", err), hs)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("error parsing client address: %w", err), r)
 			return
 		}
 
@@ -427,7 +450,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener, hs customRe
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, fmt.Errorf("client address not authorized for x-forwarded-for and configured to reject connection"), hs)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("client address not authorized for x-forwarded-for and configured to reject connection"), r)
 			return
 		}
 
@@ -455,7 +478,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener, hs customRe
 			// authorized (or we've turned off explicit rejection) and we
 			// should assume that what comes in should be properly
 			// formatted.
-			respondError(w, http.StatusBadRequest, fmt.Errorf("malformed x-forwarded-for configuration or request, hops to skip (%d) would skip before earliest chain link (chain length %d)", hopSkips, len(headers)), hs)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("malformed x-forwarded-for configuration or request, hops to skip (%d) would skip before earliest chain link (chain length %d)", hopSkips, len(headers)), r)
 			return
 		}
 
@@ -486,7 +509,7 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 
 		userHeaders, err := core.UIHeaders()
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusInternalServerError, err, req)
 			return
 		}
 		if userHeaders != nil {
@@ -500,7 +523,7 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 		// status code specifically, instead, a call to w.Write is called which
 		// internally also sets the status code to 200.
 		// Just setting the headers for status code 200.
-		core.SetCustomResponseHeaders(w, 200)
+		SetCustomResponseHeaders(w, 200, req)
 
 		h.ServeHTTP(w, req)
 	})
@@ -592,7 +615,7 @@ func handleUIStub() http.Handler {
 func handleUIRedirect(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		status := 307
-		core.SetCustomResponseHeaders(w, status)
+		SetCustomResponseHeaders(w, status, req)
 		http.Redirect(w, req, "/ui/", status)
 		return
 	})
@@ -748,7 +771,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		// Note if the client requested forwarding
 		shouldForward, err := forwardBasedOnHeaders(core, r)
 		if err != nil {
-			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, err, r)
 			return
 		}
 
@@ -756,7 +779,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		if core.PerfStandby() && !shouldForward {
 			ns, err := namespace.FromContext(r.Context())
 			if err != nil {
-				respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+				respondError(w, http.StatusBadRequest, err, r)
 				return
 			}
 			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
@@ -784,7 +807,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			// Some internal error occurred
-			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusInternalServerError, err, r)
 			return
 		}
 		if isLeader {
@@ -793,7 +816,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 		if leaderAddr == "" {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"), core.SetCustomResponseHeaders)
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"), r)
 			return
 		}
 
@@ -805,25 +828,25 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
 	if r.Header.Get(NoRequestForwardingHeaderName) != "" {
 		// Forwarding explicitly disabled, fall back to previous behavior
 		core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
-		respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, err, r)
 		return
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 	if alwaysRedirectPaths.HasPath(path) {
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
@@ -839,7 +862,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Fall back to redirection
-		respondStandby(core, w, r.URL)
+		respondStandby(core, w, r)
 		return
 	}
 
@@ -849,7 +872,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	core.SetCustomResponseHeaders(w, statusCode)
+	SetCustomResponseHeaders(w, statusCode, r)
 	w.WriteHeader(statusCode)
 	w.Write(retBytes)
 }
@@ -865,7 +888,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
-		respondStandby(core, w, rawReq.URL)
+		respondStandby(core, w, rawReq)
 		return resp, false, false
 	}
 	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
@@ -906,7 +929,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		return nil, true, false
 	}
 
-	if respondErrorCommon(w, r, resp, err, core.SetCustomResponseHeaders) {
+	if respondErrorCommon(w, r, resp, err, rawReq) {
 		return resp, false, false
 	}
 
@@ -914,33 +937,34 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
-func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
+func respondStandby(core *vault.Core, w http.ResponseWriter, req *http.Request) {
 
+	reqURL := req.URL
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
 		if err == vault.ErrHANotEnabled {
 			// Standalone node, serve 503
 			err = errors.New("node is not active")
-			respondError(w, http.StatusServiceUnavailable, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusServiceUnavailable, err, req)
 			return
 		}
 
-		respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusInternalServerError, err, req)
 		return
 	}
 
 	// If there is no leader, generate a 503 error
 	if redirectAddr == "" {
 		err = errors.New("no active Vault instance found")
-		respondError(w, http.StatusServiceUnavailable, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusServiceUnavailable, err, req)
 		return
 	}
 
 	// Parse the redirect location
 	redirectURL, err := url.Parse(redirectAddr)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusInternalServerError, err, req)
 		return
 	}
 
@@ -961,7 +985,7 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// because we don't actually know if its permanent and
 	// the request method should be preserved.
 	w.Header().Set("Location", finalURL.String())
-	core.SetCustomResponseHeaders(w, 307)
+	SetCustomResponseHeaders(w, 307, req)
 	w.WriteHeader(307)
 }
 
@@ -1126,27 +1150,37 @@ func isForm(head []byte, contentType string) bool {
 	return true
 }
 
-type customResponseHeaderSetter func(w http.ResponseWriter, status int)
-
-func respondError(w http.ResponseWriter, status int, err error, hs customResponseHeaderSetter) {
+func respondError(w http.ResponseWriter, status int, err error, r *http.Request) {
 	logical.AdjustErrorStatusCode(&status, err)
-	if hs != nil {
-		hs(w, status)
-	}
+	SetCustomResponseHeaders(w, status, r)
 	logical.RespondError(w, status, err)
 }
 
-func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error, hs customResponseHeaderSetter) bool {
+func SetCustomResponseHeaders(w http.ResponseWriter, status int, r *http.Request) {
+	if r == nil {
+		return
+	}
+	ctx := r.Context()
+	listenerCustomHeaders := ctx.Value("X-Vault-Listener-Custom-Headers-Struct")
+	if listenerCustomHeaders != nil {
+		lc := listenerCustomHeaders.(*listenerutil.ListenerCustomHeaders)
+		if lc != nil {
+			lc.SetCustomResponseHeaders(w, status)
+		}
+	}
+}
+
+func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error, r *http.Request) bool {
 	statusCode, newErr := logical.RespondErrorCommon(req, resp, err)
 	if newErr == nil && statusCode == 0 {
 		return false
 	}
 
-	respondError(w, statusCode, newErr, hs)
+	respondError(w, statusCode, newErr, r)
 	return true
 }
 
-func respondOk(w http.ResponseWriter, body interface{}, hs customResponseHeaderSetter) {
+func respondOk(w http.ResponseWriter, body interface{}, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var status int
@@ -1156,9 +1190,7 @@ func respondOk(w http.ResponseWriter, body interface{}, hs customResponseHeaderS
 		status = http.StatusOK
 	}
 
-	if hs != nil {
-		hs(w, status)
-	}
+	SetCustomResponseHeaders(w, status, r)
 	w.WriteHeader(status)
 
 	if body != nil {

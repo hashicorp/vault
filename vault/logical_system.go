@@ -2627,8 +2627,9 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
-		la := req.ResponseWriter.Header().Get("X-Vault-Listener-Add")
-		if b.Core.ExistCustomResponseHeader(header, la) {
+		// ExistCustomResponseHeader support checking for custom headers per listener address
+		// If address is an empty string, it checks all listeners for the header.
+		if b.Core.ExistCustomResponseHeader(header, "") {
 			return logical.ErrorResponse(fmt.Sprintf("header already exist in server configuration file: %v", header)), logical.ErrInvalidRequest
 		}
 		value.Add(header, v)

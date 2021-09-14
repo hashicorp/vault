@@ -17,14 +17,14 @@ func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, _, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
-			respondError(w, statusCode, err, core.SetCustomResponseHeaders)
+			respondError(w, statusCode, err, r)
 			return
 		}
 
 		switch req.Operation {
 		case logical.UpdateOperation:
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 			return
 		}
 
@@ -32,14 +32,14 @@ func handleSysSeal(core *vault.Core) http.Handler {
 		// We use context.Background since there won't be a request context if the node isn't active
 		if err := core.SealWithRequest(r.Context(), req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-				respondError(w, http.StatusForbidden, err, core.SetCustomResponseHeaders)
+				respondError(w, http.StatusForbidden, err, r)
 				return
 			}
-			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusInternalServerError, err, r)
 			return
 		}
 
-		respondOk(w, nil, core.SetCustomResponseHeaders)
+		respondOk(w, nil, r)
 	})
 }
 
@@ -47,28 +47,28 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, _, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
-			respondError(w, statusCode, err, core.SetCustomResponseHeaders)
+			respondError(w, statusCode, err, r)
 			return
 		}
 
 		switch req.Operation {
 		case logical.UpdateOperation:
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 			return
 		}
 
 		// Seal with the token above
 		if err := core.StepDown(r.Context(), req); err != nil {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-				respondError(w, http.StatusForbidden, err, core.SetCustomResponseHeaders)
+				respondError(w, http.StatusForbidden, err, r)
 				return
 			}
-			respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusInternalServerError, err, r)
 			return
 		}
 
-		respondOk(w, nil, core.SetCustomResponseHeaders)
+		respondOk(w, nil, r)
 	})
 }
 
@@ -78,20 +78,20 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 		case "PUT":
 		case "POST":
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 			return
 		}
 
 		// Parse the request
 		var req UnsealRequest
 		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, err, r)
 			return
 		}
 
 		if req.Reset {
 			if !core.Sealed() {
-				respondError(w, http.StatusBadRequest, errors.New("vault is unsealed"), core.SetCustomResponseHeaders)
+				respondError(w, http.StatusBadRequest, errors.New("vault is unsealed"), r)
 				return
 			}
 			core.ResetUnsealProcess()
@@ -103,7 +103,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			respondError(
 				w, http.StatusBadRequest,
 				errors.New("'key' must be specified in request body as JSON, or 'reset' set to true"),
-				core.SetCustomResponseHeaders)
+				r)
 			return
 		}
 
@@ -119,7 +119,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 				respondError(
 					w, http.StatusBadRequest,
 					errors.New("'key' must be a valid hex or base64 string"),
-					core.SetCustomResponseHeaders)
+					r)
 				return
 			}
 		}
@@ -139,10 +139,10 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			case errwrap.Contains(err, vault.ErrBarrierSealed.Error()):
 			case errwrap.Contains(err, consts.ErrStandby.Error()):
 			default:
-				respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+				respondError(w, http.StatusInternalServerError, err, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, err, r)
 			return
 		}
 
@@ -154,7 +154,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 func handleSysSealStatus(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 			return
 		}
 
@@ -166,11 +166,11 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	ctx := context.Background()
 	status, err := core.GetSealStatus(ctx)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusInternalServerError, err, r)
 		return
 	}
 
-	respondOk(w, status, core.SetCustomResponseHeaders)
+	respondOk(w, status, r)
 }
 
 // Note: because we didn't provide explicit tagging in the past we can't do it

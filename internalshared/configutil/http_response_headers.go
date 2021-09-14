@@ -31,10 +31,10 @@ const (
     xFrameOptions = "Deny"
     xContentTypeOptions = "nosniff"
     strictTransportSecurity = "max-age=31536000; includeSubDomains"
-    contentType = "text/plain; charset=utf-8"
+    contentType = "application/json"
 )
 
-func ParseDefaultHeaders(h string) string {
+func GetDefaultHeaderValue(h string) string {
     switch h {
     case "Content-Security-Policy":
         return contentSecurityPolicy
@@ -66,7 +66,7 @@ func setDefaultResponseHeaders(c map[string]string) map[string]string {
         if _, ok := c[hn]; ok {
             continue
         }
-        hv := ParseDefaultHeaders(hn)
+        hv := GetDefaultHeaderValue(hn)
         if hv != "" {
             defaults[hn] = hv
         }
@@ -76,7 +76,7 @@ func setDefaultResponseHeaders(c map[string]string) map[string]string {
 }
 
 func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, error) {
-    if !isValidListDict(r) {
+    if _, ok := r.([]map[string]interface{}); !ok {
         return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a map")
     }
 
@@ -84,16 +84,16 @@ func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, er
     h := make(map[string]map[string]string)
 
     for _, crh := range customResponseHeader {
-        for sc, rh := range crh {
-            if !isValidListDict(rh){
-                return nil, fmt.Errorf("invalid response header type")
+        for statusCode, responseHeader := range crh {
+            if _, ok := responseHeader.([]map[string]interface{}); !ok {
+                return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a map")
             }
 
-            if !IsValidStatusCode(sc) {
-                return nil, fmt.Errorf("invalid status code found in the config file: %v", sc)
+            if !IsValidStatusCode(statusCode) {
+                return nil, fmt.Errorf("invalid status code found in the config file: %v", statusCode)
             }
 
-            hvl := rh.([]map[string]interface{})
+            hvl := responseHeader.([]map[string]interface{})
             if len(hvl) != 1 {
                 return nil, fmt.Errorf("invalid number of response headers exist")
             }
@@ -103,7 +103,7 @@ func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, er
                 return nil, err
             }
 
-            h[sc] = hv
+            h[statusCode] = hv
         }
     }
 
@@ -112,20 +112,6 @@ func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, er
     h["default"] = setDefaultResponseHeaders(de)
 
 	return h, nil
-}
-
-func isValidListDict(in interface{}) bool {
-    if _, ok := in.([]map[string]interface{}); ok {
-        return true
-    }
-    return false
-}
-
-func isValidList(in interface{}) bool {
-    if _, ok := in.([]interface{}); ok {
-        return true
-    }
-    return false
 }
 
 func IsValidStatusCodeCollection(sc string) bool {
@@ -173,11 +159,14 @@ func parseHeaders(in map[string]interface{}) (map[string]string, error) {
 
 func parseHeaderValues(h interface{}) (string, error) {
     var sl []string
-    if !isValidList(h) {
+    if _, ok := h.([]interface{}); !ok {
         return "", fmt.Errorf("headers must be given in a list of strings")
     }
     vli := h.([]interface{})
     for _, vh := range vli {
+        if vh.(string) == "" {
+           continue
+        }
         sl = append(sl, vh.(string))
     }
     s := strings.Join(sl, "; ")

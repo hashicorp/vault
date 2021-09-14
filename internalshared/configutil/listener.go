@@ -102,7 +102,7 @@ type Listener struct {
 
 	// Custom Http response headers
 	CustomResponseHeaders 	 map[string]map[string]string `hcl:"-"`
-	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers,alias:custom_response_headers"`
+	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
 
 }
 
@@ -371,7 +371,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			if l.CustomResponseHeadersRaw != nil {
 				customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
 				if err != nil {
-					return multierror.Prefix(fmt.Errorf("failed to parse custom_response_headers:%w", err), fmt.Sprintf("listeners.%d", i))
+					return multierror.Prefix(fmt.Errorf("failed to parse custom_response_headers: %w", err), fmt.Sprintf("listeners.%d", i))
 				}
 				l.CustomResponseHeaders = customHeadersMap
 				l.CustomResponseHeadersRaw = nil

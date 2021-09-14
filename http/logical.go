@@ -273,17 +273,17 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
 		if err != nil || statusCode != 0 {
-			respondError(w, statusCode, err, nil)
+			respondError(w, statusCode, err, r)
 			return
 		}
 		reqToken := r.Header.Get(consts.AuthHeaderName)
 		if reqToken == "" || token.Load() == "" || reqToken != token.Load() {
-			respondError(w, http.StatusForbidden, nil, nil)
+			respondError(w, http.StatusForbidden, nil, r)
 			return
 		}
 
 		resp, err := raw.HandleRequest(r.Context(), req)
-		if respondErrorCommon(w, req, resp, err, nil) {
+		if respondErrorCommon(w, req, resp, err, r) {
 			return
 		}
 
@@ -292,7 +292,7 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 			httpResp = logical.LogicalResponseToHTTPResponse(resp)
 			httpResp.RequestID = req.ID
 		}
-		respondOk(w, httpResp, nil)
+		respondOk(w, httpResp, r)
 	})
 }
 
@@ -303,7 +303,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
-			respondError(w, statusCode, err, core.SetCustomResponseHeaders)
+			respondError(w, statusCode, err, r)
 			return
 		}
 
@@ -315,7 +315,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		resp, ok, needsForward := request(core, w, r, req)
 		switch {
 		case needsForward && noForward:
-			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly, r)
 			return
 		case needsForward && !noForward:
 			if origBody != nil {
@@ -351,18 +351,14 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 			// If we have a redirect, redirect! We use a 307 code
 			// because we don't actually know if its permanent.
 			status := 307
-			core.SetCustomResponseHeaders(w, status)
+			SetCustomResponseHeaders(w, status, r)
 			http.Redirect(w, r, resp.Redirect, status)
 			return
 		}
 
 		// Check if this is a raw response
 		if _, ok := resp.Data[logical.HTTPStatusCode]; ok {
-			var hs customResponseHeaderSetter
-			if core != nil {
-				hs = core.SetCustomResponseHeaders
-			}
-			respondRaw(w, r, resp, hs)
+			respondRaw(w, r, resp)
 			return
 		}
 
@@ -395,20 +391,18 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 	adjustResponse(core, w, req)
 
 	// Respond
-	respondOk(w, ret, core.SetCustomResponseHeaders)
+	respondOk(w, ret, r)
 	return
 }
 
 // respondRaw is used when the response is using HTTPContentType and HTTPRawBody
 // to change the default response handling. This is only used for specific things like
 // returning the CRL information on the PKI backends.
-func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response, hs customResponseHeaderSetter) {
+func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) {
 	retErr := func(w http.ResponseWriter, err string) {
 		w.Header().Set("X-Vault-Raw-Error", err)
 		code := http.StatusInternalServerError
-		if hs != nil {
-			hs(w, code)
-		}
+		SetCustomResponseHeaders(w, code, r)
 		w.WriteHeader(code)
 		w.Write(nil)
 	}
@@ -497,9 +491,8 @@ WRITE_RESPONSE:
 	if cacheControl, ok := resp.Data[logical.HTTPRawCacheControl].(string); ok {
 		w.Header().Set("Cache-Control", cacheControl)
 	}
-	if hs != nil {
-		hs(w, status)
-	}
+
+	SetCustomResponseHeaders(w, status, r)
 	w.WriteHeader(status)
 	w.Write(body)
 }

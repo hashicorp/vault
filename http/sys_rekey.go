@@ -17,7 +17,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r.URL)
+			respondStandby(core, w, r)
 			return
 		}
 
@@ -25,7 +25,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
 				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"),
-				core.SetCustomResponseHeaders)
+				r)
 			return
 		}
 
@@ -34,7 +34,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
-			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), r)
 		case r.Method == "GET":
 			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
@@ -42,7 +42,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		case r.Method == "DELETE":
 			handleSysRekeyInitDelete(ctx, core, recovery, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 		}
 	})
 }
@@ -50,24 +50,24 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
 	if barrierConfErr != nil {
-		respondError(w, http.StatusInternalServerError, barrierConfErr, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusInternalServerError, barrierConfErr, r)
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), r)
 		return
 	}
 
 	// Get the rekey configuration
 	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
 
 	sealThreshold, err := core.RekeyThreshold(ctx, recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
 
@@ -82,7 +82,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		// Get the progress
 		started, progress, err := core.RekeyProgress(recovery, false)
 		if err != nil {
-			respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+			respondError(w, err.Code(), err, r)
 			return
 		}
 
@@ -96,31 +96,31 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
-				respondError(w, http.StatusInternalServerError, err, core.SetCustomResponseHeaders)
+				respondError(w, http.StatusInternalServerError, err, r)
 				return
 			}
 			status.PGPFingerprints = pgpFingerprints
 			status.Backup = rekeyConf.Backup
 		}
 	}
-	respondOk(w, status, core.SetCustomResponseHeaders)
+	respondOk(w, status, r)
 }
 
 func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req RekeyRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-		respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, err, r)
 		return
 	}
 
 	if req.Backup && len(req.PGPKeys) == 0 {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"), core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"), r)
 		return
 	}
 
 	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"), core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"), r)
 		return
 	}
 
@@ -134,7 +134,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 		VerificationRequired: req.RequireVerification,
 	}, recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
 
@@ -143,31 +143,31 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 
 func handleSysRekeyInitDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	if err := core.RekeyCancel(recovery); err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
-	respondOk(w, nil, core.SetCustomResponseHeaders)
+	respondOk(w, nil, r)
 }
 
 func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r.URL)
+			respondStandby(core, w, r)
 			return
 		}
 
 		// Parse the request
 		var req RekeyUpdateRequest
 		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, err, r)
 			return
 		}
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
 				errors.New("'key' must be specified in request body as JSON"),
-				core.SetCustomResponseHeaders)
+				r)
 			return
 		}
 
@@ -183,7 +183,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 				respondError(
 					w, http.StatusBadRequest,
 					errors.New("'key' must be a valid hex or base64 string"),
-					core.SetCustomResponseHeaders)
+					r)
 				return
 			}
 		}
@@ -194,7 +194,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		// Use the key to make progress on rekey
 		result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery)
 		if rekeyErr != nil {
-			respondError(w, rekeyErr.Code(), rekeyErr, core.SetCustomResponseHeaders)
+			respondError(w, rekeyErr.Code(), rekeyErr, r)
 			return
 		}
 
@@ -217,7 +217,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			}
 			resp.Keys = keys
 			resp.KeysB64 = keysB64
-			respondOk(w, resp, core.SetCustomResponseHeaders)
+			respondOk(w, resp, r)
 		} else {
 			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		}
@@ -228,7 +228,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		standby, _ := core.Standby()
 		if standby {
-			respondStandby(core, w, r.URL)
+			respondStandby(core, w, r)
 			return
 		}
 
@@ -236,7 +236,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
 				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"),
-				core.SetCustomResponseHeaders)
+				r)
 			return
 		}
 
@@ -245,7 +245,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
-			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"), r)
 		case r.Method == "GET":
 			handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
@@ -253,7 +253,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		case r.Method == "DELETE":
 			handleSysRekeyVerifyDelete(ctx, core, recovery, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 		}
 	})
 }
@@ -261,29 +261,29 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
 	if barrierConfErr != nil {
-		respondError(w, http.StatusInternalServerError, barrierConfErr, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusInternalServerError, barrierConfErr, r)
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"), r)
 		return
 	}
 
 	// Get the rekey configuration
 	rekeyConf, err := core.RekeyConfig(recovery)
 	if err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
 	if rekeyConf == nil {
-		respondError(w, http.StatusBadRequest, errors.New("no rekey configuration found"), core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, errors.New("no rekey configuration found"), r)
 		return
 	}
 
 	// Get the progress
 	started, progress, err := core.RekeyProgress(recovery, true)
 	if err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
 
@@ -295,12 +295,12 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 		N:        rekeyConf.SecretShares,
 		Progress: progress,
 	}
-	respondOk(w, status, core.SetCustomResponseHeaders)
+	respondOk(w, status, r)
 }
 
 func handleSysRekeyVerifyDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
 	if err := core.RekeyVerifyRestart(recovery); err != nil {
-		respondError(w, err.Code(), err, core.SetCustomResponseHeaders)
+		respondError(w, err.Code(), err, r)
 		return
 	}
 
@@ -311,14 +311,14 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	// Parse the request
 	var req RekeyVerificationUpdateRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-		respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, err, r)
 		return
 	}
 	if req.Key == "" {
 		respondError(
 			w, http.StatusBadRequest,
 			errors.New("'key' must be specified in request body as JSON"),
-			core.SetCustomResponseHeaders)
+			r)
 		return
 	}
 
@@ -334,7 +334,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 			respondError(
 				w, http.StatusBadRequest,
 				errors.New("'key' must be a valid hex or base64 string"),
-				core.SetCustomResponseHeaders)
+				r)
 			return
 		}
 	}
@@ -345,7 +345,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	// Use the key to make progress on rekey
 	result, rekeyErr := core.RekeyVerify(ctx, key, req.Nonce, recovery)
 	if rekeyErr != nil {
-		respondError(w, rekeyErr.Code(), rekeyErr, core.SetCustomResponseHeaders)
+		respondError(w, rekeyErr.Code(), rekeyErr, r)
 		return
 	}
 
@@ -354,7 +354,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	if result != nil {
 		resp.Complete = true
 		resp.Nonce = result.Nonce
-		respondOk(w, resp, core.SetCustomResponseHeaders)
+		respondOk(w, resp, r)
 	} else {
 		handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
 	}

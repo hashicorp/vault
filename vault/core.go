@@ -42,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -1004,9 +1005,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	uiHeaders, _ := c.UIHeaders()
-	customHeaderLogger := conf.Logger.Named("customHeader")
-	c.allLoggers = append(c.allLoggers, customHeaderLogger)
-	c.customListenerHeader = NewListenerCustomHeader(conf.RawConfig.Listeners, customHeaderLogger, uiHeaders)
+	c.customListenerHeader = NewListenerCustomHeader(conf.RawConfig.Listeners, c.logger, uiHeaders)
 
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
@@ -2627,18 +2626,6 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
-func (c *Core) GetLogger(name string) log.Logger {
-	c.allLoggersLock.Lock()
-	defer c.allLoggersLock.Unlock()
-	for _, logger := range c.allLoggers {
-		ln := logger.Name()
-		if ln == name {
-			return logger
-		}
-	}
-	return nil
-}
-
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
@@ -2651,13 +2638,36 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
-func (c *Core) SetCustomResponseHeaders(w http.ResponseWriter, status int) {
+func (c *Core) getCustomResponseHeaders(la string) []*listenerutil.ListenerCustomHeaders {
 	if c.customListenerHeader == nil {
 		c.logger.Debug("failed to find the custom response headers configuration")
-		return
+		return nil
 	}
 
-	c.customListenerHeader.SetCustomResponseHeaders(w, status)
+	lch := c.customListenerHeader.getListenerMap(la)
+	if lch == nil {
+		c.logger.Warn("no listener config found", "address", la)
+		return nil
+	}
+
+	return lch
+}
+
+func (c *Core) GetListenerCustomResponseHeaders(la string) *listenerutil.ListenerCustomHeaders {
+
+	if la == "" {
+		return nil
+	}
+	lch := c.getCustomResponseHeaders(la)
+	if lch == nil {
+		return nil
+	}
+	if len(lch) != 1 {
+		c.logger.Warn("multiple listeners with the same address configured")
+		return nil
+	}
+
+	return lch[0]
 }
 
 func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
@@ -2666,7 +2676,21 @@ func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
 		return false
 	}
 
-	return c.customListenerHeader.ExistCustomResponseHeader(header, la)
+	lch := c.getCustomResponseHeaders(la)
+	if lch == nil {
+		c.logger.Warn("no listener config found", "address", la)
+		return false
+	}
+
+	exist := false
+	for _, l := range lch {
+		exist = l.ExistCustomResponseHeader(header)
+		if exist {
+			return true
+		}
+	}
+
+	return exist
 }
 
 func (c *Core) ReloadCustomResponseHeaders() error {
@@ -2681,17 +2705,11 @@ func (c *Core) ReloadCustomResponseHeaders() error {
 
 	uiHeaders, _ := c.UIHeaders()
 
-	customHeaderLogger := c.GetLogger("customHeader")
-	if customHeaderLogger == nil {
-		customHeaderLogger = c.Logger().Named("customHeader")
-		c.AddLogger(customHeaderLogger)
-	}
-
 	lns := conf.(*server.Config).Listeners
-	c.customListenerHeader = NewListenerCustomHeader(lns, customHeaderLogger, uiHeaders)
+	c.customListenerHeader = NewListenerCustomHeader(lns, c.logger, uiHeaders)
 
 	if c.customListenerHeader == nil {
-		c.logger.Error("failed to reload custom headers, reverting back the old configuration")
+		c.logger.Error("failed to reload custom headers. the previous configuration will be used")
 		c.customListenerHeader = tempLH
 	}
 

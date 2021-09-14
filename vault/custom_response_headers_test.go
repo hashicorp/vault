@@ -77,43 +77,49 @@ func TestConfigCustomHeaders(t *testing.T) {
 	if customListenerHeader == nil {
 		t.Fatalf("custom header config should be configured")
 	}
-
-	if customListenerHeader.ExistCustomResponseHeader("X-Vault-Ignored-307", "127.0.0.1:443") {
-		t.Fatalf("header name with X-Vault prefix is not valid")
-	}
-	if customListenerHeader.ExistCustomResponseHeader("X-Vault-Ignored-3xx", "127.0.0.1:443") {
-		t.Fatalf("header name with X-Vault prefix is not valid")
+	listenerCustomHeaders := customListenerHeader.getListenerMap("127.0.0.1:443")
+	if listenerCustomHeaders == nil || len(listenerCustomHeaders) != 1 {
+		t.Fatalf("failed to find listener specific custom header")
 	}
 
-	if !customListenerHeader.ExistCustomResponseHeader("X-Custom-Header", "127.0.0.1:443") {
+	lch := listenerCustomHeaders[0]
+
+	if lch.ExistCustomResponseHeader("X-Vault-Ignored-307") {
+		t.Fatalf("header name with X-Vault prefix is not valid")
+	}
+	if lch.ExistCustomResponseHeader("X-Vault-Ignored-3xx") {
+		t.Fatalf("header name with X-Vault prefix is not valid")
+	}
+
+	if !lch.ExistCustomResponseHeader("X-Custom-Header") {
 		t.Fatalf("header name with X-Vault prefix is not valid")
 	}
 
 	commonDefaultUiHeader := uiHeaders["Content-Security-Policy"]
-	commonDefaultResponseHeader, _ := customListenerHeader.FetchCustomResponseHeaderValue("Content-Security-Policy", "default", "127.0.0.1:443")
+	commonDefaultResponseHeader, _ := lch.FetchHeaderForStatusCode("Content-Security-Policy", "default")
 
-	if commonDefaultUiHeader[0] == commonDefaultResponseHeader[0] {
+	if commonDefaultUiHeader[0] == commonDefaultResponseHeader {
 		t.Fatalf("default haeder ")
 	}
 
 	w := httptest.NewRecorder()
 	w.Header().Set("X-Vault-Listener-Add", rawListenerConfig[0].Address)
 
-	customListenerHeader.SetCustomResponseHeaders(w, 200)
+	lch.SetCustomResponseHeaders(w, 200)
 	if w.Header().Get("Someheader-200") != "200" || w.Header().Get("X-Custom-Header") != "Custom header value 200"{
 		t.Fatalf("response headers related to status code %v did not set properly", 200)
 	}
 
 	w = httptest.NewRecorder()
 	w.Header().Set("X-Vault-Listener-Add", rawListenerConfig[0].Address)
-	customListenerHeader.SetCustomResponseHeaders(w, 204)
+	lch.SetCustomResponseHeaders(w, 204)
 	if w.Header().Get("Someheader-200") == "200" || w.Header().Get("X-Custom-Header") != "Custom header value 2xx" {
 		t.Fatalf("response headers related to status code %v did not set properly", "2xx")
 	}
 
 	w = httptest.NewRecorder()
 	w.Header().Set("X-Vault-Listener-Add", rawListenerConfig[0].Address)
-	customListenerHeader.SetCustomResponseHeaders(w, 500)
+	lch.SetCustomResponseHeaders(w, 500)
 	for h, v := range defaultCustomHeaders {
 		if h != "X-Vault-Ignored" && w.Header().Get(h) != v {
 			t.Fatalf("response headers related to status code %v did not set properly", 500)
@@ -123,7 +129,6 @@ func TestConfigCustomHeaders(t *testing.T) {
 		t.Fatalf("response headers contains a header with pattern X-Vault")
 	}
 }
-
 
 func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	b := testSystemBackend(t)

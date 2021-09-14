@@ -28,7 +28,7 @@ func wrapHelpHandler(h http.Handler, core *vault.Core) http.Handler {
 func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
-		respondError(w, http.StatusBadRequest, nil, core.SetCustomResponseHeaders)
+		respondError(w, http.StatusBadRequest, nil, r)
 		return
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
@@ -42,9 +42,9 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	resp, err := core.HandleRequest(r.Context(), req)
 	if err != nil {
-		respondErrorCommon(w, req, resp, err, core.SetCustomResponseHeaders)
+		respondErrorCommon(w, req, resp, err, r)
 		return
 	}
 
-	respondOk(w, resp.Data, core.SetCustomResponseHeaders)
+	respondOk(w, resp.Data, r)
 }

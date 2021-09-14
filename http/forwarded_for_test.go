@@ -42,7 +42,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			})
 			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
 			listenerConfig.XForwardedForRejectNotPresent = true
-			return WrapForwardedForHandler(origHandler, listenerConfig, nil)
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -85,7 +85,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			})
 			listenerConfig := getListenerConfigForMarshalerTest(badAddr)
 			listenerConfig.XForwardedForRejectNotPresent = true
-			return WrapForwardedForHandler(origHandler, listenerConfig, nil)
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -121,7 +121,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			listenerConfig := getListenerConfigForMarshalerTest(badAddr)
 			listenerConfig.XForwardedForRejectNotPresent = true
 			listenerConfig.XForwardedForRejectNotAuthorized = true
-			return WrapForwardedForHandler(origHandler, listenerConfig, nil)
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -155,7 +155,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			listenerConfig.XForwardedForRejectNotPresent = true
 			listenerConfig.XForwardedForRejectNotAuthorized = true
 			listenerConfig.XForwardedForHopSkips = 4
-			return WrapForwardedForHandler(origHandler, listenerConfig, nil)
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -189,7 +189,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			listenerConfig.XForwardedForRejectNotPresent = true
 			listenerConfig.XForwardedForRejectNotAuthorized = true
 			listenerConfig.XForwardedForHopSkips = 1
-			return WrapForwardedForHandler(origHandler, listenerConfig, nil)
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -226,7 +226,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 			listenerConfig.XForwardedForRejectNotPresent = true
 			listenerConfig.XForwardedForRejectNotAuthorized = true
 			listenerConfig.XForwardedForHopSkips = 1
-			return WrapForwardedForHandler(origHandler, listenerConfig, nil)
+			return WrapForwardedForHandler(origHandler, listenerConfig)
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{

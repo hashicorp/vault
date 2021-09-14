@@ -17,13 +17,13 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "GET":
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusMethodNotAllowed, nil, r)
 			return
 		}
 
 		// Parse form
 		if err := r.ParseForm(); err != nil {
-			respondError(w, http.StatusBadRequest, err, core.SetCustomResponseHeaders)
+			respondError(w, http.StatusBadRequest, err, r)
 			return
 		}
 
@@ -37,7 +37,7 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 
 		// Manually extract the logical response and send back the information
 		status := resp.Data[logical.HTTPStatusCode].(int)
-		core.SetCustomResponseHeaders(w, status)
+		SetCustomResponseHeaders(w, status, r)
 		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
 		switch v := resp.Data[logical.HTTPRawBody].(type) {
 		case string:
@@ -47,7 +47,7 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 			w.WriteHeader(status)
 			w.Write(v)
 		default:
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"), core.SetCustomResponseHeaders)
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"), r)
 		}
 	})
 }
