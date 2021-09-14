@@ -2693,6 +2693,33 @@ func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
 	return exist
 }
 
+// ChangeListenerAddressCustomHeader function is mainly used for tests where a random
+// listener address is used
+func (c *Core) ChangeListenerAddressCustomHeader(la string) error {
+
+	if la == "" {
+		return nil
+	}
+
+	if c.customListenerHeader == nil || c.customListenerHeader.CustomHeadersList == nil {
+		return nil
+	}
+
+	lch := c.getCustomResponseHeaders("")
+	if lch == nil {
+		return nil
+	}
+
+	if len(lch) != 1 {
+		return fmt.Errorf("found more than one listener with the given address")
+	}
+
+	listenerCustomHeaders := lch[0]
+	listenerCustomHeaders.ChangeListenerAddress(la)
+
+	return nil
+}
+
 func (c *Core) ReloadCustomResponseHeaders() error {
 
 	conf := c.rawConfig.Load()

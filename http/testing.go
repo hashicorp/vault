@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -45,7 +46,12 @@ func TestServerWithListener(tb testing.TB, ln net.Listener, addr string, core *v
 	// for tests.
 	props := &vault.HandlerProperties{
 		Core: core,
+		// This is needed for testing custom response headers
+		ListenerConfig: &configutil.Listener {
+			Address: addr,
+		},
 	}
+	testAugmentListenerAddressCustomHeaders(tb, core, addr)
 	TestServerWithListenerAndProperties(tb, ln, addr, core, props)
 }
 
@@ -62,5 +68,13 @@ func TestServerAuth(tb testing.TB, addr string, token string) {
 }
 
 func testHandleAuth(w http.ResponseWriter, req *http.Request) {
-	respondOk(w, nil, nil)
+	respondOk(w, nil, req)
+}
+
+func testAugmentListenerAddressCustomHeaders(tb testing.TB, core *vault.Core, la string) {
+
+	err := core.ChangeListenerAddressCustomHeader(la)
+	if err != nil {
+		tb.Fatalf("failed to change listener address to the one given")
+	}
 }
