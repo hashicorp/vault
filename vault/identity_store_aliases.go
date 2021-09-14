@@ -54,7 +54,7 @@ This field is deprecated, use canonical_id.`,
 				},
 				"custom_metadata": {
 					Type:        framework.TypeKVPairs,
-					Description: "User-provided key-value pairs",
+					Description: "User provided key-value pairs",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -91,7 +91,7 @@ This field is deprecated, use canonical_id.`,
 				},
 				"custom_metadata": {
 					Type:        framework.TypeKVPairs,
-					Description: "User-provided key-value pairs",
+					Description: "User provided key-value pairs",
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -193,7 +193,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 					customMetadata = alias.CustomMetadata
 
 				default:
-					// mountAccessor,name and customMetadata  provided
+					// mountAccessor, name and customMetadata  provided
 				}
 				return i.handleAliasUpdate(ctx, req, canonicalID, name, mountAccessor, alias, customMetadata)
 			}
@@ -403,7 +403,6 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	}, nil
 }
 
-//TODO: ask if we can use the same validation code from kv secrets plugin
 func validateCustomMetadata(customMetadata map[string]string) error {
 	var errs *multierror.Error
 
