@@ -175,8 +175,6 @@ message Alias {
 
 	// Custom Metadata
 	map<string, string> customMetadata = 12;
-
-
 }
 
 // Deprecated. Retained for backwards compatibility.
