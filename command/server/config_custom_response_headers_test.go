@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"github.com/go-test/deep"
 	"testing"
 )
@@ -12,7 +13,7 @@ var defaultCustomHeaders = map[string]string {
 	"X-Custom-Header": "Custom header value default",
 	"X-Frame-Options": "Deny",
 	"X-Content-Type-Options": "nosniff",
-	"Content-Type": "text/plain; charset=utf-8",
+	"Content-Type": "application/json",
 	"X-XSS-Protection": "1; mode=block",
 }
 
@@ -54,7 +55,7 @@ func TestCustomResponseHeadersConfigs(t *testing.T) {
 		t.Fatalf("Error encountered when loading config %+v", err)
 	}
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[0].CustomResponseHeaders); diff != nil {
-		t.Fatalf("parsed custom headers do not match the expected ones")
+		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
 	}
 }
 
