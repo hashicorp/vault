@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -95,30 +96,19 @@ func TestConfigCustomHeaders(t *testing.T) {
 		t.Fatalf("header name with X-Vault prefix is not valid")
 	}
 
-	commonDefaultUiHeader := uiHeaders["Content-Security-Policy"]
-	commonDefaultResponseHeader, _ := lch.FetchHeaderForStatusCode("Content-Security-Policy", "default")
-
-	if commonDefaultUiHeader[0] == commonDefaultResponseHeader {
-		t.Fatalf("default haeder ")
-	}
-
 	w := httptest.NewRecorder()
-	w.Header().Set("X-Vault-Listener-Add", rawListenerConfig[0].Address)
-
 	lch.SetCustomResponseHeaders(w, 200)
 	if w.Header().Get("Someheader-200") != "200" || w.Header().Get("X-Custom-Header") != "Custom header value 200"{
 		t.Fatalf("response headers related to status code %v did not set properly", 200)
 	}
 
 	w = httptest.NewRecorder()
-	w.Header().Set("X-Vault-Listener-Add", rawListenerConfig[0].Address)
 	lch.SetCustomResponseHeaders(w, 204)
 	if w.Header().Get("Someheader-200") == "200" || w.Header().Get("X-Custom-Header") != "Custom header value 2xx" {
 		t.Fatalf("response headers related to status code %v did not set properly", "2xx")
 	}
 
 	w = httptest.NewRecorder()
-	w.Header().Set("X-Vault-Listener-Add", rawListenerConfig[0].Address)
 	lch.SetCustomResponseHeaders(w, 500)
 	for h, v := range defaultCustomHeaders {
 		if h != "X-Vault-Ignored" && w.Header().Get(h) != v {
@@ -166,7 +156,6 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	w.Header().Set("X-Vault-Listener-Add", "127.0.0.1:443")
 	hw := logical.NewHTTPResponseWriter(w)
 
 	// setting a header that already exist in custom headers
@@ -178,7 +167,7 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	if err == nil {
 		t.Fatal("request did not fail on setting a header that is present in custom response headers")
 	}
-	if !strings.Contains(resp.Data["error"].(string), "header already exist in server configuration file") {
+	if !strings.Contains(resp.Data["error"].(string), fmt.Sprintf("This header already exist in server configuration. %v", "X-Custom-Header")) {
 		t.Fatalf("failed to get the expected error")
 	}
 
