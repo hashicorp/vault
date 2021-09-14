@@ -295,14 +295,13 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
-// TODO: load clients into memory (go-memdb) to look this up
-func (i *IdentityStore) allClients(ctx context.Context, s logical.Storage) (*[]client, error) {
+func (i *IdentityStore) listClients(ctx context.Context, s logical.Storage) ([]*client, error) {
 	clientNames, err := s.List(ctx, clientPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var clients []client
+	var clients []*client
 	for _, name := range clientNames {
 		entry, err := s.Get(ctx, clientPath+name)
 		if err != nil {
@@ -316,22 +315,22 @@ func (i *IdentityStore) allClients(ctx context.Context, s logical.Storage) (*[]c
 		if err := entry.DecodeJSON(&client); err != nil {
 			return nil, err
 		}
-		clients = append(clients, client)
+		clients = append(clients, &client)
 	}
 
-	return &clients, nil
+	return clients, nil
 }
 
 // TODO: load clients into memory (go-memdb) to look this up
 func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id string) (*client, error) {
-	clients, err := i.allClients(ctx, s)
+	clients, err := i.listClients(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, client := range *clients {
+	for _, client := range clients {
 		if client.ClientID == id {
-			return &client, nil
+			return client, nil
 		}
 	}
 
@@ -347,12 +346,12 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 	for _, clientID := range targetIDs {
 		// Collect the client keys by name
 		if clientID == "*" {
-			clients, err := i.allClients(ctx, s)
+			clients, err := i.listClients(ctx, s)
 			if err != nil {
 				return nil, err
 			}
 
-			for _, client := range *clients {
+			for _, client := range clients {
 				keyNames = append(keyNames, client.Key)
 			}
 		} else {
