@@ -1,3 +1,3 @@
-```release-note:improvement
-secrets/pki: Allow signing of self-issued certs with a different signature algorithm.
+```release-note:feature
+secret/pki: allow the ca to sign certificates with a different algorithm than the certificate's.
 ```
