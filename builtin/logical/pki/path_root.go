@@ -477,7 +477,8 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}, nil
 }
 
-// Adapted from x509.go, may need to be updated in the future
+// Adapted from similar code in https://github.com/golang/go/blob/4a4221e8187189adcc6463d2d96fe2e8da290132/src/crypto/x509/x509.go#L1342,
+// may need to be updated in the future.
 func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAlgo x509.SignatureAlgorithm, err error) {
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -485,7 +486,6 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		sigAlgo = x509.SHA256WithRSA
 	case *ecdsa.PublicKey:
 		pubType = x509.ECDSA
-
 		switch pub.Curve {
 		case elliptic.P224(), elliptic.P256():
 			sigAlgo = x509.ECDSAWithSHA256
