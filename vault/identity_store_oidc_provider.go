@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
@@ -1267,43 +1268,12 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 
 	// Validate that the identity entity associated with the request
-	// is a member of the client assignment's groups or entities
-	var entityHasAssignment bool
-AssignmentsLoop:
-	for _, a := range client.Assignments {
-		assignment, err := i.getOIDCAssignment(ctx, req.Storage, a)
-		if err != nil {
-			return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
-		}
-		if assignment == nil {
-			return nil, fmt.Errorf("%s: client assignment %q not found", ErrAuthServerError, a)
-		}
-
-		// Get the group names that the entity is a member of
-		entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
-		if err != nil {
-			return nil, fmt.Errorf("%s: internal server error", ErrAuthServerError)
-		}
-		entityGroupNames := make(map[string]bool)
-		for _, group := range entityGroups {
-			entityGroupNames[group.Name] = true
-		}
-
-		// Check if the entity is a member of any groups in the assignment
-		for _, group := range assignment.Groups {
-			if entityGroupNames[group] {
-				entityHasAssignment = true
-				break AssignmentsLoop
-			}
-		}
-
-		// Check if the entity is a member of the assignment's entities
-		if strutil.StrListContains(assignment.Entities, entity.GetName()) {
-			entityHasAssignment = true
-			break
-		}
+	// is a member of the client assignments' groups or entities
+	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity, client.Assignments)
+	if err != nil {
+		return nil, err
 	}
-	if !entityHasAssignment {
+	if !isMember {
 		return logical.ErrorResponse("%s: identity entity not authorized by client assignment",
 			ErrAuthAccessDenied), nil
 	}
@@ -1371,6 +1341,44 @@ AssignmentsLoop:
 			"code": code,
 		},
 	}, nil
+}
+
+// entityHasAssignment returns true if the entity is a member of any of the
+// assignments' groups or entities. Otherwise, returns false or an error.
+func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entity *identity.Entity, assignments []string) (bool, error) {
+	for _, a := range assignments {
+		assignment, err := i.getOIDCAssignment(ctx, s, a)
+		if err != nil {
+			return false, fmt.Errorf("%s: internal server error", ErrAuthServerError)
+		}
+		if assignment == nil {
+			return false, fmt.Errorf("%s: client assignment %q not found", ErrAuthServerError, a)
+		}
+
+		// Get the group names that the entity is a member of
+		entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
+		if err != nil {
+			return false, fmt.Errorf("%s: internal server error", ErrAuthServerError)
+		}
+		entityGroupNames := make(map[string]bool)
+		for _, group := range entityGroups {
+			entityGroupNames[group.Name] = true
+		}
+
+		// Check if the entity is a member of any groups in the assignment
+		for _, group := range assignment.Groups {
+			if entityGroupNames[group] {
+				return true, nil
+			}
+		}
+
+		// Check if the entity is a member of the assignment's entities
+		if strutil.StrListContains(assignment.Entities, entity.GetName()) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // clientByID returns the client with the given ID.
