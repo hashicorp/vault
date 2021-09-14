@@ -44,7 +44,7 @@ export default RESTSerializer.extend({
     // model is the responseJSON from the payload
     const cert = pki.certificateFromPem(model.certificate);
     const commonName = cert.subject.getField('CN').value;
-    const issueDate = format(cert.validity.notBefore, 'MMM dd, yyyy hh:mm:ss a'); // config here or hbs?
+    const issueDate = format(cert.validity.notBefore, 'MMM dd, yyyy hh:mm:ss a'); // config here or hbs? move to hbs
     const expiryDate = format(cert.validity.notAfter, 'MMM dd, yyyy hh:mm:ss a');
     const certMetadata = {
       common_name: commonName,
