@@ -341,34 +341,37 @@ func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id st
 // referenced by the clients' targetIDs.
 // If targetIDs contains "*" then the IDs for all public keys are returned.
 func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s logical.Storage, targetIDs []string) ([]string, error) {
-	var keyNames []string
-	// Loop through client IDs
-	for _, clientID := range targetIDs {
-		// Collect the client keys by name
-		if clientID == "*" {
-			clients, err := i.listClients(ctx, s)
-			if err != nil {
-				return nil, err
-			}
+	keyNames := make(map[string]bool)
 
-			for _, client := range clients {
-				keyNames = append(keyNames, client.Key)
-			}
-		} else {
+	// Get all key names referenced by clients if wildcard "*" in target client IDs
+	if strutil.StrListContains(targetIDs, "*") {
+		clients, err := i.listClients(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, client := range clients {
+			keyNames[client.Key] = true
+		}
+	}
+
+	// Otherwise, get the key names referenced by each target client ID
+	if len(keyNames) == 0 {
+		for _, clientID := range targetIDs {
 			client, err := i.clientByID(ctx, s, clientID)
 			if err != nil {
 				return nil, err
 			}
 
 			if client != nil {
-				keyNames = append(keyNames, client.Key)
+				keyNames[client.Key] = true
 			}
 		}
 	}
 
 	// Collect the key IDs
 	var keyIDs []string
-	for _, name := range keyNames {
+	for name, _ := range keyNames {
 		entry, err := s.Get(ctx, namedKeyConfigPath+name)
 		if err != nil {
 			return nil, err
