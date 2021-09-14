@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 const maxCustomMetadataKeys = 64
@@ -135,7 +136,14 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		id := d.Get("id").(string)
 
 		// Get custom metadata, if any
-		customMetadata := d.Get("custom_metadata").(map[string]string)
+		customMetadata := make(map[string]string)
+		data, customMetadataExists := d.GetOk("custom_metadata")
+		if customMetadataExists {
+			err = mapstructure.Decode(data, &customMetadata)
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		// Get entity id
 		canonicalID := d.Get("canonical_id").(string)
