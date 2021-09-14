@@ -519,9 +519,8 @@ CHECK:
 							return
 						} else {
 							// this will happen if the value isn't found OR the pointer is malformed.
-							// if the value isn't found, continue, because it might show up on the next field
-							// if the value is malformed, error (although a better UX would be to catch malformed
-							// pointers when we upload the policy).
+							// if the value isn't found, continue, because it might show up on the next field.
+							// otherwise, error. malformed pointers should've been caught when the policy was uploaded.
 							if errors.Is(err, pointerstructure.ErrNotFound) {
 								continue
 							} else {

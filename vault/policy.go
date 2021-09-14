@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/pointerstructure"
 )
 
 const (
@@ -443,6 +444,13 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 					if fon != PatchCapability {
 						return fmt.Errorf("path %q: filter_on capability %q not allowed, only 'patch' is allowed.", key, fon)
+					}
+				}
+
+				for _, fld := range ff.Fields {
+					_, err := pointerstructure.Parse(fld)
+					if err != nil {
+						return fmt.Errorf("failed to parse JSON pointer: %w", err)
 					}
 				}
 			}

@@ -381,13 +381,7 @@ func TestPolicy_ParseFieldFilters(t *testing.T) {
 	if diff := deep.Equal(filters[0].FilterOn, []string{"patch"}); diff != nil {
 		t.Error(diff)
 	}
-	if diff := deep.Equal(filters[0].Fields, []string{"options/*", "/data/internal/foo"}); diff != nil {
-		t.Error(diff)
-	}
-	if diff := deep.Equal(filters[1].FilterOn, []string{"read"}); diff != nil {
-		t.Error(diff)
-	}
-	if diff := deep.Equal(filters[1].Fields, []string{"/data/internal/foo", "/metadata/*"}); diff != nil {
+	if diff := deep.Equal(filters[0].Fields, []string{"/bar", "/bar/baz"}); diff != nil {
 		t.Error(diff)
 	}
 }
@@ -397,6 +391,14 @@ func TestPolicy_ParseBadFieldFilters(t *testing.T) {
 	t.Log(err)
 	if err == nil {
 		t.Fatal("there should've been an error parsing the bad policy but there wasn't")
+	}
+}
+
+func TestPolicy_ParseFieldFilters_MalformedJSONPointer(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(malformedJSONPointerFieldFilterPolicy))
+	t.Log(err)
+	if err == nil {
+		t.Fatal("there should've been an error parsing the malformed json pointer policy but there wasn't")
 	}
 }
 

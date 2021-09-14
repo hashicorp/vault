@@ -896,15 +896,12 @@ var fieldFilterPolicy = `
 			{
 				filter_on = ["patch"]
 				fields = ["/bar", "/bar/baz"]
-			},
-			{
-				filter_on = ["read"]
-				fields = ["/bar", "/metadata/*"]
 			}
 		]
 	}
 `
 
+// bad because filter_on contains a capability that's not listed under capabilities
 var badFieldFilterPolicy = `
 	name = "badfieldfilters"
     path "secret/*" {
@@ -913,6 +910,19 @@ var badFieldFilterPolicy = `
 			{
 				filter_on = ["update"]
 				fields = ["/bar", "/bar/baz"]
+			}
+		]
+	}
+`
+
+var malformedJSONPointerFieldFilterPolicy = `
+	name = "malformedjsonpointer"
+    path "secret/*" {
+		capabilities = ["patch"]
+		field_filters = [
+			{
+				filter_on = ["patch"]
+				fields = ["bar/baz"]
 			}
 		]
 	}
