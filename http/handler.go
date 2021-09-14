@@ -167,8 +167,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			} else {
 				mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 			}
-			mux.Handle("/ui", handleUIRedirect(core))
-			mux.Handle("/", handleUIRedirect(core))
+			mux.Handle("/ui", handleUIRedirect())
+			mux.Handle("/", handleUIRedirect())
 
 		}
 
@@ -348,7 +348,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 
 		if listenerCustomHeaders != nil {
-			ctx = context.WithValue(ctx, "X-Vault-Listener-Custom-Headers-Struct", listenerCustomHeaders)
+			ctx = context.WithValue(ctx, "listener_custom_headers_struct", listenerCustomHeaders)
 		}
 
 		r = r.WithContext(ctx)
@@ -612,7 +612,7 @@ func handleUIStub() http.Handler {
 	})
 }
 
-func handleUIRedirect(core *vault.Core) http.Handler {
+func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		status := 307
 		SetCustomResponseHeaders(w, status, req)
@@ -1161,7 +1161,7 @@ func SetCustomResponseHeaders(w http.ResponseWriter, status int, r *http.Request
 		return
 	}
 	ctx := r.Context()
-	listenerCustomHeaders := ctx.Value("X-Vault-Listener-Custom-Headers-Struct")
+	listenerCustomHeaders := ctx.Value("listener_custom_headers_struct")
 	if listenerCustomHeaders != nil {
 		lc := listenerCustomHeaders.(*listenerutil.ListenerCustomHeaders)
 		if lc != nil {

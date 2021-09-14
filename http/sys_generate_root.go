@@ -122,9 +122,9 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 
 func handleSysGenerateRootAttemptDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
-	errNew := core.GenerateRootCancel()
-	if errNew != nil {
-		respondError(w, http.StatusInternalServerError, errNew, r)
+	err := core.GenerateRootCancel()
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err, r)
 		return
 	}
 	respondOk(w, nil, r)

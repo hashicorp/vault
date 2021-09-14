@@ -2620,10 +2620,6 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 		return logical.ErrorResponse("X-Vault headers cannot be set"), logical.ErrInvalidRequest
 	}
 
-	if req.ResponseWriter == nil {
-		return logical.ErrorResponse("no ResponseWriter in the request"), logical.ErrInvalidRequest
-	}
-
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
