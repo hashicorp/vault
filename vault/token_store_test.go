@@ -3211,12 +3211,13 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	// automatically due to the existence check
 	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
-		"period":           "79h",
-		"allowed_policies": "test3",
-		"path_suffix":      "happenin",
-		"renewable":        false,
-		"explicit_max_ttl": "80h",
-		"token_num_uses":   0,
+		"period":                  "79h",
+		"allowed_policies":        "test3",
+		"path_suffix":             "happenin",
+		"renewable":               false,
+		"explicit_max_ttl":        "80h",
+		"token_num_uses":          0,
+		"token_no_default_policy": true,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -3263,6 +3264,10 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 	delete(resp.Data, "token_bound_cidrs")
 
+	if resp.Data["token_no_default_policy"].(bool) != true {
+		t.Fatal("unexpected no_default_policy config")
+	}
+	delete(resp.Data, "token_no_default_policy")
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
@@ -3313,6 +3318,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 	delete(resp.Data, "token_bound_cidrs")
 
+	if resp.Data["token_no_default_policy"].(bool) != true {
+		t.Fatal("unexpected no_default_policy config")
+	}
+	delete(resp.Data, "token_no_default_policy")
+
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
@@ -3320,8 +3330,9 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	// Update path_suffix and bound_cidrs with empty values
 	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
-		"path_suffix": "",
-		"bound_cidrs": []string{},
+		"path_suffix":             "",
+		"bound_cidrs":             []string{},
+		"token_no_default_policy": false,
 	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {

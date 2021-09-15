@@ -3208,6 +3208,10 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 		resp.Data["token_num_uses"] = role.TokenNumUses
 	}
 
+	if role.TokenNoDefaultPolicy {
+		resp.Data["token_no_default_policy"] = true
+	}
+
 	return resp, nil
 }
 
