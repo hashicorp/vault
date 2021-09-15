@@ -42,11 +42,9 @@ module('Integration | Component | client count current', function(hooks) {
   test('it shows data when available from query', async function(assert) {
     Object.assign(this.model.config, { queriesAvailable: true, configPath: { canRead: true } });
     Object.assign(this.model.activity, {
-      total: {
-        clients: 1234,
-        distinct_entities: 234,
-        non_entity_tokens: 232,
-      },
+      clients: 1234,
+      distinct_entities: 234,
+      non_entity_tokens: 232,
     });
 
     await render(hbs`<Clients::History @tab={{tab}} @model={{model}} />`);
