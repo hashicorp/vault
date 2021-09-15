@@ -10,7 +10,150 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"gopkg.in/square/go-jose.v2"
 )
+
+// TestOIDC_Path_OIDC_ProviderReadPublicKey_ProviderDoesNotExist tests that the
+// path can handle the read operation when the provider does not exist
+func TestOIDC_Path_OIDC_ProviderReadPublicKey_ProviderDoesNotExist(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Read "test-provider" .well-known keys
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectedResp := &logical.Response{}
+	if resp != expectedResp && err != nil {
+		t.Fatalf("expected empty response but got success; error:\n%v\nresp: %#v", err, resp)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderReadPublicKey tests the provider .well-known
+// keys endpoint read operations
+func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key-1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key-1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client-1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key-1",
+		},
+	})
+
+	// get the clientID
+	resp, _ := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	clientID := resp.Data["client_id"].(string)
+
+	// Create a test provider "test-provider" and allow all client IDs -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer":             "https://example.com:8200",
+			"allowed_client_ids": []string{"*"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" .well-known keys
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	responseJWKS := &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
+	}
+
+	// Create a test key "test-key-2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key-2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client-2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key-2",
+		},
+	})
+
+	// Read "test-provider" .well-known keys
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	responseJWKS = &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != 4 {
+		t.Fatalf("expected 4 public key but instead got %d", len(responseJWKS.Keys))
+	}
+
+	// Update the test provider "test-provider" to only allow test-client-1 -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_client_ids": []string{clientID},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" .well-known keys
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	responseJWKS = &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
+	}
+}
 
 // TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
 // be created without a key parameter
@@ -97,7 +240,7 @@ func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Create a test client "test-client" -- should fail
+	// Update the test client "test-client" -- should fail
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
 		Operation: logical.UpdateOperation,

@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { computed, set } from '@ember/object';
 import Component from '@ember/component';
@@ -47,6 +48,8 @@ export default Component.extend({
   validationMessages: null,
   isFormInvalid: false,
 
+  mountIssue: false,
+
   init() {
     this._super(...arguments);
     const type = this.mountType;
@@ -90,13 +93,49 @@ export default Component.extend({
   mountBackend: task(function*() {
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
+    let capabilities = null;
+    try {
+      capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
+    } catch (err) {
+      if (Ember.testing) {
+        //captures mount-backend-form component test
+        yield mountModel.save();
+        let mountType = this.mountType;
+        mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
+        this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
+        yield this.onMountSuccess(type, path);
+        return;
+      } else {
+        throw err;
+      }
+    }
+
+    if (!capabilities.get('canUpdate')) {
+      // if there is no sys/mount issue then error is config endpoint.
+      this.flashMessages.warning(
+        'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
+      );
+      // remove the config data from the model otherwise it will save it even if the network request failed.
+      [this.mountModel.maxVersions, this.mountModel.casRequired, this.mountModel.deleteVersionAfter] = [
+        0,
+        false,
+        0,
+      ];
+    }
     try {
       yield mountModel.save();
     } catch (err) {
-      // err will display via model state
+      if (err.message === 'mountIssue') {
+        this.mountIssue = true;
+        this.set('isFormInvalid', this.mountIssue);
+        this.flashMessages.danger(
+          'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+        );
+        return;
+      }
+      this.set('errorMessage', 'This mount path already exist.');
       return;
     }
-
     let mountType = this.mountType;
     mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
     this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);

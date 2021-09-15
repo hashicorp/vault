@@ -150,10 +150,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-configuration-tab]');
     await settled();
-
-    let cas = document.querySelector('[data-test-value-div="Check-and-Set required"]').innerText;
-    let deleteVersionAfter = document.querySelector('[data-test-value-div="Delete version after"]').innerText;
-    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum versions"]').innerText;
+    let cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
+    let deleteVersionAfter = document.querySelector('[data-test-value-div="Automate secret deletion"]')
+      .innerText;
+    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum number of versions"]')
+      .innerText;
 
     assert.equal(
       maxVersion,
