@@ -5,4 +5,7 @@ export default Model.extend({
   byNamespace: attr('array'),
   endTime: attr('string'),
   startTime: attr('string'),
+  clients: attr('number'),
+  distinct_entities: attr('number'),
+  non_entity_tokens: attr('number'),
 });

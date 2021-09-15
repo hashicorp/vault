@@ -41,10 +41,10 @@
         @retentionMonths={{@model.config.retentionMonths}}
         />
     {{/if}}
-    {{#unless @model.activity.total}}
+    {{#unless this.hasClientData}}
         {{#if (eq @tab "current")}}
             {{#if (eq @model.config.enabled 'On')}}
-                <EmptyState @title="No data received" @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes" />
+                <EmptyState @title="No data received" @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes." />
             {{/if}}
         {{else}}
                 <EmptyState @title="No data received" @message="No data exists for that query period. Try searching again." />
@@ -64,31 +64,33 @@
             <hr>
             <div class="columns">
                 <div class="column" data-test-client-count-stats>
-                    <StatText @label="Total active Clients" @value={{@model.activity.total.clients}} @size="l" 
+                    <StatText @label="Total active Clients" @value={{or @model.activity.clients @model.activity.total.clients}} @size="l" 
                         @subText="The sum of unique entities and active direct tokens; Vault's primary billing metric."/>
                     </div>
                     <div class="column">
-                    <StatText class="column" @label="Unique entities" @value={{@model.activity.total.distinct_entities}} @size="l" 
+                    <StatText class="column" @label="Unique entities" @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities}} @size="l" 
                         @subText="Representation of a particular user, client or application that created a token via login."/>
                     </div>
                     <div class="column">
-                    <StatText class="column" @label="Active direct tokens" @value={{@model.activity.total.non_entity_tokens}} @size="l" 
+                    <StatText class="column" @label="Active direct tokens" @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens}} @size="l" 
                         @subText="Tokens created via a method that is not associated with an entity."/>
                 </div>
             </div>
             </div>
         </div>
-        <div class="columns has-bottom-margin-m">
-            <div class="column is-two-thirds">
-                <BarChart @title="Top 10 Namespaces" @description="Each namespace's client count includes clients in child namespaces." 
-                    @dataset={{this.dataset}} 
-                    @mapLegend={{ array (hash key="non_entity_tokens" label="Active direct tokens") (hash key="distinct_entities" label="Unique Entities") }}>
-                </BarChart>
-            </div>
-            <div class="column">
+        {{#if this.showGraphs}}
+            <div class="columns has-bottom-margin-m">
+                <div class="column is-two-thirds">
+                    <BarChart @title="Top 10 Namespaces" @description="Each namespace's client count includes clients in child namespaces." 
+                        @dataset={{this.barChartDataset}} 
+                        @mapLegend={{ array (hash key="non_entity_tokens" label="Active direct tokens") (hash key="distinct_entities" label="Unique Entities") }}>
+                    </BarChart>
+                </div>
+                <div class="column">
 
+                </div>
             </div>
-        </div>
+        {{/if}}
     {{/unless}}
 </div>
 {{/if}}

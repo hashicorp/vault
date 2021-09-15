@@ -3,7 +3,14 @@ import Component from '@glimmer/component';
 export default class HistoryComponent extends Component {
   max_namespaces = 10;
 
-  get dataset() {
+  get hasClientData() {
+    if (this.args.tab === 'current') {
+      return this.args.model.activity && this.args.model.activity.clients;
+    }
+    return this.args.model.activity && this.args.model.activity.total;
+  }
+
+  get barChartDataset() {
     if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
@@ -22,5 +29,12 @@ export default class HistoryComponent extends Component {
         total: d['counts']['clients'],
       };
     });
+  }
+
+  get showGraphs() {
+    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
+      return null;
+    }
+    return this.args.model.activity.byNamespace.length > 1;
   }
 }
