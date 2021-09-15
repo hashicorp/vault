@@ -1587,7 +1587,7 @@ func (i *IdentityStore) clientByName(ctx context.Context, s logical.Storage, nam
 // memDBClientByID returns the client with the given ID from memdb.
 func (i *IdentityStore) memDBClientByID(id string) (*client, error) {
 	if id == "" {
-		return nil, fmt.Errorf("missing client ID")
+		return nil, errors.New("missing client ID")
 	}
 
 	txn := i.db.Txn(false)
@@ -1598,7 +1598,7 @@ func (i *IdentityStore) memDBClientByID(id string) (*client, error) {
 // memDBClientByIDInTxn returns the client with the given ID from memdb using the given txn.
 func (i *IdentityStore) memDBClientByIDInTxn(txn *memdb.Txn, id string) (*client, error) {
 	if id == "" {
-		return nil, fmt.Errorf("missing client ID")
+		return nil, errors.New("missing client ID")
 	}
 
 	if txn == nil {
@@ -1624,7 +1624,7 @@ func (i *IdentityStore) memDBClientByIDInTxn(txn *memdb.Txn, id string) (*client
 // memDBClientByName returns the client with the given name from memdb.
 func (i *IdentityStore) memDBClientByName(ctx context.Context, name string) (*client, error) {
 	if name == "" {
-		return nil, fmt.Errorf("missing client name")
+		return nil, errors.New("missing client name")
 	}
 
 	txn := i.db.Txn(false)
@@ -1666,7 +1666,7 @@ func (i *IdentityStore) memDBClientByNameInTxn(ctx context.Context, txn *memdb.T
 // memDBDeleteClientByName deletes the client with the given name from memdb.
 func (i *IdentityStore) memDBDeleteClientByName(ctx context.Context, name string) error {
 	if name == "" {
-		return fmt.Errorf("missing client name")
+		return errors.New("missing client name")
 	}
 
 	txn := i.db.Txn(true)
@@ -1684,11 +1684,11 @@ func (i *IdentityStore) memDBDeleteClientByName(ctx context.Context, name string
 // memDBDeleteClientByNameInTxn deletes the client with name from memdb using the given txn.
 func (i *IdentityStore) memDBDeleteClientByNameInTxn(ctx context.Context, txn *memdb.Txn, name string) error {
 	if name == "" {
-		return fmt.Errorf("missing client name")
+		return errors.New("missing client name")
 	}
 
 	if txn == nil {
-		return fmt.Errorf("txn is nil")
+		return errors.New("txn is nil")
 	}
 
 	client, err := i.memDBClientByNameInTxn(ctx, txn, name)
@@ -1708,12 +1708,12 @@ func (i *IdentityStore) memDBDeleteClientByNameInTxn(ctx context.Context, txn *m
 
 // memDBUpsertClientInTxn creates or updates the given client in memdb using the given txn.
 func (i *IdentityStore) memDBUpsertClientInTxn(txn *memdb.Txn, client *client) error {
-	if txn == nil {
-		return fmt.Errorf("nil txn")
+	if client == nil {
+		return errors.New("client is nil")
 	}
 
-	if client == nil {
-		return fmt.Errorf("client is nil")
+	if txn == nil {
+		return errors.New("nil txn")
 	}
 
 	clientRaw, err := txn.First(oidcClientsTable, "id", client.ClientID)
