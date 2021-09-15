@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
+	"gopkg.in/square/go-jose.v2"
 )
 
 type assignment struct {
@@ -277,7 +278,165 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpSynopsis:    "Query OIDC configurations",
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
+		{
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/keys",
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the provider",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: i.pathOIDCReadProviderPublicKeys,
+			},
+			HelpSynopsis:    "Retrieve public keys",
+			HelpDescription: "Returns the public portion of keys for a named OIDC provider. Clients can use them to validate the authenticity of an ID token.",
+		},
 	}
+}
+
+func (i *IdentityStore) listClients(ctx context.Context, s logical.Storage) ([]*client, error) {
+	clientNames, err := s.List(ctx, clientPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var clients []*client
+	for _, name := range clientNames {
+		entry, err := s.Get(ctx, clientPath+name)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			continue
+		}
+
+		var client client
+		if err := entry.DecodeJSON(&client); err != nil {
+			return nil, err
+		}
+		clients = append(clients, &client)
+	}
+
+	return clients, nil
+}
+
+// TODO: load clients into memory (go-memdb) to look this up
+func (i *IdentityStore) clientByID(ctx context.Context, s logical.Storage, id string) (*client, error) {
+	clients, err := i.listClients(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, client := range clients {
+		if client.ClientID == id {
+			return client, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// keyIDsReferencedByTargetClientIDs returns a slice of key IDs that are
+// referenced by the clients' targetIDs.
+// If targetIDs contains "*" then the IDs for all public keys are returned.
+func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s logical.Storage, targetIDs []string) ([]string, error) {
+	keyNames := make(map[string]bool)
+
+	// Get all key names referenced by clients if wildcard "*" in target client IDs
+	if strutil.StrListContains(targetIDs, "*") {
+		clients, err := i.listClients(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, client := range clients {
+			keyNames[client.Key] = true
+		}
+	}
+
+	// Otherwise, get the key names referenced by each target client ID
+	if len(keyNames) == 0 {
+		for _, clientID := range targetIDs {
+			client, err := i.clientByID(ctx, s, clientID)
+			if err != nil {
+				return nil, err
+			}
+
+			if client != nil {
+				keyNames[client.Key] = true
+			}
+		}
+	}
+
+	// Collect the key IDs
+	var keyIDs []string
+	for name, _ := range keyNames {
+		entry, err := s.Get(ctx, namedKeyConfigPath+name)
+		if err != nil {
+			return nil, err
+		}
+
+		var key namedKey
+		if err := entry.DecodeJSON(&key); err != nil {
+			return nil, err
+		}
+		for _, expirableKey := range key.KeyRing {
+			keyIDs = append(keyIDs, expirableKey.KeyID)
+		}
+	}
+	return keyIDs, nil
+}
+
+// pathOIDCReadProviderPublicKeys is used to retrieve all public keys for a
+// named provider so that clients can verify the validity of a signed OIDC token.
+func (i *IdentityStore) pathOIDCReadProviderPublicKeys(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	providerName := d.Get("name").(string)
+
+	var provider provider
+
+	providerEntry, err := req.Storage.Get(ctx, providerPath+providerName)
+	if err != nil {
+		return nil, err
+	}
+	if providerEntry == nil {
+		return nil, nil
+	}
+	if err := providerEntry.DecodeJSON(&provider); err != nil {
+		return nil, err
+	}
+
+	keyIDs, err := i.keyIDsReferencedByTargetClientIDs(ctx, req.Storage, provider.AllowedClientIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+	}
+
+	for _, keyID := range keyIDs {
+		key, err := loadOIDCPublicKey(ctx, req.Storage, keyID)
+		if err != nil {
+			return nil, err
+		}
+		jwks.Keys = append(jwks.Keys, *key)
+	}
+
+	data, err := json.Marshal(jwks)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
 }
 
 func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
