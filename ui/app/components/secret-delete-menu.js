@@ -23,7 +23,7 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
-        id: `${encodeURIComponent(backend)}/delete/${encodeURIComponent(id)}`,
+        id: `${backend}/delete/${id}`,
       };
     },
     'model.id'
@@ -37,7 +37,7 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
-        id: `${encodeURIComponent(backend)}/undelete/${encodeURIComponent(id)}`,
+        id: `${backend}/undelete/${id}`,
       };
     },
     'model.id'
@@ -51,7 +51,7 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
       let [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
-        id: `${encodeURIComponent(backend)}/destroy/${encodeURIComponent(id)}`,
+        id: `${backend}/destroy/${id}`,
       };
     },
     'model.id'
@@ -66,7 +66,7 @@ export default class SecretDeleteMenu extends Component {
       let backend = context.args.model.engine.id;
       let id = context.args.model.id;
       return {
-        id: `${encodeURIComponent(backend)}/metadata/${encodeURIComponent(id)}`,
+        id: `${backend}/metadata/${id}`,
       };
     },
     'model',
@@ -84,9 +84,7 @@ export default class SecretDeleteMenu extends Component {
       }
       let backend = context.args.isV2 ? context.args.model.engine.id : context.args.model.backend;
       let id = context.args.model.id;
-      let path = context.args.isV2
-        ? `${encodeURIComponent(backend)}/data/${encodeURIComponent(id)}`
-        : `${encodeURIComponent(backend)}/${encodeURIComponent(id)}`;
+      let path = context.args.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
         id: path,
       };
