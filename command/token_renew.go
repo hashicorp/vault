@@ -77,8 +77,8 @@ func (c *TokenRenewCommand) Flags() *FlagSets {
 		Default:    0,
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage: "Request a specific increment for renewal. Vault is not required " +
-			"to honor this request. If not supplied, Vault will use the default " +
+		Usage: "Request a specific increment for renewal. Vault will not honor this" +
+			"request for periodic tokens. If not supplied, Vault will use the default " +
 			"TTL. This is specified as a numeric string with suffix like \"30s\" " +
 			"or \"5m\".",
 	})
