@@ -336,8 +336,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	dbi.RLock()
 	defer dbi.RUnlock()
 
-	// ROY
-	// var newPassword string
 	// Use password from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
