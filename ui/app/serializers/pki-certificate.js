@@ -3,7 +3,6 @@ import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 import { pki } from 'node-forge';
-import { format } from 'date-fns';
 
 export default RESTSerializer.extend({
   keyForAttribute: function(attr) {
@@ -44,9 +43,6 @@ export default RESTSerializer.extend({
     // model is the responseJSON from the payload
     const cert = pki.certificateFromPem(model.certificate);
     const commonName = cert.subject.getField('CN').value;
-    console.log(cert.validity.notBefore);
-    // const issueDate = format(cert.validity.notBefore, 'MMM dd, yyyy hh:mm:ss a');
-    // const expiryDate = format(cert.validity.notAfter, 'MMM dd, yyyy hh:mm:ss a');
     const issueDate = cert.validity.notBefore;
     const expiryDate = cert.validity.notAfter;
     const certMetadata = {

@@ -24,8 +24,8 @@ export default Model.extend({
       'privateKey',
       'privateKeyType',
       'revocationTime',
-      'expiryDate',
       'issueDate',
+      'expiryDate',
       'serialNumber',
     ];
   }),
