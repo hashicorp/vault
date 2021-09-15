@@ -1684,7 +1684,7 @@ func (i *IdentityStore) memDBDeleteClientByName(ctx context.Context, name string
 // memDBDeleteClientByNameInTxn deletes the client with name from memdb using the given txn.
 func (i *IdentityStore) memDBDeleteClientByNameInTxn(ctx context.Context, txn *memdb.Txn, name string) error {
 	if name == "" {
-		return nil
+		return fmt.Errorf("missing client name")
 	}
 
 	if txn == nil {
