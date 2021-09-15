@@ -5,7 +5,11 @@ export default Application.extend({
     return 'internal/counters/activity';
   },
   queryRecord(store, type, query) {
-    const url = this.urlForQuery(null, type);
+    let url = this.urlForQuery(null, type);
+    if (query.tab === 'current') {
+      url = `${url}/monthly`;
+      query = null;
+    }
     // API accepts start and end as query params
     return this.ajax(url, 'GET', { data: query }).then(resp => {
       let response = resp || {};

@@ -29,7 +29,7 @@ const API_PATHS = {
     seal: 'sys/seal',
     raft: 'sys/storage/raft/configuration',
   },
-  metrics: {
+  clients: {
     activity: 'sys/internal/counters/activity',
     config: 'sys/internal/counters/config',
   },

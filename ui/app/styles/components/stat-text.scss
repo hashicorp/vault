@@ -1,5 +1,8 @@
 .stat-text-container {
   line-height: normal;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 
   &.l,
   &.m {
@@ -13,6 +16,7 @@
       font-weight: $font-weight-normal;
       color: $ui-gray-700;
       line-height: inherit;
+      flex-grow: 1;
     }
     .stat-value {
       font-size: $size-3;
