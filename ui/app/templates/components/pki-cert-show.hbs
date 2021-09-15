@@ -12,7 +12,6 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   <MessageError @model={{model}} />
   {{#each model.attrs as |attr|}}
-  {{ log attr}}
     {{#if (eq attr.type "object")}}
       <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
     {{else}}
@@ -25,7 +24,7 @@
           />
         </InfoTableRow>
       {{else if (or (eq attr.name "expiryDate") (eq attr.name "issueDate"))}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' true}} />
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}} />
       {{else}}
         <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
       {{/if}}
