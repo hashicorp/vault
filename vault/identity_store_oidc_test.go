@@ -1433,7 +1433,7 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// headerVal will be a random value between 0 and jwksCacheControlMaxAge
+	// headerVal will be a random value between 0 and jwksCacheControlMaxAge (in seconds)
 	if headerVal > durationSeconds {
 		t.Fatalf("unexpected header value, got %d expected less than %d", headerVal, durationSeconds)
 	}
