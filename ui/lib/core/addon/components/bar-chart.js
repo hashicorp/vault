@@ -94,7 +94,7 @@ class BarChartComponent extends Component {
     container
       .append('div')
       .attr('class', 'chart-tooltip')
-      .attr('style', 'position: absolute; opacity: 0;')
+      .attr('style', 'position: fixed; opacity: 0;')
       .style('color', 'white')
       .style('background', `${TOOLTIP_BACKGROUND}`)
       .style('font-size', '.929rem')
@@ -214,8 +214,8 @@ class BarChartComponent extends Component {
         select('.chart-tooltip')
           .style('opacity', 1)
           .style('max-width', '200px')
-          .style('left', `${event.pageX - 95}px`)
-          .style('top', `${event.pageY - 155}px`)
+          .style('left', `${event.pageX - 90}px`)
+          .style('top', `${event.pageY - 90}px`)
           .text(
             `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
             ${chartData.non_entity_tokens} active tokens, ${chartData.distinct_entities} unique entities.
