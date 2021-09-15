@@ -507,8 +507,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	case logical.CreateOperation:
 		// setStaticAccount calls Storage.Put and saves the role to storage
 		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName: name,
-			Role:     role,
+			RoleName:   name,
+			Role:       role,
+			CreateUser: createRole,
 		})
 		if err != nil {
 			if resp != nil && resp.WALID != "" {

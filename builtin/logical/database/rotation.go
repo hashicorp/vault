@@ -278,9 +278,11 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 }
 
 type setStaticAccountInput struct {
-	RoleName string
-	Role     *roleEntry
-	WALID    string
+	RoleName   string
+	Role       *roleEntry
+	CreateUser bool
+	WALID      string
+	Password   string
 }
 
 type setStaticAccountOutput struct {
@@ -336,7 +338,15 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	dbi.RLock()
 	defer dbi.RUnlock()
 
-	var newPassword string
+	// ROY
+	// var newPassword string
+	// Use password from input if available. This happens if we're restoring from
+	// a WAL item or processing the rotation queue with an item that has a WAL
+	// associated with it
+	newPassword := input.Password
+	if newPassword == "" {
+		newPassword, err = dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
+	}
 	if output.WALID != "" {
 		wal, err := b.findStaticWAL(ctx, s, output.WALID)
 		if err != nil {
