@@ -405,7 +405,7 @@ type Alias struct {
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
 	NamespaceID string `sentinel:"" protobuf:"bytes,11,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
-	// Custom Metadata
+	// Custom Metadata represents the custom data tied to this alias
 	CustomMetadata map[string]string `sentinel:"" protobuf:"bytes,12,rep,name=customMetadata,proto3" json:"customMetadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 

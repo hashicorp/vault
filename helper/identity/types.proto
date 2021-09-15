@@ -173,7 +173,7 @@ message Alias {
 	// belongs.
 	string namespace_id = 11;
 
-	// Custom Metadata
+	// Custom Metadata represents the custom data tied to this alias
 	map<string, string> customMetadata = 12;
 }
 
