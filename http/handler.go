@@ -210,6 +210,30 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	return printablePathCheckHandler
 }
 
+type statusHeaderResponseWriter struct {
+	wrapped http.ResponseWriter
+	// headers map[int]http.Header
+}
+
+func (w statusHeaderResponseWriter) Header() http.Header {
+	return w.wrapped.Header()
+}
+
+func (w statusHeaderResponseWriter) Write(buf []byte) (int, error) {
+	return w.wrapped.Write(buf)
+}
+
+func (w statusHeaderResponseWriter) WriteHeader(statusCode int) {
+	if statusCode == 200 {
+		w.wrapped.Header()["X-Bogus"] = []string{"yay"}
+	} else {
+		w.wrapped.Header()["X-Bogus"] = []string{"boo"}
+	}
+	w.wrapped.WriteHeader(statusCode)
+}
+
+var _ http.ResponseWriter = &statusHeaderResponseWriter{}
+
 type copyResponseWriter struct {
 	wrapped    http.ResponseWriter
 	statusCode int
@@ -300,6 +324,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = &statusHeaderResponseWriter{wrapped: w}
+
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")

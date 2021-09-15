@@ -277,6 +277,7 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
+	t.Log(resp.Header)
 	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
 }
 
