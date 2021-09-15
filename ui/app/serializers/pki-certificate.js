@@ -39,20 +39,6 @@ export default RESTSerializer.extend({
     return payload;
   },
 
-  // getMetadata(model) {
-  //   // model is the responseJSON from the payload
-  //   const cert = pki.certificateFromPem(model.certificate);
-  //   const commonName = cert.subject.getField('CN').value;
-  //   const issueDate = cert.validity.notBefore;
-  //   const expiryDate = cert.validity.notAfter;
-  //   const certMetadata = {
-  //     common_name: commonName,
-  //     issue_date: issueDate,
-  //     expiry_date: expiryDate,
-  //   };
-  //   return certMetadata;
-  // },
-
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
@@ -62,9 +48,6 @@ export default RESTSerializer.extend({
     } catch {
       certMetadata = null;
     }
-    // const certMetadata = getMetadata(responseJSON.certificate), return object with
-    // getMetadata is a function (make a helper...later) use forge to parse the cert
-    // get info we want, and always return an object so wrap in a try
     let transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
