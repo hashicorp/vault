@@ -38,7 +38,12 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
-			if !c.PerfStandby() {
+			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
+				// Go through the loop again, this time the stop channel case
+				// should trigger
+				continue
+			}
+			if !c.perfStandby {
 				c.metricsMutex.Lock()
 				// Emit on active node only
 				if c.expiration != nil {
@@ -55,13 +60,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 
 			// Refresh the standby gauge, on all nodes
-			if standby, _ := c.Standby(); standby {
+			if c.standby {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 			}
 
-			if perfStandby := c.PerfStandby(); perfStandby {
+			if c.perfStandby {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "performance_standby"}, 1, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "performance_standby"}, 0, nil)
@@ -98,6 +103,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 			// Refresh gauge metrics that are looped
 			c.cachedGaugeMetricsEmitter()
+			c.stateLock.RUnlock()
 		case <-writeTimer:
 			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
 				// Go through the loop again, this time the stop channel case
@@ -193,9 +199,6 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// The gauge collection processes are started and stopped here
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
-	//
-	// Both active nodes and performance standby nodes call emitMetricsNonStandby
-	// so we have to handle both.
 	metricsInit := []struct {
 		MetricName    []string
 		MetadataLabel []metrics.Label
