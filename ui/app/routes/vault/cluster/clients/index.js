@@ -44,13 +44,13 @@ export default Route.extend(ClusterRoute, {
   },
 
   model(params) {
-    let config = this.store.queryRecord('metrics/config', {}).catch(e => {
+    let config = this.store.queryRecord('clients/config', {}).catch(e => {
       console.debug(e);
       // swallowing error so activity can show if no config permissions
       return {};
     });
     const activityParams = getActivityParams(params);
-    let activity = this.store.queryRecord('metrics/activity', activityParams);
+    let activity = this.store.queryRecord('clients/activity', activityParams);
 
     return hash({
       queryStart: params.start,

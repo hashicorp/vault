@@ -110,7 +110,7 @@ export default Component.extend({
     handleQuery() {
       const start = format(this.startDate, 'MM-yyyy');
       const end = format(this.endDate, 'MM-yyyy');
-      this.router.transitionTo('vault.cluster.metrics', {
+      this.router.transitionTo('vault.cluster.clients', {
         queryParams: {
           start,
           end,

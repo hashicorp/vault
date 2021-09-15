@@ -72,14 +72,14 @@
           <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
         </div>
         <div class="navbar-separator is-hidden-mobile"></div>
-      {{else if (and (has-permission 'metrics' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
+      {{else if (and (has-permission 'clients' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
         <div class="navbar-sections">
-          <div class="{{if (is-active-route 'vault.cluster.metrics') 'is-active'}}">
+          <div class="{{if (is-active-route 'vault.cluster.clients') 'is-active'}}">
             {{#link-to
-              "vault.cluster.metrics"
+              "vault.cluster.clients"
               (query-params tab="history")
-              current-when="vault.cluster.metrics"
-              data-test-navbar-item='metrics'
+              current-when="vault.cluster.clients"
+              data-test-navbar-item='clients'
             }}
               Client count
             {{/link-to}}

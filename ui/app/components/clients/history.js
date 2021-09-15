@@ -4,10 +4,10 @@ export default class HistoryComponent extends Component {
   max_namespaces = 10;
 
   get dataset() {
-    if (!this.args.model.activity || !this.args.model.activity.by_namespace) {
+    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
-    let dataset = this.args.model.activity.by_namespace;
+    let dataset = this.args.model.activity.byNamespace;
     // Filter out root data
     dataset = dataset.filter(item => {
       return item.namespace_id != 'root';
