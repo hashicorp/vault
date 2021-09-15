@@ -185,7 +185,7 @@ DONELISTHANDLING:
 	}
 
 	// Store the accessor of the approle secret in WrappedAccessor
-	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok && resp.Auth == nil {
+	if secretIdAccessor, ok := resp.Data["secret_id_accessor"]; ok && resp.Auth == nil && req.MountType == "approle" {
 		resp.WrapInfo.WrappedAccessor = secretIdAccessor.(string)
 	}
 
