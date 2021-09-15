@@ -334,8 +334,8 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 			return nil, err
 		}
 
-		// Bail unless it's just a case change or no custom meta data change
-		if existingAlias != nil && !strings.EqualFold(existingAlias.Name, name) && reflect.DeepEqual(customMetadata, alias.CustomMetadata) {
+		// Bail unless it's just a case change
+		if existingAlias != nil && !strings.EqualFold(existingAlias.Name, name) {
 			return logical.ErrorResponse("alias with combination of mount accessor and name already exists"), nil
 		}
 
