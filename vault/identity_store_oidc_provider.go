@@ -338,26 +338,32 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"client_id": {
 					Type:        framework.TypeString,
 					Description: "The ID of the requesting client.",
+					Required:    true,
 				},
 				"scope": {
 					Type:        framework.TypeString,
 					Description: "A space-delimited, case-sensitive list of scopes to be requested. The 'openid' scope is required.",
+					Required:    true,
 				},
 				"redirect_uri": {
 					Type:        framework.TypeString,
 					Description: "The redirection URI to which the response will be sent.",
+					Required:    true,
 				},
 				"response_type": {
 					Type:        framework.TypeString,
 					Description: "The OIDC authentication flow to be used. The following response types are supported: 'code'",
+					Required:    true,
 				},
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
+					Required:    true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
 					Description: "The value that will be returned in the ID token nonce claim after a token exchange.",
+					Required:    true,
 				},
 				"max_age": {
 					Type:        framework.TypeInt,
