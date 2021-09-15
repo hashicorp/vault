@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
+
 	"github.com/NYTimes/gziphandler"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
@@ -210,9 +212,20 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	return printablePathCheckHandler
 }
 
+type WrappingResponseWriter interface {
+	http.ResponseWriter
+	Wrapped() http.ResponseWriter
+}
+
 type statusHeaderResponseWriter struct {
 	wrapped http.ResponseWriter
+	logger  log.Logger
+
 	// headers map[int]http.Header
+}
+
+func (w statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
+	return w.wrapped
 }
 
 func (w statusHeaderResponseWriter) Header() http.Header {
@@ -232,7 +245,7 @@ func (w statusHeaderResponseWriter) WriteHeader(statusCode int) {
 	w.wrapped.WriteHeader(statusCode)
 }
 
-var _ http.ResponseWriter = &statusHeaderResponseWriter{}
+var _ WrappingResponseWriter = &statusHeaderResponseWriter{}
 
 type copyResponseWriter struct {
 	wrapped    http.ResponseWriter
@@ -324,7 +337,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w = &statusHeaderResponseWriter{wrapped: w}
+		w = &statusHeaderResponseWriter{wrapped: w, logger: core.Logger()}
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
@@ -658,7 +671,15 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
-			reader = http.MaxBytesReader(w, r.Body, max)
+			// MaxBytesReader won't do all the internal stuff it must unless it's
+			// given a ResponseWriter that implements the internal http interface
+			// requestTooLarger.  So we let it have access to the underlying
+			// ResponseWriter.
+			inw := w
+			if myw, ok := inw.(WrappingResponseWriter); ok {
+				inw = myw.Wrapped()
+			}
+			reader = http.MaxBytesReader(inw, r.Body, max)
 		}
 	}
 	var origBody io.ReadWriter
