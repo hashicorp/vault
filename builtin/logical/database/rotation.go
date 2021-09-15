@@ -310,6 +310,8 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return output, errors.New("input was empty when attempting to set credentials for static account")
 	}
+	b.Lock()
+	defer b.Unlock()
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
 	if err != nil {
