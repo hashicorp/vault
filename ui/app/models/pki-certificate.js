@@ -30,11 +30,10 @@ export default Model.extend({
     ];
   }),
 
-  // add missing attributes commonName, issueDate, expiryDate
-  // object key names in serializer need to match new attributes
-  // issueDate = issue_date in serializer
   issueDate: attr('string'),
-  expiryDate: attr('string'),
+  expiryDate: attr('string', {
+    label: 'Expiration date',
+  }),
   role: attr('object', {
     readOnly: true,
   }),

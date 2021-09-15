@@ -9,7 +9,9 @@ export default Certificate.extend({
     return [
       'csr',
       'certificate',
-      'expiration',
+      'commonName',
+      'issueDate',
+      'expiryDate',
       'issuingCa',
       'caChain',
       'privateKey',
@@ -17,28 +19,32 @@ export default Certificate.extend({
       'serialNumber',
     ];
   }),
+  addBasicConstraints: attr('boolean', {
+    label: 'Add a Basic Constraints extension with CA: true',
+    helpText:
+      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  }),
   backend: attr('string', {
     readOnly: true,
   }),
-
   caType: attr('string', {
     possibleValues: ['root', 'intermediate'],
     defaultValue: 'root',
     label: 'CA Type',
     readOnly: true,
   }),
-  uploadPemBundle: attr('boolean', {
-    label: 'Upload PEM bundle',
-    readOnly: true,
+  commonName: attr('string'),
+  expiryDate: attr('string', {
+    label: 'Expiration date',
   }),
+  issueDate: attr('string'),
   pemBundle: attr('string', {
     label: 'PEM bundle',
     editType: 'file',
   }),
-  addBasicConstraints: attr('boolean', {
-    label: 'Add a Basic Constraints extension with CA: true',
-    helpText:
-      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  uploadPemBundle: attr('boolean', {
+    label: 'Upload PEM bundle',
+    readOnly: true,
   }),
 
   fieldDefinition: computed('caType', 'uploadPemBundle', function() {
@@ -145,7 +151,7 @@ export default Certificate.extend({
     label: 'CSR',
     masked: true,
   }),
-  expiration: attr(),
+  expirationDate: attr(),
 
   deletePath: lazyCapabilities(apiPath`${'backend'}/root`, 'backend'),
   canDeleteRoot: and('deletePath.canDelete', 'deletePath.canSudo'),
