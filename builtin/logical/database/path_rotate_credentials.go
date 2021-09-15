@@ -188,6 +188,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		} else {
 			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+			item.Value = ""
 		}
 
 		// Add their rotation to the queue
@@ -195,8 +197,13 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, fmt.Errorf("unable to finish rotating credentials; retries will "+
+				"continue in the background but it is also safe to retry manually: %w", err)
+		}
+
 		// return any err from the setStaticAccount call
-		return nil, err
+		return nil, nil
 	}
 }
 

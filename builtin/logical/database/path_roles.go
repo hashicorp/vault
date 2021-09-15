@@ -482,19 +482,22 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 	// Only call setStaticAccount if we're creating the role for the
 	// first time
+	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
 		// setStaticAccount calls Storage.Put and saves the role to storage
 		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName:   name,
-			Role:       role,
-			CreateUser: createRole,
+			RoleName: name,
+			Role:     role,
 		})
 		if err != nil {
 			return nil, err
 		}
 		// guard against RotationTime not being set or zero-value
 		lvr = resp.RotationTime
+		item = &queue.Item{
+			Key: name,
+		}
 	case logical.UpdateOperation:
 		// store updated Role
 		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
@@ -504,17 +507,15 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
-
-		// In case this is an update, remove any previous version of the item from
-		// the queue
-		b.popFromRotationQueueByKey(name)
+		item, err = b.popFromRotationQueueByKey(name)
+		if err != nil {
+			return nil, err
+		}
 	}
+	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
 
 	// Add their rotation to the queue
-	if err := b.pushItem(&queue.Item{
-		Key:      name,
-		Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
-	}); err != nil {
+	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
 
