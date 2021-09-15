@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -215,7 +216,26 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		return nil, err
 	}
 
-	return nil, nil
+	walIDs, err := framework.ListWAL(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	var merr *multierror.Error
+	for _, walID := range walIDs {
+		wal, err := b.findStaticWAL(ctx, req.Storage, walID)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+			continue
+		}
+		if wal != nil && name == wal.RoleName {
+			err = framework.DeleteWAL(ctx, req.Storage, walID)
+			if err != nil {
+				merr = multierror.Append(merr, err)
+			}
+		}
+	}
+
+	return nil, merr.ErrorOrNil()
 }
 
 func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -491,7 +511,15 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			Role:     role,
 		})
 		if err != nil {
-			return nil, err
+			if resp != nil && resp.WALID != "" {
+				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
+				if walDeleteErr != nil {
+					var merr *multierror.Error
+					merr = multierror.Append(merr, err)
+					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
+					err = merr.ErrorOrNil()
+				}
+			}
 		}
 		// guard against RotationTime not being set or zero-value
 		lvr = resp.RotationTime
