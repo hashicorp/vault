@@ -23,15 +23,17 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 
 	testMounts := []struct {
 		Path          string
+		Type          string
 		Version       string
 		ExpectedCount int
 	}{
-		{"secret/", "2", 0},
-		{"secret1/", "1", 3},
-		{"secret2/", "1", 0},
-		{"secret3/", "2", 4},
-		{"prefix/secret3/", "2", 0},
-		{"prefix/secret4/", "2", 5},
+		{"secret/", "kv", "2", 0},
+		{"secret1/", "kv", "1", 3},
+		{"secret2/", "kv", "1", 0},
+		{"secret3/", "kv", "2", 4},
+		{"prefix/secret3/", "kv", "2", 0},
+		{"prefix/secret4/", "kv", "2", 5},
+		{"generic/", "generic", "1", 3},
 	}
 	ctx := namespace.RootContext(nil)
 
@@ -40,7 +42,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		me := &MountEntry{
 			Table:   mountTableType,
 			Path:    sanitizePath(tm.Path),
-			Type:    "kv",
+			Type:    tm.Type,
 			Options: map[string]string{"version": tm.Version},
 		}
 		err := core.mount(ctx, me)
@@ -53,6 +55,9 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		"secret1/a", // 3
 		"secret1/b",
 		"secret1/c/d",
+		"generic/a",
+		"generic/b",
+		"generic/c",
 	}
 	v2secrets := []string{
 		"secret3/data/a", // 4

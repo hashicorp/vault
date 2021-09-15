@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -193,6 +194,14 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(int); ok {
 				(*dst)[i].KeyVersion = casted
+			} else if js, ok := v.(json.Number); ok {
+				// https://github.com/hashicorp/vault/issues/10232
+				// Because API server parses json request with UseNumber=true, logical.Request.Data can include json.Number for a number field.
+				if casted, err := js.Int64(); err == nil {
+					(*dst)[i].KeyVersion = int(casted)
+				} else {
+					errs.Errors = append(errs.Errors, fmt.Sprintf(`error decoding %T into [%d].key_version: strconv.ParseInt: parsing "%s": invalid syntax`, v, i, v))
+				}
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
 			}
@@ -208,7 +217,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 
 func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -327,7 +336,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	p, upserted, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, upserted, err = b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}

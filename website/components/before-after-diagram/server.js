@@ -1,5 +1,5 @@
-import md from '@hashicorp/nextjs-scripts/markdown/markdown-to-html'
-import mdInline from '@hashicorp/nextjs-scripts/markdown/markdown-to-inline-html'
+import md from '@hashicorp/platform-markdown-utils/markdown-to-html'
+import mdInline from '@hashicorp/platform-markdown-utils/markdown-to-inline-html'
 
 export default async function processBeforeAfterDiagramProps(props) {
   const { beforeHeadline, beforeContent, afterHeadline, afterContent } = props

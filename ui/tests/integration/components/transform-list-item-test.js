@@ -19,7 +19,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     this.set('itemPath', 'role/foo');
     this.set('itemType', 'role');
     this.set('item', item);
-    await render(hbs`<TransformListItem
+    await render(hbs`<SecretList::TransformListItem
       @item={{item}}
       @itemPath={{itemPath}}
       @itemType={{itemType}}
@@ -41,7 +41,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     this.set('itemPath', 'template/foo');
     this.set('itemType', 'template');
     this.set('item', item);
-    await render(hbs`<TransformListItem
+    await render(hbs`<SecretList::TransformListItem
       @item={{item}}
       @itemPath={{itemPath}}
       @itemType={{itemType}}
@@ -64,7 +64,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     this.set('itemPath', 'alphabet/foo');
     this.set('itemType', 'alphabet');
     this.set('item', item);
-    await render(hbs`<TransformListItem
+    await render(hbs`<SecretList::TransformListItem
       @item={{item}}
       @itemPath={{itemPath}}
       @itemType={{itemType}}
@@ -87,7 +87,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     this.set('itemPath', 'template/builtin/foo');
     this.set('itemType', 'template');
     this.set('item', item);
-    await render(hbs`<TransformListItem
+    await render(hbs`<SecretList::TransformListItem
       @item={{item}}
       @itemPath={{itemPath}}
       @itemType={{itemType}}
@@ -109,7 +109,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     this.set('itemPath', 'alphabet/builtin/foo');
     this.set('itemType', 'alphabet');
     this.set('item', item);
-    await render(hbs`<TransformListItem
+    await render(hbs`<SecretList::TransformListItem
       @item={{item}}
       @itemPath={{itemPath}}
       @itemType={{itemType}}

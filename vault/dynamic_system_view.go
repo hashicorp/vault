@@ -277,7 +277,7 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 		alias := identity.ToSDKAlias(a)
 
 		// MountType is not stored with the entity and must be looked up
-		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
+		if mount := d.core.router.ValidateMountByAccessor(a.MountAccessor); mount != nil {
 			alias.MountType = mount.MountType
 		}
 
@@ -336,11 +336,11 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	// Ensure there's a timeout on the context of some sort
 	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
 		var cancel func()
-		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 	}
 
-	policyCfg, err := retrievePasswordPolicy(ctx, d.core.systemBarrierView, policyName)
+	policyCfg, err := d.retrievePasswordPolicy(ctx, policyName)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve password policy: %w", err)
 	}

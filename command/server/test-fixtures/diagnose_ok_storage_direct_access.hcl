@@ -17,7 +17,7 @@ backend "consul" {
 ha_backend "consul" {
     address = "127.0.0.1:1024"
     bar = "baz"
-    advertise_addr = "snafu"
+    advertise_addr = "https://127.0.0.1:8500"
     disable_clustering = "true"
 }
 

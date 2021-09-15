@@ -128,14 +128,14 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerPartialName: computed('selectedAuthBackend.type', function() {
+  providerName: computed('selectedAuthBackend.type', function() {
     if (!this.selectedAuthBackend) {
       return;
     }
     let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
-    return `partials/auth-form/${templateName}`;
+    return templateName;
   }),
 
   hasCSPError: alias('csp.connectionViolations.firstObject'),
@@ -178,7 +178,16 @@ export default Component.extend(DEFAULTS, {
           unauthenticated: true,
         },
       });
-      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
+      this.set(
+        'methods',
+        methods.map(m => {
+          const method = m.serialize({ includeId: true });
+          return {
+            ...method,
+            mountDescription: method.description,
+          };
+        })
+      );
       next(() => {
         store.unloadAll('auth-method');
       });

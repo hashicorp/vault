@@ -18,11 +18,11 @@ import (
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
@@ -37,6 +37,8 @@ var (
 
 	// TestingUpdateClusterAddr is used in tests to override the cluster address
 	TestingUpdateClusterAddr uint32
+
+	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
 
 // GetRaftNodeID returns the raft node ID if there is one, or an empty string if there's not
@@ -179,12 +181,15 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 	disableAutopilot := c.disableAutopilot
-	if c.IsDRSecondary() {
-		disableAutopilot = true
-	}
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
+
+	// Reload the raft TLS keys to ensure we are using the latest version.
+	if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+		return err
+	}
+
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 
@@ -942,39 +947,28 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 			case leaderInfo.AutoJoin != "":
-				addrs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
+				scheme := leaderInfo.AutoJoinScheme
+				if scheme == "" {
+					// default to HTTPS when no scheme is provided
+					scheme = "https"
+				}
+				port := leaderInfo.AutoJoinPort
+				if port == 0 {
+					// default to 8200 when no port is provided
+					port = 8200
+				}
+				// Addrs returns either IPv4 or IPv6 address sans scheme or port
+				clusterIPs, err := disco.Addrs(leaderInfo.AutoJoin, c.logger.StandardLogger(nil))
 				if err != nil {
 					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
-
-				for _, addr := range addrs {
-					u, err := url.Parse(addr)
-					if err != nil {
-						c.logger.Error("failed to parse discovered address", "error", err)
-						continue
+				for _, ip := range clusterIPs {
+					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "["){
+						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
+						ip = fmt.Sprintf("[%s]", ip)
 					}
-
-					if u.Scheme == "" {
-						scheme := leaderInfo.AutoJoinScheme
-						if scheme == "" {
-							// default to HTTPS when no scheme is provided
-							scheme = "https"
-						}
-
-						addr = fmt.Sprintf("%s://%s", scheme, addr)
-					}
-
-					if u.Port() == "" {
-						port := leaderInfo.AutoJoinPort
-						if port == 0 {
-							// default to 8200 when no port is provided
-							port = 8200
-						}
-
-						addr = fmt.Sprintf("%s:%d", addr, port)
-					}
-
-					if err := joinLeader(leaderInfo, addr); err != nil {
+					u := fmt.Sprintf("%s://%s:%d", scheme, ip, port)
+					if err := joinLeader(leaderInfo, u); err != nil {
 						c.logger.Warn("join attempt failed", "error", err)
 					} else {
 						// successfully joined leader
@@ -1101,6 +1095,9 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
+	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+		return ErrJoinWithoutAutoloading
+	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
 		return err
 	}
@@ -1201,8 +1198,9 @@ type answerRespData struct {
 }
 
 type answerResp struct {
-	Peers      []raft.Peer      `json:"peers"`
-	TLSKeyring *raft.TLSKeyring `json:"tls_keyring"`
+	Peers             []raft.Peer      `json:"peers"`
+	TLSKeyring        *raft.TLSKeyring `json:"tls_keyring"`
+	AutoloadedLicense bool             `json:"autoloaded_license"`
 }
 
 func newDiscover() (*discover.Discover, error) {

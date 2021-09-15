@@ -15,19 +15,18 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/raft-boltdb/v2"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
@@ -219,7 +218,7 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 	var leaderInfos []*LeaderJoinInfo
 	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode retry_join config: %w", err)
 	}
 
 	if len(leaderInfos) == 0 {
@@ -238,7 +237,7 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 		info.Retry = true
 		info.TLSConfig, err = parseTLSInfo(info)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node (retry_join index: %d): {{err}}", i), err)
+			return nil, fmt.Errorf("failed to create tls config to communicate with leader node (retry_join index: %d): %w", i, err)
 		}
 	}
 
@@ -365,7 +364,15 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
+		freelistType, noFreelistSync := freelistOptions()
+		raftOptions := raftboltdb.Options{
+			Path: filepath.Join(path, "raft.db"),
+			BoltOptions: &bolt.Options{
+				FreelistType:   freelistType,
+				NoFreelistSync: noFreelistSync,
+			},
+		}
+		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -664,6 +671,11 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	config.NoSnapshotRestoreOnStart = true
 	config.MaxAppendEntries = 64
 
+	// Setting BatchApplyCh allows the raft library to enqueue up to
+	// MaxAppendEntries into each raft apply rather than relying on the
+	// scheduler.
+	config.BatchApplyCh = true
+
 	return nil
 }
 
@@ -804,7 +816,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 		recoveryConfig, err := raft.ReadConfigJSON(peersFile)
 		if err != nil {
-			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
+			return fmt.Errorf("raft recovery failed to parse peers.json: %w", err)
 		}
 
 		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
@@ -819,12 +831,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
-			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
+			return fmt.Errorf("raft recovery failed: %w", err)
 		}
 
 		err = os.Remove(peersFile)
 		if err != nil {
-			return errwrap.Wrapf("raft recovery failed to delete peers.json; please delete manually: {{err}}", err)
+			return fmt.Errorf("raft recovery failed to delete peers.json; please delete manually: %w", err)
 		}
 		b.logger.Info("raft recovery deleted peers.json")
 	}
@@ -832,7 +844,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	if opts.RecoveryModeConfig != nil {
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *opts.RecoveryModeConfig)
 		if err != nil {
-			return errwrap.Wrapf("recovering raft cluster failed: {{err}}", err)
+			return fmt.Errorf("recovering raft cluster failed: %w", err)
 		}
 	}
 
@@ -857,7 +869,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			case <-ctx.Done():
 				future := raftObj.Shutdown()
 				if future.Error() != nil {
-					return errwrap.Wrapf("shutdown while waiting for leadership: {{err}}", future.Error())
+					return fmt.Errorf("shutdown while waiting for leadership: %w", future.Error())
 				}
 
 				return errors.New("shutdown while waiting for leadership")
@@ -966,6 +978,10 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if b.disableAutopilot {
 		if b.raft == nil {
 			return errors.New("raft storage is not initialized")
@@ -983,7 +999,49 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	return b.autopilot.RemoveServer(raft.ServerID(peerID))
 }
 
+// GetConfigurationOffline is used to read the stale, last known raft
+// configuration to this node. It accesses the last state written into the
+// FSM. When a server is online use GetConfiguration instead.
+func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft != nil {
+		return nil, errors.New("raft storage is initialized, used GetConfiguration instead")
+	}
+
+	if b.fsm == nil {
+		return nil, nil
+	}
+
+	state, configuration := b.fsm.LatestState()
+	config := &RaftConfigurationResponse{
+		Index: state.Index,
+	}
+
+	if configuration == nil || configuration.Servers == nil {
+		return config, nil
+	}
+
+	for _, server := range configuration.Servers {
+		entry := &RaftServer{
+			NodeID:  server.Id,
+			Address: server.Address,
+			// Since we are offline no node is the leader.
+			Leader: false,
+			Voter:  raft.ServerSuffrage(server.Suffrage) == raft.Voter,
+		}
+		config.Servers = append(config.Servers, entry)
+	}
+
+	return config, nil
+}
+
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1018,6 +1076,10 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 
 // AddPeer adds a new server to the raft cluster
 func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1046,6 +1108,10 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 
 // Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1130,6 +1196,10 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 // RestoreSnapshot applies the provided snapshot metadata and snapshot data to
 // raft.
 func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snap io.Reader) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1164,6 +1234,11 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 // Delete inserts an entry in the log to delete the given path
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
 			{
@@ -1188,17 +1263,23 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		return nil, errors.New("raft: fsm not configured")
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	entry, err := b.fsm.Get(ctx, path)
 	if entry != nil {
 		valueLen := len(entry.Value)
 		if uint64(valueLen) > b.maxEntrySize {
-			b.logger.Warn(
-				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
-				"size", valueLen, "suggested", b.maxEntrySize,
-			)
+			b.logger.Warn("retrieved entry value is too large, has raft's max_entry_size been reduced?",
+				"size", valueLen, "max_entry_size", b.maxEntrySize)
 		}
 	}
 
@@ -1210,6 +1291,11 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
 			{
@@ -1236,8 +1322,16 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 		return nil, errors.New("raft: fsm not configured")
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	return b.fsm.List(ctx, prefix)
 }
@@ -1246,6 +1340,11 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 // applies it.
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "transaction"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: make([]*LogOperation, len(txns)),
 	}
@@ -1281,6 +1380,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
 		return errors.New("raft storage is not initialized")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	commandBytes, err := proto.Marshal(command)
@@ -1540,4 +1642,22 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
+}
+
+// freelistOptions returns the freelist type and nofreelistsync values to use
+// when opening boltdb files, based on our preferred defaults, and the possible
+// presence of overriding environment variables.
+func freelistOptions() (bolt.FreelistType, bool) {
+	freelistType := bolt.FreelistMapType
+	noFreelistSync := true
+
+	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
+		freelistType = bolt.FreelistArrayType
+	}
+
+	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
+		noFreelistSync = false
+	}
+
+	return freelistType, noFreelistSync
 }

@@ -12,9 +12,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"
 )
@@ -128,7 +127,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	_, _, err = c.Container(container)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("Unable to access container %q: {{err}}", container), err)
+		return nil, fmt.Errorf("Unable to access container %q: %w", container, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -136,7 +135,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)

@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole"
@@ -37,7 +37,7 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "rabbitmq",
-		ImageTag:      "3-management",
+		ImageTag:      "3.8-management",
 		ContainerName: "rabbitmq",
 		Ports:         []string{"15672/tcp"},
 	})

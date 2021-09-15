@@ -53,7 +53,10 @@
           data-test-warning
         />
       {{/if}}
-      {{partial "partials/form-field-groups-loop"}}
+      <FormFieldGroupsLoop
+        @model={{model}}
+        @mode={{mode}}
+      />
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
         <div class="field is-grouped">
           <div class="control">
@@ -119,7 +122,10 @@
     <NamespaceReminder @mode="save" @noun="PKI change" />
     <MessageError @model={{model}} />
     <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
-      {{partial "partials/form-field-groups-loop"}}
+      <FormFieldGroupsLoop
+        @model={{model}}
+        @mode={{mode}}
+      />
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <button data-test-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>

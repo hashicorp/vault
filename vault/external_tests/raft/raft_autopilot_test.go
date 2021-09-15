@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/vault"
 	"github.com/kr/pretty"
 	testingintf "github.com/mitchellh/go-testing-interface"
@@ -380,7 +380,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if reflect.DeepEqual(core0Peers, core1Peers) && reflect.DeepEqual(core1Peers, core2Peers) {
+		if len(core0Peers) == 3 && reflect.DeepEqual(core0Peers, core1Peers) && reflect.DeepEqual(core1Peers, core2Peers) {
 			break
 		}
 		time.Sleep(time.Second)

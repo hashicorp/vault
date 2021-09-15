@@ -1,0 +1,27 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.9.0 - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.9.0. Please read it carefully.
+---
+
+~> Note: these are **draft** notes for a future version of Vault. They should not be considered
+official guidance until the release has been completed.
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.9.0 compared to 1.8. Please read it carefully.
+
+## Identity Tokens
+
+The Identity secrets engine has changed the procedure for creating Identity
+token roles. When creating a role, the key parameter is required and the key
+must exist. Previously, it was possible to create a role and assign it a named
+key that did not yet exist despite the documentation stating otherwise.
+
+All calls to [create or update a role](https://www.vaultproject.io/api/secret/identity/tokens#create-or-update-a-role)
+must be checked to ensure that roles are not being created or updated with
+non-existent keys.
+

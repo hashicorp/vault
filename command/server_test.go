@@ -1,4 +1,4 @@
-// +build !race,!hsm
+// +build !race,!hsm,!fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -22,6 +22,12 @@ import (
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
 )
+
+func init() {
+	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
+		os.Setenv(EnvVaultLicense, signed)
+	}
+}
 
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
@@ -90,8 +96,9 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		},
 
 		// These prevent us from random sleep guessing...
-		startedCh:  make(chan struct{}, 5),
-		reloadedCh: make(chan struct{}, 5),
+		startedCh:         make(chan struct{}, 5),
+		reloadedCh:        make(chan struct{}, 5),
+		licenseReloadedCh: make(chan error),
 	}
 }
 

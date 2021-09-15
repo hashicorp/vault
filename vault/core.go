@@ -32,21 +32,21 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -120,6 +120,11 @@ var (
 	LastRemoteWAL                = lastRemoteWALImpl
 	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
 	WaitUntilWALShipped          = waitUntilWALShippedImpl
+	storedLicenseCheck           = func(c *Core, conf *CoreConfig) error { return nil }
+	LicenseAutoloaded            = func(*Core) bool { return false }
+	LicenseInitCheck             = func(*Core) error { return nil }
+	LicenseSummary               = func(*Core) (*LicenseState, error) { return nil, nil }
+	LicenseReload                = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -515,9 +520,6 @@ type Core struct {
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
 
-	// Stores request counters
-	counters counters
-
 	// raftFollowerStates tracks information about all the raft follower nodes.
 	raftFollowerStates *raft.FollowerStates
 	// Stop channel for raft TLS rotations
@@ -570,6 +572,17 @@ type Core struct {
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
+}
+
+func (c *Core) HAState() consts.HAState {
+	switch {
+	case c.perfStandby:
+		return consts.PerfStandby
+	case c.standby:
+		return consts.Standby
+	default:
+		return consts.Active
+	}
 }
 
 // CoreConfig is used to parameterize a core
@@ -651,8 +664,6 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
-	// Don't set this unless in dev mode, ideally only when using inmem
-	DevLicenseDuration time.Duration
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -663,8 +674,6 @@ type CoreConfig struct {
 	// Telemetry objects
 	MetricsHelper *metricsutil.MetricsHelper
 	MetricSink    *metricsutil.ClusterMetricSink
-
-	CounterSyncInterval time.Duration
 
 	RecoveryMode bool
 
@@ -705,8 +714,9 @@ func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
 	return nil
 }
 
-// NewCore is used to construct a new core
-func NewCore(conf *CoreConfig) (*Core, error) {
+// CreateCore conducts static validations on the Core Config
+// and returns an uninitialized core.
+func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		if conf.RedirectAddr == "" {
 			return nil, fmt.Errorf("missing API address, please set in configuration or via environment")
@@ -750,11 +760,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.RawConfig = new(server.Config)
 	}
 
-	syncInterval := conf.CounterSyncInterval
-	if syncInterval.Nanoseconds() == 0 {
-		syncInterval = 30 * time.Second
-	}
-
 	// secureRandomReader cannot be nil
 	if conf.SecureRandomReader == nil {
 		conf.SecureRandomReader = rand.Reader
@@ -789,39 +794,35 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		baseLogger:          conf.Logger,
 		logger:              conf.Logger.Named("core"),
 
-		defaultLeaseTTL:              conf.DefaultLeaseTTL,
-		maxLeaseTTL:                  conf.MaxLeaseTTL,
-		sentinelTraceDisabled:        conf.DisableSentinelTrace,
-		cachingDisabled:              conf.DisableCache,
-		clusterName:                  conf.ClusterName,
-		clusterNetworkLayer:          conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache: cache.New(3*clusterHeartbeatInterval, time.Second),
-		enableMlock:                  !conf.DisableMlock,
-		rawEnabled:                   conf.EnableRaw,
-		shutdownDoneCh:               make(chan struct{}),
-		replicationState:             new(uint32),
-		atomicPrimaryClusterAddrs:    new(atomic.Value),
-		atomicPrimaryFailoverAddrs:   new(atomic.Value),
-		localClusterPrivateKey:       new(atomic.Value),
-		localClusterCert:             new(atomic.Value),
-		localClusterParsedCert:       new(atomic.Value),
-		activeNodeReplicationState:   new(uint32),
-		keepHALockOnStepDown:         new(uint32),
-		replicationFailure:           new(uint32),
-		disablePerfStandby:           true,
-		activeContextCancelFunc:      new(atomic.Value),
-		allLoggers:                   conf.AllLoggers,
-		builtinRegistry:              conf.BuiltinRegistry,
-		neverBecomeActive:            new(uint32),
-		clusterLeaderParams:          new(atomic.Value),
-		metricsHelper:                conf.MetricsHelper,
-		metricSink:                   conf.MetricSink,
-		secureRandomReader:           conf.SecureRandomReader,
-		rawConfig:                    new(atomic.Value),
-		counters: counters{
-			requests:     new(uint64),
-			syncInterval: syncInterval,
-		},
+		defaultLeaseTTL:                conf.DefaultLeaseTTL,
+		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		sentinelTraceDisabled:          conf.DisableSentinelTrace,
+		cachingDisabled:                conf.DisableCache,
+		clusterName:                    conf.ClusterName,
+		clusterNetworkLayer:            conf.ClusterNetworkLayer,
+		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
+		enableMlock:                    !conf.DisableMlock,
+		rawEnabled:                     conf.EnableRaw,
+		shutdownDoneCh:                 make(chan struct{}),
+		replicationState:               new(uint32),
+		atomicPrimaryClusterAddrs:      new(atomic.Value),
+		atomicPrimaryFailoverAddrs:     new(atomic.Value),
+		localClusterPrivateKey:         new(atomic.Value),
+		localClusterCert:               new(atomic.Value),
+		localClusterParsedCert:         new(atomic.Value),
+		activeNodeReplicationState:     new(uint32),
+		keepHALockOnStepDown:           new(uint32),
+		replicationFailure:             new(uint32),
+		disablePerfStandby:             true,
+		activeContextCancelFunc:        new(atomic.Value),
+		allLoggers:                     conf.AllLoggers,
+		builtinRegistry:                conf.BuiltinRegistry,
+		neverBecomeActive:              new(uint32),
+		clusterLeaderParams:            new(atomic.Value),
+		metricsHelper:                  conf.MetricsHelper,
+		metricSink:                     conf.MetricSink,
+		secureRandomReader:             conf.SecureRandomReader,
+		rawConfig:                      new(atomic.Value),
 		recoveryMode:                   conf.RecoveryMode,
 		postUnsealStarted:              new(uint32),
 		raftJoinDoneCh:                 make(chan struct{}),
@@ -894,8 +895,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		})
 	}
 	c.seal.SetCore(c)
+	return c, nil
+}
 
-	if err := coreInit(c, conf); err != nil {
+// NewCore is used to construct a new core
+func NewCore(conf *CoreConfig) (*Core, error) {
+	var err error
+	c, err := CreateCore(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = coreInit(c, conf); err != nil {
 		return nil, err
 	}
 
@@ -915,14 +926,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
-	var err error
-
 	// Construct a new AES-GCM barrier
 	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
 
+	if err := storedLicenseCheck(c, conf); err != nil {
+		return nil, err
+	}
 	// We create the funcs here, then populate the given config with it so that
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
@@ -1658,8 +1670,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}()
 
 	if req == nil {
-		retErr = multierror.Append(retErr, errors.New("nil request to seal"))
-		return retErr
+		return errors.New("nil request to seal")
 	}
 
 	// Since there is no token store in standby nodes, sealing cannot be done.
@@ -1669,14 +1680,19 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// same thing.
 	if c.standby {
 		c.logger.Error("vault cannot seal when in standby mode; please restart instead")
-		retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
-		return retErr
+		return errors.New("vault cannot seal when in standby mode; please restart instead")
 	}
 
+	err := c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+			return logical.ErrPermissionDenied
+		}
+		return logical.ErrInvalidRequest
+	}
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
+		return err
 	}
 
 	// Audit-log the request before going any further
@@ -1702,19 +1718,16 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
-		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
-		return retErr
+		return errors.New("failed to audit request, cannot continue")
 	}
 
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		return retErr
+		return logical.ErrPermissionDenied
 	}
 	if te != nil && te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
-		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-		return retErr
+		return logical.ErrPermissionDenied
 	}
 
 	// Attempt to use the token (decrement num_uses)
@@ -1723,13 +1736,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		te, err = c.tokenStore.UseToken(ctx, te)
 		if err != nil {
 			c.logger.Error("failed to use token", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return retErr
+			return ErrInternalError
 		}
 		if te == nil {
 			// Token is no longer valid
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
-			return retErr
+			return logical.ErrPermissionDenied
 		}
 	}
 
@@ -1970,9 +1981,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
-	if err := c.loadCurrentRequestCounters(ctx, time.Now()); err != nil {
-		return err
-	}
 	if err := c.loadCredentials(ctx); err != nil {
 		return err
 	}
@@ -2169,6 +2177,7 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
+
 	if err := enterprisePreSeal(c); err != nil {
 		result = multierror.Append(result, err)
 	}
@@ -2719,12 +2728,12 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby)
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
 // If the given request's path is exempt, no rate limiting will be applied.
-func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
+func (c *Core) ApplyRateLimitQuota(ctx context.Context, req *quotas.Request) (quotas.Response, error) {
 	req.Type = quotas.TypeRateLimit
 
 	resp := quotas.Response{
@@ -2738,7 +2747,7 @@ func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error)
 			return resp, nil
 		}
 
-		return c.quotaManager.ApplyQuota(req)
+		return c.quotaManager.ApplyQuota(ctx, req)
 	}
 
 	return resp, nil
@@ -2861,4 +2870,10 @@ func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,
 	}, nil
+}
+
+type LicenseState struct {
+	State      string
+	ExpiryTime time.Time
+	Terminated bool
 }

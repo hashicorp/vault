@@ -20,16 +20,16 @@ import (
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -348,8 +348,8 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 
 	// Verify extracts the authenticated attributes in the PKCS#7 signature, and verifies
 	// the authenticity of the content using 'dsa.PublicKey' embedded in the public certificate.
-	if pkcs7Data.Verify() != nil {
-		return nil, fmt.Errorf("failed to verify the signature")
+	if err := pkcs7Data.Verify(); err != nil {
+		return nil, fmt.Errorf("failed to verify the signature: %w", err)
 	}
 
 	// Check if the signature has content inside of it
@@ -1364,7 +1364,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	if roleEntry.InferredEntityType == ec2EntityType {
 		instance, err := b.validateInstance(ctx, req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", entity.SessionInfo, roleEntry.InferredAWSRegion)), nil
+			return logical.ErrorResponse("failed to verify %s as a valid EC2 instance in region %s: %s", entity.SessionInfo, roleEntry.InferredAWSRegion, err), nil
 		}
 
 		// build a fake identity doc to pass on metadata about the instance to verifyInstanceMeetsRoleRequirements

@@ -1,0 +1,3 @@
+```release-note:bug
+core: correct logic for renewal of leases nearing their expiration time.
+```

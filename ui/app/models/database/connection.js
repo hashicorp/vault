@@ -198,10 +198,10 @@ export default Model.extend({
   port: attr('string', {}),
   write_concern: attr('string', {
     subText: 'Optional. Must be in JSON. See our documentation for help.',
+    allowReset: true,
     editType: 'json',
     theme: 'hashi short',
     defaultShown: 'Default',
-    // defaultValue: '# For example: { "wmode": "majority", "wtimeout": 5000 }',
   }),
   username_template: attr('string', {
     editType: 'optionalText',

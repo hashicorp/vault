@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
@@ -1060,6 +1060,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			OtherSANs:                     otherSANs,
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
+			SignatureBits:                 data.role.SignatureBits,
 			NotAfter:                      notAfter,
 			KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 			ExtKeyUsage:                   parseExtKeyUsages(data.role),
