@@ -569,7 +569,15 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			// Send the request to the OIDC authorize endpoint
 			resp, err = c.identityStore.HandleRequest(ctx, tt.args.authorizeRequest)
 			if tt.wantErr {
-				expectError(t, resp, err)
+				var res struct {
+					Error            string `json:"error"`
+					ErrorDescription string `json:"error_description"`
+				}
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.Data["http_raw_body"])
+				assert.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &res))
+				assert.NotEmpty(t, res.Error)
+				assert.NotEmpty(t, res.ErrorDescription)
 				return
 			}
 
