@@ -33,9 +33,7 @@ export default ApplicationAdapter.extend({
       // version comes in as a string
       if (mountModel.data.type === 'kv' && mountModel.data.options.version === '2') {
         configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
-        let data = mountModel.data;
-        data = { ...mountModel.data, ...configModel.data };
-        mountModel.data = data;
+        mountModel.data = { ...mountModel.data, ...configModel.data };
       }
     } catch (error) {
       // control groups will throw a 403 permission denied error. If this happens return the mountModel
