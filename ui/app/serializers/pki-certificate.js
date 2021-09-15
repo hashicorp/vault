@@ -66,7 +66,6 @@ export default RESTSerializer.extend({
     // getMetadata is a function (make a helper...later) use forge to parse the cert
     // get info we want, and always return an object so wrap in a try
     let transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
-    console.log(transformedPayload);
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 

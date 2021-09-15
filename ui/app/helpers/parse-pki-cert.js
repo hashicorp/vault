@@ -2,8 +2,8 @@ import { helper } from '@ember/component/helper';
 import { pki } from 'node-forge';
 
 export function parsePkiCert([model]) {
-  // model has to be the responseJSON from a PKI serializer
-  if (model.certificate) {
+  // model has to be the responseJSON from PKI serializer
+  if (!model.certificate) {
     throw new Error();
   }
   const cert = pki.certificateFromPem(model.certificate);
