@@ -905,14 +905,14 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
-		respondStandby(core, w, r)
+		respondStandby(core, w, r.URL)
 		return
 	}
 
 	if r.Header.Get(NoRequestForwardingHeaderName) != "" {
 		// Forwarding explicitly disabled, fall back to previous behavior
 		core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
-		respondStandby(core, w, r)
+		respondStandby(core, w, r.URL)
 		return
 	}
 
@@ -923,7 +923,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 	if alwaysRedirectPaths.HasPath(path) {
-		respondStandby(core, w, r)
+		respondStandby(core, w, r.URL)
 		return
 	}
 
@@ -939,7 +939,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Fall back to redirection
-		respondStandby(core, w, r)
+		respondStandby(core, w, r.URL)
 		return
 	}
 
@@ -964,7 +964,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
-		respondStandby(core, w, rawReq)
+		respondStandby(core, w, rawReq.URL)
 		return resp, false, false
 	}
 	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
@@ -1013,9 +1013,8 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
-func respondStandby(core *vault.Core, w http.ResponseWriter, req *http.Request) {
+func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 
-	reqURL := req.URL
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
