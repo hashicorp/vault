@@ -115,7 +115,8 @@ set `disable_mlock` to `true`, and to disable memory swapping on the system.
 
 - `leader_api_addr` `(string: "")` - Address of a possible leader node.
 
-- `auto_join` `(string: "")` - Cloud auto-join configuration.
+- `auto_join` `(string: "")` - Cloud auto-join configuration, using
+  [go-discover](https://github.com/hashicorp/go-discover) syntax.
 
 - `auto_join_scheme` `(string: "")` - The optional URI protocol scheme for addresses
   discovered via auto-join.
