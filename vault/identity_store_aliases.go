@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
@@ -306,7 +305,7 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
-		(canonicalID == alias.CanonicalID || canonicalID == "") && (reflect.DeepEqual(customMetadata, alias.CustomMetadata)) {
+		(canonicalID == alias.CanonicalID || canonicalID == "") && (strutil.EqualStringMaps(customMetadata, alias.CustomMetadata)) {
 		// Nothing to do; return nil to be idempotent
 		return nil, nil
 	}
@@ -316,7 +315,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	// If we're changing one or the other or both of these, make sure that
 	// there isn't a matching alias already, and make sure it's in the same
 	// namespace.
-	if name != alias.Name || mountAccessor != alias.MountAccessor || !reflect.DeepEqual(customMetadata, alias.CustomMetadata) {
+	if name != alias.Name || mountAccessor != alias.MountAccessor || !strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) {
 		// Check here to see if such an alias already exists, if so bail
 		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
