@@ -100,10 +100,12 @@ type providerDiscovery struct {
 }
 
 type authCodeCacheEntry struct {
-	entityID string
-	nonce    string
-	scopes   []string
-	authTime time.Time
+	clientID    string
+	entityID    string
+	redirectURI string
+	nonce       string
+	scopes      []string
+	authTime    time.Time
 }
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -1424,9 +1426,11 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 
 	// Create the auth code cache entry
 	authCodeEntry := &authCodeCacheEntry{
-		entityID: entity.GetID(),
-		nonce:    nonce,
-		scopes:   scopes,
+		clientID:    clientID,
+		entityID:    entity.GetID(),
+		redirectURI: redirectURI,
+		nonce:       nonce,
+		scopes:      scopes,
 	}
 
 	// Validate the optional max_age parameter to check if an active re-authentication
