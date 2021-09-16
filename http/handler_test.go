@@ -599,7 +599,7 @@ func TestHandler_ui_enabled(t *testing.T) {
 func TestHandler_error(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	respondError(w, 500, errors.New("test Error"), nil)
+	respondError(w, 500, errors.New("test Error"))
 
 	if w.Code != 500 {
 		t.Fatalf("expected 500, got %d", w.Code)
@@ -610,7 +610,7 @@ func TestHandler_error(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	e := logical.CodedError(403, "error text")
 
-	respondError(w2, 500, e, nil)
+	respondError(w2, 500, e)
 
 	if w2.Code != 403 {
 		t.Fatalf("expected 403, got %d", w2.Code)
@@ -619,7 +619,7 @@ func TestHandler_error(t *testing.T) {
 	// vault.ErrSealed is a special case
 	w3 := httptest.NewRecorder()
 
-	respondError(w3, 400, consts.ErrSealed, nil)
+	respondError(w3, 400, consts.ErrSealed)
 
 	if w3.Code != 503 {
 		t.Fatalf("expected 503, got %d", w3.Code)

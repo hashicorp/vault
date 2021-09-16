@@ -42,7 +42,6 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -2638,7 +2637,7 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
-func (c *Core) getCustomResponseHeaders(la string) []*listenerutil.ListenerCustomHeaders {
+func (c *Core) getCustomResponseHeaders(la string) []*ListenerCustomHeaders {
 	if c.customListenerHeader == nil {
 		c.logger.Debug("failed to find the custom response headers configuration")
 		return nil
@@ -2653,7 +2652,7 @@ func (c *Core) getCustomResponseHeaders(la string) []*listenerutil.ListenerCusto
 	return lch
 }
 
-func (c *Core) GetListenerCustomResponseHeaders(la string) *listenerutil.ListenerCustomHeaders {
+func (c *Core) GetListenerCustomResponseHeaders(la string) *ListenerCustomHeaders {
 
 	if la == "" {
 		return nil

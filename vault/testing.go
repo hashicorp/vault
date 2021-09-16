@@ -128,6 +128,61 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
+func TestCoreWithCustomResponseHeaderAndUI(t testing.T, enableUI bool) (*Core, [][]byte, string) {
+	confRaw := &server.Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:    "tcp",
+					Address: "127.0.0.1",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": {
+							"Strict-Transport-Security": "max-age=1; domains",
+							"Content-Security-Policy": "default-src 'others'",
+							"X-Vault-Ignored": "ignored",
+							"X-Custom-Header": "Custom header value default",
+							"X-Frame-Options": "Deny",
+							"X-Content-Type-Options": "nosniff",
+							"Content-Type": "application/json",
+							"X-XSS-Protection": "1; mode=block",
+						},
+						"307": {"X-Custom-Header": "Custom header value 307"},
+						"3xx": {
+							"X-Custom-Header": "Custom header value 3xx",
+							"X-Vault-Ignored-3xx": "Ignored 3xx",
+						},
+						"200": {
+							"Someheader-200": "200",
+							"X-Custom-Header": "Custom header value 200",
+						},
+						"2xx": {
+							"X-Custom-Header": "Custom header value 2xx",
+						},
+						"400": {
+							"Someheader-400": "400",
+						},
+						"405":{
+							"Someheader-405": "405",
+						},
+						"4xx": {
+							"Someheader-4xx": "4xx",
+						},
+					},
+				},
+			},
+			DisableMlock: true,
+		},
+	}
+	conf := &CoreConfig{
+		RawConfig: 	     confRaw,
+		EnableUI:        enableUI,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	core := TestCoreWithSealAndUI(t, conf)
+	return testCoreUnsealed(t, core)
+}
+
 func TestCoreUI(t testing.T, enableUI bool) *Core {
 	conf := &CoreConfig{
 		EnableUI:        enableUI,

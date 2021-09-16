@@ -31,7 +31,7 @@ func handleSysInternalFeatureFlags(core *vault.Core) http.Handler {
 		case "GET":
 			break
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, r)
+			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 
 		response := &FeatureFlagsResponse{}
@@ -43,9 +43,7 @@ func handleSysInternalFeatureFlags(core *vault.Core) http.Handler {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		status := http.StatusOK
-		SetCustomResponseHeaders(w, status, r)
-		w.WriteHeader(status)
+		w.WriteHeader(http.StatusOK)
 
 		// Generate the response
 		enc := json.NewEncoder(w)

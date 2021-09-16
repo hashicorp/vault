@@ -14,7 +14,7 @@ func handleSysLeader(core *vault.Core) http.Handler {
 		case "GET":
 			handleSysLeaderGet(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, r)
+			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
@@ -22,8 +22,8 @@ func handleSysLeader(core *vault.Core) http.Handler {
 func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	resp, err := core.GetLeaderStatus()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, r)
+		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
-	respondOk(w, resp, r)
+	respondOk(w, resp)
 }

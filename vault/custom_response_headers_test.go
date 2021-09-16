@@ -96,28 +96,6 @@ func TestConfigCustomHeaders(t *testing.T) {
 		t.Fatalf("header name with X-Vault prefix is not valid")
 	}
 
-	w := httptest.NewRecorder()
-	lch.SetCustomResponseHeaders(w, 200)
-	if w.Header().Get("Someheader-200") != "200" || w.Header().Get("X-Custom-Header") != "Custom header value 200"{
-		t.Fatalf("response headers related to status code %v did not set properly", 200)
-	}
-
-	w = httptest.NewRecorder()
-	lch.SetCustomResponseHeaders(w, 204)
-	if w.Header().Get("Someheader-200") == "200" || w.Header().Get("X-Custom-Header") != "Custom header value 2xx" {
-		t.Fatalf("response headers related to status code %v did not set properly", "2xx")
-	}
-
-	w = httptest.NewRecorder()
-	lch.SetCustomResponseHeaders(w, 500)
-	for h, v := range defaultCustomHeaders {
-		if h != "X-Vault-Ignored" && w.Header().Get(h) != v {
-			t.Fatalf("response headers related to status code %v did not set properly", 500)
-		}
-	}
-	if w.Header().Get("X-Vault-Ignored") != "" {
-		t.Fatalf("response headers contains a header with pattern X-Vault")
-	}
 }
 
 func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {

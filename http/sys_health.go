@@ -22,7 +22,7 @@ func handleSysHealth(core *vault.Core) http.Handler {
 		case "HEAD":
 			handleSysHealthHead(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, r)
+			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
@@ -44,17 +44,16 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
-		respondError(w, code, nil, r)
+		respondError(w, code, nil)
 		return
 	}
 
 	if body == nil {
-		respondError(w, code, nil, r)
+		respondError(w, code, nil)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	SetCustomResponseHeaders(w, code, r)
 	w.WriteHeader(code)
 
 	// Generate the response
@@ -69,7 +68,6 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		w.Header().Set("Content-Type", "application/json")
 	}
 
-	SetCustomResponseHeaders(w, code, r)
 	w.WriteHeader(code)
 }
 

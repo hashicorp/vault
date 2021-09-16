@@ -18,16 +18,16 @@ func handleSysRaftBootstrap(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "POST", "PUT":
 			if core.Sealed() {
-				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"), r)
+				respondError(w, http.StatusBadRequest, errors.New("node must be unsealed to bootstrap"))
 			}
 
 			if err := core.RaftBootstrap(context.Background(), false); err != nil {
-				respondError(w, http.StatusInternalServerError, err, r)
+				respondError(w, http.StatusInternalServerError, err)
 				return
 			}
 
 		default:
-			respondError(w, http.StatusBadRequest, nil, r)
+			respondError(w, http.StatusBadRequest, nil)
 		}
 	})
 }
@@ -38,7 +38,7 @@ func handleSysRaftJoin(core *vault.Core) http.Handler {
 		case "POST", "PUT":
 			handleSysRaftJoinPost(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, r)
+			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
@@ -47,12 +47,12 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	// Parse the request
 	var req JoinRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
-		respondError(w, http.StatusBadRequest, err, r)
+		respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	if req.NonVoter && !nonVotersAllowed {
-		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"), r)
+		respondError(w, http.StatusBadRequest, errors.New("non-voting nodes not allowed"))
 		return
 	}
 
@@ -61,14 +61,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 	if len(req.LeaderCACert) != 0 || len(req.LeaderClientCert) != 0 || len(req.LeaderClientKey) != 0 {
 		tlsConfig, err = tlsutil.ClientTLSConfig([]byte(req.LeaderCACert), []byte(req.LeaderClientCert), []byte(req.LeaderClientKey))
 		if err != nil {
-			respondError(w, http.StatusBadRequest, err, r)
+			respondError(w, http.StatusBadRequest, err)
 			return
 		}
 		tlsConfig.ServerName = req.LeaderTLSServerName
 	}
 
 	if req.AutoJoinScheme != "" && (req.AutoJoinScheme != "http" && req.AutoJoinScheme != "https") {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme), r)
+		respondError(w, http.StatusBadRequest, fmt.Errorf("invalid scheme '%s'; must either be http or https", req.AutoJoinScheme))
 		return
 	}
 
@@ -85,14 +85,14 @@ func handleSysRaftJoinPost(core *vault.Core, w http.ResponseWriter, r *http.Requ
 
 	joined, err := core.JoinRaftCluster(context.Background(), leaderInfos, req.NonVoter)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, r)
+		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	resp := JoinResponse{
 		Joined: joined,
 	}
-	respondOk(w, resp, r)
+	respondOk(w, resp)
 }
 
 type JoinResponse struct {

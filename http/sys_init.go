@@ -17,7 +17,7 @@ func handleSysInit(core *vault.Core) http.Handler {
 		case "PUT", "POST":
 			handleSysInitPut(core, w, r)
 		default:
-			respondError(w, http.StatusMethodNotAllowed, nil, r)
+			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
 	})
 }
@@ -25,13 +25,13 @@ func handleSysInit(core *vault.Core) http.Handler {
 func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	init, err := core.Initialized(context.Background())
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err, r)
+		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	respondOk(w, &InitStatusResponse{
 		Initialized: init,
-	}, r)
+	})
 }
 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
@@ -41,7 +41,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	// Parse the request
 	var req InitRequest
 	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
-		respondError(w, http.StatusBadRequest, err, r)
+		respondError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -68,7 +68,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	result, initErr := core.Initialize(ctx, initParams)
 	if initErr != nil {
 		if vault.IsFatalError(initErr) {
-			respondError(w, http.StatusBadRequest, initErr, r)
+			respondError(w, http.StatusBadRequest, initErr)
 			return
 		} else {
 			// Add a warnings field? The error will be logged in the vault log
@@ -100,11 +100,11 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := core.UnsealWithStoredKeys(ctx); err != nil {
-		respondError(w, http.StatusInternalServerError, err, r)
+		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	respondOk(w, resp, r)
+	respondOk(w, resp)
 }
 
 type InitRequest struct {
