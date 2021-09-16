@@ -4,13 +4,18 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
@@ -34,6 +39,8 @@ type RaftClusterOpts struct {
 	PhysicalFactoryConfig          map[string]interface{}
 	DisablePerfStandby             bool
 	EnableResponseHeaderRaftNodeID bool
+	NumCores                       int
+	Seal                           vault.Seal
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -47,6 +54,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 		},
 		DisableAutopilot:               !ropts.EnableAutopilot,
 		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
+		Seal:                           ropts.Seal,
 	}
 
 	var opts = vault.TestClusterOptions{
@@ -55,6 +63,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.InmemClusterLayers = ropts.InmemCluster
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
+	opts.NumCores = ropts.NumCores
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
@@ -481,6 +490,58 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 
 	if len(secret.Data["keys"].([]interface{})) != 10 {
 		t.Fatal("snapshot didn't apply correctly")
+	}
+}
+
+func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
+	// defer goleak.VerifyNone(t)
+	t.Parallel()
+
+	seal, errptr := vaultseal.NewToggleableTestSeal(nil)
+	cluster := raftCluster(t, &RaftClusterOpts{
+		NumCores: 1,
+		Seal:     vault.NewAutoSeal(seal),
+	})
+	defer cluster.Cleanup()
+
+	leaderClient := cluster.Cores[0].Client
+
+	// Write a bunch of keys; if too few, the detection code in api.RaftSnapshot
+	// will never make it into the tar part, it'll fail merely when trying to
+	// decompress the stream.
+	for i := 0; i < 1000; i++ {
+		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			"test": "data",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	r, w := io.Pipe()
+	var snap []byte
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var readErr error
+	go func() {
+		snap, readErr = ioutil.ReadAll(r)
+		wg.Done()
+	}()
+
+	*errptr = errors.New("seal failure")
+	// Take a snapshot
+	err := leaderClient.Sys().RaftSnapshot(w)
+	w.Close()
+	if err == nil || err != api.ErrIncompleteSnapshot {
+		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)
+	}
+	wg.Wait()
+	if len(snap) == 0 && readErr == nil {
+		readErr = errors.New("no bytes read")
+	}
+	if readErr != nil {
+		t.Fatal(readErr)
 	}
 }
 

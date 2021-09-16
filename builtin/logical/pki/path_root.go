@@ -2,11 +2,17 @@ package pki
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strings"
 	"time"
@@ -103,6 +109,10 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 			"certificate": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
+			},
+			"allow_different_signature_algorithm": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `If true, allow the public key type of the signer to differ from the self issued certificate.`,
 			},
 		},
 
@@ -429,6 +439,25 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
 
+	// If the requested signature algorithm isn't the same as the signing certificate, and
+	// the user has requested a cross-algorithm signature, reset the template's signing algorithm
+	// to that of the signing key
+	signingPubType, signingAlgorithm, err := publicKeyType(signingBundle.Certificate.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("error determining signing certificate algorithm type: %e", err)
+	}
+	certPubType, _, err := publicKeyType(cert.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("error determining template algorithm type: %e", err)
+	}
+
+	if signingPubType != certPubType {
+		b, ok := data.GetOk("allow_different_signature_algorithm")
+		if ok && b.(bool) {
+			cert.SignatureAlgorithm = signingAlgorithm
+		}
+	}
+
 	newCert, err := x509.CreateCertificate(rand.Reader, cert, signingBundle.Certificate, cert.PublicKey, signingBundle.PrivateKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)
@@ -447,6 +476,34 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 			"issuing_ca":  signingCB.Certificate,
 		},
 	}, nil
+}
+
+// Adapted from similar code in https://github.com/golang/go/blob/4a4221e8187189adcc6463d2d96fe2e8da290132/src/crypto/x509/x509.go#L1342,
+// may need to be updated in the future.
+func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAlgo x509.SignatureAlgorithm, err error) {
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		pubType = x509.RSA
+		sigAlgo = x509.SHA256WithRSA
+	case *ecdsa.PublicKey:
+		pubType = x509.ECDSA
+		switch pub.Curve {
+		case elliptic.P224(), elliptic.P256():
+			sigAlgo = x509.ECDSAWithSHA256
+		case elliptic.P384():
+			sigAlgo = x509.ECDSAWithSHA384
+		case elliptic.P521():
+			sigAlgo = x509.ECDSAWithSHA512
+		default:
+			err = errors.New("x509: unknown elliptic curve")
+		}
+	case ed25519.PublicKey:
+		pubType = x509.Ed25519
+		sigAlgo = x509.PureEd25519
+	default:
+		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
+	}
+	return
 }
 
 const pathGenerateRootHelpSyn = `
