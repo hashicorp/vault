@@ -121,7 +121,6 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 }
 
 func handleSysGenerateRootAttemptDelete(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-
 	err := core.GenerateRootCancel()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
@@ -141,8 +140,7 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must be specified in request body as JSON"),
-				)
+				errors.New("'key' must be specified in request body as JSON"))
 			return
 		}
 
@@ -157,8 +155,7 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 			if err != nil {
 				respondError(
 					w, http.StatusBadRequest,
-					errors.New("'key' must be a valid hex or base64 string"),
-					)
+					errors.New("'key' must be a valid hex or base64 string"))
 				return
 			}
 		}

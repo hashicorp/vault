@@ -166,8 +166,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must be specified in request body as JSON"),
-				)
+				errors.New("'key' must be specified in request body as JSON"))
 			return
 		}
 
@@ -182,8 +181,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			if err != nil {
 				respondError(
 					w, http.StatusBadRequest,
-					errors.New("'key' must be a valid hex or base64 string"),
-					)
+					errors.New("'key' must be a valid hex or base64 string"))
 				return
 			}
 		}
@@ -235,8 +233,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		repState := core.ReplicationState()
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
-				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"),
-				)
+				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"))
 			return
 		}
 
@@ -317,8 +314,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 	if req.Key == "" {
 		respondError(
 			w, http.StatusBadRequest,
-			errors.New("'key' must be specified in request body as JSON"),
-			)
+			errors.New("'key' must be specified in request body as JSON"))
 		return
 	}
 
@@ -333,8 +329,7 @@ func handleSysRekeyVerifyPut(ctx context.Context, core *vault.Core, recovery boo
 		if err != nil {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must be a valid hex or base64 string"),
-				)
+				errors.New("'key' must be a valid hex or base64 string"))
 			return
 		}
 	}

@@ -334,7 +334,6 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		origBody := new(bytes.Buffer)
 		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
 		r.Body = reader
-
 		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
@@ -385,7 +384,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		maxRequestSize = DefaultMaxRequestSize
 	}
 
-
 	// Swallow this error since we don't want to pollute the logs and we also don't want to
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
@@ -427,7 +425,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
-
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
@@ -595,7 +592,6 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 				header.Set(k, v)
 			}
 		}
-
 		h.ServeHTTP(w, req)
 	})
 }
@@ -903,7 +899,6 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 }
 
 func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-
 	if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
 		respondStandby(core, w, r.URL)
 		return
@@ -1014,7 +1009,6 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
 func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
-
 	// Request the leader address
 	_, redirectAddr, _, err := core.Leader()
 	if err != nil {

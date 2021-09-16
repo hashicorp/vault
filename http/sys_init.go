@@ -35,7 +35,6 @@ func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
-
 	ctx := context.Background()
 
 	// Parse the request

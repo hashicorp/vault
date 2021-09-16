@@ -11,7 +11,6 @@ import (
 
 func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		req := &logical.Request{Headers: r.Header}
 
 		switch r.Method {
