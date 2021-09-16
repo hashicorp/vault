@@ -33,11 +33,16 @@ export default Certificate.extend({
     label: 'CA Type',
     readOnly: true,
   }),
-  commonName: attr('string'),
+  commonName: attr('string', {
+    defaultValue: "i'm a common name",
+  }),
   expiryDate: attr('string', {
+    defaultValue: 'i am expire',
     label: 'Expiration date',
   }),
-  issueDate: attr('string'),
+  issueDate: attr('string', {
+    defaultValue: 'i am issue',
+  }),
   pemBundle: attr('string', {
     label: 'PEM bundle',
     editType: 'file',
@@ -151,7 +156,6 @@ export default Certificate.extend({
     label: 'CSR',
     masked: true,
   }),
-  expirationDate: attr(),
 
   deletePath: lazyCapabilities(apiPath`${'backend'}/root`, 'backend'),
   canDeleteRoot: and('deletePath.canDelete', 'deletePath.canSudo'),
