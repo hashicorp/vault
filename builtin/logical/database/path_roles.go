@@ -547,6 +547,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			}
 			return nil, nil
 		}
+
 	}
 	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
 
