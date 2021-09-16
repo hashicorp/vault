@@ -585,6 +585,8 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			expectSuccess(t, resp, err)
 			assert.NotNil(t, resp.Data["code"])
 			assert.Regexp(t, "[a-zA-Z0-9]{32}", resp.Data["code"].(string))
+			assert.NotNil(t, resp.Data["state"])
+			assert.NotEmpty(t, resp.Data["state"].(string))
 		})
 	}
 }

@@ -1478,7 +1478,8 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"code": code,
+			"code":  code,
+			"state": state,
 		},
 	}, nil
 }
