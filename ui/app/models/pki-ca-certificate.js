@@ -17,6 +17,7 @@ export default Certificate.extend({
       'privateKey',
       'privateKeyType',
       'serialNumber',
+      'meep',
     ];
   }),
   backend: attr('string', {
@@ -32,11 +33,9 @@ export default Certificate.extend({
     label: 'Upload PEM bundle',
     readOnly: true,
   }),
-  commonName: attr('string', {
-    defaultValue: "i'm a common name",
-  }),
-  expiryDate: attr('string', {
-    defaultValue: 'i am expire',
+  commonName: attr('string'),
+  meep: attr('string'),
+  expiration: attr('string', {
     label: 'Expiration date',
   }),
   issueDate: attr('string', {

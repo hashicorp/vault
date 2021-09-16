@@ -9,16 +9,16 @@ export default RESTSerializer.extend({
     return decamelize(attr);
   },
 
-  pushPayload(store, payload) {
-    const transformedPayload = this.normalizeResponse(
-      store,
-      store.modelFor(payload.modelName),
-      payload,
-      payload.id,
-      'findRecord'
-    );
-    return store.push(transformedPayload);
-  },
+  // pushPayload(store, payload) {
+  //   const transformedPayload = this.normalizeResponse(
+  //     store,
+  //     store.modelFor(payload.modelName),
+  //     payload,
+  //     payload.id,
+  //     'findRecord'
+  //   );
+  //   return store.push(transformedPayload);
+  // },
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
@@ -40,6 +40,7 @@ export default RESTSerializer.extend({
   },
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    debugger;
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
     // let certMetadata;
@@ -57,6 +58,7 @@ export default RESTSerializer.extend({
   },
 
   serializeAttribute(snapshot, json, key, attributes) {
+    debugger;
     const val = snapshot.attr(key);
     const valHasNotChanged = isNone(snapshot.changedAttributes()[key]);
     const valIsBlank = isBlank(val);
