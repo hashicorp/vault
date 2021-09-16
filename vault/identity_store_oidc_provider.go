@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -1313,9 +1314,9 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 			"state":             state,
 		}
 
-		statusCode := 400
+		statusCode := http.StatusBadRequest
 		if errorCode == ErrAuthServerError {
-			statusCode = 500
+			statusCode = http.StatusInternalServerError
 		}
 
 		data, err := json.Marshal(response)
