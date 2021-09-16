@@ -11,18 +11,13 @@ export default Certificate.extend({
       'certificate',
       'commonName',
       'issueDate',
-      'expiryDate',
+      'expiration',
       'issuingCa',
       'caChain',
       'privateKey',
       'privateKeyType',
       'serialNumber',
     ];
-  }),
-  addBasicConstraints: attr('boolean', {
-    label: 'Add a Basic Constraints extension with CA: true',
-    helpText:
-      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
   }),
   backend: attr('string', {
     readOnly: true,
@@ -31,6 +26,10 @@ export default Certificate.extend({
     possibleValues: ['root', 'intermediate'],
     defaultValue: 'root',
     label: 'CA Type',
+    readOnly: true,
+  }),
+  uploadPemBundle: attr('boolean', {
+    label: 'Upload PEM bundle',
     readOnly: true,
   }),
   commonName: attr('string', {
@@ -47,9 +46,10 @@ export default Certificate.extend({
     label: 'PEM bundle',
     editType: 'file',
   }),
-  uploadPemBundle: attr('boolean', {
-    label: 'Upload PEM bundle',
-    readOnly: true,
+  addBasicConstraints: attr('boolean', {
+    label: 'Add a Basic Constraints extension with CA: true',
+    helpText:
+      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
   }),
 
   fieldDefinition: computed('caType', 'uploadPemBundle', function() {
