@@ -17,7 +17,7 @@ export default class HistoryComponent extends Component {
     let dataset = this.args.model.activity.byNamespace;
     // Filter out root data
     dataset = dataset.filter(item => {
-      return item.namespace_id != 'root';
+      return item.namespace_id !== 'root';
     });
     // Show only top 10 namespaces
     dataset = dataset.slice(0, this.max_namespaces);
