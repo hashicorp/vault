@@ -9,6 +9,7 @@ import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
+  flashMessages: service(),
   secretParam() {
     let { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
@@ -251,7 +252,15 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType === 'secret-v2') {
       // after the the base model fetch, kv-v2 has a second associated
       // version model that contains the secret data
-      secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+      try {
+        secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+      } catch (err) {
+        // if you don't have access to the secret or doesn't exist (ARG TODO double check dn't have access)
+        // this error is now capture in the actions error
+        throw new Error('permissions');
+      }
+      this.secretModel.set('isPermissionsError', false);
+      return secretModel;
     }
     return {
       secret: secretModel,
@@ -259,7 +268,8 @@ export default Route.extend(UnloadModelRoute, {
     };
   },
 
-  setupController(controller, model) {
+  setupController(controller, model, error) {
+    console.log(error.message, 'MEEP');
     this._super(...arguments);
     let secret = this.secretParam();
     let backend = this.enginePathParam();
@@ -280,6 +290,7 @@ export default Route.extend(UnloadModelRoute, {
       backend,
       preferAdvancedEdit,
       backendType,
+      isPermissionsError: this.isPermissionsError,
     });
   },
 
@@ -291,6 +302,13 @@ export default Route.extend(UnloadModelRoute, {
 
   actions: {
     error(error) {
+      if (error.message === 'permissions') {
+        // this error is caught after passing through handleSecretModelError and returning an empty secretModel.
+        // we don't want them to transition off the page, only know the operation they're attempting is not possible with their permission level or they've entered the wrong secret.
+        this.flashMessages.danger('You do not have access to view that secret or it does not exist.');
+        return false;
+      }
+      // otherwise show them the error page.
       let secret = this.secretParam();
       let backend = this.enginePathParam();
       set(error, 'keyId', backend + '/' + secret);
