@@ -25,6 +25,14 @@ export default ApplicationAdapter.extend({
     return 'mounts';
   },
 
+  async returnConfigModel(path) {
+    try {
+      return await this.ajax(this.urlForConfig(path), 'GET');
+    } catch (e) {
+      return e;
+    }
+  },
+
   async query(store, type, query) {
     let mountModel, configModel;
     try {

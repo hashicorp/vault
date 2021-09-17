@@ -257,10 +257,8 @@ export default Route.extend(UnloadModelRoute, {
       } catch (err) {
         // if you don't have access to the secret or doesn't exist (ARG TODO double check dn't have access)
         // this error is now capture in the actions error
-        throw new Error('permissions');
+        throw new Error('permissionsError');
       }
-      this.secretModel.set('isPermissionsError', false);
-      return secretModel;
     }
     return {
       secret: secretModel,
@@ -268,8 +266,7 @@ export default Route.extend(UnloadModelRoute, {
     };
   },
 
-  setupController(controller, model, error) {
-    console.log(error.message, 'MEEP');
+  setupController(controller, model) {
     this._super(...arguments);
     let secret = this.secretParam();
     let backend = this.enginePathParam();
@@ -290,7 +287,6 @@ export default Route.extend(UnloadModelRoute, {
       backend,
       preferAdvancedEdit,
       backendType,
-      isPermissionsError: this.isPermissionsError,
     });
   },
 
@@ -302,7 +298,7 @@ export default Route.extend(UnloadModelRoute, {
 
   actions: {
     error(error) {
-      if (error.message === 'permissions') {
+      if (error.message === 'permissionsError') {
         // this error is caught after passing through handleSecretModelError and returning an empty secretModel.
         // we don't want them to transition off the page, only know the operation they're attempting is not possible with their permission level or they've entered the wrong secret.
         this.flashMessages.danger('You do not have access to view that secret or it does not exist.');

@@ -5,12 +5,16 @@
  *
  * @example
  * ```js
- * <GetCredentialsCard @title="Get Credentials" @searchLabel="Role to use" @models={{array 'database/roles'}} />
+ * <GetCredentialsCard @title="Get Credentials" @searchLabel="Role to use" @models={{array 'database/roles'}} @type="role" @backend={{model.backend}}/>
  * ```
  * @param title=null {String} - The title displays the card title
  * @param searchLabel=null {String} - The text above the searchSelect component
  * @param models=null {Array} - An array of model types to fetch from the API.  Passed through to SearchSelect component
  * @param type=null {String} - Determines where the transitionTo goes. If role to backend.credentials, if secret backend.show
+ * @param shouldUseFallback=[false] {Boolean} - If true the input is used instead of search select.
+ * @param subText=[null] {String} - Text below title
+ * @param placeHolder=[null] {String} - Only works if shouldUseFallback is true. Displays the helper text inside the input.
+ * @param backend=null {String} - Name of the backend to look up on search.
  */
 
 import Component from '@glimmer/component';
