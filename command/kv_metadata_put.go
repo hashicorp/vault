@@ -21,6 +21,7 @@ type KVMetadataPutCommand struct {
 	flagMaxVersions        int
 	flagCASRequired        bool
 	flagDeleteVersionAfter time.Duration
+	flagCustomMetadata     map[string]string
 	testStdin              io.Reader // for tests
 }
 
@@ -50,6 +51,10 @@ Usage: vault metadata kv put [options] KEY
   Require Check-and-Set for this key:
 
       $ vault kv metadata put -cas-required secret/foo
+
+  Set custom metadata on the key:
+
+      $ vault kv metadata put -custom-metadata=foo=abc -custom-metadata=bar=123 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -88,6 +93,14 @@ func (c *KVMetadataPutCommand) Flags() *FlagSets {
 		greater than the backend's delete-version-after. The delete-version-after is
 		specified as a numeric string with a suffix like "30s" or
 		"3h25m19s".`,
+	})
+
+	f.StringMapVar(&StringMapVar{
+		Name: "custom-metadata",
+		Target: &c.flagCustomMetadata,
+		Default: map[string]string{},
+		Usage: "Specifies arbitrary version-agnostic key=value metadata meant to describe a secret." +
+			"This can be specified multiple times to add multiple pieces of metadata.",
 	})
 
 	return set
@@ -139,8 +152,9 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 
 	path = addPrefixToVKVPath(path, mountPath, "metadata")
 	data := map[string]interface{}{
-		"max_versions": c.flagMaxVersions,
-		"cas_required": c.flagCASRequired,
+		"max_versions":  c.flagMaxVersions,
+		"cas_required":  c.flagCASRequired,
+		"custom_metadata": c.flagCustomMetadata,
 	}
 
 	if c.flagDeleteVersionAfter >= 0 {

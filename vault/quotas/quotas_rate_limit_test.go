@@ -37,7 +37,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 			err := tc.rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink())
 			require.Equal(t, tc.expectErr, err != nil, err)
 			if err == nil {
-				require.Nil(t, tc.rlq.close())
+				require.Nil(t, tc.rlq.close(context.Background()))
 			}
 		})
 	}
@@ -46,7 +46,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 func TestRateLimitQuota_Close(t *testing.T) {
 	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", 16.7, time.Second, time.Minute)
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
-	require.NoError(t, rlq.close())
+	require.NoError(t, rlq.close(context.Background()))
 
 	time.Sleep(time.Second) // allow enough time for purgeClientsLoop to receive on closeCh
 	require.False(t, rlq.getPurgeBlocked(), "expected blocked client purging to be disabled after explicit close")
@@ -66,14 +66,14 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 	}
 
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
-	defer rlq.close()
+	defer rlq.close(context.Background())
 
 	var wg sync.WaitGroup
 
 	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
 		defer wg.Done()
 
-		resp, err := rlq.allow(&Request{ClientAddress: addr})
+		resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
 		if err != nil {
 			return
 		}
@@ -141,7 +141,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 	}
 
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
-	defer rlq.close()
+	defer rlq.close(context.Background())
 	require.True(t, rlq.getPurgeBlocked())
 
 	var wg sync.WaitGroup
@@ -149,7 +149,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 	reqFunc := func(addr string, atomicNumAllow, atomicNumFail *atomic.Int32) {
 		defer wg.Done()
 
-		resp, err := rlq.allow(&Request{ClientAddress: addr})
+		resp, err := rlq.allow(context.Background(), &Request{ClientAddress: addr})
 		if err != nil {
 			return
 		}
@@ -221,5 +221,5 @@ func TestRateLimitQuota_Update(t *testing.T) {
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 
-	require.Nil(t, quota.close())
+	require.Nil(t, quota.close(context.Background()))
 }

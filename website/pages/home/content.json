@@ -20,7 +20,7 @@
         "content": "Use policy to codify, protect, and automate access to secrets."
       },
       "codeBlock": {
-        "options": { "showWindowBar": "true" },
+        "options": { "showChrome": "true" },
         "language": "shell-session",
         "code": "$ curl \n    --header \"X-Vault-Token: ...\" \n    --request POST \n    --data @payload.json \n    https://127.0.0.1:8200/v1/secret/config"
       }

@@ -200,7 +200,7 @@ func (c gRPCClient) DeleteUser(ctx context.Context, req DeleteUserRequest) (Dele
 		if c.doneCtx.Err() != nil {
 			return DeleteUserResponse{}, ErrPluginShutdown
 		}
-		return DeleteUserResponse{}, fmt.Errorf("unable to update user: %w", err)
+		return DeleteUserResponse{}, fmt.Errorf("unable to delete user: %w", err)
 	}
 
 	return deleteUserRespFromProto(rpcResp)
