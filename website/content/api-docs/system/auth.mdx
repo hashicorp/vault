@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/auth - HTTP API
-sidebar_title: <code>/sys/auth</code>
 description: The `/sys/auth` endpoint is used to manage auth methods in Vault.
 ---
 
@@ -84,26 +83,28 @@ For example, enable the "foo" auth method will make it accessible at
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
     string duration like "5s" or "30m".
 
-  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the request data object.
+  - `audit_non_hmac_request_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the request data object.
 
-  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the response data object.
+  - `audit_non_hmac_response_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint.
 
-  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist and pass from the request to the plugin.
+  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+    and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist, allowing a plugin to include them in the response.
+  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+    allowing a plugin to include them in the response.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Specifies if the auth method is local only. Local
   auth methods are not replicated nor (if a secondary) removed by replication.
+  Logins via local auth methods do not make use of identity, i.e. no entity
+  or groups will be attached to the token.
 
   ~> ** Warning:** Remember, policies when using replication secondaries are
   validated by the local cluster. An administrator that can set up a local auth
@@ -187,8 +188,11 @@ $ curl \
 
 ```json
 {
-  "default_lease_ttl": 3600,
-  "max_lease_ttl": 7200
+  "default_lease_ttl": 2764800,
+  "description": "",
+  "force_no_cache": false,
+  "max_lease_ttl": 2764800,
+  "token_type": "default-service"
 }
 ```
 
@@ -216,22 +220,20 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `description` `(string: "")` – Specifies the description of the mount. This
   overrides the current stored value, if any.
 
-- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the request data
-  object.
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the list of keys
+  that will not be HMAC'd by audit devices in the request data object.
 
-- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the response data
-  object.
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the list of keys
+  that will not be HMAC'd by audit devices in the response data object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount
   in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
 
-- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist and pass from the request to the plugin.
+- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist, allowing a plugin to include them in the response.
+- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  allowing a plugin to include them in the response.
 
 - `token_type` `(string: "")` – Specifies the type of tokens that should be
   returned by the mount. The following values are available:

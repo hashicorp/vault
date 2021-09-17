@@ -15,8 +15,7 @@ type clock interface {
 	NewTicker(time.Duration) *time.Ticker
 }
 
-type defaultClock struct {
-}
+type defaultClock struct{}
 
 func (_ defaultClock) Now() time.Time {
 	return time.Now()
@@ -205,6 +204,8 @@ func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 	// 1 second / 500 = 2 ms each, so we can send 25 per 50 milliseconds.
 	// That should be one or two packets.
 	sendTick := p.clock.NewTicker(50 * time.Millisecond)
+	defer sendTick.Stop()
+
 	batchSize := 25
 	for i, lv := range values {
 		if i > 0 && i%batchSize == 0 {
@@ -217,11 +218,9 @@ func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 			case <-sendTick.C:
 				break
 			}
-
 		}
 		p.sink.SetGaugeWithLabels(p.key, lv.Value, lv.Labels)
 	}
-	sendTick.Stop()
 }
 
 // Run should be called as a goroutine.

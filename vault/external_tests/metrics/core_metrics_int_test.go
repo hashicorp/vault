@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 )
@@ -25,7 +24,7 @@ func TestMountTableMetrics(t *testing.T) {
 		KeepStandbysSealed:     false,
 		HandlerFunc:            vaulthttp.Handler,
 		NumCores:               2,
-		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 	})
 
 	cluster.Start()
@@ -39,7 +38,7 @@ func TestMountTableMetrics(t *testing.T) {
 
 	// Verify that the nonlocal logical mount table has 3 entries -- cubbyhole, identity, and kv
 
-	data, err := sysMetricsReq(client, cluster)
+	data, err := testhelpers.SysMetricsReq(client, cluster, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +58,7 @@ func TestMountTableMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err = sysMetricsReq(client, cluster)
+	data, err = testhelpers.SysMetricsReq(client, cluster, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,31 +71,9 @@ func TestMountTableMetrics(t *testing.T) {
 	if nonlocalLogicalMountsizeAfterMount <= nonlocalLogicalMountsize {
 		t.Errorf("Mount size does not change after new mount is mounted")
 	}
-
 }
 
-func sysMetricsReq(client *api.Client, cluster *vault.TestCluster) (*SysMetricsJSON, error) {
-	r := client.NewRequest("GET", "/v1/sys/metrics")
-	r.Headers.Set("X-Vault-Token", cluster.RootToken)
-	var data SysMetricsJSON
-	mountAddResp, err := client.RawRequestWithContext(context.Background(), r)
-	if err != nil {
-		return nil, err
-	}
-	bodyBytes, err := ioutil.ReadAll(mountAddResp.Response.Body)
-	if err != nil {
-		return nil, err
-	}
-	if mountAddResp != nil {
-		defer mountAddResp.Body.Close()
-	}
-	if err := json.Unmarshal(bodyBytes, &data); err != nil {
-		return nil, errors.New("failed to unmarshal:" + err.Error())
-	}
-	return &data, nil
-}
-
-func gaugeSearchHelper(data *SysMetricsJSON, expectedValue int) (int, error) {
+func gaugeSearchHelper(data *testhelpers.SysMetricsJSON, expectedValue int) (int, error) {
 	foundFlag := false
 	tablesize := int(^uint(0) >> 1)
 	for _, gauge := range data.Gauges {
@@ -127,15 +104,6 @@ func gaugeConditionCheck(comparator string, compareVal int, compareToVal int) er
 	return nil
 }
 
-func testMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
-	return func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
-		inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-		clusterSink := metricsutil.NewClusterMetricSink(clusterName, inm)
-		clusterSink.GaugeInterval = gaugeInterval
-		return clusterSink, metricsutil.NewMetricsHelper(inm, false)
-	}
-}
-
 func TestLeaderReElectionMetrics(t *testing.T) {
 	clusterName := "mycluster"
 	conf := &vault.CoreConfig{
@@ -146,7 +114,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		KeepStandbysSealed:     false,
 		HandlerFunc:            vaulthttp.Handler,
 		NumCores:               2,
-		CoreMetricSinkProvider: testMetricSinkProvider(time.Minute),
+		CoreMetricSinkProvider: testhelpers.TestMetricSinkProvider(time.Minute),
 	})
 
 	cluster.Start()
@@ -174,7 +142,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 	if respo != nil {
 		defer respo.Body.Close()
 	}
-	var data SysMetricsJSON
+	var data testhelpers.SysMetricsJSON
 	var coreLeaderMetric bool = false
 	var coreUnsealMetric bool = false
 	if err := json.Unmarshal(bodyBytes, &data); err != nil {
@@ -241,14 +209,4 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 	if respo != nil {
 		defer respo.Body.Close()
 	}
-}
-
-type SysMetricsJSON struct {
-	Gauges []GaugeJSON `json:"Gauges"`
-}
-
-type GaugeJSON struct {
-	Name   string                 `json:"Name"`
-	Value  int                    `json:"Value"`
-	Labels map[string]interface{} `json:"Labels"`
 }

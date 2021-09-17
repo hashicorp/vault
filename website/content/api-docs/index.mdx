@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: HTTP API
-sidebar_title: Overview
 description: Vault has an HTTP API that can be used to control every aspect of Vault.
 ---
 
@@ -272,6 +271,12 @@ warnings are generated during the operation.
 - `404` - Invalid path. This can both mean that the path truly doesn't exist or
   that you don't have permission to view a specific path. We use 404 in some
   cases to avoid state leakage.
+- `405` - Unsupported operation.  You tried to use a method inappropriate to
+  the request path, e.g. a POST on an endpoint that only accepts GETs.
+- `412` - Precondition failed.  Returned on Enterprise when a request can't be
+  processed yet due to some missing eventually consistent data.  Should be retried,
+  perhaps with a little backoff.
+  See [Vault Eventual Consistency](/docs/enterprise/consistency).
 - `429` - Default return code for health status of standby nodes. This will
   likely change in the future.
 - `473` - Default return code for health status of performance standby nodes.

@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Plugin System
-sidebar_title: Plugins
 description: Learn about Vault's plugin system.
 ---
 
@@ -47,10 +46,11 @@ plugin process' environment. This token is single use and has a short TTL. Once
 unwrapped, it provides the plugin with a uniquely generated TLS certificate and
 private key for it to use to talk to the original Vault process.
 
-The [`api_addr`][api_addr] must be set in order for the plugin process establish
-communication with the Vault server during mount time. If the storage backend
-has HA enabled and supports automatic host address detection (e.g. Consul),
-Vault will automatically attempt to determine the `api_addr` as well.
+The [`api_addr`][api_addr] must be set in order for the plugin process to
+establish communication with the Vault server during mount time. If the storage
+backend has HA enabled and supports automatic host address detection
+(e.g. Consul), Vault will automatically attempt to determine the `api_addr` as
+well.
 
 ~> Note: Reading the original connection's TLS connection state is not supported
 in plugins.
@@ -88,12 +88,24 @@ it instead becomes visible to backends and can be executed by them. For more
 information on the plugin catalog please see the [Plugin Catalog API
 docs](/api/system/plugins-catalog).
 
-An example plugin submission looks like:
+An example of plugin registration in current versions of Vault:
+
+```shell-session
+$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
+    secret \                  # type
+    myplugin-database-plugin
+
+Success! Registered plugin: myplugin-database-plugin
+```
+
+Vault versions prior to v0.10.4 lacked the `vault plugin` operator and the
+registration step for them is:
 
 ```shell-session
 $ vault write sys/plugins/catalog/database/myplugin-database-plugin \
-    sha256=<expected SHA256 Hex value of the plugin binary> \
-    command="myplugin"
+     sha256=<SHA256 Hex value of the plugin binary> \
+     command="myplugin"
+
 Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 ```
 
@@ -108,6 +120,32 @@ settings. Like Vault, plugins support [the use of mlock when available](/docs/co
 ~> Note: If Vault is configured with `mlock` enabled, then the Vault executable and each
 plugin executable in your [plugins directory](/docs/internals/plugins#plugin-directory) must be
 given the ability to use the `mlock` syscall.
+
+### Plugin Upgrades
+
+Plugins may be updated by registering and reloading them. More details on the
+upgrade procedure can be found in [Upgrading Vault Plugins](/docs/upgrading/plugins).
+
+### Troubleshooting
+
+#### Unrecognized remote plugin message
+
+If the following error is encountered when enabling a plugin secret engine or
+auth method:
+
+```sh
+Unrecognized remote plugin message:
+
+This usually means that the plugin is either invalid or simply
+needs to be recompiled to support the latest protocol.
+```
+
+Verify whether the Vault process has `mlock` enabled, and if so run the
+following command against the plugin binary:
+
+```sh
+sudo setcap cap_ipc_lock=+ep <plugin-binary>
+```
 
 # Plugin Development
 

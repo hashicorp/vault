@@ -8,7 +8,7 @@ export default Service.extend({
   auth: service(),
   userRootNamespace: alias('auth.authData.userRootNamespace'),
   //populated by the query param on the cluster route
-  path: null,
+  path: '',
   // list of namespaces available to the current user under the
   // current namespace
   accessibleNamespaces: null,
@@ -16,6 +16,10 @@ export default Service.extend({
   inRootNamespace: equal('path', ROOT_NAMESPACE),
 
   setNamespace(path) {
+    if (!path) {
+      this.set('path', '');
+      return;
+    }
     this.set('path', path);
   },
 

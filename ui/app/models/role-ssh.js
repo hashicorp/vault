@@ -1,9 +1,8 @@
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 // these arrays define the order in which the fields will be displayed
 // see
@@ -65,7 +64,8 @@ export default Model.extend({
     helpText: "Username to use when one isn't specified",
   }),
   allowedUsers: attr('string', {
-    helpText: 'Create a whitelist of users that can use this key (e.g. `admin, dev`, use `*` to allow all.)',
+    helpText:
+      'Create a list of users who are allowed to use this key (e.g. `admin, dev`, or use `*` to allow all.)',
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:

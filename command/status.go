@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*StatusCommand)(nil)
-var _ cli.CommandAutocomplete = (*StatusCommand)(nil)
+var (
+	_ cli.Command             = (*StatusCommand)(nil)
+	_ cli.CommandAutocomplete = (*StatusCommand)(nil)
+)
 
 type StatusCommand struct {
 	*BaseCommand
@@ -70,6 +72,11 @@ func (c *StatusCommand) Run(args []string) int {
 		// We return 2 everywhere else, but 2 is reserved for "sealed" here
 		return 1
 	}
+
+	// Always query in the root namespace.
+	// Although seal-status is present in other namespaces, it will not
+	// be available until Vault is unsealed.
+	client.SetNamespace("")
 
 	status, err := client.Sys().SealStatus()
 	if err != nil {

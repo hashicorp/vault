@@ -25,8 +25,10 @@ type GRPCDatabasePlugin struct {
 	plugin.NetRPCUnsupportedPlugin
 }
 
-var _ plugin.Plugin = &GRPCDatabasePlugin{}
-var _ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
+var (
+	_ plugin.Plugin     = &GRPCDatabasePlugin{}
+	_ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
+)
 
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	proto.RegisterDatabaseServer(s, gRPCServer{impl: d.Impl})

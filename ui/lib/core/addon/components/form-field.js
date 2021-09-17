@@ -18,11 +18,13 @@ import layout from '../templates/components/form-field';
  * ```
  *
  * @param [onChange=null] {Func} - Called whenever a value on the model changes via the component.
+ * @param [onKeyUp=null] {Func} - A function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
  * @param attr=null {Object} - This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
  * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
  * @param [disabled=false] {Boolean} - whether the field is disabled
  * @param [showHelpText=true] {Boolean} - whether to show the tooltip with help text from OpenAPI
  * @param [subText] {String} - Text to be displayed below the label
+ * @param [validationMessages] {Object} - Object of errors.  If attr.name is in object and has error message display in AlertInline.
  *
  */
 
@@ -33,6 +35,15 @@ export default Component.extend({
   disabled: false,
   showHelpText: true,
   subText: '',
+  // This is only used internally for `optional-text` editType
+  showInput: false,
+
+  init() {
+    this._super(...arguments);
+    const valuePath = this.attr.options?.fieldValue || this.attr.name;
+    const modelValue = this.model[valuePath];
+    this.set('showInput', !!modelValue);
+  },
 
   onChange() {},
 
@@ -53,6 +64,8 @@ export default Component.extend({
    *
    */
   attr: null,
+
+  mode: null,
 
   /*
    * @private
@@ -81,6 +94,11 @@ export default Component.extend({
    *
    */
   valuePath: or('attr.options.fieldValue', 'attr.name'),
+
+  isReadOnly: computed('attr.options.readOnly', 'mode', function() {
+    let readonly = this.attr.options?.readOnly || false;
+    return readonly && this.mode === 'edit';
+  }),
 
   model: null,
 
@@ -129,6 +147,20 @@ export default Component.extend({
         this.model.set(path, valToSet);
         this.onChange(path, valToSet);
       }
+    },
+
+    toggleShow(path) {
+      const value = !this.showInput;
+      this.set('showInput', value);
+      if (!value) {
+        this.send('setAndBroadcast', path, null);
+      }
+    },
+    handleKeyUp(name, value) {
+      if (!this.onKeyUp) {
+        return;
+      }
+      this.onKeyUp(name, value);
     },
   },
 });

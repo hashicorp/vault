@@ -13,10 +13,10 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     await render(hbs`
       <PricingMetricsDates />
     `);
-    assert.dom('[data-test-end-input]').hasValue(format(expectedEnd, 'MM/YYYY'), 'End input is last month');
+    assert.dom('[data-test-end-input]').hasValue(format(expectedEnd, 'MM/yyyy'), 'End input is last month');
     assert
       .dom('[data-test-start-input]')
-      .hasValue(format(expectedStart, 'MM/YYYY'), 'Start input is 12 months before last month');
+      .hasValue(format(expectedStart, 'MM/yyyy'), 'Start input is 12 months before last month');
   });
 
   test('On init if end date passed, start is calculated', async function(assert) {
@@ -28,7 +28,7 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     assert.dom('[data-test-end-input]').hasValue('09/2020', 'End input matches query');
     assert
       .dom('[data-test-start-input]')
-      .hasValue(format(expectedStart, 'MM/YYYY'), 'Start input is 12 months before end input');
+      .hasValue(format(expectedStart, 'MM/yyyy'), 'Start input is 12 months before end input');
   });
 
   test('On init if query start date passed, end is default', async function(assert) {
@@ -37,7 +37,7 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     await render(hbs`
       <PricingMetricsDates @queryStart={{queryStart}} />
     `);
-    assert.dom('[data-test-end-input]').hasValue(format(expectedEnd, 'MM/YYYY'), 'End input is last month');
+    assert.dom('[data-test-end-input]').hasValue(format(expectedEnd, 'MM/yyyy'), 'End input is last month');
     assert.dom('[data-test-start-input]').hasValue('01/2020', 'Start input matches query');
   });
 
@@ -55,34 +55,6 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     assert.dom('[data-test-results-date-warning]').doesNotExist('Does not show result states warning');
   });
 
-  test('If result and query start dates are > 1 day apart, warning is shown', async function(assert) {
-    this.set('resultStart', new Date(2020, 1, 20));
-    this.set('resultEnd', new Date(2020, 9, 31));
-    await render(hbs`
-      <PricingMetricsDates
-        @queryStart="2-2020"
-        @queryEnd="10-2020"
-        @resultStart={{resultStart}}
-        @resultEnd={{resultEnd}}
-      />
-    `);
-    assert.dom('[data-test-results-date-warning]').exists('shows states warning');
-  });
-
-  test('If result and query end dates are > 1 day apart, warning is shown', async function(assert) {
-    this.set('resultStart', new Date(2020, 1, 1));
-    this.set('resultEnd', new Date(2020, 9, 15));
-    await render(hbs`
-      <PricingMetricsDates
-        @queryStart="2-2020"
-        @queryEnd="10-2020"
-        @resultStart={{resultStart}}
-        @resultEnd={{resultEnd}}
-      />
-    `);
-    assert.dom('[data-test-results-date-warning]').exists('shows states warning');
-  });
-
   test('it shows appropriate errors on input form', async function(assert) {
     const lastAvailable = endOfMonth(subMonths(startOfToday(), 1));
     const firstAvailable = subMonths(lastAvailable, 12);
@@ -91,15 +63,15 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     `);
     assert.dom('[data-test-form-error]').doesNotExist('No form error shows by default');
 
-    await fillIn('[data-test-start-input]', format(subMonths(firstAvailable, 1), 'MM/YYYY'));
+    await fillIn('[data-test-start-input]', format(subMonths(firstAvailable, 1), 'MM/yyyy'));
     assert
       .dom('[data-test-form-error]')
       .includesText(
-        `No data retained before ${format(firstAvailable, 'MM/YYYY')}`,
+        `No data retained before ${format(firstAvailable, 'MM/yyyy')}`,
         'shows the correct error message for starting before the configured retainment period'
       );
 
-    await fillIn('[data-test-end-input]', format(subMonths(lastAvailable, -1), 'MM/YYYY'));
+    await fillIn('[data-test-end-input]', format(subMonths(lastAvailable, -1), 'MM/yyyy'));
     assert
       .dom('[data-test-form-error]')
       .includesText(
@@ -111,15 +83,15 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     assert
       .dom('[data-test-form-error]')
       .includesText(
-        'End date is invalid. Please use format MM/YYYY',
+        'End date is invalid. Please use format MM/yyyy',
         'shows the correct error message for non-date input'
       );
 
-    await fillIn('[data-test-start-input]', `13/${format(lastAvailable, 'YYYY')}`);
+    await fillIn('[data-test-start-input]', `13/${format(lastAvailable, 'yyyy')}`);
     assert
       .dom('[data-test-form-error]')
       .includesText(
-        'Start date is invalid. Please use format MM/YYYY',
+        'Start date is invalid. Please use format MM/yyyy',
         'shows the correct error message for an invalid month'
       );
   });

@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/openldap: Added dynamic roles to OpenLDAP similar to the combined database engine
+```

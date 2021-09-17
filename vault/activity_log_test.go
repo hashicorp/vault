@@ -15,10 +15,12 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestActivityLog_Creation(t *testing.T) {
@@ -89,6 +91,54 @@ func TestActivityLog_Creation(t *testing.T) {
 	if actual != 1 {
 		t.Errorf("mismatched number of tokens, %v vs %v", actual, 1)
 	}
+}
+
+func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+
+	a := core.activityLog
+	a.SetEnable(true)
+
+	if a == nil {
+		t.Fatal("no activity log found")
+	}
+	if a.logger == nil || a.view == nil {
+		t.Fatal("activity log not initialized")
+	}
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("activity log already has fragment")
+	}
+	a.fragmentLock.Unlock()
+	const namespace_id = "ns123"
+
+	a.HandleTokenCreation(&logical.TokenEntry{
+		Path:         "test",
+		Policies:     []string{responseWrappingPolicyName},
+		CreationTime: time.Now().Unix(),
+		TTL:          3600,
+		NamespaceID:  namespace_id,
+	})
+
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("fragment created")
+	}
+	a.fragmentLock.Unlock()
+
+	a.HandleTokenCreation(&logical.TokenEntry{
+		Path:         "test",
+		Policies:     []string{controlGroupPolicyName},
+		CreationTime: time.Now().Unix(),
+		TTL:          3600,
+		NamespaceID:  namespace_id,
+	})
+
+	a.fragmentLock.Lock()
+	if a.fragment != nil {
+		t.Fatal("fragment created")
+	}
+	a.fragmentLock.Unlock()
 }
 
 func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string) {
@@ -341,12 +391,12 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 	}
 
 	entityRecords := []*activity.EntityRecord{
-		&activity.EntityRecord{
+		{
 			EntityID:    ids[0],
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
 		},
-		&activity.EntityRecord{
+		{
 			EntityID:    ids[1],
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
@@ -386,7 +436,6 @@ func TestActivityLog_availableLogsEmptyDirectory(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	times, err := a.availableLogs(context.Background())
-
 	if err != nil {
 		t.Fatalf("error getting start_time(s) for empty activity log")
 	}
@@ -432,6 +481,11 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 
 	// Stop timers for test purposes
 	close(a.doneCh)
+	defer func() {
+		a.l.Lock()
+		a.doneCh = make(chan struct{}, 1)
+		a.l.Unlock()
+	}()
 
 	startTimestamp := a.GetStartTimestamp()
 	path0 := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", startTimestamp)
@@ -517,7 +571,11 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	a.receivedFragment(fragment1)
 	a.receivedFragment(fragment2)
 
-	<-a.newFragmentCh
+	select {
+	case <-a.newFragmentCh:
+	case <-time.After(time.Minute):
+		t.Fatal("timed out waiting for new fragment")
+	}
 
 	err = a.saveCurrentSegmentToStorage(context.Background(), false)
 	if err != nil {
@@ -949,7 +1007,7 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 		entitySequenceNumber: 0,
 	}
 
-	a.activeEntities = make(map[string]struct{})
+	a.entityTracker.activeEntities = make(map[string]struct{})
 }
 
 func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
@@ -966,12 +1024,12 @@ func TestActivityLog_loadCurrentEntitySegment(t *testing.T) {
 
 	// setup in-storage data to load for testing
 	entityRecords := []*activity.EntityRecord{
-		&activity.EntityRecord{
+		{
 			EntityID:    "11111111-1111-1111-1111-111111111111",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
 		},
-		&activity.EntityRecord{
+		{
 			EntityID:    "22222222-2222-2222-2222-222222222222",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
@@ -1066,12 +1124,12 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 
 	// setup in-storage data to load for testing
 	entityRecords := []*activity.EntityRecord{
-		&activity.EntityRecord{
+		{
 			EntityID:    "11111111-1111-1111-1111-111111111111",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
 		},
-		&activity.EntityRecord{
+		{
 			EntityID:    "22222222-2222-2222-2222-222222222222",
 			NamespaceID: "root",
 			Timestamp:   time.Now().Unix(),
@@ -1132,7 +1190,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		if tc.refresh {
 			a.l.Lock()
 			a.fragmentLock.Lock()
-			a.activeEntities = make(map[string]struct{})
+			a.entityTracker.activeEntities = make(map[string]struct{})
 			a.currentSegment.startTimestamp = tc.time
 			a.fragmentLock.Unlock()
 			a.l.Unlock()
@@ -1253,7 +1311,6 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 // :base: is the timestamp to start from for the setup logic (use to simulate newest log from past or future)
@@ -1269,56 +1326,56 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 	var entityRecords []*activity.EntityRecord
 	if includeEntities {
 		entityRecords = []*activity.EntityRecord{
-			&activity.EntityRecord{
+			{
 				EntityID:    "11111111-1111-1111-1111-111111111111",
-				NamespaceID: "root",
+				NamespaceID: namespace.RootNamespaceID,
 				Timestamp:   time.Now().Unix(),
 			},
-			&activity.EntityRecord{
+			{
 				EntityID:    "22222222-2222-2222-2222-222222222222",
-				NamespaceID: "root",
+				NamespaceID: namespace.RootNamespaceID,
 				Timestamp:   time.Now().Unix(),
 			},
-			&activity.EntityRecord{
+			{
 				EntityID:    "33333333-2222-2222-2222-222222222222",
-				NamespaceID: "root",
+				NamespaceID: namespace.RootNamespaceID,
 				Timestamp:   time.Now().Unix(),
 			},
 		}
+		if constants.IsEnterprise {
+			entityRecords = append(entityRecords, []*activity.EntityRecord{
+				{
+					EntityID:    "44444444-1111-1111-1111-111111111111",
+					NamespaceID: "ns1",
+					Timestamp:   time.Now().Unix(),
+				},
+			}...)
+		}
+		for i, entityRecord := range entityRecords {
+			entityData, err := proto.Marshal(&activity.EntityActivityLog{
+				Entities: []*activity.EntityRecord{entityRecord},
+			})
+			if err != nil {
+				t.Fatalf(err.Error())
+			}
+			if i == 0 {
+				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData)
+			} else {
+				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
+			}
 
-		testEntities1 := &activity.EntityActivityLog{
-			Entities: entityRecords[:1],
 		}
-		entityData1, err := proto.Marshal(testEntities1)
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		testEntities2 := &activity.EntityActivityLog{
-			Entities: entityRecords[1:2],
-		}
-		entityData2, err := proto.Marshal(testEntities2)
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-		testEntities3 := &activity.EntityActivityLog{
-			Entities: entityRecords[2:],
-		}
-		entityData3, err := proto.Marshal(testEntities3)
-		if err != nil {
-			t.Fatalf(err.Error())
-		}
-
-		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(monthsAgo.Unix())+"/0", entityData1)
-		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/0", entityData2)
-		WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/1", entityData3)
 	}
 
 	var tokenRecords map[string]uint64
 	if includeTokens {
 		tokenRecords = make(map[string]uint64)
-		for i := 1; i < 4; i++ {
-			nsID := "ns" + strconv.Itoa(i)
-			tokenRecords[nsID] = uint64(i)
+		tokenRecords[namespace.RootNamespaceID] = uint64(1)
+		if constants.IsEnterprise {
+			for i := 1; i < 4; i++ {
+				nsID := "ns" + strconv.Itoa(i)
+				tokenRecords[nsID] = uint64(i)
+			}
 		}
 		tokenCount := &activity.TokenCount{
 			CountByNamespaceID: tokenRecords,
@@ -1350,7 +1407,7 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 		Entities: expectedEntityRecords[1:],
 	}
 	expectedCurrent := &activity.EntityActivityLog{
-		Entities: expectedEntityRecords[2:],
+		Entities: expectedEntityRecords[len(expectedEntityRecords)-1:],
 	}
 
 	currentEntities := a.GetCurrentEntities()
@@ -1378,6 +1435,11 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 
 	var wg sync.WaitGroup
 	close(a.doneCh)
+	defer func() {
+		a.l.Lock()
+		a.doneCh = make(chan struct{}, 1)
+		a.l.Unlock()
+	}()
 
 	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
@@ -1386,7 +1448,7 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 	wg.Wait()
 
 	expected := &activity.EntityActivityLog{
-		Entities: expectedEntityRecords[2:],
+		Entities: expectedEntityRecords[len(expectedEntityRecords)-1:],
 	}
 
 	currentEntities := a.GetCurrentEntities()
@@ -1436,7 +1498,7 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 		Entities: expectedEntityRecords[1:],
 	}
 	expectedCurrent := &activity.EntityActivityLog{
-		Entities: expectedEntityRecords[2:],
+		Entities: expectedEntityRecords[len(expectedEntityRecords)-1:],
 	}
 
 	currentEntities := a.GetCurrentEntities()
@@ -1535,7 +1597,7 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 		Entities: expectedEntityRecords[1:],
 	}
 	expectedCurrent := &activity.EntityActivityLog{
-		Entities: expectedEntityRecords[2:],
+		Entities: expectedEntityRecords[len(expectedEntityRecords)-1:],
 	}
 
 	currentEntities := a.GetCurrentEntities()
@@ -1770,8 +1832,8 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	month0 := time.Now().UTC()
 	segment0 := a.GetStartTimestamp()
-	month1 := month0.AddDate(0, 1, 0)
-	month2 := month0.AddDate(0, 2, 0)
+	month1 := timeutil.StartOfNextMonth(month0)
+	month2 := timeutil.StartOfNextMonth(month1)
 
 	// Trigger end-of-month
 	a.HandleEndOfMonth(month1)
@@ -1796,6 +1858,10 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if intentRaw == nil {
+		t.Fatal("no intent log present")
+	}
+
 	var intent ActivityIntentLog
 	err = intentRaw.DecodeJSON(&intent)
 	if err != nil {
@@ -1895,7 +1961,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _ := TestCoreUnsealed(t)
+	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -2137,12 +2203,86 @@ func TestActivityLog_Precompute(t *testing.T) {
 		for i := 0; i <= tc.ExpectedUpTo; i++ {
 			checkPrecomputedQuery(i)
 		}
+	}
 
+	// Check metrics on the last precomputed query
+	// (otherwise we need a way to reset the in-memory metrics between test cases.)
+
+	intervals := sink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+	expectedGauges := []struct {
+		Name           string
+		NamespaceLabel string
+		Value          float32
+	}{
+		// october values
+		{
+			"identity.entity.active.monthly",
+			"root",
+			15.0,
+		},
+		{
+			"identity.entity.active.monthly",
+			"deleted-bbbbb", // No namespace entry for this fake ID
+			5.0,
+		},
+		{
+			"identity.entity.active.monthly",
+			"deleted-ccccc",
+			5.0,
+		},
+		// august-september values
+		{
+			"identity.entity.active.reporting_period",
+			"root",
+			20.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-aaaaa",
+			5.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-bbbbb",
+			10.0,
+		},
+		{
+			"identity.entity.active.reporting_period",
+			"deleted-ccccc",
+			5.0,
+		},
+	}
+	for _, g := range expectedGauges {
+		found := false
+		for _, actual := range intervals[0].Gauges {
+			actualNamespaceLabel := ""
+			for _, l := range actual.Labels {
+				if l.Name == "namespace" {
+					actualNamespaceLabel = l.Value
+					break
+				}
+			}
+			if actual.Name == g.Name && actualNamespaceLabel == g.NamespaceLabel {
+				found = true
+				if actual.Value != g.Value {
+					t.Errorf("Mismatched value for %v %v %v != %v",
+						g.Name, g.NamespaceLabel, actual.Value, g.Value)
+				}
+				break
+			}
+		}
+		if !found {
+			t.Errorf("No guage found for %v %v",
+				g.Name, g.NamespaceLabel)
+		}
 	}
 }
 
-type BlockingInmemStorage struct {
-}
+type BlockingInmemStorage struct{}
 
 func (b *BlockingInmemStorage) List(ctx context.Context, prefix string) ([]string, error) {
 	<-ctx.Done()
@@ -2177,7 +2317,8 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 
 	// This will block if the shutdown didn't work.
 	go func() {
-		a.precomputedQueryWorker()
+		// We expect this to error because of BlockingInmemStorage
+		_ = a.precomputedQueryWorker()
 		close(done)
 	}()
 
@@ -2189,7 +2330,6 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 	case <-timeout:
 		t.Fatalf("timeout waiting for worker to finish")
 	}
-
 }
 
 func TestActivityLog_NextMonthStart(t *testing.T) {
@@ -2231,11 +2371,25 @@ func TestActivityLog_NextMonthStart(t *testing.T) {
 	}
 }
 
+// The retention worker is called on unseal; wait for it to finish before
+// proceeding with the test.
+func waitForRetentionWorkerToFinish(t *testing.T, a *ActivityLog) {
+	t.Helper()
+	timeout := time.After(30 * time.Second)
+	select {
+	case <-a.retentionDone:
+		return
+	case <-timeout:
+		t.Fatal("timeout waiting for retention worker to finish")
+	}
+}
+
 func TestActivityLog_Deletion(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
+	waitForRetentionWorkerToFinish(t, a)
 
 	times := []time.Time{
 		time.Date(2019, 1, 15, 1, 2, 3, 0, time.UTC), // 0
@@ -2342,5 +2496,94 @@ func TestActivityLog_Deletion(t *testing.T) {
 		checkAbsent(i)
 	}
 	checkPresent(21)
+}
 
+func TestActivityLog_partialMonthClientCount(t *testing.T) {
+	timeutil.SkipAtEndOfMonth(t)
+
+	ctx := namespace.RootContext(nil)
+	now := time.Now().UTC()
+	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
+	entities = entities[1:]
+	entityCounts := make(map[string]uint64)
+
+	for _, entity := range entities {
+		entityCounts[entity.NamespaceID] += 1
+	}
+
+	a.SetEnable(true)
+	var wg sync.WaitGroup
+	err := a.refreshFromStoredLog(ctx, &wg, now)
+	if err != nil {
+		t.Fatalf("error loading clients: %v", err)
+	}
+	wg.Wait()
+
+	// entities[0] is from a previous month
+	partialMonthEntityCount := len(entities)
+	var partialMonthTokenCount int
+	for _, countByNS := range tokenCounts {
+		partialMonthTokenCount += int(countByNS)
+	}
+
+	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
+
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results == nil {
+		t.Fatal("no results to test")
+	}
+
+	byNamespace, ok := results["by_namespace"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+
+	clientCountResponse := make([]*ClientCountInNamespace, 0)
+	err = mapstructure.Decode(byNamespace, &clientCountResponse)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, clientCount := range clientCountResponse {
+
+		if int(entityCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(entityCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
+
+		}
+		if int(tokenCounts[clientCount.NamespaceID]) != clientCount.Counts.NonEntityTokens {
+			t.Errorf("bad token count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(tokenCounts[clientCount.NamespaceID]), clientCount.Counts.NonEntityTokens)
+		}
+
+		totalCount := int(entityCounts[clientCount.NamespaceID] + tokenCounts[clientCount.NamespaceID])
+		if totalCount != clientCount.Counts.Clients {
+			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
+		}
+
+	}
+
+	entityCount, ok := results["distinct_entities"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if entityCount != partialMonthEntityCount {
+		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	}
+
+	tokenCount, ok := results["non_entity_tokens"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if tokenCount != partialMonthTokenCount {
+		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
+	}
+	clientCount, ok := results["clients"]
+	if !ok {
+		t.Fatalf("malformed results. got %v", results)
+	}
+	if clientCount != expectedClientCount {
+		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	}
 }

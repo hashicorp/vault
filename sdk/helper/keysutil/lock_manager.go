@@ -22,9 +22,7 @@ const (
 	currentConvergentVersion = 3
 )
 
-var (
-	errNeedExclusiveLock = errors.New("an exclusive lock is needed for this operation")
-)
+var errNeedExclusiveLock = errors.New("an exclusive lock is needed for this operation")
 
 // PolicyRequest holds values used when requesting a policy. Most values are
 // only used during an upsert.
@@ -101,6 +99,24 @@ func (lm *LockManager) InvalidatePolicy(name string) {
 	if lm.useCache {
 		lm.cache.Delete(name)
 	}
+}
+
+func (lm *LockManager) InitCache(cacheSize int) error {
+	if lm.useCache {
+		switch {
+		case cacheSize < 0:
+			return errors.New("cache size must be greater or equal to zero")
+		case cacheSize == 0:
+			lm.cache = NewTransitSyncMap()
+		case cacheSize > 0:
+			newLRUCache, err := NewTransitLRU(cacheSize)
+			if err != nil {
+				return errwrap.Wrapf("failed to create cache: {{err}}", err)
+			}
+			lm.cache = newLRUCache
+		}
+	}
+	return nil
 }
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the

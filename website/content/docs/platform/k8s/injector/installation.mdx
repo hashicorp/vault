@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Agent Sidecar Injector Installation
-sidebar_title: Installation
 description: The Vault Agent Sidecar Injector can be installed using Vault Helm.
 ---
 
@@ -21,7 +20,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.5.0        	           	Install and configure Vault on Kubernetes.
+hashicorp/vault	0.16.0       	1.8.2      	Official HashiCorp Vault Chart
 ```
 
 Then install the chart and enable the injection feature by setting the
@@ -64,6 +63,27 @@ The following is required to configure TLS manually:
 - Base64 PEM encoded Certificate Authority bundle
 
 For more information on configuring manual TLS, see the [Vault Helm cert values](/docs/platform/k8s/helm/configuration#certs).
+
+## Multiple Replicas and TLS
+
+The Vault Agent Injector can be run with multiple replicas if using [Manual
+TLS](#manual-tls) or [cert-manager](/docs/platform/k8s/helm/examples/injector-tls-cert-manager), and as of v0.7.0 multiple replicas are also supported with
+[Auto TLS](#auto-tls). The number of replicas is controlled in the Vault Helm
+chart by the [injector.replicas
+value](/docs/platform/k8s/helm/configuration#replicas).
+
+With Auto TLS and multiple replicas, a leader replica is determined by ownership
+of a ConfigMap named `vault-k8s-leader`. Another replica can become the leader
+once the current leader replica stops running, and the Kubernetes garbage
+collector deletes the ConfigMap. The leader replica is in charge of generating
+the CA and patching the webhook caBundle in Kubernetes, and also generating and
+distributing the certificate and key to the "followers". The followers read the
+certificate and key needed for the webhook service listener from a Kubernetes
+Secret, which is updated by the leader when a certificate is near expiration.
+
+With Manual TLS and multiple replicas,
+[injector.leaderElector.enabled](/docs/platform/k8s/helm/configuration#enabled-2)
+can be set to `false` since leader determination is not necessary in this case.
 
 ## Namespace Selector
 

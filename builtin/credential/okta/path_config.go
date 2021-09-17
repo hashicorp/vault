@@ -25,53 +25,53 @@ func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "Use org_name instead.",
 				Deprecated:  true,
 			},
-			"org_name": &framework.FieldSchema{
+			"org_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the organization to be used in the Okta API.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Organization Name",
 				},
 			},
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Use api_token instead.",
 				Deprecated:  true,
 			},
-			"api_token": &framework.FieldSchema{
+			"api_token": {
 				Type:        framework.TypeString,
 				Description: "Okta API key.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "API Token",
 				},
 			},
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type:        framework.TypeString,
 				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Base URL",
 				},
 			},
-			"production": &framework.FieldSchema{
+			"production": {
 				Type:        framework.TypeBool,
 				Description: `Use base_url instead.`,
 				Deprecated:  true,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
-			"bypass_okta_mfa": &framework.FieldSchema{
+			"bypass_okta_mfa": {
 				Type:        framework.TypeBool,
 				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
 				DisplayAttrs: &framework.DisplayAttributes{

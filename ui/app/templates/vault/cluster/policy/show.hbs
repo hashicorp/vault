@@ -40,20 +40,13 @@
 </Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
   <div class="field">
-    <label for="policy" class="is-label">
-      Policy
-      {{#if (eq policyType "acl")}}
-        <span class="tag is-white is-size-9 has-text-grey" data-test-acl-format>
-          ({{uppercase model.format}} format)
-        </span>
-      {{/if}}
-    </label>
-    <IvyCodemirror @value={{model.policy}} @options={{hash
+    <JsonEditor
+      @title="Policy"
+      @subTitle={{if (eq policyType "acl") (concat uppercase model.format " format")}}
+      @value={{model.policy}} 
+      @options={{hash
         readOnly=true
-        lineNumbers=true
-        tabSize=2
         mode='ruby'
-        theme='hashi'
       }} />
   </div>
   {{#if model.paths}}

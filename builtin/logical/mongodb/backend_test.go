@@ -14,9 +14,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var (
-	testImagePull sync.Once
-)
+var testImagePull sync.Once
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -123,7 +121,6 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 			testAccStepReadLease(),
 		},
 	})
-
 }
 
 func testAccStepConfig(d map[string]interface{}, expectError bool) logicaltest.TestStep {
@@ -265,5 +262,7 @@ func testAccStepReadLease() logicaltest.TestStep {
 	}
 }
 
-const testDb = "foo"
-const testMongoDBRoles = `["readWrite",{"role":"read","db":"bar"}]`
+const (
+	testDb           = "foo"
+	testMongoDBRoles = `["readWrite",{"role":"read","db":"bar"}]`
+)

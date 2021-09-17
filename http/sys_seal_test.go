@@ -262,7 +262,6 @@ func TestSysUnseal_Reset(t *testing.T) {
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)
 	}
-
 }
 
 // Test Seal's permissions logic, which is slightly different than normal code

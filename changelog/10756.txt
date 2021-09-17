@@ -1,0 +1,4 @@
+```release-note:bug
+consul-template: Update consul-template vendor version and associated dependencies to master, 
+pulling in https://github.com/hashicorp/consul-template/pull/1447
+```

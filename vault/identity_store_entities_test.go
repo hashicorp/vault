@@ -503,7 +503,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -780,7 +780,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -883,7 +883,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	if entityFetched != nil {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
-
 }
 
 func TestIdentityStore_EntityCRUD(t *testing.T) {

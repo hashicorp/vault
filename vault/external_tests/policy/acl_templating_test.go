@@ -147,7 +147,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 	clientToken := secret.Auth.ClientToken
 
-	var tests = []struct {
+	tests := []struct {
 		name string
 		path string
 		fail bool

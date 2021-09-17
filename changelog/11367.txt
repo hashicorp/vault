@@ -1,0 +1,3 @@
+```release-note:bug
+pki: Only remove revoked entry for certificates during tidy if they are past their NotAfter value
+```

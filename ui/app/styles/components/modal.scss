@@ -76,3 +76,17 @@ pre {
   background: #f7f8fa;
   border-top: 1px solid #bac1cc;
 }
+
+.modal-radio-button {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: $spacing-xs;
+
+  input {
+    top: 2px;
+  }
+
+  .helper-text {
+    margin-left: 10px;
+  }
+}

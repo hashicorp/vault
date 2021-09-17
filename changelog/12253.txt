@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Update github.com/ulikunitz/xz to fix security vulnerability GHSA-25xm-hr59-7c27.
+```

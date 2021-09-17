@@ -146,8 +146,10 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-var _ plugin.Plugin = &GRPCDatabasePlugin{}
-var _ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
+var (
+	_ plugin.Plugin     = &GRPCDatabasePlugin{}
+	_ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
+)
 
 // GRPCDatabasePlugin is the plugin.Plugin implementation that only supports GRPC
 // transport

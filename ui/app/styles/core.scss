@@ -45,6 +45,7 @@
 @import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/b64-toggle';
+@import './components/bar-chart';
 @import './components/box-label';
 @import './components/box-radio';
 @import './components/codemirror';
@@ -64,6 +65,8 @@
 @import './components/input-hint';
 @import './components/kmip-role-edit';
 @import './components/known-secondaries-card.scss';
+@import './components/license-banners';
+@import './components/linkable-item';
 @import './components/linked-block';
 @import './components/list-item-row';
 @import './components/list-pagination';
@@ -80,6 +83,8 @@
 @import './components/radio-card';
 @import './components/radial-progress';
 @import './components/raft-join';
+@import './components/read-more';
+@import './components/regex-validator';
 @import './components/replication-dashboard';
 @import './components/replication-doc-link';
 @import './components/replication-header';
@@ -97,8 +102,10 @@
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';
+@import './components/stat-text';
 @import './components/status-menu';
 @import './components/tabs';
+@import './components/text-file';
 @import './components/token-expire-warning';
 @import './components/toolbar';
 @import './components/tool-tip';

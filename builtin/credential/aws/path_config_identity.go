@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/authmetadata"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -178,11 +178,13 @@ type identityConfig struct {
 	EC2AuthMetadataHandler *authmetadata.Handler `json:"ec2_auth_metadata_handler"`
 }
 
-const identityAliasIAMUniqueID = "unique_id"
-const identityAliasIAMFullArn = "full_arn"
-const identityAliasEC2InstanceID = "instance_id"
-const identityAliasEC2ImageID = "image_id"
-const identityAliasRoleID = "role_id"
+const (
+	identityAliasIAMUniqueID   = "unique_id"
+	identityAliasIAMFullArn    = "full_arn"
+	identityAliasEC2InstanceID = "instance_id"
+	identityAliasEC2ImageID    = "image_id"
+	identityAliasRoleID        = "role_id"
+)
 
 const pathConfigIdentityHelpSyn = `
 Configure the way the AWS auth method interacts with the identity store

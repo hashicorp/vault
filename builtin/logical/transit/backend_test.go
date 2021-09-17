@@ -496,6 +496,7 @@ func testAccStepAdjustPolicyMinDecryption(t *testing.T, name string, minVer int)
 		},
 	}
 }
+
 func testAccStepAdjustPolicyMinEncryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -1361,7 +1362,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	wg := sync.WaitGroup{}
 
 	funcs := []string{"encrypt", "decrypt", "rotate", "change_min_version"}
-	//keys := []string{"test1", "test2", "test3", "test4", "test5"}
+	// keys := []string{"test1", "test2", "test3", "test4", "test5"}
 	keys := []string{"test1", "test2", "test3"}
 
 	// This is the goroutine loop
@@ -1383,7 +1384,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 		var chosenFunc, chosenKey string
 
-		//t.Errorf("Starting %d", id)
+		// t.Errorf("Starting %d", id)
 		for {
 			// Stop after 10 seconds
 			if time.Now().Sub(startTime) > 10*time.Second {
@@ -1408,7 +1409,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
 			case "encrypt":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Raw["plaintext"] = base64.StdEncoding.EncodeToString([]byte(testPlaintext))
 				fd.Schema = be.pathEncrypt().Fields
 				resp, err := be.pathEncryptWrite(context.Background(), req, fd)
@@ -1419,7 +1420,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Rotate to a new key version
 			case "rotate":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Schema = be.pathRotate().Fields
 				resp, err := be.pathRotateWrite(context.Background(), req, fd)
 				if err != nil {
@@ -1428,7 +1429,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Decrypt the ciphertext and compare the result
 			case "decrypt":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				ct := latestEncryptedText[chosenKey]
 				if ct == "" {
 					continue
@@ -1460,7 +1461,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := be.pathPolicyRead(context.Background(), req, fd)
 				if err != nil {
 					t.Errorf("got an error reading policy %s: %v", chosenKey, err)

@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: AppRole - Auth Methods
-sidebar_title: AppRole
 description: |-
   The AppRole auth method allows machines and services to authenticate with
   Vault.
@@ -70,6 +69,10 @@ The response will contain the token at `auth.client_token`:
 }
 ```
 
+-> **Application Integration:** See the [Code Example](#code-example) section
+for a code snippet demonstrating the authentication with Vault using the
+AppRole auth method.
+
 ## Configuration
 
 Auth methods must be configured in advance before users or machines can
@@ -80,13 +83,13 @@ management tool.
 
 1. Enable the AppRole auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable approle
    ```
 
 1. Create a named role:
 
-   ```text
+   ```shell-session
    $ vault write auth/approle/role/my-role \
        secret_id_ttl=10m \
        token_num_uses=10 \
@@ -102,24 +105,25 @@ documentation.
 
 1. Fetch the RoleID of the AppRole:
 
-   ```text
+   ```shell-session
    $ vault read auth/approle/role/my-role/role-id
    role_id     db02de05-fa39-4855-059b-67221c5c2f63
    ```
 
 1. Get a SecretID issued against the AppRole:
 
-   ```text
+   ```shell-session
    $ vault write -f auth/approle/role/my-role/secret-id
    secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
    secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
+   secret_id_ttl           10m
    ```
 
 ### Via the API
 
 1. Enable the AppRole auth method:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -129,7 +133,7 @@ documentation.
 
 1. Create an AppRole with desired set of policies:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -139,7 +143,7 @@ documentation.
 
 1. Fetch the identifier of the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        http://127.0.0.1:8200/v1/auth/approle/role/my-role/role-id
@@ -157,7 +161,7 @@ documentation.
 
 1. Create a new secret identifier under the role:
 
-   ```sh
+   ```shell-session
    $ curl \
        --header "X-Vault-Token: ..." \
        --request POST \
@@ -170,7 +174,8 @@ documentation.
    {
      "data": {
        "secret_id_accessor": "45946873-1d96-a9d4-678c-9229f74386a5",
-       "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25"
+       "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25",
+       "secret_id_ttl": 600
      }
    }
    ```
@@ -237,3 +242,92 @@ guide for a step-by-step tutorial.
 The AppRole auth method has a full HTTP API. Please see the
 [AppRole API](/api/auth/approle) for more
 details.
+
+## Code Example
+
+The following code snippet demonstrates AppRole authentication with response
+wrapping.
+
+<CodeTabs heading="AppRole auth with response wrap">
+
+<CodeBlockConfig lineNumbers>
+
+```go
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
+	vault "github.com/hashicorp/vault/api"
+)
+
+// Fetches a key-value secret (kv-v2) after authenticating via AppRole,
+// an auth method used by machines that are unable to use platform-based authentication mechanisms like AWS Auth, Kubernetes Auth, etc.
+func getSecretWithAppRole() (string, error) {
+	config := vault.DefaultConfig() // modify for more granular configuration
+
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return "", fmt.Errorf("unable to initialize Vault client: %w", err)
+	}
+
+	// A combination of a Role ID and Secret ID is required to log in to Vault with an AppRole.
+	// The Secret ID is a value that needs to be protected, so instead of the app having knowledge of the secret ID directly,
+	// we have a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/secure-introduction?in=vault/app-integration#trusted-orchestrator)
+	// give the app access to a short-lived response-wrapping token (https://www.vaultproject.io/docs/concepts/response-wrapping).
+	// Read more at: https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
+
+	wrappingToken, err := ioutil.ReadFile("path/to/wrapping-token") // placed here by a trusted orchestrator
+	if err != nil {
+		return "", fmt.Errorf("unable to read file containing wrapping token: %w", err)
+	}
+
+	unwrappedToken, err := client.Logical().Unwrap(strings.TrimSuffix(string(wrappingToken), "\n"))
+	if err != nil {
+		// a good opportunity to alert, in case the one-time use wrapping token appears to have already been used
+		return "", fmt.Errorf("unable to unwrap token: %w", err)
+	}
+	secretID := unwrappedToken.Data["secret_id"]
+
+	// the role ID given to you by your administrator
+	roleID := os.Getenv("APPROLE_ROLE_ID")
+	if roleID == "" {
+		return "", fmt.Errorf("no role ID was provided in APPROLE_ROLE_ID env var")
+	}
+
+	params := map[string]interface{}{
+		"role_id":   roleID,
+		"secret_id": secretID,
+	}
+	resp, err := client.Logical().Write("auth/approle/login", params)
+	if err != nil {
+		return "", fmt.Errorf("unable to log in with approle: %w", err)
+	}
+	client.SetToken(resp.Auth.ClientToken)
+
+	secret, err := client.Logical().Read("kv-v2/data/creds")
+	if err != nil {
+		return "", fmt.Errorf("unable to read secret: %w", err)
+	}
+
+	data, ok := secret.Data["data"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
+	}
+
+	key := "password"
+	value, ok := data[key].(string)
+	if !ok {
+		return "", fmt.Errorf("value type assertion failed: %T %#v", data[key], data[key])
+	}
+
+	return value, nil
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>

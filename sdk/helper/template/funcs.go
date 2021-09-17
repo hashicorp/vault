@@ -2,6 +2,7 @@ package template
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,12 +11,16 @@ import (
 	UUID "github.com/hashicorp/go-uuid"
 )
 
-func nowSeconds() string {
+func unixTime() string {
 	return strconv.FormatInt(time.Now().Unix(), 10)
 }
 
-func nowNano() string {
-	return strconv.FormatInt(time.Now().UnixNano(), 10)
+func unixTimeMillis() string {
+	return strconv.FormatInt(time.Now().UnixNano()/int64(time.Millisecond), 10)
+}
+
+func timestamp(format string) string {
+	return time.Now().Format(format)
 }
 
 func truncate(maxLen int, str string) (string, error) {
@@ -49,6 +54,10 @@ func truncateSHA256(maxLen int, str string) (string, error) {
 
 func hashSHA256(str string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(str)))
+}
+
+func encodeBase64(str string) string {
+	return base64.StdEncoding.EncodeToString([]byte(str))
 }
 
 func uppercase(str string) string {

@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: lease renew - Command
-sidebar_title: <code>renew</code>
 description: |-
   The "lease renew" command renews the lease on a secret, extending the time
   that it can be used before it is revoked by Vault.
@@ -22,7 +21,11 @@ Renew a lease:
 
 ```shell-session
 $ vault lease renew database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
-Success! Revoked lease: database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
+Key                Value
+---                -----
+lease_id           database/creds/readonly/27e1b9a1-27b8-83d9-9fe0-d99d786bdc83
+lease_duration     5m
+lease_renewable    true
 ```
 
 ## Usage

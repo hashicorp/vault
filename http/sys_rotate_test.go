@@ -36,15 +36,16 @@ func TestSysRotate(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 
-	actualInstallTime, ok := actual["data"].(map[string]interface{})["install_time"]
-	if !ok || actualInstallTime == "" {
-		t.Fatal("install_time missing in data")
+	for _, field := range []string{"install_time", "encryptions"} {
+		actualVal, ok := actual["data"].(map[string]interface{})[field]
+		if !ok || actualVal == "" {
+			t.Fatal(field, " missing in data")
+		}
+		expected["data"].(map[string]interface{})[field] = actualVal
+		expected[field] = actualVal
 	}
-	expected["data"].(map[string]interface{})["install_time"] = actualInstallTime
-	expected["install_time"] = actualInstallTime
 
 	expected["request_id"] = actual["request_id"]
-
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)
 	}
