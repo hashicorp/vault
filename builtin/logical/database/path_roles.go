@@ -541,14 +541,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil || item == nil {
-			// in this case we want to push a new role into the rotation queue
-			if err := b.pushItem(&queue.Item{
+			b.Logger().Warn("expected role to exist in rotation queue but none found", "role", name, "error", err)
+			item = &queue.Item{
 				Key:      name,
 				Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
-			}); err != nil {
-				return nil, err
 			}
-			return nil, nil
 		}
 
 	}
