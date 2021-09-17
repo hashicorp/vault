@@ -50,6 +50,9 @@ message Alias {
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
 	string namespace_id = 6;
+
+	// Custom Metadata represents the custom data tied to this alias
+	map<string, string> custom_metadata = 7;
 }
 
 message Group {
