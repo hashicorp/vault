@@ -133,12 +133,15 @@ class BarChartComponent extends Component {
       );
 
     chartSvg.selectAll('.tick text').call(truncate);
-
-    let rects = groups
+    let barsUpdate = groups
       .selectAll('rect')
-      .data(d => d)
-      .enter()
-      .append('rect')
+      // iterate through the stacked data and chart respectively
+      .data(stackedData => stackedData);
+
+    let barsEnter = barsUpdate.enter().append('rect');
+
+    barsEnter
+      .merge(barsUpdate)
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
       .attr('width', chartData => `${xScale(chartData[1] - chartData[0] - 5)}%`)
@@ -276,7 +279,7 @@ class BarChartComponent extends Component {
     // TODO: these render twice, need to only render and append once per line
     // creates total count text and coordinates to display to the right of data bars
     let totalCountData = [];
-    rects.each(function(d) {
+    barsEnter.each(function(d) {
       let textDatum = {
         total: d.data.total,
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),

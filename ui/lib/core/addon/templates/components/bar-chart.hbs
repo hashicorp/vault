@@ -18,7 +18,10 @@
   {{else}}
     <div class="is-border"></div>
     <div class="bar-chart-container">
-      <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
+      <svg 
+        {{did-insert this.renderBarChart}} 
+        {{!-- {{did-update this.renderBarChart}}  --}}
+        class="bar-chart"></svg>
     </div>
     <div class="is-border"></div>
     <div class="legend-container">
