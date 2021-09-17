@@ -7,7 +7,7 @@ export function parsePkiCert([model]) {
     throw new Error();
   }
   const cert = pki.certificateFromPem(model.certificate);
-  const commonName = cert.subject.getField('CN').value;
+  const commonName = cert.subject.getField('CN') ? cert.subject.getField('CN').value : null;
   const issueDate = cert.validity.notBefore;
   const expiryDate = cert.validity.notAfter;
   const certMetadata = {
