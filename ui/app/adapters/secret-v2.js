@@ -22,23 +22,6 @@ export default ApplicationAdapter.extend({
       resp.backend = backend;
       return resp;
     });
-    // return this.ajax(this._url(backend, id), 'GET', { data: { list: true } })
-    //   .then(resp => {
-    //     resp.id = id;
-    //     resp.backend = backend;
-    //     return resp;
-    //   })
-    //   .catch(e => {
-    //     // ARG TODO need to check on V1 when no access, because you're not catching the error
-    //     if (e.httpStatus === 403 && backend === 'kv') {
-    //       console.log(e, 'capture error');
-    //     }
-    //     // ARG TODO test for other engines that it shows the error page.
-    //     // not ideal but I need it to return the error and return e here does not include the httpStatus
-    //     return this.ajax(this._url(backend, id), 'GET', { data: { list: true } });
-
-    //     return;
-    //   });
   },
 
   urlForQueryRecord(query) {
