@@ -33,9 +33,7 @@ export default Certificate.extend({
     readOnly: true,
   }),
   commonName: attr('string'),
-  expiration: attr('string', {
-    label: 'Expiration date',
-  }),
+  // NOTE: attr was previously "expiration" not sure if changing to expiryDate breaks everything
   expiryDate: attr('string', {
     label: 'Expiration date',
   }),
