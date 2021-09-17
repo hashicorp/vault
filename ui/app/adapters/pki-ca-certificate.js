@@ -45,7 +45,6 @@ export default ApplicationAdapter.extend({
       response.id = snapshot.id;
       response.modelName = type.modelName;
       const transformedResponse = { ...response, ...caCertMetadata };
-      console.log(transformedResponse, 'Transformed response, adapter');
       store.pushPayload(type.modelName, transformedResponse);
     });
   },
