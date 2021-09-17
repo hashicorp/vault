@@ -1023,7 +1023,7 @@ func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *l
 
 // pathOIDCCreateUpdateProvider is used to create a new named provider or update an existing one
 func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{}
+	var resp logical.Response
 	name := d.Get("name").(string)
 
 	var provider provider
@@ -1141,7 +1141,15 @@ func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *l
 		return nil, err
 	}
 
-	return resp, req.Storage.Put(ctx, entry)
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 // pathOIDCListProvider is used to list named providers
