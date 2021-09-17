@@ -228,8 +228,10 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 			continue
 		}
 		if wal != nil && name == wal.RoleName {
+			b.Logger().Debug("deleting WAL for deleted role", "WAL ID", walID, "role", name)
 			err = framework.DeleteWAL(ctx, req.Storage, walID)
 			if err != nil {
+				b.Logger().Debug("failed to delete WAL for deleted role", "WAL ID", walID, "error", err)
 				merr = multierror.Append(merr, err)
 			}
 		}
@@ -507,14 +509,15 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	case logical.CreateOperation:
 		// setStaticAccount calls Storage.Put and saves the role to storage
 		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName:   name,
-			Role:       role,
-			CreateUser: createRole,
+			RoleName: name,
+			Role:     role,
 		})
 		if err != nil {
 			if resp != nil && resp.WALID != "" {
+				b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
 				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
 				if walDeleteErr != nil {
+					b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
 					var merr *multierror.Error
 					merr = multierror.Append(merr, err)
 					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
@@ -539,14 +542,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil || item == nil {
-			// in this case we want to push a new role into the rotation queue
-			if err := b.pushItem(&queue.Item{
+			b.Logger().Warn("expected role to exist in rotation queue but none found", "role", name, "error", err)
+			item = &queue.Item{
 				Key:      name,
 				Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
-			}); err != nil {
-				return nil, err
 			}
-			return nil, nil
 		}
 
 	}

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -67,7 +66,8 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 
 		item := queue.Item{
 			Key:      roleName,
-			Priority: role.StaticAccount.NextRotationTime().Unix()}
+			Priority: role.StaticAccount.NextRotationTime().Unix(),
+		}
 
 		// Check if role name is in map
 		walEntry := walMap[roleName]
@@ -127,7 +127,6 @@ func (b *databaseBackend) runTicker(ctx context.Context, queueTickInterval time.
 // credential setting or rotation in the event of partial failure.
 type setCredentialsWAL struct {
 	NewPassword string `json:"new_password"`
-	OldPassword string `json:"old_password"`
 	RoleName    string `json:"role_name"`
 	Username    string `json:"username"`
 
@@ -264,7 +263,6 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 		walID:        id,
 		walCreatedAt: wal.CreatedAt,
 		NewPassword:  data["new_password"].(string),
-		OldPassword:  data["old_password"].(string),
 		RoleName:     data["role_name"].(string),
 		Username:     data["username"].(string),
 	}
@@ -278,11 +276,9 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 }
 
 type setStaticAccountInput struct {
-	RoleName   string
-	Role       *roleEntry
-	CreateUser bool
-	WALID      string
-	Password   string
+	RoleName string
+	Role     *roleEntry
+	WALID    string
 }
 
 type setStaticAccountOutput struct {
@@ -306,12 +302,11 @@ type setStaticAccountOutput struct {
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
 func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
-	var merr error
+	if input == nil || input.Role == nil || input.RoleName == "" {
+		return nil, errors.New("input was empty when attempting to set credentials for static account")
+	}
 	// Re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
-	if input == nil || input.Role == nil || input.RoleName == "" {
-		return output, errors.New("input was empty when attempting to set credentials for static account")
-	}
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
 	if err != nil {
@@ -379,7 +374,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			RoleName:          input.RoleName,
 			Username:          config.Username,
 			NewPassword:       config.Password,
-			OldPassword:       input.Role.StaticAccount.Password,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {
@@ -420,14 +414,13 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	// Cleanup WAL after successfully rotating and pushing new item on to queue
 	if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
-		merr = multierror.Append(merr, err)
 		b.Logger().Warn("error deleting WAL", "WAL ID", output.WALID, "error", err)
-		return output, merr
+		return output, err
 	}
 	b.Logger().Debug("deleted WAL", "WAL ID", output.WALID)
 
 	// The WAL has been deleted, return new setStaticAccountOutput without it
-	return &setStaticAccountOutput{RotationTime: lvr}, merr
+	return &setStaticAccountOutput{RotationTime: lvr}, nil
 }
 
 // initQueue preforms the necessary checks and initializations needed to perform
@@ -541,18 +534,18 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 			if walEntry.walCreatedAt > existingWALEntry.walCreatedAt {
 				// If the existing WAL is older, delete it from storage and fall
 				// through to inserting our current WAL into the map.
-				b.Logger().Debug("deleting stale WAL", "WAL ID", existingWALEntry.walID)
+				b.Logger().Debug("deleting stale loaded WAL", "WAL ID", existingWALEntry.walID)
 				err = framework.DeleteWAL(ctx, s, existingWALEntry.walID)
 				if err != nil {
-					b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", existingWALEntry.walID)
+					b.Logger().Warn("unable to delete loaded WAL", "error", err, "WAL ID", existingWALEntry.walID)
 				}
 			} else {
 				// If we already have a more recent WAL entry in the map, delete
 				// this one and continue onto the next WAL.
-				b.Logger().Debug("deleting stale WAL", "WAL ID", walEntry.walID)
+				b.Logger().Debug("deleting stale candidate WAL", "WAL ID", walEntry.walID)
 				err = framework.DeleteWAL(ctx, s, walID)
 				if err != nil {
-					b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
+					b.Logger().Warn("unable to delete candidate WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 				continue
 			}
