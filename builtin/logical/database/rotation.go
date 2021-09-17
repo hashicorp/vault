@@ -373,7 +373,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &setCredentialsWAL{
 			RoleName:          input.RoleName,
 			Username:          config.Username,
-			NewPassword:       config.Password,
+			NewPassword:       newPassword,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {
