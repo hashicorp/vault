@@ -141,7 +141,39 @@
               }}
             />
           </div>
-          <div class="column"></div>
+          <div class="column">
+            <div class="card">
+                <div class="card-content">
+                  <SearchSelect
+                      @id="namespaces"
+                      @labelClass="title is-5"
+                      @disallowNewItems={{true}}
+                      @onChange={{action "initNamespace"}}
+                      @label="Single namespace"
+                      @options={{or this.searchDataset []}}
+                      @selectLimit={{1}}
+                      />
+                      {{#if this.selectedNamespace}}
+                        <div class="columns">
+                            <div class="column">
+                                <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
+                            </div>
+                            <div class="column">
+                                <StatText @label="Active direct tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
+                            </div>
+                        </div>
+                      {{else}}
+                        <EmptyState @title="No namespace selected" 
+                            @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
+                      {{/if}}
+                </div>
+            </div>
+          </div>
         </div>
       {{/if}}
     {{/unless}}
