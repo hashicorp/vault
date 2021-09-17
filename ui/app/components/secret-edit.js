@@ -109,7 +109,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canDeleteSecretMetadata: alias('checkMetadataCapabilities.canDelete'),
-  canCreateSecretMetadata: alias('checkMetadataCapabilities.canCreate'),
+  canCreateSecretMetadata: or('checkMetadataCapabilities.canCreate', 'checkMetadataCapabilities.canUpdate'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
