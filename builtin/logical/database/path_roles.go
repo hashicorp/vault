@@ -520,6 +520,10 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
 					err = merr.ErrorOrNil()
 				}
+			} else {
+				// There is no walID, but role creation failed. In this case we must simply
+				// return the error.
+				return nil, err
 			}
 		}
 		// guard against RotationTime not being set or zero-value
