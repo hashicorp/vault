@@ -43,18 +43,9 @@ export default RESTSerializer.extend({
     const responseJSON = this.normalizeItems(payload);
     const { modelName } = primaryModelClass;
     let transformedPayload, certMetadata;
-    // const getCertMetadata = () => {
-    //   try {
-    //     return parsePkiCert([responseJSON])
-    //   } catch (error){
-    //     console.log(error, "ERROR")
-    //     return null
-    //   }
-    // }
-    // hits cert/list endpoint which returns an array, only want to parse cert if not array
+    // hits cert/list endpoint first which returns an array, only want to parse if response is not an array
     if (!Array.isArray(responseJSON)) {
       certMetadata = parsePkiCert([responseJSON]);
-      // certMetadata = getCertMetadata()
       transformedPayload = { [modelName]: { ...certMetadata, ...responseJSON } };
     } else {
       transformedPayload = { [modelName]: responseJSON };
