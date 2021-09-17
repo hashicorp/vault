@@ -17,18 +17,11 @@
             @allowCopy={{true}}
           />
         </InfoTableRow>
-      {{else if (eq attr.name "expiration")}}
-        {{info-table-row 
-          data-test-table-row
-          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-          value=(date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a')
-        }}
+      {{!-- only pass to date-format helper if (get model attr.name) returns a value AND attr.name equals 'issueDate' or 'expiryDate' --}}
+      {{else if (and (get model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
+        <InfoTableRow data-test-table-row @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
       {{else}}
-        {{info-table-row 
-          data-test-table-row
-          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-          value=(get model attr.name)
-        }}
+        <InfoTableRow data-test-table-row @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}/>
       {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">

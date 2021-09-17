@@ -11,13 +11,12 @@ export default Certificate.extend({
       'certificate',
       'commonName',
       'issueDate',
-      'expiration',
+      'expiryDate',
       'issuingCa',
       'caChain',
       'privateKey',
       'privateKeyType',
       'serialNumber',
-      'meep',
     ];
   }),
   backend: attr('string', {
@@ -34,13 +33,13 @@ export default Certificate.extend({
     readOnly: true,
   }),
   commonName: attr('string'),
-  meep: attr('string'),
   expiration: attr('string', {
     label: 'Expiration date',
   }),
-  issueDate: attr('string', {
-    defaultValue: 'i am issue',
+  expiryDate: attr('string', {
+    label: 'Expiration date',
   }),
+  issueDate: attr('string'),
   pemBundle: attr('string', {
     label: 'PEM bundle',
     editType: 'file',

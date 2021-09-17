@@ -1,3 +1,4 @@
+import { parsePkiCert } from '../helpers/parse-pki-cert';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -36,15 +37,16 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.url(snapshot, action), 'POST', { data }).then(response => {
       // uploading CA, setting signed intermediate cert, and attempting to generate
       // a new CA if one exists, all return a 204
-      debugger;
       if (!response) {
         response = {};
       }
-      // test if also works with isUpload or isSetSignedIntermediate
-      response.meep = 'meep';
+      // TODO: test if also works with isUpload or isSetSignedIntermediate
+      const caCertMetadata = parsePkiCert([response.data]);
       response.id = snapshot.id;
       response.modelName = type.modelName;
-      store.pushPayload(type.modelName, response);
+      const transformedResponse = { ...response, ...caCertMetadata };
+      console.log(transformedResponse, 'Transformed response, adapter');
+      store.pushPayload(type.modelName, transformedResponse);
     });
   },
 
