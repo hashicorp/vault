@@ -3509,16 +3509,6 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
-	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testnot23")
-	req.ClientToken = root
-	req.Data = map[string]interface{}{
-		"disallowed_policies_glob": "test2,test3*",
-	}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
-	}
-
 	// policy containing a glob character in the non-glob disallowed_policies field
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testglobdisabled")
 	req.ClientToken = root
@@ -3543,6 +3533,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	}
 	parentToken := resp.Auth.ClientToken
 
+	// Test that the parent token's policies are rejected by disallowed_policies
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test1")
 	req.ClientToken = parentToken
 	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
@@ -3564,37 +3555,12 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatalf("expected an error response, got %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
-	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || resp != nil && !resp.IsError() {
-		t.Fatalf("expected an error response, got %#v", resp)
-	}
-
 	// Disallowed should act as a blacklist so make sure we can still make
 	// something with other policies in the request
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
 	req.Data["policies"] = []string{"foo", "bar"}
 	req.ClientToken = parentToken
 	testMakeTokenViaRequest(t, ts, req)
-
-	// Check to be sure 'test3*' matches 'test3'
-	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
-	req.Data["policies"] = []string{"test3"}
-	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || resp != nil && !resp.IsError() {
-		t.Fatalf("expected an error response, got %#v", resp)
-	}
-
-	// Check to be sure 'test3*' matches 'test3b'
-	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
-	req.Data["policies"] = []string{"test3b"}
-	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || resp != nil && !resp.IsError() {
-		t.Fatalf("expected an error response, got %#v", resp)
-	}
 
 	// Check to be sure 'test*' without globbing matches 'test*'
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/testglobdisabled")
@@ -3608,12 +3574,6 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	// Check to be sure 'test*' without globbing doesn't match 'test1' or 'test'
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/testglobdisabled")
 	req.Data["policies"] = []string{"test1", "test"}
-	req.ClientToken = parentToken
-	testMakeTokenViaRequest(t, ts, req)
-
-	// Check that non-blacklisted policies still work
-	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
-	req.Data["policies"] = []string{"test1"}
 	req.ClientToken = parentToken
 	testMakeTokenViaRequest(t, ts, req)
 
@@ -3669,35 +3629,6 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	// test glob matching with allowed_policies_glob
-	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test")
-	req.ClientToken = root
-	req.Data = map[string]interface{}{
-		"allowed_policies":      "",
-		"allowed_policies_glob": "test*",
-	}
-
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-	if resp != nil {
-		t.Fatalf("expected a nil response")
-	}
-
-	req.Path = "create/test"
-	req.Data["policies"] = []string{"footest"}
-	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-
-	req.Data["policies"] = []string{"testfoo", "test2"}
-	resp = testMakeTokenViaRequest(t, ts, req)
-	if resp.Auth.ClientToken == "" {
-		t.Fatalf("bad: %#v", resp)
-	}
-
 	// test not glob matching when using allowed_policies instead of allowed_policies_glob
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testnoglob")
 	req.ClientToken = root
@@ -3736,8 +3667,7 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
-		"allowed_policies":      "",
-		"allowed_policies_glob": "",
+		"allowed_policies": "",
 	}
 	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3785,6 +3715,201 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	}
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "test1", "test2", "test3"}) {
 		t.Fatalf("bad: %#v", resp.Auth.Policies)
+	}
+}
+
+func TestTokenStore_RoleDisallowedPoliciesGlob(t *testing.T) {
+	var req *logical.Request
+	var resp *logical.Response
+	var err error
+
+	core, _, root := TestCoreUnsealed(t)
+	ts := core.tokenStore
+	ps := core.policyStore
+
+	// Create 4 different policies
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
+	policy.Name = "test1"
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
+	policy.Name = "test2"
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
+	policy.Name = "test3"
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
+	policy.Name = "test3b"
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create roles with different disallowed_policies configuration
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test1")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies_glob": "test1",
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testnot23")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies_glob": "test2,test3*",
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// Create a token that has all the policies defined above
+	req = logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"test1", "test2", "test3", "test3b"}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp == nil || resp.Auth == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: ClientToken; resp:%#v", resp)
+	}
+	parentToken := resp.Auth.ClientToken
+
+	// Test that the parent token's policies are rejected by disallowed_policies
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test1")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Disallowed should act as a blacklist so make sure we can still make
+	// something with other policies in the request
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test1")
+	req.Data["policies"] = []string{"foo", "bar"}
+	req.ClientToken = parentToken
+	testMakeTokenViaRequest(t, ts, req)
+
+	// Check to be sure 'test3*' matches 'test3'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test3"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check to be sure 'test3*' matches 'test3b'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test3b"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check that non-blacklisted policies still work
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test1"}
+	req.ClientToken = parentToken
+	testMakeTokenViaRequest(t, ts, req)
+
+	// Create a role to have 'default' policy disallowed
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/default")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies_glob": "default",
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/default")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+}
+
+func TestTokenStore_RoleAllowedPoliciesGlob(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	// test literal matching works in allowed_policies_glob
+	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies_glob": "test1,test2",
+	}
+
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Data = map[string]interface{}{}
+
+	req.Path = "create/test"
+	req.Data["policies"] = []string{"foo"}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"test2"}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// test glob matching in allowed_policies_glob
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies_glob": "test*",
+	}
+
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Path = "create/test"
+	req.Data["policies"] = []string{"footest"}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"testfoo", "test2", "test"}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 

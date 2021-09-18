@@ -633,11 +633,10 @@ type tsRoleEntry struct {
 	// List of policies to be not allowed during token creation using this role
 	DisallowedPolicies []string `json:"disallowed_policies" mapstructure:"disallowed_policies" structs:"disallowed_policies"`
 
-	// The policies that creation functions using this role can assign to a token,
-	// escaping or further locking down normal subset checking
+	// An extension to AllowedPolicies that instead uses glob matching on policy names
 	AllowedPoliciesGlob []string `json:"allowed_policies_glob" mapstructure:"allowed_policies_glob" structs:"allowed_policies_glob"`
 
-	// List of policies to be not allowed during token creation using this role
+	// An extension to DisallowedPolicies that instead uses glob matching on policy names
 	DisallowedPoliciesGlob []string `json:"disallowed_policies_glob" mapstructure:"disallowed_policies_glob" structs:"disallowed_policies_glob"`
 
 	// If true, tokens created using this role will be orphans
@@ -3822,12 +3821,13 @@ calling token's policies. The parameter is a comma-delimited string of
 policy names.`
 	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
 no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
-	tokenAllowedPoliciesGlobHelp = `If set, tokens can be created with any subset of the policies in this
+	tokenAllowedPoliciesGlobHelp = `If set, tokens can be created with any subset of glob matched policies in this
 list, rather than the normal semantics of tokens being a subset of the
 calling token's policies. The parameter is a comma-delimited string of
 policy name globs.`
 	tokenDisallowedPoliciesGlobHelp = `If set, successful token creation via this role will require that
-no policies in the given list are requested. The parameter is a comma-delimited string of policy name globs.`
+no requested policies glob match any of policies in this list.
+The parameter is a comma-delimited string of policy name globs.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role

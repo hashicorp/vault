@@ -73,7 +73,7 @@ during this call.
 
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
-  subset of the policies belonging to the token making the request, unless 
+  subset of the policies belonging to the token making the request, unless
   the calling token is root or contains `sudo` capabilities to `auth/token/create`.
   If not specified, defaults to all the policies of the calling token.
 - `meta` `(map: {})` – A map of string to string valued metadata. This is
@@ -338,8 +338,8 @@ if there is a lease associated with it.
 - `token` `(string: <required>)` - Token to renew. This can be part of the URL
   or the body.
 - `increment` `(string: "")` - An optional requested increment duration can be
-  provided. This increment may not be honored, for instance in the case of periodic tokens. 
-  If not supplied, Vault will use the default TTL. This is specified as a numeric string 
+  provided. This increment may not be honored, for instance in the case of periodic tokens.
+  If not supplied, Vault will use the default TTL. This is specified as a numeric string
   with suffix like "30s" or "5m".
 
 ### Sample Payload
@@ -389,8 +389,8 @@ possible only if there is a lease associated with it.
 ### Parameters
 
 - `increment` `(string: "")` - An optional requested increment duration can be
-  provided. This increment may not be honored, for instance in the case of periodic tokens. 
-  If not supplied, Vault will use the default TTL. This is specified as a numeric string 
+  provided. This increment may not be honored, for instance in the case of periodic tokens.
+  If not supplied, Vault will use the default TTL. This is specified as a numeric string
   with suffix like "30s" or "5m".
 
 ### Sample Payload
@@ -627,6 +627,8 @@ $ curl \
     ],
     "allowed_policies": [],
     "disallowed_policies": [],
+    "allowed_policies_glob": [],
+    "disallowed_policies_glob": [],
     "explicit_max_ttl": 0,
     "name": "nomad",
     "orphan": false,
@@ -690,13 +692,29 @@ tokens created against a role to be revoked using the
   tokens being a subset of the calling token's policies. The parameter is a
   comma-delimited string of policy names. If at creation time
   `no_default_policy` is not set and `"default"` is not contained in
-  `disallowed_policies`, the `"default"` policy will be added to the created
-  token automatically.
+  `disallowed_policies` or glob matched in `disallowed_policies_glob`,
+  the `"default"` policy will be added to the created token automatically.
 - `disallowed_policies` `(list: [])` – If set, successful token creation via
   this role will require that no policies in the given list are requested. The
   parameter is a comma-delimited string of policy names. Adding `"default"` to
   this list will prevent `"default"` from being added automatically to created
   tokens.
+- `allowed_policies_glob` `(list: [])` – If set, tokens can be created with any
+  subset of glob matched policies in this list, rather than the normal semantics
+  of tokens being a subset of the calling token's policies. The parameter is a
+  comma-delimited string of policy name globs. If at creation time
+  `no_default_policy` is not set and `"default"` is not contained in
+  `disallowed_policies` or glob matched in `disallowed_policies_glob`,
+  the `"default"` policy will be added to the created token automatically.
+  If combined with `allowed_policies` policies need to only match one of the two
+  lists to be permitted.
+- `disallowed_policies_glob` `(list: [])` – If set, successful token creation via
+  this role will require that no requested policies glob match any of policies in
+  this list. The parameter is a comma-delimited string of policy name globs.
+  Adding any glob that matches `"default"` to this list will prevent `"default"`
+  from being added automatically to created tokens.
+  If combined with `disallowed_policies` policies need to only match one of the
+  two lists to be blocked.
 - `orphan` `(bool: false)` - If `true`, tokens created against this policy will
   be orphan tokens (they will have no parent). As such, they will not be
   automatically revoked by the revocation of any other token.
