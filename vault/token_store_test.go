@@ -4156,18 +4156,19 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		}
 
 		expected := map[string]interface{}{
-			"name":                   "test",
-			"orphan":                 false,
-			"period":                 int64(1),
-			"token_period":           int64(1),
-			"allowed_policies":       []string(nil),
-			"disallowed_policies":    []string(nil),
-			"path_suffix":            "",
-			"token_explicit_max_ttl": int64(3600),
-			"explicit_max_ttl":       int64(3600),
-			"renewable":              false,
-			"token_type":             "batch",
-			"allowed_entity_aliases": []string(nil),
+			"name":                    "test",
+			"orphan":                  false,
+			"period":                  int64(1),
+			"token_period":            int64(1),
+			"allowed_policies":        []string(nil),
+			"disallowed_policies":     []string(nil),
+			"path_suffix":             "",
+			"token_explicit_max_ttl":  int64(3600),
+			"explicit_max_ttl":        int64(3600),
+			"renewable":               false,
+			"token_type":              "batch",
+			"allowed_entity_aliases":  []string(nil),
+			"token_no_default_policy": false,
 		}
 
 		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
@@ -4209,18 +4210,19 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		}
 
 		expected := map[string]interface{}{
-			"name":                   "test",
-			"orphan":                 false,
-			"period":                 int64(5),
-			"token_period":           int64(5),
-			"allowed_policies":       []string(nil),
-			"disallowed_policies":    []string(nil),
-			"path_suffix":            "",
-			"token_explicit_max_ttl": int64(7200),
-			"explicit_max_ttl":       int64(7200),
-			"renewable":              false,
-			"token_type":             "default-service",
-			"allowed_entity_aliases": []string(nil),
+			"name":                    "test",
+			"orphan":                  false,
+			"period":                  int64(5),
+			"token_period":            int64(5),
+			"allowed_policies":        []string(nil),
+			"disallowed_policies":     []string(nil),
+			"path_suffix":             "",
+			"token_explicit_max_ttl":  int64(7200),
+			"explicit_max_ttl":        int64(7200),
+			"renewable":               false,
+			"token_type":              "default-service",
+			"allowed_entity_aliases":  []string(nil),
+			"token_no_default_policy": false,
 		}
 
 		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
@@ -4261,18 +4263,19 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		}
 
 		expected := map[string]interface{}{
-			"name":                   "test",
-			"orphan":                 false,
-			"period":                 int64(0),
-			"token_period":           int64(7),
-			"allowed_policies":       []string(nil),
-			"disallowed_policies":    []string(nil),
-			"path_suffix":            "",
-			"token_explicit_max_ttl": int64(5200),
-			"explicit_max_ttl":       int64(0),
-			"renewable":              false,
-			"token_type":             "default-service",
-			"allowed_entity_aliases": []string(nil),
+			"name":                    "test",
+			"orphan":                  false,
+			"period":                  int64(0),
+			"token_period":            int64(7),
+			"allowed_policies":        []string(nil),
+			"disallowed_policies":     []string(nil),
+			"path_suffix":             "",
+			"token_explicit_max_ttl":  int64(5200),
+			"explicit_max_ttl":        int64(0),
+			"renewable":               false,
+			"token_type":              "default-service",
+			"allowed_entity_aliases":  []string(nil),
+			"token_no_default_policy": false,
 		}
 
 		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
@@ -4315,18 +4318,19 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		}
 
 		expected := map[string]interface{}{
-			"name":                   "test",
-			"orphan":                 false,
-			"period":                 int64(0),
-			"token_period":           int64(5),
-			"allowed_policies":       []string(nil),
-			"disallowed_policies":    []string(nil),
-			"path_suffix":            "",
-			"token_explicit_max_ttl": int64(7200),
-			"explicit_max_ttl":       int64(0),
-			"renewable":              false,
-			"token_type":             "service",
-			"allowed_entity_aliases": []string(nil),
+			"name":                    "test",
+			"orphan":                  false,
+			"period":                  int64(0),
+			"token_period":            int64(5),
+			"allowed_policies":        []string(nil),
+			"disallowed_policies":     []string(nil),
+			"path_suffix":             "",
+			"token_explicit_max_ttl":  int64(7200),
+			"explicit_max_ttl":        int64(0),
+			"renewable":               false,
+			"token_type":              "service",
+			"allowed_entity_aliases":  []string(nil),
+			"token_no_default_policy": false,
 		}
 
 		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
