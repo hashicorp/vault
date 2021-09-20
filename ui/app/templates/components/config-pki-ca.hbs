@@ -10,18 +10,23 @@
   {{#if (or model.certificate model.csr)}}
     {{#each model.attrs as |attr|}}
       {{#if attr.options.masked}}
-        <InfoTableRow data-test-table-row @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
+        <InfoTableRow data-test-table-row 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}>
           <MaskedInput
             @value={{get model attr.name}}
             @displayOnly={{true}}
             @allowCopy={{true}}
           />
         </InfoTableRow>
-      {{!-- only pass to date-format helper if (get model attr.name) returns a value AND attr.name equals 'issueDate' or 'expiryDate' --}}
       {{else if (and (get model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
-        <InfoTableRow data-test-table-row @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
+        <InfoTableRow data-test-table-row 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
       {{else}}
-        <InfoTableRow data-test-table-row @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}/>
+        <InfoTableRow data-test-table-row 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}/>
       {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
