@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"strconv"
@@ -37,6 +38,8 @@ func newBufferedReader(r io.ReadCloser) *bufferedReader {
 func (b *bufferedReader) Close() error {
 	return b.rOrig.Close()
 }
+
+const MergePatchContentTypeHeader = "application/merge-patch+json"
 
 func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
@@ -137,6 +140,34 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 					return nil, nil, status, fmt.Errorf("error parsing JSON")
 				}
 			}
+		}
+
+	case "PATCH":
+		op = logical.PatchOperation
+
+		contentTypeHeader := r.Header.Get("Content-Type")
+		contentType, _, err := mime.ParseMediaType(contentTypeHeader)
+		if err != nil {
+			status := http.StatusBadRequest
+			logical.AdjustErrorStatusCode(&status, err)
+			return nil, nil, status, err
+		}
+
+		if contentType != MergePatchContentTypeHeader {
+			return nil, nil, http.StatusBadRequest, fmt.Errorf("PATCH requires Content-Type of %s, provided %s", MergePatchContentTypeHeader, contentType)
+		}
+
+		origBody, err = parseJSONRequest(perfStandby, r, w, &data)
+
+		if err == io.EOF {
+			data = nil
+			err = nil
+		}
+
+		if err != nil {
+			status := http.StatusBadRequest
+			logical.AdjustErrorStatusCode(&status, err)
+			return nil, nil, status, fmt.Errorf("error parsing JSON")
 		}
 
 	case "LIST":
