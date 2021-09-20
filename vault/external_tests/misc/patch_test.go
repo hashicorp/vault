@@ -36,7 +36,6 @@ func TestKVV2_Patch_FieldFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create a policy with field filters that should emulate the behavior amex wants
 	policy := `
 path "kv/*" {
 	capabilities = ["create", "patch", "list"]
@@ -202,6 +201,26 @@ path "kv/metadata/*" {
 	}
 
 	if secret.Data["data"].(map[string]interface{})["wibble"] != "wobble" {
+		t.Fatal("expected the kv patch to work but it didn't")
+	}
+
+	// patching a whole bunch of fields at once should only work for the fields in the filter
+	_, err = client.Logical().JSONMergePatch("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "bar-works", "quux": map[string]interface{}{"wibble": "quux-wibble-works"}, "wibble": "wibble-doesnt-work"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secret, err = client.Logical().Read("kv/data/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Data["data"].(map[string]interface{})["bar"] != "bar-works" {
+		t.Fatal("expected the kv patch to work but it didn't")
+	}
+	if secret.Data["data"].(map[string]interface{})["quux"].(map[string]interface{})["wibble"] != "quux-wibble-works" {
+		t.Fatal("expected the kv patch to work but it didn't")
+	}
+	if secret.Data["data"].(map[string]interface{})["wibble"] == "wibble-doesnt-work" {
 		t.Fatal("expected the kv patch to work but it didn't")
 	}
 }
