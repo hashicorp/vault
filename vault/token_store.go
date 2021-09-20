@@ -3183,18 +3183,19 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 	// TODO (1.4): Remove "period" and "explicit_max_ttl" if they're zero
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"period":                 int64(role.Period.Seconds()),
-			"token_period":           int64(role.TokenPeriod.Seconds()),
-			"explicit_max_ttl":       int64(role.ExplicitMaxTTL.Seconds()),
-			"token_explicit_max_ttl": int64(role.TokenExplicitMaxTTL.Seconds()),
-			"disallowed_policies":    role.DisallowedPolicies,
-			"allowed_policies":       role.AllowedPolicies,
-			"name":                   role.Name,
-			"orphan":                 role.Orphan,
-			"path_suffix":            role.PathSuffix,
-			"renewable":              role.Renewable,
-			"token_type":             role.TokenType.String(),
-			"allowed_entity_aliases": role.AllowedEntityAliases,
+			"period":                  int64(role.Period.Seconds()),
+			"token_period":            int64(role.TokenPeriod.Seconds()),
+			"explicit_max_ttl":        int64(role.ExplicitMaxTTL.Seconds()),
+			"token_explicit_max_ttl":  int64(role.TokenExplicitMaxTTL.Seconds()),
+			"disallowed_policies":     role.DisallowedPolicies,
+			"allowed_policies":        role.AllowedPolicies,
+			"name":                    role.Name,
+			"orphan":                  role.Orphan,
+			"path_suffix":             role.PathSuffix,
+			"renewable":               role.Renewable,
+			"token_type":              role.TokenType.String(),
+			"allowed_entity_aliases":  role.AllowedEntityAliases,
+			"token_no_default_policy": role.TokenNoDefaultPolicy,
 		},
 	}
 
@@ -3206,10 +3207,6 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 	}
 	if role.TokenNumUses > 0 {
 		resp.Data["token_num_uses"] = role.TokenNumUses
-	}
-
-	if role.TokenNoDefaultPolicy {
-		resp.Data["token_no_default_policy"] = true
 	}
 
 	return resp, nil
