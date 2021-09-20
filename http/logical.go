@@ -154,7 +154,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 		if contentType != MergePatchContentTypeHeader {
-			return nil, nil, http.StatusBadRequest, fmt.Errorf("PATCH requires Content-Type of %s, provided %s", MergePatchContentTypeHeader, contentType)
+			return nil, nil, http.StatusUnsupportedMediaType, fmt.Errorf("PATCH requires Content-Type of %s, provided %s", MergePatchContentTypeHeader, contentType)
 		}
 
 		origBody, err = parseJSONRequest(perfStandby, r, w, &data)
