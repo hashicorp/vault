@@ -77,7 +77,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.form.generateCA();
     await settled();
 
-    // assert.ok(page.form.rows.length > 0, 'shows all of the rows');
+    assert.ok(page.form.rows.length > 0, 'shows all of the rows');
     // TODO come back and figure out why not working after upgrade.  I see it, it's a timing issue.
     // assert.ok(page.form.certificateIsPresent, 'the certificate is included');
     await page.form.back();

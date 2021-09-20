@@ -4,6 +4,7 @@ import { computed } from '@ember/object';
 import Certificate from './pki-certificate';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
+// TODO: alphabetize attrs
 export default Certificate.extend({
   DISPLAY_FIELDS: computed(function() {
     return [
