@@ -18,37 +18,36 @@ export default class HistoryComponent extends Component {
 
   // Show namespace graph only if we have more than 1
   get showGraphs() {
-    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
-      return null;
-    }
-    return this.args.model.activity.byNamespace.length > 1;
+    return (
+      this.args.model.activity &&
+      this.args.model.activity.byNamespace &&
+      this.args.model.activity.byNamespace.length > 1
+    );
   }
 
   // Construct the namespace model for the search select component
   get searchDataset() {
-    let dataList = this.cleanUpNamespaces();
-    if (!dataList) {
+    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
+    let dataList = this.args.model.activity.byNamespace;
     return dataList.map(d => {
       return {
         name: d['namespace_id'],
-        id: d['namespace_path'] || 'root',
+        id: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
       };
     });
   }
 
-  // Construct the namespace model for the car chart component
+  // Construct the namespace model for the bar chart component
   get barChartDataset() {
-    let dataset = this.cleanUpNamespaces();
-    if (!dataset) {
+    if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
-    // Show only top 10 namespaces
-    dataset = dataset.slice(0, this.max_namespaces);
+    let dataset = this.args.model.activity.byNamespace.slice(0, this.max_namespaces);
     return dataset.map(d => {
       return {
-        label: d['namespace_path'],
+        label: d['namespace_path'] === '' ? 'root' : d['namespace_path'],
         non_entity_tokens: d['counts']['non_entity_tokens'],
         distinct_entities: d['counts']['distinct_entities'],
         total: d['counts']['clients'],
@@ -56,29 +55,46 @@ export default class HistoryComponent extends Component {
     });
   }
 
-  // Filter out root data
-  cleanUpNamespaces() {
+  // Create namespaces data for csv format
+  get getCsvData() {
     if (!this.args.model.activity || !this.args.model.activity.byNamespace) {
       return null;
     }
-    let namespaces = this.args.model.activity.byNamespace;
-    namespaces = namespaces.filter(item => {
-      return item.namespace_id !== 'root';
+    let results = '',
+      namespaces = this.args.model.activity.byNamespace,
+      fields = ['Namespace path', 'Active clients', 'Unique entities', 'Non-entity tokens'];
+
+    results = fields.join(',') + '\n';
+
+    namespaces.forEach(function(item) {
+      let path = item.namespace_path !== '' ? item.namespace_path : 'root',
+        total = item.counts.clients,
+        unique = item.counts.distinct_entities,
+        non_entity = item.counts.non_entity_tokens;
+
+      results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
     });
-    return namespaces;
+    return results;
   }
 
-  // Set the namespace from the search select picker
-  setNamespace(path) {
-    this.selectedNamespace = this.args.model.activity.byNamespace.find(ns => {
+  // Get the namespace by matching the path from the namespace list
+  getNamespace(path) {
+    return this.args.model.activity.byNamespace.find(ns => {
+      if (path === 'root') {
+        return ns.namespace_path === '';
+      }
       return ns.namespace_path === path;
     });
   }
 
   @action
-  initNamespace(value) {
-    if (value && value.length) {
-      this.setNamespace(value[0]);
+  selectNamespace(value) {
+    // In case of search select component, value returned is an array
+    if (Array.isArray(value)) {
+      this.selectedNamespace = this.getNamespace(value[0]);
+    } else if (typeof value === 'object') {
+      // While D3 bar selection returns an object
+      this.selectedNamespace = this.getNamespace(value.label);
     } else {
       this.selectedNamespace = null;
     }
