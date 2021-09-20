@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -16,11 +17,12 @@ import (
 
 func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 	type args struct {
-		client           *client
-		provider         *provider
-		assignment       *assignment
-		authorizeRequest *logical.Request
-		entityID         string
+		client            *client
+		provider          *provider
+		assignment        *assignment
+		authorizeRequest  *logical.Request
+		entityID          string
+		tokenCreationTime func() time.Time
 	}
 	tests := []struct {
 		name    string
@@ -385,6 +387,123 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthAccessDenied,
 		},
 		{
+			name: "invalid authorize request with negative max_age",
+			args: args{
+				provider: new(provider),
+				assignment: &assignment{
+					Entities: []string{"test-entity"},
+				},
+				client: &client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "-1",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "active re-authentication required with max_age=0",
+			args: args{
+				provider: new(provider),
+				assignment: &assignment{
+					Entities: []string{"test-entity"},
+				},
+				client: &client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "0",
+					},
+				},
+			},
+			wantErr: ErrAuthMaxAgeReAuthenticate,
+		},
+		{
+			name: "active re-authentication required with token creation time exceeding max_age requirement",
+			args: args{
+				provider: new(provider),
+				assignment: &assignment{
+					Entities: []string{"test-entity"},
+				},
+				client: &client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "30",
+					},
+				},
+				tokenCreationTime: func() time.Time {
+					return time.Now().Add(-time.Minute)
+				},
+			},
+			wantErr: ErrAuthMaxAgeReAuthenticate,
+		},
+		{
+			name: "valid authorize request with token creation time within max_age requirement",
+			args: args{
+				provider: new(provider),
+				assignment: &assignment{
+					Entities: []string{"test-entity"},
+				},
+				client: &client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "30",
+					},
+				},
+				tokenCreationTime: func() time.Time {
+					return time.Now()
+				},
+			},
+		},
+		{
 			name: "valid authorize request using update operation (HTTP PUT/POST)",
 			args: args{
 				provider: new(provider),
@@ -470,6 +589,21 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			ctx := namespace.RootContext(nil)
 			storage := new(logical.InmemStorage)
 			tt.args.authorizeRequest.Storage = storage
+
+			// Create a token entry and associate with the authorize request
+			creationTime := time.Now()
+			if tt.args.tokenCreationTime != nil {
+				creationTime = tt.args.tokenCreationTime()
+			}
+			te := &logical.TokenEntry{
+				Path:         "test",
+				Policies:     []string{"default"},
+				TTL:          time.Hour * 24,
+				CreationTime: creationTime.Unix(),
+			}
+			testMakeTokenDirectly(t, c.tokenStore, te)
+			assert.NotEmpty(t, te.ID)
+			tt.args.authorizeRequest.ClientToken = te.ID
 
 			// Create a key
 			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
