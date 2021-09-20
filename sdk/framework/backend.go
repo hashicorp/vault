@@ -3,7 +3,9 @@ package framework
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	jsonpatch "github.com/evanphx/json-patch"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -119,6 +121,10 @@ type InvalidateFunc func(context.Context, string)
 // InitializeFunc is the callback, which if set, will be invoked via
 // Initialize() just after a plugin has been mounted.
 type InitializeFunc func(context.Context, *logical.InitializationRequest) error
+
+// PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
+// the input as defined by request handler prior to JSON marshaling
+type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -272,6 +278,51 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	}
 
 	return callback(ctx, req, &fd)
+}
+
+
+func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
+	var err error
+
+	if resource == nil {
+		return nil, fmt.Errorf("resource does not exist")
+	}
+
+	inputMap := map[string]interface{}{}
+
+	// Parse all fields to ensure data types are handled properly according to the FieldSchema
+	for key := range input.Raw {
+		val, ok := input.GetOk(key)
+
+		// Only accept fields in the schema
+		if ok {
+			inputMap[key] = val
+		}
+	}
+
+	if preprocessor!= nil {
+		inputMap, err = preprocessor(inputMap)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	marshaledResource, err := json.Marshal(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledInput, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil, err
+	}
+
+	modified, err := jsonpatch.MergePatch(marshaledResource, marshaledInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return modified, nil
 }
 
 // SpecialPaths is the logical.Backend implementation.
