@@ -173,7 +173,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 			// Create static role
 			staticRoleName := "static-role"
 			req = &logical.Request{
-				Operation: logical.UpdateOperation,
+				Operation: logical.CreateOperation,
 				Path:      fmt.Sprintf("static-roles/%s", staticRoleName),
 				Storage:   config.StorageView,
 				Data: map[string]interface{}{
