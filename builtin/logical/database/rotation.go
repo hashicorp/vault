@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -360,11 +359,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 
-	config := v4.StaticUserConfig{
-		Username: input.Role.StaticAccount.Username,
-		Password: newPassword,
-	}
-
 	if output.WALID == "" {
 		newPassword, err = dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
 		if err != nil {
@@ -372,7 +366,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &setCredentialsWAL{
 			RoleName:          input.RoleName,
-			Username:          config.Username,
+			Username:          input.Role.StaticAccount.Username,
 			NewPassword:       newPassword,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
