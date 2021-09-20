@@ -1307,121 +1307,93 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 }
 
 func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Helper for preparing the non-standard OIDC error response:
-	// https://openid.net/specs/openid-connect-core-1_0.html#AuthError
-	errorResp := func(errorCode, description, state string) (*logical.Response, error) {
-		response := map[string]interface{}{
-			"error":             errorCode,
-			"error_description": description,
-			"state":             state,
-		}
-
-		statusCode := http.StatusBadRequest
-		if errorCode == ErrAuthServerError {
-			statusCode = http.StatusInternalServerError
-		}
-
-		data, err := json.Marshal(response)
-		if err != nil {
-			return nil, err
-		}
-
-		return &logical.Response{
-			Data: map[string]interface{}{
-				logical.HTTPStatusCode:  statusCode,
-				logical.HTTPRawBody:     data,
-				logical.HTTPContentType: "application/json",
-			},
-		}, nil
-	}
-
 	// Validate the state
 	state := d.Get("state").(string)
 	if state == "" {
-		return errorResp(ErrAuthInvalidRequest, "state parameter is required", "")
+		return authResponse("", "", ErrAuthInvalidRequest, "state parameter is required")
 	}
 
 	// Get the namespace
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 
 	// Get the OIDC provider
 	name := d.Get("name").(string)
 	provider, err := i.getOIDCProvider(ctx, req.Storage, name)
 	if err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 	if provider == nil {
-		return errorResp(ErrAuthInvalidRequest, "provider not found", state)
+		return authResponse("", state, ErrAuthInvalidRequest, "provider not found")
 	}
 
 	// Validate that a scope parameter is present and contains the openid scope value
 	scopes := strutil.ParseStringSlice(d.Get("scope").(string), " ")
 	if len(scopes) == 0 || !strutil.StrListContains(scopes, openIDScope) {
-		return errorResp(ErrAuthInvalidRequest,
-			fmt.Sprintf("scope parameter must contain the %q value", openIDScope), state)
+		return authResponse("", state, ErrAuthInvalidRequest,
+			fmt.Sprintf("scope parameter must contain the %q value", openIDScope))
 	}
 
 	// Validate the response type
 	responseType := d.Get("response_type").(string)
 	if responseType == "" {
-		return errorResp(ErrAuthInvalidRequest, "response_type parameter is required", state)
+		return authResponse("", state, ErrAuthInvalidRequest, "response_type parameter is required")
 	}
 	if responseType != "code" {
-		return errorResp(ErrAuthUnsupportedResponseType, "unsupported response_type value", state)
+		return authResponse("", state, ErrAuthUnsupportedResponseType, "unsupported response_type value")
 	}
 
 	// Validate the client ID
 	clientID := d.Get("client_id").(string)
 	if clientID == "" {
-		return errorResp(ErrAuthInvalidClientID, "client_id parameter is required", state)
+		return authResponse("", state, ErrAuthInvalidClientID, "client_id parameter is required")
 	}
 	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 	if client == nil {
-		return errorResp(ErrAuthInvalidClientID, "client with client_id not found", state)
+		return authResponse("", state, ErrAuthInvalidClientID, "client with client_id not found")
 	}
 	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
 		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
-		return errorResp(ErrAuthUnauthorizedClient, "client is not authorized to use the provider", state)
+		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
 	}
 
 	// Validate the redirect URI
 	redirectURI := d.Get("redirect_uri").(string)
 	if redirectURI == "" {
-		return errorResp(ErrAuthInvalidRequest, "redirect_uri parameter is required", state)
+		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
 	}
 	if !strutil.StrListContains(client.RedirectURIs, redirectURI) {
-		return errorResp(ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client", state)
+		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
 	// Validate the nonce
 	nonce := d.Get("nonce").(string)
 	if nonce == "" {
-		return errorResp(ErrAuthInvalidRequest, "nonce parameter is required", state)
+		return authResponse("", state, ErrAuthInvalidRequest, "nonce parameter is required")
 	}
 
 	// Validate that there is an identity entity associated with the request
 	entity, err := i.MemDBEntityByID(req.EntityID, false)
 	if err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 	if entity == nil {
-		return errorResp(ErrAuthAccessDenied, "identity entity must be associated with the request", state)
+		return authResponse("", state, ErrAuthAccessDenied, "identity entity must be associated with the request")
 	}
 
 	// Validate that the identity entity associated with the request
 	// is a member of the client assignments' groups or entities
 	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity, client.Assignments)
 	if err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 	if !isMember {
-		return errorResp(ErrAuthAccessDenied, "identity entity not authorized by client assignment", state)
+		return authResponse("", state, ErrAuthAccessDenied, "identity entity not authorized by client assignment")
 	}
 
 	// Create the auth code cache entry
@@ -1441,20 +1413,20 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if maxAgeRaw, ok := d.GetOk("max_age"); ok {
 		maxAge := maxAgeRaw.(int)
 		if maxAge < 0 {
-			return errorResp(ErrAuthInvalidRequest, "max_age must be greater than zero", state)
+			return authResponse("", state, ErrAuthInvalidRequest, "max_age must be greater than zero")
 		}
 		if maxAge == 0 {
 			// TODO: solve for the potential UI loop here or make max_age=0 invalid
-			return errorResp(ErrAuthMaxAgeReAuthenticate, "active re-authentication is required by max_age", state)
+			return authResponse("", state, ErrAuthMaxAgeReAuthenticate, "active re-authentication is required by max_age")
 		}
 
 		// Look up the token associated with the request
 		te, err := i.tokenStorer.LookupToken(ctx, req.ClientToken)
 		if err != nil {
-			return errorResp(ErrAuthServerError, err.Error(), state)
+			return authResponse("", state, ErrAuthServerError, err.Error())
 		}
 		if te == nil {
-			return errorResp(ErrAuthAccessDenied, "token associated with request not found", state)
+			return authResponse("", state, ErrAuthAccessDenied, "token associated with request not found")
 		}
 
 		// Check if the token creation time violates the max age requirement
@@ -1462,7 +1434,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		lastAuthTime := time.Unix(te.CreationTime, 0).UTC()
 		secondsSince := int(now.Sub(lastAuthTime).Seconds())
 		if secondsSince > maxAge {
-			return errorResp(ErrAuthMaxAgeReAuthenticate, "active re-authentication is required by max_age", state)
+			return authResponse("", state, ErrAuthMaxAgeReAuthenticate, "active re-authentication is required by max_age")
 		}
 
 		// Set the auth time to use for the auth_time claim in the token exchange
@@ -1472,18 +1444,52 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	// Generate the authorization code
 	code, err := base62.Random(32)
 	if err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 
 	// Cache the authorization code for a subsequent token exchange
 	if err := i.oidcAuthCodeCache.SetDefault(ns, code, authCodeEntry); err != nil {
-		return errorResp(ErrAuthServerError, err.Error(), state)
+		return authResponse("", state, ErrAuthServerError, err.Error())
+	}
+
+	return authResponse(code, state, "", "")
+}
+
+// authResponse returns the OIDC Authentication Response. An error response is
+// returned if the given error code is non-empty. For details, see spec at
+//   - https://openid.net/specs/openid-connect-core-1_0.html#AuthResponse
+//   - https://openid.net/specs/openid-connect-core-1_0.html#AuthError
+func authResponse(code, state, errorCode, errorDescription string) (*logical.Response, error) {
+	statusCode := http.StatusOK
+	response := map[string]interface{}{
+		"code":  code,
+		"state": state,
+	}
+
+	// Set the error response and status code if error code isn't empty
+	if errorCode != "" {
+		statusCode = http.StatusBadRequest
+		if errorCode == ErrAuthServerError {
+			statusCode = http.StatusInternalServerError
+		}
+
+		response = map[string]interface{}{
+			"error":             errorCode,
+			"error_description": errorDescription,
+			"state":             state,
+		}
+	}
+
+	data, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"code":  code,
-			"state": state,
+			logical.HTTPStatusCode:  statusCode,
+			logical.HTTPRawBody:     data,
+			logical.HTTPContentType: "application/json",
 		},
 	}, nil
 }

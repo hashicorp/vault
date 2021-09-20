@@ -25,7 +25,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "invalid authorize request with provider not found",
@@ -50,7 +50,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with empty scopes",
@@ -75,7 +75,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with missing openid scope",
@@ -100,7 +100,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with missing response_type",
@@ -125,7 +125,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with unsupported response_type",
@@ -150,7 +150,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthUnsupportedResponseType,
 		},
 		{
 			name: "invalid authorize request with client_id not found",
@@ -175,7 +175,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidClientID,
 		},
 		{
 			name: "invalid authorize request with client_id not allowed by provider",
@@ -202,7 +202,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthUnauthorizedClient,
 		},
 		{
 			name: "invalid authorize request with missing redirect_uri",
@@ -227,7 +227,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with redirect_uri not allowed by client",
@@ -252,7 +252,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRedirectURI,
 		},
 		{
 			name: "invalid authorize request with missing state",
@@ -277,7 +277,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with missing nonce",
@@ -302,7 +302,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthInvalidRequest,
 		},
 		{
 			name: "invalid authorize request with identity entity ID not found",
@@ -328,7 +328,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthAccessDenied,
 		},
 		{
 			name: "invalid authorize request with entity not found in client assignment",
@@ -355,7 +355,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthAccessDenied,
 		},
 		{
 			name: "invalid authorize request with group not found in client assignment",
@@ -382,7 +382,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: ErrAuthAccessDenied,
 		},
 		{
 			name: "valid authorize request using update operation (HTTP PUT/POST)",
@@ -568,25 +568,33 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 
 			// Send the request to the OIDC authorize endpoint
 			resp, err = c.identityStore.HandleRequest(ctx, tt.args.authorizeRequest)
-			if tt.wantErr {
-				var res struct {
-					Error            string `json:"error"`
-					ErrorDescription string `json:"error_description"`
-				}
-				assert.NotNil(t, resp)
-				assert.NotNil(t, resp.Data["http_raw_body"])
-				assert.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &res))
-				assert.NotEmpty(t, res.Error)
+
+			// Parse the response
+			var res struct {
+				Code             string `json:"code"`
+				State            string `json:"state"`
+				Error            string `json:"error"`
+				ErrorDescription string `json:"error_description"`
+			}
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.Data[logical.HTTPRawBody])
+			assert.NotNil(t, resp.Data[logical.HTTPContentType])
+			assert.Equal(t, "application/json", resp.Data[logical.HTTPContentType].(string))
+			assert.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &res))
+
+			if tt.wantErr != "" {
+				// Assert that we receive the expected error code
+				assert.Equal(t, tt.wantErr, res.Error)
 				assert.NotEmpty(t, res.ErrorDescription)
 				return
 			}
 
-			// Expect to receive a base62 authorization code in the response
+			// Assert that we receive an authorization code (base62) and state
 			expectSuccess(t, resp, err)
-			assert.NotNil(t, resp.Data["code"])
-			assert.Regexp(t, "[a-zA-Z0-9]{32}", resp.Data["code"].(string))
-			assert.NotNil(t, resp.Data["state"])
-			assert.NotEmpty(t, resp.Data["state"].(string))
+			assert.Regexp(t, "[a-zA-Z0-9]{32}", res.Code)
+			assert.NotEmpty(t, res.State)
+			assert.Empty(t, res.Error)
+			assert.Empty(t, res.ErrorDescription)
 		})
 	}
 }
