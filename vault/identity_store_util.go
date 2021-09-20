@@ -2117,9 +2117,10 @@ func (i *IdentityStore) handleAliasListCommon(ctx context.Context, groupAlias bo
 		alias := raw.(*identity.Alias)
 		aliasIDs = append(aliasIDs, alias.ID)
 		aliasInfoEntry := map[string]interface{}{
-			"name":           alias.Name,
-			"canonical_id":   alias.CanonicalID,
-			"mount_accessor": alias.MountAccessor,
+			"name":            alias.Name,
+			"canonical_id":    alias.CanonicalID,
+			"mount_accessor":  alias.MountAccessor,
+			"custom_metadata": alias.CustomMetadata,
 		}
 
 		mi, ok := mountAccessorMap[alias.MountAccessor]

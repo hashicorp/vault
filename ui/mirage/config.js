@@ -5,7 +5,7 @@ export default function() {
 
   this.get('sys/internal/counters/activity', function(db) {
     let data = {};
-    const firstRecord = db['metrics/activities'].first();
+    const firstRecord = db['clients/activities'].first();
     if (firstRecord) {
       data = firstRecord;
     }
@@ -18,7 +18,7 @@ export default function() {
   this.get('sys/internal/counters/config', function(db) {
     return {
       request_id: '00001',
-      data: db['metrics/configs'].first(),
+      data: db['clients/configs'].first(),
     };
   });
 
