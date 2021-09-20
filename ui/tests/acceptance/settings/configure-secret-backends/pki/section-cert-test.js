@@ -70,14 +70,19 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   };
 
   test('cert config: generate', async function(assert) {
+    const commonName = 'PKI CA';
+    const cert = 'Certificate';
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
     await page.form.generateCA();
     await settled();
-
+    assert.dom('[data-test-row-value="Common name"]').hasText(commonName);
     assert.ok(page.form.rows.length > 0, 'shows all of the rows');
+    // assert.dom('[data-test-row-value="Issue date"]').hasText();
+    // assert.dom('[data-test-row-value="Expiration date"]').hasText();
+    await this.pauseTest();
     // TODO come back and figure out why not working after upgrade.  I see it, it's a timing issue.
     // assert.ok(page.form.certificateIsPresent, 'the certificate is included');
     await page.form.back();

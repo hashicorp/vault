@@ -40,12 +40,17 @@ export default ApplicationAdapter.extend({
       if (!response) {
         response = {};
       }
-      // TODO: test if also works with isUpload or isSetSignedIntermediate
-      const caCertMetadata = parsePkiCert([response.data]);
       response.id = snapshot.id;
       response.modelName = type.modelName;
-      const transformedResponse = { ...response, ...caCertMetadata };
-      store.pushPayload(type.modelName, transformedResponse);
+      // only parse if certificate is attached to response
+      if (response.data && response.data.certificate) {
+        const caCertMetadata = parsePkiCert([response.data]);
+        const transformedResponse = { ...response, ...caCertMetadata };
+        store.pushPayload(type.modelName, transformedResponse);
+      } else {
+        store.pushPayload(type.modelName, response);
+      }
+      store.pushPayload(type.modelName, response);
     });
   },
 
