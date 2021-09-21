@@ -1345,14 +1345,14 @@ func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDataba
 	t.Helper()
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	lb, err := Factory(context.Background(), config)
-	if err != nil {
+	// Create and init the backend ourselves instead of using a Factory because
+	// the factory function kicks off threads that cause racy tests.
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
-	b, ok := lb.(*databaseBackend)
-	if !ok {
-		t.Fatal("could not convert to database backend")
-	}
+	b.credRotationQueue = queue.New()
+	b.populateQueue(context.Background(), config.StorageView)
 
 	mockDB := setupMockDB(b)
 
