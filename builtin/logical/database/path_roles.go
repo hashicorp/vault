@@ -543,10 +543,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil {
-			// This update operation is actually performing a create.
-			item = &queue.Item{
-				Key: name,
-			}
+			return nil, err
 		}
 	}
 
