@@ -81,8 +81,12 @@ func TestPlugin_lifecycle(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanupReqs := []*logical.Request{}
-			defer cleanup(t, b, &cleanupReqs)
+			var cleanupReqs []*logical.Request
+			defer func() {
+				// Do not defer cleanup directly so that we can populate the
+				// slice before the function gets executed.
+				cleanup(t, b, cleanupReqs)
+			}()
 
 			// /////////////////////////////////////////////////////////////////
 			// Configure
@@ -213,13 +217,13 @@ func TestPlugin_lifecycle(t *testing.T) {
 	}
 }
 
-func cleanup(t *testing.T, b *databaseBackend, reqs *[]*logical.Request) {
+func cleanup(t *testing.T, b *databaseBackend, reqs []*logical.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Go in stack order so it works similar to defer
-	for i := len(*reqs) - 1; i >= 0; i-- {
-		req := (*reqs)[i]
+	for i := len(reqs) - 1; i >= 0; i-- {
+		req := (reqs)[i]
 		resp, err := b.HandleRequest(ctx, req)
 		if err != nil {
 			t.Fatalf("Error cleaning up: %s", err)
