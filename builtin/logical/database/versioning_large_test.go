@@ -223,7 +223,7 @@ func cleanup(t *testing.T, b *databaseBackend, reqs []*logical.Request) {
 
 	// Go in stack order so it works similar to defer
 	for i := len(reqs) - 1; i >= 0; i-- {
-		req := (reqs)[i]
+		req := reqs[i]
 		resp, err := b.HandleRequest(ctx, req)
 		if err != nil {
 			t.Fatalf("Error cleaning up: %s", err)
