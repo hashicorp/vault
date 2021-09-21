@@ -1,0 +1,3 @@
+```release-note:bug
+aws/auth: Add Profile field to AWS Client Config to enable shared credentials between named profiles
+```
