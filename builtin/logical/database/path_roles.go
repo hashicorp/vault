@@ -543,10 +543,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil {
-			return nil, err
+			// This update operation is actually performing a create.
+			item = &queue.Item{
+				Key: name,
+			}
 		}
-
 	}
+
 	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
 
 	// Add their rotation to the queue
