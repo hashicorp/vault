@@ -20,6 +20,7 @@ import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const consoleComponent = create(consoleClass);
 
@@ -27,6 +28,12 @@ let writeSecret = async function(backend, path, key, val) {
   await listPage.visitRoot({ backend });
   await listPage.create();
   return editPage.createSecret(path, key, val);
+};
+
+let writeSecretWithMetadata = async function(backend, path, key, val, maxVersion) {
+  await listPage.visitRoot({ backend });
+  await listPage.create();
+  return editPage.editSecretWithMetadata(path, key, val, maxVersion);
 };
 
 module('Acceptance | secrets/secret/create', function(hooks) {
@@ -390,7 +397,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'saves the content'
     );
   });
-
+  // Policy tests
   test('version 2 with restricted policy still allows creation', async function(assert) {
     let backend = 'kv-v2';
     const V2_POLICY = `
@@ -449,6 +456,51 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     //check for metadata tab
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
+  });
+
+  test('version 2 with metadata no read or list access but access to the data endpoint', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/metadata/*" {
+        capabilities = ["create","update"]
+      }
+      path "kv-v2/data/secret" {
+        capabilities = ["create", "read", "update"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    // write secret with metadata
+    await writeSecretWithMetadata(backend, 'secret', 'foo', 'bar', 101);
+    await logout.visit();
+    await authPage.login(userToken);
+    await settled();
+    // will need to confirm the secret search box.
+
+    // test if metadata tab there and error and no edit. and you can't see metadata that was setup.
+    await click('[data-test-auth-backend-link="kv-v2"]');
+    assert.dom('[data-test-get-credentials-card]').exists('shows the get credentials card');
+    let card = document.querySelector('[data-test-search-roles]').childNodes[1];
+    await typeIn(card.querySelector('input'), 'secret');
+    await click('[data-test-get-credentials]');
+    await settled();
+    assert.dom('[data-test-value-div="foo"]').exists('secret view page and info table row with foo value');
+
+    // check metadata
+    await click('[data-test-secret-metadata-tab]');
+    await settled();
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
+      );
   });
 
   test('version 2 with policy with destroy capabilities shows modal', async function(assert) {

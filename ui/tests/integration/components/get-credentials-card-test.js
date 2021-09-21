@@ -53,7 +53,7 @@ module('Integration | Component | get-credentials-card', function(hooks) {
     assert.dom('[data-test-get-credentials]').isEnabled();
   });
 
-  test('it shows input field that can be clicked to a secret when role is secret meep', async function(assert) {
+  test('it shows input field that can be clicked to a secret when role is secret', async function(assert) {
     await render(
       hbs`<GetCredentialsCard @title={{title}} @shouldUseFallback={{true}} @placeHolder="secret/" @backend="kv" @type="secret"/>`
     );
