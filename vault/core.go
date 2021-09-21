@@ -517,6 +517,7 @@ type Core struct {
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
+	// customListenerHeader holds custom response headers for a listener
 	customListenerHeader *atomic.Value
 
 	// Telemetry objects

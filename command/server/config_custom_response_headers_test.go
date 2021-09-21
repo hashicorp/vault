@@ -80,7 +80,7 @@ func TestCustomResponseHeadersConfigsMultipleListeners(t *testing.T) {
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[1].CustomResponseHeaders); diff == nil {
 		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
 	}
-	if diff := deep.Equal(expectedCustomResponseHeader["default"], config.Listeners[0].CustomResponseHeaders["default"]); diff != nil {
+	if diff := deep.Equal(expectedCustomResponseHeader["default"], config.Listeners[1].CustomResponseHeaders["default"]); diff != nil {
 		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
 	}
 }
