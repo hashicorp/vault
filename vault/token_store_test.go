@@ -3194,6 +3194,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_type":               "default-service",
 		"token_num_uses":           123,
 		"allowed_entity_aliases":   []string(nil),
+		"token_no_default_policy":  false,
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -3213,12 +3214,13 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	// automatically due to the existence check
 	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
-		"period":           "79h",
-		"allowed_policies": "test3",
-		"path_suffix":      "happenin",
-		"renewable":        false,
-		"explicit_max_ttl": "80h",
-		"token_num_uses":   0,
+		"period":                  "79h",
+		"allowed_policies":        "test3",
+		"path_suffix":             "happenin",
+		"renewable":               false,
+		"explicit_max_ttl":        "80h",
+		"token_num_uses":          0,
+		"token_no_default_policy": true,
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -3256,6 +3258,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":                false,
 		"token_type":               "default-service",
 		"allowed_entity_aliases":   []string(nil),
+		"token_no_default_policy":  true,
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -3308,6 +3311,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":                false,
 		"token_type":               "default-service",
 		"allowed_entity_aliases":   []string(nil),
+		"token_no_default_policy":  true,
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
@@ -3326,8 +3330,9 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	// Update path_suffix and bound_cidrs with empty values
 	req.Operation = logical.CreateOperation
 	req.Data = map[string]interface{}{
-		"path_suffix": "",
-		"bound_cidrs": []string{},
+		"path_suffix":             "",
+		"bound_cidrs":             []string{},
+		"token_no_default_policy": false,
 	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3360,6 +3365,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":                false,
 		"token_type":               "default-service",
 		"allowed_entity_aliases":   []string(nil),
+		"token_no_default_policy":  false,
 	}
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
@@ -4428,6 +4434,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"renewable":                false,
 			"token_type":               "batch",
 			"allowed_entity_aliases":   []string(nil),
+			"token_no_default_policy":  false,
 		}
 
 		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
@@ -4483,6 +4490,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"renewable":                false,
 			"token_type":               "default-service",
 			"allowed_entity_aliases":   []string(nil),
+			"token_no_default_policy":  false,
 		}
 
 		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
@@ -4537,6 +4545,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"renewable":                false,
 			"token_type":               "default-service",
 			"allowed_entity_aliases":   []string(nil),
+			"token_no_default_policy":  false,
 		}
 
 		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
@@ -4593,6 +4602,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 			"renewable":                false,
 			"token_type":               "service",
 			"allowed_entity_aliases":   []string(nil),
+			"token_no_default_policy":  false,
 		}
 
 		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {

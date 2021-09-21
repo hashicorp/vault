@@ -3223,6 +3223,7 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"renewable":                role.Renewable,
 			"token_type":               role.TokenType.String(),
 			"allowed_entity_aliases":   role.AllowedEntityAliases,
+			"token_no_default_policy":  role.TokenNoDefaultPolicy,
 		},
 	}
 
