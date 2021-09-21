@@ -93,6 +93,7 @@
     {{#each model.attrs as |attr|}}
       {{#if attr.options.masked}}
         <InfoTableRow 
+          data-test-table-row={{value}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
           @value={{get model attr.name}}>
           <MaskedInput
