@@ -524,6 +524,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 					err = merr.ErrorOrNil()
 				}
 			}
+
 			return nil, err
 		}
 		// guard against RotationTime not being set or zero-value
