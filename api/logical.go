@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -131,6 +132,18 @@ func (c *Logical) List(path string) (*Secret, error) {
 
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
+	if err := r.SetJSONBody(data); err != nil {
+		return nil, err
+	}
+
+	return c.write(path, r)
+}
+
+func (c *Logical) JSONMergePatch(path string, data map[string]interface{}) (*Secret, error) {
+	r := c.c.NewRequest("PATCH", "/v1/"+path)
+	r.Headers = http.Header{
+		"Content-Type": []string{"application/merge-patch+json"},
+	}
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
