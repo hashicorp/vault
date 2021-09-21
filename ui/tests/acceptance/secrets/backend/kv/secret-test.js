@@ -397,7 +397,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'saves the content'
     );
   });
-  // Policy tests
+
   test('version 2 with restricted policy still allows creation', async function(assert) {
     let backend = 'kv-v2';
     const V2_POLICY = `

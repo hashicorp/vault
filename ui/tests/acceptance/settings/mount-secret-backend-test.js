@@ -148,7 +148,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
 
-  test('version 2 with no read to config endpoint still shows configuration page but with no config data meep', async function(assert) {
+  test('version 2 with no read to config endpoint still shows configuration page but with no config data', async function(assert) {
     let backend = `kv-noConfig-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${backend}/*" {
