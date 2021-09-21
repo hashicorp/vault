@@ -20,7 +20,6 @@ import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const consoleComponent = create(consoleClass);
 
