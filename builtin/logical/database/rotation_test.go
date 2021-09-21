@@ -1217,7 +1217,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			b.credRotationQueue = queue.New()
 
 			// Now finish the startup process by populating the queue, which should discard the WAL
-			b.initQueue(ctx, config, consts.ReplicationDRPrimary)
+			b.initQueue(ctx, config, consts.ReplicationPerformancePrimary)
 
 			if tc.shouldRotate {
 				requireWALs(t, storage, 1)
