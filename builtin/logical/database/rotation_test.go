@@ -980,15 +980,25 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	}
 
 	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
-	for i := 0; i < 25; i++ {
-		data := map[string]interface{}{
-			"name":                "plugin-role-test",
-			"db_name":             "plugin-test",
-			"rotation_statements": testRoleStaticUpdate,
-			"username":            dbUser,
-			"rotation_period":     "7s",
-		}
+	data = map[string]interface{}{
+		"name":                "plugin-role-test",
+		"db_name":             "plugin-test",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_period":     "7s",
+	}
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
 
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	for i := 0; i < 25; i++ {
 		req = &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "static-roles/plugin-role-test",
