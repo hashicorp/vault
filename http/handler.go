@@ -218,11 +218,11 @@ type WrappingResponseWriter interface {
 }
 
 type statusHeaderResponseWriter struct {
-	wrapped http.ResponseWriter
-	logger  log.Logger
+	wrapped     http.ResponseWriter
+	logger      log.Logger
 	wroteHeader bool
-	statusCode int
-	headers map[string][]*vault.CustomHeader
+	statusCode  int
+	headers     map[string][]*vault.CustomHeader
 }
 
 func (w statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
@@ -234,14 +234,14 @@ func (w statusHeaderResponseWriter) Header() http.Header {
 }
 
 func (w statusHeaderResponseWriter) Write(buf []byte) (int, error) {
-	// It is allowed to only call ResponseWriter.Write and skip ResponseWriter.WriteHeader
-	// An example of such a situation is "handleUIStub". The Write function will internally
-	// set the status code 200 for the response, and that call might invoke other implementations
-	// the WriteHeader function normally for some sort of IO writer.
-	// So, we still need to set the custom headers.
-	// In cases where both WriteHeader and Write of statusHeaderResponseWriter struct are called
-	// the internal call to the WriterHeader invoked from inside Write method won't change
-	// the headers.
+	// It is allowed to only call ResponseWriter.Write and skip
+	// ResponseWriter.WriteHeader. An example of such a situation is
+	// "handleUIStub". The Write function will internally set the status code
+	// 200 for the response for which that call might invoke other
+	// implementations of the WriteHeader function. So, we still need to set
+	// the custom headers. In cases where both WriteHeader and Write of
+	// statusHeaderResponseWriter struct are called the internal call to the
+	// WriterHeader invoked from inside Write method won't change the headers.
 	if !w.wroteHeader {
 		w.setCustomResponseHeaders(w.statusCode)
 	}
@@ -255,13 +255,10 @@ func (w statusHeaderResponseWriter) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 	// in cases where Write is called after WriteHeader, let's prevent setting
 	// ResponseWriter headers twice
-	if !w.wroteHeader {
-		w.wroteHeader = true
-	}
+	w.wroteHeader = true
 }
 
 func (w statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
-
 	sch := w.headers
 	if sch == nil {
 		w.logger.Warn("status code header map not configured")
@@ -284,7 +281,7 @@ func (w statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 	setter(sch["default"])
 
 	// setting the Xyy pattern first
-	d := fmt.Sprintf("%vxx", status / 100)
+	d := fmt.Sprintf("%vxx", status/100)
 	if val, ok := sch[d]; ok {
 		setter(val)
 	}
@@ -389,7 +386,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		if props.ListenerConfig != nil {

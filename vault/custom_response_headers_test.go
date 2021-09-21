@@ -15,37 +15,36 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
-
-var defaultCustomHeaders = map[string]string {
+var defaultCustomHeaders = map[string]string{
 	"Strict-Transport-Security": "max-age=1; domains",
-	"Content-Security-Policy": "default-src 'others'",
-	"X-Vault-Ignored": "ignored",
-	"X-Custom-Header": "Custom header value default",
-	"X-Frame-Options": "Deny",
-	"X-Content-Type-Options": "nosniff",
-	"Content-Type": "text/plain; charset=utf-8",
-	"X-XSS-Protection": "1; mode=block",
+	"Content-Security-Policy":   "default-src 'others'",
+	"X-Vault-Ignored":           "ignored",
+	"X-Custom-Header":           "Custom header value default",
+	"X-Frame-Options":           "Deny",
+	"X-Content-Type-Options":    "nosniff",
+	"Content-Type":              "text/plain; charset=utf-8",
+	"X-XSS-Protection":          "1; mode=block",
 }
 
-var customHeaders307 = map[string]string {
+var customHeaders307 = map[string]string{
 	"X-Custom-Header": "Custom header value 307",
 }
 
-var customHeader3xx = map[string]string {
+var customHeader3xx = map[string]string{
 	"X-Vault-Ignored-3xx": "Ignored 3xx",
-	"X-Custom-Header": "Custom header value 3xx",
+	"X-Custom-Header":     "Custom header value 3xx",
 }
 
-var customHeaders200 = map[string]string {
-	"Someheader-200": "200",
+var customHeaders200 = map[string]string{
+	"Someheader-200":  "200",
 	"X-Custom-Header": "Custom header value 200",
 }
 
-var customHeader2xx = map[string]string {
+var customHeader2xx = map[string]string{
 	"X-Custom-Header": "Custom header value 2xx",
 }
 
-var customHeader400 = map[string]string {
+var customHeader400 = map[string]string{
 	"Someheader-400": "400",
 }
 
@@ -58,29 +57,25 @@ func TestConfigCustomHeaders(t *testing.T) {
 	logl := &logical.InmemStorage{}
 	uiConfig := NewUIConfig(true, phys, logl)
 
-	rawListenerConfig :=  []*configutil.Listener {
+	rawListenerConfig := []*configutil.Listener{
 		{
 			Type:    "tcp",
 			Address: "127.0.0.1:443",
 			CustomResponseHeaders: map[string]map[string]string{
 				"default": defaultCustomHeaders,
-				"307": customHeaders307,
-				"3xx": customHeader3xx,
-				"200": customHeaders200,
-				"2xx": customHeader2xx,
-				"400": customHeader400,
+				"307":     customHeaders307,
+				"3xx":     customHeader3xx,
+				"200":     customHeaders200,
+				"2xx":     customHeader2xx,
+				"400":     customHeader400,
 			},
 		},
 	}
 
 	uiHeaders, err := uiConfig.Headers(context.Background())
-	customListenerHeader := NewListenerCustomHeader(rawListenerConfig, logger, uiHeaders)
-	if customListenerHeader == nil {
-		t.Fatalf("custom header config should be configured")
-	}
-	listenerCustomHeaders := customListenerHeader.getListenerMap("127.0.0.1:443")
+	listenerCustomHeaders := NewListenerCustomHeader(rawListenerConfig, logger, uiHeaders)
 	if listenerCustomHeaders == nil || len(listenerCustomHeaders) != 1 {
-		t.Fatalf("failed to find listener specific custom header")
+		t.Fatalf("failed to get custom header configuration")
 	}
 
 	lch := listenerCustomHeaders[0]
@@ -95,7 +90,6 @@ func TestConfigCustomHeaders(t *testing.T) {
 	if !lch.ExistCustomResponseHeader("X-Custom-Header") {
 		t.Fatalf("header name with X-Vault prefix is not valid")
 	}
-
 }
 
 func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
@@ -105,17 +99,17 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	b.(*SystemBackend).Core.systemBarrierView = view
 
 	logger := logging.NewVaultLogger(log.Trace)
-	rawListenerConfig :=  []*configutil.Listener {
+	rawListenerConfig := []*configutil.Listener{
 		{
 			Type:    "tcp",
 			Address: "127.0.0.1:443",
 			CustomResponseHeaders: map[string]map[string]string{
 				"default": defaultCustomHeaders,
-				"307": customHeaders307,
-				"3xx": customHeader3xx,
-				"200": customHeaders200,
-				"2xx": customHeader2xx,
-				"400": customHeader400,
+				"307":     customHeaders307,
+				"3xx":     customHeader3xx,
+				"200":     customHeaders200,
+				"2xx":     customHeader2xx,
+				"400":     customHeader400,
 			},
 		},
 	}
@@ -127,7 +121,7 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	if customListenerHeader == nil {
 		t.Fatalf("custom header config should be configured")
 	}
-	b.(*SystemBackend).Core.customListenerHeader = customListenerHeader
+	b.(*SystemBackend).Core.customListenerHeader.Store(customListenerHeader)
 	clh := b.(*SystemBackend).Core.customListenerHeader
 	if clh == nil {
 		t.Fatalf("custom header config should be configured in core")
@@ -145,7 +139,7 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	if err == nil {
 		t.Fatal("request did not fail on setting a header that is present in custom response headers")
 	}
-	if !strings.Contains(resp.Data["error"].(string), fmt.Sprintf("This header already exist in server configuration. %v", "X-Custom-Header")) {
+	if !strings.Contains(resp.Data["error"].(string), fmt.Sprintf("This header already exists in the server configuration and cannot be set in the UI.")) {
 		t.Fatalf("failed to get the expected error")
 	}
 
@@ -163,13 +157,14 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 		t.Fatalf("should not be able to set a header that is in custom response headers")
 	}
 
+	// setting an ui specific header
 	req = logical.TestRequest(t, logical.UpdateOperation, "config/ui/headers/X-CustomUiHeader")
 	req.Data["values"] = []string{"Ui header value"}
 	req.ResponseWriter = hw
 
 	_, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
-		t.Fatal("request did not fail on setting a header that is present in custom response headers")
+		t.Fatal("request failed on setting a header that is not present in custom response headers")
 	}
 
 	h, err = b.(*SystemBackend).Core.uiConfig.Headers(context.Background())

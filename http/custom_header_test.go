@@ -37,8 +37,22 @@ var customHeader405 = map[string]string {
 	"Someheader-405": "405",
 }
 
+var CustomResponseHeaders = map[string]map[string]string{
+	"default": defaultCustomHeaders,
+	"307": {"X-Custom-Header": "Custom header value 307"},
+	"3xx": {
+		"X-Custom-Header": "Custom header value 3xx",
+		"X-Vault-Ignored-3xx": "Ignored 3xx",
+	},
+	"200": customHeader200,
+	"2xx": customHeader2xx,
+	"400": customHeader400,
+	"405": customHeader405,
+	"4xx": customHeader4xx,
+}
+
 func TestCustomResponseHeaders(t *testing.T) {
-	core, _, token := vault.TestCoreWithCustomResponseHeaderAndUI(t, true)
+	core, _, token := vault.TestCoreWithCustomResponseHeaderAndUI(t, CustomResponseHeaders, true)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)

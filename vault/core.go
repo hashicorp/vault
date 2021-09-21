@@ -517,7 +517,7 @@ type Core struct {
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
-	customListenerHeader *ListenersCustomResponseHeadersList
+	customListenerHeader *atomic.Value
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -767,23 +767,24 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		entCore:             entCore{},
-		devToken:            conf.DevToken,
-		physical:            conf.Physical,
-		serviceRegistration: conf.GetServiceRegistration(),
-		underlyingPhysical:  conf.Physical,
-		storageType:         conf.StorageType,
-		redirectAddr:        conf.RedirectAddr,
-		clusterAddr:         new(atomic.Value),
-		clusterListener:     new(atomic.Value),
-		seal:                conf.Seal,
-		router:              NewRouter(),
-		sealed:              new(uint32),
-		sealMigrationDone:   new(uint32),
-		standby:             true,
-		standbyStopCh:       new(atomic.Value),
-		baseLogger:          conf.Logger,
-		logger:              conf.Logger.Named("core"),
+		entCore:              entCore{},
+		devToken:             conf.DevToken,
+		physical:             conf.Physical,
+		serviceRegistration:  conf.GetServiceRegistration(),
+		underlyingPhysical:   conf.Physical,
+		storageType:          conf.StorageType,
+		redirectAddr:         conf.RedirectAddr,
+		clusterAddr:          new(atomic.Value),
+		clusterListener:      new(atomic.Value),
+		customListenerHeader: new(atomic.Value),
+		seal:                 conf.Seal,
+		router:               NewRouter(),
+		sealed:               new(uint32),
+		sealMigrationDone:    new(uint32),
+		standby:              true,
+		standbyStopCh:        new(atomic.Value),
+		baseLogger:           conf.Logger,
+		logger:               conf.Logger.Named("core"),
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -1003,8 +1004,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
-	uiHeaders, _ := c.UIHeaders()
-	c.customListenerHeader = NewListenerCustomHeader(conf.RawConfig.Listeners, c.logger, uiHeaders)
+	// for listeners with custom response headers, configuring customListenerHeader
+	if conf.RawConfig.Listeners != nil {
+		uiHeaders, err := c.UIHeaders()
+		if err != nil {
+			return nil, err
+		}
+		c.customListenerHeader.Store(NewListenerCustomHeader(conf.RawConfig.Listeners, c.logger, uiHeaders))
+	} else {
+		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
+	}
 
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
@@ -2637,27 +2646,41 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
-func (c *Core) getCustomResponseHeaders(la string) []*ListenerCustomHeaders {
-	if c.customListenerHeader == nil {
-		c.logger.Debug("failed to find the custom response headers configuration")
+func (c *Core) getCustomHeadersListenerList(listenerAdd string) []*ListenerCustomHeaders {
+	customHeaders := c.customListenerHeader.Load()
+	if customHeaders == nil {
 		return nil
 	}
 
-	lch := c.customListenerHeader.getListenerMap(la)
-	if lch == nil {
-		c.logger.Warn("no listener config found", "address", la)
+	customHeadersList := customHeaders.([]*ListenerCustomHeaders)
+	if customHeadersList == nil {
 		return nil
 	}
 
+	// either looking for a specific listener, or if listener address isn't given,
+	// checking for all available listeners
+	var lch []*ListenerCustomHeaders
+	if listenerAdd == "" {
+		lch = customHeadersList
+	} else {
+		for _, l := range customHeadersList {
+			if l.Address == listenerAdd {
+				lch = append(lch, l)
+				break
+			}
+		}
+		if len(lch) == 0 {
+			return nil
+		}
+	}
 	return lch
 }
 
-func (c *Core) GetListenerCustomResponseHeaders(la string) *ListenerCustomHeaders {
-
-	if la == "" {
+func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
+	if listenerAdd == "" {
 		return nil
 	}
-	lch := c.getCustomResponseHeaders(la)
+	lch := c.getCustomHeadersListenerList(listenerAdd)
 	if lch == nil {
 		return nil
 	}
@@ -2669,15 +2692,10 @@ func (c *Core) GetListenerCustomResponseHeaders(la string) *ListenerCustomHeader
 	return lch[0]
 }
 
-func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
-	if c.customListenerHeader == nil {
-		c.logger.Debug("failed to find the custom response headers configuration")
-		return false
-	}
-
-	lch := c.getCustomResponseHeaders(la)
+func (c *Core) ExistCustomResponseHeader(header string, listenerAdd string) bool {
+	lch := c.getCustomHeadersListenerList(listenerAdd)
 	if lch == nil {
-		c.logger.Warn("no listener config found", "address", la)
+		c.logger.Warn("no listener config found", "address", listenerAdd)
 		return false
 	}
 
@@ -2693,24 +2711,22 @@ func (c *Core) ExistCustomResponseHeader(header string, la string) bool {
 }
 
 func (c *Core) ReloadCustomResponseHeaders() error {
-
 	conf := c.rawConfig.Load()
 	if conf == nil {
 		return fmt.Errorf("failed to load core raw config")
 	}
-
-	tempLH := c.customListenerHeader
-	c.customListenerHeader = nil
-
-	uiHeaders, _ := c.UIHeaders()
-
 	lns := conf.(*server.Config).Listeners
-	c.customListenerHeader = NewListenerCustomHeader(lns, c.logger, uiHeaders)
-
-	if c.customListenerHeader == nil {
-		c.logger.Error("failed to reload custom headers. the previous configuration will be used")
-		c.customListenerHeader = tempLH
+	if lns == nil {
+		return fmt.Errorf("no listener configured")
 	}
+
+	c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
+
+	uiHeaders, err := c.UIHeaders()
+	if err != nil {
+		return err
+	}
+	c.customListenerHeader.Store(NewListenerCustomHeader(lns, c.logger, uiHeaders))
 
 	return nil
 }

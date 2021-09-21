@@ -101,9 +101,8 @@ type Listener struct {
 	CorsAllowedHeadersRaw []string    `hcl:"cors_allowed_headers,alias:cors_allowed_headers"`
 
 	// Custom Http response headers
-	CustomResponseHeaders 	 map[string]map[string]string `hcl:"-"`
+	CustomResponseHeaders    map[string]map[string]string `hcl:"-"`
 	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
-
 }
 
 func (l *Listener) GoString() string {
@@ -368,14 +367,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 
 		// HTTP Headers
 		{
-			if l.CustomResponseHeadersRaw != nil {
-				customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
-				if err != nil {
-					return multierror.Prefix(fmt.Errorf("failed to parse custom_response_headers: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-				l.CustomResponseHeaders = customHeadersMap
-				l.CustomResponseHeadersRaw = nil
+			// if CustomResponseHeadersRaw is nil, we still need to set the default headers
+			customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
+			if err != nil {
+				return multierror.Prefix(fmt.Errorf("failed to parse custom_response_headers: %w", err), fmt.Sprintf("listeners.%d", i))
 			}
+			l.CustomResponseHeaders = customHeadersMap
+			l.CustomResponseHeadersRaw = nil
 		}
 
 		result.Listeners = append(result.Listeners, &l)

@@ -16,6 +16,15 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
+var DefaultCustomHeaders = map[string]string{
+	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+	"Content-Security-Policy":   "default-src 'none';   connect-src 'self';  img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'",
+	"X-Frame-Options":           "Deny",
+	"X-Content-Type-Options":    "nosniff",
+	"Content-Type":              "application/json",
+	"X-XSS-Protection":          "1; mode=block",
+}
+
 func boolPointer(x bool) *bool {
 	return &x
 }
@@ -32,6 +41,9 @@ func testConfigRaftRetryJoin(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:8200",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 			DisableMlock: true,
@@ -64,6 +76,9 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 
@@ -174,10 +189,16 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:444",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 
@@ -336,6 +357,9 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:8200",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 			DisableMlock: true,
@@ -379,6 +403,9 @@ func testLoadConfigFile(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 
@@ -486,7 +513,7 @@ func testUnknownFieldValidation(t *testing.T) {
 	for _, er1 := range errors {
 		found := false
 		if strings.Contains(er1.String(), "sentinel") {
-			//This happens on OSS, and is fine
+			// This happens on OSS, and is fine
 			continue
 		}
 		for _, ex := range expected {
@@ -525,6 +552,9 @@ func testLoadConfigFile_json(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 
@@ -610,6 +640,9 @@ func testLoadConfigDir(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 
@@ -818,6 +851,9 @@ listener "tcp" {
 					Profiling: configutil.ListenerProfiling{
 						UnauthenticatedPProfAccess: true,
 					},
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 		},
@@ -845,6 +881,9 @@ func testParseSeals(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 			Seals: []*configutil.KMS{
@@ -898,6 +937,9 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
+					CustomResponseHeaders: map[string]map[string]string{
+						"default": DefaultCustomHeaders,
+					},
 				},
 			},
 

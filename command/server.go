@@ -1544,7 +1544,7 @@ func (c *ServerCommand) Run(args []string) int {
 			// reloading custom response headers to make sure we have
 			// the most up to date headers after reloading the config file
 			if err = core.ReloadCustomResponseHeaders(); err != nil {
-				c.UI.Error(err.Error())
+				c.logger.Error(err.Error())
 			}
 
 			if config.LogLevel != "" {
