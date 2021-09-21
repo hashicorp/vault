@@ -10,7 +10,7 @@
   {{#if (or model.certificate model.csr)}}
     {{#each model.attrs as |attr|}}
       {{#if attr.options.masked}}
-        <InfoTableRow data-test-table-row={{value}} 
+        <InfoTableRow data-test-table-row
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
           @value={{get model attr.name}}>
           <MaskedInput
@@ -92,7 +92,9 @@
     />
     {{#each model.attrs as |attr|}}
       {{#if attr.options.masked}}
-        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}}>
+        <InfoTableRow 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}>
           <MaskedInput
             @value={{get model attr.name}}
             @displayOnly={{true}}
