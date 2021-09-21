@@ -29,6 +29,12 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Description: "AWS Secret Access Key for the account used to make AWS API requests.",
 			},
 
+			"profile": {
+				Type:        framework.TypeString,
+				Default:     "default",
+				Description: "AWS Profile used to make AWS API requests.",
+			},
+
 			"endpoint": {
 				Type:        framework.TypeString,
 				Default:     "",
@@ -142,6 +148,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"access_key":                 clientConfig.AccessKey,
+			"profile":                    clientConfig.Profile,
 			"endpoint":                   clientConfig.Endpoint,
 			"iam_endpoint":               clientConfig.IAMEndpoint,
 			"sts_endpoint":               clientConfig.STSEndpoint,
@@ -212,6 +219,16 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.SecretKey = data.Get("secret_key").(string)
+	}
+
+	profileStr, ok := data.GetOk("profile")
+	if ok {
+		if configEntry.Profile != profileStr.(string) {
+			changedCreds = true
+			configEntry.Profile = profileStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.Profile = data.Get("profile").(string)
 	}
 
 	endpointStr, ok := data.GetOk("endpoint")
@@ -338,6 +355,7 @@ type clientConfig struct {
 	AccessKey              string   `json:"access_key"`
 	SecretKey              string   `json:"secret_key"`
 	Endpoint               string   `json:"endpoint"`
+	Profile                string   `json:"profile"`
 	IAMEndpoint            string   `json:"iam_endpoint"`
 	STSEndpoint            string   `json:"sts_endpoint"`
 	STSRegion              string   `json:"sts_region"`

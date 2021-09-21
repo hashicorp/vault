@@ -54,6 +54,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
+		credsConfig.Profile = config.Profile
 		maxRetries = config.MaxRetries
 	}
 
