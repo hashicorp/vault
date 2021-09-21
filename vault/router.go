@@ -57,6 +57,8 @@ type routeEntry struct {
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
 	l             sync.RWMutex
+
+	segmentWildcardPaths map[string]bool
 }
 
 type ValidateMountResponse struct {
@@ -135,9 +137,16 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
+
+		segmentWildcardPaths: make(map[string]bool, len(paths.Unauthenticated)),
 	}
 	re.rootPaths.Store(pathsToRadix(paths.Root))
-	re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
+	// re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
+	// TODO(jmf): store Unauthenticated paths
+	err := r.parsePaths(re, paths.Unauthenticated)
+	if err != nil {
+		return err
+	}
 
 	switch {
 	case prefix == "":
@@ -155,6 +164,25 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	r.mountUUIDCache.Insert(re.mountEntry.UUID, re.mountEntry)
 	r.mountAccessorCache.Insert(re.mountEntry.Accessor, re.mountEntry)
 
+	return nil
+}
+
+func (r *Router) parsePaths(re *routeEntry, paths []string) error {
+	tempPaths := []string{}
+	for _, path := range paths {
+		if strings.Contains(path, "+*") {
+			return fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
+		}
+
+		if path == "+" || strings.Count(path, "/+") > 0 || strings.HasPrefix(path, "+/") {
+			re.segmentWildcardPaths[path] = true
+		} else {
+			// accumulate paths that do not contain wildcards
+			tempPaths = append(tempPaths, path)
+		}
+	}
+
+	re.loginPaths.Store(pathsToRadix(tempPaths))
 	return nil
 }
 
