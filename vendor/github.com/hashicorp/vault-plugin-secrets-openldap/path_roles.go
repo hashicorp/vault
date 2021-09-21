@@ -2,8 +2,10 @@ package openldap
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -145,7 +147,28 @@ func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	return nil, nil
+	walIDs, err := framework.ListWAL(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	var merr *multierror.Error
+	for _, walID := range walIDs {
+		wal, err := b.findStaticWAL(ctx, req.Storage, walID)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+			continue
+		}
+		if wal != nil && name == wal.RoleName {
+			b.Logger().Debug("deleting WAL for deleted role", "WAL ID", walID, "role", name)
+			err = framework.DeleteWAL(ctx, req.Storage, walID)
+			if err != nil {
+				b.Logger().Debug("failed to delete WAL for deleted role", "WAL ID", walID, "error", err)
+				merr = multierror.Append(merr, err)
+			}
+		}
+	}
+
+	return nil, merr.ErrorOrNil()
 }
 
 func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -220,6 +243,7 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 
 	// Only call setStaticAccountPassword if we're creating the role for the
 	// first time
+	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
 		// setStaticAccountPassword calls Storage.Put and saves the role to storage
@@ -228,10 +252,24 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 			Role:     role,
 		})
 		if err != nil {
+			if resp != nil && resp.WALID != "" {
+				b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
+				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
+				if walDeleteErr != nil {
+					b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
+					var merr *multierror.Error
+					merr = multierror.Append(merr, err)
+					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
+					err = merr.ErrorOrNil()
+				}
+			}
 			return nil, err
 		}
 		// guard against RotationTime not being set or zero-value
 		lvr = resp.RotationTime
+		item = &queue.Item{
+			Key: name,
+		}
 	case logical.UpdateOperation:
 		// store updated Role
 		entry, err := logical.StorageEntryJSON(staticRolePath+name, role)
@@ -243,20 +281,19 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 		}
 
 		// In case this is an update, remove any previous version of the item from
-		// the queue
-
+		// the queue. The existing item could be tracking a WAL ID for this role,
+		// so it's important to keep the existing item rather than recreate it.
 		//TODO: Add retry logic
-		_, err = b.popFromRotationQueueByKey(name)
+		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+
 	// Add their rotation to the queue
-	if err := b.pushItem(&queue.Item{
-		Key:      name,
-		Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
-	}); err != nil {
+	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
 
