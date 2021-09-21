@@ -11,7 +11,10 @@
   {
     "divider": true
   },
-
+  {
+    "title": "Browser Support",
+    "path": "browser-support"
+  },
   {
     "title": "Installing Vault",
     "path": "install"
