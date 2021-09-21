@@ -1,12 +1,12 @@
 /**
- * @module PricingMetricsConfig
- * PricingMetricsConfig components are used to show and edit the pricing metrics config information.
+ * @module ClientsConfig
+ * ClientsConfig components are used to show and edit the client count config information.
  *
  * @example
  * ```js
- * <PricingMetricsConfig @model={{model}} @mode="edit" />
+ * <Clients::Config @model={{model}} @mode="edit" />
  * ```
- * @param {object} model - model is the DS metrics/config model which should be passed in
+ * @param {object} model - model is the DS clients/config model which should be passed in
  * @param {string} [mode=show] - mode is either show or edit. Show results in a table with the config, show has a form.
  */
 
@@ -16,7 +16,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 
-export default class PricingMetricsConfigComponent extends Component {
+export default class ConfigComponent extends Component {
   @service router;
   @tracked mode = 'show';
   @tracked modalOpen = false;
@@ -57,7 +57,7 @@ export default class PricingMetricsConfigComponent extends Component {
       this.error = err.message;
       return;
     }
-    this.router.transitionTo('vault.cluster.metrics.config');
+    this.router.transitionTo('vault.cluster.clients.index');
   }).drop())
   save;
 

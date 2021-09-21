@@ -375,10 +375,13 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 	aliasID := resp.Data["id"].(string)
+	customMetadata := make(map[string]string)
+	customMetadata["foo"] = "abc"
 
 	updateData := map[string]interface{}{
-		"name":           "updatedaliasname",
-		"mount_accessor": githubAccessor,
+		"name":            "updatedaliasname",
+		"mount_accessor":  githubAccessor,
+		"custom_metadata": customMetadata,
 	}
 
 	aliasReq.Data = updateData
@@ -395,6 +398,9 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 	}
 
 	if resp.Data["name"] != "updatedaliasname" {
+		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
+	}
+	if !reflect.DeepEqual(resp.Data["custom_metadata"], customMetadata) {
 		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
 	}
 }
@@ -425,9 +431,12 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 		t.Fatalf("expected an error due to invalid alias id")
 	}
 
+	customMetadata := make(map[string]string)
+	customMetadata["foo"] = "abc"
 	registerData := map[string]interface{}{
-		"name":           "testaliasname",
-		"mount_accessor": githubAccessor,
+		"name":            "testaliasname",
+		"mount_accessor":  githubAccessor,
+		"custom_metadata": customMetadata,
 	}
 
 	registerReq := &logical.Request{
@@ -468,6 +477,9 @@ func TestIdentityStore_AliasUpdate_ByID(t *testing.T) {
 	if resp.Data["name"] != "updatedaliasname" {
 		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
 	}
+	if !reflect.DeepEqual(resp.Data["custom_metadata"], customMetadata) {
+		t.Fatalf("failed to update alias information; \n response data: %#v\n", resp.Data)
+	}
 
 	delete(registerReq.Data, "name")
 
@@ -498,10 +510,13 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
+	customMetadata := make(map[string]string)
+	customMetadata["foo"] = "abc"
 	registerData := map[string]interface{}{
-		"name":           "testaliasname",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
+		"name":            "testaliasname",
+		"mount_accessor":  githubAccessor,
+		"metadata":        []string{"organization=hashicorp", "team=vault"},
+		"custom_metadata": customMetadata,
 	}
 
 	registerReq := &logical.Request{
@@ -537,7 +552,7 @@ func TestIdentityStore_AliasReadDelete(t *testing.T) {
 	if resp.Data["id"].(string) == "" ||
 		resp.Data["canonical_id"].(string) == "" ||
 		resp.Data["name"].(string) != registerData["name"] ||
-		resp.Data["mount_type"].(string) != "github" {
+		resp.Data["mount_type"].(string) != "github" || !reflect.DeepEqual(resp.Data["custom_metadata"], customMetadata) {
 		t.Fatalf("bad: alias read response; \nexpected: %#v \nactual: %#v\n", registerData, resp.Data)
 	}
 
