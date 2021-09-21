@@ -9,7 +9,7 @@ module('Integration | Component | toolbar-actions', function(hooks) {
   test('it renders', async function(assert) {
     await render(hbs`<ToolbarActions>These are the toolbar actions</ToolbarActions>`);
 
-    assert.equal(this.element.textContent.trim(), 'These are the toolbar actions');
+    assert.dom(this.element).hasText('These are the toolbar actions');
     assert.dom('.toolbar-actions').exists();
   });
 });

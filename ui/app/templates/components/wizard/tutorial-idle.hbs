@@ -4,12 +4,12 @@
   @class="collapsed"
   @hidePopup={{true}}
 >
-  <button type="button" class="button is-transparent icon dismiss-collapsed" {{action onDismiss}}>
+  <button type="button" class="button is-transparent icon dismiss-collapsed" {{action @onDismiss}}>
     <Icon @glyph="cancel-plain" aria-label="Close" />
   </button>
   <p>Want a tour? Our helpful guide will introduce you to the Vault Web UI.</p>
   <div class="box wizard-divider-box">
-    <button type="button" class="button is-transparent has-icon-left has-text-white" {{action onAdvance}}>
+    <button type="button" class="button is-transparent has-icon-left has-text-white" {{action @onAdvance}}>
       <Chevron @direction="up" />
       Let's get started
     </button>

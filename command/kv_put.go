@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVPutCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVPutCommand)(nil)
+var (
+	_ cli.Command             = (*KVPutCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVPutCommand)(nil)
+)
 
 type KVPutCommand struct {
 	*BaseCommand

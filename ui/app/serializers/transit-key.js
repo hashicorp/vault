@@ -1,8 +1,8 @@
+import RESTSerializer from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.RESTSerializer.extend({
+export default RESTSerializer.extend({
   primaryKey: 'name',
 
   keyForAttribute: function(attr) {
@@ -26,6 +26,7 @@ export default DS.RESTSerializer.extend({
         payload.keys[version] = payload.keys[version] * 1000;
       }
     }
+    payload.id = payload.name;
     return [payload];
   },
 
@@ -55,7 +56,8 @@ export default DS.RESTSerializer.extend({
         deletion_allowed,
       };
     } else {
-      return this._super(...arguments);
+      snapshot.id = snapshot.attr('name');
+      return this._super(snapshot, requestType);
     }
   },
 });

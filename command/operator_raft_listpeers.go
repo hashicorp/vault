@@ -4,15 +4,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRaftListPeersCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRaftListPeersCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRaftListPeersCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRaftListPeersCommand)(nil)
+)
 
 type OperatorRaftListPeersCommand struct {
 	*BaseCommand
+	flagDRToken string
 }
 
 func (c *OperatorRaftListPeersCommand) Synopsis() string {
@@ -27,6 +31,11 @@ Usage: vault operator raft list-peers
 
 	  $ vault operator raft list-peers
 
+  Provides the details of all the peers in the Raft cluster of a DR secondary
+  cluster. This command should be invoked on the DR secondary nodes.
+
+      $ vault operator raft list-peers -dr-token <dr-operation-token>
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
@@ -34,6 +43,17 @@ Usage: vault operator raft list-peers
 
 func (c *OperatorRaftListPeersCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "dr-token",
+		Target:     &c.flagDRToken,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage:      "DR operation token used to authorize this request (if a DR secondary node).",
+	})
 
 	return set
 }
@@ -60,7 +80,15 @@ func (c *OperatorRaftListPeersCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Read("sys/storage/raft/configuration")
+	var secret *api.Secret
+	switch {
+	case c.flagDRToken != "":
+		secret, err = client.Logical().Write("sys/storage/raft/configuration", map[string]interface{}{
+			"dr_operation_token": c.flagDRToken,
+		})
+	default:
+		secret, err = client.Logical().Read("sys/storage/raft/configuration")
+	}
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading the raft cluster configuration: %s", err))
 		return 2

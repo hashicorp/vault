@@ -9,8 +9,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PathHelpCommand)(nil)
-var _ cli.CommandAutocomplete = (*PathHelpCommand)(nil)
+var (
+	_ cli.Command             = (*PathHelpCommand)(nil)
+	_ cli.CommandAutocomplete = (*PathHelpCommand)(nil)
+)
 
 var pathHelpVaultSealedMessage = strings.TrimSpace(`
 Error: Vault is sealed.

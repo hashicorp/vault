@@ -2,10 +2,10 @@
   <PageHeader as |p|>
     <p.top>
       <div class="breadcrumb">
-        {{#link-to "vault.cluster.access.namespaces.index"}}
+        <LinkTo @route="vault.cluster.access.namespaces.index">
           <span class="sep">&#x0002f;</span>
           Namespaces
-        {{/link-to}}
+        </LinkTo>
       </div>
     </p.top>
     <p.levelLeft>

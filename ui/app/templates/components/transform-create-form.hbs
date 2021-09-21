@@ -1,0 +1,32 @@
+<form onsubmit={{action "createOrUpdate" "create"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @model={{model}} />
+    <NamespaceReminder @mode={{mode}} @noun="transformation" />
+    {{#each model.transformFieldAttrs as |attr|}}
+      <FormField
+        data-test-field
+        @attr={{attr}}
+        @model={{model}}
+      />
+    {{/each}}
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        disabled={{buttonDisabled}}
+        class="button is-primary"
+        data-test-transform-create=true
+      >
+        {{#if (eq mode 'create')}}
+          Create transformation
+        {{else if (eq mode 'edit')}}
+          Save
+        {{/if}}
+      </button>
+      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{model.id}}>
+        Cancel
+      </SecretLink>
+    </div>
+  </div>
+</form>

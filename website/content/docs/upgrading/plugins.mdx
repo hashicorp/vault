@@ -1,0 +1,41 @@
+---
+layout: docs
+page_title: Upgrading Plugins - Guides
+description: These are general upgrade instructions for Vault plugins.
+---
+
+# Upgrading Vault Plugins
+
+The following procedure details steps for upgrading a plugin that has already
+been registered to the catalog on a running server. This procedure is applicable
+to secret, auth, and database plugins.
+
+## Upgrade Procedure
+
+Vault executes plugin binaries when they are configured and roles are established
+around them. The binary cannot be modified or replaced while running, so
+upgrades cannot be performed by simply swapping the binary and updating the hash
+in the plugin catalog.
+
+Instead, you can restart or reload a plugin with the
+`sys/plugins/reload/backend` [API][plugin_reload_api]. Follow these steps to
+replace or upgrade a Vault plugin binary:
+
+1. Register plugin_v1 to the catalog
+2. Mount the plugin backend
+3. Register plugin_v2 to the catalog under the same plugin name, but with
+   updated command to run plugin_v2 and updated sha256 of plugin_v2
+4. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
+   mounted backends using that plugin or a subset of the mounts using that plugin
+   with either the `plugin` or `mounts` parameter respectively.
+
+Until step 4, the mount will still use plugin_v1, and when the reload is
+triggered, Vault will kill plugin_v1’s process and start a plugin_v2 process.
+
+-> **Important:** Plugin reload of a new plugin binary must be
+performed on each Vault instance. Performing a plugin upgrade on a single
+instance or through a load balancer can result in mismatched
+plugin binaries within a cluster. On a replicated cluster this may be accomplished
+by setting the 'scope' parameter of the reload to 'global'.
+
+[plugin_reload_api]: /api/system/plugins-reload-backend

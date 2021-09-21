@@ -6,7 +6,7 @@
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| [renderGroup] | <code>String</code> | <code></code> | A whitelist of groups to include in the render. |
+| [renderGroup] | <code>String</code> | <code></code> | An allow list of groups to include in the render. |
 | model | <code>DS.Model</code> | <code></code> | Model to be passed down to form-field component. If `fieldGroups` is present on the model then it will be iterated over and groups of `FormField` components will be rendered. |
 | onChange | <code>Func</code> | <code></code> | Handler that will get set on the `FormField` component. |
 

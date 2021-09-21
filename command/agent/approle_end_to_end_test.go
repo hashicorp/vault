@@ -23,6 +23,7 @@ import (
 )
 
 func TestAppRoleEndToEnd(t *testing.T) {
+	t.Parallel()
 
 	testCases := []struct {
 		removeSecretIDFile bool
@@ -30,7 +31,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		secretIDLess       bool
 		expectToken        bool
 	}{
-		//default behaviour => token expected
+		// default behaviour => token expected
 		{false, true, false, true},
 		{true, true, false, true},
 
@@ -39,11 +40,11 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		{false, false, false, true},
 		{true, false, false, true},
 
-		//bindSecretID=false, secret not provided => token expected
+		// bindSecretID=false, secret not provided => token expected
 		{false, false, true, true},
 		{true, false, true, true},
 
-		//bindSecretID=true, secret not provided => token not expected
+		// bindSecretID=true, secret not provided => token not expected
 		{false, true, true, false},
 		{true, true, true, false},
 	}
@@ -54,6 +55,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 			secretFileAction = "remove"
 		}
 		t.Run(fmt.Sprintf("%s_secret_id_file bindSecretID=%v secretIDLess=%v expectToken=%v", secretFileAction, tc.bindSecretID, tc.secretIDLess, tc.expectToken), func(t *testing.T) {
+			t.Parallel()
 			testAppRoleEndToEnd(t, tc.removeSecretIDFile, tc.bindSecretID, tc.secretIDLess, tc.expectToken)
 		})
 	}
@@ -175,11 +177,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	os.Remove(out)
 	t.Logf("output: %s", out)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	secretFromAgent := secret
 	if secretIDLess {
@@ -194,8 +192,8 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		secretFromAgent = secretf.Name()
 		secretf.Close()
 		defer os.Remove(secretFromAgent)
-		//if the token is empty, auth.approle would fail reporting the error
-		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0600); err != nil {
+		// if the token is empty, auth.approle would fail reporting the error
+		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote secret_id_file_path with wrong-secret", "path", secretFromAgent)
@@ -222,9 +220,18 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	config := &sink.SinkConfig{
@@ -243,13 +250,26 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+	}()
 	defer func() {
-		<-ss.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Check that no sink file exists
 	_, err = os.Lstat(out)
@@ -260,14 +280,14 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0600); err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
 	}
 
 	if bindSecretID {
-		if err := ioutil.WriteFile(secret, []byte(secretID1), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 1", "path", secret)
@@ -339,14 +359,14 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 
 	// Write new values
-	if err := ioutil.WriteFile(role, []byte(roleID2), 0600); err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID2), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 2", "path", role)
 	}
 
 	if bindSecretID {
-		if err := ioutil.WriteFile(secret, []byte(secretID2), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 2", "path", secret)
@@ -385,14 +405,14 @@ func TestAppRoleWithWrapping(t *testing.T) {
 		secretIDLess bool
 		expectToken  bool
 	}{
-		//default behaviour => token expected
+		// default behaviour => token expected
 		{true, false, true},
 
 		//bindSecretID=false, wrong secret provided, wrapping_path provided => token not expected
 		//(wrapping token is not valid or does not exist)
 		{false, false, false},
 
-		//bindSecretID=false, no secret provided, wrapping_path provided but ignored => token expected
+		// bindSecretID=false, no secret provided, wrapping_path provided but ignored => token expected
 		{false, true, true},
 	}
 	for _, tc := range testCases {
@@ -501,11 +521,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	os.Remove(out)
 	t.Logf("output: %s", out)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	secretFromAgent := secret
 	if secretIDLess {
@@ -520,8 +536,8 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		secretFromAgent = secretf.Name()
 		secretf.Close()
 		defer os.Remove(secretFromAgent)
-		//if the token is empty, auth.approle would fail reporting the error
-		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0600); err != nil {
+		// if the token is empty, auth.approle would fail reporting the error
+		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote secret_id_file_path with wrong-secret", "path", secretFromAgent)
@@ -548,9 +564,18 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Client: client,
 	}
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	config := &sink.SinkConfig{
@@ -569,13 +594,26 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	defer func() {
-		<-ss.DoneCh
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
 	}()
 
-	// This has to be after the other defers so it happens first
-	defer cancelFunc()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	// Check that no sink file exists
 	_, err = os.Lstat(out)
@@ -586,7 +624,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0600); err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
@@ -595,7 +633,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	if bindSecretID {
 		logger.Trace("WRITING TO auth.secret-id.test.", "secret", secret, "secretID1", secretID1)
 
-		if err := ioutil.WriteFile(secret, []byte(secretID1), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 1", "path", secret)
@@ -675,7 +713,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 			t.Fatal(err)
 		}
 		secretID2 := resp.WrapInfo.Token
-		if err := ioutil.WriteFile(secret, []byte(secretID2), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 2", "path", secret)
@@ -710,7 +748,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 
 func addConstraints(add bool, cfg map[string]interface{}) map[string]interface{} {
 	if add {
-		//extraConstraints to add when bind_secret_id=false (otherwise Vault would fail with: "at least one constraint should be enabled on the role")
+		// extraConstraints to add when bind_secret_id=false (otherwise Vault would fail with: "at least one constraint should be enabled on the role")
 		extraConstraints := map[string]interface{}{
 			"secret_id_bound_cidrs": "127.0.0.1/32",
 			"token_bound_cidrs":     "127.0.0.1/32",

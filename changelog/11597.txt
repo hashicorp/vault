@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix text link URL on database roles list
+```

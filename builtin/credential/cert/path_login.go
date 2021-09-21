@@ -31,7 +31,7 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the certificate role to authenticate against.",
 			},
@@ -414,21 +414,31 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
-	names, err := storage.List(ctx, "cert/")
-	if err != nil {
-		b.Logger().Error("failed to list trusted certs", "error", err)
-		return
-	}
-	for _, name := range names {
-		// If we are trying to select a single CertEntry and this isn't it
-		if certName != "" && name != certName {
-			continue
+
+	var names []string
+	if certName != "" {
+		names = append(names, certName)
+	} else {
+		var err error
+		names, err = storage.List(ctx, "cert/")
+		if err != nil {
+			b.Logger().Error("failed to list trusted certs", "error", err)
+			return
 		}
+	}
+
+	for _, name := range names {
 		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
 			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
+		if entry == nil {
+			// This could happen when the certName was provided and the cert doesn't exist,
+			// or just if between the LIST and the GET the cert was deleted.
+			continue
+		}
+
 		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
 			b.Logger().Error("failed to parse certificate", "name", name)

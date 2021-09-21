@@ -1,12 +1,10 @@
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const { attr } = DS;
-
-export default DS.Model.extend({
+export default Model.extend({
   idPrefix: 'cert/',
 
   backend: attr('string', {
@@ -65,14 +63,20 @@ export default DS.Model.extend({
     defaultValue: false,
   }),
 
-  certificate: attr('string'),
+  certificate: attr('string', {
+    masked: true,
+  }),
   issuingCa: attr('string', {
     label: 'Issuing CA',
+    masked: true,
   }),
   caChain: attr('string', {
     label: 'CA chain',
+    masked: true,
   }),
-  privateKey: attr('string'),
+  privateKey: attr('string', {
+    masked: true,
+  }),
   privateKeyType: attr('string'),
   serialNumber: attr('string'),
 
@@ -89,11 +93,11 @@ export default DS.Model.extend({
   }),
 
   fieldGroups: computed('fieldDefinition', function() {
-    return this.fieldsToAttrs(this.get('fieldDefinition'));
+    return this.fieldsToAttrs(this.fieldDefinition);
   }),
 
-  attrs: computed('certificate', 'csr', function() {
-    let keys = this.get('certificate') || this.get('csr') ? this.get('DISPLAY_FIELDS').slice(0) : [];
+  attrs: computed('DISPLAY_FIELDS', 'certificate', 'csr', function() {
+    let keys = this.certificate || this.csr ? this.DISPLAY_FIELDS.slice(0) : [];
     return expandAttributeMeta(this, keys);
   }),
 
@@ -106,15 +110,15 @@ export default DS.Model.extend({
     'revocationTime',
     'serialNumber',
     function() {
-      const props = this.getProperties(
-        'certificate',
-        'issuingCa',
-        'caChain',
-        'privateKey',
-        'privateKeyType',
-        'revocationTime',
-        'serialNumber'
-      );
+      const props = {
+        certificate: this.certificate,
+        issuingCa: this.issuingCa,
+        caChain: this.caChain,
+        privateKey: this.privateKey,
+        privateKeyType: this.privateKeyType,
+        revocationTime: this.revocationTime,
+        serialNumber: this.serialNumber,
+      };
       const propsWithVals = Object.keys(props).reduce((ret, prop) => {
         if (props[prop]) {
           ret[prop] = props[prop];

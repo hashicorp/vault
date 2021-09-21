@@ -2,10 +2,10 @@
   <p.top>
     <nav class="breadcrumb">
       <li>
-        {{#link-to "vault.cluster.policies" policyType data-test-policy-list-link=true}}
+        <LinkTo @route="vault.cluster.policies" @model={{policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
           {{uppercase policyType}} policies
-        {{/link-to}}
+        </LinkTo>
       </li>
     </nav>
   </p.top>
@@ -40,24 +40,14 @@
 </Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
   <div class="field">
-    <label for="policy" class="is-label">
-      Policy
-      {{#if (eq policyType "acl")}}
-        <span class="tag is-white is-size-9 has-text-grey" data-test-acl-format>
-          ({{uppercase model.format}} format)
-        </span>
-      {{/if}}
-    </label>
-    {{ivy-codemirror
-      value=model.policy
-      options=(hash
+    <JsonEditor
+      @title="Policy"
+      @subTitle={{if (eq policyType "acl") (concat uppercase model.format " format")}}
+      @value={{model.policy}} 
+      @options={{hash
         readOnly=true
-        lineNumbers=true
-        tabSize=2
         mode='ruby'
-        theme='hashi'
-      )
-    }}
+      }} />
   </div>
   {{#if model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">

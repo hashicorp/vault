@@ -16,11 +16,11 @@ export default Controller.extend({
   auth: service(),
   store: service(),
   activeCluster: computed('auth.activeCluster', function() {
-    let id = this.get('auth.activeCluster');
-    return id ? this.get('store').peekRecord('cluster', id) : null;
+    let id = this.auth.activeCluster;
+    return id ? this.store.peekRecord('cluster', id) : null;
   }),
   activeClusterName: computed('activeCluster', function() {
-    const activeCluster = this.get('activeCluster');
+    const activeCluster = this.activeCluster;
     return activeCluster ? activeCluster.get('name') : null;
   }),
 });

@@ -115,9 +115,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
-
 	})
-
 }
 
 func TestPluginReloadStatusCommand_Run(t *testing.T) {

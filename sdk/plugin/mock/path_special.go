@@ -24,5 +24,4 @@ func (b *backend) pathSpecialRead(ctx context.Context, req *logical.Request, dat
 			"data": "foo",
 		},
 	}, nil
-
 }

@@ -77,6 +77,7 @@ module('Acceptance | init', function(hooks) {
     this.server.get('/v1/sys/health', () => {
       return [200, { 'Content-Type': 'application/json' }, JSON.stringify(HEALTH_RESPONSE)];
     });
+    this.server.get('/v1/sys/internal/ui/feature-flags', this.server.passthrough);
   });
 
   hooks.afterEach(function() {

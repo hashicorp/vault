@@ -13,8 +13,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PolicyFmtCommand)(nil)
-var _ cli.CommandAutocomplete = (*PolicyFmtCommand)(nil)
+var (
+	_ cli.Command             = (*PolicyFmtCommand)(nil)
+	_ cli.CommandAutocomplete = (*PolicyFmtCommand)(nil)
+)
 
 type PolicyFmtCommand struct {
 	*BaseCommand
@@ -101,7 +103,7 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 	}
 
 	// Write them back out
-	if err := ioutil.WriteFile(path, result, 0644); err != nil {
+	if err := ioutil.WriteFile(path, result, 0o644); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing result: %s", err))
 		return 1
 	}

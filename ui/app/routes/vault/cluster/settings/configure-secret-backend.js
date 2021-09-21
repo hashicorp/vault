@@ -1,6 +1,6 @@
+import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
-import DS from 'ember-data';
 
 const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki'];
 
@@ -10,7 +10,7 @@ export default Route.extend({
     return this.store.query('secret-engine', { path: backend }).then(modelList => {
       let model = modelList && modelList.get('firstObject');
       if (!model || !CONFIGURABLE_BACKEND_TYPES.includes(model.get('type'))) {
-        const error = new DS.AdapterError();
+        const error = new AdapterError();
         set(error, 'httpStatus', 404);
         throw error;
       }

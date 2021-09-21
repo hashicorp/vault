@@ -32,7 +32,7 @@ export default Component.extend({
     return htmlSafe(`height: ${this.height}px`);
   }),
   wormholeReference: null,
-  wormholeId: computed(function() {
+  wormholeId: computed('elementId', function() {
     return `confirm-${this.elementId}`;
   }),
   didInsertElement() {

@@ -1,4 +1,5 @@
 'use strict';
+/* eslint-disable node/no-extraneous-require */
 
 const path = require('path');
 const stringUtil = require('ember-cli-string-utils');

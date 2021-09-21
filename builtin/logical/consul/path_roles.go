@@ -24,30 +24,30 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"policy": &framework.FieldSchema{
+			"policy": {
 				Type: framework.TypeString,
 				Description: `Policy document, base64 encoded. Required
 for 'client' tokens. Required for Consul pre-1.4.`,
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `List of policies to attach to the token. Required
 for Consul 1.4 or above.`,
 			},
 
-			"local": &framework.FieldSchema{
+			"local": {
 				Type: framework.TypeBool,
 				Description: `Indicates that the token should not be replicated globally 
 and instead be local to the current datacenter.  Available in Consul 1.4 and above.`,
 			},
 
-			"token_type": &framework.FieldSchema{
+			"token_type": {
 				Type:    framework.TypeString,
 				Default: "client",
 				Description: `Which type of token to create: 'client'
@@ -56,17 +56,17 @@ the "policy" parameter is not required.
 Defaults to 'client'.`,
 			},
 
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "TTL for the Consul token created from the role.",
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Max TTL for the Consul token created from the role.",
 			},
 
-			"lease": &framework.FieldSchema{
+			"lease": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Use ttl instead.",
 				Deprecated:  true,

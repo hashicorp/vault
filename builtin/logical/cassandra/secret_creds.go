@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -16,12 +15,12 @@ func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password",
 			},
@@ -45,7 +44,7 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 
 	role, err := getRole(ctx, req.Storage, roleName)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to load role: {{err}}", err)
+		return nil, fmt.Errorf("unable to load role: %w", err)
 	}
 
 	resp := &logical.Response{Secret: req.Secret}

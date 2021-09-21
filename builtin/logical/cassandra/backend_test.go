@@ -4,81 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"strconv"
-	"sync"
 	"testing"
 
-	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
-
-var (
-	testImagePull sync.Once
-)
-
-func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
-	if os.Getenv("CASSANDRA_HOST") != "" {
-		return func() {}, os.Getenv("CASSANDRA_HOST"), 0
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	cwd, _ := os.Getwd()
-	cassandraMountPath := fmt.Sprintf("%s/test-fixtures/:/etc/cassandra/", cwd)
-
-	ro := &dockertest.RunOptions{
-		Repository: "cassandra",
-		Tag:        "latest",
-		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
-		Mounts:     []string{cassandraMountPath},
-	}
-	resource, err := pool.RunWithOptions(ro)
-	if err != nil {
-		t.Fatalf("Could not start local cassandra docker container: %s", err)
-	}
-
-	cleanup := func() {
-		docker.CleanupResource(t, pool, resource)
-	}
-
-	port, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
-	address := fmt.Sprintf("127.0.0.1:%d", port)
-
-	// exponential backoff-retry
-	if err = pool.Retry(func() error {
-		clusterConfig := gocql.NewCluster(address)
-		clusterConfig.Authenticator = gocql.PasswordAuthenticator{
-			Username: "cassandra",
-			Password: "cassandra",
-		}
-		clusterConfig.ProtoVersion = 4
-		clusterConfig.Port = port
-
-		session, err := clusterConfig.CreateSession()
-		if err != nil {
-			return fmt.Errorf("error creating session: %s", err)
-		}
-		defer session.Close()
-		return nil
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to cassandra docker container: %s", err)
-	}
-	return cleanup, address, port
-}
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -86,13 +20,18 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, hostname, _ := prepareCassandraTestContainer(t)
+	copyFromTo := map[string]string{
+		"test-fixtures/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
+	}
+	host, cleanup := cassandra.PrepareTestContainer(t,
+		cassandra.CopyFromTo(copyFromTo),
+	)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, hostname),
+			testAccStepConfig(t, host.ConnectionURL()),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, "test"),
 		},
@@ -100,9 +39,6 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv("VAULT_ACC") == "" {
-		t.SkipNow()
-	}
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -110,13 +46,17 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, hostname, _ := prepareCassandraTestContainer(t)
+	copyFromTo := map[string]string{
+		"test-fixtures/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
+	}
+	host, cleanup := cassandra.PrepareTestContainer(t,
+		cassandra.CopyFromTo(copyFromTo))
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, hostname),
+			testAccStepConfig(t, host.ConnectionURL()),
 			testAccStepRole(t),
 			testAccStepRoleWithOptions(t),
 			testAccStepReadRole(t, "test", testRole),
@@ -127,12 +67,6 @@ func TestBackend_roleCrud(t *testing.T) {
 			testAccStepReadRole(t, "test2", ""),
 		},
 	})
-}
-
-func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("CASSANDRA_HOST"); v == "" {
-		t.Fatal("CASSANDRA_HOST must be set for acceptance tests")
-	}
 }
 
 func testAccStepConfig(t *testing.T, hostname string) logicaltest.TestStep {

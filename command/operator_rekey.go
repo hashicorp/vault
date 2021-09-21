@@ -8,15 +8,17 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorRekeyCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorRekeyCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorRekeyCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorRekeyCommand)(nil)
+)
 
 type OperatorRekeyCommand struct {
 	*BaseCommand

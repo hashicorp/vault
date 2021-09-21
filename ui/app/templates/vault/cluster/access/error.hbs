@@ -1,5 +1,5 @@
     {{#if (eq model.httpStatus 404)}}
-      {{not-found model=model}}
+      <NotFound @model={{model}} />
     {{else}}
       <PageHeader as |p|>
         <p.levelLeft>

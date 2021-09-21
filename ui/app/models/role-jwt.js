@@ -1,7 +1,6 @@
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import parseURL from 'core/utils/parse-url';
-const { attr } = DS;
 
 const DOMAIN_STRINGS = {
   github: 'GitHub',
@@ -16,7 +15,7 @@ const PROVIDER_WITH_LOGO = ['GitLab', 'Google', 'Auth0'];
 
 export { DOMAIN_STRINGS, PROVIDER_WITH_LOGO };
 
-export default DS.Model.extend({
+export default Model.extend({
   authUrl: attr('string'),
 
   providerName: computed('authUrl', function() {

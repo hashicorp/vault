@@ -503,7 +503,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -558,6 +558,42 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 
 	if entityFetched.Aliases[0].ID == "invalidaliasid" {
 		t.Fatal("memdb item is mutable outside of transaction")
+	}
+}
+
+func TestIdentityStore_ContextCancel(t *testing.T) {
+	var err error
+	var resp *logical.Response
+
+	ctx, cancelFunc := context.WithCancel(namespace.RootContext(nil))
+	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	entityReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+
+	expected := []string{}
+	for i := 0; i < 10; i++ {
+		resp, err = is.HandleRequest(ctx, entityReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		expected = append(expected, resp.Data["id"].(string))
+	}
+
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "entity/id",
+	}
+
+	cancelFunc()
+	resp, err = is.HandleRequest(ctx, listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp.Warnings == nil || len(resp.Warnings) == 0 {
+		t.Fatalf("expected warning for cancelled context. resp:%#v", resp)
 	}
 }
 
@@ -744,7 +780,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
 
-	validateMountResp := is.core.router.validateMountByAccessor(githubAccessor)
+	validateMountResp := is.router.ValidateMountByAccessor(githubAccessor)
 	if validateMountResp == nil {
 		t.Fatal("failed to validate github auth mount")
 	}
@@ -847,7 +883,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 	if entityFetched != nil {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
-
 }
 
 func TestIdentityStore_EntityCRUD(t *testing.T) {

@@ -14,12 +14,12 @@ export default ApplicationAdapter.extend({
     return this.ajax(url, 'PUT');
   },
 
-  renew(lease_id, interval) {
+  renew(lease_id, increment) {
     let url = this.buildURL() + '/leases/renew';
     return this.ajax(url, 'PUT', {
       data: {
         lease_id,
-        interval,
+        increment,
       },
     });
   },

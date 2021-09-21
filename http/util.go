@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/logical"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
@@ -28,6 +27,8 @@ var (
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
 
 	nonVotersAllowed = false
+
+	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
 )
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
@@ -47,7 +48,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 
-		quotaResp, err := core.ApplyRateLimitQuota(&quotas.Request{
+		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
 			MountPath:     strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path),
@@ -67,11 +68,11 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		}
 
 		if !quotaResp.Allowed {
-			quotaErr := errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", path), quotas.ErrRateLimitQuotaExceeded)
+			quotaErr := fmt.Errorf("request path %q: %w", path, quotas.ErrRateLimitQuotaExceeded)
 			respondError(w, http.StatusTooManyRequests, quotaErr)
 
 			if core.Logger().IsTrace() {
-				core.Logger().Trace("request rejected due to lease count quota violation", "request_path", path)
+				core.Logger().Trace("request rejected due to rate limit quota violation", "request_path", path)
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {

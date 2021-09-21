@@ -2,9 +2,9 @@
   <label for="{{name}}" class="is-label">
     {{label}}
     {{#if helpText}}
-      {{#info-tooltip}}
+      <InfoTooltip>
         <span data-test-help-text>{{helpText}}</span>
-      {{/info-tooltip}}
+      </InfoTooltip>
     {{/if}}
   </label>
 {{/if}}

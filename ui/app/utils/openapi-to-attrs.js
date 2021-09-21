@@ -1,5 +1,4 @@
-import DS from 'ember-data';
-const { attr } = DS;
+import { attr } from '@ember-data/model';
 import { assign } from '@ember/polyfills';
 import { camelize, capitalize } from '@ember/string';
 
@@ -35,6 +34,12 @@ export const expandOpenApiProps = function(props) {
       readOnly: isId,
       defaultValue: value || null,
     };
+
+    if (type === 'object' && !!value) {
+      attrDefn.defaultValue = () => {
+        return value;
+      };
+    }
 
     if (sensitive) {
       attrDefn.sensitive = true;

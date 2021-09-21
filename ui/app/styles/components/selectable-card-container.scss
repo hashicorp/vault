@@ -3,6 +3,13 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   grid-template-rows: 1fr;
   grid-gap: 2rem;
+
+  &.one-card {
+    max-width: 33%;
+    min-width: 350px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .selectable-card-container.has-grid {
@@ -13,13 +20,6 @@
 
   @include until($mobile) {
     grid-template-columns: 2fr;
-  }
-
-  .grid-item-http {
-    grid-column-start: 1;
-    grid-column-end: 2;
-    grid-row-start: 1;
-    grid-row-end: 3;
   }
 
   .selectable-card.is-grid-container {

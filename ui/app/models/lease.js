@@ -1,7 +1,6 @@
+import Model, { attr } from '@ember-data/model';
 import { match } from '@ember/object/computed';
-import DS from 'ember-data';
 import KeyMixin from 'vault/mixins/key-mixin';
-const { attr } = DS;
 
 /* sample response
 {
@@ -15,7 +14,7 @@ const { attr } = DS;
 
 */
 
-export default DS.Model.extend(KeyMixin, {
+export default Model.extend(KeyMixin, {
   issueTime: attr('string'),
   expireTime: attr('string'),
   lastRenewal: attr('string'),

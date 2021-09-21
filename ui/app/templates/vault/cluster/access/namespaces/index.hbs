@@ -21,9 +21,9 @@
   <ListView @items={{model}} @itemNoun="namespace" as |list|>
     {{#if list.empty}}
       <list.empty>
-        {{#link-to "vault.cluster.access.namespaces.create"}}
+        <LinkTo @route="vault.cluster.access.namespaces.create">
           Create Namespace
-        {{/link-to}}
+        </LinkTo>
 
         <LearnLink @path="/vault/security/namespaces">
           Learn more
@@ -38,9 +38,9 @@
           {{#with (concat currentNamespace (if currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (contains targetNamespace accessibleNamespaces)}}
               <li class="action">
-                {{#link-to "vault.cluster.secrets" (query-params namespace=targetNamespace) class="is-block"}}
+                <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
                   Switch to Namespace
-                {{/link-to}}
+                </NamespaceLink>
               </li>
             {{/if}}
           {{/with}}

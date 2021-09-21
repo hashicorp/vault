@@ -31,16 +31,16 @@ func (m *Manager) inLeasePathCache(path string) bool {
 
 type entManager struct {
 	isPerfStandby bool
+	isDRSecondary bool
 }
 
 func (*entManager) Reset() error {
 	return nil
 }
 
-type LeaseCountQuota struct {
-}
+type LeaseCountQuota struct{}
 
-func (l LeaseCountQuota) allow(request *Request) (Response, error) {
+func (l LeaseCountQuota) allow(_ context.Context, _ *Request) (Response, error) {
 	panic("implement me")
 }
 
@@ -56,7 +56,7 @@ func (l LeaseCountQuota) initialize(logger log.Logger, sink *metricsutil.Cluster
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) close() error {
+func (l LeaseCountQuota) close(_ context.Context) error {
 	panic("implement me")
 }
 

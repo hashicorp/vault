@@ -44,11 +44,12 @@
 .ember-basic-dropdown-content--below.ember-basic-dropdown-content--right.tool-tip {
   @include css-top-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
 }
+.ember-basic-dropdown-content--above.tool-tip {
+  @include css-bottom-arrow(8px, $grey, 1px, $grey-dark);
+  margin-top: -8px;
+}
 .ember-basic-dropdown-content--above.ember-basic-dropdown-content--right.tool-tip {
   @include css-bottom-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
-}
-.ember-basic-dropdown-content--above.tool-tip {
-  margin-top: -2px;
 }
 
 .b-checkbox .tool-tip-trigger {

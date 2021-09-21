@@ -1,0 +1,238 @@
+---
+layout: docs
+page_title: Seal/Unseal
+description: >-
+  A Vault must be unsealed before it can access its data. Likewise, it can be
+  sealed to lock it down.
+---
+
+# Seal/Unseal
+
+When a Vault server is started, it starts in a _sealed_ state. In this
+state, Vault is configured to know where and how to access the physical
+storage, but doesn't know how to decrypt any of it.
+
+_Unsealing_ is the process of obtaining the plaintext master key necessary to
+read the decryption key to decrypt the data, allowing access to the Vault.
+
+Prior to unsealing, almost no operations are possible with Vault. For
+example authentication, managing the mount tables, etc. are all not possible.
+The only possible operations are to unseal the Vault and check the status
+of the seal.
+
+## Why?
+
+The data stored by Vault is encrypted. Vault needs the _encryption key_ in order
+to decrypt the data. The encryption key is also stored with the data
+(in the _keyring_), but encrypted with another encryption key known as the _master key_.
+
+Therefore, to decrypt the data, Vault must decrypt the encryption key
+which requires the master key. Unsealing is the process of getting access to
+this master key. The master key is stored alongside all other Vault data,
+but is encrypted by yet another mechanism: the unseal key.
+
+To recap: most Vault data is encrypted using the encryption key in the keyring;
+the keyring is encrypted by the master key; and the master key is encrypted by
+the unseal key.
+
+## Shamir seals
+
+![Shamir](/img/vault-shamir-storage.png)
+
+The default Vault config uses a Shamir seal. Instead of distributing the unseal
+key as a single key to an operator, Vault uses an algorithm known as
+[Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing)
+to split the key into shards. A certain threshold of shards is required to
+reconstruct the unseal key, which is then used to decrypt the master key.
+
+This is the _unseal_ process: the shards are added one at a time (in any
+order) until enough shards are present to reconstruct the key and
+decrypt the master key.
+
+## Unsealing
+
+The unseal process is done by running `vault operator unseal` or via the API.
+This process is stateful: each key can be entered via multiple mechanisms
+on multiple computers and it will work. This allows each shard of the master
+key to be on a distinct machine for better security.
+
+Once a Vault node is unsealed, it remains unsealed until one of these things happens:
+
+1. It is resealed via the API (see below).
+
+2. The server is restarted.
+
+3. Vault's storage layer encounters an unrecoverable error.
+
+-> **Note:** Unsealing makes the process of automating a Vault install
+difficult. Automated tools can easily install, configure, and start Vault,
+but unsealing it using Shamir is a very manual process. For most users
+AutoUnseal will provide a better experience.
+
+## Sealing
+
+There is also an API to seal the Vault. This will throw away the master
+key in memory and require another unseal process to restore it. Sealing
+only requires a single operator with root privileges.
+
+This way, if there is a detected intrusion, the Vault data can be locked
+quickly to try to minimize damages. It can't be accessed again without
+access to the master key shards.
+
+## Auto Unseal
+
+Auto Unseal was developed to aid in reducing the operational complexity of
+keeping the unseal key secure. This feature delegates the responsibility of
+securing the unseal key from users to a trusted device or service. At startup
+Vault will connect to the device or service implementing the seal and ask it
+to decrypt the master key Vault read from storage.
+
+![AutoUnseal](/img/vault-autounseal-storage.png)
+
+There are certain operations in Vault besides unsealing that
+require a quorum of users to perform, e.g. generating a root token. When
+using a Shamir seal the unseal keys must be provided to authorize these
+operations. When using Auto Unseal these operations require _recovery
+keys_ instead.
+
+Just as the initialization process with a Shamir seal yields unseal keys,
+initializing with an Auto Unseal yields recovery keys.
+
+-> **Note:** Recovery keys cannot decrypt the master key, and thus are not
+sufficient to unseal Vault if the AutoUnseal mechanism isn't working. They
+are purely an authorization mechanism.
+
+It is still possible to seal a Vault node using the API. In this case Vault
+will remain sealed until restarted, or the unseal API is used, which with AutoUnseal
+requires the recovery key fragments instead of the unseal key fragments that
+would be provided with Shamir. The process remains the same.
+
+For a list of examples and supported providers, please see the
+[seal documentation](/docs/configuration/seal).
+
+## Recovery Key Rekeying
+
+Recovery keys can be rekeyed to change the number of shares or thresholds.
+When using the Vault CLI, this is performed by using the `-target=recovery` flag
+to `vault operator rekey`.
+
+## Seal Migration
+
+The Seal migration process cannot be performed without downtime, and due to the technical underpinnings of the seal implementations, the process requires that you briefly take the whole cluster down. While experiencing some downtime may be unavoidable, we believe that switching seals is a rare event and that the inconvenience of the downtime is an acceptable trade-off.
+
+~> **NOTE**: A backup should be taken before starting seal migration in case
+something goes wrong.
+
+~> **NOTE**: Seal migration operation will require both old and new seals to be
+available during the migration. For example, migration from Auto Unseal to Shamir
+seal will require that the service backing the Auto Unseal is accessible during
+the migration.
+
+~> **NOTE**: Seal migration from Auto Unseal to Auto Unseal of the same type (e.g. AWSKMS to AWSKMS with a different key) is supported since Vault 1.6.0.
+Seal migration from One Auto Unseal type (AWS KMS) to different Auto Unseal type (HSM, Azure KMS, etc.) is also supported on older versions as well.
+
+### Migration post Vault 1.5.1
+
+These steps are common for seal migrations between any supported kinds and for
+any storage backend.
+
+1. Take a standby node down and update the [seal
+   configuration](/docs/configuration/seal).
+
+   - If the migration is from Shamir seal to Auto seal, add the desired new Auto
+     seal block to the configuration.
+   - If the migration is from Auto seal to Shamir seal, add `disabled = "true"`
+     to the old seal block.
+   - If the migration is from Auto seal to another Auto seal, add `disabled = "true"` to the old seal block and add the desired new Auto seal block.
+
+   Now, bring the standby node back up and run the unseal command on each key, by
+   supplying the `-migrate` flag.
+
+   - Supply Shamir unseal keys if the old seal was Shamir, which will be migrated
+     as the recovery keys for the Auto seal.
+   - Supply recovery keys if the old seal is one of Auto seals, which will be
+     migrated as the recovery keys of the new Auto seal, or as Shamir unseal
+     keys if the new seal is Shamir.
+
+1. Perform step 1 for all the standby nodes, one at a time. It is necessary to
+   bring back the downed standby node before moving on to the other standby nodes,
+   specifically when Integrated Storage is in use for it helps to retain the
+   quorum.
+
+1. [Step down](https://www.vaultproject.io/docs/commands/operator/step-down) the
+   active node. One of the standby nodes will become the new active node.
+   When using Integrated Storage, ensure that quorum is reached and a leader is
+   elected.
+
+1. The new active node will perform the migration. Monitor the server log in
+   the active node to witness the completion of the seal migration process.
+   Wait for a little while for the migration information to replicate to all the
+   nodes in case of Integrated Storage. In enterprise Vault, switching a Auto seal
+   implies that the seal wrapped storage entries get re-wrapped. Monitor the log
+   and wait until this process is complete (look for `seal re-wrap completed`).
+
+1. Seal migration is now completed. Take down the old active node, update its
+   configuration of the old active node to use the new seal blocks (completely
+   unaware of the old seal type) and bring it back up. It will be auto-unsealed if
+   the new seal is one of the Auto seals, or will require unseal keys if the new
+   seal is Shamir.
+
+1. At this point, configuration files of all the nodes can be updated to only have the
+   new seal information. Standby nodes can be restarted right away and the active
+   node can be restarted upon a leadership change.
+
+### Migration pre 1.5.1
+
+#### Migration From Shamir to Auto Unseal
+
+To migrate from Shamir keys to Auto Unseal, take your server cluster offline and
+update the [seal configuration](/docs/configuration/seal) with the appropriate
+seal configuration. Bring your server back up and leave the rest of the nodes
+offline if using multi-server mode, then run the unseal process with the
+`-migrate` flag and bring the rest of the cluster online.
+
+All unseal commands must specify the `-migrate` flag. Once the required
+threshold of unseal keys are entered, unseal keys will be migrated to recovery
+keys.
+
+`$ vault operator unseal -migrate`
+
+#### Migration From Auto Unseal to Shamir
+
+To migrate from Auto Unseal to Shamir keys, take your server cluster offline and
+update the [seal configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal block. This allows the migration to use this information to
+decrypt the key but will not unseal Vault. When you bring your server back up,
+run the unseal process with the `-migrate` flag and use the Recovery Keys to
+perform the migration. All unseal commands must specify the `-migrate` flag.
+Once the required threshold of recovery keys are entered, the recovery keys will
+be migrated to be used as unseal keys.
+
+#### Migration From Auto Unseal to Auto Unseal
+
+~> **NOTE**: Migration between same Auto Unseal types is supported in Vault
+1.6.0 and higher. For these pre-1.5.1 steps, it is only possible to migrate from
+one type of Auto Unseal to a different type (ie Transit -> AWSKMS).
+
+To migrate from Auto Unseal to a different Auto Unseal configuration, take your
+server cluster offline and update the existing [seal
+configuration](/docs/configuration/seal) and add `disabled = "true"` to the seal
+block. Then add another seal block to describe the new seal.
+
+When you bring your server back up, run the unseal process with the `-migrate`
+flag and use the Recovery Keys to perform the migration. All unseal commands
+must specify the `-migrate` flag. Once the required threshold of recovery keys
+are entered, the recovery keys will be kept and used as recovery keys in the new
+seal.
+
+#### Migration with Integrated Storage
+
+Integrated Storage uses the Raft protocol underneath, which requires a quorum of
+servers to be online before the cluster is functional. Therefore, bringing the
+cluster back up one node at a time with the seal configuration updated, will not
+work in this case. Follow the same steps for each kind of migration described
+above with the exception that after the cluster is taken offline, update the
+seal configurations of all the nodes appropriately and bring them all back up.
+When the quorum of nodes are back up, Raft will elect a leader and the leader
+node that will perform the migration. The migrated information will be replicated to
+all other cluster peers and when the peers eventually become the leader,
+migration will not happen again on the peer nodes.

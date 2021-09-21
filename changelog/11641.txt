@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix entity group membership and metadata not showing
+```

@@ -1,0 +1,120 @@
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader
+      @baseKey={{hash display=model.id id=model.idForNav}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{mode}}
+      @root={{root}}
+      @showCurrent={{true}}
+    />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header="true">
+      {{#if (eq mode "create") }}
+        Create Alphabet
+      {{else if (eq mode "edit")}}
+        Edit Alphabet
+      {{else}}
+        Alphabet <code>{{model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq mode "show")}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if capabilities.canDelete}}
+        <button
+          type="button"
+          class="toolbar-link"
+          onclick={{action "delete"}}
+          data-test-transformation-alphabet-delete
+        >
+          Delete alphabet
+        </button>
+      {{/if}}
+      {{#if capabilities.canUpdate }}
+        <ToolbarSecretLink
+          @secret={{concat model.idPrefix model.id}}
+          @mode="edit"
+          @data-test-edit-link=true
+          @replace=true
+        >
+          Edit alphabet
+        </ToolbarSecretLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{#if (or (eq mode 'edit') (eq mode 'create'))}}
+<form onsubmit={{action "createOrUpdate" mode}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @model={{model}} />
+    <NamespaceReminder @mode={{mode}} @noun="transform alphabet" />
+    {{#each model.attrs as |attr|}}
+      {{#if (and (eq attr.name 'name') (eq mode 'edit')) }}
+        <label for="{{attr.name}}" class="is-label">
+          {{attr.options.label}}
+        </label>
+        {{#if attr.options.subText}}
+          <p class="sub-text">{{attr.options.subText}}</p>
+        {{/if}}
+        <input
+          data-test-input={{attr.name}}
+          id={{attr.name}}
+          autocomplete="off"
+          spellcheck="false"
+          value={{or (get model attr.name) model.id}}
+          readonly
+          class="field input is-readOnly"
+          type={{attr.type}}
+        />
+      {{else}}
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{model}}
+        />
+      {{/if}}
+    {{/each}}
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        disabled={{buttonDisabled}}
+        class="button is-primary"
+        data-test-alphabet-transform-create=true
+      >
+        {{#if (eq mode 'create')}}
+          Create alphabet
+        {{else if (eq mode 'edit')}}
+          Save
+        {{/if}}
+      </button>
+      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{concat model.idPrefix model.id}}>
+        Cancel
+      </SecretLink>
+    </div>
+  </div>
+</form>
+{{else}}
+  {{#if model.displayErrors}}
+    <div class="has-top-margin-s">
+      <MessageError @model={{model}} />
+    </div>
+  {{/if}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each model.attrs as |attr|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
+      {{else if (eq attr.type "array")}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} @type={{attr.type}} @isLink={{eq attr.name "transformations"}} @viewAll="transformations" />
+      {{else}}
+        <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
+      {{/if}}
+    {{/each}}
+  </div>
+{{/if}}

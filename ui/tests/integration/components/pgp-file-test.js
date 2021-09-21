@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { settled, render, click, fillIn, findAll, find, triggerEvent, waitUntil } from '@ember/test-helpers';
+import { settled, render, click, fillIn, triggerEvent, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 let file;
@@ -29,8 +29,8 @@ module('Integration | Component | pgp file', function(hooks) {
 
     await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
 
-    assert.equal(find('[data-test-pgp-label]').textContent.trim(), 'PGP KEY 1');
-    assert.equal(find('[data-test-pgp-file-input-label]').textContent.trim(), 'Choose a file…');
+    assert.dom('[data-test-pgp-label]').hasText('PGP KEY 1');
+    assert.dom('[data-test-pgp-file-input-label]').hasText('Choose a file…');
   });
 
   test('it accepts files', async function(assert) {
@@ -46,11 +46,7 @@ module('Integration | Component | pgp file', function(hooks) {
     await waitUntil(() => {
       return !!this.lastOnChangeCall;
     });
-    assert.equal(
-      find('[data-test-pgp-file-input-label]').textContent.trim(),
-      file.name,
-      'the file input shows the file name'
-    );
+    assert.dom('[data-test-pgp-file-input-label]').hasText(file.name, 'the file input shows the file name');
     assert.notDeepEqual(this.lastOnChangeCall[1].value, key.value, 'onChange was called with the new key');
     assert.equal(this.lastOnChangeCall[0], 0, 'onChange is called with the index value');
     await click('[data-test-pgp-clear]');
@@ -65,7 +61,7 @@ module('Integration | Component | pgp file', function(hooks) {
 
     await render(hbs`{{pgp-file index=index key=key onChange=(action change)}}`);
     await click('[data-test-text-toggle]');
-    assert.equal(findAll('[data-test-pgp-file-textarea]').length, 1, 'renders the textarea on toggle');
+    assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
 
     fillIn('[data-test-pgp-file-textarea]', text);
     await waitUntil(() => {
@@ -84,11 +80,9 @@ module('Integration | Component | pgp file', function(hooks) {
     await triggerEvent('[data-test-pgp-file-input]', ...event);
     await settled();
     await click('[data-test-text-toggle]');
-    assert.equal(findAll('[data-test-pgp-file-textarea]').length, 1, 'renders the textarea on toggle');
-    assert.equal(
-      find('[data-test-pgp-file-textarea]').textContent.trim(),
-      this.lastOnChangeCall[1].value,
-      'textarea shows the value of the base64d key'
-    );
+    assert.dom('[data-test-pgp-file-textarea]').exists({ count: 1 }, 'renders the textarea on toggle');
+    assert
+      .dom('[data-test-pgp-file-textarea]')
+      .hasText(this.lastOnChangeCall[1].value, 'textarea shows the value of the base64d key');
   });
 });

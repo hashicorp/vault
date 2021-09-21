@@ -4,9 +4,11 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -39,7 +41,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	}
 	defer lb.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
@@ -91,18 +93,22 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	}
 
 	// Get a connection to the database plugin
-	pc, err := dbBackend.GetConnection(context.Background(),
+	dbi, err := dbBackend.GetConnection(context.Background(),
 		config.StorageView, "plugin-test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Alter the database password so it no longer matches what is in storage
-	_, _, err = pc.SetCredentials(context.Background(), dbplugin.Statements{},
-		dbplugin.StaticUserConfig{
-			Username: databaseUser,
-			Password: "newSecret",
-		})
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	updateReq := v5.UpdateUserRequest{
+		Username: databaseUser,
+		Password: &v5.ChangePassword{
+			NewPassword: "newSecret",
+		},
+	}
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +180,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 	}
 	defer lb.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
@@ -282,7 +288,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	}
 	defer lb.Cleanup(context.Background())
 
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, lb)
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
@@ -334,17 +340,21 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	}
 
 	// Get a connection to the database plugin
-	pc, err := dbBackend.GetConnection(context.Background(), config.StorageView, "plugin-test")
+	dbi, err := dbBackend.GetConnection(context.Background(), config.StorageView, "plugin-test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Alter the database password
-	_, _, err = pc.SetCredentials(context.Background(), dbplugin.Statements{},
-		dbplugin.StaticUserConfig{
-			Username: databaseUser,
-			Password: "newSecret",
-		})
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	updateReq := v5.UpdateUserRequest{
+		Username: databaseUser,
+		Password: &v5.ChangePassword{
+			NewPassword: "newSecret",
+		},
+	}
+	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		t.Fatal(err)
 	}

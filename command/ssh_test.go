@@ -26,7 +26,7 @@ func TestParseSSHCommand(t *testing.T) {
 	t.Parallel()
 
 	_, cmd := testSSHCommand(t)
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		args     []string
 		hostname string
@@ -162,7 +162,6 @@ func TestParseSSHCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
 			hostname, username, port, err := cmd.parseSSHCommand(test.args)
 			if err != test.err {
 				t.Errorf("got error: %q want %q", err, test.err)
@@ -184,7 +183,7 @@ func TestIsSingleSSHArg(t *testing.T) {
 	t.Parallel()
 
 	_, cmd := testSSHCommand(t)
-	var tests = []struct {
+	tests := []struct {
 		name string
 		arg  string
 		want bool

@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
@@ -16,15 +16,18 @@ module('Acceptance | engine/disable', function(hooks) {
     // first mount an engine so we can disable it.
     let enginePath = `alicloud-${new Date().getTime()}`;
     await mountSecrets.enable('alicloud', enginePath);
-
+    await settled();
     assert.ok(backendsPage.rows.filterBy('path', `${enginePath}/`)[0], 'shows the mounted engine');
 
     await backendsPage.visit();
+    await settled();
     let row = backendsPage.rows.filterBy('path', `${enginePath}/`)[0];
     await row.menu();
+    await settled();
     await backendsPage.disableButton();
+    await settled();
     await backendsPage.confirmDisable();
-
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
 
     assert.equal(

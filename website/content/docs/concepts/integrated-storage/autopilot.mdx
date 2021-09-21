@@ -1,0 +1,82 @@
+---
+layout: docs
+page_title: Integrated Storage Autopilot
+description: Learn about the autopilot subsystem of integrated raft storage in Vault.
+---
+
+# Autopilot
+
+Autopilot enables automated workflows for managing Raft clusters. The current
+feature set includes 3 main features: Server Stabilization, Dead Server Cleanup
+and State API. These three features are introduced in Vault 1.7.
+
+## Server Stabilization
+
+Server stabilization helps to retain the stability of the Raft cluster by safely
+joining new voting nodes to the cluster. When a new voter node is joined to an
+existing cluster, autopilot adds it as a non-voter instead, and waits for a
+pre-configured amount of time to monitor it's health. If the node remains to be
+healthy for the entire duration of stabilization, then that node will be
+promoted as a voter. The server stabilization period can be tuned using
+`server_stabilization_time` (see below).
+
+## Dead Server Cleanup
+
+Dead server cleanup automatically removes nodes deemed unhealthy from the
+Raft cluster, avoiding the manual operator intervention. This feature can be
+tuned using the `cleanup_dead_servers`, `dead_server_last_contact_threshold`,
+and `min_quorum` (see below).
+
+## State API
+
+State API provides detailed information about all the nodes in the Raft cluster
+in a single call. This API can be used for monitoring for cluster health.
+
+### Follower Health
+
+Follower node health is determined by 2 factors.
+
+- Its ability to heartbeat to leader node at regular intervals. Tuned using
+  `last_contact_threshold` (see below).
+- Its ability to keep up with data replication from the leader node. Tuned using
+  `max_trailing_logs` (see below).
+
+### Default Configuration
+
+By default, Autopilot will be enabled with clusters using Vault 1.7+,
+although dead server cleanup is not enabled by default. Upgrade of
+Raft clusters deployed with older versions of Vault will also transition to use
+Autopilot automatically.
+
+Autopilot exposes a [configuration
+API](/api/system/storage/raftautopilot#set-configuration) to manage its
+behavior. Autopilot gets initialized with the following default values.
+
+- `cleanup_dead_servers` - `false`
+
+- `dead_server_last_contact_threshold` - `24h`
+
+- `min_quorum` - This doesn't default to anything and will need to be set to at
+  least 3 when `cleanup_dead_servers` is set as `true`.
+
+- `max_trailing_logs` - `1000`
+
+- `last_contact_threshold` - `10s`
+
+- `server_stabilization_time` - `10s`
+
+## Replication
+
+Performance secondary clusters have their own Autopilot configuration, managed
+independently of their primary.
+
+DR secondary clusters will also have their own Autopilot configuration (starting
+in Vault 1.8.0), managed independently of their primary. The [Autopilot
+API](/api/system/storage/raftautopilot) uses DR operation tokens for
+authorization.
+
+## Learn
+
+Refer to [Integrated Storage
+Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot) for a
+step-by-step tutorial.

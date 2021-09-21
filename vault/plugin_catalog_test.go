@@ -10,9 +10,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+
+	"github.com/hashicorp/vault/helper/builtinplugins"
 )
 
 func TestPluginCatalog_CRUD(t *testing.T) {
@@ -106,7 +107,6 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	if !reflect.DeepEqual(p, expectedBuiltin) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", p, expectedBuiltin)
 	}
-
 }
 
 func TestPluginCatalog_List(t *testing.T) {
@@ -179,5 +179,4 @@ func TestPluginCatalog_List(t *testing.T) {
 			t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[i+1], p)
 		}
 	}
-
 }

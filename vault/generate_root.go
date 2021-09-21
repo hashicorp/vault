@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
@@ -39,12 +38,12 @@ type GenerateRootStrategy interface {
 type generateStandardRootToken struct{}
 
 func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	masterKey, err := c.unsealKeyToMasterKey(ctx, combinedKey)
+	masterKey, err := c.unsealKeyToMasterKeyPostUnseal(ctx, combinedKey)
 	if err != nil {
-		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
+		return fmt.Errorf("unable to authenticate: %w", err)
 	}
 	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		return errwrap.Wrapf("master key verification failed: {{err}}", err)
+		return fmt.Errorf("master key verification failed: %w", err)
 	}
 
 	return nil
@@ -142,7 +141,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	case len(pgpKey) > 0:
 		fingerprints, err := pgpkeys.GetFingerprints([]string{pgpKey}, nil)
 		if err != nil {
-			return errwrap.Wrapf("error parsing PGP key: {{err}}", err)
+			return fmt.Errorf("error parsing PGP key: %w", err)
 		}
 		if len(fingerprints) != 1 || fingerprints[0] == "" {
 			return fmt.Errorf("could not acquire PGP key entity")
@@ -304,13 +303,13 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		combinedKey, err = shamir.Combine(c.generateRootProgress)
 		c.generateRootProgress = nil
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
+			return nil, fmt.Errorf("failed to compute master key: %w", err)
 		}
 	}
 
 	if err := strategy.authenticate(ctx, c, combinedKey); err != nil {
 		c.logger.Error("root generation aborted", "error", err.Error())
-		return nil, errwrap.Wrapf("root generation aborted: {{err}}", err)
+		return nil, fmt.Errorf("root generation aborted: %w", err)
 	}
 
 	// Run the generate strategy

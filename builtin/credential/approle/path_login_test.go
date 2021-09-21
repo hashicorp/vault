@@ -171,6 +171,22 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		t.Fatalf("expected a non-nil auth object in the response")
 	}
 
+	if loginResp.Auth.Metadata == nil {
+		t.Fatalf("expected a non-nil metadata object in the response")
+	}
+
+	if val := loginResp.Auth.Metadata["role_name"]; val != "role1" {
+		t.Fatalf("expected metadata.role_name to equal 'role1', got: %v", val)
+	}
+
+	if loginResp.Auth.Alias.Metadata == nil {
+		t.Fatalf("expected a non-nil alias metadata object in the response")
+	}
+
+	if val := loginResp.Auth.Alias.Metadata["role_name"]; val != "role1" {
+		t.Fatalf("expected metadata.alias.role_name to equal 'role1', got: %v", val)
+	}
+
 	// Test renewal
 	renewReq := generateRenewRequest(storage, loginResp.Auth)
 

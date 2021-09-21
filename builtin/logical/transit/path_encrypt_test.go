@@ -2,7 +2,9 @@ package transit
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -192,7 +194,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -264,7 +266,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -320,7 +322,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -331,7 +333,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	for _, responseItem := range batchResponseItems {
-		var item BatchResponseItem
+		var item EncryptBatchResponseItem
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
 		}
@@ -380,7 +382,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -578,9 +580,10 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 // Test that the fast path function decodeBatchRequestItems behave like mapstructure.Decode() to decode []BatchRequestItem.
 func TestTransit_decodeBatchRequestItems(t *testing.T) {
 	tests := []struct {
-		name string
-		src  interface{}
-		dest []BatchRequestItem
+		name            string
+		src             interface{}
+		dest            []BatchRequestItem
+		wantErrContains string
 	}{
 		// basic edge cases of nil values
 		{name: "nil-nil", src: nil, dest: nil},
@@ -610,9 +613,10 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest: []BatchRequestItem{},
 		},
 		{
-			name: "src_plaintext_invalid-dest",
-			src:  []interface{}{map[string]interface{}{"plaintext": 666}},
-			dest: []BatchRequestItem{},
+			name:            "src_plaintext_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"plaintext": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
 		},
 		{
 			name: "src_ciphertext-dest",
@@ -620,9 +624,10 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest: []BatchRequestItem{},
 		},
 		{
-			name: "src_ciphertext_invalid-dest",
-			src:  []interface{}{map[string]interface{}{"ciphertext": 666}},
-			dest: []BatchRequestItem{},
+			name:            "src_ciphertext_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"ciphertext": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
 		},
 		{
 			name: "src_key_version-dest",
@@ -630,9 +635,16 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest: []BatchRequestItem{},
 		},
 		{
-			name: "src_key_version_invalid-dest",
-			src:  []interface{}{map[string]interface{}{"key_version": "666"}},
-			dest: []BatchRequestItem{},
+			name:            "src_key_version_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"key_version": "666"}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'int', got unconvertible type 'string'",
+		},
+		{
+			name:            "src_key_version_invalid-number-dest",
+			src:             []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "key_version": json.Number("1.1")}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "error decoding json.Number into [0].key_version",
 		},
 		{
 			name: "src_nonce-dest",
@@ -640,9 +652,10 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest: []BatchRequestItem{},
 		},
 		{
-			name: "src_nonce_invalid-dest",
-			src:  []interface{}{map[string]interface{}{"nonce": 666}},
-			dest: []BatchRequestItem{},
+			name:            "src_nonce_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"nonce": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
 		},
 		{
 			name: "src_context-dest",
@@ -650,9 +663,10 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest: []BatchRequestItem{},
 		},
 		{
-			name: "src_context_invalid-dest",
-			src:  []interface{}{map[string]interface{}{"context": 666}},
-			dest: []BatchRequestItem{},
+			name:            "src_context_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"context": 666}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
 		},
 		{
 			name: "src_multi_order-dest",
@@ -670,7 +684,8 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 				map[string]interface{}{"context": "2", "key_version": "666"},
 				map[string]interface{}{"context": "3"},
 			},
-			dest: []BatchRequestItem{},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'int', got unconvertible type 'string'",
 		},
 		{
 			name: "src_multi_with_multi_invalid-dest",
@@ -679,6 +694,12 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 				map[string]interface{}{"context": "2", "key_version": "666"},
 				map[string]interface{}{"context": "3", "key_version": "1337"},
 			},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'int', got unconvertible type 'string'",
+		},
+		{
+			name: "src_plaintext-nil-nonce",
+			src:  []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "nonce": "null"}},
 			dest: []BatchRequestItem{},
 		},
 	}
@@ -690,8 +711,16 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			gotErr := decodeBatchRequestItems(tt.src, &tt.dest)
 			gotDest := tt.dest
 
-			if !reflect.DeepEqual(expectedErr, gotErr) {
-				t.Errorf("decodeBatchRequestItems unexpected error value, want: '%v', got: '%v'", expectedErr, gotErr)
+			if expectedErr != nil {
+				if gotErr == nil {
+					t.Fatal("decodeBatchRequestItems unexpected error value; expected error but got none")
+				}
+				if tt.wantErrContains == "" {
+					t.Fatal("missing error condition")
+				}
+				if !strings.Contains(gotErr.Error(), tt.wantErrContains) {
+					t.Errorf("decodeBatchRequestItems unexpected error value, want err contains: '%v', got: '%v'", tt.wantErrContains, gotErr)
+				}
 			}
 
 			if !reflect.DeepEqual(expectedDest, gotDest) {

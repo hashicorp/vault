@@ -1,0 +1,112 @@
+---
+layout: docs
+page_title: OCI KMS - Seals - Configuration
+description: |-
+  The OCI KMS seal configures Vault to use OCI KMS as the seal wrapping
+  mechanism.
+---
+
+# `ocikms` Seal
+
+The OCI KMS seal configures Vault to use OCI KMS as the seal wrapping mechanism.
+The OCI KMS seal is activated by one of the following:
+
+- The presence of a `seal "ocikms"` block in Vault's configuration file
+- The presence of the environment variable `VAULT_SEAL_TYPE` set to `ocikms`. If
+  enabling via environment variable, all other required values specific to OCI
+  KMS (i.e. `VAULT_OCIKMS_SEAL_KEY_ID`, `VAULT_OCIKMS_CRYPTO_ENDPOINT` `VAULT_OCIKMS_MANAGEMENT_ENDPOINT`) must be also supplied, as well as all
+  other OCI-related [environment variables][oci-sdk] that lends to successful
+  authentication.
+
+## `ocikms` Example
+
+This example shows configuring the OCI KMS seal through the Vault configuration file
+by providing all the required values:
+
+```hcl
+seal "ocikms" {
+    key_id               = "ocid1.key.oc1.iad.afnxza26aag4s.abzwkljsbapzb2nrha5nt3s7s7p42ctcrcj72vn3kq5qx"
+    crypto_endpoint      = "https://afnxza26aag4s-crypto.kms.us-ashburn-1.oraclecloud.com"
+    management_endpoint  = "https://afnxza26aag4s-management.kms.us-ashburn-1.oraclecloud.com"
+    auth_type_api_key    = "true"
+}
+```
+
+## `ocikms` Parameters
+
+These parameters apply to the `seal` stanza in the Vault configuration file:
+
+- `key_id` `(string: <required>)`: The OCI KMS key ID to use. May also be
+  specified by the `VAULT_OCIKMS_SEAL_KEY_ID` environment variable.
+- `crypto_endpoint` `(string: <required>)`: The OCI KMS cryptographic endpoint (or data plane endpoint)
+  to be used to make OCI KMS encryption/decryption requests. May also be specified by the `VAULT_OCIKMS_CRYPTO_ENDPOINT` environment
+  variable.
+- `management_endpoint` `(string: <required>)`: The OCI KMS management endpoint (or control plane endpoint)
+  to be used to make OCI KMS key management requests. May also be specified by the `VAULT_OCIKMS_MANAGEMENT_ENDPOINT` environment
+  variable.
+- `auth_type_api_key` `(boolean: false)`: Specifies if using API key to authenticate to OCI KMS service.
+  If it is `false`, Vault authenticates using the instance principal from the compute instance. See Authentication section for details. Default is `false`.
+
+## Authentication
+
+Authentication-related values must be provided, either as environment
+variables or as configuration parameters.
+
+If you want to use Instance Principal, add section configuration below and add further configuration settings as detailed in the [configuration docs](/docs/configuration/).
+
+```hcl
+seal "ocikms" {
+    crypto_endpoint     = "<kms-crypto-endpoint>"
+    management_endpoint = "<kms-management-endpoint>"
+    key_id              = "<kms-key-id>"
+}
+# Notes:
+# crypto_endpoint can be replaced by VAULT_OCIKMS_CRYPTO_ENDPOINT environment var
+# management_endpoint can be replaced by VAULT_OCIKMS_MANAGEMENT_ENDPOINT environment var
+# key_id can be replaced by VAULT_OCIKMS_SEAL_KEY_ID environment var
+```
+
+If you want to use User Principal, the plugin will take the API key you defined for OCI SDK, often under `~/.oci/config`.
+
+```hcl
+seal "ocikms" {
+    auth_type_api_key   = true
+    crypto_endpoint     = "<kms-crypto-endpoint>"
+    management_endpoint = "<kms-management-endpoint>"
+    key_id              = "<kms-key-id>"
+}
+```
+
+To grant permission for a compute instance to use OCI KMS service, write policies for KMS access.
+
+- Create a [Dynamic Group][oci-dg] in your OCI tenancy.
+- Create a policy that allows the Dynamic Group to use or manage keys from OCI KMS. There are multiple ways to write these policies. The [OCI Identity Policy][oci-id] can be used as a reference or starting point.
+
+The most common policy allows a dynamic group of tenant A to use KMS's keys in tenant B:
+
+```text
+define tenancy tenantB as <tenantB-ocid>
+
+endorse dynamic-group <dynamic-group-name> to use keys in tenancy tenantB
+
+```
+
+```text
+define tenancy tenantA as <tenantA-ocid>
+
+define dynamic-group <dynamic-group-name> as <dynamic-group-ocid>
+
+admit dynamic-group <dynamic-group-name> of tenancy tenantA to use keys in compartment <key-compartment>
+
+```
+
+## `ocikms` Rotate OCI KMS Master Key
+
+For the [OCI KMS key rotation feature][oci-kms-rotation], OCI KMS will create a new version of key internally. This process is independent from Vault, and Vault still uses the same `key_id` without any interruption.
+
+If you want to change the `key_id`: migrate to Shamir, change `key_id`, and then migrate to OCI KMS with the new `key_id`.
+
+[oci-sdk]: https://docs.cloud.oracle.com/iaas/Content/API/Concepts/sdkconfig.htm
+[oci-dg]: https://docs.cloud.oracle.com/iaas/Content/Identity/Tasks/managingdynamicgroups.htm
+[oci-id]: https://docs.cloud.oracle.com/iaas/Content/Identity/Concepts/policies.htm
+[oci-kms-rotation]: https://docs.cloud.oracle.com/iaas/Content/KeyManagement/Tasks/managingkeys.htm

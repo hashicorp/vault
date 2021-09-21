@@ -8,7 +8,7 @@ export default Controller.extend(PolicyEditController, {
   actions: {
     setPolicyFromFile(index, fileInfo) {
       let { value, fileName } = fileInfo;
-      let model = this.get('model');
+      let model = this.model;
       model.set('policy', value);
       if (!model.get('name')) {
         let trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);

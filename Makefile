@@ -2,24 +2,20 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-export RELEASE_GPG_KEY_FINGERPRINT := 91A6 E7F8 5D05 C656 30BE  F189 5185 2D87 348F FC4C
-
 TEST?=$$($(GO_CMD) list ./... | grep -v /vendor/ | grep -v /integ)
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
-	github.com/elazarl/go-bindata-assetfs/... \
-	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
-	golang.org/x/tools/cmd/goimports 
+	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.14.7
+GO_VERSION_MIN=1.16.7
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -53,12 +49,12 @@ dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
 
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
-# The resulting image is tagged "vault:dev". 
+# The resulting image is tagged "vault:dev".
 docker-dev: prep
-	docker build -f scripts/docker/Dockerfile -t vault:dev .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
 docker-dev-ui: prep
-	docker build -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep
@@ -122,12 +118,7 @@ ci-lint:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@$(GO_CMD) generate $($(GO_CMD) list ./... | grep -v /vendor/)
-	@# Remove old (now broken) husky git hooks.
-	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm -f
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
-
-PACKAGES_LOCK_DIR := $(shell find . -mindepth 1 -maxdepth 1 \
-	-type d -name 'packages*.lock')
 
 # bootstrap the build by downloading additional tools needed to build
 ci-bootstrap:
@@ -143,16 +134,10 @@ bootstrap: ci-bootstrap
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
 update-plugins:
-	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
+	grep vault-plugin- go.mod | cut -d ' ' -f 1 | while read -r P; do echo "Updating $P..."; go get -v "$P"; done
 
 static-assets-dir:
-	@mkdir -p ./pkg/web_ui
-
-static-assets: static-assets-dir
-	@echo "--> Generating static assets"
-	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
-	@mv bindata_assetfs.go http
-	@$(MAKE) -f $(THIS_FILE) fmt
+	@mkdir -p ./http/web_ui
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
@@ -192,13 +177,14 @@ ember-dist-dev:
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
-static-dist: ember-dist static-assets
-static-dist-dev: ember-dist-dev static-assets
+static-dist: ember-dist 
+static-dist-dev: ember-dist-dev 
 
 proto:
 	protoc vault/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc vault/activity/activity_log.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
@@ -206,16 +192,17 @@ proto:
 	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/database/dbplugin/v5/proto/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go 
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 
 fmtcheck:
 	@true
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	goimports -w $(GOFMT_FILES)
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
@@ -249,114 +236,21 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-# GPG_KEY_VARS sets FPR to the fingerprint with no spaces and GIT_GPG_KEY_ID to a git compatible gpg key id.
-define GPG_KEY_VARS
-	FPR=$$(echo "$(RELEASE_GPG_KEY_FINGERPRINT)" | sed 's/ //g') && GIT_GPG_KEY_ID="0x$$(printf $$FPR | tail -c 16)"
-endef
+# Tell packagespec where to write its CircleCI config.
+PACKAGESPEC_CIRCLECI_CONFIG := .circleci/config/@build-release.yml
 
-define FAIL_IF_GPG_KEY_MISSING
-	@$(GPG_KEY_VARS) && echo "Checking for key '$$FPR' (git key id: $$GIT_GPG_KEY_ID)"; \
-	gpg --list-secret-keys "$$FPR" >/dev/null 2>&1 || { \
-		echo "ERROR: Secret GPG key missing: $$FPR"; \
-		exit 1; \
-	}
-endef
-
-define FAIL_IF_UNCOMMITTED_CHANGES
-	@{ git diff --exit-code && git diff --cached --exit-code; } >/dev/null 2>&1 || { \
-		echo "ERROR: Uncommitted changes detected."; \
-		exit 1; \
-	}
-endef
-
-stage-commit:
-	$(FAIL_IF_GPG_KEY_MISSING)
-	$(FAIL_IF_UNCOMMITTED_CHANGES)
-	@[ -n "$(STAGE_VERSION)" ] || { echo "You must set STAGE_VERSION to the version in semver-like format."; exit 1; }
-	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: stage v$(STAGE_VERSION)' 
-
-publish-commit:
-	$(FAIL_IF_GPG_KEY_MISSING)
-	$(FAIL_IF_UNCOMMITTED_CHANGES)
-	@[ -n "$(PUBLISH_VERSION)" ] || { echo "You must set PUBLISH_VERSION to the version in semver-like format."; exit 1; }
-	set -x; $(GPG_KEY_VARS) && git commit --allow-empty --gpg-sign=$$GIT_GPG_KEY_ID -m 'release: publish v$(PUBLISH_VERSION)'
-
-# WRITE_GENERATED_FILE_HEADER overwrites the file specified, replacing its contents with
-# the header warning people not to attempt to edit or merge the file. You should call this
-# before writing the generated contents to the file.
-# Args: 1: File to write; 2: Command to generate it; 3: Source files to edit/merge instead.
-define WRITE_GENERATED_FILE_HEADER
-	echo "### ***" > $(1); \
-	echo "### WARNING: DO NOT manually EDIT or MERGE this file, it is generated by '$(2)'." >> $(1); \
-	echo "### INSTEAD: Edit or merge the source in $(3) then run '$(2)'." >> $(1); \
-	echo "### ***" >> $(1)
-endef
-
-## begin packagespec integration ##
-
-# The plan is to generate this packagespec integration section automatically.
-# By keeping it in a contiguous block for now, it will be easier to
-# auto-generate when we get to it.
-
-SPEC_FILE_PATTERN := packages*.yml
-# SPEC is the human-managed description of which packages we are able to build.
-SPEC := $(shell find . -mindepth 1 -maxdepth 1 -name '$(SPEC_FILE_PATTERN)')
-ifneq ($(words $(SPEC)),1)
-$(error Found $(words $(SPEC)) $(SPEC_FILE_PATTERN) files, need exactly 1: $(SPEC))
-endif
-SPEC_FILENAME := $(notdir $(SPEC))
-SPEC_MODIFIER := $(SPEC_FILENAME:packages%.yml=%)
-# LOCKDIR contains the lockfile and layer files.
-LOCKDIR  := packages$(SPEC_MODIFIER).lock
-LOCKFILE := $(LOCKDIR)/pkgs.yml
-
-export PACKAGE_SPEC_ID LAYER_SPEC_ID PRODUCT_REVISION PRODUCT_VERSION
-
-# PACKAGESPEC_TARGETS are convenience aliases for targets defined in $(LOCKDIR)/Makefile
-PACKAGESPEC_TARGETS := \
-	build build-all build-ci \
-	aliases meta package \
-	package-meta stage-config stage \
-	watch-ci publish-config publish list-staged-builds
-
-$(PACKAGESPEC_TARGETS): 
-$(PACKAGESPEC_TARGETS):
-	@PRODUCT_REPO_ROOT="$(shell git rev-parse --show-toplevel)" $(MAKE) -C $(LOCKDIR) $@
-
-# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
-# internal HashiCorp use, as it has dependencies not available to OSS contributors.
-packages:
-	@command -v packagespec > /dev/null 2>&1 || { \
-		echo "Please install packagespec."; \
-		echo "Note: packagespec is only available to HashiCorp employees at present."; \
-		exit 1; \
-	}
-	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
-	@$(MAKE) ci-config
-
-.PHONY: $(PACKAGESPEC_TARGETS) packages
-## end packagespec integration ##
-
-CI_WORKFLOW_TPL     := .circleci/config/@build-release.yml.tpl
-CI_WORKFLOW         := .circleci/config/@build-release.yml
-
-.PHONY: ci-update-release-packages $(CI_WORKFLOW)
-ci-update-release-packages: $(CI_WORKFLOW)
-	@echo $^
-
-$(CI_WORKFLOW): $(LOCKFILE) $(CI_WORKFLOW_TPL)
-	@\
-		echo "==> Updating $@ to match $<"; \
-		$(call WRITE_GENERATED_FILE_HEADER,$@,make $@,$^); \
-		cat $< | gomplate -f $(CI_WORKFLOW_TPL) -d 'package-list=stdin://?type=application/yaml' >> $@
+# Tell packagespec to re-run 'make ci-config' whenever updating its own CI config.
+PACKAGESPEC_HOOK_POST_CI_CONFIG := $(MAKE) ci-config
 
 .PHONY: ci-config
-ci-config: ci-update-release-packages
+ci-config:
 	@$(MAKE) -C .circleci ci-config
 .PHONY: ci-verify
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack stage-commit publish-commit
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
 
-.NOTPARALLEL: ember-dist ember-dist-dev static-assets
+.NOTPARALLEL: ember-dist ember-dist-dev
+
+-include packagespec.mk
