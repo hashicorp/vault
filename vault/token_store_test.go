@@ -3453,7 +3453,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	ts := core.tokenStore
 	ps := core.policyStore
 
-	// Create 4 different policies
+	// Create 3 different policies
 	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test1"
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
@@ -3468,12 +3468,6 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 
 	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test3"
-	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
-		t.Fatal(err)
-	}
-
-	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
-	policy.Name = "test3b"
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
@@ -3523,7 +3517,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	// Create a token that has all the policies defined above
 	req = logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
-	req.Data["policies"] = []string{"test1", "test2", "test3", "test3b"}
+	req.Data["policies"] = []string{"test1", "test2", "test3"}
 	resp = testMakeTokenViaRequest(t, ts, req)
 	if resp == nil || resp.Auth == nil {
 		t.Fatal("got nil response")

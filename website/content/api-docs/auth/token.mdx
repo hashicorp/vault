@@ -707,7 +707,9 @@ tokens created against a role to be revoked using the
   `disallowed_policies` or glob matched in `disallowed_policies_glob`,
   the `"default"` policy will be added to the created token automatically.
   If combined with `allowed_policies` policies need to only match one of the two
-  lists to be permitted.
+  lists to be permitted. Note that unlike `allowed_policies` the policies listed
+  in `allowed_policies_glob` will not be added to the token when no policies are
+  specified in the call to `/auth/token/create/:role_name`.
 - `disallowed_policies_glob` `(list: [])` – If set, successful token creation via
   this role will require that no requested policies glob match any of policies in
   this list. The parameter is a comma-delimited string of policy name globs.
