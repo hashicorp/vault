@@ -451,13 +451,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 
 			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
 			if walID != "" {
-				defer func() {
-					b.logger.Debug("deleting readonly test WAL")
-					err := framework.DeleteWAL(ctx, conf.StorageView, walID)
-					if err != nil {
-						b.logger.Debug("failed to clean up readonly test WAL", "error", err)
-					}
-				}()
+				defer framework.DeleteWAL(ctx, conf.StorageView, walID)
 			}
 			switch {
 			case err == nil:
@@ -519,7 +513,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 			continue
 		}
 		if role == nil || role.StaticAccount == nil {
-			b.Logger().Debug("deleting WAL with nil role or static account", "WAL ID", walEntry.walID, "WAL", walEntry)
+			b.Logger().Debug("deleting WAL with nil role or static account", "WAL ID", walEntry.walID)
 			if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
 				b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 			}
