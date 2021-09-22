@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `vault:1.7.2`.
+  not needed. Defaults to `hashicorp/vault:1.8.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -72,15 +72,30 @@ them, optional commands to run, etc.
   `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-file-foobar` would configure the filename.
 
-- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the 
-  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`, 
-  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret, 
-  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`. 
+- `vault.hashicorp.com/agent-inject-perms` - configures the permissions of the
+  file to create in the secrets volume. The name of the secret is the string
+  after "vault.hashicorp.com/agent-inject-perms-", and should map to the same
+  unique value provided in "vault.hashicorp.com/agent-inject-secret-". The value
+  is the octal permission, for example: `0644`.
+
+- `vault.hashicorp.com/agent-inject-template-file` - configures the path and filename of the
+  custom template to use. This should be used with `vault.hashicorp.com/extra-secret`,
+  which mounts a Kubernetes secret to `/vault/custom`. To map a template file to a specific secret,
+  use the same unique secret name: `vault.hashicorp.com/agent-inject-template-file-SECRET-NAME`.
   For example, if a secret annotation `vault.hashicorp.com/agent-inject-secret-foobar` is configured,
   `vault.hashicorp.com/agent-inject-template-file-foobar` would configure the template file.
 
-- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering 
+- `vault.hashicorp.com/agent-inject-default-template` - configures the default template type for rendering
   secrets if no custom template is defined. Possible values include `map` and `json`. Defaults to `map`.
+
+- `vault.hashicorp.com/template-config-exit-on-retry-failure` - controls whether
+  Vault Agent exits after it has exhausted its number of template retry attempts
+  due to failures. Defaults to `true`. See [Vault Agent Template
+  Config](/docs/agent/template-config) for more details.
+
+- `vault.hashicorp.com/template-static-secret-render-interval` - If specified,
+  configures how often Vault Agent Template should render non-leased secrets such as KV v2.
+  See [Vault Agent Template Config](/docs/agent/template-config) for more details.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
@@ -168,6 +183,8 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-copy-volume-mounts` - copies the mounts from the specified
   container and mounts them to the Vault Agent containers. The service account volume is
   ignored.
+
+- `vault.hashicorp.com/agent-service-account-token-volume-name` - the optional name of a projected volume containing a service account token for use with auto-auth against Vault's Kubernetes auth method. If the volume is mounted to another container in the deployment, the token volume will be mounted to the same location in the vault-agent containers. Otherwise it will be mounted at the default location of `/var/run/secrets/vault.hashicorp.com/serviceaccount/`.
 
 ## Vault Annotations
 

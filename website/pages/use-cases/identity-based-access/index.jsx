@@ -5,7 +5,7 @@ import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
-import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import highlightData from '@hashicorp/platform-code-highlighting/highlight-data'
 import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
@@ -20,7 +20,7 @@ export default function DataEncryptionUseCase({ content }) {
   return (
     <main id="use-cases" className="g-section-block page-wrap">
       {/* Header / Buttons */}
-      <section className="g-container">
+      <section className="g-grid-container">
         <SectionHeader
           headline="Leverage Trusted Identities in Low Trust Networks"
           description="Authenticate and access different clouds, systems, and endpoints using trusted identities"
@@ -44,7 +44,7 @@ export default function DataEncryptionUseCase({ content }) {
 
       {/* Before/After Diagram */}
       <section>
-        <div className="g-container">
+        <div className="g-grid-container">
           <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>

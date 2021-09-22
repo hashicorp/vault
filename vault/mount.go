@@ -60,10 +60,11 @@ const (
 	identityMountPath  = "identity/"
 	cubbyholeMountPath = "cubbyhole/"
 
-	systemMountType    = "system"
-	identityMountType  = "identity"
-	cubbyholeMountType = "cubbyhole"
-	pluginMountType    = "plugin"
+	systemMountType      = "system"
+	identityMountType    = "identity"
+	cubbyholeMountType   = "cubbyhole"
+	pluginMountType      = "plugin"
+	mountTypeNSCubbyhole = "ns_cubbyhole"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false

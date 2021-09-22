@@ -12,10 +12,8 @@ label {
 }
 
 .masked-font {
-  font-family: obscure;
-  font-size: $size-medium;
+  font-family: obscure, text-security-square;
   letter-spacing: 2px;
-  color: $ui-gray-300;
 }
 
 .label {
@@ -58,6 +56,10 @@ label {
 .b-checkbox .is-label {
   display: inline;
   margin-left: $size-10;
+}
+
+.b-checkbox > .sub-text {
+  padding-left: 2rem;
 }
 
 .help {

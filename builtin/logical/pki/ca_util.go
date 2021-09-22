@@ -33,6 +33,7 @@ func (b *backend) getGenerationParams(
 		TTL:                  time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:              data.Get("key_type").(string),
 		KeyBits:              data.Get("key_bits").(int),
+		SignatureBits:        data.Get("signature_bits").(int),
 		AllowLocalhost:       true,
 		AllowAnyName:         true,
 		AllowIPSANs:          true,
@@ -57,6 +58,11 @@ func (b *backend) getGenerationParams(
 
 	if err := certutil.ValidateKeyTypeLength(role.KeyType, role.KeyBits); err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
+	}
+
+	if err := certutil.ValidateSignatureLength(role.SignatureBits); err != nil {
+		errorResp = logical.ErrorResponse(err.Error())
+		return
 	}
 
 	return
