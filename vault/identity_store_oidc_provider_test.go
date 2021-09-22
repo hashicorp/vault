@@ -16,12 +16,50 @@ import (
 )
 
 func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := new(logical.InmemStorage)
+
+	// Create a key
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data:      map[string]interface{}{},
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create an entity
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "test-entity",
+		},
+	})
+	expectSuccess(t, resp, err)
+	assert.NotNil(t, resp.Data["id"])
+	entityID := resp.Data["id"].(string)
+
+	// Create a group
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              "test-group",
+			"member_entity_ids": []string{entityID},
+		},
+	})
+	expectSuccess(t, resp, err)
+	assert.NotNil(t, resp.Data["id"])
+	groupID := resp.Data["id"].(string)
+
 	type args struct {
-		client            *client
-		provider          *provider
-		assignment        *assignment
-		authorizeRequest  *logical.Request
 		entityID          string
+		client            client
+		provider          provider
+		assignment        assignment
+		authorizeRequest  *logical.Request
 		tokenCreationTime func() time.Time
 	}
 	tests := []struct {
@@ -32,9 +70,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with provider not found",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -57,9 +97,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with empty scopes",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -82,9 +124,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with missing openid scope",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -107,9 +151,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with missing response_type",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -132,9 +178,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with unsupported response_type",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -157,9 +205,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with client_id not found",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -182,11 +232,14 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with client_id not allowed by provider",
 			args: args{
-				assignment: new(assignment),
-				provider: &provider{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				provider: provider{
 					AllowedClientIDs: []string{"not-client-id"},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -209,9 +262,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with missing redirect_uri",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -234,9 +289,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with redirect_uri not allowed by client",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://not.redirect.uri:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -259,9 +316,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with missing state",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -284,9 +343,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with missing nonce",
 			args: args{
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -309,10 +370,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with identity entity ID not found",
 			args: args{
-				entityID:   "non-existent-entity",
-				provider:   new(provider),
-				assignment: new(assignment),
-				client: &client{
+				entityID: "non-existent-entity",
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -335,11 +397,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with entity not found in client assignment",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"not-entity"},
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{"not-entity-id"},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -362,11 +424,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with group not found in client assignment",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Groups: []string{"not-group"},
+				entityID: entityID,
+				assignment: assignment{
+					GroupIDs: []string{"not-group-id"},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -389,11 +451,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "invalid authorize request with negative max_age",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"test-entity"},
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -417,11 +479,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "active re-authentication required with token creation time exceeding max_age requirement",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"test-entity"},
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -448,11 +510,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "valid authorize request with token creation time within max_age requirement",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"test-entity"},
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -478,11 +540,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "valid authorize request using update operation (HTTP PUT/POST)",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"test-entity"},
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -504,11 +566,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "valid authorize request using read operation (HTTP GET)",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"test-entity"},
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -530,11 +592,11 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 		{
 			name: "valid authorize request using client assignment with group membership",
 			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Groups: []string{"test-group"},
+				entityID: entityID,
+				assignment: assignment{
+					GroupIDs: []string{groupID},
 				},
-				client: &client{
+				client: client{
 					RedirectURIs: []string{"https://localhost:8251/callback"},
 					Assignments:  []string{"test-assignment"},
 					Key:          "test-key",
@@ -557,11 +619,6 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, _, _ := TestCoreUnsealed(t)
-			ctx := namespace.RootContext(nil)
-			storage := new(logical.InmemStorage)
-			tt.args.authorizeRequest.Storage = storage
-
 			// Create a token entry and associate with the authorize request
 			creationTime := time.Now()
 			if tt.args.tokenCreationTime != nil {
@@ -577,48 +634,13 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			assert.NotEmpty(t, te.ID)
 			tt.args.authorizeRequest.ClientToken = te.ID
 
-			// Create a key
-			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
-				Path:      "oidc/key/test-key",
-				Operation: logical.CreateOperation,
-				Data:      map[string]interface{}{},
-				Storage:   storage,
-			})
-			expectSuccess(t, resp, err)
-
-			// Create an entity
-			entityID := tt.args.entityID
-			if entityID == "" {
-				resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-					Path:      "entity",
-					Operation: logical.UpdateOperation,
-					Data: map[string]interface{}{
-						"name": "test-entity",
-					},
-				})
-				expectSuccess(t, resp, err)
-				assert.NotNil(t, resp.Data["id"])
-				entityID = resp.Data["id"].(string)
-			}
-			tt.args.authorizeRequest.EntityID = entityID
-
-			// Create a group
-			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-				Path:      "group",
-				Operation: logical.UpdateOperation,
-				Data: map[string]interface{}{
-					"name":              "test-group",
-					"member_entity_ids": []string{entityID},
-				},
-			})
-
 			// Create an assignment
 			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 				Path:      "oidc/assignment/test-assignment",
 				Operation: logical.CreateOperation,
 				Data: map[string]interface{}{
-					"groups":   tt.args.assignment.Groups,
-					"entities": tt.args.assignment.Entities,
+					"group_ids":  tt.args.assignment.GroupIDs,
+					"entity_ids": tt.args.assignment.EntityIDs,
 				},
 				Storage: storage,
 			})
@@ -647,9 +669,9 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			})
 			expectSuccess(t, resp, err)
 			assert.NotNil(t, resp.Data["client_id"])
-
-			// Use allowed client IDs set by test args only if it's set
 			clientID := resp.Data["client_id"].(string)
+
+			// Use allowed client IDs if set by test args
 			if len(tt.args.provider.AllowedClientIDs) == 0 {
 				tt.args.provider.AllowedClientIDs = []string{clientID}
 			}
@@ -667,12 +689,14 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			})
 			expectSuccess(t, resp, err)
 
-			// Use the client ID set by test args only if it's set
+			// Use the client ID if set by test args
 			if len(tt.args.authorizeRequest.Data["client_id"].(string)) == 0 {
 				tt.args.authorizeRequest.Data["client_id"] = clientID
 			}
 
 			// Send the request to the OIDC authorize endpoint
+			tt.args.authorizeRequest.Storage = storage
+			tt.args.authorizeRequest.EntityID = tt.args.entityID
 			resp, err = c.identityStore.HandleRequest(ctx, tt.args.authorizeRequest)
 
 			// Parse the response
@@ -1781,8 +1805,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"groups":   []string{},
-		"entities": []string{},
+		"group_ids":  []string{},
+		"entity_ids": []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1793,8 +1817,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 		Path:      "oidc/assignment/test-assignment",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"groups":   "my-group",
-			"entities": "my-entity",
+			"group_ids":  "my-group",
+			"entity_ids": "my-entity",
 		},
 		Storage: storage,
 	})
@@ -1808,8 +1832,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"groups":   []string{"my-group"},
-		"entities": []string{"my-entity"},
+		"group_ids":  []string{"my-group"},
+		"entity_ids": []string{"my-entity"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1893,8 +1917,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"groups":   []string{},
-		"entities": []string{},
+		"group_ids":  []string{},
+		"entity_ids": []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1913,8 +1937,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"groups":   "my-group",
-			"entities": "my-entity",
+			"group_ids":  "my-group",
+			"entity_ids": "my-entity",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1927,8 +1951,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"groups":   []string{"my-group"},
-		"entities": []string{"my-entity"},
+		"group_ids":  []string{"my-group"},
+		"entity_ids": []string{"my-entity"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1939,7 +1963,7 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 		Path:      "oidc/assignment/test-assignment",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"groups": "my-group2",
+			"group_ids": "my-group2",
 		},
 		Storage: storage,
 	})
@@ -1953,8 +1977,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"groups":   []string{"my-group2"},
-		"entities": []string{"my-entity"},
+		"group_ids":  []string{"my-group2"},
+		"entity_ids": []string{"my-entity"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)

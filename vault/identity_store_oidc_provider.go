@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
@@ -51,8 +50,8 @@ const (
 )
 
 type assignment struct {
-	Groups   []string `json:"groups"`
-	Entities []string `json:"entities"`
+	GroupIDs  []string `json:"group_ids"`
+	EntityIDs []string `json:"entity_ids"`
 }
 
 type scope struct {
@@ -117,13 +116,13 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Name of the assignment",
 				},
-				"entities": {
+				"entity_ids": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Comma separated string or array of identity entity names",
+					Description: "Comma separated string or array of identity entity IDs",
 				},
-				"groups": {
+				"group_ids": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Comma separated string or array of identity group names",
+					Description: "Comma separated string or array of identity group IDs",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -528,21 +527,21 @@ func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req 
 		}
 	}
 
-	if entitiesRaw, ok := d.GetOk("entities"); ok {
-		assignment.Entities = entitiesRaw.([]string)
+	if entitiesRaw, ok := d.GetOk("entity_ids"); ok {
+		assignment.EntityIDs = entitiesRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Entities = d.GetDefaultOrZero("entities").([]string)
+		assignment.EntityIDs = d.GetDefaultOrZero("entity_ids").([]string)
 	}
 
-	if groupsRaw, ok := d.GetOk("groups"); ok {
-		assignment.Groups = groupsRaw.([]string)
+	if groupsRaw, ok := d.GetOk("group_ids"); ok {
+		assignment.GroupIDs = groupsRaw.([]string)
 	} else if req.Operation == logical.CreateOperation {
-		assignment.Groups = d.GetDefaultOrZero("groups").([]string)
+		assignment.GroupIDs = d.GetDefaultOrZero("group_ids").([]string)
 	}
 
 	// remove duplicates and lowercase entities and groups
-	assignment.Entities = strutil.RemoveDuplicates(assignment.Entities, true)
-	assignment.Groups = strutil.RemoveDuplicates(assignment.Groups, true)
+	assignment.EntityIDs = strutil.RemoveDuplicates(assignment.EntityIDs, true)
+	assignment.GroupIDs = strutil.RemoveDuplicates(assignment.GroupIDs, true)
 
 	// store assignment
 	entry, err := logical.StorageEntryJSON(assignmentPath+name, assignment)
@@ -580,8 +579,8 @@ func (i *IdentityStore) pathOIDCReadAssignment(ctx context.Context, req *logical
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"groups":   assignment.Groups,
-			"entities": assignment.Entities,
+			"group_ids":  assignment.GroupIDs,
+			"entity_ids": assignment.EntityIDs,
 		},
 	}, nil
 }
@@ -1396,7 +1395,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 
 	// Validate that the identity entity associated with the request
 	// is a member of the client assignments' groups or entities
-	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity, client.Assignments)
+	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity.GetID(), client.Assignments)
 	if err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
@@ -1500,7 +1499,17 @@ func authResponse(code, state, errorCode, errorDescription string) (*logical.Res
 
 // entityHasAssignment returns true if the entity is a member of any of the
 // assignments' groups or entities. Otherwise, returns false or an error.
-func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entity *identity.Entity, assignments []string) (bool, error) {
+func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entityID string, assignments []string) (bool, error) {
+	// Get the group IDs that the entity is a member of
+	entityGroups, err := i.MemDBGroupsByMemberEntityID(entityID, true, false)
+	if err != nil {
+		return false, err
+	}
+	entityGroupIDs := make(map[string]bool)
+	for _, group := range entityGroups {
+		entityGroupIDs[group.GetID()] = true
+	}
+
 	for _, a := range assignments {
 		assignment, err := i.getOIDCAssignment(ctx, s, a)
 		if err != nil {
@@ -1510,25 +1519,15 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 			return false, fmt.Errorf("client assignment %q not found", a)
 		}
 
-		// Get the group names that the entity is a member of
-		entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
-		if err != nil {
-			return false, err
-		}
-		entityGroupNames := make(map[string]bool)
-		for _, group := range entityGroups {
-			entityGroupNames[group.Name] = true
-		}
-
 		// Check if the entity is a member of any groups in the assignment
-		for _, group := range assignment.Groups {
-			if entityGroupNames[group] {
+		for _, id := range assignment.GroupIDs {
+			if entityGroupIDs[id] {
 				return true, nil
 			}
 		}
 
 		// Check if the entity is a member of the assignment's entities
-		if strutil.StrListContains(assignment.Entities, entity.GetName()) {
+		if strutil.StrListContains(assignment.EntityIDs, entityID) {
 			return true, nil
 		}
 	}
