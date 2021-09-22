@@ -415,34 +415,6 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthInvalidRequest,
 		},
 		{
-			name: "active re-authentication required with max_age=0",
-			args: args{
-				provider: new(provider),
-				assignment: &assignment{
-					Entities: []string{"test-entity"},
-				},
-				client: &client{
-					RedirectURIs: []string{"https://localhost:8251/callback"},
-					Assignments:  []string{"test-assignment"},
-					Key:          "test-key",
-				},
-				authorizeRequest: &logical.Request{
-					Path:      "oidc/provider/test-provider/authorize",
-					Operation: logical.UpdateOperation,
-					Data: map[string]interface{}{
-						"client_id":     "",
-						"scope":         "openid",
-						"redirect_uri":  "https://localhost:8251/callback",
-						"response_type": "code",
-						"state":         "abcdefg",
-						"nonce":         "hijklmn",
-						"max_age":       "0",
-					},
-				},
-			},
-			wantErr: ErrAuthMaxAgeReAuthenticate,
-		},
-		{
 			name: "active re-authentication required with token creation time exceeding max_age requirement",
 			args: args{
 				provider: new(provider),

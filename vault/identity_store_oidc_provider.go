@@ -1420,12 +1420,8 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	// the user agent.
 	if maxAgeRaw, ok := d.GetOk("max_age"); ok {
 		maxAge := maxAgeRaw.(int)
-		if maxAge < 0 {
+		if maxAge < 1 {
 			return authResponse("", state, ErrAuthInvalidRequest, "max_age must be greater than zero")
-		}
-		if maxAge == 0 {
-			// TODO: solve for the potential UI loop here or make max_age=0 invalid
-			return authResponse("", state, ErrAuthMaxAgeReAuthenticate, "active re-authentication is required by max_age")
 		}
 
 		// Look up the token associated with the request
