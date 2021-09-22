@@ -22,6 +22,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   await settled();
   await page.editForm.name(name).submit();
   await settled();
+  // sometimes it reads other flash messages still on there.
   assert.ok(
     aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved'),
     `${itemType}: shows a flash message`
@@ -85,15 +86,15 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     'vault.cluster.access.identity.aliases.edit',
     `${itemType}: navigates to edit on create`
   );
+  await settled();
   await page.editForm.delete();
   await settled();
   await page.editForm.confirmDelete();
   await settled();
-  assert.ok(
-    aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
-    `${itemType}: shows flash message`
-  );
 
+  let flashMessage = document.querySelectorAll('.flash-message')[3].innerText;
+  assert.ok(flashMessage.startsWith('Success\n\nSuccessfully deleted'), `${itemType}: shows flash message`);
+  await settled();
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',
