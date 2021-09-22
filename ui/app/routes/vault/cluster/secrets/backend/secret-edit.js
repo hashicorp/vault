@@ -252,13 +252,7 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType === 'secret-v2') {
       // after the the base model fetch, kv-v2 has a second associated
       // version model that contains the secret data
-      try {
-        secretModel = await this.fetchV2Models(capabilities, secretModel, params);
-      } catch (err) {
-        // if you don't have access to the secret or doesn't exist (ARG TODO double check dn't have access)
-        // this error is now capture in the actions error
-        throw new Error('permissionsError');
-      }
+      secretModel = await this.fetchV2Models(capabilities, secretModel, params);
     }
     return {
       secret: secretModel,
@@ -298,13 +292,6 @@ export default Route.extend(UnloadModelRoute, {
 
   actions: {
     error(error) {
-      if (error.message === 'permissionsError') {
-        // this error is caught after passing through handleSecretModelError and returning an empty secretModel.
-        // we don't want them to transition off the page, only know the operation they're attempting is not possible with their permission level or they've entered the wrong secret.
-        this.flashMessages.danger('You do not have access to view that secret or it does not exist.');
-        return false;
-      }
-      // otherwise show them the error page.
       let secret = this.secretParam();
       let backend = this.enginePathParam();
       set(error, 'keyId', backend + '/' + secret);
