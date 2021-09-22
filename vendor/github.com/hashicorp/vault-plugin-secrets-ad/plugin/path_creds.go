@@ -47,8 +47,12 @@ func (b *backend) pathCreds() *framework.Path {
 				Description: "Name of the role",
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.credReadOperation,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.credReadOperation,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 		HelpSynopsis:    credHelpSynopsis,
 		HelpDescription: credHelpDescription,

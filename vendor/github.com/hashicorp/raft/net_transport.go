@@ -5,13 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
 	"io"
 	"net"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-msgpack/codec"
 )
 
@@ -122,7 +122,6 @@ type StreamLayer interface {
 type netConn struct {
 	target ServerAddress
 	conn   net.Conn
-	r      *bufio.Reader
 	w      *bufio.Writer
 	dec    *codec.Decoder
 	enc    *codec.Encoder
@@ -344,12 +343,10 @@ func (n *NetworkTransport) getConn(target ServerAddress) (*netConn, error) {
 	netConn := &netConn{
 		target: target,
 		conn:   conn,
-		r:      bufio.NewReader(conn),
+		dec:    codec.NewDecoder(bufio.NewReader(conn), &codec.MsgpackHandle{}),
 		w:      bufio.NewWriter(conn),
 	}
 
-	// Setup encoder/decoders
-	netConn.dec = codec.NewDecoder(netConn.r, &codec.MsgpackHandle{})
 	netConn.enc = codec.NewEncoder(netConn.w, &codec.MsgpackHandle{})
 
 	// Done

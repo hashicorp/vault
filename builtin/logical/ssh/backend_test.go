@@ -121,7 +121,7 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 	testPublicKeyInstall = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9i+hFxZHGo6KblVme4zrAcJstR6I0PTJozW286X4WyvPnkMYDQ5mnhEYC7UWCvjoTWbPEXPX7NjhRtwQTGD67bV+lrxgfyzK1JZbUXK4PwgKJvQD+XyyWYMzDgGSQY61KUSqCxymSm/9NZkPU3ElaQ9xQuTzPpztM4ROfb8f2Yv6/ZESZsTo0MTAkp8Pcy+WkioI/uJ1H7zqs0EA4OMY4aDJRu0UtP4rTVeYNEAuRXdX+eH4aW3KMvhzpFTjMbaJHJXlEeUm2SaX5TNQyTOvghCeQILfYIL/Ca2ij8iwCmulwdV6eQGfd4VDu40PvSnmfoaE38o6HaPnX0kUcnKiT"
 
 	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
-	dockerImageTagSupportsNoRSA1 = "8.3_p1-r0-ls21"
+	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {

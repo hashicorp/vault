@@ -27,7 +27,7 @@ func inmemConfig(t *testing.T) *Config {
 	conf.ElectionTimeout = 50 * time.Millisecond
 	conf.LeaderLeaseTimeout = 50 * time.Millisecond
 	conf.CommitTimeout = 5 * time.Millisecond
-	conf.Logger = newTestLeveledLogger(t)
+	conf.Logger = newTestLogger(t)
 	return conf
 }
 
@@ -144,9 +144,6 @@ func (a *testLoggerAdapter) Write(d []byte) (int, error) {
 	}
 	if a.prefix != "" {
 		l := a.prefix + ": " + string(d)
-		if testing.Verbose() {
-			fmt.Printf("testLoggerAdapter verbose: %s\n", l)
-		}
 		a.t.Log(l)
 		return len(l), nil
 	}
@@ -156,27 +153,21 @@ func (a *testLoggerAdapter) Write(d []byte) (int, error) {
 }
 
 func newTestLogger(t *testing.T) hclog.Logger {
-	return hclog.New(&hclog.LoggerOptions{
-		Output: &testLoggerAdapter{t: t},
-		Level:  hclog.DefaultLevel,
-	})
+	return newTestLoggerWithPrefix(t, "")
 }
 
+// newTestLoggerWithPrefix returns a Logger that can be used in tests. prefix will
+// be added as the name of the logger.
+//
+// If tests are run with -v (verbose mode, or -json which implies verbose) the
+// log output will go to stderr directly.
+// If tests are run in regular "quiet" mode, logs will be sent to t.Log so that
+// the logs only appear when a test fails.
 func newTestLoggerWithPrefix(t *testing.T, prefix string) hclog.Logger {
-	return hclog.New(&hclog.LoggerOptions{
-		Output: &testLoggerAdapter{t: t, prefix: prefix},
-		Level:  hclog.DefaultLevel,
-	})
-}
+	if testing.Verbose() {
+		return hclog.New(&hclog.LoggerOptions{Name: prefix})
+	}
 
-func newTestLeveledLogger(t *testing.T) hclog.Logger {
-	return hclog.New(&hclog.LoggerOptions{
-		Name:   "",
-		Output: &testLoggerAdapter{t: t},
-	})
-}
-
-func newTestLeveledLoggerWithPrefix(t *testing.T, prefix string) hclog.Logger {
 	return hclog.New(&hclog.LoggerOptions{
 		Name:   prefix,
 		Output: &testLoggerAdapter{t: t, prefix: prefix},
@@ -243,8 +234,8 @@ func (c *cluster) Failf(format string, args ...interface{}) {
 // other goroutines created during the test. Calling FailNowf does not stop
 // those other goroutines.
 func (c *cluster) FailNowf(format string, args ...interface{}) {
-	c.logger.Error(fmt.Sprintf(format, args...))
-	c.t.FailNow()
+	c.t.Helper()
+	c.t.Fatalf(format, args...)
 }
 
 // Close shuts down the cluster and cleans up.
@@ -264,7 +255,7 @@ func (c *cluster) Close() {
 
 	for _, f := range futures {
 		if err := f.Error(); err != nil {
-			c.FailNowf("shutdown future err: %v", err)
+			c.t.Fatalf("shutdown future err: %v", err)
 		}
 	}
 
@@ -325,7 +316,7 @@ CHECK:
 			c.t.FailNow()
 
 		case <-limitCh:
-			c.FailNowf("timeout waiting for replication")
+			c.t.Fatalf("timeout waiting for replication")
 
 		case <-ch:
 			for _, fsmRaw := range c.fsms {
@@ -423,14 +414,14 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
 			c.t.FailNow()
 
 		case <-limitCh:
-			c.FailNowf("timeout waiting for stable %s state", s)
+			c.t.Fatalf("timeout waiting for stable %s state", s)
 
 		case <-eventCh:
 			c.logger.Debug("resetting stability timeout")
 
 		case t, ok := <-timer.C:
 			if !ok {
-				c.FailNowf("timer channel errored")
+				c.t.Fatalf("timer channel errored")
 			}
 
 			c.logger.Info(fmt.Sprintf("stable state for %s reached at %s (%d nodes), %s from start of poll, %s from cluster start. Timeout at %s, %s after stability",
@@ -442,9 +433,10 @@ func (c *cluster) GetInState(s RaftState) []*Raft {
 
 // Leader waits for the cluster to elect a leader and stay in a stable state.
 func (c *cluster) Leader() *Raft {
+	c.t.Helper()
 	leaders := c.GetInState(Leader)
 	if len(leaders) != 1 {
-		c.FailNowf("expected one leader: %v", leaders)
+		c.t.Fatalf("expected one leader: %v", leaders)
 	}
 	return leaders[0]
 }
@@ -455,7 +447,7 @@ func (c *cluster) Followers() []*Raft {
 	expFollowers := len(c.rafts) - 1
 	followers := c.GetInState(Follower)
 	if len(followers) != expFollowers {
-		c.FailNowf("timeout waiting for %d followers (followers are %v)", expFollowers, followers)
+		c.t.Fatalf("timeout waiting for %d followers (followers are %v)", expFollowers, followers)
 	}
 	return followers
 }
@@ -551,7 +543,7 @@ func (c *cluster) EnsureLeader(t *testing.T, expect ServerAddress) {
 		}
 	}
 	if fail {
-		c.FailNowf("at least one peer has the wrong notion of leader")
+		t.Fatalf("at least one peer has the wrong notion of leader")
 	}
 }
 
@@ -572,7 +564,7 @@ CHECK:
 		if len(first.logs) != len(fsm.logs) {
 			fsm.Unlock()
 			if time.Now().After(limit) {
-				c.FailNowf("FSM log length mismatch: %d %d",
+				t.Fatalf("FSM log length mismatch: %d %d",
 					len(first.logs), len(fsm.logs))
 			} else {
 				goto WAIT
@@ -583,7 +575,7 @@ CHECK:
 			if bytes.Compare(first.logs[idx], fsm.logs[idx]) != 0 {
 				fsm.Unlock()
 				if time.Now().After(limit) {
-					c.FailNowf("FSM log mismatch at index %d", idx)
+					t.Fatalf("FSM log mismatch at index %d", idx)
 				} else {
 					goto WAIT
 				}
@@ -592,7 +584,7 @@ CHECK:
 		if len(first.configurations) != len(fsm.configurations) {
 			fsm.Unlock()
 			if time.Now().After(limit) {
-				c.FailNowf("FSM configuration length mismatch: %d %d",
+				t.Fatalf("FSM configuration length mismatch: %d %d",
 					len(first.logs), len(fsm.logs))
 			} else {
 				goto WAIT
@@ -603,7 +595,7 @@ CHECK:
 			if !reflect.DeepEqual(first.configurations[idx], fsm.configurations[idx]) {
 				fsm.Unlock()
 				if time.Now().After(limit) {
-					c.FailNowf("FSM configuration mismatch at index %d: %v, %v", idx, first.configurations[idx], fsm.configurations[idx])
+					t.Fatalf("FSM configuration mismatch at index %d: %v, %v", idx, first.configurations[idx], fsm.configurations[idx])
 				} else {
 					goto WAIT
 				}
@@ -626,7 +618,7 @@ WAIT:
 func (c *cluster) getConfiguration(r *Raft) Configuration {
 	future := r.GetConfiguration()
 	if err := future.Error(); err != nil {
-		c.FailNowf("failed to get configuration: %v", err)
+		c.t.Fatalf("failed to get configuration: %v", err)
 		return Configuration{}
 	}
 
@@ -647,7 +639,7 @@ CHECK:
 		otherSet := c.getConfiguration(raft)
 		if !reflect.DeepEqual(peerSet, otherSet) {
 			if time.Now().After(limit) {
-				c.FailNowf("peer mismatch: %+v %+v", peerSet, otherSet)
+				t.Fatalf("peer mismatch: %+v %+v", peerSet, otherSet)
 			} else {
 				goto WAIT
 			}
@@ -700,7 +692,7 @@ func makeCluster(t *testing.T, opts *MakeClusterOpts) *cluster {
 	for i := 0; i < opts.Peers; i++ {
 		dir, err := ioutil.TempDir("", "raft")
 		if err != nil {
-			c.FailNowf("err: %v", err)
+			t.Fatalf("err: %v", err)
 		}
 
 		store := NewInmemStore()
@@ -750,23 +742,23 @@ func makeCluster(t *testing.T, opts *MakeClusterOpts) *cluster {
 
 		peerConf := opts.Conf
 		peerConf.LocalID = configuration.Servers[i].ID
-		peerConf.Logger = newTestLeveledLoggerWithPrefix(t, string(configuration.Servers[i].ID))
+		peerConf.Logger = newTestLoggerWithPrefix(t, string(configuration.Servers[i].ID))
 
 		if opts.Bootstrap {
 			err := BootstrapCluster(peerConf, logs, store, snap, trans, configuration)
 			if err != nil {
-				c.FailNowf("BootstrapCluster failed: %v", err)
+				t.Fatalf("BootstrapCluster failed: %v", err)
 			}
 		}
 
 		raft, err := NewRaft(peerConf, c.fsms[i], logs, store, snap, trans)
 		if err != nil {
-			c.FailNowf("NewRaft failed: %v", err)
+			t.Fatalf("NewRaft failed: %v", err)
 		}
 
 		raft.RegisterObserver(NewObserver(c.observationCh, false, nil))
 		if err != nil {
-			c.FailNowf("RegisterObserver failed: %v", err)
+			t.Fatalf("RegisterObserver failed: %v", err)
 		}
 		c.rafts = append(c.rafts, raft)
 	}

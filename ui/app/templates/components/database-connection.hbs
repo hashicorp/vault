@@ -226,11 +226,11 @@
   {{#each @model.showAttrs as |attr|}}
     {{#let attr.options.defaultDisplay as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
-        <InfoTableRow 
+        <InfoTableRow
           @alwaysRender={{true}}
           @defaultShown={{attr.options.defaultShown}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{stringify (get @model attr.name)}} 
+          @value={{stringify (get @model attr.name)}}
         />
       {{else if (eq attr.type "array")}}
         <InfoTableRow

@@ -6,6 +6,11 @@
 
 package windows
 
+import (
+	errorspkg "errors"
+	"unsafe"
+)
+
 // EscapeArg rewrites command line argument s as prescribed
 // in http://msdn.microsoft.com/en-us/library/ms880421.
 // This function returns "" (2 double quotes) if s is empty.
@@ -73,6 +78,40 @@ func EscapeArg(s string) string {
 	return string(qs[:j])
 }
 
+// ComposeCommandLine escapes and joins the given arguments suitable for use as a Windows command line,
+// in CreateProcess's CommandLine argument, CreateService/ChangeServiceConfig's BinaryPathName argument,
+// or any program that uses CommandLineToArgv.
+func ComposeCommandLine(args []string) string {
+	var commandLine string
+	for i := range args {
+		if i > 0 {
+			commandLine += " "
+		}
+		commandLine += EscapeArg(args[i])
+	}
+	return commandLine
+}
+
+// DecomposeCommandLine breaks apart its argument command line into unescaped parts using CommandLineToArgv,
+// as gathered from GetCommandLine, QUERY_SERVICE_CONFIG's BinaryPathName argument, or elsewhere that
+// command lines are passed around.
+func DecomposeCommandLine(commandLine string) ([]string, error) {
+	if len(commandLine) == 0 {
+		return []string{}, nil
+	}
+	var argc int32
+	argv, err := CommandLineToArgv(StringToUTF16Ptr(commandLine), &argc)
+	if err != nil {
+		return nil, err
+	}
+	defer LocalFree(Handle(unsafe.Pointer(argv)))
+	var args []string
+	for _, v := range (*argv)[:argc] {
+		args = append(args, UTF16ToString((*v)[:]))
+	}
+	return args, nil
+}
+
 func CloseOnExec(fd Handle) {
 	SetHandleInformation(Handle(fd), HANDLE_FLAG_INHERIT, 0)
 }
@@ -94,4 +133,34 @@ func FullPath(name string) (path string, err error) {
 			return UTF16ToString(buf[:n]), nil
 		}
 	}
+}
+
+// NewProcThreadAttributeList allocates a new ProcThreadAttributeList, with the requested maximum number of attributes.
+func NewProcThreadAttributeList(maxAttrCount uint32) (*ProcThreadAttributeList, error) {
+	var size uintptr
+	err := initializeProcThreadAttributeList(nil, maxAttrCount, 0, &size)
+	if err != ERROR_INSUFFICIENT_BUFFER {
+		if err == nil {
+			return nil, errorspkg.New("unable to query buffer size from InitializeProcThreadAttributeList")
+		}
+		return nil, err
+	}
+	const psize = unsafe.Sizeof(uintptr(0))
+	// size is guaranteed to be ≥1 by InitializeProcThreadAttributeList.
+	al := (*ProcThreadAttributeList)(unsafe.Pointer(&make([]unsafe.Pointer, (size+psize-1)/psize)[0]))
+	err = initializeProcThreadAttributeList(al, maxAttrCount, 0, &size)
+	if err != nil {
+		return nil, err
+	}
+	return al, err
+}
+
+// Update modifies the ProcThreadAttributeList using UpdateProcThreadAttribute.
+func (al *ProcThreadAttributeList) Update(attribute uintptr, flags uint32, value unsafe.Pointer, size uintptr, prevValue unsafe.Pointer, returnedSize *uintptr) error {
+	return updateProcThreadAttribute(al, flags, attribute, value, size, prevValue, returnedSize)
+}
+
+// Delete frees ProcThreadAttributeList's resources.
+func (al *ProcThreadAttributeList) Delete() {
+	deleteProcThreadAttributeList(al)
 }

@@ -2,17 +2,20 @@ package oidc
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -24,13 +27,18 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/hashicorp/cap/oidc/internal/strutils"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/square/go-jose.v2"
+)
+
+var (
+	codeTimeout         = 5 * time.Minute
+	codeCleanupInterval = 1 * time.Minute
 )
 
 // TestProvider is a local http server that supports test provider capabilities
@@ -72,7 +80,15 @@ import (
 //  * Now: SetNowFunc(...) updates the provider's "now" function and time.Now
 //  is the default.
 //
-//  * Expiry: SetExpectedExpiry( exp time.Duration) updates the expiry and
+//  * Subject: SetExpectedSubject(sub string) configures the expected subject for
+//    any JWTs issued by the provider (the default is "alice@example.com")
+//
+//  * Subject Passwords: SetSubjectInfo(...) configures a subject/password
+//    dictionary. If configured, then an interactive Login form is presented by
+//    the /authorize endpoint and the TestProvider becomes an interactive test
+//    provider using the provided subject/password dictionary.
+//
+//  * Expiry: SetExpectedExpiry(exp time.Duration) updates the expiry and
 //    now + 5 * time.Second is the default.
 //
 //  * Signing keys: SetSigningKeys(...) updates the keys and a ECDSA P-256 pair
@@ -122,10 +138,15 @@ type TestProvider struct {
 	httpServer *httptest.Server
 	caCert     string
 
+	startContext context.Context
+	startCancel  context.CancelFunc
+
 	jwks                *jose.JSONWebKeySet
 	allowedRedirectURIs []string
 	replySubject        string
-	replyUserinfo       interface{}
+	subjectInfo         map[string]*TestSubject
+	codes               map[string]*codeState
+	replyUserinfo       map[string]interface{}
 	replyExpiry         time.Duration
 
 	mu                sync.Mutex
@@ -136,6 +157,7 @@ type TestProvider struct {
 	expectedState     string
 	customClaims      map[string]interface{}
 	customAudiences   []string
+	supportedScopes   []string
 	omitAuthTimeClaim bool
 	omitIDToken       bool
 	omitAccessToken   bool
@@ -153,7 +175,7 @@ type TestProvider struct {
 	keyID   string
 	alg     Alg
 
-	t *testing.T
+	t TestingT
 
 	client *http.Client
 }
@@ -164,45 +186,60 @@ func (p *TestProvider) Stop() {
 	if p.client != nil {
 		p.client.CloseIdleConnections()
 	}
+	p.startCancel()
+}
+
+// TestSubject is a struct that contains various values for customizing per-user
+// responses via SubjectInfo in TestProvider. See the description of those
+// values in TestProvider; these are simply overrides.
+type TestSubject struct {
+	Password     string
+	UserInfo     map[string]interface{}
+	CustomClaims map[string]interface{}
 }
 
 // StartTestProvider creates and starts a running TestProvider http server.  The
-// WithPort option is supported.  The TestProvider will be shutdown when the
-// test and all it's subtests complete via a registered function with
-// t.Cleanup(...).
-func StartTestProvider(t *testing.T, opt ...Option) *TestProvider {
-	t.Helper()
-	require := require.New(t)
-	opts := getTestProviderOpts(opt...)
-
-	v, err := NewCodeVerifier()
-	require.NoError(err)
-	p := &TestProvider{
-		t:            t,
-		nowFunc:      time.Now,
-		pkceVerifier: v,
-		customClaims: map[string]interface{}{},
-		replyExpiry:  5 * time.Second,
-
-		allowedRedirectURIs: []string{
-			"https://example.com",
-		},
-		replySubject: "alice@example.com",
-		replyUserinfo: map[string]interface{}{
-			"sub":           "alice@example.com",
-			"dob":           "1978",
-			"friend":        "bob",
-			"nickname":      "A",
-			"advisor":       "Faythe",
-			"nosy-neighbor": "Eve",
-		},
+// WithTestDefaults, WithNoTLS and WithPort options are supported.  If the
+// TestingT parameter supports a CleanupT interface, then TestProvider will be
+// shutdown when the test and all it's subtests complete via a registered
+// function with t.Cleanup(...).
+func StartTestProvider(t TestingT, opt ...Option) *TestProvider {
+	if v, ok := interface{}(t).(HelperT); ok {
+		v.Helper()
 	}
-
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(err)
-	p.pubKey, p.privKey = &priv.PublicKey, priv
-	p.alg = ES256
-	p.keyID = strconv.Itoa(int(time.Now().Unix()))
+	require := require.New(t)
+	opts := getTestProviderOpts(t, opt...)
+	p := &TestProvider{
+		t:                   t,
+		clientID:            *opts.withDefaults.ClientID,
+		clientSecret:        *opts.withDefaults.ClientSecret,
+		expectedAuthCode:    *opts.withDefaults.ExpectedCode,
+		expectedState:       *opts.withDefaults.ExpectedState,
+		expectedAuthNonce:   *opts.withDefaults.ExpectedNonce,
+		allowedRedirectURIs: opts.withDefaults.AllowedRedirectURIs,
+		replyUserinfo:       opts.withDefaults.UserInfoReply,
+		supportedScopes:     opts.withDefaults.SupportedScopes,
+		customAudiences:     opts.withDefaults.CustomAudiences,
+		customClaims:        opts.withDefaults.CustomClaims,
+		privKey:             opts.withDefaults.SigningKey.PrivKey,
+		pubKey:              opts.withDefaults.SigningKey.PubKey,
+		alg:                 opts.withDefaults.SigningKey.Alg,
+		replyExpiry:         *opts.withDefaults.Expiry,
+		nowFunc:             opts.withDefaults.NowFunc,
+		pkceVerifier:        opts.withDefaults.PKCEVerifier,
+		replySubject:        *opts.withDefaults.ExpectedSubject,
+		subjectInfo:         opts.withDefaults.SubjectInfo, // default is not to use a login form, so no passwords required for subjects
+		codes:               map[string]*codeState{},
+		invalidJWKs:         opts.withDefaults.InvalidJWKS,
+		omitAuthTimeClaim:   opts.withDefaults.OmitAuthTime,
+		omitIDToken:         opts.withDefaults.OmitIDTokens,
+		omitAccessToken:     opts.withDefaults.OmitAccessTokens,
+		disableToken:        opts.withDefaults.DisableTokenEndpoint,
+		disableImplicit:     opts.withDefaults.DisableImplicitFlow,
+		disableUserInfo:     opts.withDefaults.DisableUserInfo,
+		disableJWKs:         opts.withDefaults.DisableJWKs,
+		keyID:               strconv.Itoa(int(time.Now().Unix())),
+	}
 	p.jwks = &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{
 			{
@@ -211,17 +248,27 @@ func StartTestProvider(t *testing.T, opt ...Option) *TestProvider {
 			},
 		},
 	}
-	p.httpServer = httptestNewUnstartedServerWithPort(t, p, opts.withPort)
+	p.httpServer = httptestNewUnstartedServerWithOpts(t, p, opt...)
 	p.httpServer.Config.ErrorLog = log.New(ioutil.Discard, "", 0)
-	p.httpServer.StartTLS()
-	t.Cleanup(p.Stop)
+	if opts.withNoTLS {
+		p.httpServer.Start()
+	} else {
+		p.httpServer.StartTLS()
+	}
+	if v, ok := interface{}(t).(CleanupT); ok {
+		v.Cleanup(p.Stop)
+	}
 
-	cert := p.httpServer.Certificate()
+	if !opts.withNoTLS {
+		cert := p.httpServer.Certificate()
 
-	var buf bytes.Buffer
-	err = pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
-	require.NoError(err)
-	p.caCert = buf.String()
+		var buf bytes.Buffer
+		err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+		require.NoError(err)
+		p.caCert = buf.String()
+	}
+	p.startContext, p.startCancel = context.WithCancel(context.Background())
+	p.startCachedCodesCleanupTicking(p.startContext)
 
 	return p
 }
@@ -229,26 +276,317 @@ func StartTestProvider(t *testing.T, opt ...Option) *TestProvider {
 // testProviderOptions is the set of available options for TestProvider
 // functions
 type testProviderOptions struct {
+	withHost     string
 	withPort     int
 	withAtHashOf string
 	withCHashOf  string
+	withNoTLS    bool
+	withSubject  string
+	withNonce    string
+	withDefaults *TestProviderDefaults
 }
 
 // testProviderDefaults is a handy way to get the defaults at runtime and during unit
 // tests.
-func testProviderDefaults() testProviderOptions {
-	return testProviderOptions{}
+func testProviderDefaults(t TestingT) testProviderOptions {
+	require := require.New(t)
+	v, err := NewCodeVerifier()
+	require.NoError(err)
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(err)
+
+	exp := 5 * time.Second
+	sub := "alice@example.com"
+	emptyString := ""
+	return testProviderOptions{
+		withDefaults: &TestProviderDefaults{
+			ClientID:      &emptyString,
+			ClientSecret:  &emptyString,
+			ExpectedCode:  &emptyString,
+			ExpectedState: &emptyString,
+			ExpectedNonce: &emptyString,
+
+			SigningKey: &TestSigningKey{
+				PrivKey: priv,
+				PubKey:  &priv.PublicKey,
+				Alg:     ES256,
+			},
+			NowFunc:      time.Now,
+			PKCEVerifier: v,
+			Expiry:       &exp,
+			AllowedRedirectURIs: []string{
+				"https://example.com",
+			},
+			CustomClaims: map[string]interface{}{
+				"name":  "Alice Doe Smith",
+				"email": "alice@example.com",
+			},
+			ExpectedSubject: &sub,
+			UserInfoReply: map[string]interface{}{
+				"sub":           "alice@example.com",
+				"dob":           "1978",
+				"friend":        "bob",
+				"nickname":      "A",
+				"advisor":       "Faythe",
+				"nosy-neighbor": "Eve",
+			},
+			SupportedScopes: []string{"openid"},        // required openid is the default
+			SubjectInfo:     map[string]*TestSubject{}, // default is not to use a login form, so no passwords required for subjects
+			InvalidJWKS:     false,
+		},
+	}
 }
 
 // getTestProviderOpts gets the test provider defaults and applies the opt
 // overrides passed in
-func getTestProviderOpts(opt ...Option) testProviderOptions {
-	opts := testProviderDefaults()
+func getTestProviderOpts(t TestingT, opt ...Option) testProviderOptions {
+	opts := testProviderDefaults(t)
 	ApplyOpts(&opts, opt...)
 	return opts
 }
 
-// WithTestPort provides an optional port for the test provider.
+// withTestSubject provides the option to provide a subject
+//
+func withTestSubject(s string) Option {
+	return func(o interface{}) {
+		if o, ok := o.(*testProviderOptions); ok {
+			o.withSubject = s
+		}
+	}
+}
+
+// withTestNonce provides the option to provide a nonce
+//
+func withTestNonce(n string) Option {
+	return func(o interface{}) {
+		if o, ok := o.(*testProviderOptions); ok {
+			o.withNonce = n
+		}
+	}
+}
+
+// TestSigningKey defines a type for specifying a test signing key and algorithm
+// when providing TestProviderDefaults
+type TestSigningKey struct {
+	Alg     Alg
+	PrivKey crypto.PrivateKey
+	PubKey  crypto.PublicKey
+}
+
+// TestProviderDefaults define a type for composing all the defaults for
+// StartTestProvider(...)
+type TestProviderDefaults struct {
+	// ClientID for test relying party which is empty by default
+	ClientID *string
+
+	//  ClientSecret for test relying party which is empty by default
+	ClientSecret *string
+
+	// ExpectedSubject configures the expected subject for any JWTs issued by
+	// the provider (the default is "alice@example.com")
+	ExpectedSubject *string
+
+	// ExpectedCode configures the auth code required by the /authorize endpoint
+	// and the code is empty by default
+	ExpectedCode *string
+
+	// ExpectedState configures the value for the state parameter returned from
+	// the /authorize endpoint which is empty by default
+	ExpectedState *string
+
+	// ExpectedAuthNonce configures the nonce value required for /authorize
+	// endpoint which is empty by default
+	ExpectedNonce *string
+
+	// AllowedRedirectURIs configures the allowed redirect URIs for the OIDC
+	// workflow which is "https://example.com" by default
+	AllowedRedirectURIs []string
+
+	// UserInfoReply configures the UserInfo endpoint response.  There is a
+	// basic response for sub == "alice@example.com" by default.
+	UserInfoReply map[string]interface{}
+
+	// SupportedScopes configures the supported scopes which is "openid" by
+	// default
+	SupportedScopes []string
+
+	// CustomAudiences configures what audience value to embed in the JWT issued
+	// by the OIDC workflow.  By default only the ClientId is in the aud claim
+	// returned.
+	CustomAudiences []string
+
+	// CustomClaims configures the custom claims added to JWTs returned.  By
+	// default there are no additional custom claims
+	CustomClaims map[string]interface{}
+
+	// SigningKey configures the signing key and algorithm for JWTs returned.
+	// By default an ES256 key is generated and used.
+	SigningKey *TestSigningKey
+
+	// Expiry configures the expiry for JWTs returned and now + 5 * time.Second
+	// is the default
+	Expiry *time.Duration
+
+	// NowFunc configures how the test provider will determine the current time
+	// The default is time.Now()
+	NowFunc func() time.Time
+
+	// PKCEVerifier(oidc.CodeVerifier) configures the PKCE code_verifier
+	PKCEVerifier CodeVerifier
+
+	// OmitAuthTime turn on/off the omitting of an auth_time claim from
+	// id_tokens from the /token endpoint.  If set to true, the test provider will
+	// not include the auth_time claim in issued id_tokens from the /token
+	// endpoint.  The default is false, so auth_time will be included
+	OmitAuthTime bool
+
+	// OmitIDTokens turn on/off the omitting of id_tokens from the /token
+	// endpoint. If set to true, the test provider will not omit (issue) id_tokens
+	// from the /token endpoint. The default is false, so ID tokens will be included
+	OmitIDTokens bool
+
+	// OmitAccessTokens turn on/off the omitting of access_tokens from the /token
+	// endpoint.  If set to true, the test provider will not omit (issue)
+	// access_tokens from the /token endpoint. The default is false, so Access
+	// tokens will be included
+	OmitAccessTokens bool
+
+	// DisableTokenEndpoint makes the /token endpoint return 401. It is false by
+	// default, so the endpoint is on
+	DisableTokenEndpoint bool
+
+	// DisableImplicitFlow disables implicit flow responses, causing them to
+	// return a 401 http status. The implicit flow is allowed by default
+	DisableImplicitFlow bool
+
+	// DisableUserInfo disables userinfo responses, causing it to return a 404
+	// http status. The userinfo endpoint is enabled by default
+	DisableUserInfo bool
+
+	// DisableJWKs disables the JWKs endpoint, causing it to 404.  It is enabled
+	// by default
+	DisableJWKs bool
+
+	// InvalidJWKS makes the JWKs endpoint return an invalid response. Valid
+	// JWKs are returned by default.
+	InvalidJWKS bool
+
+	// SubjectInfo configures a subject/password dictionary. If configured,
+	// then an interactive Login form is presented by the /authorize endpoint
+	// and the TestProvider becomes an interactive test provider using the
+	// provided subject/password dictionary.
+	SubjectInfo map[string]*TestSubject
+}
+
+// WithTestDefaults provides an option to provide a set of defaults to
+// StartTestProvider(...) which make it much more composable.
+//
+// Valid for: StartTestProvider(...)
+func WithTestDefaults(defaults *TestProviderDefaults) Option {
+	return func(o interface{}) {
+		if o, ok := o.(*testProviderOptions); ok {
+			if defaults != nil {
+				if defaults.ClientID != nil {
+					o.withDefaults.ClientID = defaults.ClientID
+				}
+				if defaults.ClientSecret != nil {
+					o.withDefaults.ClientSecret = defaults.ClientSecret
+				}
+				if defaults.ExpectedCode != nil {
+					o.withDefaults.ExpectedCode = defaults.ExpectedCode
+				}
+				if defaults.ExpectedState != nil {
+					o.withDefaults.ExpectedState = defaults.ExpectedState
+				}
+				if defaults.ExpectedNonce != nil {
+					o.withDefaults.ExpectedNonce = defaults.ExpectedNonce
+				}
+				if defaults.AllowedRedirectURIs != nil {
+					o.withDefaults.AllowedRedirectURIs = defaults.AllowedRedirectURIs
+				}
+				if defaults.UserInfoReply != nil {
+					o.withDefaults.UserInfoReply = defaults.UserInfoReply
+				}
+				if defaults.SupportedScopes != nil {
+					o.withDefaults.SupportedScopes = defaults.SupportedScopes
+				}
+				if defaults.CustomAudiences != nil {
+					o.withDefaults.CustomAudiences = defaults.CustomAudiences
+				}
+				if defaults.CustomClaims != nil {
+					o.withDefaults.CustomClaims = defaults.CustomClaims
+				}
+				if defaults.SigningKey != nil {
+					o.withDefaults.SigningKey = defaults.SigningKey
+				}
+				if defaults.Expiry != nil {
+					o.withDefaults.Expiry = defaults.Expiry
+				}
+				if defaults.NowFunc != nil {
+					o.withDefaults.NowFunc = defaults.NowFunc
+				}
+				if defaults.PKCEVerifier != nil {
+					o.withDefaults.PKCEVerifier = defaults.PKCEVerifier
+				}
+				if defaults.ExpectedSubject != nil {
+					o.withDefaults.ExpectedSubject = defaults.ExpectedSubject
+				}
+				if defaults.SubjectInfo != nil {
+					o.withDefaults.SubjectInfo = defaults.SubjectInfo
+				}
+				if defaults.InvalidJWKS {
+					o.withDefaults.InvalidJWKS = defaults.InvalidJWKS
+				}
+				if defaults.OmitAuthTime {
+					o.withDefaults.OmitAuthTime = defaults.OmitAuthTime
+				}
+				if defaults.OmitIDTokens {
+					o.withDefaults.OmitIDTokens = defaults.OmitIDTokens
+				}
+				if defaults.OmitAccessTokens {
+					o.withDefaults.OmitAccessTokens = defaults.OmitAccessTokens
+				}
+				if defaults.DisableTokenEndpoint {
+					o.withDefaults.DisableTokenEndpoint = defaults.DisableTokenEndpoint
+				}
+				if defaults.DisableImplicitFlow {
+					o.withDefaults.DisableImplicitFlow = defaults.DisableImplicitFlow
+				}
+				if defaults.DisableJWKs {
+					o.withDefaults.DisableJWKs = defaults.DisableJWKs
+				}
+
+			}
+		}
+	}
+}
+
+// WithNoTLS provides the option to not use TLS for the test provider.
+//
+// Valid for: StartTestProvider(...)
+func WithNoTLS() Option {
+	return func(o interface{}) {
+		if o, ok := o.(*testProviderOptions); ok {
+			o.withNoTLS = true
+		}
+	}
+}
+
+// WithTestHost provides an optional address for the test provider.
+//
+// Valid for: TestProvider.StartTestProvider
+func WithTestHost(host string) Option {
+	return func(o interface{}) {
+		if o, ok := o.(*testProviderOptions); ok {
+			o.withHost = host
+		}
+	}
+}
+
+// WithTestPort provides an optional port for the test provider. -1 causes an
+// unstarted server with a random port. 0 causes a started server with a random
+// port. Any other value returns a started server on that port.
 //
 // Valid for: TestProvider.StartTestProvider
 func WithTestPort(port int) Option {
@@ -290,9 +628,15 @@ func (p *TestProvider) HTTPClient() *http.Client {
 	if p.client != nil {
 		return p.client
 	}
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 
+	if p.caCert == "" {
+		p.client = &http.Client{}
+		return p.client
+	}
 	// use the cleanhttp package to create a "pooled" transport that's better
 	// configured for requests that re-use the same provider host.  Among other
 	// things, this transport supports better concurrency when making requests
@@ -313,6 +657,69 @@ func (p *TestProvider) HTTPClient() *http.Client {
 		Transport: tr,
 	}
 	return p.client
+}
+
+// SetSupportedScopes sets the values for the scopes supported for
+// authorization.  Valid supported scopes are: openid, profile, email,
+// address, phone
+func (p *TestProvider) SetSupportedScopes(scope ...string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
+	require := require.New(p.t)
+	for _, s := range scope {
+		require.Containsf([]string{"openid", "profile", "email", "address", "phone"}, s, "unsupported scope %q", s)
+	}
+	if !strutils.StrListContains(scope, "openid") {
+		scope = append(scope, "openid")
+	}
+	p.supportedScopes = scope
+}
+
+// SupportedScopes returns the values for the scopes supported.
+func (p *TestProvider) SupportedScopes() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.supportedScopes
+}
+
+// SetExpectedSubject is for configuring the expected subject for
+// any JWTs issued by the provider (the default is "alice@example.com")
+func (p *TestProvider) SetExpectedSubject(sub string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.replySubject = sub
+}
+
+// ExpectedSubject returns the subject for any JWTs issued by the
+// provider See: SetExpectedSubject(...) to override the default which
+// is "alice@example.com"
+func (p *TestProvider) ExpectedSubject() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.replySubject
+}
+
+// SetSubjectInfo is for configuring subject passwords when you wish to
+// have login prompts for interactive testing.
+func (p *TestProvider) SetSubjectInfo(subjectInfo map[string]*TestSubject) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.subjectInfo = subjectInfo
+}
+
+// SubjectInfo returns the current subject passwords when you wish to have
+// login prompts for interactive testing.
+func (p *TestProvider) SubjectInfo() map[string]*TestSubject {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	clone := map[string]*TestSubject{}
+	for k, v := range p.subjectInfo {
+		clone[k] = v
+	}
+	return clone
 }
 
 // SetExpectedExpiry is for configuring the expected expiry for any JWTs issued
@@ -385,7 +792,9 @@ func (p *TestProvider) SetCustomAudience(customAudiences ...string) {
 func (p *TestProvider) SetNowFunc(n func() time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotNilf(n, "TestProvider.SetNowFunc: time func is nil")
 	p.nowFunc = n
@@ -466,7 +875,9 @@ func (p *TestProvider) SetDisableImplicit(disable bool) {
 func (p *TestProvider) SetPKCEVerifier(verifier CodeVerifier) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require.NotNil(p.t, verifier)
 	p.pkceVerifier = verifier
 }
@@ -479,14 +890,14 @@ func (p *TestProvider) PKCEVerifier() CodeVerifier {
 }
 
 // SetUserInfoReply sets the UserInfo endpoint response.
-func (p *TestProvider) SetUserInfoReply(resp interface{}) {
+func (p *TestProvider) SetUserInfoReply(resp map[string]interface{}) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.replyUserinfo = resp
 }
 
-// SetUserInfoReply sets the UserInfo endpoint response.
-func (p *TestProvider) UserInfoReply() interface{} {
+// UserInfoReply gets the UserInfo endpoint response.
+func (p *TestProvider) UserInfoReply() map[string]interface{} {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.replyUserinfo
@@ -498,7 +909,8 @@ func (p *TestProvider) UserInfoReply() interface{} {
 func (p *TestProvider) Addr() string { return p.httpServer.URL }
 
 // CACert returns the pem-encoded CA certificate used by the test provider's
-// HTTPS server.
+// HTTPS server.  If the TestProvider was started the WithNoTLS option, then
+// this will return an empty string
 func (p *TestProvider) CACert() string { return p.caCert }
 
 // SigningKeys returns the test provider's keys used to sign JWTs, its Alg and
@@ -514,7 +926,9 @@ func (p *TestProvider) SetSigningKeys(privKey crypto.PrivateKey, pubKey crypto.P
 	const op = "TestProvider.SetSigningKeys"
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotNilf(privKey, "%s: private key is nil")
 	require.NotNilf(pubKey, "%s: public key is empty")
@@ -536,7 +950,9 @@ func (p *TestProvider) SetSigningKeys(privKey crypto.PrivateKey, pubKey crypto.P
 
 func (p *TestProvider) writeJSON(w http.ResponseWriter, out interface{}) error {
 	const op = "TestProvider.writeJSON"
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotNilf(w, "%s: http.ResponseWriter is nil")
 	enc := json.NewEncoder(w)
@@ -546,7 +962,9 @@ func (p *TestProvider) writeJSON(w http.ResponseWriter, out interface{}) error {
 // writeImplicitResponse will write the required form data response for an
 // implicit flow response to the OIDC authorize endpoint
 func (p *TestProvider) writeImplicitResponse(w http.ResponseWriter, state, redirectURL string) error {
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotNilf(w, "%s: http.ResponseWriter is nil")
 
@@ -580,25 +998,44 @@ func (p *TestProvider) writeImplicitResponse(w http.ResponseWriter, state, redir
 }
 
 func (p *TestProvider) issueSignedJWT(opt ...Option) string {
-	opts := getTestProviderOpts(opt...)
+	opts := getTestProviderOpts(p.t, opt...)
+
+	var sub string
+	switch {
+	case opts.withSubject != "":
+		sub = opts.withSubject
+	default:
+		sub = p.replySubject
+	}
+
+	switch {
+	case opts.withNonce != "":
+		p.customClaims["nonce"] = opts.withNonce
+	case p.expectedAuthNonce != "":
+		p.customClaims["nonce"] = p.expectedAuthNonce
+	}
 
 	claims := map[string]interface{}{
-		"sub":       p.replySubject,
+		"sub":       sub,
 		"iss":       p.Addr(),
 		"nbf":       float64(p.nowFunc().Add(-p.replyExpiry).Unix()),
 		"exp":       float64(p.nowFunc().Add(p.replyExpiry).Unix()),
 		"auth_time": float64(p.nowFunc().Unix()),
 		"iat":       float64(p.nowFunc().Unix()),
 		"aud":       []string{p.clientID},
+		"azp":       p.clientID,
 	}
 	if len(p.customAudiences) != 0 {
 		claims["aud"] = append(claims["aud"].([]string), p.customAudiences...)
 	}
-	if p.expectedAuthNonce != "" {
-		p.customClaims["nonce"] = p.expectedAuthNonce
-	}
 	for k, v := range p.customClaims {
 		claims[k] = v
+	}
+	info, ok := p.subjectInfo[sub]
+	if ok {
+		for k, v := range info.CustomClaims {
+			claims[k] = v
+		}
 	}
 	if opts.withAtHashOf != "" {
 		claims["at_hash"] = p.testHash(opts.withAtHashOf)
@@ -613,7 +1050,9 @@ func (p *TestProvider) issueSignedJWT(opt ...Option) string {
 // test at_hash and c_hash id_token claims. This is helpful internally, but
 // intentionally not exported.
 func (p *TestProvider) testHash(data string) string {
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotEmptyf(data, "testHash: data to hash is empty")
 	var h hash.Hash
@@ -639,7 +1078,9 @@ func (p *TestProvider) testHash(data string) string {
 // writeAuthErrorResponse writes a standard OIDC authentication error response.
 // See: https://openid.net/specs/openid-connect-core-1_0.html#AuthError
 func (p *TestProvider) writeAuthErrorResponse(w http.ResponseWriter, req *http.Request, redirectURL, state, errorCode, errorMessage string) {
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotNilf(w, "%s: http.ResponseWriter is nil")
 	require.NotNilf(req, "%s: http.Request is nil")
@@ -680,7 +1121,6 @@ func (p *TestProvider) writeTokenErrorResponse(w http.ResponseWriter, statusCode
 
 // ServeHTTP implements the test provider's http.Handler.
 func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-
 	// define all the endpoints supported
 	const (
 		openidConfiguration = "/.well-known/openid-configuration"
@@ -688,11 +1128,14 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		token               = "/token"
 		userInfo            = "/userinfo"
 		wellKnownJwks       = "/.well-known/jwks.json"
+		login               = "/login"
 	)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.t.Helper()
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(p.t)
 	require.NotNilf(w, "%s: http.ResponseWriter is nil")
 	require.NotNilf(req, "%s: http.Request is nil")
@@ -710,17 +1153,25 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 		reply := struct {
-			Issuer           string `json:"issuer"`
-			AuthEndpoint     string `json:"authorization_endpoint"`
-			TokenEndpoint    string `json:"token_endpoint"`
-			JWKSURI          string `json:"jwks_uri"`
-			UserinfoEndpoint string `json:"userinfo_endpoint,omitempty"`
+			Issuer                 string   `json:"issuer"`
+			AuthEndpoint           string   `json:"authorization_endpoint"`
+			TokenEndpoint          string   `json:"token_endpoint"`
+			JWKSURI                string   `json:"jwks_uri"`
+			UserinfoEndpoint       string   `json:"userinfo_endpoint,omitempty"`
+			SupportedAlgs          []string `json:"id_token_signing_alg_values_supported"`
+			SupportedScopes        []string `json:"scopes_supported"`
+			SubjectTypesSupported  []string `json:"subject_types_supported"`
+			ResponseTypesSupported []string `json:"response_types_supported"`
 		}{
-			Issuer:           p.Addr(),
-			AuthEndpoint:     p.Addr() + authorize,
-			TokenEndpoint:    p.Addr() + token,
-			JWKSURI:          p.Addr() + wellKnownJwks,
-			UserinfoEndpoint: p.Addr() + userInfo,
+			Issuer:                 p.Addr(),
+			AuthEndpoint:           p.Addr() + authorize,
+			TokenEndpoint:          p.Addr() + token,
+			JWKSURI:                p.Addr() + wellKnownJwks,
+			UserinfoEndpoint:       p.Addr() + userInfo,
+			SupportedAlgs:          []string{string(p.alg)},
+			SupportedScopes:        p.supportedScopes,
+			SubjectTypesSupported:  []string{"public"},
+			ResponseTypesSupported: []string{"code", "id_token", "token id_token"},
 		}
 		if p.disableUserInfo {
 			reply.UserinfoEndpoint = ""
@@ -729,6 +1180,40 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		err := p.writeJSON(w, &reply)
 		require.NoErrorf(err, "%s: internal error: %w", openidConfiguration, err)
 
+		return
+	case login:
+		// support for a login form for interactive testing.
+		err := req.ParseForm()
+		require.NoErrorf(err, "%s: internal error: %w", authorize, err)
+		uname := req.FormValue("uname")
+		psw := req.FormValue("psw")
+		state := req.FormValue("state")
+		code := req.FormValue("code")
+		redirectURI := req.FormValue("redirect_uri")
+
+		// p.mu.Lock() called at top of func... so this map access if okay.
+		subInfo, ok := p.subjectInfo[uname]
+		if !ok {
+			p.writeAuthErrorResponse(w, req, redirectURI, state, "access_denied", "invalid user name")
+			return
+		}
+		if subtle.ConstantTimeCompare([]byte(subInfo.Password), []byte(psw)) == 0 {
+			p.writeAuthErrorResponse(w, req, redirectURI, state, "access_denied", "invalid password")
+			return
+		}
+
+		// p.mu.Lock() called at top of func... so this map access if okay.
+		c, ok := p.codes[code]
+		if !ok {
+			p.writeAuthErrorResponse(w, req, redirectURI, state, "invalid_request", "missing code")
+			return
+		}
+		c.sub = uname
+
+		redirectURI += "?state=" + url.QueryEscape(state) +
+			"&code=" + url.QueryEscape(code)
+
+		http.Redirect(w, req, redirectURI, http.StatusFound)
 		return
 	case authorize:
 		// Supports both the authorization code and implicit flows
@@ -747,13 +1232,33 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		redirectURI := req.FormValue("redirect_uri")
 		respMode := req.FormValue("response_mode")
 
+		// if subjectInfo are configured, then we're doing interactive
+		// testing and we need to create a login form.
+		if len(p.subjectInfo) > 0 {
+			code, err := NewID()
+			require.NoError(err)
+			cs := &codeState{
+				exp: time.Now().Add(codeTimeout),
+			}
+			nonce := req.FormValue("nonce")
+			if nonce != "" {
+				cs.nonce = nonce
+			}
+			// p.mu.Lock() called at top of func... so this map access if okay.
+			p.codes[code] = cs
+			_ = p.writeLoginPage(w, state, code, redirectURI)
+			return
+		}
+
 		if respType != "code" && !strings.Contains(respType, "id_token") {
 			p.writeAuthErrorResponse(w, req, redirectURI, state, "unsupported_response_type", "")
 			return
 		}
-		if !strutils.StrListContains(scopes, "openid") {
-			p.writeAuthErrorResponse(w, req, redirectURI, state, "invalid_scope", "")
-			return
+		for _, s := range scopes {
+			if !strutils.StrListContains(p.supportedScopes, s) {
+				p.writeAuthErrorResponse(w, req, redirectURI, state, "invalid_scope", "")
+				return
+			}
 		}
 
 		if p.expectedAuthCode == "" {
@@ -830,7 +1335,10 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
+		err := req.ParseForm()
+		require.NoErrorf(err, "%s: internal error: %w", authorize, err)
 
+		code := req.FormValue("code")
 		switch {
 		case req.FormValue("grant_type") != "authorization_code":
 			_ = p.writeTokenErrorResponse(w, http.StatusBadRequest, "invalid_request", "bad grant_type")
@@ -838,7 +1346,7 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		case !strutils.StrListContains(p.allowedRedirectURIs, req.FormValue("redirect_uri")):
 			_ = p.writeTokenErrorResponse(w, http.StatusBadRequest, "invalid_request", "redirect_uri is not allowed")
 			return
-		case req.FormValue("code") != p.expectedAuthCode:
+		case len(p.subjectInfo) == 0 && code != p.expectedAuthCode:
 			_ = p.writeTokenErrorResponse(w, http.StatusUnauthorized, "invalid_grant", "unexpected auth code")
 			return
 		case req.FormValue("code_verifier") != "" && req.FormValue("code_verifier") != p.pkceVerifier.Verifier():
@@ -846,8 +1354,26 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		accessToken := p.issueSignedJWT()
-		idToken := p.issueSignedJWT(withTestAtHash(accessToken), withTestCHash(p.expectedAuthCode))
+		var sub string
+		var nonce string
+		switch {
+		// p.mu.Lock() called at top of func... so this map access is okay.
+		case len(p.subjectInfo) > 0:
+			s := p.verifyCachedCode(code)
+			if s == nil {
+				_ = p.writeTokenErrorResponse(w, http.StatusUnauthorized, "invalid_grant", fmt.Sprintf("unexpected auth code: %s", code))
+				return
+			}
+			s.issuedTokens = true
+			p.codes[code] = s
+			sub = s.sub
+			nonce = s.nonce
+		default:
+			sub = p.replySubject
+			nonce = p.expectedAuthNonce
+		}
+		accessToken := p.issueSignedJWT(withTestSubject(sub), withTestNonce(nonce))
+		idToken := p.issueSignedJWT(withTestSubject(sub), withTestNonce(nonce), withTestAtHash(accessToken), withTestCHash(p.expectedAuthCode))
 		reply := struct {
 			AccessToken string `json:"access_token,omitempty"`
 			IDToken     string `json:"id_token,omitempty"`
@@ -876,12 +1402,43 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-
-		if err := p.writeJSON(w, p.replyUserinfo); err != nil {
-			require.NoErrorf(err, "%s: internal error: %w", userInfo, err)
+		switch {
+		// p.mu.Lock() called at top of func... so this map access if okay.
+		case len(p.subjectInfo) > 0:
+			const bearSchema = "Bearer "
+			authHeader := req.Header.Get("Authorization")
+			tk := authHeader[len(bearSchema):]
+			var claims map[string]interface{}
+			err := UnmarshalClaims(tk, &claims)
+			require.NoError(err, "%s: internal error: %w", userInfo, err)
+			sub, ok := claims["sub"].(string)
+			if !ok {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			if p.subjectInfo[sub].UserInfo != nil {
+				if _, ok := p.subjectInfo[sub].UserInfo["sub"]; !ok {
+					p.subjectInfo[sub].UserInfo["sub"] = sub
+				}
+				if err := p.writeJSON(w, p.subjectInfo[sub].UserInfo); err != nil {
+					require.NoErrorf(err, "%s: internal error: %w", userInfo, err)
+					return
+				}
+				return
+			}
+			p.replyUserinfo["sub"] = claims["sub"]
+			if err := p.writeJSON(w, p.replyUserinfo); err != nil {
+				require.NoErrorf(err, "%s: internal error: %w", userInfo, err)
+				return
+			}
+			return
+		default:
+			if err := p.writeJSON(w, p.replyUserinfo); err != nil {
+				require.NoErrorf(err, "%s: internal error: %w", userInfo, err)
+				return
+			}
 			return
 		}
-		return
 
 	default:
 		w.WriteHeader(http.StatusNotFound)
@@ -889,17 +1446,73 @@ func (p *TestProvider) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// httptestNewUnstartedServerWithPort is roughly the same as
-// httptest.NewUnstartedServer() but allows the caller to explicitly choose the
-// port if desired.
-func httptestNewUnstartedServerWithPort(t *testing.T, handler http.Handler, port int) *httptest.Server {
-	t.Helper()
+type codeState struct {
+	exp          time.Time
+	sub          string
+	nonce        string
+	issuedTokens bool
+}
+
+// verifyCachedCode is not concurrency safe by itself.  Its TestProvider must be
+// locked/unlocked externally to this function for it to be safe.
+func (p *TestProvider) verifyCachedCode(code string) *codeState {
+	defer delete(p.codes, code)
+	if s, ok := p.codes[code]; ok {
+		if s.issuedTokens || time.Now().After(s.exp) {
+			return nil
+		}
+		return s
+	}
+	return nil
+}
+
+func (p *TestProvider) startCachedCodesCleanupTicking(cancelCtx context.Context) {
+	go func() {
+		interval := codeCleanupInterval
+		timer := time.NewTimer(0)
+		for {
+			select {
+			case <-cancelCtx.Done():
+				if v, ok := interface{}(p.t).(InfofT); ok {
+					v.Infof("cleanup of cached codes shutting down", nil)
+				}
+				return
+			case <-timer.C:
+				func() {
+					p.mu.Lock()
+					defer p.mu.Unlock()
+					for k, v := range p.codes {
+						if time.Now().After(v.exp) {
+							delete(p.codes, k)
+						}
+					}
+					timer.Reset(interval)
+				}()
+			}
+		}
+	}()
+}
+
+// httptestNewUnstartedServerWithOpts is roughly the same as
+// httptest.NewUnstartedServer() but allows the caller to tweak some options.
+func httptestNewUnstartedServerWithOpts(t TestingT, handler http.Handler, opt ...Option) *httptest.Server {
+	if v, ok := interface{}(t).(HelperT); ok {
+		v.Helper()
+	}
 	require := require.New(t)
 	require.NotNil(handler)
-	if port == 0 {
+
+	opts := getTestProviderOpts(t, opt...)
+	if opts.withPort == -1 {
 		return httptest.NewUnstartedServer(handler)
 	}
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+
+	host := opts.withHost
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	addr := net.JoinHostPort(host, strconv.Itoa(opts.withPort))
 	l, err := net.Listen("tcp", addr)
 	require.NoError(err)
 
@@ -907,4 +1520,188 @@ func httptestNewUnstartedServerWithPort(t *testing.T, handler http.Handler, port
 		Listener: l,
 		Config:   &http.Server{Handler: handler},
 	}
+}
+
+// TestingT defines a very slim interface required by the TestProvider and any
+// test functions it uses.
+type TestingT interface {
+	Errorf(format string, args ...interface{})
+	FailNow()
+}
+
+// CleanupT defines an single function interface for a testing.Cleanup(func()).
+type CleanupT interface{ Cleanup(func()) }
+
+// HelperT defines a single function interface for a testing.Helper()
+type HelperT interface{ Helper() }
+
+// TestingLogger defines a logger that will implement the TestingT interface so
+// it can be used with StartTestProvider(...) as its t TestingT parameter.
+type TestingLogger struct {
+	Logger hclog.Logger
+}
+
+// NewTestingLogger makes a new TestingLogger
+func NewTestingLogger(logger hclog.Logger) (*TestingLogger, error) {
+	if logger == nil {
+		return nil, errors.New("missing logger")
+	}
+	return &TestingLogger{
+		Logger: logger,
+	}, nil
+}
+
+// Errorf will output the error to the log
+func (l *TestingLogger) Errorf(format string, args ...interface{}) {
+	l.Logger.Error(format, args...)
+}
+
+// InfofT defines a single function interface for a Info(format string, args ...interface{})
+type InfofT interface {
+	Infof(format string, args ...interface{})
+}
+
+// Infof will output the info to the log
+func (l *TestingLogger) Infof(format string, args ...interface{}) {
+	l.Logger.Info(format, args...)
+}
+
+// FailNow will panic
+func (l *TestingLogger) FailNow() {
+	panic("testing.T failed, see logs for output (if any)")
+}
+
+func (p *TestProvider) writeLoginPage(w http.ResponseWriter, state, code, redirectURI string) error {
+	const loginFormTop = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Mockland Login</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Normalize.css -->
+    <style type="text/css">
+      html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}hr{box-sizing:content-box;height:0;overflow:visible}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}abbr[title]{border-bottom:none;text-decoration:underline;text-decoration:underline dotted}b,strong{font-weight:bolder}code,kbd,samp{font-family:monospace,monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}img{border-style:none}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}fieldset{padding:.35em .75em .625em}legend{box-sizing:border-box;color:inherit;display:table;max-width:100%;padding:0;white-space:normal}progress{vertical-align:baseline}textarea{overflow:auto}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}summary{display:list-item}template{display:none}[hidden]{display:none}
+    </style>
+    <style type="text/css">
+      html {
+        background: #222;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      section {
+        margin: 1rem;
+        width: 100%;
+        max-width: 25rem;
+        border-radius: 0.25rem;
+        overflow: hidden;
+        background: #FFF;
+        color: #333;
+      }
+      header {
+        padding: 3rem 2rem 2rem 2rem;
+        text-align: center;
+      }
+      h1 {
+        margin: 0;
+        font-weight: 400;
+        font-size: 2rem;
+      }
+      p {
+        color: #888;
+      }
+      form {
+        padding: 0 2rem 3rem 2rem;
+      }
+      .field {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      input {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        padding: 1rem;
+        border: 0;
+        border-radius: 0.5rem;
+        background: #eee;
+      }
+      input:focus {
+        outline: 0;
+        box-shadow: 0 0 10px 2px #60e9, inset 0 0 0 1px #fff;
+        background: #fff;
+      }
+      button {
+        margin-top: 2rem;
+        width: 100%;
+        border: 0;
+        padding: 1rem;
+        background: #c0f;
+        color: #fff;
+        border-radius: 0.5rem;
+      }
+      button:focus {
+        outline: 0;
+        box-shadow: 0 0 10px 3px #60e9, inset 0 0 0 1px #fff;
+      }
+    </style>
+  </head>
+  <body>
+
+    <section>
+      <header>
+        <h1>Test Sign In</h1>
+        <p>Welcome to the test OIDC provider.</p>
+      </header>
+
+      <form action="/login" method="post">
+
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="uname" type="text" autocomplete="off" autofocus required />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="psw" type="password" autocomplete="off" required />
+        </div>
+`
+	const loginFormInputs = `
+        <input name="state" type="hidden" value="%s" />
+        <input name="code" type="hidden" value="%s" />
+        <input name="redirect_uri" type="hidden" value="%s" />
+`
+	const loginFormBottom = `
+        <button type="submit">Login</button>
+      </form>
+    </section>
+
+  </body>
+</html>
+`
+
+	if v, ok := interface{}(p.t).(HelperT); ok {
+		v.Helper()
+	}
+	require := require.New(p.t)
+	require.NotNilf(w, "%s: http.ResponseWriter is nil")
+
+	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+	form := fmt.Sprintf("%s%s%s", loginFormTop, fmt.Sprintf(loginFormInputs, state, code, redirectURI), loginFormBottom)
+	if _, err := w.Write([]byte(form)); err != nil {
+		return err
+	}
+
+	return nil
 }

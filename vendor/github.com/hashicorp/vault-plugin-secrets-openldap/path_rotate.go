@@ -24,12 +24,12 @@ func (b *backend) pathRotateCredentials() []*framework.Path {
 			Fields:  map[string]*framework.FieldSchema{},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.pathRotateCredentialsUpdate,
+					Callback:                    b.pathRotateRootCredentialsUpdate,
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: true,
 				},
 				logical.CreateOperation: &framework.PathOperation{
-					Callback:                    b.pathRotateCredentialsUpdate,
+					Callback:                    b.pathRotateRootCredentialsUpdate,
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: true,
 				},
@@ -64,7 +64,7 @@ func (b *backend) pathRotateCredentials() []*framework.Path {
 	}
 }
 
-func (b *backend) pathRotateCredentialsUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRotateRootCredentialsUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if _, hasTimeout := ctx.Deadline(); !hasTimeout {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(ctx, defaultCtxTimeout)
@@ -133,10 +133,14 @@ func (b *backend) pathRotateRoleCredentialsUpdate(ctx context.Context, req *logi
 		}
 	}
 
-	resp, err := b.setStaticAccountPassword(ctx, req.Storage, &setStaticAccountInput{
+	input := &setStaticAccountInput{
 		RoleName: name,
 		Role:     role,
-	})
+	}
+	if walID, ok := item.Value.(string); ok {
+		input.WALID = walID
+	}
+	resp, err := b.setStaticAccountPassword(ctx, req.Storage, input)
 	if err != nil {
 		b.Logger().Warn("unable to rotate credentials in rotate-role", "error", err)
 		// Update the priority to re-try this rotation and re-add the item to
@@ -149,6 +153,8 @@ func (b *backend) pathRotateRoleCredentialsUpdate(ctx context.Context, req *logi
 		}
 	} else {
 		item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+		// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+		item.Value = ""
 	}
 
 	// Add their rotation to the queue. We use pushErr here to distinguish between
@@ -159,9 +165,14 @@ func (b *backend) pathRotateRoleCredentialsUpdate(ctx context.Context, req *logi
 		return nil, pushErr
 	}
 
+	if err != nil {
+		return nil, fmt.Errorf("unable to finish rotating credentials; retries will "+
+			"continue in the background but it is also safe to retry manually: %w", err)
+	}
+
 	// We're not returning creds here because we do not know if its been processed
 	// by the queue.
-	return nil, err
+	return nil, nil
 }
 
 // rollBackPassword uses naive exponential backoff to retry updating to an old password,

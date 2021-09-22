@@ -381,6 +381,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
 		Ext:         d.autopilotServerExt("voter"),
+		IsLeader:    true,
 	}
 
 	return ret

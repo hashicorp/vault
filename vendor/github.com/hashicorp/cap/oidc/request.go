@@ -206,6 +206,7 @@ var _ Request = (*Req)(nil)
 // NewRequest creates a new Request (*Req).
 //  Supports the options:
 //   * WithState
+//   * WithNonce
 //   * WithNow
 //   * WithAudiences
 //   * WithScopes
@@ -222,10 +223,6 @@ func NewRequest(expireIn time.Duration, redirectURL string, opt ...Option) (*Req
 	if redirectURL == "" {
 		return nil, fmt.Errorf("%s: redirect URL is empty: %w", op, ErrInvalidParameter)
 	}
-	nonce, err := NewID(WithPrefix("n"))
-	if err != nil {
-		return nil, fmt.Errorf("%s: unable to generate a request's nonce: %w", op, err)
-	}
 
 	var state string
 	switch {
@@ -236,6 +233,18 @@ func NewRequest(expireIn time.Duration, redirectURL string, opt ...Option) (*Req
 		state, err = NewID(WithPrefix("st"))
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to generate a request's state: %w", op, err)
+		}
+	}
+
+	var nonce string
+	switch {
+	case opts.withNonce != "":
+		nonce = opts.withNonce
+	default:
+		var err error
+		nonce, err = NewID(WithPrefix("n"))
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to generate a request's nonce: %w", op, err)
 		}
 	}
 
@@ -428,6 +437,7 @@ type reqOptions struct {
 	withClaims       []byte
 	withACRValues    []string
 	withState        string
+	withNonce        string
 }
 
 // reqDefaults is a handy way to get the defaults at runtime and during unit
@@ -622,6 +632,39 @@ func WithState(s string) Option {
 	return func(o interface{}) {
 		if o, ok := o.(*reqOptions); ok {
 			o.withState = s
+		}
+	}
+}
+
+// WithNonce optionally specifies a value to use for the request's nonce. The
+// nonce value is a case sensitive string.  A nonce allows you to associate a
+// Client session with an ID Token, because the Provider must include a nonce
+// claim in the ID Token with the claim value being the nonce value sent in the
+// Authentication Request
+//
+// Typically, a nonce is a random string generated for you when you create a new
+// Request.  This option allows you to override that auto-generated value with
+// a specific value of your own choosing.
+//
+// The primary reason for a nonce is to mitigate replay attacks by using a
+// unique and non-guessable value associated with the Client session which the
+// Provider will add to the ID Token as the nonce claim value.
+//
+// A nonce should be at least 20 chars long (see:
+// https://tools.ietf.org/html/rfc6749#section-10.10).
+//
+// See NewID(...) for a function that generates a sufficiently
+// random string and supports the WithPrefix(...) option, which can be used
+// prefix your custom nonce payload.
+//
+// Neither a max or min length is enforced when you use the WithNonce option.
+//
+// Option is valid for: Request
+//
+func WithNonce(n string) Option {
+	return func(o interface{}) {
+		if o, ok := o.(*reqOptions); ok {
+			o.withNonce = n
 		}
 	}
 }

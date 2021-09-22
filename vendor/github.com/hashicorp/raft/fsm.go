@@ -175,16 +175,13 @@ func (r *Raft) runFSM() {
 			req.respond(fmt.Errorf("failed to open snapshot %v: %v", req.ID, err))
 			return
 		}
+		defer source.Close()
 
 		// Attempt to restore
-		start := time.Now()
-		if err := r.fsm.Restore(source); err != nil {
+		if err := fsmRestoreAndMeasure(r.fsm, source); err != nil {
 			req.respond(fmt.Errorf("failed to restore snapshot %v: %v", req.ID, err))
-			source.Close()
 			return
 		}
-		source.Close()
-		metrics.MeasureSince([]string{"raft", "fsm", "restore"}, start)
 
 		// Update the last index and term
 		lastIndex = meta.Index
@@ -232,4 +229,18 @@ func (r *Raft) runFSM() {
 			return
 		}
 	}
+}
+
+// fsmRestoreAndMeasure wraps the Restore call on an FSM to consistently measure
+// and report timing metrics. The caller is still responsible for calling Close
+// on the source in all cases.
+func fsmRestoreAndMeasure(fsm FSM, source io.ReadCloser) error {
+	start := time.Now()
+	if err := fsm.Restore(source); err != nil {
+		return err
+	}
+	metrics.MeasureSince([]string{"raft", "fsm", "restore"}, start)
+	metrics.SetGauge([]string{"raft", "fsm", "lastRestoreDuration"},
+		float32(time.Since(start).Milliseconds()))
+	return nil
 }

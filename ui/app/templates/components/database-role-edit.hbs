@@ -32,13 +32,13 @@
       <div class="toolbar-separator" />
       {{/if}}
       {{#if @model.canGenerateCredentials}}
-      <button 
+      <button
         type="button"
         class="toolbar-link"
-        {{on 'click' (fn this.generateCreds @model.id)}}
+        {{on 'click' (fn this.generateCreds @model.id @model.type)}}
         data-test-database-role-generate-creds
       >
-        Generate credentials
+        {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
       </button>
       {{/if}}
       {{#if @model.canEditRole}}

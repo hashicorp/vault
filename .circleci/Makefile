@@ -78,9 +78,7 @@ define GEN_CONFIG
 	@mv -f $@.tmp $@
 endef
 
-# Always re-generate the config, as we can't trust timestamps with git.
-.PHONY: $(OUT)
-$(OUT): $(CONFIG_SOURCE) 
+$(OUT): $(CONFIG_SOURCE)
 	$(GEN_CONFIG)
 	@echo "$@ updated"
 

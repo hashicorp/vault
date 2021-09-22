@@ -1,0 +1,3 @@
+```release-note:improvement
+api, agent: LifetimeWatcher now does more retries when renewal failures occur.  This also impacts Agent auto-auth and leases managed via Agent caching.
+```

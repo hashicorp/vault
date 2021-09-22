@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -62,21 +61,34 @@ func (b *backend) populateQueue(ctx context.Context, s logical.Storage) {
 
 		item := queue.Item{
 			Key:      roleName,
-			Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod).Unix(),
+			Priority: role.StaticAccount.NextRotationTime().Unix(),
 		}
 
 		// Check if role name is in map
 		walEntry := walMap[roleName]
 		if walEntry != nil {
 			// Check walEntry last vault time
-			if !walEntry.LastVaultRotation.IsZero() && walEntry.LastVaultRotation.Before(role.StaticAccount.LastVaultRotation) {
+			if walEntry.LastVaultRotation.IsZero() {
+				// A WAL's last Vault rotation can only ever be 0 for a role that
+				// was never successfully created. So we know this WAL couldn't
+				// have been created for this role we just retrieved from storage.
+				// i.e. it must be a hangover from a previous attempt at creating
+				// a role with the same name
+				log.Debug("deleting WAL with zero last rotation time", "WAL ID", walEntry.walID, "created", walEntry.walCreatedAt)
+				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
+					log.Warn("unable to delete zero-time WAL", "error", err, "WAL ID", walEntry.walID)
+				}
+			} else if walEntry.LastVaultRotation.Before(role.StaticAccount.LastVaultRotation) {
 				// WAL's last vault rotation record is older than the role's data, so
 				// delete and move on
+				log.Debug("deleting outdated WAL", "WAL ID", walEntry.walID, "created", walEntry.walCreatedAt)
 				if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
-				log.Info("adjusting priority for Role")
+				log.Info("found WAL for role",
+					"role", item.Key,
+					"WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
 			}
@@ -110,14 +122,15 @@ func (b *backend) runTicker(ctx context.Context, s logical.Storage) {
 // credential setting or rotation in the event of partial failure.
 type setCredentialsWAL struct {
 	NewPassword string `json:"new_password"`
-	OldPassword string `json:"old_password"`
 	RoleName    string `json:"role_name"`
 	Username    string `json:"username"`
 	DN          string `json:"dn"`
 
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
-	walID string
+	// Private fields which will not be included in json.Marshal/Unmarshal.
+	walID        string
+	walCreatedAt int64 // Unix time at which the WAL was created.
 }
 
 // rotateCredentials sets a new password for a static account. This method is
@@ -191,18 +204,7 @@ func (b *backend) rotateCredential(ctx context.Context, s logical.Storage) bool 
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
 	// should be stored in the Item's Value field.
 	if walID, ok := item.Value.(string); ok {
-		walEntry, err := b.findStaticWAL(ctx, s, walID)
-		if err != nil {
-			b.Logger().Error("error finding static WAL", "error", err)
-			item.Priority = time.Now().Add(10 * time.Second).Unix()
-			if err := b.pushItem(item); err != nil {
-				b.Logger().Error("unable to push item on to queue", "error", err)
-			}
-		}
-		if walEntry != nil && walEntry.NewPassword != "" {
-			input.Password = walEntry.NewPassword
-			input.WALID = walID
-		}
+		input.WALID = walID
 	}
 
 	resp, err := b.setStaticAccountPassword(ctx, s, input)
@@ -223,6 +225,8 @@ func (b *backend) rotateCredential(ctx context.Context, s logical.Storage) bool 
 		// Go to next item
 		return true
 	}
+	// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+	item.Value = ""
 
 	lvr := resp.RotationTime
 	if lvr.IsZero() {
@@ -252,12 +256,12 @@ func (b *backend) findStaticWAL(ctx context.Context, s logical.Storage, id strin
 
 	data := wal.Data.(map[string]interface{})
 	walEntry := setCredentialsWAL{
-		walID:       id,
-		NewPassword: data["new_password"].(string),
-		OldPassword: data["old_password"].(string),
-		RoleName:    data["role_name"].(string),
-		Username:    data["username"].(string),
-		DN:          data["dn"].(string),
+		walID:        id,
+		walCreatedAt: wal.CreatedAt,
+		NewPassword:  data["new_password"].(string),
+		RoleName:     data["role_name"].(string),
+		Username:     data["username"].(string),
+		DN:           data["dn"].(string),
 	}
 	lvr, err := time.Parse(time.RFC3339, data["last_vault_rotation"].(string))
 	if err != nil {
@@ -269,16 +273,13 @@ func (b *backend) findStaticWAL(ctx context.Context, s logical.Storage, id strin
 }
 
 type setStaticAccountInput struct {
-	RoleName   string
-	Role       *roleEntry
-	Password   string
-	CreateUser bool
-	WALID      string
+	RoleName string
+	Role     *roleEntry
+	WALID    string
 }
 
 type setStaticAccountOutput struct {
 	RotationTime time.Time
-	Password     string
 	// Optional return field, in the event WAL was created and not destroyed
 	// during the operation
 	WALID string
@@ -298,7 +299,6 @@ type setStaticAccountOutput struct {
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
 func (b *backend) setStaticAccountPassword(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
-	var merr error
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
@@ -312,32 +312,54 @@ func (b *backend) setStaticAccountPassword(ctx context.Context, s logical.Storag
 	// Re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
-	config, err := readConfig(ctx, s)
-	if err != nil {
-		return nil, err
-	}
-	if config == nil {
-		return nil, errors.New("the config is currently unset")
-	}
-
-	newPassword, err := b.GeneratePassword(ctx, config)
-	if err != nil {
-		return nil, err
-	}
-
-	oldPassword := input.Role.StaticAccount.Password
-
-	// Take out the backend lock since we are swapping out the connection
 	b.Lock()
 	defer b.Unlock()
 
+	config, err := readConfig(ctx, s)
+	if err != nil {
+		return output, err
+	}
+	if config == nil {
+		return output, errors.New("the config is currently unset")
+	}
+
+	var newPassword string
+	if output.WALID != "" {
+		wal, err := b.findStaticWAL(ctx, s, output.WALID)
+		if err != nil {
+			return output, errwrap.Wrapf("error retrieving WAL entry: {{err}}", err)
+		}
+
+		switch {
+		case wal != nil && wal.NewPassword != "":
+			newPassword = wal.NewPassword
+		default:
+			if wal == nil {
+				b.Logger().Error("expected role to have WAL, but WAL not found in storage", "role", input.RoleName, "WAL ID", output.WALID)
+			} else {
+				b.Logger().Error("expected WAL to have a new password set, but empty", "role", input.RoleName, "WAL ID", output.WALID)
+				err = framework.DeleteWAL(ctx, s, output.WALID)
+				if err != nil {
+					b.Logger().Warn("failed to delete WAL with no new password", "error", err, "WAL ID", output.WALID)
+				}
+			}
+			// If there's anything wrong with the WAL in storage, we'll need
+			// to generate a fresh WAL and password
+			output.WALID = ""
+		}
+	}
+
 	if output.WALID == "" {
+		newPassword, err = b.GeneratePassword(ctx, config)
+		if err != nil {
+			return output, err
+		}
+		b.Logger().Debug("writing WAL", "role", input.RoleName, "WAL ID", output.WALID)
 		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &setCredentialsWAL{
 			RoleName:          input.RoleName,
 			Username:          input.Role.StaticAccount.Username,
 			DN:                input.Role.StaticAccount.DN,
 			NewPassword:       newPassword,
-			OldPassword:       oldPassword,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {
@@ -345,21 +367,17 @@ func (b *backend) setStaticAccountPassword(ctx context.Context, s logical.Storag
 		}
 	}
 
-	// Update the password remotely.
-	if err := b.client.UpdatePassword(config.LDAP, input.Role.StaticAccount.DN, newPassword); err != nil {
-		return nil, err
+	if newPassword == "" {
+		b.Logger().Error("newPassword was empty, re-generating based on the password policy")
+		newPassword, err = b.GeneratePassword(ctx, config)
+		if err != nil {
+			return output, err
+		}
 	}
 
-	// Update the password locally.
-	if pwdStoringErr := storePassword(ctx, s, config); pwdStoringErr != nil {
-		// We were unable to store the new password locally. We can't continue in this state because we won't be able
-		// to roll any passwords, including our own to get back into a state of working. So, we need to roll back to
-		// the last password we successfully got into storage.
-		if rollbackErr := b.rollBackPassword(ctx, config, oldPassword); rollbackErr != nil {
-			return nil, fmt.Errorf(`unable to store new password due to %s and unable to return to previous password due
-to %s, configure a new binddn and bindpass to restore openldap function`, pwdStoringErr, rollbackErr)
-		}
-		return nil, fmt.Errorf("unable to update password due to storage err: %s", pwdStoringErr)
+	// Update the password remotely.
+	if err := b.client.UpdatePassword(config.LDAP, input.Role.StaticAccount.DN, newPassword); err != nil {
+		return output, err
 	}
 
 	// Store updated role information
@@ -379,12 +397,13 @@ to %s, configure a new binddn and bindpass to restore openldap function`, pwdSto
 
 	// Cleanup WAL after successfully rotating and pushing new item on to queue
 	if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
-		merr = multierror.Append(merr, err)
-		return output, merr
+		b.Logger().Warn("error deleting WAL", "WAL ID", output.WALID, "error", err)
+		return output, err
 	}
+	b.Logger().Debug("deleted WAL", "WAL ID", output.WALID)
 
 	// The WAL has been deleted, return new setStaticAccountOutput without it
-	return &setStaticAccountOutput{RotationTime: lvr}, merr
+	return &setStaticAccountOutput{RotationTime: lvr}, nil
 }
 
 func (b *backend) GeneratePassword(ctx context.Context, cfg *config) (string, error) {
@@ -463,13 +482,39 @@ func (b *backend) loadStaticWALs(ctx context.Context, s logical.Storage) (map[st
 			continue
 		}
 		if role == nil || role.StaticAccount == nil {
+			b.Logger().Debug("deleting WAL with nil role or static account", "WAL ID", walEntry.walID)
 			if err := framework.DeleteWAL(ctx, s, walEntry.walID); err != nil {
 				b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 			}
 			continue
 		}
 
-		walEntry.walID = walID
+		if existingWALEntry, exists := walMap[walEntry.RoleName]; exists {
+			b.Logger().Debug("multiple WALs detected for role", "role", walEntry.RoleName,
+				"loaded WAL ID", existingWALEntry.walID, "created at", existingWALEntry.walCreatedAt, "last vault rotation", existingWALEntry.LastVaultRotation,
+				"candidate WAL ID", walEntry.walID, "created at", walEntry.walCreatedAt, "last vault rotation", walEntry.LastVaultRotation)
+
+			if walEntry.walCreatedAt > existingWALEntry.walCreatedAt {
+				// If the existing WAL is older, delete it from storage and fall
+				// through to inserting our current WAL into the map.
+				b.Logger().Debug("deleting stale loaded WAL", "WAL ID", existingWALEntry.walID)
+				err = framework.DeleteWAL(ctx, s, existingWALEntry.walID)
+				if err != nil {
+					b.Logger().Warn("unable to delete loaded WAL", "error", err, "WAL ID", existingWALEntry.walID)
+				}
+			} else {
+				// If we already have a more recent WAL entry in the map, delete
+				// this one and continue onto the next WAL.
+				b.Logger().Debug("deleting stale candidate WAL", "WAL ID", walEntry.walID)
+				err = framework.DeleteWAL(ctx, s, walID)
+				if err != nil {
+					b.Logger().Warn("unable to delete candidate WAL", "error", err, "WAL ID", walEntry.walID)
+				}
+				continue
+			}
+		}
+
+		b.Logger().Debug("loaded WAL", "WAL ID", walID)
 		walMap[walEntry.RoleName] = walEntry
 	}
 	return walMap, nil

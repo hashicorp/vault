@@ -186,6 +186,12 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
+
+	// Reload the raft TLS keys to ensure we are using the latest version.
+	if err := c.checkRaftTLSKeyUpgrades(ctx); err != nil {
+		return err
+	}
+
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
 

@@ -69,7 +69,7 @@ type SnapshotSink interface {
 func (r *Raft) runSnapshots() {
 	for {
 		select {
-		case <-randomTimeout(r.conf.SnapshotInterval):
+		case <-randomTimeout(r.config().SnapshotInterval):
 			// Check if we should snapshot
 			if !r.shouldSnapshot() {
 				continue
@@ -113,7 +113,7 @@ func (r *Raft) shouldSnapshot() bool {
 
 	// Compare the delta to the threshold
 	delta := lastIdx - lastSnap
-	return delta >= r.conf.SnapshotThreshold
+	return delta >= r.config().SnapshotThreshold
 }
 
 // takeSnapshot is used to take a new snapshot. This must only be called from
@@ -219,7 +219,11 @@ func (r *Raft) compactLogs(snapIdx uint64) error {
 
 	// Check if we have enough logs to truncate
 	lastLogIdx, _ := r.getLastLog()
-	if lastLogIdx <= r.conf.TrailingLogs {
+
+	// Use a consistent value for trailingLogs for the duration of this method
+	// call to avoid surprising behaviour.
+	trailingLogs := r.config().TrailingLogs
+	if lastLogIdx <= trailingLogs {
 		return nil
 	}
 
@@ -227,7 +231,7 @@ func (r *Raft) compactLogs(snapIdx uint64) error {
 	// back from the head, which ever is further back. This ensures
 	// at least `TrailingLogs` entries, but does not allow logs
 	// after the snapshot to be removed.
-	maxLog := min(snapIdx, lastLogIdx-r.conf.TrailingLogs)
+	maxLog := min(snapIdx, lastLogIdx-trailingLogs)
 
 	if minLog > maxLog {
 		r.logger.Info("no logs to truncate")

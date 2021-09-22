@@ -1000,13 +1000,13 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	subject := pkix.Name{
 		CommonName:         cn,
 		SerialNumber:       ridSerialNumber,
-		Country:            strutil.RemoveDuplicates(data.role.Country, false),
-		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
+		Country:            strutil.RemoveDuplicatesStable(data.role.Country, false),
+		Organization:       strutil.RemoveDuplicatesStable(data.role.Organization, false),
 		OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
-		Locality:           strutil.RemoveDuplicates(data.role.Locality, false),
-		Province:           strutil.RemoveDuplicates(data.role.Province, false),
-		StreetAddress:      strutil.RemoveDuplicates(data.role.StreetAddress, false),
-		PostalCode:         strutil.RemoveDuplicates(data.role.PostalCode, false),
+		Locality:           strutil.RemoveDuplicatesStable(data.role.Locality, false),
+		Province:           strutil.RemoveDuplicatesStable(data.role.Province, false),
+		StreetAddress:      strutil.RemoveDuplicatesStable(data.role.StreetAddress, false),
+		PostalCode:         strutil.RemoveDuplicatesStable(data.role.PostalCode, false),
 	}
 
 	// Get the TTL and verify it against the max allowed

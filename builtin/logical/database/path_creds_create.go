@@ -92,6 +92,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
 		if err != nil {
+			b.CloseIfShutdown(dbi, err)
 			return nil, fmt.Errorf("unable to generate password: %w", err)
 		}
 

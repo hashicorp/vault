@@ -1,5 +1,12 @@
 package raft
 
+import (
+	"fmt"
+	"time"
+
+	metrics "github.com/armon/go-metrics"
+)
+
 // LogType describes various types of log entries.
 type LogType uint8
 
@@ -33,6 +40,26 @@ const (
 	LogConfiguration
 )
 
+// String returns LogType as a human readable string.
+func (lt LogType) String() string {
+	switch lt {
+	case LogCommand:
+		return "LogCommand"
+	case LogNoop:
+		return "LogNoop"
+	case LogAddPeerDeprecated:
+		return "LogAddPeerDeprecated"
+	case LogRemovePeerDeprecated:
+		return "LogRemovePeerDeprecated"
+	case LogBarrier:
+		return "LogBarrier"
+	case LogConfiguration:
+		return "LogConfiguration"
+	default:
+		return fmt.Sprintf("%d", lt)
+	}
+}
+
 // Log entries are replicated to all members of the Raft cluster
 // and form the heart of the replicated state machine.
 type Log struct {
@@ -62,6 +89,19 @@ type Log struct {
 	// trouble, so gating extension behavior via some flag in the client
 	// program is also a good idea.
 	Extensions []byte
+
+	// AppendedAt stores the time the leader first appended this log to it's
+	// LogStore. Followers will observe the leader's time. It is not used for
+	// coordination or as part of the replication protocol at all. It exists only
+	// to provide operational information for example how many seconds worth of
+	// logs are present on the leader which might impact follower's ability to
+	// catch up after restoring a large snapshot. We should never rely on this
+	// being in the past when appending on a follower or reading a log back since
+	// the clock skew can mean a follower could see a log with a future timestamp.
+	// In general too the leader is not required to persist the log before
+	// delivering to followers although the current implementation happens to do
+	// this.
+	AppendedAt time.Time
 }
 
 // LogStore is used to provide an interface for storing
@@ -84,4 +124,53 @@ type LogStore interface {
 
 	// DeleteRange deletes a range of log entries. The range is inclusive.
 	DeleteRange(min, max uint64) error
+}
+
+func oldestLog(s LogStore) (Log, error) {
+	var l Log
+
+	// We might get unlucky and have a truncate right between getting first log
+	// index and fetching it so keep trying until we succeed or hard fail.
+	var lastFailIdx uint64
+	var lastErr error
+	for {
+		firstIdx, err := s.FirstIndex()
+		if err != nil {
+			return l, err
+		}
+		if firstIdx == 0 {
+			return l, ErrLogNotFound
+		}
+		if firstIdx == lastFailIdx {
+			// Got same index as last time around which errored, don't bother trying
+			// to fetch it again just return the error.
+			return l, lastErr
+		}
+		err = s.GetLog(firstIdx, &l)
+		if err == nil {
+			// We found the oldest log, break the loop
+			break
+		}
+		// We failed, keep trying to see if there is a new firstIndex
+		lastFailIdx = firstIdx
+		lastErr = err
+	}
+	return l, nil
+}
+
+func emitLogStoreMetrics(s LogStore, prefix []string, interval time.Duration, stopCh <-chan struct{}) {
+	for {
+		select {
+		case <-time.After(interval):
+			// In error case emit 0 as the age
+			ageMs := float32(0.0)
+			l, err := oldestLog(s)
+			if err == nil && !l.AppendedAt.IsZero() {
+				ageMs = float32(time.Since(l.AppendedAt).Milliseconds())
+			}
+			metrics.SetGauge(append(prefix, "oldestLogAge"), ageMs)
+		case <-stopCh:
+			return
+		}
+	}
 }

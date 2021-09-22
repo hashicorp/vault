@@ -9,12 +9,13 @@ import (
 
 // Future is used to represent an action that may occur in the future.
 type Future interface {
-	// Error blocks until the future arrives and then
-	// returns the error status of the future.
-	// This may be called any number of times - all
-	// calls will return the same value.
-	// Note that it is not OK to call this method
-	// twice concurrently on the same Future instance.
+	// Error blocks until the future arrives and then returns the error status
+	// of the future. This may be called any number of times - all calls will
+	// return the same value, however is not OK to call this method twice
+	// concurrently on the same Future instance.
+	// Error will only return generic errors related to raft, such
+	// as ErrLeadershipLost, or ErrRaftShutdown. Some operations, such as
+	// ApplyLog, may also return errors from other methods.
 	Error() error
 }
 
@@ -32,9 +33,11 @@ type IndexFuture interface {
 type ApplyFuture interface {
 	IndexFuture
 
-	// Response returns the FSM response as returned
-	// by the FSM.Apply method. This must not be called
-	// until after the Error method has returned.
+	// Response returns the FSM response as returned by the FSM.Apply method. This
+	// must not be called until after the Error method has returned.
+	// Note that if FSM.Apply returns an error, it will be returned by Response,
+	// and not by the Error method, so it is always important to check Response
+	// for errors from the FSM.
 	Response() interface{}
 }
 

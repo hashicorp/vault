@@ -16,28 +16,28 @@ endif
 TEST_RESULTS_DIR?=/tmp/test-results
 
 test:
-	GOTRACEBACK=all go test $(TESTARGS) -timeout=60s -race .
-	GOTRACEBACK=all go test $(TESTARGS) -timeout=60s -tags batchtest -race .
+	GOTRACEBACK=all go test $(TESTARGS) -timeout=180s -race .
+	GOTRACEBACK=all go test $(TESTARGS) -timeout=180s -tags batchtest -race .
 
 integ: test
-	INTEG_TESTS=yes go test $(TESTARGS) -timeout=25s -run=Integ .
-	INTEG_TESTS=yes go test $(TESTARGS) -timeout=25s -tags batchtest -run=Integ .
+	INTEG_TESTS=yes go test $(TESTARGS) -timeout=60s -run=Integ .
+	INTEG_TESTS=yes go test $(TESTARGS) -timeout=60s -tags batchtest -run=Integ .
 
 ci.test-norace:
-	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=60s
-	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=60s -tags batchtest
+	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=180s
+	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=180s -tags batchtest
 
 ci.test:
-	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=60s -race .
-	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=60s -race -tags batchtest .
+	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=180s -race .
+	gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-test.xml -- -timeout=180s -race -tags batchtest .
 
 ci.integ: ci.test
-	INTEG_TESTS=yes gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-integ.xml -- -timeout=25s -run=Integ .
-	INTEG_TESTS=yes gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-integ.xml -- -timeout=25s -run=Integ -tags batchtest .
+	INTEG_TESTS=yes gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-integ.xml -- -timeout=60s -run=Integ .
+	INTEG_TESTS=yes gotestsum --format=short-verbose --junitfile $(TEST_RESULTS_DIR)/gotestsum-report-integ.xml -- -timeout=60s -run=Integ -tags batchtest .
 
 fuzz:
-	go test $(TESTARGS) -timeout=20m ./fuzzy
-	go test $(TESTARGS) -timeout=20m -tags batchtest ./fuzzy
+	cd ./fuzzy && go test $(TESTARGS) -timeout=20m .
+	cd ./fuzzy && go test $(TESTARGS) -timeout=20m -tags batchtest .
 
 deps:
 	go get -t -d -v ./...

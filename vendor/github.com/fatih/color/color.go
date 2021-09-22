@@ -387,7 +387,7 @@ func (c *Color) EnableColor() {
 }
 
 func (c *Color) isNoColorSet() bool {
-	// check first if we have user setted action
+	// check first if we have user set action
 	if c.noColor != nil {
 		return *c.noColor
 	}

@@ -1,20 +1,11 @@
-# Archived project. No maintenance. 
-
-This project is not maintained anymore and is archived. Feel free to fork and
-make your own changes if needed. For more detail read my blog post: [Taking an indefinite sabbatical from my projects](https://arslan.io/2018/10/09/taking-an-indefinite-sabbatical-from-my-projects/)
-
-Thanks to everyone for their valuable feedback and contributions.
-
-
-# Color [![GoDoc](https://godoc.org/github.com/fatih/color?status.svg)](https://godoc.org/github.com/fatih/color) 
+# color [![](https://github.com/fatih/color/workflows/build/badge.svg)](https://github.com/fatih/color/actions) [![PkgGoDev](https://pkg.go.dev/badge/github.com/fatih/color)](https://pkg.go.dev/github.com/fatih/color)
 
 Color lets you use colorized outputs in terms of [ANSI Escape
 Codes](http://en.wikipedia.org/wiki/ANSI_escape_code#Colors) in Go (Golang). It
 has support for Windows too! The API can be used in several ways, pick one that
 suits you.
 
-
-![Color](https://i.imgur.com/c1JI0lA.png)
+![Color](https://user-images.githubusercontent.com/438920/96832689-03b3e000-13f4-11eb-9803-46f4c4de3406.jpg)
 
 
 ## Install
@@ -143,7 +134,6 @@ definitions. For example suppose you have a CLI app and a `--no-color` bool flag
 can easily disable the color output with:
 
 ```go
-
 var flagNoColor = flag.Bool("no-color", false, "Disable color output")
 
 if *flagNoColor {
@@ -165,6 +155,10 @@ c.EnableColor()
 c.Println("This prints again cyan...")
 ```
 
+## GitHub Actions
+
+To output color in GitHub Actions (or other CI systems that support ANSI colors), make sure to set `color.NoColor = false` so that it bypasses the check for non-tty output streams. 
+
 ## Todo
 
 * Save/Return previous values
@@ -179,4 +173,3 @@ c.Println("This prints again cyan...")
 ## License
 
 The MIT License (MIT) - see [`LICENSE.md`](https://github.com/fatih/color/blob/master/LICENSE.md) for more details
-
