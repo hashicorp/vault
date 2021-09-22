@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -16,7 +17,7 @@ import (
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "roles/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -26,7 +27,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathRoleHelpSyn,
 			HelpDescription: pathRoleHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-roles/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -41,7 +42,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern:        "roles/" + framework.GenericNameRegex("name"),
 			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -56,7 +57,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathRoleHelpDesc,
 		},
 
-		&framework.Path{
+		{
 			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
@@ -215,7 +216,28 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		return nil, err
 	}
 
-	return nil, nil
+	walIDs, err := framework.ListWAL(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	var merr *multierror.Error
+	for _, walID := range walIDs {
+		wal, err := b.findStaticWAL(ctx, req.Storage, walID)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+			continue
+		}
+		if wal != nil && name == wal.RoleName {
+			b.Logger().Debug("deleting WAL for deleted role", "WAL ID", walID, "role", name)
+			err = framework.DeleteWAL(ctx, req.Storage, walID)
+			if err != nil {
+				b.Logger().Debug("failed to delete WAL for deleted role", "WAL ID", walID, "error", err)
+				merr = multierror.Append(merr, err)
+			}
+		}
+	}
+
+	return nil, merr.ErrorOrNil()
 }
 
 func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -482,19 +504,34 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 	// Only call setStaticAccount if we're creating the role for the
 	// first time
+	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
 		// setStaticAccount calls Storage.Put and saves the role to storage
 		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName:   name,
-			Role:       role,
-			CreateUser: createRole,
+			RoleName: name,
+			Role:     role,
 		})
 		if err != nil {
+			if resp != nil && resp.WALID != "" {
+				b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
+				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
+				if walDeleteErr != nil {
+					b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
+					var merr *multierror.Error
+					merr = multierror.Append(merr, err)
+					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
+					err = merr.ErrorOrNil()
+				}
+			}
+
 			return nil, err
 		}
 		// guard against RotationTime not being set or zero-value
 		lvr = resp.RotationTime
+		item = &queue.Item{
+			Key: name,
+		}
 	case logical.UpdateOperation:
 		// store updated Role
 		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
@@ -504,17 +541,16 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		if err := req.Storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
-
-		// In case this is an update, remove any previous version of the item from
-		// the queue
-		b.popFromRotationQueueByKey(name)
+		item, err = b.popFromRotationQueueByKey(name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+
 	// Add their rotation to the queue
-	if err := b.pushItem(&queue.Item{
-		Key:      name,
-		Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
-	}); err != nil {
+	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
 
