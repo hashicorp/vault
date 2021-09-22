@@ -62,7 +62,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	ictx, cancel := context.WithCancel(initCtx)
 	b.cancelQueue = cancel
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(ictx, conf)
+	go b.initQueue(ictx, conf, conf.System.ReplicationState())
 	return b, nil
 }
 
