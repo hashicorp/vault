@@ -78,12 +78,12 @@ class BarChartComponent extends Component {
   }
 
   @action
-  renderBarChart(element) {
+  renderBarChart(element, data) {
     let elementId = guidFor(element);
-    let totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
+    let [dataset] = data;
+    let totalCount = dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
-    let dataset = this.dataset;
     let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
     // creates an array of data for each map legend key
     // each array contains coordinates for each data bar
@@ -117,6 +117,8 @@ class BarChartComponent extends Component {
     // creates group for each array of stackedData
     let groups = chartSvg
       .selectAll('g')
+      .remove()
+      .exit()
       .data(stackedData)
       .enter()
       .append('g')
@@ -133,15 +135,13 @@ class BarChartComponent extends Component {
       );
 
     chartSvg.selectAll('.tick text').call(truncate);
-    let barsUpdate = groups
+
+    let rects = groups
       .selectAll('rect')
       // iterate through the stacked data and chart respectively
-      .data(stackedData => stackedData);
-
-    let barsEnter = barsUpdate.enter().append('rect');
-
-    barsEnter
-      .merge(barsUpdate)
+      .data(stackedData => stackedData)
+      .enter()
+      .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
       .attr('width', chartData => `${xScale(chartData[1] - chartData[0] - 5)}%`)
@@ -279,7 +279,7 @@ class BarChartComponent extends Component {
     // TODO: these render twice, need to only render and append once per line
     // creates total count text and coordinates to display to the right of data bars
     let totalCountData = [];
-    barsEnter.each(function(d) {
+    rects.each(function(d) {
       let textDatum = {
         total: d.data.total,
         x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),

@@ -19,8 +19,8 @@
     <div class="is-border"></div>
     <div class="bar-chart-container">
       <svg 
-        {{did-insert this.renderBarChart}} 
-        {{!-- {{did-update this.renderBarChart}}  --}}
+        {{did-insert this.renderBarChart @dataset}} 
+        {{did-update this.renderBarChart @dataset}} 
         class="bar-chart"></svg>
     </div>
     <div class="is-border"></div>
