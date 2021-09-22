@@ -221,7 +221,7 @@ class BarChartComponent extends Component {
           .style('top', `${event.pageY - 155}px`)
           .text(
             `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
-            ${chartData.non_entity_tokens} active tokens, ${chartData.distinct_entities} unique entities.
+            ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
           `
           );
       });

@@ -337,8 +337,10 @@ if there is a lease associated with it.
 
 - `token` `(string: <required>)` - Token to renew. This can be part of the URL
   or the body.
-- `increment` `(string: "")` - An optional requested lease increment can be
-  provided. This increment may be ignored.
+- `increment` `(string: "")` - An optional requested increment duration can be
+  provided. This increment may not be honored, for instance in the case of periodic tokens. 
+  If not supplied, Vault will use the default TTL. This is specified as a numeric string 
+  with suffix like "30s" or "5m".
 
 ### Sample Payload
 
@@ -386,8 +388,10 @@ possible only if there is a lease associated with it.
 
 ### Parameters
 
-- `increment` `(string: "")` - An optional requested lease increment can be
-  provided. This increment may be ignored.
+- `increment` `(string: "")` - An optional requested increment duration can be
+  provided. This increment may not be honored, for instance in the case of periodic tokens. 
+  If not supplied, Vault will use the default TTL. This is specified as a numeric string 
+  with suffix like "30s" or "5m".
 
 ### Sample Payload
 
