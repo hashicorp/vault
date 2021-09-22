@@ -20,8 +20,6 @@ var DefaultCustomHeaders = map[string]string{
 	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
 	"Content-Security-Policy":   "default-src 'none';   connect-src 'self';  img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'",
 	"X-Frame-Options":           "Deny",
-	"X-Content-Type-Options":    "nosniff",
-	"Content-Type":              "application/json",
 	"X-XSS-Protection":          "1; mode=block",
 }
 

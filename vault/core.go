@@ -2662,19 +2662,17 @@ func (c *Core) getCustomHeadersListenerList(listenerAdd string) []*ListenerCusto
 	// checking for all available listeners
 	var lch []*ListenerCustomHeaders
 	if listenerAdd == "" {
-		lch = customHeadersList
+		return customHeadersList
 	} else {
 		for _, l := range customHeadersList {
 			if l.Address == listenerAdd {
 				lch = append(lch, l)
-				break
+				return lch
 			}
 		}
-		if len(lch) == 0 {
-			return nil
-		}
 	}
-	return lch
+
+	return nil
 }
 
 func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
@@ -2693,6 +2691,8 @@ func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCus
 	return lch[0]
 }
 
+// ExistCustomResponseHeader support checking for custom headers per listener address
+// If the address is an empty string, it checks all listeners for the header.
 func (c *Core) ExistCustomResponseHeader(header string, listenerAdd string) bool {
 	lch := c.getCustomHeadersListenerList(listenerAdd)
 	if lch == nil {

@@ -2623,8 +2623,6 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
-		// ExistCustomResponseHeader support checking for custom headers per listener address
-		// If address is an empty string, it checks all listeners for the header.
 		if b.Core.ExistCustomResponseHeader(header, "") {
 			return logical.ErrorResponse("This header already exists in the server configuration and cannot be set in the UI."), logical.ErrInvalidRequest
 		}

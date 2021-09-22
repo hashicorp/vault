@@ -164,11 +164,11 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 
 	_, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
-		t.Fatal("request failed on setting a header that is not present in custom response headers")
+		t.Fatal("request failed on setting a header that is not present in custom response headers.", "error:", err)
 	}
 
 	h, err = b.(*SystemBackend).Core.uiConfig.Headers(context.Background())
 	if h.Get("X-CustomUiHeader") != "Ui header value" {
-		t.Fatalf("failed to sett a header that is not in custom response headers")
+		t.Fatalf("failed to set a header that is not in custom response headers")
 	}
 }

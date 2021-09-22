@@ -11,9 +11,7 @@ var DefaultHeaderNames = []string{
 	"Content-Security-Policy",
 	"X-XSS-Protection",
 	"X-Frame-Options",
-	"X-Content-Type-Options",
 	"Strict-Transport-Security",
-	"Content-Type",
 }
 
 var ValidCustomStatusCodeCollection = []string{
@@ -29,9 +27,7 @@ const (
 	contentSecurityPolicy   = "default-src 'none';   connect-src 'self';  img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'"
 	xXssProtection          = "1; mode=block"
 	xFrameOptions           = "Deny"
-	xContentTypeOptions     = "nosniff"
 	strictTransportSecurity = "max-age=31536000; includeSubDomains"
-	contentType             = "application/json"
 )
 
 func GetDefaultHeaderValue(h string) string {
@@ -42,12 +38,8 @@ func GetDefaultHeaderValue(h string) string {
 		return xXssProtection
 	case "X-Frame-Options":
 		return xFrameOptions
-	case "X-Content-Type-Options":
-		return xContentTypeOptions
 	case "Strict-Transport-Security":
 		return strictTransportSecurity
-	case "Content-Type":
-		return contentType
 	default:
 		return ""
 	}
@@ -174,7 +166,7 @@ func parseHeaderValues(h interface{}) (string, error) {
 		if _, ok := vh.(string); !ok {
 			return "", fmt.Errorf("found a non-string header value: %v", vh)
 		}
-		headerVal := vh.(string)
+		headerVal := strings.TrimSpace(vh.(string))
 		if headerVal == "" {
 			continue
 		}

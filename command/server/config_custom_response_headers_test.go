@@ -13,8 +13,6 @@ var defaultCustomHeaders = map[string]string{
 	"X-Vault-Ignored":           "ignored",
 	"X-Custom-Header":           "Custom header value default",
 	"X-Frame-Options":           "Deny",
-	"X-Content-Type-Options":    "nosniff",
-	"Content-Type":              "application/json",
 	"X-XSS-Protection":          "1; mode=block",
 }
 

@@ -33,6 +33,7 @@ type UIConfig struct {
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
+	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
 
 	return &UIConfig{
 		physicalStorage: physicalStorage,

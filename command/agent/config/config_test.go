@@ -11,15 +11,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
-var DefaultCustomHeaders = map[string]string{
-	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-	"Content-Security-Policy":   "default-src 'none';   connect-src 'self';  img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'",
-	"X-Frame-Options":           "Deny",
-	"X-Content-Type-Options":    "nosniff",
-	"Content-Type":              "application/json",
-	"X-XSS-Protection":          "1; mode=block",
-}
-
 func TestLoadConfigFile_AgentCache(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-cache.hcl")
 	if err != nil {
@@ -37,26 +28,17 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 					SocketMode:  "configmode",
 					SocketUser:  "configuser",
 					SocketGroup: "configgroup",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 				{
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 				{
 					Type:        "tcp",
 					Address:     "127.0.0.1:8400",
 					TLSKeyFile:  "/path/to/cakey.pem",
 					TLSCertFile: "/path/to/cacert.pem",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 		},
@@ -255,9 +237,6 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 		},
@@ -336,9 +315,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 			PidFile: "./pidfile",
@@ -383,9 +359,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_Force(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 			PidFile: "./pidfile",
@@ -430,9 +403,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_True(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 			PidFile: "./pidfile",
@@ -477,9 +447,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 			PidFile: "./pidfile",
@@ -545,9 +512,6 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 		},
@@ -938,9 +902,6 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 					Type:       "tcp",
 					Address:    "127.0.0.1:8300",
 					TLSDisable: true,
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
 				},
 			},
 			PidFile: "",
