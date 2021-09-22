@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"github.com/hashicorp/vault/api"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -816,5 +818,111 @@ func TestHandler_Parse_Form(t *testing.T) {
 	}
 	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestHandler_Patch_BadContentTypeHeader(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Mount a KVv2 backend
+	err := c.Sys().Mount("kv", &api.MountInput{
+		Type:    "kv",
+		Options: map[string]string{"version": "2"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kvData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	if err != nil {
+		t.Fatalf("write failed - err :%#v, resp: %#v\n", err, resp)
+	}
+
+	resp, err = c.Logical().Read("kv/data/foo")
+	if err != nil {
+		t.Fatalf("read failed - err :%#v, resp: %#v\n", err, resp)
+	}
+
+	req := c.NewRequest("PATCH", "/v1/kv/data/foo")
+	req.Headers = http.Header{
+		"Content-Type": []string{"application/json"},
+	}
+
+	if err := req.SetJSONBody(kvData); err != nil {
+		t.Fatal(err)
+	}
+
+	apiResp, err := c.RawRequestWithContext(context.Background(), req)
+	if err == nil || apiResp.StatusCode != http.StatusUnsupportedMediaType {
+		t.Fatalf("expected PATCH request to fail with %d status code - err :%#v, resp: %#v\n", http.StatusUnsupportedMediaType, err, apiResp)
+	}
+}
+
+func TestHandler_Patch_NotFound(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Mount a KVv2 backend
+	err := c.Sys().Mount("kv", &api.MountInput{
+		Type:    "kv",
+		Options: map[string]string{"version": "2"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kvData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().JSONMergePatch("kv/data/foo", kvData)
+	if err == nil {
+		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
+	}
+
+	if err != nil {
+		responseError := err.(*api.ResponseError)
+		t.Fatalf("expected PATCH request to fail with %d status code - err: %#v, resp: %#v\n", http.StatusNotFound, responseError, resp)
 	}
 }
