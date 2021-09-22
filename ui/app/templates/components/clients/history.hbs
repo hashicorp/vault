@@ -130,7 +130,7 @@
       </div>
       {{#if this.showGraphs}}
         <div class="columns has-bottom-margin-m">
-          <div class="column is-two-thirds">
+          <div class="column is-two-thirds" data-test-client-count-graph>
             <BarChart
               @title="Top 10 Namespaces"
               @description="Each namespace's client count includes clients in child namespaces."
