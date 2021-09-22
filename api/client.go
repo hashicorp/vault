@@ -80,6 +80,10 @@ type Config struct {
 	// (or http.DefaultClient).
 	HttpClient *http.Client
 
+	// HTTP proxy needed to access this Vault server. If present this will
+	// override any proxy picked up from the HTTP{,S}_PROXY environment
+	// variables. This should be a complete URL + port such as
+	// "http://proxy.example.com:99".
 	HttpProxy string
 
 	// MinRetryWait controls the minimum time to wait before retrying when a 5xx
@@ -181,6 +185,8 @@ func DefaultConfig() *Config {
 		return config
 	}
 
+	transport := config.HttpClient.Transport.(*http.Transport)
+
 	if config.HttpProxy != "" {
 		url, err := url.Parse(config.HttpProxy)
 		if err != nil {
@@ -188,14 +194,9 @@ func DefaultConfig() *Config {
 			return config
 		}
 
-		proxied_transport := cleanhttp.DefaultPooledTransport()
-		proxied_transport.Proxy = http.ProxyURL(url)
-		config.HttpClient = &http.Client{
-			Transport: proxied_transport,
-		}
+		transport.Proxy = http.ProxyURL(url)
 	}
 
-	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
