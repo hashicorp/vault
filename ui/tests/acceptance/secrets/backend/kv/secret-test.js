@@ -460,10 +460,10 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   test('version 2 with metadata no read or list access but access to the data endpoint', async function(assert) {
     let backend = 'kv-v2-no-metadata';
     const V2_POLICY = `
-      path "kv-v2/metadata/*" {
+      path "${backend}/metadata/" {
         capabilities = ["create","update"]
       }
-      path "kv-v2/data/secret" {
+      path "${backend}/data/secret-no-list" {
         capabilities = ["create", "read", "update"]
       }
     `;
@@ -471,23 +471,24 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       `write sys/mounts/${backend} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
-      'delete kv-v2/metadata/secret',
+      `delete ${backend}/metadata/secret-no-list`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
     // write secret with metadata
-    await writeSecretWithMetadata(backend, 'secret', 'foo', 'bar', 101);
+    await settled();
+    await writeSecretWithMetadata(backend, 'secret-no-list', 'foo', 'bar', 101);
     await logout.visit();
     await authPage.login(userToken);
     await settled();
     // will need to confirm the secret search box.
 
     // test if metadata tab there and error and no edit. and you can't see metadata that was setup.
-    await click('[data-test-auth-backend-link="kv-v2"]');
+    await click(`[data-test-auth-backend-link=${backend}]`);
     assert.dom('[data-test-get-credentials-card]').exists('shows the get credentials card');
     let card = document.querySelector('[data-test-search-roles]').childNodes[1];
-    await typeIn(card.querySelector('input'), 'secret');
+    await typeIn(card.querySelector('input'), 'secret-no-list');
     await click('[data-test-get-credentials]');
     await settled();
     assert.dom('[data-test-value-div="foo"]').exists('secret view page and info table row with foo value');

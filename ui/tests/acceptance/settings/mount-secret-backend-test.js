@@ -195,9 +195,9 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
   });
 
   test('version 2 with no read to config endpoint still shows configuration page but with no config data', async function(assert) {
-    let backend = `kv-noConfig-${new Date().getTime()}`;
+    let path = `kv-noConfig-${new Date().getTime()}`;
     const V2_POLICY = `
-      path "${backend}/*" {
+      path "${path}/*" {
         capabilities = ["list","create","sudo","delete"]
       }
       path "sys/mounts/*"
@@ -214,6 +214,9 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await consoleComponent.runCommands([
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
+      // delete any kv previously written here so that tests can be re-run
+      `delete ${path}/metadata/secret`,
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
@@ -224,11 +227,11 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await mountSecrets.selectType('kv');
     await mountSecrets
       .next()
-      .path(backend)
+      .path(path)
       .setMaxVersion(101)
       .submit();
     await settled();
-    await configPage.visit({ backend: backend });
+    await configPage.visit({ backend: path });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').doesNotExist('Does not show');
   });
