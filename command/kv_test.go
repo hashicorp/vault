@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -551,4 +552,203 @@ func TestKVMetadataGetCommand(t *testing.T) {
 		_, cmd := testKVMetadataGetCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+func testKVPatchCommand(tb testing.TB) (*cli.MockUi, *KVPatchCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &KVPatchCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestKVPatchCommand_RWMethodNotExists(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give time for the upgrade code to run/finish
+	time.Sleep(time.Second)
+
+	ui, cmd := testKVPatchCommand(t)
+	cmd.client = client
+
+	code := cmd.Run([]string{"kv/patch/foo", "foo==a"})
+	if code != 2 {
+		t.Errorf("patch command failed with code %d", code)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+	expectedOutputSubstr := "No value found"
+	if !strings.Contains(combined, expectedOutputSubstr) {
+		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+	}
+}
+
+func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give time for the upgrade code to run/finish
+	time.Sleep(time.Second)
+
+	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "a",
+			"bar": "b",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ui, cmd := testKVPatchCommand(t)
+	cmd.client = client
+
+	code := cmd.Run([]string{"kv/patch/foo", "foo==aa"})
+	if code != 0 {
+		t.Errorf("patch command failed with code %d", code)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+	expectedOutputSubstr := "created_time"
+	if !strings.Contains(combined, expectedOutputSubstr) {
+		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+	}
+}
+
+func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
+	t.Helper()
+
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return nil, err
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return nil, fmt.Errorf("missing auth data: %#v", secret)
+	}
+
+	return secret.Auth, err
+}
+
+func TestKVPatchCommand_RWMethodNoRead(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give time for the upgrade code to run/finish
+	time.Sleep(time.Second)
+
+	// The rw patch method requires the read capability - create a
+	// policy that does not have it in order to force command to fail
+	policy := `path "kv/data/patch/foo" { capabilities = ["create", "update"] }`
+	secretAuth, err := createTokenForPolicy(t, client, policy)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client.SetToken(secretAuth.ClientToken)
+
+	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "a",
+			"bar": "b",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ui, cmd := testKVPatchCommand(t)
+	cmd.client = client
+
+	code := cmd.Run([]string{"kv/patch/foo", "foo==aa"})
+	if code != 2 {
+		t.Errorf("patch command failed with code %d", code)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+	expectedOutputSubstr := "Error doing pre-read"
+	if !strings.Contains(combined, expectedOutputSubstr) {
+		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+	}
+}
+
+func TestKVPatchCommand_RWMethodNoUpdate(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give time for the upgrade code to run/finish
+	time.Sleep(time.Second)
+
+	// The rw patch method requires the update capability - create a
+	// policy that does not have it in order to force command to fail
+	policy := `path "kv/data/patch/foo" { capabilities = ["create", "read"] }`
+	secretAuth, err := createTokenForPolicy(t, client, policy)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client.SetToken(secretAuth.ClientToken)
+
+	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "a",
+			"bar": "b",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ui, cmd := testKVPatchCommand(t)
+	cmd.client = client
+
+	code := cmd.Run([]string{"kv/patch/foo", "foo==aa"})
+	if code != 2 {
+		t.Errorf("patch command failed with code %d", code)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+	expectedOutputSubstr := "Error writing data"
+	if !strings.Contains(combined, expectedOutputSubstr) {
+		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+	}
 }
