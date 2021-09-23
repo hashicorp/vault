@@ -9,10 +9,8 @@ export const testCRUD = async (name, itemType, assert) => {
   await settled();
   await page.editForm.name(name).submit();
   await settled();
-  assert.ok(
-    showPage.flashMessage.latestMessage.startsWith('Successfully saved'),
-    `${itemType}: shows a flash message`
-  );
+  let flashMessage = document.querySelectorAll('[data-test-flash-message-body]')[1].innerText;
+  assert.ok(flashMessage.startsWith('Successfully saved'), `${itemType}: shows a flash message`);
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.show',
@@ -33,10 +31,8 @@ export const testCRUD = async (name, itemType, assert) => {
   await settled();
   await indexPage.confirmDelete();
   await settled();
-  assert.ok(
-    indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
-    `${itemType}: shows flash message`
-  );
+  let flashMessageDelete = document.querySelectorAll('[data-test-flash-message-body]')[2].innerText;
+  assert.ok(flashMessageDelete.startsWith('Successfully deleted'), `${itemType}: shows flash message`);
   assert.equal(indexPage.items.filterBy('name', name).length, 0, `${itemType}: the row is deleted`);
 };
 
