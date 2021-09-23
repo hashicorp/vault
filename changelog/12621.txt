@@ -1,0 +1,3 @@
+```release-note:improvement
+go-secure-stdlib/awsutil: update the package version to v0.1.5
+```
