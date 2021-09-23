@@ -83,7 +83,7 @@ module.exports = {
     },
   },
   launch_in_dev: [],
-  launch_in_ci: ['BS_IE_11'],
+  launch_in_ci: ['BS_Safari_Current'],
   proxies: {
     '/v1': {
       target: 'http://localhost:9200',
