@@ -304,7 +304,7 @@ class BarChartComponent extends Component {
     // removes axes lines
     groups.selectAll('.domain, .tick line').remove();
 
-    // TODO: make more flexible, make legend a div instead of svg?
+    // TODO: if mapLegend has more than 4 keys, yCoord will need to change. currently map keys are centered in the legend SVG
     // each map key symbol & label takes up 20% of legend SVG width
     let startingXCoordinate = 100 - this.mapLegend.length * 20; // subtract from 100% to find starting x-coordinate
     let legendSvg = select('.legend');
