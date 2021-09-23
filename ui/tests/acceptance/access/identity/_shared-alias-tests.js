@@ -1,4 +1,4 @@
-import { currentRouteName, settled, pauseTest } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -85,7 +85,6 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     `${itemType}: navigates to edit on create`
   );
   await settled();
-  await pauseTest();
   await page.editForm.delete();
   await settled();
   await page.editForm.confirmDelete();

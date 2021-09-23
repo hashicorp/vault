@@ -458,7 +458,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('version 2 with metadata no read or list access but access to the data endpoint', async function(assert) {
-    let backend = 'kv-v2';
+    let backend = 'kv-v2-no-metadata';
     const V2_POLICY = `
       path "kv-v2/metadata/*" {
         capabilities = ["create","update"]
