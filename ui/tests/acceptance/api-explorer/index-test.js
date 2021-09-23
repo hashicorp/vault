@@ -1,4 +1,4 @@
-import { find, fillIn, visit, waitUntil } from '@ember/test-helpers';
+import { find, fillIn, visit, waitUntil, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 
@@ -13,10 +13,13 @@ module('Acceptance | API Explorer', function(hooks) {
 
   test('it filters paths after swagger-ui is loaded', async function(assert) {
     await visit('/vault/api-explorer');
+    await settled();
     await waitUntil(() => {
       return find('[data-test-filter-input]').disabled === false;
     });
+    await settled();
     await fillIn('[data-test-filter-input]', 'sys/health');
+    await settled();
     assert.dom('.opblock').exists({ count: 1 }, 'renders a single opblock for sys/health');
   });
 });

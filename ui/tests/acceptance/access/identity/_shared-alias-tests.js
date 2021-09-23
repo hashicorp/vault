@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, settled, pauseTest } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -23,10 +23,8 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   await page.editForm.name(name).submit();
   await settled();
   // sometimes it reads other flash messages still on there.
-  assert.ok(
-    aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved'),
-    `${itemType}: shows a flash message`
-  );
+  let flashMessage = document.querySelectorAll('[data-test-flash-message-body]')[1].innerText;
+  assert.ok(flashMessage.startsWith('Successfully saved'), `${itemType}: shows a flash message`);
 
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
@@ -87,6 +85,7 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     `${itemType}: navigates to edit on create`
   );
   await settled();
+  await pauseTest();
   await page.editForm.delete();
   await settled();
   await page.editForm.confirmDelete();

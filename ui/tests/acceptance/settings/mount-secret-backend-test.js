@@ -152,7 +152,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function(assert) {
-    let backend = `kv-noUpdate-${new Date().getTime()}`;
+    let backend = `kv-noUpdate`;
     const V2_POLICY = `
       path "${backend}/*" {
         capabilities = ["list","create","read","sudo","delete"]
