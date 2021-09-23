@@ -15,9 +15,8 @@ Router.map(function() {
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
-      this.route('metrics', function() {
+      this.route('clients', function() {
         this.route('index', { path: '/' });
-        this.route('config');
         this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });

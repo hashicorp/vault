@@ -15,7 +15,7 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | pricing-metrics-config', function(hooks) {
+module('Integration | Component | client count config', function(hooks) {
   setupRenderingTest(hooks);
 
   const createAttr = (name, type, options) => {
@@ -50,7 +50,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
   });
 
   test('it shows the table with the correct rows by default', async function(assert) {
-    await render(hbs`<PricingMetricsConfig @model={{model}} />`);
+    await render(hbs`<Clients::Config @model={{model}} />`);
 
     assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
     const rows = document.querySelectorAll('.info-table-row');
@@ -72,7 +72,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
   test('TODO: it shows the config edit form when mode = edit', async function(assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <PricingMetricsConfig @model={{model}} @mode="edit" />
+      <Clients::Config @model={{model}} @mode="edit" />
     `);
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
@@ -89,7 +89,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
     this.set('model', simModel);
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <PricingMetricsConfig @model={{model}} @mode="edit" />
+      <Clients::Config @model={{model}} @mode="edit" />
     `);
 
     await click('[data-test-edit-metrics-config-save]');
@@ -110,7 +110,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
     this.set('model', simModel);
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <PricingMetricsConfig @model={{model}} @mode="edit" />
+      <Clients::Config @model={{model}} @mode="edit" />
     `);
 
     await click('[data-test-edit-metrics-config-save]');
@@ -131,7 +131,7 @@ module('Integration | Component | pricing-metrics-config', function(hooks) {
     this.set('model', simModel);
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <PricingMetricsConfig @model={{model}} @mode="edit" />
+      <Clients::Config @model={{model}} @mode="edit" />
     `);
 
     await click('[data-test-edit-metrics-config-save]');
