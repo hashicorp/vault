@@ -1021,6 +1021,7 @@ jobs:
               cd ..
             fi
             all_package_names+=" ${package_names}"
+          done
 
           echo "Testing packages $all_package_names"
           # After running tests split step, we are now running the following steps
@@ -1289,6 +1290,7 @@ jobs:
               cd ..
             fi
             all_package_names+=" ${package_names}"
+          done
 
           echo "Testing packages $all_package_names"
           # After running tests split step, we are now running the following steps
@@ -1808,6 +1810,7 @@ jobs:
               cd ..
             fi
             all_package_names+=" ${package_names}"
+          done
 
           echo "Testing packages $all_package_names"
           # After running tests split step, we are now running the following steps
@@ -2471,6 +2474,7 @@ jobs:
               cd ..
             fi
             all_package_names+=" ${package_names}"
+          done
 
           echo "Testing packages $all_package_names"
           # After running tests split step, we are now running the following steps
