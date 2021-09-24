@@ -12,21 +12,20 @@ export default class MetadataShow extends Route {
 
   model(params) {
     let { secret } = params;
-    return this.store
-      .queryRecord('secret-v2', {
-        backend: this.backend,
-        id: secret,
-      })
-      .catch(() => {
-        // there was an error likely in read metadata.
-        // still load the page and handle what you show by filtering for this property
-        this.noReadAccess = true;
-      });
+    return this.store.queryRecord('secret-v2', {
+      backend: this.backend,
+      id: secret,
+    });
+    // .catch(() => {
+    //   // there was an error likely in read metadata.
+    //   // still load the page and handle what you show by filtering for this property
+    //   this.noReadAccess = true;
+    // });
   }
 
   setupController(controller, model) {
     controller.set('backend', this.backend); // for backendCrumb
     controller.set('model', model);
-    controller.set('noReadAccess', this.noReadAccess);
+    // controller.set('noReadAccess', this.noReadAccess);
   }
 }

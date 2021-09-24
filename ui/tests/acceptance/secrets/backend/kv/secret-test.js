@@ -494,13 +494,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-value-div="foo"]').exists('secret view page and info table row with foo value');
 
     // check metadata
-    await click('[data-test-secret-metadata-tab]');
-    await settled();
-    assert
-      .dom('[data-test-empty-state-message]')
-      .hasText(
-        'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
-      );
+    // await click('[data-test-secret-metadata-tab]');
+    // await settled();
+    // assert
+    //   .dom('[data-test-empty-state-message]')
+    //   .hasText(
+    //     'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
+    //   );
   });
 
   test('version 2 with policy with destroy capabilities shows modal', async function(assert) {
