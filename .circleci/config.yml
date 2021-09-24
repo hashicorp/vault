@@ -1020,7 +1020,9 @@ jobs:
             if [ $dir != '.' ]; then
               cd ..
             fi
-            all_package_names+=" ${package_names}"
+            if [ "$package_names" != '' ]; then
+              all_package_names+=" ${package_names}"
+            fi
           done
 
           echo "Testing packages $all_package_names"
@@ -1289,7 +1291,9 @@ jobs:
             if [ $dir != '.' ]; then
               cd ..
             fi
-            all_package_names+=" ${package_names}"
+            if [ "$package_names" != '' ]; then
+              all_package_names+=" ${package_names}"
+            fi
           done
 
           echo "Testing packages $all_package_names"
@@ -1809,7 +1813,9 @@ jobs:
             if [ $dir != '.' ]; then
               cd ..
             fi
-            all_package_names+=" ${package_names}"
+            if [ "$package_names" != '' ]; then
+              all_package_names+=" ${package_names}"
+            fi
           done
 
           echo "Testing packages $all_package_names"
@@ -2473,7 +2479,9 @@ jobs:
             if [ $dir != '.' ]; then
               cd ..
             fi
-            all_package_names+=" ${package_names}"
+            if [ "$package_names" != '' ]; then
+              all_package_names+=" ${package_names}"
+            fi
           done
 
           echo "Testing packages $all_package_names"
