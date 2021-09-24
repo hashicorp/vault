@@ -89,7 +89,7 @@ async function processLines(input, eachLine = () => {}) {
       if (process.argv[2] === '--browserstack') {
         await run('ember', ['browserstack:connect']);
         try {
-          await run('ember', ['test', '-f=secrets/secret/create', '-c', 'testem.browserstack.js']);
+          await run('ember', ['test', '-c', 'testem.browserstack.js']);
 
           console.log('success');
           process.exit(0);
