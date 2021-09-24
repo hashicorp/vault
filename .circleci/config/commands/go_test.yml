@@ -58,22 +58,34 @@ steps:
         USE_DOCKER=1
         <</ parameters.use_docker >>
 
-        # Split Go tests by prior test times.  If use_docker is true, only run
-        # tests that depend on docker, otherwise only those that don't.
-        if [ $USE_DOCKER == 1 ]; then
-          package_names=$(go list -test -json ./... |
-            jq -r 'select(.Deps != null) |
-              select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-              .ForTest | select(. != null)' |
-              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-        else
-          package_names=$(go list -test -json ./... |
-            jq -r 'select(.Deps != null) |
-              select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-              .ForTest | select(. != null)' |
-              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-        fi
+        modules=('.' 'api' 'sdk')
+        all_package_names=""
 
+        for dir in "${modules[@]}"
+        do
+          cd $dir
+          echo "checkin $dir"
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
+          if [ $USE_DOCKER == 1 ]; then
+            package_names=$(go list -test -json ./... |
+              jq -r 'select(.Deps != null) |
+                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                .ForTest | select(. != null)' |
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
+          else
+            package_names=$(go list -test -json ./... |
+              jq -r 'select(.Deps != null) |
+                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                .ForTest | select(. != null)' |
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
+          fi
+          if [ $dir != '.' ]; then
+            cd ..
+          fi
+          all_package_names+=" ${package_names}"
+
+        echo "Testing packages $all_package_names"
         # After running tests split step, we are now running the following steps
         # in multiple different containers, each getting a different subset of
         # the test packages in their package_names variable.  Each container
@@ -148,7 +160,7 @@ steps:
                 -timeout=60m \
                 -parallel=20 \
                 << parameters.extra_flags >> \
-                ${package_names}
+                ${all_package_names}
         else
           GOARCH=<< parameters.arch >> \
             GOCACHE=<< parameters.cache_dir >> \
@@ -160,7 +172,7 @@ steps:
               -timeout=60m \
               -parallel=20 \
               << parameters.extra_flags >> \
-              ${package_names}
+              ${all_package_names}
         fi
 
   - when:
