@@ -565,6 +565,180 @@ func testKVPatchCommand(tb testing.TB) (*cli.MockUi, *KVPatchCommand) {
 	}
 }
 
+func TestKVPatchCommand_ArgValidation(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			[]string{},
+			"Not enough arguments",
+			1,
+		},
+		{
+			"empty_kvs",
+			[]string{"kv/patch/foo"},
+			"Must supply data",
+			1,
+		},
+		{
+			"kvs_no_value",
+			[]string{"kv/patch/foo", "foo"},
+			"Failed to parse K=V data",
+			1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			if err := client.Sys().Mount("kv/", &api.MountInput{
+				Type: "kv-v2",
+			}); err != nil {
+				t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+			}
+
+			ui, cmd := testKVPatchCommand(t)
+			cmd.client = client
+
+			code := cmd.Run(tc.args)
+
+			if code != tc.code {
+				t.Fatalf("expected code to be %d but was %d for cmd %#v with args %#v\n", tc.code, code, cmd, tc.args)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+			if !strings.Contains(combined, tc.out) {
+				t.Fatalf("expected output to be %q but was %q for cmd %#v with args %#v\n", tc.out, combined, cmd, tc.args)
+			}
+		})
+	}
+}
+
+func TestKvPatchCommand_StdinFull(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "a",
+		},
+	}); err != nil {
+		t.Fatalf("write failed, err: %#v\n", err)
+	}
+
+	stdinR, stdinW := io.Pipe()
+	go func() {
+		stdinW.Write([]byte(`{"foo":"bar"}`))
+		stdinW.Close()
+	}()
+
+	_, cmd := testKVPatchCommand(t)
+	cmd.client = client
+
+	cmd.testStdin = stdinR
+
+	args := []string{"kv/patch/foo", "-"}
+	code := cmd.Run(args)
+	if code != 0 {
+		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
+	}
+
+	secret, err := client.Logical().Read("kv/data/patch/foo")
+	if err != nil {
+		t.Fatalf("read failed, err: %#v\n", err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		t.Fatal("expected secret to have data")
+	}
+
+	secretDataRaw, ok := secret.Data["data"]
+
+	if !ok {
+		t.Fatalf("expected secret to have nested data key, data: %#v", secret.Data)
+	}
+
+	secretData := secretDataRaw.(map[string]interface{})
+
+	if exp, act := "bar", secretData["foo"].(string); exp != act {
+		t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
+	}
+}
+
+func TestKvPatchCommand_StdinValue(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+		"data": map[string]interface{}{
+			"foo": "a",
+		},
+	}); err != nil {
+		t.Fatalf("write failed, err: %#v\n", err)
+	}
+
+	stdinR, stdinW := io.Pipe()
+	go func() {
+		stdinW.Write([]byte("bar"))
+		stdinW.Close()
+	}()
+
+	_, cmd := testKVPatchCommand(t)
+	cmd.client = client
+
+	cmd.testStdin = stdinR
+
+	args := []string{"kv/patch/foo", "foo=-"}
+	code := cmd.Run(args)
+	if code != 0 {
+		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
+	}
+
+	secret, err := client.Logical().Read("kv/patch/foo")
+	if err != nil {
+		t.Fatalf("read failed, err: %#v\n", err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		t.Fatal("expected secret to have data")
+	}
+
+	secretDataRaw, ok := secret.Data["data"]
+
+	if !ok {
+		t.Fatalf("expected secret to have nested data key, data: %#v\n", secret.Data)
+	}
+
+	secretData := secretDataRaw.(map[string]interface{})
+
+	if exp, act := "bar", secretData["foo"].(string); exp != act {
+		t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
+	}
+}
+
 func TestKVPatchCommand_RWMethodNotExists(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -572,25 +746,23 @@ func TestKVPatchCommand_RWMethodNotExists(t *testing.T) {
 	if err := client.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
-
-	// Give time for the upgrade code to run/finish
-	time.Sleep(time.Second)
 
 	ui, cmd := testKVPatchCommand(t)
 	cmd.client = client
 
-	code := cmd.Run([]string{"kv/patch/foo", "foo==a"})
+	args := []string{"kv/patch/foo", "foo=a"}
+	code := cmd.Run(args)
 	if code != 2 {
-		t.Errorf("patch command failed with code %d", code)
+		t.Fatalf("expected code to be 2 but was %d for cmd %#v with args %#v\n", code, cmd, args)
 	}
 
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 
 	expectedOutputSubstr := "No value found"
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
 	}
 }
 
@@ -601,11 +773,8 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 	if err := client.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
-
-	// Give time for the upgrade code to run/finish
-	time.Sleep(time.Second)
 
 	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
 		"data": map[string]interface{}{
@@ -613,22 +782,37 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 			"bar": "b",
 		},
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("write failed, err: %#v\n", err)
 	}
 
 	ui, cmd := testKVPatchCommand(t)
 	cmd.client = client
 
-	code := cmd.Run([]string{"kv/patch/foo", "foo==aa"})
+	// Test single value
+	args := []string{"kv/patch/foo", "foo=aa"}
+	code := cmd.Run(args)
 	if code != 0 {
-		t.Errorf("patch command failed with code %d", code)
+		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
 	}
 
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 
 	expectedOutputSubstr := "created_time"
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
+	}
+
+	// Test multi value
+	args = []string{"kv/patch/foo", "foo=aaa bar=bbb"}
+	code = cmd.Run(args)
+	if code != 0 {
+		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
+	}
+
+	combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+	if !strings.Contains(combined, expectedOutputSubstr) {
+		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
 	}
 }
 
@@ -662,11 +846,8 @@ func TestKVPatchCommand_RWMethodNoRead(t *testing.T) {
 	if err := client.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
-
-	// Give time for the upgrade code to run/finish
-	time.Sleep(time.Second)
 
 	// The rw patch method requires the read capability - create a
 	// policy that does not have it in order to force command to fail
@@ -674,7 +855,7 @@ func TestKVPatchCommand_RWMethodNoRead(t *testing.T) {
 	secretAuth, err := createTokenForPolicy(t, client, policy)
 
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
 	}
 
 	client.SetToken(secretAuth.ClientToken)
@@ -685,22 +866,26 @@ func TestKVPatchCommand_RWMethodNoRead(t *testing.T) {
 			"bar": "b",
 		},
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("write failed, err: %#v\n", err)
 	}
 
 	ui, cmd := testKVPatchCommand(t)
 	cmd.client = client
 
-	code := cmd.Run([]string{"kv/patch/foo", "foo==aa"})
-	if code != 2 {
-		t.Errorf("patch command failed with code %d", code)
+	args := []string{"kv/patch/foo", "foo=aa"}
+	code := cmd.Run(args)
+	expectedCode := 2
+
+	if code != expectedCode {
+		t.Fatalf("expected code to be %d but was %d for cmd %#v with args %#v\n", expectedCode, code, cmd, args)
 	}
 
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 
 	expectedOutputSubstr := "Error doing pre-read"
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
+
 	}
 }
 
@@ -711,11 +896,8 @@ func TestKVPatchCommand_RWMethodNoUpdate(t *testing.T) {
 	if err := client.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
-
-	// Give time for the upgrade code to run/finish
-	time.Sleep(time.Second)
 
 	// The rw patch method requires the update capability - create a
 	// policy that does not have it in order to force command to fail
@@ -723,7 +905,7 @@ func TestKVPatchCommand_RWMethodNoUpdate(t *testing.T) {
 	secretAuth, err := createTokenForPolicy(t, client, policy)
 
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
 	}
 
 	client.SetToken(secretAuth.ClientToken)
@@ -734,21 +916,24 @@ func TestKVPatchCommand_RWMethodNoUpdate(t *testing.T) {
 			"bar": "b",
 		},
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("write failed, err: %#v\n", err)
 	}
 
 	ui, cmd := testKVPatchCommand(t)
 	cmd.client = client
 
-	code := cmd.Run([]string{"kv/patch/foo", "foo==aa"})
-	if code != 2 {
-		t.Errorf("patch command failed with code %d", code)
+	args := []string{"kv/patch/foo", "foo=aa"}
+	code := cmd.Run(args)
+	expectedCode := 2
+
+	if code != expectedCode {
+		t.Fatalf("expected code to be %d but was %d for cmd %#v with args %#v\n", expectedCode, code, cmd, args)
 	}
 
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 
 	expectedOutputSubstr := "Error writing data"
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Errorf("expected %q to contain %q", combined, expectedOutputSubstr)
+		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
 	}
 }
