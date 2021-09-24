@@ -1288,7 +1288,6 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		currentRequests := len(noop.Requests)
 		noop.Unlock()
 
-		// Break out of the loop, if all requests present
 		if currentRequests == 3 {
 			break
 		}
