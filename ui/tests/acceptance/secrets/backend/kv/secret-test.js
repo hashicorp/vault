@@ -29,11 +29,11 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-let writeSecretWithMetadata = async function(backend, path, key, val, maxVersion) {
-  await listPage.visitRoot({ backend });
-  await listPage.create();
-  return editPage.editSecretWithMetadata(path, key, val, maxVersion);
-};
+// let writeSecretWithMetadata = async function(backend, path, key, val, maxVersion) {
+//   await listPage.visitRoot({ backend });
+//   await listPage.create();
+//   return editPage.editSecretWithMetadata(path, key, val, maxVersion);
+// };
 
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
