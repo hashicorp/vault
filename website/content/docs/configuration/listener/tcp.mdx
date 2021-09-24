@@ -102,6 +102,9 @@ advertise the correct address to other nodes.
 
   ~> **Warning**: TLS 1.1 and lower are generally considered insecure.
 
+- `tls_max_version` `(string: "tls13")` – Specifies the maximum supported
+  version of TLS. Accepted values are "tls10", "tls11", "tls12" or "tls13".
+
 - `tls_cipher_suites` `(string: "")` – Specifies the list of supported
   ciphersuites as a comma-separated-list. The list of all available ciphersuites
   is available in the [Golang TLS documentation][golang-tls].
