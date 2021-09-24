@@ -40,6 +40,8 @@ const (
 	ErrAuthAccessDenied            = "access_denied"
 	ErrAuthUnauthorizedClient      = "unauthorized_client"
 	ErrAuthServerError             = "server_error"
+	ErrAuthRequestNotSupported     = "request_not_supported"
+	ErrAuthRequestURINotSupported  = "request_uri_not_supported"
 
 	// The following errors are used by the UI for specific behavior of
 	// the OIDC specification. Any changes to their values must come with
@@ -1382,6 +1384,17 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	nonce := d.Get("nonce").(string)
 	if nonce == "" {
 		return authResponse("", state, ErrAuthInvalidRequest, "nonce parameter is required")
+	}
+
+	// We don't support the request or request_uri parameters. If they're provided,
+	// the appropriate errors must be returned. For details, see the spec at:
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestUriParameter
+	if _, ok := d.Raw["request"]; ok {
+		return authResponse("", state, ErrAuthRequestNotSupported, "request parameter is not supported")
+	}
+	if _, ok := d.Raw["request_uri"]; ok {
+		return authResponse("", state, ErrAuthRequestURINotSupported, "request_uri parameter is not supported")
 	}
 
 	// Validate that there is an identity entity associated with the request

@@ -368,6 +368,62 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthInvalidRequest,
 		},
 		{
+			name: "invalid authorize request with request parameter provided",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"request":       "header.payload.signature",
+					},
+				},
+			},
+			wantErr: ErrAuthRequestNotSupported,
+		},
+		{
+			name: "invalid authorize request with request_uri parameter provided",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"request_uri":   "https://client.example.org/request.jwt",
+					},
+				},
+			},
+			wantErr: ErrAuthRequestURINotSupported,
+		},
+		{
 			name: "invalid authorize request with identity entity ID not found",
 			args: args{
 				entityID: "non-existent-entity",
