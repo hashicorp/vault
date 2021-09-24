@@ -29,6 +29,12 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
+let writeSecretWithMetadata = async function(backend, path, key, val, maxVersion) {
+  await listPage.visitRoot({ backend });
+  await listPage.create();
+  return editPage.editSecretWithMetadata(path, key, val, maxVersion);
+};
+
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
@@ -449,6 +455,52 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     //check for metadata tab
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
+  });
+
+  test('version 2 with metadata no read or list access but access to the data endpoint', async function(assert) {
+    let backend = 'kv-v2-no-metadata';
+    const V2_POLICY = `
+      path "${backend}/metadata/" {
+        capabilities = ["create","update"]
+      }
+      path "${backend}/data/secret-no-list" {
+        capabilities = ["create", "read", "update"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      `delete ${backend}/metadata/secret-no-list`,
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    // write secret with metadata
+    await settled();
+    await writeSecretWithMetadata(backend, 'secret-no-list', 'foo', 'bar', 101);
+    await logout.visit();
+    await authPage.login(userToken);
+    await settled();
+    // will need to confirm the secret search box.
+
+    // test if metadata tab there and error and no edit. and you can't see metadata that was setup.
+    await click(`[data-test-auth-backend-link=${backend}]`);
+    await settled();
+    let card = document.querySelector('[data-test-search-roles]').childNodes[1];
+    await typeIn(card.querySelector('input'), 'secret-no-list');
+    await click('[data-test-get-credentials]');
+    await settled();
+    assert.dom('[data-test-value-div="foo"]').exists('secret view page and info table row with foo value');
+
+    // check metadata
+    await click('[data-test-secret-metadata-tab]');
+    await settled();
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
+      );
   });
 
   test('version 2 with policy with destroy capabilities shows modal', async function(assert) {

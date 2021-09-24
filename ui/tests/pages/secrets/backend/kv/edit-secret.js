@@ -34,4 +34,12 @@ export default create({
       .secretValue(value)
       .save();
   },
+  editSecretWithMetadata: async function(path, key, value, maxVersion) {
+    return this.path(path)
+      .secretKey(key)
+      .secretValue(value)
+      .toggleMetadata()
+      .maxVersion(maxVersion)
+      .save();
+  },
 });
