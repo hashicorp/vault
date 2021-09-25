@@ -867,7 +867,7 @@ func TestUsernameGeneration(t *testing.T) {
 }
 
 func TestNewUser_CustomUsername(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	type testCase struct {
