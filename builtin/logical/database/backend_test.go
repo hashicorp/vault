@@ -345,7 +345,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, _ := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, _ := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	respCheck := func(req *logical.Request) {
@@ -394,7 +394,7 @@ func TestBackend_basic(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -601,7 +601,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -789,7 +789,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -1038,7 +1038,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -1235,7 +1235,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)

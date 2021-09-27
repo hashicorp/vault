@@ -101,10 +101,10 @@
           <div class="columns">
             <div class="column" data-test-client-count-stats>
               <StatText
-                @label="Total active Clients"
+                @label="Total active clients"
                 @value={{or @model.activity.clients @model.activity.total.clients}}
                 @size="l"
-                @subText="The sum of unique entities and active direct tokens; Vault's primary billing metric."
+                @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
               />
             </div>
             <div class="column">
@@ -119,7 +119,7 @@
             <div class="column">
               <StatText
                 class="column"
-                @label="Active direct tokens"
+                @label="Non-entity tokens"
                 @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens}}
                 @size="l"
                 @subText="Tokens created via a method that is not associated with an entity."
@@ -130,18 +130,54 @@
       </div>
       {{#if this.showGraphs}}
         <div class="columns has-bottom-margin-m">
-          <div class="column is-two-thirds">
+          <div class="column is-two-thirds" data-test-client-count-graph>
             <BarChart
               @title="Top 10 Namespaces"
               @description="Each namespace's client count includes clients in child namespaces."
               @dataset={{this.barChartDataset}}
+              @onClick={{action this.selectNamespace}}
               @mapLegend={{array
-                (hash key='non_entity_tokens' label='Active direct tokens')
+                (hash key='non_entity_tokens' label='Non-entity tokens')
                 (hash key='distinct_entities' label='Unique entities')
               }}
-            />
+            >
+            <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{'client-count-by-namespaces.csv'}} />
+            </BarChart>
           </div>
-          <div class="column"></div>
+          <div class="column">
+            <div class="card">
+                <div class="card-content">
+                  <SearchSelect
+                      @id="namespaces"
+                      @labelClass="title is-5"
+                      @disallowNewItems={{true}}
+                      @onChange={{action this.selectNamespace}}
+                      @label="Single namespace"
+                      @options={{or this.searchDataset []}}
+                      @searchField="namespace_path"
+                      @selectLimit={{1}}
+                      />
+                      {{#if this.selectedNamespace}}
+                        <div class="columns">
+                            <div class="column">
+                                <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
+                            </div>
+                        </div>
+                        <div class="columns">
+                            <div class="column">
+                                <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
+                            </div>
+                            <div class="column">
+                                <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
+                            </div>
+                        </div>
+                      {{else}}
+                        <EmptyState @title="No namespace selected" 
+                            @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
+                      {{/if}}
+                </div>
+            </div>
+          </div>
         </div>
       {{/if}}
     {{/unless}}
