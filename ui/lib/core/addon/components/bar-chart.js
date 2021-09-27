@@ -273,8 +273,6 @@ class BarChartComponent extends Component {
       });
 
     chartSvg
-      .select('.domain')
-      .remove()
       .append('g')
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top + 2})`)
       .selectAll('text')
@@ -289,6 +287,8 @@ class BarChartComponent extends Component {
       .attr('alignment-baseline', 'mathematical')
       .attr('x', chartData => `${xScale(chartData.total)}%`)
       .attr('y', chartData => yScale(chartData.label));
+
+    chartSvg.select('.domain').remove();
 
     // TODO: if mapLegend has more than 4 keys, y attrs ('cy' and 'y') will need to be set to a variable. Currently map keys are centered in the legend SVG (50%)
     // each map key symbol & label takes up 20% of legend SVG width
