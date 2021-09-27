@@ -59,12 +59,12 @@ steps:
         <</ parameters.use_docker >>
 
         # Check all directories with a go.mod file
-        modules=('.' 'api' 'sdk')
+        modules=("." "api" "sdk")
         all_package_names=""
 
         for dir in "${modules[@]}"
         do
-          cd $dir
+          pushd "$dir"
           # Split Go tests by prior test times.  If use_docker is true, only run
           # tests that depend on docker, otherwise only those that don't.
           # The appended true condition ensures the command will succeed if no packages are found
@@ -81,12 +81,10 @@ steps:
                 .ForTest | select(. != null)' |
                 sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
           fi
-          # Move back into root directory if needed
-          if [ $dir != '.' ]; then
-            cd ..
-          fi
+          # Move back into root directory
+          popd
           # Append the test packages into the global list, if any are found
-          if [ "$package_names" != '' ]; then
+          if [ -n "$package_names" ]; then
             all_package_names+=" ${package_names}"
           fi
         done
