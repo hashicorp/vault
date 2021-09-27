@@ -122,11 +122,13 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 		currentCacheSize := b.lm.GetCacheSize()
 		storedCacheSize, err := GetCacheSizeFromStorage(ctx, polReq.Storage)
 		if err != nil {
+			b.configMutex.RUnlock()
 			return nil, false, err
 		}
 		if currentCacheSize != storedCacheSize {
 			err = b.lm.InitCache(storedCacheSize)
 			if err != nil {
+				b.configMutex.RUnlock()
 				return nil, false, err
 			}
 		}
@@ -135,7 +137,10 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 		b.configMutex.Lock()
 		defer b.configMutex.Unlock()
 		b.cacheSizeChanged = false
+	} else {
+		b.configMutex.RUnlock()
 	}
+
 	p, _, err := b.lm.GetPolicy(ctx, polReq, rand)
 	if err != nil {
 		return p, false, err
