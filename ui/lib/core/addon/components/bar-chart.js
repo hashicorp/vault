@@ -122,8 +122,8 @@ class BarChartComponent extends Component {
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
-    let yAxis = axisLeft(yScale);
-    yAxis(groups.append('g'));
+    let yAxis = axisLeft(yScale).tickSize(0);
+    yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
 
     let truncate = selection =>
       selection.text(string =>
@@ -132,7 +132,7 @@ class BarChartComponent extends Component {
 
     chartSvg.selectAll('.tick text').call(truncate);
 
-    let rects = groups
+    groups
       .selectAll('rect')
       // iterate through the stacked data and chart respectively
       .data(stackedData => stackedData)
@@ -263,8 +263,8 @@ class BarChartComponent extends Component {
       .on('mousemove', function(chartData) {
         if (chartData.label.length >= CHAR_LIMIT) {
           select('.chart-tooltip')
-            .style('left', `${event.pageX - 100}px`)
-            .style('top', `${event.pageY - 50}px`)
+            .style('left', `${event.pageX - 400}px`)
+            .style('top', `${event.pageY - 100}px`)
             .text(`${chartData.label}`)
             .style('max-width', 'fit-content');
         } else {
@@ -272,21 +272,13 @@ class BarChartComponent extends Component {
         }
       });
 
-    // TODO: these render twice, need to only render and append once per line
-    // creates total count text and coordinates to display to the right of data bars
-    let totalCountData = [];
-    rects.each(function(d) {
-      let textDatum = {
-        total: d.data.total,
-        x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
-        y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
-      };
-      totalCountData.push(textDatum);
-    });
-
-    groups
+    chartSvg
+      .select('.domain')
+      .remove()
+      .append('g')
+      .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top + 2})`)
       .selectAll('text')
-      .data(totalCountData)
+      .data(dataset)
       .enter()
       .append('text')
       .text(d => d.total)
@@ -294,13 +286,11 @@ class BarChartComponent extends Component {
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
-      .attr('y', d => `${d.y}`)
-      .attr('x', d => `${d.x + 1}%`);
+      .attr('alignment-baseline', 'mathematical')
+      .attr('x', chartData => `${xScale(chartData.total)}%`)
+      .attr('y', chartData => yScale(chartData.label));
 
-    // removes axes lines
-    groups.selectAll('.domain, .tick line').remove();
-
-    // TODO: if mapLegend has more than 4 keys, yCoord will need to change. currently map keys are centered in the legend SVG
+    // TODO: if mapLegend has more than 4 keys, y attrs ('cy' and 'y') will need to be set to a variable. Currently map keys are centered in the legend SVG (50%)
     // each map key symbol & label takes up 20% of legend SVG width
     let startingXCoordinate = 100 - this.mapLegend.length * 20; // subtract from 100% to find starting x-coordinate
     let legendSvg = select('.legend');
