@@ -717,7 +717,7 @@ func TestKvPatchCommand_StdinValue(t *testing.T) {
 		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
 	}
 
-	secret, err := client.Logical().Read("kv/patch/foo")
+	secret, err := client.Logical().Read("kv/data/patch/foo")
 	if err != nil {
 		t.Fatalf("read failed, err: %#v\n", err)
 	}
