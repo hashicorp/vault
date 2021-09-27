@@ -72,13 +72,13 @@ steps:
               jq -r 'select(.Deps != null) |
                 select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                 .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
           else
             package_names=$(go list -test -json ./... |
               jq -r 'select(.Deps != null) |
                 select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                 .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
           fi
           if [ $dir != '.' ]; then
             cd ..
