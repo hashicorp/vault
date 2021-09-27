@@ -40,6 +40,18 @@ Note that currently only strings coming from JSON or being returned in JSON are
 HMAC'd. Other data types, like integers, booleans, and so on, are passed
 through in plaintext.
 
+### Optional audit log flags
+
+The following flags can be applied if you wish to unmask the sensitive data within a request or response.
+
+- `-audit-non-hmac-request-keys` `(string: "")` - Key that will not be HMAC'd
+  by audit devices in the request data object. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
+
+- `-audit-non-hmac-response-keys` `(string: "")` - Key that will not be HMAC'd
+  by audit devices in the response data object. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
+
 ## Enabling/Disabling Audit Devices
 
 When a Vault server is first initialized, no auditing is enabled. Audit
@@ -56,12 +68,12 @@ In the command above, we passed the "file_path" parameter to specify the path
 where the audit log will be written to. Each audit device has its own
 set of parameters. See the documentation to the left for more details.
 
-~> Note: Audit device configuration is replicated to all nodes within a 
-cluster by default, and to performance/DR secondaries for Vault Enterprise clusters. 
-Before enabling an audit device, ensure that all nodes within the cluster(s) 
-will be able to successfully log to the audit device to avoid Vault being 
-blocked from serving requests. 
-An audit device can be limited to only within the node's cluster with the [`local`](api/system/audit#local) parameter. 
+~> Note: Audit device configuration is replicated to all nodes within a
+cluster by default, and to performance/DR secondaries for Vault Enterprise clusters.
+Before enabling an audit device, ensure that all nodes within the cluster(s)
+will be able to successfully log to the audit device to avoid Vault being
+blocked from serving requests.
+An audit device can be limited to only within the node's cluster with the [`local`](api/system/audit#local) parameter.
 
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.
