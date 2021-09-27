@@ -561,10 +561,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // test if metadata tab there and error and no edit. and you can’t see metadata that was setup.
     await click(`[data-test-auth-backend-link=${backend}]`);
     await settled();
-    let card = document.querySelector('[data-test-search-roles]').childNodes[1];
-    await typeIn(card.querySelector('input'), 'secret-path');
-    await settled();
-    await click('[data-test-get-credentials]');
+    // let card = document.querySelector('[data-test-search-roles]').childNodes[1];
+    // await typeIn(card.querySelector('input'), 'secret-path');
+    // await settled();
+    await visit('/vault/secrets/no-metadata-read/show/secret-path');
+    // await click('[data-test-get-credentials]');
     await settled();
     await assert.dom('[data-test-value-div="secret-key"]').exists('meep');
   });
