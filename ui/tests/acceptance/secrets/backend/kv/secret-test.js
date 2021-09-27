@@ -527,7 +527,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('version 2: with metadata no read or list access but access to the data endpoint', async function(assert) {
-    let backend = 'kv-v2-no-metadata-read';
+    let backend = 'no-metadata-read';
     let V2_POLICY_NO_LIST = `
       path "${backend}/metadata/*" {
         capabilities = ["create","update"]
@@ -542,11 +542,15 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       // delete any previous mount with same name
       `delete sys/mounts/${backend}`,
       `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/kv-v2-metadata-no-list policy=${btoa(V2_POLICY_NO_LIST)}`,
-      'write -field=client_token auth/token/create policies=kv-v2-metadata-no-list',
+      `write sys/policies/acl/metadata-no-list policy=${btoa(V2_POLICY_NO_LIST)}`,
+      'write -field=client_token auth/token/create policies=metadata-no-list',
     ]);
     await settled();
-    assert.dom('[data-test-linkable-item-content]').exists('MEEP');
+    // let userToken2 = consoleComponent.lastLogOutput;
+    await settled();
+    await listPage.visitRoot({ backend });
+    await settled();
+    await assert.dom('[data-test-component="empty-state"]').exists('meep');
   });
 
   // KV delete operations testing
