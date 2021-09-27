@@ -550,7 +550,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await listPage.visitRoot({ backend });
     await settled();
-    await assert.dom('[data-test-component="empty-state"]').exists('meep');
+    await listPage.create();
+    await settled();
+    await editPage.createSecretWithMetadata('secret-path', 'secret-key', 'secret-value', 101);
+    await settled();
+    await assert.dom('[data-test-row-label="secret-key"]').exists('meep');
   });
 
   // KV delete operations testing
