@@ -67,11 +67,11 @@ type client struct {
 	NamespaceID string `json:"namespace_id"`
 
 	// User-supplied parameters
-	RedirectURIs   []string `json:"redirect_uris"`
-	Assignments    []string `json:"assignments"`
-	Key            string   `json:"key"`
-	IDTokenTTL     int      `json:"id_token_ttl"`
-	AccessTokenTTL int      `json:"access_token_ttl"`
+	RedirectURIs   []string      `json:"redirect_uris"`
+	Assignments    []string      `json:"assignments"`
+	Key            string        `json:"key"`
+	IDTokenTTL     time.Duration `json:"id_token_ttl"`
+	AccessTokenTTL time.Duration `json:"access_token_ttl"`
 
 	// Generated values that are used in OIDC endpoints
 	ClientID     string `json:"client_id"`
@@ -89,15 +89,18 @@ type provider struct {
 }
 
 type providerDiscovery struct {
-	AuthorizationEndpoint string   `json:"authorization_endpoint"`
-	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	Issuer                string   `json:"issuer"`
 	Keys                  string   `json:"jwks_uri"`
+	AuthorizationEndpoint string   `json:"authorization_endpoint"`
+	TokenEndpoint         string   `json:"token_endpoint"`
+	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+	RequestURIParameter   bool     `json:"request_uri_parameter_supported"`
+	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	ResponseTypes         []string `json:"response_types_supported"`
 	Scopes                []string `json:"scopes_supported"`
 	Subjects              []string `json:"subject_types_supported"`
-	TokenEndpoint         string   `json:"token_endpoint"`
-	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+	GrantTypes            []string `json:"grant_types_supported"`
+	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
 }
 
 type authCodeCacheEntry struct {
@@ -222,10 +225,12 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"id_token_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "The time-to-live for ID tokens obtained by the client.",
+					Default:     "24h",
 				},
 				"access_token_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "The time-to-live for access tokens obtained by the client.",
+					Default:     "24h",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -855,15 +860,15 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	}
 
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
-		client.IDTokenTTL = idTokenTTLRaw.(int)
+		client.IDTokenTTL = time.Duration(idTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		client.IDTokenTTL = d.Get("id_token_ttl").(int)
+		client.IDTokenTTL = time.Duration(d.Get("id_token_ttl").(int)) * time.Second
 	}
 
 	if accessTokenTTLRaw, ok := d.GetOk("access_token_ttl"); ok {
-		client.AccessTokenTTL = accessTokenTTLRaw.(int)
+		client.AccessTokenTTL = time.Duration(accessTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
+		client.AccessTokenTTL = time.Duration(d.Get("access_token_ttl").(int)) * time.Second
 	}
 
 	if client.ClientID == "" {
@@ -927,8 +932,8 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 			"redirect_uris":    client.RedirectURIs,
 			"assignments":      client.Assignments,
 			"key":              client.Key,
-			"id_token_ttl":     client.IDTokenTTL,
-			"access_token_ttl": client.AccessTokenTTL,
+			"id_token_ttl":     int64(client.IDTokenTTL.Seconds()),
+			"access_token_ttl": int64(client.AccessTokenTTL.Seconds()),
 			"client_id":        client.ClientID,
 			"client_secret":    client.ClientSecret,
 		},
@@ -1185,15 +1190,18 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 	scopes := append(p.Scopes, openIDScope)
 
 	disc := providerDiscovery{
-		AuthorizationEndpoint: strings.Replace(p.effectiveIssuer, "/v1/", "/ui/vault/", 1) + "/authorize",
-		IDTokenAlgs:           supportedAlgs,
 		Issuer:                p.effectiveIssuer,
 		Keys:                  p.effectiveIssuer + "/.well-known/keys",
-		ResponseTypes:         []string{"code"},
-		Scopes:                scopes,
-		Subjects:              []string{"public"},
+		AuthorizationEndpoint: strings.Replace(p.effectiveIssuer, "/v1/", "/ui/vault/", 1) + "/authorize",
 		TokenEndpoint:         p.effectiveIssuer + "/token",
 		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
+		IDTokenAlgs:           supportedAlgs,
+		Scopes:                scopes,
+		RequestURIParameter:   false,
+		ResponseTypes:         []string{"code"},
+		Subjects:              []string{"public"},
+		GrantTypes:            []string{"authorization_code"},
+		AuthMethods:           []string{"client_secret_basic"},
 	}
 
 	data, err := json.Marshal(disc)
