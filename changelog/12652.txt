@@ -1,0 +1,4 @@
+```release-note:bug
+Add missing read unlock calls in transit backend code.
+Invoke initCache in pathCacheConfigRead routine if needed.
+```
