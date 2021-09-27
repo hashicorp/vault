@@ -341,6 +341,8 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 		defer cancel()
 	}
 
+	ctx = namespace.ContextWithNamespace(ctx, d.mountEntry.Namespace())
+
 	policyCfg, err := d.retrievePasswordPolicy(ctx, policyName)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve password policy: %w", err)
