@@ -332,8 +332,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"redirect_uris":    []string{},
 		"assignments":      []string{},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(86400),
+		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -357,8 +357,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 			"redirect_uris":    "http://localhost:3456/callback",
 			"assignments":      "my-assignment",
 			"key":              "test-key",
-			"id_token_ttl":     0,
-			"access_token_ttl": 0,
+			"id_token_ttl":     "90s",
+			"access_token_ttl": "1m",
 		},
 		Storage: storage,
 	})
@@ -375,8 +375,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"redirect_uris":    []string{"http://localhost:3456/callback"},
 		"assignments":      []string{"my-assignment"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(90),
+		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -452,8 +452,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 		"redirect_uris":    []string{"http://example.com", "http://notduplicate.com"},
 		"assignments":      []string{"test-assignment1"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(86400),
+		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -496,8 +496,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 			"redirect_uris":    "http://localhost:3456/callback",
 			"assignments":      "my-assignment",
 			"key":              "test-key",
-			"id_token_ttl":     0,
-			"access_token_ttl": 0,
+			"id_token_ttl":     "2m",
+			"access_token_ttl": "1h",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -513,8 +513,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"redirect_uris":    []string{"http://localhost:3456/callback"},
 		"assignments":      []string{"my-assignment"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(120),
+		"access_token_ttl": int64(3600),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -527,7 +527,9 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		Path:      "oidc/client/test-client",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"redirect_uris": "http://localhost:3456/callback2",
+			"redirect_uris":    "http://localhost:3456/callback2",
+			"id_token_ttl":     "30",
+			"access_token_ttl": "1m",
 		},
 		Storage: storage,
 	})
@@ -544,8 +546,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"redirect_uris":    []string{"http://localhost:3456/callback2"},
 		"assignments":      []string{"my-assignment"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(30),
+		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}

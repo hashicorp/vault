@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -29,11 +30,11 @@ type scope struct {
 }
 
 type client struct {
-	RedirectURIs   []string `json:"redirect_uris"`
-	Assignments    []string `json:"assignments"`
-	Key            string   `json:"key"`
-	IDTokenTTL     int      `json:"id_token_ttl"`
-	AccessTokenTTL int      `json:"access_token_ttl"`
+	RedirectURIs   []string      `json:"redirect_uris"`
+	Assignments    []string      `json:"assignments"`
+	Key            string        `json:"key"`
+	IDTokenTTL     time.Duration `json:"id_token_ttl"`
+	AccessTokenTTL time.Duration `json:"access_token_ttl"`
 
 	// used for OIDC endpoints
 	ClientID     string `json:"client_id"`
@@ -182,10 +183,12 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"id_token_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "The time-to-live for ID tokens obtained by the client.",
+					Default:     "24h",
 				},
 				"access_token_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Description: "The time-to-live for access tokens obtained by the client.",
+					Default:     "24h",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -920,15 +923,15 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	}
 
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
-		client.IDTokenTTL = idTokenTTLRaw.(int)
+		client.IDTokenTTL = time.Duration(idTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		client.IDTokenTTL = d.Get("id_token_ttl").(int)
+		client.IDTokenTTL = time.Duration(d.Get("id_token_ttl").(int)) * time.Second
 	}
 
 	if accessTokenTTLRaw, ok := d.GetOk("access_token_ttl"); ok {
-		client.AccessTokenTTL = accessTokenTTLRaw.(int)
+		client.AccessTokenTTL = time.Duration(accessTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
-		client.AccessTokenTTL = d.Get("access_token_ttl").(int)
+		client.AccessTokenTTL = time.Duration(d.Get("access_token_ttl").(int)) * time.Second
 	}
 
 	if client.ClientID == "" {
@@ -992,8 +995,8 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 			"redirect_uris":    client.RedirectURIs,
 			"assignments":      client.Assignments,
 			"key":              client.Key,
-			"id_token_ttl":     client.IDTokenTTL,
-			"access_token_ttl": client.AccessTokenTTL,
+			"id_token_ttl":     int64(client.IDTokenTTL.Seconds()),
+			"access_token_ttl": int64(client.AccessTokenTTL.Seconds()),
 			"client_id":        client.ClientID,
 			"client_secret":    client.ClientSecret,
 		},
