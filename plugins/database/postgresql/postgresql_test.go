@@ -14,7 +14,7 @@ import (
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
