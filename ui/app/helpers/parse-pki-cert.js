@@ -10,12 +10,11 @@ export function parsePkiCert([model]) {
   const commonName = cert.subject.getField('CN') ? cert.subject.getField('CN').value : null;
   const issueDate = cert.validity.notBefore;
   const expiryDate = cert.validity.notAfter;
-  const certMetadata = {
+  return {
     common_name: commonName,
     issue_date: issueDate,
     expiry_date: expiryDate,
   };
-  return certMetadata;
 }
 
 export default helper(parsePkiCert);

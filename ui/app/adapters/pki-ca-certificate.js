@@ -50,7 +50,6 @@ export default ApplicationAdapter.extend({
       } else {
         store.pushPayload(type.modelName, response);
       }
-      store.pushPayload(type.modelName, response);
     });
   },
 
