@@ -51,15 +51,18 @@ type provider struct {
 }
 
 type providerDiscovery struct {
-	AuthorizationEndpoint string   `json:"authorization_endpoint"`
-	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	Issuer                string   `json:"issuer"`
 	Keys                  string   `json:"jwks_uri"`
+	AuthorizationEndpoint string   `json:"authorization_endpoint"`
+	TokenEndpoint         string   `json:"token_endpoint"`
+	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+	RequestURIParameter   bool     `json:"request_uri_parameter_supported"`
+	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	ResponseTypes         []string `json:"response_types_supported"`
 	Scopes                []string `json:"scopes_supported"`
 	Subjects              []string `json:"subject_types_supported"`
-	TokenEndpoint         string   `json:"token_endpoint"`
-	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+	GrantTypes            []string `json:"grant_types_supported"`
+	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
 }
 
 const (
@@ -457,15 +460,18 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 	scopes := append(p.Scopes, "openid")
 
 	disc := providerDiscovery{
-		AuthorizationEndpoint: strings.Replace(p.effectiveIssuer, "/v1/", "/ui/vault/", 1) + "/authorize",
-		IDTokenAlgs:           supportedAlgs,
 		Issuer:                p.effectiveIssuer,
 		Keys:                  p.effectiveIssuer + "/.well-known/keys",
-		ResponseTypes:         []string{"code"},
-		Scopes:                scopes,
-		Subjects:              []string{"public"},
+		AuthorizationEndpoint: strings.Replace(p.effectiveIssuer, "/v1/", "/ui/vault/", 1) + "/authorize",
 		TokenEndpoint:         p.effectiveIssuer + "/token",
 		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
+		IDTokenAlgs:           supportedAlgs,
+		Scopes:                scopes,
+		RequestURIParameter:   false,
+		ResponseTypes:         []string{"code"},
+		Subjects:              []string{"public"},
+		GrantTypes:            []string{"authorization_code"},
+		AuthMethods:           []string{"client_secret_basic"},
 	}
 
 	data, err := json.Marshal(disc)

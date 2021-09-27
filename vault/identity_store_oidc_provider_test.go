@@ -1810,6 +1810,9 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthorizationEndpoint: "/ui/vault/identity/oidc/provider/test-provider/authorize",
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
+		GrantTypes:            []string{"authorization_code"},
+		AuthMethods:           []string{"client_secret_basic"},
+		RequestURIParameter:   false,
 	}
 	discoveryResp := &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
@@ -1861,6 +1864,9 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		AuthorizationEndpoint: testIssuer + "/ui/vault/identity/oidc/provider/test-provider/authorize",
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
+		GrantTypes:            []string{"authorization_code"},
+		AuthMethods:           []string{"client_secret_basic"},
+		RequestURIParameter:   false,
 	}
 	discoveryResp = &providerDiscovery{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
