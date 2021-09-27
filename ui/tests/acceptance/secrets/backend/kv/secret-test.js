@@ -546,7 +546,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'write -field=client_token auth/token/create policies=metadata-no-list',
     ]);
     await settled();
-    // let userToken2 = consoleComponent.lastLogOutput;
+    let userToken2 = consoleComponent.lastLogOutput;
     await settled();
     await listPage.visitRoot({ backend });
     await settled();
@@ -554,7 +554,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await editPage.createSecretWithMetadata('secret-path', 'secret-key', 'secret-value', 101);
     await settled();
-    await assert.dom('[data-test-row-label="secret-key"]').exists('meep');
+    await logout.visit();
+    await settled();
+    await authPage.login(userToken2);
+    await settled();
+    await assert.dom('[data-test-auth-backend-link="no-metadata-read"]').exists('meep');
   });
 
   // KV delete operations testing
