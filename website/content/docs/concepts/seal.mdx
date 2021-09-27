@@ -209,8 +209,9 @@ be migrated to be used as unseal keys.
 
 #### Migration From Auto Unseal to Auto Unseal
 
-~> **NOTE**: Migration between same Auto Unseal types is not currently
-supported. We plan to support this officially in a future release.
+~> **NOTE**: Migration between same Auto Unseal types is supported in Vault
+1.6.0 and higher. For these pre-1.5.1 steps, it is only possible to migrate from
+one type of Auto Unseal to a different type (ie Transit -> AWSKMS).
 
 To migrate from Auto Unseal to a different Auto Unseal configuration, take your
 server cluster offline and update the existing [seal

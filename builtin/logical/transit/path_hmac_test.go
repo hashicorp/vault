@@ -26,7 +26,7 @@ func TestTransit_HMAC(t *testing.T) {
 	}
 
 	// Now, change the key value to something we control
-	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
 	}, b.GetRandomReader())
@@ -196,7 +196,7 @@ func TestTransit_batchHMAC(t *testing.T) {
 	}
 
 	// Now, change the key value to something we control
-	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
 	}, b.GetRandomReader())

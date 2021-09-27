@@ -1307,7 +1307,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 }
 
 func TestOIDC_Flush(t *testing.T) {
-	c := newOIDCCache()
+	c := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 	ns := []*namespace.Namespace{
 		noNamespace, // ns[0] is nilNamespace
 		{ID: "ns1"},
@@ -1367,7 +1367,7 @@ func TestOIDC_Flush(t *testing.T) {
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
-	cache := newOIDCCache()
+	cache := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 
 	if _, _, err := cache.Get(nil, "foo"); err == nil {
 		t.Fatal("expected error, got nil")
@@ -1413,7 +1413,8 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 	}
 
 	// set jwksCacheControlMaxAge
-	jwksCacheControlMaxAge := time.Duration(60) * time.Second
+	durationSeconds := 60
+	jwksCacheControlMaxAge := time.Duration(durationSeconds) * time.Second
 	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
 		t.Fatal(err)
 	}
@@ -1432,9 +1433,10 @@ func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// headerVal will be a random value between 0 and jwksCacheControlMaxAge
-	if headerVal > int(jwksCacheControlMaxAge) {
-		t.Fatalf("unexpected header value, got %d", headerVal)
+	// headerVal will be a random value between 0 and jwksCacheControlMaxAge (in seconds)
+	if headerVal > durationSeconds {
+		t.Logf("jwksCacheControlMaxAge: %d", int(jwksCacheControlMaxAge))
+		t.Fatalf("unexpected header value, got %d expected less than %d", headerVal, durationSeconds)
 	}
 }
 

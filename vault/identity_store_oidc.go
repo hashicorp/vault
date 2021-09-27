@@ -1715,7 +1715,6 @@ func (i *IdentityStore) oidcKeyRotation(ctx context.Context, s logical.Storage) 
 // oidcPeriodFunc is invoked by the backend's periodFunc and runs regular key
 // rotations and expiration actions.
 func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
-	i.Logger().Debug("begin oidcPeriodicFunc")
 	var nextRun time.Time
 	now := time.Now()
 
@@ -1798,9 +1797,9 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 	}
 }
 
-func newOIDCCache() *oidcCache {
+func newOIDCCache(defaultExpiration, cleanupInterval time.Duration) *oidcCache {
 	return &oidcCache{
-		c: cache.New(cache.NoExpiration, cache.NoExpiration),
+		c: cache.New(defaultExpiration, cleanupInterval),
 	}
 }
 

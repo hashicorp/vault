@@ -150,10 +150,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-configuration-tab]');
     await settled();
-
-    let cas = document.querySelector('[data-test-value-div="Check-and-Set required"]').innerText;
-    let deleteVersionAfter = document.querySelector('[data-test-value-div="Delete version after"]').innerText;
-    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum versions"]').innerText;
+    let cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
+    let deleteVersionAfter = document.querySelector('[data-test-value-div="Automate secret deletion"]')
+      .innerText;
+    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum number of versions"]')
+      .innerText;
 
     assert.equal(
       maxVersion,
@@ -520,6 +521,62 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('[data-test-secret-link="secret"]');
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
+  });
+
+  test('version 2 with path forward slash will show delete button', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/delete/forward/slash" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/metadata/*" {
+        capabilities = ["list","read","create","update"]
+      }
+      path "kv-v2/data/forward/slash" {
+        capabilities = ["create", "read"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/forward/slash',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(backend, 'forward/slash', 'foo', 'bar');
+    assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+  });
+
+  test('version 2 with engine with forward slash will show delete button', async function(assert) {
+    let backend = 'forward/slash';
+    const V2_POLICY = `
+      path "forward/slash/delete/secret" {
+        capabilities = ["update"]
+      }
+      path "forward/slash/metadata/*" {
+        capabilities = ["list","read","create","update"]
+      }
+      path "forward/slash/data/*" {
+        capabilities = ["create", "read"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete forward/slash/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
   });
 
   test('paths are properly encoded', async function(assert) {

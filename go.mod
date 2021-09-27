@@ -98,7 +98,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.10.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1-0.20210921194437-e5af6ccd8add
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.3.1-0.20210902192635-c3ee7c5bc378
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
@@ -112,7 +112,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20210811133805-e060c2307b24
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1-0.20210921171411-e86105e4986d
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20210715043003-e02ca8f6408e
 	github.com/hashicorp/vault-testing-stepwise v0.1.1
 	github.com/hashicorp/vault/api v1.1.1
@@ -160,13 +160,13 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sasha-s/go-deadlock v0.2.0
-	github.com/sethvargo/go-limiter v0.7.0
+	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
-	github.com/ulikunitz/xz v0.5.7 // indirect
+	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
