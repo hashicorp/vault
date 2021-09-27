@@ -20,6 +20,11 @@ export default Certificate.extend({
       'serialNumber',
     ];
   }),
+  addBasicConstraints: attr('boolean', {
+    label: 'Add a Basic Constraints extension with CA: true',
+    helpText:
+      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  }),
   backend: attr('string', {
     readOnly: true,
   }),
@@ -29,12 +34,7 @@ export default Certificate.extend({
     label: 'CA Type',
     readOnly: true,
   }),
-  uploadPemBundle: attr('boolean', {
-    label: 'Upload PEM bundle',
-    readOnly: true,
-  }),
   commonName: attr('string'),
-  // NOTE: attr was previously "expiration" not sure if changing to expiryDate breaks everything
   expiryDate: attr('string', {
     label: 'Expiration date',
   }),
@@ -43,12 +43,10 @@ export default Certificate.extend({
     label: 'PEM bundle',
     editType: 'file',
   }),
-  addBasicConstraints: attr('boolean', {
-    label: 'Add a Basic Constraints extension with CA: true',
-    helpText:
-      'Only needed as a workaround in some compatibility scenarios with Active Directory Certificate Services',
+  uploadPemBundle: attr('boolean', {
+    label: 'Upload PEM bundle',
+    readOnly: true,
   }),
-
   fieldDefinition: computed('caType', 'uploadPemBundle', function() {
     const type = this.caType;
     const isUpload = this.uploadPemBundle;
@@ -100,7 +98,6 @@ export default Certificate.extend({
 
     return groups;
   }),
-
   type: attr('string', {
     possibleValues: ['internal', 'exported'],
     defaultValue: 'internal',
