@@ -15,7 +15,6 @@ export default Model.extend({
     readOnly: true,
   }),
   DISPLAY_FIELDS: computed(function() {
-    // check here for ordering
     return [
       'certificate',
       'commonName',
@@ -30,15 +29,15 @@ export default Model.extend({
     ];
   }),
 
-  issueDate: attr('string'),
+  commonName: attr('string'),
   expiryDate: attr('string', {
     label: 'Expiration date',
   }),
+  issueDate: attr('string'),
   role: attr('object', {
     readOnly: true,
   }),
   revocationTime: attr('number'),
-  commonName: attr('string'),
   altNames: attr('string', {
     label: 'DNS/Email Subject Alternative Names (SANs)',
   }),
