@@ -106,7 +106,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.2.0
 	github.com/hashicorp/vault/api v1.1.2-0.20210713235431-1fc8af4c041f
-	github.com/hashicorp/vault/sdk v0.2.2-0.20210825150427-9b1f4d486f5d
+	github.com/hashicorp/vault/sdk v0.2.2-0.20210927220632-193e27e9cc1e
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
