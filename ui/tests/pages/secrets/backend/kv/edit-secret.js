@@ -29,17 +29,17 @@ export default create({
       .secretValue(value)
       .save();
   },
-  editSecret: async function(key, value) {
-    return this.secretKey(key)
-      .secretValue(value)
-      .save();
-  },
-  editSecretWithMetadata: async function(path, key, value, maxVersion) {
+  createSecretWithMetadata: async function(path, key, value, maxVersion) {
     return this.path(path)
       .secretKey(key)
       .secretValue(value)
       .toggleMetadata()
       .maxVersion(maxVersion)
+      .save();
+  },
+  editSecret: async function(key, value) {
+    return this.secretKey(key)
+      .secretValue(value)
       .save();
   },
 });
