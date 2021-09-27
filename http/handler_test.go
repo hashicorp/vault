@@ -921,8 +921,8 @@ func TestHandler_Patch_NotFound(t *testing.T) {
 		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
 	}
 
-	if err != nil {
-		responseError := err.(*api.ResponseError)
+	responseError := err.(*api.ResponseError)
+	if responseError.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected PATCH request to fail with %d status code - err: %#v, resp: %#v\n", http.StatusNotFound, responseError, resp)
 	}
 }
