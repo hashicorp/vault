@@ -558,7 +558,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await authPage.login(userToken2);
     await settled();
-    await assert.dom('[data-test-auth-backend-link="no-metadata-read"]').exists('meep');
+    // test if metadata tab there and error and no edit. and you can’t see metadata that was setup.
+    await click(`[data-test-auth-backend-link=${backend}]`);
+    await settled();
+    let card = document.querySelector('[data-test-search-roles]').childNodes[1];
+    await typeIn(card.querySelector('input'), 'secret-path');
+    await settled();
+    await assert.dom('[data-test-get-credentials]').exists('meep');
   });
 
   // KV delete operations testing
