@@ -2080,22 +2080,29 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	limit := time.Now().Add(3 * time.Second)
+	for time.Now().Before(limit) {
+		indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
+		if err != nil {
+			t.Fatalf("token index lookup error: %v", err)
+		}
+		if indexEntry == nil {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if indexEntry != nil {
+		t.Fatalf("should not have found a secondary index entry after revocation")
+	}
 
 	out, err := exp.tokenStore.Lookup(namespace.RootContext(nil), le.ClientToken)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("error looking up client token after revocation: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
-	}
-
-	indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if indexEntry != nil {
-		t.Fatalf("err: should not have found a secondary index entry")
+		t.Fatalf("should not have found revoked token in tokenstore: %v", out)
 	}
 }
 
