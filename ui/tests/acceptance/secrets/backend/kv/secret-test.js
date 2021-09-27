@@ -561,13 +561,24 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // test if metadata tab there and error and no edit. and you can’t see metadata that was setup.
     await click(`[data-test-auth-backend-link=${backend}]`);
     await settled();
+    // this fails in IE11 on browserstack so going directly to URL
     // let card = document.querySelector('[data-test-search-roles]').childNodes[1];
     // await typeIn(card.querySelector('input'), 'secret-path');
     // await settled();
     await visit('/vault/secrets/no-metadata-read/show/secret-path');
     // await click('[data-test-get-credentials]');
     await settled();
-    await assert.dom('[data-test-value-div="secret-key"]').exists('meep');
+    await assert
+      .dom('[data-test-value-div="secret-key"]')
+      .exists('secret view page and info table row with secret-key value');
+    // check metadata
+    await click('[data-test-secret-metadata-tab]');
+    await settled();
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
+      );
   });
 
   // KV delete operations testing
