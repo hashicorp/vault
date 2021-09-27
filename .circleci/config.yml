@@ -995,21 +995,36 @@ jobs:
           USE_DOCKER=0
           USE_DOCKER=1
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            else
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -1085,7 +1100,7 @@ jobs:
                   -timeout=60m \
                   -parallel=20 \
                    \
-                  ${package_names}
+                  ${all_package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1097,7 +1112,7 @@ jobs:
                 -timeout=60m \
                 -parallel=20 \
                  \
-                ${package_names}
+                ${all_package_names}
           fi
         environment:
           GOPRIVATE: github.com/hashicorp/*
@@ -1251,21 +1266,36 @@ jobs:
 
           USE_DOCKER=0
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            else
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -1341,7 +1371,7 @@ jobs:
                   -timeout=60m \
                   -parallel=20 \
                   -race \
-                  ${package_names}
+                  ${all_package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1353,7 +1383,7 @@ jobs:
                 -timeout=60m \
                 -parallel=20 \
                 -race \
-                ${package_names}
+                ${all_package_names}
           fi
         environment:
           GOPRIVATE: github.com/hashicorp/*
@@ -1758,21 +1788,36 @@ jobs:
 
           USE_DOCKER=0
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            else
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -1848,7 +1893,7 @@ jobs:
                   -timeout=60m \
                   -parallel=20 \
                    \
-                  ${package_names}
+                  ${all_package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -1860,7 +1905,7 @@ jobs:
                 -timeout=60m \
                 -parallel=20 \
                  \
-                ${package_names}
+                ${all_package_names}
           fi
         environment:
           GOPRIVATE: github.com/hashicorp/*
@@ -2409,21 +2454,36 @@ jobs:
           USE_DOCKER=0
           USE_DOCKER=1
 
-          # Split Go tests by prior test times.  If use_docker is true, only run
-          # tests that depend on docker, otherwise only those that don't.
-          if [ $USE_DOCKER == 1 ]; then
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          else
-            package_names=$(go list -test -json ./... |
-              jq -r 'select(.Deps != null) |
-                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-                .ForTest | select(. != null)' |
-                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-          fi
+          # Check all directories with a go.mod file
+          modules=("." "api" "sdk")
+          all_package_names=""
+
+          for dir in "${modules[@]}"
+          do
+            pushd "$dir"
+            # Split Go tests by prior test times.  If use_docker is true, only run
+            # tests that depend on docker, otherwise only those that don't.
+            # The appended true condition ensures the command will succeed if no packages are found
+            if [ $USE_DOCKER == 1 ]; then
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            else
+              package_names=$(go list -test -json ./... |
+                jq -r 'select(.Deps != null) |
+                  select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                  .ForTest | select(. != null)' |
+                  sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+            fi
+            # Move back into root directory
+            popd
+            # Append the test packages into the global list, if any are found
+            if [ -n "$package_names" ]; then
+              all_package_names+=" ${package_names}"
+            fi
+          done
 
           # After running tests split step, we are now running the following steps
           # in multiple different containers, each getting a different subset of
@@ -2499,7 +2559,7 @@ jobs:
                   -timeout=60m \
                   -parallel=20 \
                   -race \
-                  ${package_names}
+                  ${all_package_names}
           else
             GOARCH=amd64 \
               GOCACHE=/tmp/go-cache \
@@ -2511,7 +2571,7 @@ jobs:
                 -timeout=60m \
                 -parallel=20 \
                 -race \
-                ${package_names}
+                ${all_package_names}
           fi
         environment:
           GOPRIVATE: github.com/hashicorp/*
