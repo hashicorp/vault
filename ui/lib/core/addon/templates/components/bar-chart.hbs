@@ -7,12 +7,12 @@
         {{/if}}
       </div> 
       <div class="header-right">
-      {{#if this.dataset}}
+      {{#if @dataset}}
         {{yield}}
       {{/if}}
       </div>
     </div>
-  {{#unless this.dataset}}
+  {{#unless @dataset}}
   <div class="toolbar"></div>
     <EmptyState @title="No namespace data" @message="There is no data to display for namespaces."/>
   {{else}}

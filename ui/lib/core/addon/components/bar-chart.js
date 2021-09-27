@@ -64,10 +64,6 @@ class BarChartComponent extends Component {
     return this.args.mapLegend;
   }
 
-  get dataset() {
-    return this.args.dataset || null;
-  }
-
   hasLegend() {
     if (!this.args.mapLegend || !Array.isArray(this.args.mapLegend)) {
       return false;
@@ -217,8 +213,8 @@ class BarChartComponent extends Component {
         select('.chart-tooltip')
           .style('opacity', 1)
           .style('max-width', '200px')
-          .style('left', `${event.pageX - 95}px`)
-          .style('top', `${event.pageY - 155}px`)
+          .style('left', `${event.pageX - 400}px`)
+          .style('top', `${event.pageY - 150}px`)
           .text(
             `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
             ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
