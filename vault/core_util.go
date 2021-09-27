@@ -153,7 +153,7 @@ func (c *Core) initSealsForMigration() {}
 
 func (c *Core) postSealMigration(ctx context.Context) error { return nil }
 
-func (c *Core) applyLeaseCountQuota(in *quotas.Request) (*quotas.Response, error) {
+func (c *Core) applyLeaseCountQuota(_ context.Context, in *quotas.Request) (*quotas.Response, error) {
 	return &quotas.Response{Allowed: true}, nil
 }
 
@@ -181,6 +181,6 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 	return false
 }
 
-func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig) (bool, []string) {
+func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
 	return false, nil
 }

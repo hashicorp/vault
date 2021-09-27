@@ -6,6 +6,7 @@ import {
   currentRouteName,
   fillIn,
   triggerKeyEvent,
+  typeIn,
 } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
@@ -48,6 +49,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await listPage.create();
     await settled();
+    await editPage.toggleMetadata();
+    await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
     await settled();
@@ -67,22 +70,123 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
-  test('it can create a secret with a non default max version', async function(assert) {
+  test('it can create a secret with a non default max version and add metadata', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'maxVersions';
     let maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
-    await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', secretPath);
+    await editPage.startCreateSecret();
+    await editPage.path(secretPath);
+    await editPage.toggleMetadata();
+    await settled();
+    await editPage.maxVersion(maxVersions);
+    await settled();
+    await editPage.save();
+    await settled();
+    await editPage.metadataTab();
+    await settled();
+    let savedMaxVersions = Number(
+      document.querySelector('[data-test-value-div="Maximum versions"]').innerText
+    );
+    assert.equal(
+      maxVersions,
+      savedMaxVersions,
+      'max_version displays the saved number set when creating the secret'
+    );
+    // add metadata
+    await click('[data-test-add-custom-metadata]');
+    await fillIn('[data-test-kv-key]', 'key');
+    await fillIn('[data-test-kv-value]', 'value');
+    await click('[data-test-save-metadata]');
+    let key = document.querySelector('[data-test-row-label="key"]').innerText;
+    let value = document.querySelector('[data-test-row-value="key"]').innerText;
+    assert.equal(key, 'key', 'metadata key displays after adding it.');
+    assert.equal(value, 'value', 'metadata value displays after adding it.');
+  });
+
+  test('it can handle validation on custom metadata', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'customMetadataValidations';
+
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await settled();
+    await editPage.startCreateSecret();
+    await editPage.path(secretPath);
+    await editPage.toggleMetadata();
+    await settled();
+    await typeIn('[data-test-kv-value]', 'invalid\\/');
+    assert
+      .dom('[data-test-inline-error-message]')
+      .hasText('Custom values cannot contain a backward slash.', 'will not allow backward slash in value.');
+    //remove validation error and cause another error that is captured by the API
+    await fillIn('[data-test-kv-value]', 'removed');
+    await typeIn('[data-test-kv-value]', '!');
+    await click('[data-test-secret-save="true"]');
+    assert
+      .dom('[data-test-error]')
+      .includesText(
+        'custom_metadata validation failed: length of key',
+        'shows API error that is not captured by validation'
+      );
+  });
+
+  test('it can create a secret with config metadata', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let maxVersion = 101;
+    await mountSecrets.visit();
+    await click('[data-test-mount-type="kv"]');
+    await settled();
+    await click('[data-test-mount-next]');
+    await settled();
+    await fillIn('[data-test-input="path"]', enginePath);
+    await fillIn('[data-test-input="maxVersions"]', maxVersion);
+    await click('[data-test-input="casRequired"]');
+    await click('[data-test-toggle-label="Automate secret deletion"]');
+    await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
+    await click('[data-test-mount-submit="true"]');
+    await settled();
+    await click('[data-test-configuration-tab]');
+    await settled();
+    let cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
+    let deleteVersionAfter = document.querySelector('[data-test-value-div="Automate secret deletion"]')
+      .innerText;
+    let savedMaxVersion = document.querySelector('[data-test-value-div="Maximum number of versions"]')
+      .innerText;
+
+    assert.equal(
+      maxVersion,
+      savedMaxVersion,
+      'displays the max version set when configuring the secret-engine'
+    );
+    assert.equal(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
+    assert.equal(
+      deleteVersionAfter.trim(),
+      '1s',
+      'displays the delete version after set when configuring the secret-engine'
+    );
+  });
+
+  test('it can create a secret and metadata can be created and edited', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'metadata';
+    let maxVersions = 101;
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await settled();
+    await editPage.startCreateSecret();
+    await editPage.path(secretPath);
+    await editPage.toggleMetadata();
+    await settled();
     await fillIn('[data-test-input="maxVersions"]', maxVersions);
-    await click('[data-test-secret-save]');
     await settled();
-    await click('[data-test-secret-edit="true"]');
+    await editPage.save();
     await settled();
-    // convert to number for IE11 browserstack test
-    let savedMaxVersions = Number(document.querySelector('[data-test-input="maxVersions"]').value);
+    await editPage.metadataTab();
+    await settled();
+    let savedMaxVersions = Number(document.querySelectorAll('[data-test-value-div]')[0].innerText);
     assert.equal(
       maxVersions,
       savedMaxVersions,
@@ -95,9 +199,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
-    await click('[data-test-secret-create="true"]');
-    await fillIn('[data-test-secret-path="true"]', 'beep');
-    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    await editPage.startCreateSecret();
+    await typeIn('[data-test-secret-path="true"]', 'beep');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -105,15 +208,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
         'when duplicate path it shows correct error message'
       );
 
-    document.querySelector('#maxVersions').value = 'abc';
-    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
+    await editPage.toggleMetadata();
+    await settled();
+    await typeIn('[data-test-input="maxVersions"]', 'abc');
+    await settled();
     assert
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
     assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
-    await fillIn('[data-test-input="maxVersions"]', 20);
+    await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
-    await fillIn('[data-test-secret-path="true"]', 'meep');
+    await editPage.path('meep');
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     await click('[data-test-secret-save="true"]');
     assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');
@@ -146,7 +251,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     );
   });
 
-  test('version 1 performs the correct capabilities lookup', async function(assert) {
+  test('version 1 performs the correct capabilities lookup and does not show metadata tab', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'foo/bar';
     // mount version 1 engine
@@ -162,6 +267,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.createSecret(secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    //check for metadata tab should not exist on KV version 1
+    assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
   // https://github.com/hashicorp/vault/issues/5960
@@ -311,7 +418,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
-  test('version 2 with restricted policy still allows edit', async function(assert) {
+  test('version 2 with restricted policy still allows edit but does not show metadata tab', async function(assert) {
     let backend = 'kv-v2';
     const V2_POLICY = `
       path "kv-v2/metadata/*" {
@@ -330,16 +437,18 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
+    // check secret edit
     await writeSecret(backend, 'secret', 'foo', 'bar');
     await logout.visit();
     await authPage.login(userToken);
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
     await editPage.editSecret('bar', 'baz');
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    //check for metadata tab
+    assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
   test('version 2 with policy with destroy capabilities shows modal', async function(assert) {
@@ -412,6 +521,62 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await click('[data-test-secret-link="secret"]');
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
+  });
+
+  test('version 2 with path forward slash will show delete button', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `
+      path "kv-v2/delete/forward/slash" {
+        capabilities = ["update"]
+      }
+      path "kv-v2/metadata/*" {
+        capabilities = ["list","read","create","update"]
+      }
+      path "kv-v2/data/forward/slash" {
+        capabilities = ["create", "read"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/forward/slash',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(backend, 'forward/slash', 'foo', 'bar');
+    assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
+  });
+
+  test('version 2 with engine with forward slash will show delete button', async function(assert) {
+    let backend = 'forward/slash';
+    const V2_POLICY = `
+      path "forward/slash/delete/secret" {
+        capabilities = ["update"]
+      }
+      path "forward/slash/metadata/*" {
+        capabilities = ["list","read","create","update"]
+      }
+      path "forward/slash/data/*" {
+        capabilities = ["create", "read"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete forward/slash/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
   });
 
   test('paths are properly encoded', async function(assert) {
@@ -577,7 +742,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-    assert.ok(editPage.showsNoCASWarning, 'shows no CAS write warning');
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -595,8 +759,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-    assert.ok(editPage.showsV2WriteWarning, 'shows v2 warning');
+    assert
+      .dom('[data-test-warning-no-read-permissions]')
+      .exists('shows custom warning instead of default API warning about permissions');
 
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -614,8 +779,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    assert.ok(editPage.showsV1WriteWarning, 'shows v1 warning');
-
     await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
   });

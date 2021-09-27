@@ -72,15 +72,16 @@
           <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
         </div>
         <div class="navbar-separator is-hidden-mobile"></div>
-      {{else if (and (has-permission 'metrics' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
+      {{else if (and (has-permission 'clients' routeParams='activity') (not cluster.dr.isSecondary) auth.currentToken)}}
         <div class="navbar-sections">
-          <div class="{{if (is-active-route 'vault.cluster.metrics') 'is-active'}}">
+          <div class="{{if (is-active-route 'vault.cluster.clients') 'is-active'}}">
             {{#link-to
-              "vault.cluster.metrics"
-              current-when="vault.cluster.metrics"
+              "vault.cluster.clients"
+              (query-params tab="history")
+              current-when="vault.cluster.clients"
               data-test-navbar-item='metrics'
             }}
-              Metrics
+              Client count
             {{/link-to}}
           </div>
         </div>
@@ -113,16 +114,20 @@
     {{/flash-message}}
   {{/each}}
 </div>
-{{#if showNav}}
-  <UiWizard>
-    <section class="section">
-      <div class="container is-widescreen">
-        <TokenExpireWarning @expirationDate={{auth.tokenExpirationDate}}>
-          {{outlet}}
-        </TokenExpireWarning>
-      </div>
-    </section>
-  </UiWizard>
+{{#if currentlyLoading}}
+  <LogoSplash />
 {{else}}
-  {{outlet}}
+  {{#if showNav}}
+    <UiWizard>
+      <section class="section">
+        <div class="container is-widescreen">
+          <TokenExpireWarning @expirationDate={{auth.tokenExpirationDate}}>
+            {{outlet}}
+          </TokenExpireWarning>
+        </div>
+      </section>
+    </UiWizard>
+  {{else}}
+    {{outlet}}
+  {{/if}}
 {{/if}}

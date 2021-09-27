@@ -246,7 +246,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -464,7 +464,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
