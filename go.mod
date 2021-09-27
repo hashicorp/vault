@@ -112,7 +112,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20210811133805-e060c2307b24
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1-0.20210921171411-e86105e4986d
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20210715043003-e02ca8f6408e
 	github.com/hashicorp/vault-testing-stepwise v0.1.1
 	github.com/hashicorp/vault/api v1.1.1

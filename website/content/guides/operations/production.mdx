@@ -22,8 +22,8 @@ and practical.
 
 - **End-to-End TLS**. Vault should always be used with TLS in production. If
   intermediate load balancers or reverse proxies are used to front Vault, they
-  should _not_ terminate TLS. This way traffic is always encrypted in transit
-  to Vault and minimizes risks introduced by intermediate layers.
+  should _not_ terminate TLS. All traffic to and from Vault (including Storage
+  Backends) should be encrypted.
 
 - **Single Tenancy**. Vault should be the only main process running on a
   machine. This reduces the risk that another process running on the same
@@ -119,3 +119,19 @@ and practical.
 
 - **Docker Containers**. To leverage the ["memory lock"](/docs/configuration#disable_mlock)
   feature inside the Vault container you will likely need to use the `overlayfs2` or another supporting driver.
+
+- **Use Safest Algorithms Available**. Vault supports a variety of legacy algorithms
+  for backwards compatibility. While these algorithms are available, they may not
+  be recommended for use, especially if a stronger alternative is available.
+
+- **Follow Best Practices For Plugins**. While HashiCorp-developed plugins generally
+  default to a safe configuration, you should be mindful of misconfigured or malicious
+  Vault plugins. These may harm the security posture of your Vault deployment.
+
+- **Non-Deterministic File Merging**. Vault's configuration file merging is non-deterministic,
+  and inconsistencies in settings between files could lead to inconsistencies in Vault settings.
+  Ensure set configurations are consistent across all files (and any files merged
+  together denoted by `-config`).
+
+- **Use Correct Filesystem Permissions**. Always ensure appropriate permissions are applied to files
+  prior to starting Vault, especially those containing sensitive information.
