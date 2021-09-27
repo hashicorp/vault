@@ -538,46 +538,15 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     `;
     await consoleComponent.runCommands([
       // delete any kv previously written here so that tests can be re-run
-      `delete ${backend}/metadata/secret`,
+      `delete ${backend}/metadata/secret-path`,
       // delete any previous mount with same name
       `delete sys/mounts/${backend}`,
       `write sys/mounts/${backend} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-metadata-no-list policy=${btoa(V2_POLICY_NO_LIST)}`,
       'write -field=client_token auth/token/create policies=kv-v2-metadata-no-list',
     ]);
-
-    let userToken2 = consoleComponent.lastLogOutput;
     await settled();
-    await listPage.visitRoot({ backend });
-    await settled();
-    await listPage.create();
-    await settled();
-    await editPage.createSecretWithMetadata(backend, 'secret-key', 'bar', 101);
-    await settled();
-    await logout.visit();
-    await settled();
-    await authPage.login(userToken2);
-    await settled();
-    // test if metadata tab there and error and no edit. and you can't see metadata that was setup.
-    await click(`[data-test-auth-backend-link=${backend}]`);
-    await settled();
-    let card = document.querySelector('[data-test-search-roles]').childNodes[1];
-    await typeIn(card.querySelector('input'), backend);
-    await settled();
-    await click('[data-test-get-credentials]');
-    await settled();
-    assert
-      .dom('[data-test-value-div="secret-key"]')
-      .exists('secret view page and info table row with secret-key value');
-
-    // check metadata
-    await click('[data-test-secret-metadata-tab]');
-    await settled();
-    assert
-      .dom('[data-test-empty-state-message]')
-      .hasText(
-        'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
-      );
+    assert.dom('[data-test-linkable-item-content]').exists('MEEP');
   });
 
   // KV delete operations testing
