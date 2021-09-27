@@ -1280,13 +1280,23 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	limit := time.Now().Add(3 * time.Second)
+	for time.Now().Before(limit) {
+		time.Sleep(50 * time.Millisecond)
+
+		noop.Lock()
+		currentRequests := len(noop.Requests)
+		noop.Unlock()
+
+		if currentRequests == 3 {
+			break
+		}
+	}
 
 	noop.Lock()
 	defer noop.Unlock()
-
 	if len(noop.Requests) != 3 {
-		t.Fatalf("Bad: %#v", noop.Requests)
+		t.Errorf("Noop revocation requests less than expected, expected 3, found %d", len(noop.Requests))
 	}
 	for _, req := range noop.Requests {
 		if req.Operation != logical.RevokeOperation {
