@@ -564,7 +564,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let card = document.querySelector('[data-test-search-roles]').childNodes[1];
     await typeIn(card.querySelector('input'), 'secret-path');
     await settled();
-    await assert.dom('[data-test-get-credentials]').exists('meep');
+    await click('[data-test-get-credentials]');
+    await settled();
+    await assert.dom('[data-test-value-div="secret-key"]').exists('meep');
   });
 
   // KV delete operations testing
