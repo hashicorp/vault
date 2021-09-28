@@ -348,6 +348,10 @@ func TestRouter_LoginPath(t *testing.T) {
 		Login: []string{
 			"login",
 			"oauth/*",
+			"wildcard/+/",
+			"end/+/",
+			"+/begin",
+			"any/+",
 		},
 	}
 	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: "authfooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
@@ -363,50 +367,29 @@ func TestRouter_LoginPath(t *testing.T) {
 		{"random", false},
 		{"auth/foo/bar", false},
 		{"auth/foo/login", true},
+		{"auth/foo/login/", false},
 		{"auth/foo/oauth", false},
+		{"auth/foo/oauth/", true},
 		{"auth/foo/oauth/redirect", true},
-	}
 
-	for _, tc := range tcases {
-		out := r.LoginPath(namespace.RootContext(nil), tc.path)
-		if out != tc.expect {
-			t.Fatalf("bad: path: %s expect: %v got %v", tc.path, tc.expect, out)
-		}
-	}
-}
+		// Wildcard cases
 
-func TestRouter_LoginPath_Wildcard(t *testing.T) {
-	r := NewRouter()
-	_, barrier, _ := mockBarrier(t)
-	view := NewBarrierView(barrier, "identity/")
-
-	meUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	n := &NoopBackend{
-		Login: []string{
-			"oidc/provider/+/.well-known/*",
-			"oidc/provider/+/token",
-		},
-	}
-	err = r.Mount(n, "identity/", &MountEntry{UUID: meUUID, Accessor: "identityfooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	type tcase struct {
-		path   string
-		expect bool
-	}
-	tcases := []tcase{
-		{"identity/oidc/provider/p-123/.well-known/keys", true},
-		{"identity/oidc/provider/p-123/.well-known/openid-configuration", true},
-		{"identity/oidc/provider/p-123/token", true},
-		{"identity/foo/", false},
-		{"identity/foo/bar/", false},
-		{"identity/provider/bar/baz", false},
-		{"identity/provider/bar/baz/", false},
+		// "wildcard/+/"
+		{"auth/foo/wildcard/bar", false},
+		{"auth/foo/wildcard/bar/", true},
+		{"auth/foo/wildcard/bar/baz", false},
+		// "end/+/"
+		{"auth/foo/end/baz/", true},
+		{"auth/foo/end/baz", false},
+		// "+/begin"
+		{"auth/foo/bar/begin", true},
+		{"auth/foo/bar/begin/", false},
+		{"auth/foo/begin", false},
+		// "any/+"
+		{"auth/foo/any", false},
+		{"auth/foo/any/bar", true},
+		{"auth/foo/any/bar/", false},
+		{"auth/foo/any/bar/baz", false},
 	}
 
 	for _, tc := range tcases {
@@ -517,5 +500,52 @@ func TestPathsToRadix(t *testing.T) {
 	raw, ok = r.Get("sub/bar")
 	if !ok || raw.(bool) != true {
 		t.Fatalf("bad: %v (sub/bar)", raw)
+	}
+}
+
+func TestParseUnauthenticatedPaths(t *testing.T) {
+	// inputs
+	paths := []string{
+		"foo",
+		"foo/*",
+		"sub/bar*",
+	}
+	wildcardPaths := []string{
+		"end/+",
+		"+/begin/*",
+		"middle/+/bar*",
+	}
+	allPaths := append(paths, wildcardPaths...)
+
+	p, err := parseUnauthenticatedPaths(allPaths)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// outputs
+	wildcardPathsEntry := map[string]bool{
+		"end/+":         true,
+		"+/begin/*":     true,
+		"middle/+/bar*": true,
+	}
+	expected := &loginPathsEntry{
+		paths:         pathsToRadix(paths),
+		wildcardPaths: wildcardPathsEntry,
+	}
+
+	if !reflect.DeepEqual(expected, p) {
+		t.Fatalf("expected: %#v\n actual: %#v\n", expected, p)
+	}
+}
+
+func TestParseUnauthenticatedPaths_Error(t *testing.T) {
+	// inputs
+	invalidPaths := []string{
+		"/foo/+*",
+	}
+
+	_, err := parseUnauthenticatedPaths(invalidPaths)
+	if !strings.Contains(err.Error(), "path \"/foo/+*\": invalid use of wildcards ('+*' is forbidden)") {
+		t.Fatalf("err: %v", err)
 	}
 }
