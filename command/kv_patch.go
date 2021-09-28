@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -18,7 +19,9 @@ var (
 type KVPatchCommand struct {
 	*BaseCommand
 
-	testStdin io.Reader // for tests
+	flagCAS    int
+	flagMethod string
+	testStdin  io.Reader // for tests
 }
 
 func (c *KVPatchCommand) Synopsis() string {
@@ -45,6 +48,25 @@ Usage: vault kv patch [options] KEY [DATA]
 
       $ echo "abcd1234" | vault kv patch secret/foo bar=-
 
+  To perform a Check-And-Set operation, specify the -cas flag with the
+  appropriate version number corresponding to the key you want to perform
+  the CAS operation on:
+
+      $ vault kv patch -cas=1 secret/foo bar=baz
+
+  By default, this operation will attempt an HTTP PATCH operation. If your
+  policy does not allow that, it will fall back to a read/local update/write approach.
+  If you wish to specify which method this command should use, you may do so
+  with the -method flag. When -method=patch is specified, only an HTTP PATCH
+  operation will be tried. If it fails, the entire command will fail.
+
+      $ vault kv patch -method=patch secret/foo bar=baz
+
+  When -method=rw is specified, only a read/local update/write approach will be tried.
+  This was the default behavior previous to Vault 1.9.
+
+      $ vault kv patch -method=rw secret/foo bar=baz
+
   Additional flags and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
@@ -53,6 +75,26 @@ Usage: vault kv patch [options] KEY [DATA]
 
 func (c *KVPatchCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+
+	// Patch specific options
+	f := set.NewFlagSet("Common Options")
+
+	f.IntVar(&IntVar{
+		Name:    "cas",
+		Target:  &c.flagCAS,
+		Default: 0,
+		Usage: `Specifies to use a Check-And-Set operation. If set to 0 or not
+		set, the patch will be allowed. If the index is non-zero the patch will
+		only be allowed if the key’s current version matches the version
+		specified in the cas parameter.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "method",
+		Target:  &c.flagMethod,
+		Default: "patch",
+		Usage:   ``,
+	})
 
 	return set
 }
@@ -121,6 +163,28 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Check the method and behave accordingly
+	var secret *api.Secret
+	var code int
+
+	switch c.flagMethod {
+	case "rw":
+		secret, code = c.readThenWrite(client, path, newData)
+	case "patch":
+		secret, code = c.actualPatch(client, path, newData)
+	default:
+		c.UI.Error(fmt.Sprintf("Unsupported method provided to -method flag: %s", c.flagMethod))
+		return 2
+	}
+
+	if code != 0 {
+		return code
+	}
+
+	return OutputSecret(c.UI, secret)
+}
+
+func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
 	// First, do a read.
 	// Note that we don't want to see curl output for the read request.
 	curOutputCurl := client.OutputCurlString()
@@ -129,45 +193,45 @@ func (c *KVPatchCommand) Run(args []string) int {
 	client.SetOutputCurlString(curOutputCurl)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
-		return 2
+		return nil, 2
 	}
 
 	// Make sure a value already exists
 	if secret == nil || secret.Data == nil {
 		c.UI.Error(fmt.Sprintf("No value found at %s", path))
-		return 2
+		return nil, 2
 	}
 
 	// Verify metadata found
 	rawMeta, ok := secret.Data["metadata"]
 	if !ok || rawMeta == nil {
 		c.UI.Error(fmt.Sprintf("No metadata found at %s; patch only works on existing data", path))
-		return 2
+		return nil, 2
 	}
 	meta, ok := rawMeta.(map[string]interface{})
 	if !ok {
 		c.UI.Error(fmt.Sprintf("Metadata found at %s is not the expected type (JSON object)", path))
-		return 2
+		return nil, 2
 	}
 	if meta == nil {
 		c.UI.Error(fmt.Sprintf("No metadata found at %s; patch only works on existing data", path))
-		return 2
+		return nil, 2
 	}
 
 	// Verify old data found
 	rawData, ok := secret.Data["data"]
 	if !ok || rawData == nil {
 		c.UI.Error(fmt.Sprintf("No data found at %s; patch only works on existing data", path))
-		return 2
+		return nil, 2
 	}
 	data, ok := rawData.(map[string]interface{})
 	if !ok {
 		c.UI.Error(fmt.Sprintf("Data found at %s is not the expected type (JSON object)", path))
-		return 2
+		return nil, 2
 	}
 	if data == nil {
 		c.UI.Error(fmt.Sprintf("No data found at %s; patch only works on existing data", path))
-		return 2
+		return nil, 2
 	}
 
 	// Copy new data over
@@ -183,19 +247,59 @@ func (c *KVPatchCommand) Run(args []string) int {
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
-		return 2
+		return nil, 2
 	}
+
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
-		return 0
+		return nil, 0
 	}
 
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return secret, PrintRawField(c.UI, secret, c.flagField)
 	}
 
-	return OutputSecret(c.UI, secret)
+	return secret, 0
+}
+
+func (c *KVPatchCommand) actualPatch(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
+	data := map[string]interface{}{
+		"data":    newData,
+		"options": map[string]interface{}{},
+	}
+
+	if c.flagCAS > 0 {
+		data["options"].(map[string]interface{})["cas"] = c.flagCAS
+	}
+
+	secret, err := client.Logical().JSONMergePatch(path, data)
+	if err != nil {
+		// If it's a 403, that probably means they don't have the patch capability in their policy. Fall back to
+		// the old way of doing it.
+		if re, ok := err.(*api.ResponseError); ok {
+			if re.StatusCode == 403 {
+				fmt.Println("detected a 403, trying the old way")
+				return c.readThenWrite(client, path, newData)
+			}
+		}
+
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
+		return nil, 2
+	}
+
+	if secret == nil {
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+		}
+		return nil, 0
+	}
+
+	return secret, 0
 }
