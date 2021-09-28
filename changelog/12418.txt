@@ -1,4 +1,5 @@
 ```release-note:bug
+secrets/transit:
 Enforce minimum cache size for transit backend.
 Init cache size on transit backend without restart.
 ```
