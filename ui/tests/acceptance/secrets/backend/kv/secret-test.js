@@ -226,6 +226,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('it navigates to version history and to a specific version', async function(assert) {
     const path = `kv-path-${new Date().getTime()}`;
+    let today = new Date();
+    let month = today.toString().split(' ')[1];
     await listPage.visitRoot({ backend: 'secret' });
     await settled();
     await listPage.create();
@@ -233,11 +235,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.createSecret(path, 'foo', 'bar');
     await click('[data-test-popup-menu-trigger="version"]');
     await settled();
+    assert.dom('[ data-test-created-time]').includesText(month, 'created time shows todays month');
+
     await click('[data-test-version-history]');
     await settled();
     assert
       .dom('[data-test-list-item-content]')
-      .hasText('Version 1 Current', 'shows version one data on the version history as current');
+      .includesText('Version 1 Current', 'shows version one data on the version history as current');
     assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
 
     await click('.linked-block');
