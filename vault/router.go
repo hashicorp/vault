@@ -59,15 +59,10 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
+// loginPathsEntry is used to hold the routeEntry loginPaths
 type loginPathsEntry struct {
-	paths                *radix.Tree
-	segmentWildcardPaths map[string]bool
-}
-
-type wcLoginPath struct {
-	firstWCOrGlob int
-	isPrefix      bool
-	wcPath        string
+	paths         *radix.Tree
+	wildcardPaths map[string]bool
 }
 
 type ValidateMountResponse struct {
@@ -819,7 +814,7 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	// Check the loginPaths of this backend
 	pe := re.loginPaths.Load().(*loginPathsEntry)
 	match, raw, ok := pe.paths.LongestPrefix(remain)
-	if !ok && len(pe.segmentWildcardPaths) == 0 {
+	if !ok && len(pe.wildcardPaths) == 0 {
 		// no match found
 		return false
 	}
@@ -840,27 +835,26 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	}
 
 	// check Login Paths containing wildcards
-	pathParts := strings.Split(remain, "/")
-	for wcPath := range pe.segmentWildcardPaths {
+	reqPathParts := strings.Split(remain, "/")
+	for wcPath := range pe.wildcardPaths {
 		if wcPath == "" {
 			continue
 		}
-		pd := wcLoginPath{firstWCOrGlob: strings.Index(wcPath, "+")}
+		isPrefix := false
 
 		currWCPath := wcPath
 		if currWCPath[len(currWCPath)-1] == '*' {
-			pd.isPrefix = true
+			isPrefix = true
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
 		}
-		pd.wcPath = currWCPath
 
 		splitCurrWCPath := strings.Split(currWCPath, "/")
 
-		if len(pathParts) < len(splitCurrWCPath) {
+		if len(reqPathParts) < len(splitCurrWCPath) {
 			// check if the path coming in is shorter; if so it can't match
 			continue
 		}
-		if !pd.isPrefix && len(splitCurrWCPath) != len(pathParts) {
+		if !isPrefix && len(splitCurrWCPath) != len(reqPathParts) {
 			// If it's not a prefix we expect the same number of segments
 			continue
 		}
@@ -869,18 +863,17 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 		for i, wcPathPart := range splitCurrWCPath {
 			switch {
 			case wcPathPart == "+":
-				segments = append(segments, pathParts[i])
+				segments = append(segments, reqPathParts[i])
 
-			case wcPathPart == pathParts[i]:
-				segments = append(segments, pathParts[i])
+			case wcPathPart == reqPathParts[i]:
+				segments = append(segments, reqPathParts[i])
 
-			case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], wcPathPart):
-				segments = append(segments, pathParts[i:]...)
-
+			case isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(reqPathParts[i], wcPathPart):
+				segments = append(segments, reqPathParts[i:]...)
 			}
 		}
 		result := strings.Join(segments, "/")
-		if pd.isPrefix {
+		if isPrefix {
 			return strings.HasPrefix(remain, result)
 		}
 		if result == remain {
@@ -912,8 +905,8 @@ func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 	}
 
 	return &loginPathsEntry{
-		paths:                pathsToRadix(tempPaths),
-		segmentWildcardPaths: tempWildcardPaths,
+		paths:         pathsToRadix(tempPaths),
+		wildcardPaths: tempWildcardPaths,
 	}, nil
 }
 
