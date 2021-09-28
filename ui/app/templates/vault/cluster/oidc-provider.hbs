@@ -1,1 +1,12 @@
-{{outlet}}
+<div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+  <div class="columns is-centered is-gapless is-fullwidth">
+    <div class="column is-4-desktop is-6-tablet">
+      <VaultLogoSpinner />
+      <AlertBanner
+        @type="success"
+        @title="Redirecting"
+        @message="Authz was successful"
+      />
+    </div>
+  </div>
+</div>
