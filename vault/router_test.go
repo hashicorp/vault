@@ -375,6 +375,48 @@ func TestRouter_LoginPath(t *testing.T) {
 	}
 }
 
+func TestRouter_LoginPath_Wildcard(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "identity/")
+
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := &NoopBackend{
+		Login: []string{
+			"oidc/provider/+/.well-known/*",
+			"oidc/provider/+/token",
+		},
+	}
+	err = r.Mount(n, "identity/", &MountEntry{UUID: meUUID, Accessor: "identityfooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type tcase struct {
+		path   string
+		expect bool
+	}
+	tcases := []tcase{
+		{"identity/oidc/provider/p-123/.well-known/keys", true},
+		{"identity/oidc/provider/p-123/.well-known/openid-configuration", true},
+		{"identity/oidc/provider/p-123/token", true},
+		{"identity/foo/", false},
+		{"identity/foo/bar/", false},
+		{"identity/provider/bar/baz", false},
+		{"identity/provider/bar/baz/", false},
+	}
+
+	for _, tc := range tcases {
+		out := r.LoginPath(namespace.RootContext(nil), tc.path)
+		if out != tc.expect {
+			t.Fatalf("bad: path: %s expect: %v got %v", tc.path, tc.expect, out)
+		}
+	}
+}
+
 func TestRouter_Taint(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)

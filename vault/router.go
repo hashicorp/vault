@@ -57,8 +57,17 @@ type routeEntry struct {
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
 	l             sync.RWMutex
+}
 
+type loginPathsEntry struct {
+	paths                *radix.Tree
 	segmentWildcardPaths map[string]bool
+}
+
+type wcLoginPath struct {
+	firstWCOrGlob int
+	isPrefix      bool
+	wcPath        string
 }
 
 type ValidateMountResponse struct {
@@ -137,16 +146,13 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
-
-		segmentWildcardPaths: make(map[string]bool, len(paths.Unauthenticated)),
 	}
 	re.rootPaths.Store(pathsToRadix(paths.Root))
-	// re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
-	// TODO(jmf): store Unauthenticated paths
-	err := r.parsePaths(re, paths.Unauthenticated)
+	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
 	if err != nil {
 		return err
 	}
+	re.loginPaths.Store(loginPathsEntry)
 
 	switch {
 	case prefix == "":
@@ -164,25 +170,6 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	r.mountUUIDCache.Insert(re.mountEntry.UUID, re.mountEntry)
 	r.mountAccessorCache.Insert(re.mountEntry.Accessor, re.mountEntry)
 
-	return nil
-}
-
-func (r *Router) parsePaths(re *routeEntry, paths []string) error {
-	tempPaths := []string{}
-	for _, path := range paths {
-		if strings.Contains(path, "+*") {
-			return fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
-		}
-
-		if path == "+" || strings.Count(path, "/+") > 0 || strings.HasPrefix(path, "+/") {
-			re.segmentWildcardPaths[path] = true
-		} else {
-			// accumulate paths that do not contain wildcards
-			tempPaths = append(tempPaths, path)
-		}
-	}
-
-	re.loginPaths.Store(pathsToRadix(tempPaths))
 	return nil
 }
 
@@ -830,20 +817,104 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	remain := strings.TrimPrefix(adjustedPath, mount)
 
 	// Check the loginPaths of this backend
-	loginPaths := re.loginPaths.Load().(*radix.Tree)
-	match, raw, ok := loginPaths.LongestPrefix(remain)
-	if !ok {
+	pe := re.loginPaths.Load().(*loginPathsEntry)
+	match, raw, ok := pe.paths.LongestPrefix(remain)
+	if !ok && len(pe.segmentWildcardPaths) == 0 {
+		// no match found
 		return false
 	}
-	prefixMatch := raw.(bool)
 
-	// Handle the prefix match case
-	if prefixMatch {
-		return strings.HasPrefix(remain, match)
+	// Matching Priority
+	//  1. prefix
+	//  2. exact
+	//  3. wildcard
+	if ok {
+		prefixMatch := raw.(bool)
+		if prefixMatch {
+			// Handle the prefix match case
+			return strings.HasPrefix(remain, match)
+		} else if match == remain {
+			// Handle the exact match case
+			return true
+		}
 	}
 
-	// Handle the exact match case
-	return match == remain
+	// check Login Paths containing wildcards
+	pathParts := strings.Split(remain, "/")
+	for wcPath := range pe.segmentWildcardPaths {
+		if wcPath == "" {
+			continue
+		}
+		pd := wcLoginPath{firstWCOrGlob: strings.Index(wcPath, "+")}
+
+		currWCPath := wcPath
+		if currWCPath[len(currWCPath)-1] == '*' {
+			pd.isPrefix = true
+			currWCPath = currWCPath[0 : len(currWCPath)-1]
+		}
+		pd.wcPath = currWCPath
+
+		splitCurrWCPath := strings.Split(currWCPath, "/")
+
+		if len(pathParts) < len(splitCurrWCPath) {
+			// check if the path coming in is shorter; if so it can't match
+			continue
+		}
+		if !pd.isPrefix && len(splitCurrWCPath) != len(pathParts) {
+			// If it's not a prefix we expect the same number of segments
+			continue
+		}
+
+		segments := make([]string, 0, len(splitCurrWCPath))
+		for i, wcPathPart := range splitCurrWCPath {
+			switch {
+			case wcPathPart == "+":
+				segments = append(segments, pathParts[i])
+
+			case wcPathPart == pathParts[i]:
+				segments = append(segments, pathParts[i])
+
+			case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], wcPathPart):
+				segments = append(segments, pathParts[i:]...)
+
+			}
+		}
+		result := strings.Join(segments, "/")
+		if pd.isPrefix {
+			return strings.HasPrefix(remain, result)
+		}
+		if result == remain {
+			return true
+		}
+	}
+	return false
+}
+
+// parseUnauthenticatedPaths converts a list of special paths to a
+// loginPathsEntry
+func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
+	var tempPaths []string
+	tempWildcardPaths := make(map[string]bool, len(paths))
+	for _, path := range paths {
+		if strings.Contains(path, "+*") {
+			return nil, fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
+		}
+
+		if path == "+" || strings.Count(path, "/+") > 0 || strings.HasPrefix(path, "+/") {
+			// paths with wildcards are not stored in the radix tree because
+			// the radix tree does not handle wildcards in the middle of strings
+			tempWildcardPaths[path] = true
+		} else {
+			// accumulate paths that do not contain wildcards
+			// to be stored in the radix tree
+			tempPaths = append(tempPaths, path)
+		}
+	}
+
+	return &loginPathsEntry{
+		paths:                pathsToRadix(tempPaths),
+		segmentWildcardPaths: tempWildcardPaths,
+	}, nil
 }
 
 // pathsToRadix converts a list of special paths to a radix tree.
