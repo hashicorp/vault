@@ -29,28 +29,21 @@ The audit logs contain the full request and response objects for every
 interaction with Vault. The request and response can be matched utilizing a
 unique identifier assigned to each request.
 
-With a few specific exceptions, all strings (including authentication tokens and lease information) contained within requests and
-responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is
-so that secrets aren't in plaintext within your audit logs. However, you're
-still able to check the value of secrets by generating HMACs yourself; this can
-be done with the audit device's hash function and salt by using the
-`/sys/audit-hash` API endpoint (see the documentation for more details).
+Most strings contained within requests and responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is so that secrets aren't in plaintext within your audit logs. However, you're still able to check the value of secrets by generating HMACs yourself; this can be done with the audit device's hash function and salt by using the `/sys/audit-hash` API endpoint (see the documentation for more details).
 
 Note that currently only strings coming from JSON or being returned in JSON are
 HMAC'd. Other data types, like integers, booleans, and so on, are passed
 through in plaintext.
 
-### Optional audit log flags
+Vault makes some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](https://www.vaultproject.io/docs/commands/secrets/enable) command, and then tune it afterward.
 
-The following flags can be applied if you wish to display the sensitive data in plaintext, within your audit log.
+**see also**:
 
-- `-audit-non-hmac-request-keys` `(string: "")` - Key that will not be HMAC'd
-  by audit devices in the request data object. Note that multiple keys may be
-  specified by providing this option multiple times, each time with 1 key.
+[secrets tune](https://www.vaultproject.io/docs/commands/secrets/tune)
 
-- `-audit-non-hmac-response-keys` `(string: "")` - Key that will not be HMAC'd
-  by audit devices in the response data object. Note that multiple keys may be
-  specified by providing this option multiple times, each time with 1 key.
+[auth enable](https://www.vaultproject.io/docs/commands/auth/enable)
+
+[auth tune](https://www.vaultproject.io/docs/commands/auth/tune)
 
 ## Enabling/Disabling Audit Devices
 
