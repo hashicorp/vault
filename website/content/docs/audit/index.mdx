@@ -35,7 +35,7 @@ Note that currently only strings coming from JSON or being returned in JSON are
 HMAC'd. Other data types, like integers, booleans, and so on, are passed
 through in plaintext.
 
-Vault makes some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](https://www.vaultproject.io/docs/commands/secrets/enable) command, and then tune it afterward.
+While most strings are hashed, Vault does make some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](https://www.vaultproject.io/docs/commands/secrets/enable) command, and then tune it afterward.
 
 **see also**:
 
