@@ -1,0 +1,16 @@
+<div class="splash-page-container section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+  <div class="columns is-centered is-gapless is-fullwidth">
+    <div class="column is-4-desktop is-6-tablet">
+      <VaultLogoSpinner />
+      {{#if model.error}}
+        <AlertBanner
+          @type="danger"
+          @title={{model.error}}
+          @message={{model.error_description}}
+        />
+      {{else if model.consent}}
+        Consent block ({{model.consent.code}} - {{model.consent.state}})
+      {{/if}}
+    </div>
+  </div>
+</div>
