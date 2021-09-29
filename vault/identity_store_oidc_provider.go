@@ -850,6 +850,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
+	var key namedKey
 	// enforce key existence on client creation
 	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+client.Key)
 	if err != nil {
@@ -858,11 +859,18 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	if entry == nil {
 		return logical.ErrorResponse("key %q does not exist", client.Key), nil
 	}
+	if err := entry.DecodeJSON(&key); err != nil {
+		return nil, err
+	}
 
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
 		client.IDTokenTTL = time.Duration(idTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
 		client.IDTokenTTL = time.Duration(d.Get("id_token_ttl").(int)) * time.Second
+	}
+
+	if client.IDTokenTTL > key.VerificationTTL {
+		return logical.ErrorResponse("a client's id_token_ttl cannot be greater than the verification_ttl of the key it references"), nil
 	}
 
 	if accessTokenTTLRaw, ok := d.GetOk("access_token_ttl"); ok {

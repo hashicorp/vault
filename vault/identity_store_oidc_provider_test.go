@@ -972,6 +972,53 @@ func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
 
+// TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": int64(60),
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-client" with an id_token_ttl longer than the
+	// verification_ttl -- should fail with error
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key":          "test-key",
+			"id_token_ttl": int64(3600),
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"a client's id_token_ttl cannot be greater than the verification_ttl of the key it references": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-client"
+	respReadTestClient, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	// Ensure that "test-client" was not created
+	expectSuccess(t, respReadTestClient, err)
+	if respReadTestClient != nil {
+		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestClient)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderClient_UpdateKey tests that a client
 // does not allow key modification on Update operations
 func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
