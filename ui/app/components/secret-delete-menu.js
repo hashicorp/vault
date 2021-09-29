@@ -98,9 +98,15 @@ export default class SecretDeleteMenu extends Component {
   @alias('secretDataPath.canDelete') canDeleteSecretData;
 
   get isLatestVersion() {
+    // must have metadata access.
     let { model } = this.args;
     if (!model) return false;
     let latestVersion = model.currentVersion;
+    if (latestVersion === undefined) {
+      // it means you do not have metadata access (current version is returned on the metadata endpoint)
+      // if that's the case they should see the delete button because they can't navigate to older versions
+      return true;
+    }
     let selectedVersion = model.selectedVersion.version;
     if (latestVersion !== selectedVersion) {
       return false;
