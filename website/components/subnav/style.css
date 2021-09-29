@@ -1,5 +1,3 @@
-@import '~@hashicorp/react-subnav/style.css';
-
 /* limit the inner width of the navigation to match the site layout */
 
 .g-subnav {
