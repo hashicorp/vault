@@ -6,6 +6,10 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
+
+replace go.etcd.io/etcd/api/v3 v3.5.0 => go.etcd.io/etcd/api/v3 v3.5.0-alpha.0.0.20210910083144-78463237d4e9
+
 require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
@@ -122,6 +126,7 @@ require (
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
 	github.com/joyent/triton-go v1.7.1-0.20200416154420-6801d15b779f
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0
@@ -174,22 +179,26 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
-	go.etcd.io/etcd/client/v2 v2.305.0
-	go.etcd.io/etcd/client/v3 v3.5.0
+	go.etcd.io/etcd/client/v2 v2.305.0-alpha.0.0.20210928084031-3df272774672
+	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0.0.20210928084031-3df272774672
 	go.mongodb.org/mongo-driver v1.4.6
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0
-	go.uber.org/atomic v1.7.0
-	go.uber.org/goleak v1.1.10
+	go.uber.org/atomic v1.9.0
+	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
+	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
+	golang.org/x/net v0.0.0-20210928044308-7d9f5e0b762b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
-	golang.org/x/tools v0.1.2
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/tools v0.1.5
 	google.golang.org/api v0.29.0
-	google.golang.org/grpc v1.38.0
+	google.golang.org/genproto v0.0.0-20210928142010-c7af6a1a74c9 // indirect
+	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
