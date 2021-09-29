@@ -107,7 +107,7 @@ require (
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.10.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20210924190759-58a034528e35
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20210811133805-e060c2307b24
