@@ -10,7 +10,7 @@ require (
 	github.com/go-ldap/ldap/v3 v3.1.10
 	github.com/go-test/deep v1.0.2
 	github.com/golang/protobuf v1.4.2
-	github.com/golang/snappy v0.0.1
+	github.com/golang/snappy v0.0.4
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.1.0

@@ -162,7 +162,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, upserted, err := b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ type asymKey struct {
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())

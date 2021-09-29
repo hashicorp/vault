@@ -374,7 +374,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["creation_time"] = ptypes.TimestampString(alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(alias.LastUpdateTime)
 
-		if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
 			aliasMap["mount_path"] = mountValidationResp.MountPath
 		}
@@ -696,7 +696,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 					entry["mount_path"] = mi.MountPath
 				} else {
 					mi = mountInfo{}
-					if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+					if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 						mi.MountType = mountValidationResp.MountType
 						mi.MountPath = mountValidationResp.MountPath
 						entry["mount_type"] = mi.MountType
@@ -765,7 +765,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 	}
 
-	isPerfSecondaryOrStandby := i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby
+	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
+		i.localNode.HAState() == consts.PerfStandby
 	for _, fromEntityID := range fromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil

@@ -69,7 +69,7 @@
   
   @media print {
     /* @todo: remove alongside @hashicorp/react-global-styles/_temporary-to-remove/layout.css */
-    .g-container {
+    .g-grid-container {
       /*
       * A “measure” is the number of characters in a line of text.
       * Long lines fatique readers as they find the start of a new line of text.

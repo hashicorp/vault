@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
@@ -26,7 +27,6 @@ const (
 
 var (
 	caseSensitivityKey           = "casesensitivity"
-	sendGroupUpgrade             = func(context.Context, *IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
 )
@@ -48,9 +48,16 @@ func (i *IdentityStore) resetDB(ctx context.Context) error {
 
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
-		view:   config.StorageView,
-		logger: logger,
-		core:   core,
+		view:          config.StorageView,
+		logger:        logger,
+		router:        core.router,
+		redirectAddr:  core.redirectAddr,
+		localNode:     core,
+		namespacer:    core,
+		metrics:       core.MetricSink(),
+		totpPersister: core,
+		groupUpdater:  core,
+		tokenStorer:   core,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -91,7 +98,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		},
 	}
 
-	iStore.oidcCache = newOIDCCache()
+	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
+	iStore.oidcAuthCodeCache = newOIDCCache(5*time.Minute, 5*time.Minute)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -174,6 +182,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 		if err := i.loadGroups(ctx); err != nil {
 			i.logger.Error("failed to load groups during invalidation", "error", err)
+			return
+		}
+		if err := i.loadOIDCClients(ctx); err != nil {
+			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
 			return
 		}
 	// Check if the key is a storage entry key for an entity bucket
@@ -329,6 +341,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		if err := i.oidcCache.Flush(ns); err != nil {
 			i.logger.Error("error flushing oidc cache", "error", err)
 		}
+	case strings.HasPrefix(key, clientPath):
+		name := strings.TrimPrefix(key, clientPath)
+
+		// Invalidate the cached client in memdb
+		if err := i.memDBDeleteClientByName(ctx, name); err != nil {
+			i.logger.Error("error invalidating client", "error", err, "key", key)
+			return
+		}
 	}
 }
 
@@ -392,7 +412,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		persistNeeded = true
 	}
 
-	if persistNeeded && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if persistNeeded && !i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		entityAsAny, err := ptypes.MarshalAny(&entity)
 		if err != nil {
 			return nil, err
@@ -495,7 +515,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, fmt.Errorf("empty alias name")
 	}
 
-	mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor)
+	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
 	if mountValidationResp == nil {
 		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
@@ -571,14 +591,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		}
 
 		// Emit a metric for the new entity
-		ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+		ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
 		var nsLabel metrics.Label
 		if err != nil {
 			nsLabel = metrics.Label{"namespace", "unknown"}
 		} else {
 			nsLabel = metricsutil.NamespaceLabel(ns)
 		}
-		i.core.MetricSink().IncrCounterWithLabels(
+		i.metrics.IncrCounterWithLabels(
 			[]string{"identity", "entity", "creation"},
 			1,
 			[]metrics.Label{

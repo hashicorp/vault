@@ -277,7 +277,7 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 		alias := identity.ToSDKAlias(a)
 
 		// MountType is not stored with the entity and must be looked up
-		if mount := d.core.router.validateMountByAccessor(a.MountAccessor); mount != nil {
+		if mount := d.core.router.ValidateMountByAccessor(a.MountAccessor); mount != nil {
 			alias.MountType = mount.MountType
 		}
 
@@ -339,6 +339,8 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 		ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 	}
+
+	ctx = namespace.ContextWithNamespace(ctx, d.mountEntry.Namespace())
 
 	policyCfg, err := d.retrievePasswordPolicy(ctx, policyName)
 	if err != nil {

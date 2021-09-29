@@ -18,7 +18,7 @@
  * @param {string} [buttonText=Confirm] - Button text on the confirm button
  * @param {string} [confirmText=Yes] - The confirmation text that the user must type before continuing
  * @param {string} [buttonClass=is-danger] - extra class to add to confirm button (eg. "is-danger")
- * @param {sting} [type=warning] - Applies message-type styling to header. Override to default with empty string
+ * @param {string} [type=warning] - Applies message-type styling to header. Override to default with empty string
  * @param {string} [toConfirmMsg] - Finishes the sentence "Type YES to confirm ..."
  * @param {string} [testSelector] - The unique test selector used on the input to fill in text during tests.
  */
