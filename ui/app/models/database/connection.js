@@ -238,6 +238,10 @@ export default Model.extend({
     defaultShown: 'Default',
   }),
 
+  isAvailablePlugin: computed('plugin_name', function() {
+    return !!AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name);
+  }),
+
   showAttrs: computed('plugin_name', function() {
     const fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
       .fields.filter(f => f.show !== false)
