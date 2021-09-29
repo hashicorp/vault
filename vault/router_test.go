@@ -348,10 +348,10 @@ func TestRouter_LoginPath(t *testing.T) {
 		Login: []string{
 			"login",
 			"oauth/*",
-			"wildcard/+/",
-			"end/+/",
+			"end1/+",
+			"end2/+/",
+			"end3/+/*",
 			"+/begin",
-			"any/+",
 		},
 	}
 	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: "authfooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
@@ -374,22 +374,25 @@ func TestRouter_LoginPath(t *testing.T) {
 
 		// Wildcard cases
 
-		// "wildcard/+/"
-		{"auth/foo/wildcard/bar", false},
-		{"auth/foo/wildcard/bar/", true},
-		{"auth/foo/wildcard/bar/baz", false},
-		// "end/+/"
-		{"auth/foo/end/baz/", true},
-		{"auth/foo/end/baz", false},
+		// "end1/+"
+		{"auth/foo/end1", false},
+		{"auth/foo/end1/bar", true},
+		{"auth/foo/end1/bar/", false},
+		{"auth/foo/end1/bar/baz", false},
+		// "end2/+/"
+		{"auth/foo/end2", false},
+		{"auth/foo/end2/bar", false},
+		{"auth/foo/end2/bar/", true},
+		{"auth/foo/end2/bar/baz", false},
+		// "end3/+/*"
+		{"auth/foo/end3", false},
+		{"auth/foo/end3/bar", false},
+		{"auth/foo/end3/bar/", true},
+		{"auth/foo/end3/bar/baz", true},
 		// "+/begin"
 		{"auth/foo/bar/begin", true},
 		{"auth/foo/bar/begin/", false},
 		{"auth/foo/begin", false},
-		// "any/+"
-		{"auth/foo/any", false},
-		{"auth/foo/any/bar", true},
-		{"auth/foo/any/bar/", false},
-		{"auth/foo/any/bar/baz", false},
 	}
 
 	for _, tc := range tcases {
