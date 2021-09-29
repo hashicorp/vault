@@ -526,8 +526,8 @@ func ParseConfig(d, source string) (*Config, error) {
 	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, nil, append(result.FoundKeys, sharedConfig.FoundKeys...))
 	// Assign file info
 	for _, v := range result.UnusedKeys {
-		for _, p := range v {
-			p.Filename = source
+		for i := range v {
+			v[i].Filename = source
 		}
 	}
 

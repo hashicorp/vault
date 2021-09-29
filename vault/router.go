@@ -563,6 +563,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
 	case strings.HasPrefix(originalPath, "sys/"):
+	case strings.HasPrefix(originalPath, "identity/"):
 	case strings.HasPrefix(originalPath, cubbyholeMountPath):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a
