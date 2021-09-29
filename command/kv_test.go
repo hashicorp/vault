@@ -816,6 +816,208 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 	}
 }
 
+func TestKVPatchCommand_CAS(t *testing.T) {
+	cases := []struct {
+		name     string
+		args     []string
+		expected string
+		out      string
+		code     int
+	}{
+		{
+			"right version",
+			[]string{"-cas", "1", "kv/foo", "bar=quux"},
+			"quux",
+			"",
+			0,
+		},
+		{
+			"wrong version",
+			[]string{"-cas", "2", "kv/foo", "bar=wibble"},
+			"baz",
+			"check-and-set parameter did not match the current version",
+			2,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			if err := client.Sys().Mount("kv/", &api.MountInput{
+				Type: "kv-v2",
+			}); err != nil {
+				t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+			}
+
+			// create a policy with patch capability
+			policy := `path "kv/*" { capabilities = ["create", "update", "read", "patch"] }`
+			secretAuth, err := createTokenForPolicy(t, client, policy)
+			if err != nil {
+				t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
+			}
+
+			kvClient, err := client.Clone()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			kvClient.SetToken(secretAuth.ClientToken)
+
+			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			ui, cmd := testKVPatchCommand(t)
+			cmd.client = kvClient
+
+			code := cmd.Run(tc.args)
+
+			if code != tc.code {
+				t.Fatalf("expected code to be %d but was %d", tc.code, code)
+			}
+
+			if tc.out != "" {
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				if !strings.Contains(combined, tc.out) {
+					t.Errorf("expected %q to contain %q", combined, tc.out)
+				}
+			}
+
+			secret, err := kvClient.Logical().Read("kv/data/foo")
+			bar := secret.Data["data"].(map[string]interface{})["bar"]
+			if bar != tc.expected {
+				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
+			}
+		})
+	}
+}
+
+func TestKVPatchCommand_Methods(t *testing.T) {
+	cases := []struct {
+		name     string
+		args     []string
+		expected string
+		code     int
+	}{
+		{
+			"rw",
+			[]string{"-method", "rw", "kv/foo", "bar=quux"},
+			"quux",
+			0,
+		},
+		{
+			"patch",
+			[]string{"-method", "patch", "kv/foo", "bar=wibble"},
+			"wibble",
+			0,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			if err := client.Sys().Mount("kv/", &api.MountInput{
+				Type: "kv-v2",
+			}); err != nil {
+				t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+			}
+
+			// create a policy with patch capability
+			policy := `path "kv/*" { capabilities = ["create", "update", "read", "patch"] }`
+			secretAuth, err := createTokenForPolicy(t, client, policy)
+			if err != nil {
+				t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
+			}
+
+			kvClient, err := client.Clone()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			kvClient.SetToken(secretAuth.ClientToken)
+
+			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, cmd := testKVPatchCommand(t)
+			cmd.client = kvClient
+
+			code := cmd.Run(tc.args)
+
+			if code != tc.code {
+				t.Fatalf("expected code to be %d but was %d", tc.code, code)
+			}
+
+			secret, err := kvClient.Logical().Read("kv/data/foo")
+			bar := secret.Data["data"].(map[string]interface{})["bar"]
+			if bar != tc.expected {
+				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
+			}
+		})
+	}
+}
+
+func TestKVPatchCommand_403Fallback(t *testing.T) {
+	t.Parallel()
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	// create a policy without patch capability
+	policy := `path "kv/*" { capabilities = ["create", "update", "read"] }`
+	secretAuth, err := createTokenForPolicy(t, client, policy)
+	if err != nil {
+		t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
+	}
+
+	kvClient, err := client.Clone()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kvClient.SetToken(secretAuth.ClientToken)
+
+	// Write a value then attempt to patch it. It should fail, then fall back to the old method
+	_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ui, cmd := testKVPatchCommand(t)
+	cmd.client = kvClient
+	code := cmd.Run([]string{"kv/foo", "bar=quux"})
+
+	if code != 0 {
+		t.Fatalf("expected code to be 0 but was %d", code)
+	}
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	expected := `add the "patch" capability to your ACL policy`
+	if !strings.Contains(combined, expected) {
+		t.Errorf("expected %q to contain %q", combined, expected)
+	}
+}
+
 func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
 	t.Helper()
 
@@ -827,7 +1029,6 @@ func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api
 		Policies: []string{"policy"},
 		TTL:      "30m",
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -853,7 +1054,6 @@ func TestKVPatchCommand_RWMethodNoRead(t *testing.T) {
 	// policy that does not have it in order to force command to fail
 	policy := `path "kv/data/patch/foo" { capabilities = ["create", "update"] }`
 	secretAuth, err := createTokenForPolicy(t, client, policy)
-
 	if err != nil {
 		t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
 	}
@@ -885,7 +1085,6 @@ func TestKVPatchCommand_RWMethodNoRead(t *testing.T) {
 	expectedOutputSubstr := "Error doing pre-read"
 	if !strings.Contains(combined, expectedOutputSubstr) {
 		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
-
 	}
 }
 
@@ -903,7 +1102,6 @@ func TestKVPatchCommand_RWMethodNoUpdate(t *testing.T) {
 	// policy that does not have it in order to force command to fail
 	policy := `path "kv/data/patch/foo" { capabilities = ["create", "read"] }`
 	secretAuth, err := createTokenForPolicy(t, client, policy)
-
 	if err != nil {
 		t.Fatalf("policy/token creation failed for policy %s, err: %#v\n", policy, err)
 	}

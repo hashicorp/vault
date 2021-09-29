@@ -93,7 +93,10 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 		Name:    "method",
 		Target:  &c.flagMethod,
 		Default: "patch",
-		Usage:   ``,
+		Usage: `Specifies which method of patching to use. If set to "patch", then
+		an HTTP PATCH request will be issued. This is the default. If set to "rw",
+		then a read will be performed, then a local update, followed by a remote
+		update.`,
 	})
 
 	return set
@@ -281,7 +284,7 @@ func (c *KVPatchCommand) actualPatch(client *api.Client, path string, newData ma
 		// the old way of doing it.
 		if re, ok := err.(*api.ResponseError); ok {
 			if re.StatusCode == 403 {
-				fmt.Println("detected a 403, trying the old way")
+				c.UI.Warn(fmt.Sprintf("Data was written to %s but we recommend that you add the \"patch\" capability to your ACL policy in order to use HTTP PATCH in the future.", path))
 				return c.readThenWrite(client, path, newData)
 			}
 		}
