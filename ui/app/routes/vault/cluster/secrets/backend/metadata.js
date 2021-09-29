@@ -17,10 +17,12 @@ export default class MetadataShow extends Route {
         backend: this.backend,
         id: secret,
       })
-      .catch(() => {
+      .catch(error => {
         // there was an error likely in read metadata.
         // still load the page and handle what you show by filtering for this property
-        this.noReadAccess = true;
+        if (error.httpStatus === 403) {
+          this.noReadAccess = true;
+        }
       });
   }
 
