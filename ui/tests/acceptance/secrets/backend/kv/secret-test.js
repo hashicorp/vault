@@ -395,34 +395,113 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     );
   });
 
-  test('version 2 with restricted policy still allows creation', async function(assert) {
-    let backend = 'kv-v2';
-    const V2_POLICY = `
-      path "kv-v2/metadata/*" {
-        capabilities = ["list"]
-      }
-      path "kv-v2/data/secret" {
-        capabilities = ["create", "read", "update"]
-      }
-    `;
-    await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      // delete any kv previously written here so that tests can be re-run
-      'delete kv-v2/metadata/secret',
-      'write -field=client_token auth/token/create policies=kv-v2-degrade',
-    ]);
-
-    let userToken = consoleComponent.lastLogOutput;
-    await logout.visit();
-    await authPage.login(userToken);
-
-    await writeSecret(backend, 'secret', 'foo', 'bar');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    assert.ok(showPage.editIsPresent, 'shows the edit button');
+  test('paths are properly encoded', async function(assert) {
+    let backend = 'kv';
+    let paths = [
+      '(',
+      ')',
+      '"',
+      //"'",
+      '!',
+      '#',
+      '$',
+      '&',
+      '*',
+      '+',
+      '@',
+      '{',
+      '|',
+      '}',
+      '~',
+      '[',
+      '\\',
+      ']',
+      '^',
+      '_',
+    ].map(char => `${char}some`);
+    assert.expect(paths.length * 2);
+    let secretName = '2';
+    let commands = paths.map(path => `write '${backend}/${path}/${secretName}' 3=4`);
+    await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
+    for (let path of paths) {
+      await listPage.visit({ backend, id: path });
+      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+      await listPage.secrets.filterBy('text', '2')[0].click();
+      assert.equal(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.show',
+        `${path}: show page renders correctly`
+      );
+    }
   });
 
-  test('version 2 with restricted policy still allows edit but does not show metadata tab', async function(assert) {
+  test('create secret with space shows version data', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'space space';
+    // mount version 2
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .submit();
+    await settled();
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
+    await settled();
+    await click('[data-test-popup-menu-trigger="version"]');
+    await settled();
+    await click('[data-test-version-history]');
+    await settled();
+    assert.dom('[data-test-list-item-content]').exists('renders the version and not an error state');
+    // click on version
+    await click('[data-test-popup-menu-trigger="true"]');
+    await click('[data-test-version]');
+    await settled();
+    // perform encode function that should be done by the encodePath
+    let encodedSecretPath = secretPath.replace(/ /g, '%20');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
+  });
+
+  // the web cli does not handle a quote as part of a path, so we test it here via the UI
+  test('creating a secret with a single or double quote works properly', async function(assert) {
+    await consoleComponent.runCommands('write sys/mounts/kv type=kv');
+    let paths = ["'some", '"some'];
+    for (let path of paths) {
+      await listPage.visitRoot({ backend: 'kv' });
+      await listPage.create();
+      await editPage.createSecret(`${path}/2`, 'foo', 'bar');
+      await listPage.visit({ backend: 'kv', id: path });
+      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+      await listPage.secrets.filterBy('text', '2')[0].click();
+      assert.equal(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.show',
+        `${path}: show page renders correctly`
+      );
+    }
+  });
+
+  test('filter clears on nav', async function(assert) {
+    await consoleComponent.runCommands([
+      'vault write sys/mounts/test type=kv',
+      'refresh',
+      'vault write test/filter/foo keys=a keys=b',
+      'vault write test/filter/foo1 keys=a keys=b',
+      'vault write test/filter/foo2 keys=a keys=b',
+    ]);
+    await listPage.visit({ backend: 'test', id: 'filter' });
+    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    await listPage.filterInput('filter/foo1');
+    assert.equal(listPage.secrets.length, 1, 'renders only one secret');
+    await listPage.secrets.objectAt(0).click();
+    await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
+    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
+  });
+
+  // All policy test below this line
+  test('version 2 with restricted policy still allows creation and does not show metadata tab', async function(assert) {
     let backend = 'kv-v2';
     const V2_POLICY = `
       path "kv-v2/metadata/*" {
@@ -441,20 +520,72 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
-    // check secret edit
-    await writeSecret(backend, 'secret', 'foo', 'bar');
     await logout.visit();
     await authPage.login(userToken);
 
-    await editPage.visitEdit({ backend, id: 'secret' });
-    await editPage.editSecret('bar', 'baz');
-    await settled();
+    await writeSecret(backend, 'secret', 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-    //check for metadata tab
+    //check for metadata tab which should not show because you don't have read capabilities
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
+  test('version 2: with metadata no read or list access but access to the data endpoint', async function(assert) {
+    let backend = 'no-metadata-read';
+    let V2_POLICY_NO_LIST = `
+      path "${backend}/metadata/*" {
+        capabilities = ["create","update"]
+      }
+      path "${backend}/data/*" {
+        capabilities = ["create", "read", "update"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      // delete any kv previously written here so that tests can be re-run
+      `delete ${backend}/metadata/secret-path`,
+      // delete any previous mount with same name
+      `delete sys/mounts/${backend}`,
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/metadata-no-list policy=${btoa(V2_POLICY_NO_LIST)}`,
+      'write -field=client_token auth/token/create policies=metadata-no-list',
+    ]);
+    await settled();
+    let userToken2 = consoleComponent.lastLogOutput;
+    await settled();
+    await listPage.visitRoot({ backend });
+    await settled();
+    await listPage.create();
+    await settled();
+    await editPage.createSecretWithMetadata('secret-path', 'secret-key', 'secret-value', 101);
+    await settled();
+    await logout.visit();
+    await settled();
+    await authPage.login(userToken2);
+    await settled();
+    // test if metadata tab there and error and no edit. and you can’t see metadata that was setup.
+    await click(`[data-test-auth-backend-link=${backend}]`);
+    await settled();
+    // this fails in IE11 on browserstack so going directly to URL
+    // let card = document.querySelector('[data-test-search-roles]').childNodes[1];
+    // await typeIn(card.querySelector('input'), 'secret-path');
+    // await settled();
+    await visit('/vault/secrets/no-metadata-read/show/secret-path');
+    // await click('[data-test-get-credentials]');
+    await settled();
+    await assert
+      .dom('[data-test-value-div="secret-key"]')
+      .exists('secret view page and info table row with secret-key value');
+    // check metadata
+    await click('[data-test-secret-metadata-tab]');
+    await settled();
+    assert
+      .dom('[data-test-empty-state-message]')
+      .hasText(
+        'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
+      );
+  });
+
+  // KV delete operations testing
   test('version 2 with policy with destroy capabilities shows modal', async function(assert) {
     let backend = 'kv-v2';
     const V2_POLICY = `
@@ -582,111 +713,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await writeSecret(backend, 'secret', 'foo', 'bar');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
   });
-
-  test('paths are properly encoded', async function(assert) {
-    let backend = 'kv';
-    let paths = [
-      '(',
-      ')',
-      '"',
-      //"'",
-      '!',
-      '#',
-      '$',
-      '&',
-      '*',
-      '+',
-      '@',
-      '{',
-      '|',
-      '}',
-      '~',
-      '[',
-      '\\',
-      ']',
-      '^',
-      '_',
-    ].map(char => `${char}some`);
-    assert.expect(paths.length * 2);
-    let secretName = '2';
-    let commands = paths.map(path => `write '${backend}/${path}/${secretName}' 3=4`);
-    await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
-    for (let path of paths) {
-      await listPage.visit({ backend, id: path });
-      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
-      await listPage.secrets.filterBy('text', '2')[0].click();
-      assert.equal(
-        currentRouteName(),
-        'vault.cluster.secrets.backend.show',
-        `${path}: show page renders correctly`
-      );
-    }
-  });
-
-  test('create secret with space shows version data', async function(assert) {
-    let enginePath = `kv-${new Date().getTime()}`;
-    let secretPath = 'space space';
-    // mount version 2
-    await mountSecrets.visit();
-    await mountSecrets.selectType('kv');
-    await mountSecrets
-      .next()
-      .path(enginePath)
-      .submit();
-    await settled();
-    await listPage.create();
-    await editPage.createSecret(secretPath, 'foo', 'bar');
-    await settled();
-    await click('[data-test-popup-menu-trigger="version"]');
-    await settled();
-    await click('[data-test-version-history]');
-    await settled();
-    assert.dom('[data-test-list-item-content]').exists('renders the version and not an error state');
-    // click on version
-    await click('[data-test-popup-menu-trigger="true"]');
-    await click('[data-test-version]');
-    await settled();
-    // perform encode function that should be done by the encodePath
-    let encodedSecretPath = secretPath.replace(/ /g, '%20');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
-  });
-
-  // the web cli does not handle a quote as part of a path, so we test it here via the UI
-  test('creating a secret with a single or double quote works properly', async function(assert) {
-    await consoleComponent.runCommands('write sys/mounts/kv type=kv');
-    let paths = ["'some", '"some'];
-    for (let path of paths) {
-      await listPage.visitRoot({ backend: 'kv' });
-      await listPage.create();
-      await editPage.createSecret(`${path}/2`, 'foo', 'bar');
-      await listPage.visit({ backend: 'kv', id: path });
-      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
-      await listPage.secrets.filterBy('text', '2')[0].click();
-      assert.equal(
-        currentRouteName(),
-        'vault.cluster.secrets.backend.show',
-        `${path}: show page renders correctly`
-      );
-    }
-  });
-
-  test('filter clears on nav', async function(assert) {
-    await consoleComponent.runCommands([
-      'vault write sys/mounts/test type=kv',
-      'refresh',
-      'vault write test/filter/foo keys=a keys=b',
-      'vault write test/filter/foo1 keys=a keys=b',
-      'vault write test/filter/foo2 keys=a keys=b',
-    ]);
-    await listPage.visit({ backend: 'test', id: 'filter' });
-    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
-    await listPage.filterInput('filter/foo1');
-    assert.equal(listPage.secrets.length, 1, 'renders only one secret');
-    await listPage.secrets.objectAt(0).click();
-    await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
-    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
-    assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
-  });
+  // end of KV delete operation testing
 
   let setupNoRead = async function(backend, canReadMeta = false) {
     const V2_WRITE_ONLY_POLICY = `
