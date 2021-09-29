@@ -1,0 +1,3 @@
+```release-note:feature
+**Unauthenticated Paths**: The '+' wildcard is now supported for parameterizing unauthenticated paths.
+```
