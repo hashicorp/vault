@@ -990,7 +990,7 @@ func TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL(t *testing.T) {
 		Storage: storage,
 	})
 
-	// Create a test role "test-client" with an id_token_ttl longer than the
+	// Create a test client "test-client" with an id_token_ttl longer than the
 	// verification_ttl -- should fail with error
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
