@@ -298,8 +298,8 @@ Regardless of plugin type, each of these processes will incur resource overhead
 on the system, including but not limited to resources such as CPU, memory,
 networking, and file descriptors. There's no specific limit on the number
 secrets engines, auth methods, or database configured connections that can be
-enabled as this depends on the particular plugin resource utilization, the
-extent to which that plugin is being called, and the available resources on the
-system. In general, for plugins of the same type, each additional process
-spawned results in a linear increase in resource utilization, if they operate
-largely in the same fashion and frequency.
+enabled. This ultimately depends on the particular plugin resource utilization,
+the extent to which that plugin is being called, and the available resources on
+the system. For plugins of the same type, each additional process will incur a
+roughly linear increase in resource utilization. This assumes the usage of each
+plugin of the same type is similar.

@@ -42,20 +42,27 @@ when enabling it.
 Vault plugins are long-running processes that remain running once they are
 spawned by Vault, the parent process. Plugin processes can be started by Vault's
 active node and performance standby nodes. Additionally, there are cases where
-plugin processes may be terminated by Vault. These cases include the following:
+plugin processes may be terminated by Vault. These cases include but are not
+limited to:
 
 - Vault active node step-down
 - Vault barrier seal
 - Vault graceful shutdown
+- Disabling a Secrets Engine or Auth method that uses external plugins
+- Database configured connection deletion
 - Database configured connection update
+- Database configured connection reset request
 - Database root credentials rotation
+- WAL Rollback from a previously failed root credentials rotation operation
 
 The lifecycle of plugin processes should be managed by automatically and
-transparently Vault, and termination of these processes are typical in the above
-scenarios. Vault will re-start these plugin processes if and when needed on the
-next operation that requires an RPC call to the plugin, whether that's coming
-from an explicit request operation, or as part of a background process from
-Vault's expiration manager, for instance.
+transparently Vault. Termination of these processes are typical in certain
+scenarios, such as the ones listed above. Vault will start plugin processes when
+needed, typically by lazily loading the plugin when a request that requires the
+plugin is received by Vault. A plugin process may be started or terminated
+through other internal processes within Vault as well. Since Vault manages and
+tracks the lifecycle of its plugins, these processes should not be terminated
+by anything other than Vault.
 
 ## Plugin Communication
 
