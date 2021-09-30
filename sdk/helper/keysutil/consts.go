@@ -16,6 +16,9 @@ const (
 	HashTypeSHA2256
 	HashTypeSHA2384
 	HashTypeSHA2512
+	HashTypeKeccak256
+	HashTypeDoubleSHA2256
+	None
 )
 
 type MarshalingType uint32
@@ -33,6 +36,9 @@ var (
 		"sha2-256": HashTypeSHA2256,
 		"sha2-384": HashTypeSHA2384,
 		"sha2-512": HashTypeSHA2512,
+		"keccak-256":      HashTypeKeccak256,
+		"double-sha2-256": HashTypeDoubleSHA2256,
+		"none":            None,
 	}
 
 	HashFuncMap = map[HashType]func() hash.Hash{
