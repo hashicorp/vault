@@ -915,7 +915,7 @@ func TestHandler_Patch_NotFound(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().JSONMergePatch(context.Background(),"kv/data/foo", kvData)
+	resp, err := c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
 	if err == nil {
 		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
 	}
@@ -984,7 +984,7 @@ func TestHandler_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err = c.Logical().JSONMergePatch(context.Background(),"kv/data/foo", patchData)
+	resp, err = c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", patchData)
 	if err != nil {
 		t.Fatalf("patch request failed, err: %#v, resp: %#v\n", err, resp)
 	}
