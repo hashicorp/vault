@@ -46,6 +46,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.11.0
 	github.com/fatih/structs v1.1.0
+	github.com/favadi/protoc-go-inject-tag v1.3.0 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.2.4
@@ -197,6 +198,7 @@ require (
 	google.golang.org/api v0.29.0
 	google.golang.org/genproto v0.0.0-20210928142010-c7af6a1a74c9 // indirect
 	google.golang.org/grpc v1.41.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0 // indirect
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
