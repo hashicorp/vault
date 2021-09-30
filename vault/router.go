@@ -828,7 +828,8 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 		if prefixMatch {
 			// Handle the prefix match case
 			return strings.HasPrefix(remain, match)
-		} else if match == remain {
+		}
+		if match == remain {
 			// Handle the exact match case
 			return true
 		}
@@ -873,9 +874,6 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 			}
 		}
 		result := strings.Join(segments, "/")
-		if isPrefix {
-			return strings.HasPrefix(remain, result)
-		}
 		if result == remain {
 			return true
 		}

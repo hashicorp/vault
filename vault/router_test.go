@@ -351,6 +351,7 @@ func TestRouter_LoginPath(t *testing.T) {
 			"end1/+",
 			"end2/+/",
 			"end3/+/*",
+			"end4/+/+/login",
 			"+/begin",
 		},
 	}
@@ -389,6 +390,14 @@ func TestRouter_LoginPath(t *testing.T) {
 		{"auth/foo/end3/bar", false},
 		{"auth/foo/end3/bar/", true},
 		{"auth/foo/end3/bar/baz", true},
+		// "end4/+/+/*"
+		{"auth/foo/end4", false},
+		{"auth/foo/end4/bar", false},
+		{"auth/foo/end4/bar/", false},
+		{"auth/foo/end4/bar/baz", false},
+		{"auth/foo/end4/bar/baz/", false},
+		{"auth/foo/end4/bar/baz/login", true},
+		{"auth/foo/end4/bar/baz/login/", false},
 		// "+/begin"
 		{"auth/foo/bar/begin", true},
 		{"auth/foo/bar/begin/", false},
