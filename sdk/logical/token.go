@@ -87,11 +87,18 @@ type TokenEntry struct {
 	// Which named policies should be used
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
 
+	// InlinePolicy specifies ACL rules to be applied to this token entry. If provided,
+	// the token will not inherit policies from the associated Entity.
+	InlinePolicy string `json:"inline_policy" mapstructure:"inline_policy" structs:"inline_policy"`
+
 	// Used for audit trails, this is something like "auth/user/login"
 	Path string `json:"path" mapstructure:"path" structs:"path"`
 
 	// Used for auditing. This could include things like "source", "user", "ip"
 	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta" sentinel:"meta"`
+
+	// InternalMeta is used to store internal metadata. This metadata will not be audit logged.
+	InternalMeta map[string]string `json:"internal_meta" mapstructure:"internal_meta" structs:"internal_meta"`
 
 	// Used for operators to be able to associate with the source
 	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`

@@ -755,8 +755,18 @@ func (t *TemplateError) Error() string {
 // ACL is used to return an ACL which is built using the
 // named policies.
 func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string) (*ACL, error) {
-	var policies []*Policy
 	// Fetch the policies
+	policies, err := ps.GetNamedPolicies(ctx, policyNames)
+	if err != nil {
+		return nil, err
+	}
+
+	return ps.ACLFromPolicies(ctx, entity, policies)
+}
+
+func (ps *PolicyStore) GetNamedPolicies(ctx context.Context, policyNames map[string][]string) ([]*Policy, error) {
+	var policies []*Policy
+
 	for nsID, nsPolicyNames := range policyNames {
 		policyNS, err := NamespaceByID(ctx, nsID, ps.core)
 		if err != nil {
@@ -777,6 +787,10 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 		}
 	}
 
+	return policies, nil
+}
+
+func (ps *PolicyStore) ACLFromPolicies(ctx context.Context, entity *identity.Entity, policies []*Policy) (*ACL, error) {
 	var fetchedGroups bool
 	var groups []*identity.Group
 	for i, policy := range policies {
