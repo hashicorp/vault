@@ -1,7 +1,6 @@
 # Each line is a file pattern followed by one or more owners.
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
 
-
 /builtin/credential/         @hashicorp/vault-ecosystem
 
 # Secrets engines (pki, ssh, totp and transit omitted)
@@ -19,4 +18,5 @@
 /command/agent/               @hashicorp/vault-ecosystem
 /plugins/                     @hashicorp/vault-ecosystem
 
-/website/content/             @taoism4504
+/website/content/                         @taoism4504
+/website/content/docs/plugin-portal.mdx   @taoism4504  @achan
