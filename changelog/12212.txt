@@ -1,0 +1,3 @@
+```release-note:bug
+ui: updating database TTL picker help text.
+```

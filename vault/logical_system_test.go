@@ -57,6 +57,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-force/*",
 		"leases/lookup/*",
 		"storage/raft/snapshot-auto/config/*",
+		"leases",
 	}
 
 	b := testSystemBackend(t)
@@ -3305,15 +3306,15 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			assert(t, actualResp != nil, "response is nil")
-			assert(t, actualResp.Data != nil, "expected data, got nil")
+			assertTrue(t, actualResp != nil, "response is nil")
+			assertTrue(t, actualResp.Data != nil, "expected data, got nil")
 			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
 			assertIsString(t, actualResp.Data["password"], "password key should have a string value")
 			password := actualResp.Data["password"].(string)
 
 			// Delete the password so the rest of the response can be compared
 			delete(actualResp.Data, "password")
-			assert(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
+			assertTrue(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
 
 			// Check to make sure the password is correctly formatted
 			passwordLength := len([]rune(password))
@@ -3330,7 +3331,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	})
 }
 
-func assert(t *testing.T, pass bool, f string, vals ...interface{}) {
+func assertTrue(t *testing.T, pass bool, f string, vals ...interface{}) {
 	t.Helper()
 	if !pass {
 		t.Fatalf(f, vals...)
@@ -3579,4 +3580,90 @@ func makeStorage(t *testing.T, entries ...*logical.StorageEntry) *logical.InmemS
 	}
 
 	return store
+}
+
+func leaseLimitFieldData(limit string) *framework.FieldData {
+	raw := make(map[string]interface{})
+	raw["limit"] = limit
+	return &framework.FieldData{
+		Raw: raw,
+		Schema: map[string]*framework.FieldSchema{
+			"limit": {
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "limit return results",
+			},
+		},
+	}
+}
+
+func TestProcessLimit(t *testing.T) {
+	testCases := []struct {
+		d               *framework.FieldData
+		expectReturnAll bool
+		expectLimit     int
+		expectErr       bool
+	}{
+		{
+			d:               leaseLimitFieldData("500"),
+			expectReturnAll: false,
+			expectLimit:     500,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData(""),
+			expectReturnAll: false,
+			expectLimit:     MaxIrrevocableLeasesToReturn,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("none"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("NoNe"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("hello_world"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("0"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("-1"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+	}
+
+	for i, tc := range testCases {
+		returnAll, limit, err := processLimit(tc.d)
+
+		if returnAll != tc.expectReturnAll {
+			t.Errorf("bad return all for test case %d. expected %t, got %t", i, tc.expectReturnAll, returnAll)
+		}
+		if limit != tc.expectLimit {
+			t.Errorf("bad limit for test case %d. expected %d, got %d", i, tc.expectLimit, limit)
+		}
+
+		haveErr := err != nil
+		if haveErr != tc.expectErr {
+			t.Errorf("bad error status for test case %d. expected error: %t, got error: %t", i, tc.expectErr, haveErr)
+			if err != nil {
+				t.Errorf("error was: %v", err)
+			}
+		}
+	}
 }

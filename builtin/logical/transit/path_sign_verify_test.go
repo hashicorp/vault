@@ -55,7 +55,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	}
 
 	// Now, change the key value to something we control
-	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
 	}, b.GetRandomReader())
@@ -377,7 +377,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	}
 
 	// Get the keys for later
-	fooP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	fooP, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
 	}, b.GetRandomReader())
@@ -385,7 +385,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	barP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	barP, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "bar",
 	}, b.GetRandomReader())

@@ -205,6 +205,11 @@ type Request struct {
 	// request that generated this logical.Request object.
 	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
 
+	// requiredState is used internally to propagate the X-Vault-Index request
+	// header to later levels of request processing that operate only on
+	// logical.Request.
+	requiredState []string
+
 	// responseState is used internally to propagate the state that should appear
 	// in response headers; it's attached to the request rather than the response
 	// because not all requests yields non-nil responses.
@@ -271,6 +276,14 @@ func (r *Request) LastRemoteWAL() uint64 {
 
 func (r *Request) SetLastRemoteWAL(last uint64) {
 	r.lastRemoteWAL = last
+}
+
+func (r *Request) RequiredState() []string {
+	return r.requiredState
+}
+
+func (r *Request) SetRequiredState(state []string) {
+	r.requiredState = state
 }
 
 func (r *Request) ResponseState() *WALState {

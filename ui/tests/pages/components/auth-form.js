@@ -11,5 +11,6 @@ export default {
   tokenValue: value('[data-test-token]'),
   password: fillable('[data-test-password]'),
   errorText: text('[data-test-auth-error]'),
+  descriptionText: text('[data-test-description]'),
   login: clickable('[data-test-auth-submit]'),
 };

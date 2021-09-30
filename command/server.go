@@ -27,19 +27,20 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/audit"
+	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -99,10 +100,11 @@ type ServerCommand struct {
 
 	cleanupGuard sync.Once
 
-	reloadFuncsLock *sync.RWMutex
-	reloadFuncs     *map[string][]reloadutil.ReloadFunc
-	startedCh       chan (struct{}) // for tests
-	reloadedCh      chan (struct{}) // for tests
+	reloadFuncsLock   *sync.RWMutex
+	reloadFuncs       *map[string][]reloadutil.ReloadFunc
+	startedCh         chan (struct{}) // for tests
+	reloadedCh        chan (struct{}) // for tests
+	licenseReloadedCh chan (error)    // for tests
 
 	allLoggers []hclog.Logger
 
@@ -404,14 +406,17 @@ func (c *ServerCommand) flushLog() {
 	}, c.gatedWriter)
 }
 
-func (c *ServerCommand) parseConfig() (*server.Config, error) {
+func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {
+	var configErrors []configutil.ConfigError
 	// Load the configuration
 	var config *server.Config
 	for _, path := range c.flagConfigs {
 		current, err := server.LoadConfig(path)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error loading configuration from %s: {{err}}", path), err)
+			return nil, nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
 		}
+
+		configErrors = append(configErrors, current.Validate(path)...)
 
 		if config == nil {
 			config = current
@@ -419,11 +424,11 @@ func (c *ServerCommand) parseConfig() (*server.Config, error) {
 			config = config.Merge(current)
 		}
 	}
-	return config, nil
+	return config, configErrors, nil
 }
 
 func (c *ServerCommand) runRecoveryMode() int {
-	config, err := c.parseConfig()
+	config, _, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1061,7 +1066,7 @@ func (c *ServerCommand) Run(args []string) int {
 		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
-	parsedConfig, err := c.parseConfig()
+	parsedConfig, _, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1147,10 +1152,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envLicensePath := os.Getenv("VAULT_LICENSE_PATH"); envLicensePath != "" {
+	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
 		config.LicensePath = envLicensePath
 	}
-	if envLicense := os.Getenv("VAULT_LICENSE"); envLicense != "" {
+	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
 
@@ -1208,7 +1213,6 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
-
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1562,6 +1566,16 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
+			// Reload license file
+			if err = vault.LicenseReload(core); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			select {
+			case c.licenseReloadedCh <- err:
+			default:
+			}
+
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
@@ -1650,7 +1664,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 
 	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
-		return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
+		return nil, fmt.Errorf("failed to check active status: %w", err)
 	}
 	if err == nil {
 		leaderCount := 5
@@ -1663,7 +1677,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to check active status: {{err}}", err)
+				return nil, fmt.Errorf("failed to check active status: %w", err)
 			}
 			leaderCount--
 		}
@@ -1685,7 +1699,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		}
 		resp, err := core.HandleRequest(ctx, req)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create root token with ID %q: {{err}}", coreConfig.DevToken), err)
+			return nil, fmt.Errorf("failed to create root token with ID %q: %w", coreConfig.DevToken, err)
 		}
 		if resp == nil {
 			return nil, fmt.Errorf("nil response when creating root token with ID %q", coreConfig.DevToken)
@@ -1701,7 +1715,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.Data = nil
 		_, err = core.HandleRequest(ctx, req)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to revoke initial root token: {{err}}", err)
+			return nil, fmt.Errorf("failed to revoke initial root token: %w", err)
 		}
 	}
 
@@ -1735,10 +1749,10 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 	resp, err := core.HandleRequest(ctx, req)
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating default K/V store: {{err}}", err)
+		return nil, fmt.Errorf("error creating default K/V store: %w", err)
 	}
 	if resp.IsError() {
-		return nil, errwrap.Wrapf("failed to create default K/V store: {{err}}", resp.Error())
+		return nil, fmt.Errorf("failed to create default K/V store: %w", resp.Error())
 	}
 
 	return init, nil
@@ -2053,7 +2067,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf("error encountered reloading listener: {{err}}", err))
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("error encountered reloading listener: %w", err))
 					}
 				}
 			}
@@ -2062,7 +2076,7 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 			for _, relFunc := range relFuncs {
 				if relFunc != nil {
 					if err := relFunc(); err != nil {
-						reloadErrors = multierror.Append(reloadErrors, errwrap.Wrapf(fmt.Sprintf("error encountered reloading file audit device at path %q: {{err}}", strings.TrimPrefix(k, "audit_file|")), err))
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("error encountered reloading file audit device at path %q: %w", strings.TrimPrefix(k, "audit_file|"), err))
 					}
 				}
 			}
@@ -2089,7 +2103,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	// Open the PID file
 	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
-		return errwrap.Wrapf("could not open pid file: {{err}}", err)
+		return fmt.Errorf("could not open pid file: %w", err)
 	}
 	defer pidFile.Close()
 
@@ -2097,7 +2111,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	pid := os.Getpid()
 	_, err = pidFile.WriteString(fmt.Sprintf("%d", pid))
 	if err != nil {
-		return errwrap.Wrapf("could not write to pid file: {{err}}", err)
+		return fmt.Errorf("could not write to pid file: %w", err)
 	}
 	return nil
 }
@@ -2257,7 +2271,6 @@ func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.Co
 		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
 		if !exists {
 			return false, fmt.Errorf("Unknown HA storage type %s", config.HAStorage.Type)
-
 		}
 
 		namedHALogger := c.logger.Named("ha." + config.HAStorage.Type)
@@ -2265,7 +2278,6 @@ func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.Co
 		habackend, err := factory(config.HAStorage.Config, namedHALogger)
 		if err != nil {
 			return false, fmt.Errorf("Error initializing HA storage of type %s: %s", config.HAStorage.Type, err)
-
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
@@ -2457,6 +2469,8 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		SecureRandomReader:             secureRandomReader,
 		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
+		License:                        config.License,
+		LicensePath:                    config.LicensePath,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true
@@ -2609,6 +2623,11 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 		if ln.Config == nil {
 			return fmt.Errorf("Found nil listener config after parsing")
 		}
+
+		if err := config2.IsValidListener(ln.Config); err != nil {
+			return err
+		}
+
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
 			Core:                  core,
 			ListenerConfig:        ln.Config,

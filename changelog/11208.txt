@@ -1,0 +1,3 @@
+```release-note:change
+ui: replaces Vault's use of elazarl/go-bindata-assetfs in building the UI with Go's native Embed package
+```
