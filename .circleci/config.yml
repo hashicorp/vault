@@ -353,7 +353,7 @@ jobs:
         - ui/node_modules
   build-common-layers:
     machine:
-      image: ubuntu-1604:202007-01
+      image: ubuntu-2004:202010-01
     resource_class: xlarge
     shell: /usr/bin/env bash -euo pipefail -c
     steps:
