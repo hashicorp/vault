@@ -629,7 +629,6 @@ github.com/hashicorp/go-retryablehttp v0.6.7/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER
 github.com/hashicorp/go-rootcerts v1.0.1/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
 github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5Oi2viEzc=
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.1.1 h1:NZEGLyyLpWqDLK6F+drxengtkiOnrLIIJzETntnVUQ4=
 github.com/hashicorp/go-secure-stdlib/awsutil v0.1.1/go.mod h1:QRJZ7siKie+SZJB9jLbfKrs0Gd0yPWMtbneg0iU1PrY=
 github.com/hashicorp/go-secure-stdlib/awsutil v0.1.5 h1:TkCWKqk1psjvUV7WktmZiRoZ1a9vw048AVnk/YbrzgY=
 github.com/hashicorp/go-secure-stdlib/awsutil v0.1.5/go.mod h1:MpCPSPGLDILGb4JMm94/mMi3YysIqsXzGCzkEZjcjXg=
@@ -722,6 +721,8 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0 h1:7M7/DbFsUoOMBd2/R48ZNj
 github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0/go.mod h1:h+7pLm4Z2EeKHOGPefX0bGzdUQCMBUlvM/BpSMNgTFw=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1-0.20210921194437-e5af6ccd8add h1:Spwfyp4obQ6MhXWCsYHiAlNsehb8PCVciF1vMZqn3so=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1-0.20210921194437-e5af6ccd8add/go.mod h1:Q13bq4paoPWW+bsSq2seyiLPQkFl5vrb+vIwwLDlQ8M=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1-0.20210929181055-821e911b1751 h1:wICfRtupLijLDjQ/8GGnEOvpDzxGK1pwd1OQBZFQOr0=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1-0.20210929181055-821e911b1751/go.mod h1:Q13bq4paoPWW+bsSq2seyiLPQkFl5vrb+vIwwLDlQ8M=
 github.com/hashicorp/vault-plugin-auth-oci v0.8.0 h1:qYtVYsQlVnqqlCVqZ+CAiFEXuYJqUQCuqcWQVELybZY=
 github.com/hashicorp/vault-plugin-auth-oci v0.8.0/go.mod h1:Cn5cjR279Y+snw8LTaiLTko3KGrbigRbsQPOd2D5xDw=
 github.com/hashicorp/vault-plugin-database-couchbase v0.3.1-0.20210902192635-c3ee7c5bc378 h1:RATGqoJ/MeMyftaRBndUiSM9ZgCbGi7JiLzJtn31bHk=
@@ -740,8 +741,6 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0 h1:EhTRXoWCjM3suD1atK9
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0/go.mod h1:SSkKpSTOMnX84PfgYiWHgwVg+YMhxHNjo+YCJGNBoZk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20210924190759-58a034528e35 h1:EOw71K6RZcteApYrO4TfJeDcppRzOyCNRO7I66RzMbk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20210924190759-58a034528e35/go.mod h1:Tqe5hI33oQ+bHLy/dE4zmvcJD1afRnjsrc5SjUgqvZ8=
-github.com/hashicorp/vault-plugin-secrets-azure v0.10.0 h1:pJTWKVHYqfnlB3xg3XnnF9BOpj2/J7LC/e0RgiwkwKI=
-github.com/hashicorp/vault-plugin-secrets-azure v0.10.0/go.mod h1:4jCVjTG809NCQ8mrSnbBtX17gX1Iush+558BVO6MJeo=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2 h1:+DtlYJTsrFRInQpAo09KkYN64scrextjBiTSunpluo8=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2/go.mod h1:psRQ/dm5XatoUKLDUeWrpP9icMJNtu/jmscUr37YGK4=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0 h1:7a0iWuFA/YNinQ1xXogyZHStolxMVtLV+sy1LpEHaZs=
@@ -851,7 +850,6 @@ github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxv
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
-github.com/kr/pretty v0.2.1 h1:Fmg33tUaq4/8ym9TJN1x7sLJnHVwhP33CNkpYV/7rwI=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.0 h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=
 github.com/kr/pretty v0.3.0/go.mod h1:640gp4NfQd8pI5XOwp5fnNeVWj67G7CFk/SaSQn7NBk=
