@@ -7,11 +7,7 @@
 package pb
 
 import (
-	context "context"
 	logical "github.com/hashicorp/vault/sdk/logical"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -69,7 +65,7 @@ type Header struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Header []string `sentinel:"" protobuf:"bytes,1,rep,name=header,proto3" json:"header,omitempty"`
+	Header []string `protobuf:"bytes,1,rep,name=header,proto3" json:"header,omitempty"`
 }
 
 func (x *Header) Reset() {
@@ -128,9 +124,9 @@ type ProtoError struct {
 	// ErrTypePermissionDenied
 	// ErrTypeMultiAuthzPending
 	// ErrTypeUnrecoverable
-	ErrType uint32 `sentinel:"" protobuf:"varint,1,opt,name=err_type,json=errType,proto3" json:"err_type,omitempty"`
-	ErrMsg  string `sentinel:"" protobuf:"bytes,2,opt,name=err_msg,json=errMsg,proto3" json:"err_msg,omitempty"`
-	ErrCode int64  `sentinel:"" protobuf:"varint,3,opt,name=err_code,json=errCode,proto3" json:"err_code,omitempty"`
+	ErrType uint32 `protobuf:"varint,1,opt,name=err_type,json=errType,proto3" json:"err_type,omitempty"`
+	ErrMsg  string `protobuf:"bytes,2,opt,name=err_msg,json=errMsg,proto3" json:"err_msg,omitempty"`
+	ErrCode int64  `protobuf:"varint,3,opt,name=err_code,json=errCode,proto3" json:"err_code,omitempty"`
 }
 
 func (x *ProtoError) Reset() {
@@ -193,16 +189,16 @@ type Paths struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Root are the paths that require a root token to access
-	Root []string `sentinel:"" protobuf:"bytes,1,rep,name=root,proto3" json:"root,omitempty"`
+	Root []string `protobuf:"bytes,1,rep,name=root,proto3" json:"root,omitempty"`
 	// Unauthenticated are the paths that can be accessed without any auth.
-	Unauthenticated []string `sentinel:"" protobuf:"bytes,2,rep,name=unauthenticated,proto3" json:"unauthenticated,omitempty"`
+	Unauthenticated []string `protobuf:"bytes,2,rep,name=unauthenticated,proto3" json:"unauthenticated,omitempty"`
 	// LocalStorage are paths (prefixes) that are local to this instance; this
 	// indicates that these paths should not be replicated
-	LocalStorage []string `sentinel:"" protobuf:"bytes,3,rep,name=local_storage,json=localStorage,proto3" json:"local_storage,omitempty"`
+	LocalStorage []string `protobuf:"bytes,3,rep,name=local_storage,json=localStorage,proto3" json:"local_storage,omitempty"`
 	// SealWrapStorage are storage paths that, when using a capable seal,
 	// should be seal wrapped with extra encryption. It is exact matching
 	// unless it ends with '/' in which case it will be treated as a prefix.
-	SealWrapStorage []string `sentinel:"" protobuf:"bytes,4,rep,name=seal_wrap_storage,json=sealWrapStorage,proto3" json:"seal_wrap_storage,omitempty"`
+	SealWrapStorage []string `protobuf:"bytes,4,rep,name=seal_wrap_storage,json=sealWrapStorage,proto3" json:"seal_wrap_storage,omitempty"`
 }
 
 func (x *Paths) Reset() {
@@ -271,71 +267,71 @@ type Request struct {
 	unknownFields protoimpl.UnknownFields
 
 	// ID is the uuid associated with each request
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// If set, the name given to the replication secondary where this request
 	// originated
-	ReplicationCluster string `sentinel:"" protobuf:"bytes,2,opt,name=ReplicationCluster,proto3" json:"ReplicationCluster,omitempty"`
+	ReplicationCluster string `protobuf:"bytes,2,opt,name=ReplicationCluster,proto3" json:"ReplicationCluster,omitempty"`
 	// Operation is the requested operation type
-	Operation string `sentinel:"" protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
+	Operation string `protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
 	// Path is the part of the request path not consumed by the
 	// routing. As an example, if the original request path is "prod/aws/foo"
 	// and the AWS logical backend is mounted at "prod/aws/", then the
 	// final path is "foo" since the mount prefix is trimmed.
-	Path string `sentinel:"" protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	Path string `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
 	// Request data is a JSON object that must have keys with string type.
-	Data string `sentinel:"" protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
+	Data string `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
 	// Secret will be non-nil only for Revoke and Renew operations
 	// to represent the secret that was returned prior.
-	Secret *Secret `sentinel:"" protobuf:"bytes,6,opt,name=secret,proto3" json:"secret,omitempty"`
+	Secret *Secret `protobuf:"bytes,6,opt,name=secret,proto3" json:"secret,omitempty"`
 	// Auth will be non-nil only for Renew operations
 	// to represent the auth that was returned prior.
-	Auth *Auth `sentinel:"" protobuf:"bytes,7,opt,name=auth,proto3" json:"auth,omitempty"`
+	Auth *Auth `protobuf:"bytes,7,opt,name=auth,proto3" json:"auth,omitempty"`
 	// Headers will contain the http headers from the request. This value will
 	// be used in the audit broker to ensure we are auditing only the allowed
 	// headers.
-	Headers map[string]*Header `sentinel:"" protobuf:"bytes,8,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Headers map[string]*Header `protobuf:"bytes,8,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// ClientToken is provided to the core so that the identity
 	// can be verified and ACLs applied. This value is passed
 	// through to the logical backends but after being salted and
 	// hashed.
-	ClientToken string `sentinel:"" protobuf:"bytes,9,opt,name=client_token,json=clientToken,proto3" json:"client_token,omitempty"`
+	ClientToken string `protobuf:"bytes,9,opt,name=client_token,json=clientToken,proto3" json:"client_token,omitempty"`
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
-	ClientTokenAccessor string `sentinel:"" protobuf:"bytes,10,opt,name=client_token_accessor,json=clientTokenAccessor,proto3" json:"client_token_accessor,omitempty"`
+	ClientTokenAccessor string `protobuf:"bytes,10,opt,name=client_token_accessor,json=clientTokenAccessor,proto3" json:"client_token_accessor,omitempty"`
 	// DisplayName is provided to the logical backend to help associate
 	// dynamic secrets with the source entity. This is not a sensitive
 	// name, but is useful for operators.
-	DisplayName string `sentinel:"" protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	DisplayName string `protobuf:"bytes,11,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// MountPoint is provided so that a logical backend can generate
 	// paths relative to itself. The `Path` is effectively the client
 	// request path with the MountPoint trimmed off.
-	MountPoint string `sentinel:"" protobuf:"bytes,12,opt,name=mount_point,json=mountPoint,proto3" json:"mount_point,omitempty"`
+	MountPoint string `protobuf:"bytes,12,opt,name=mount_point,json=mountPoint,proto3" json:"mount_point,omitempty"`
 	// MountType is provided so that a logical backend can make decisions
 	// based on the specific mount type (e.g., if a mount type has different
 	// aliases, generating different defaults depending on the alias)
-	MountType string `sentinel:"" protobuf:"bytes,13,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
+	MountType string `protobuf:"bytes,13,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	// MountAccessor is provided so that identities returned by the authentication
 	// backends can be tied to the mount it belongs to.
-	MountAccessor string `sentinel:"" protobuf:"bytes,14,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
+	MountAccessor string `protobuf:"bytes,14,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// WrapInfo contains requested response wrapping parameters
-	WrapInfo *RequestWrapInfo `sentinel:"" protobuf:"bytes,15,opt,name=wrap_info,json=wrapInfo,proto3" json:"wrap_info,omitempty"`
+	WrapInfo *RequestWrapInfo `protobuf:"bytes,15,opt,name=wrap_info,json=wrapInfo,proto3" json:"wrap_info,omitempty"`
 	// ClientTokenRemainingUses represents the allowed number of uses left on the
 	// token supplied
-	ClientTokenRemainingUses int64 `sentinel:"" protobuf:"varint,16,opt,name=client_token_remaining_uses,json=clientTokenRemainingUses,proto3" json:"client_token_remaining_uses,omitempty"`
+	ClientTokenRemainingUses int64 `protobuf:"varint,16,opt,name=client_token_remaining_uses,json=clientTokenRemainingUses,proto3" json:"client_token_remaining_uses,omitempty"`
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
-	EntityID string `sentinel:"" protobuf:"bytes,17,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityID string `protobuf:"bytes,17,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies
-	PolicyOverride bool `sentinel:"" protobuf:"varint,18,opt,name=policy_override,json=policyOverride,proto3" json:"policy_override,omitempty"`
+	PolicyOverride bool `protobuf:"varint,18,opt,name=policy_override,json=policyOverride,proto3" json:"policy_override,omitempty"`
 	// Whether the request is unauthenticated, as in, had no client token
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
-	Unauthenticated bool `sentinel:"" protobuf:"varint,19,opt,name=unauthenticated,proto3" json:"unauthenticated,omitempty"`
+	Unauthenticated bool `protobuf:"varint,19,opt,name=unauthenticated,proto3" json:"unauthenticated,omitempty"`
 	// Connection will be non-nil only for credential providers to
 	// inspect the connection information and potentially use it for
 	// authentication/protection.
-	Connection *Connection `sentinel:"" protobuf:"bytes,20,opt,name=connection,proto3" json:"connection,omitempty"`
+	Connection *Connection `protobuf:"bytes,20,opt,name=connection,proto3" json:"connection,omitempty"`
 }
 
 func (x *Request) Reset() {
@@ -515,66 +511,66 @@ type Auth struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	LeaseOptions *LeaseOptions `sentinel:"" protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions,proto3" json:"lease_options,omitempty"`
+	LeaseOptions *LeaseOptions `protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions,proto3" json:"lease_options,omitempty"`
 	// InternalData is a JSON object that is stored with the auth struct.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
-	InternalData string `sentinel:"" protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
+	InternalData string `protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
 	// DisplayName is a non-security sensitive identifier that is
 	// applicable to this Auth. It is used for logging and prefixing
 	// of dynamic secrets. For example, DisplayName may be "armon" for
 	// the github credential backend. If the client token is used to
 	// generate a SQL credential, the user may be "github-armon-uuid".
 	// This is to help identify the source without using audit tables.
-	DisplayName string `sentinel:"" protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Policies is the list of policies that the authenticated user
 	// is associated with.
-	Policies []string `sentinel:"" protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
+	Policies []string `protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
 	// Metadata is used to attach arbitrary string-type metadata to
 	// an authenticated user. This metadata will be outputted into the
 	// audit log.
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Metadata map[string]string `protobuf:"bytes,5,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// ClientToken is the token that is generated for the authentication.
 	// This will be filled in by Vault core when an auth structure is
 	// returned. Setting this manually will have no effect.
-	ClientToken string `sentinel:"" protobuf:"bytes,6,opt,name=client_token,json=clientToken,proto3" json:"client_token,omitempty"`
+	ClientToken string `protobuf:"bytes,6,opt,name=client_token,json=clientToken,proto3" json:"client_token,omitempty"`
 	// Accessor is the identifier for the ClientToken. This can be used
 	// to perform management functionalities (especially revocation) when
 	// ClientToken in the audit logs are obfuscated. Accessor can be used
 	// to revoke a ClientToken and to lookup the capabilities of the ClientToken,
 	// both without actually knowing the ClientToken.
-	Accessor string `sentinel:"" protobuf:"bytes,7,opt,name=accessor,proto3" json:"accessor,omitempty"`
+	Accessor string `protobuf:"bytes,7,opt,name=accessor,proto3" json:"accessor,omitempty"`
 	// Period indicates that the token generated using this Auth object
 	// should never expire. The token should be renewed within the duration
 	// specified by this period.
-	Period int64 `sentinel:"" protobuf:"varint,8,opt,name=period,proto3" json:"period,omitempty"`
+	Period int64 `protobuf:"varint,8,opt,name=period,proto3" json:"period,omitempty"`
 	// Number of allowed uses of the issued token
-	NumUses int64 `sentinel:"" protobuf:"varint,9,opt,name=num_uses,json=numUses,proto3" json:"num_uses,omitempty"`
+	NumUses int64 `protobuf:"varint,9,opt,name=num_uses,json=numUses,proto3" json:"num_uses,omitempty"`
 	// EntityID is the identifier of the entity in identity store to which the
 	// identity of the authenticating client belongs to.
-	EntityID string `sentinel:"" protobuf:"bytes,10,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityID string `protobuf:"bytes,10,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 	// Alias is the information about the authenticated client returned by
 	// the auth backend
-	Alias *logical.Alias `sentinel:"" protobuf:"bytes,11,opt,name=alias,proto3" json:"alias,omitempty"`
+	Alias *logical.Alias `protobuf:"bytes,11,opt,name=alias,proto3" json:"alias,omitempty"`
 	// GroupAliases are the informational mappings of external groups which an
 	// authenticated user belongs to. This is used to check if there are
 	// mappings groups for the group aliases in identity store. For all the
 	// matching groups, the entity ID of the user will be added.
-	GroupAliases []*logical.Alias `sentinel:"" protobuf:"bytes,12,rep,name=group_aliases,json=groupAliases,proto3" json:"group_aliases,omitempty"`
+	GroupAliases []*logical.Alias `protobuf:"bytes,12,rep,name=group_aliases,json=groupAliases,proto3" json:"group_aliases,omitempty"`
 	// If set, restricts usage of the certificates to client IPs falling within
 	// the range of the specified CIDR(s).
-	BoundCIDRs []string `sentinel:"" protobuf:"bytes,13,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
+	BoundCIDRs []string `protobuf:"bytes,13,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
 	// TokenPolicies and IdentityPolicies break down the list in Policies to
 	// help determine where a policy was sourced
-	TokenPolicies    []string `sentinel:"" protobuf:"bytes,14,rep,name=token_policies,json=tokenPolicies,proto3" json:"token_policies,omitempty"`
-	IdentityPolicies []string `sentinel:"" protobuf:"bytes,15,rep,name=identity_policies,json=identityPolicies,proto3" json:"identity_policies,omitempty"`
+	TokenPolicies    []string `protobuf:"bytes,14,rep,name=token_policies,json=tokenPolicies,proto3" json:"token_policies,omitempty"`
+	IdentityPolicies []string `protobuf:"bytes,15,rep,name=identity_policies,json=identityPolicies,proto3" json:"identity_policies,omitempty"`
 	// Explicit maximum lifetime for the token. Unlike normal TTLs, the maximum
 	// TTL is a hard limit and cannot be exceeded, also counts for periodic tokens.
-	ExplicitMaxTTL int64 `sentinel:"" protobuf:"varint,16,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
+	ExplicitMaxTTL int64 `protobuf:"varint,16,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
 	// TokenType is the type of token being requested
-	TokenType uint32 `sentinel:"" protobuf:"varint,17,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
+	TokenType uint32 `protobuf:"varint,17,opt,name=token_type,json=tokenType,proto3" json:"token_type,omitempty"`
 	// Whether the default policy should be added automatically by core
-	NoDefaultPolicy bool `sentinel:"" protobuf:"varint,18,opt,name=no_default_policy,json=noDefaultPolicy,proto3" json:"no_default_policy,omitempty"`
+	NoDefaultPolicy bool `protobuf:"varint,18,opt,name=no_default_policy,json=noDefaultPolicy,proto3" json:"no_default_policy,omitempty"`
 }
 
 func (x *Auth) Reset() {
@@ -740,24 +736,24 @@ type TokenEntry struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID             string            `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Accessor       string            `sentinel:"" protobuf:"bytes,2,opt,name=accessor,proto3" json:"accessor,omitempty"`
-	Parent         string            `sentinel:"" protobuf:"bytes,3,opt,name=parent,proto3" json:"parent,omitempty"`
-	Policies       []string          `sentinel:"" protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
-	Path           string            `sentinel:"" protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`
-	Meta           map[string]string `sentinel:"" protobuf:"bytes,6,rep,name=meta,proto3" json:"meta,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	DisplayName    string            `sentinel:"" protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	NumUses        int64             `sentinel:"" protobuf:"varint,8,opt,name=num_uses,json=numUses,proto3" json:"num_uses,omitempty"`
-	CreationTime   int64             `sentinel:"" protobuf:"varint,9,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
-	TTL            int64             `sentinel:"" protobuf:"varint,10,opt,name=ttl,proto3" json:"ttl,omitempty"`
-	ExplicitMaxTTL int64             `sentinel:"" protobuf:"varint,11,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
-	Role           string            `sentinel:"" protobuf:"bytes,12,opt,name=role,proto3" json:"role,omitempty"`
-	Period         int64             `sentinel:"" protobuf:"varint,13,opt,name=period,proto3" json:"period,omitempty"`
-	EntityID       string            `sentinel:"" protobuf:"bytes,14,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	BoundCIDRs     []string          `sentinel:"" protobuf:"bytes,15,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
-	NamespaceID    string            `sentinel:"" protobuf:"bytes,16,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
-	CubbyholeID    string            `sentinel:"" protobuf:"bytes,17,opt,name=cubbyhole_id,json=cubbyholeId,proto3" json:"cubbyhole_id,omitempty"`
-	Type           uint32            `sentinel:"" protobuf:"varint,18,opt,name=type,proto3" json:"type,omitempty"`
+	ID             string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Accessor       string            `protobuf:"bytes,2,opt,name=accessor,proto3" json:"accessor,omitempty"`
+	Parent         string            `protobuf:"bytes,3,opt,name=parent,proto3" json:"parent,omitempty"`
+	Policies       []string          `protobuf:"bytes,4,rep,name=policies,proto3" json:"policies,omitempty"`
+	Path           string            `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`
+	Meta           map[string]string `protobuf:"bytes,6,rep,name=meta,proto3" json:"meta,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	DisplayName    string            `protobuf:"bytes,7,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	NumUses        int64             `protobuf:"varint,8,opt,name=num_uses,json=numUses,proto3" json:"num_uses,omitempty"`
+	CreationTime   int64             `protobuf:"varint,9,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
+	TTL            int64             `protobuf:"varint,10,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	ExplicitMaxTTL int64             `protobuf:"varint,11,opt,name=explicit_max_ttl,json=explicitMaxTtl,proto3" json:"explicit_max_ttl,omitempty"`
+	Role           string            `protobuf:"bytes,12,opt,name=role,proto3" json:"role,omitempty"`
+	Period         int64             `protobuf:"varint,13,opt,name=period,proto3" json:"period,omitempty"`
+	EntityID       string            `protobuf:"bytes,14,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	BoundCIDRs     []string          `protobuf:"bytes,15,rep,name=bound_cidrs,json=boundCidrs,proto3" json:"bound_cidrs,omitempty"`
+	NamespaceID    string            `protobuf:"bytes,16,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	CubbyholeID    string            `protobuf:"bytes,17,opt,name=cubbyhole_id,json=cubbyholeId,proto3" json:"cubbyhole_id,omitempty"`
+	Type           uint32            `protobuf:"varint,18,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *TokenEntry) Reset() {
@@ -923,11 +919,11 @@ type LeaseOptions struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TTL       int64                  `sentinel:"" protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
-	Renewable bool                   `sentinel:"" protobuf:"varint,2,opt,name=renewable,proto3" json:"renewable,omitempty"`
-	Increment int64                  `sentinel:"" protobuf:"varint,3,opt,name=increment,proto3" json:"increment,omitempty"`
-	IssueTime *timestamppb.Timestamp `sentinel:"" protobuf:"bytes,4,opt,name=issue_time,json=issueTime,proto3" json:"issue_time,omitempty"`
-	MaxTTL    int64                  `sentinel:"" protobuf:"varint,5,opt,name=MaxTTL,proto3" json:"MaxTTL,omitempty"`
+	TTL       int64                  `protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
+	Renewable bool                   `protobuf:"varint,2,opt,name=renewable,proto3" json:"renewable,omitempty"`
+	Increment int64                  `protobuf:"varint,3,opt,name=increment,proto3" json:"increment,omitempty"`
+	IssueTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=issue_time,json=issueTime,proto3" json:"issue_time,omitempty"`
+	MaxTTL    int64                  `protobuf:"varint,5,opt,name=MaxTTL,proto3" json:"MaxTTL,omitempty"`
 }
 
 func (x *LeaseOptions) Reset() {
@@ -1002,15 +998,15 @@ type Secret struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	LeaseOptions *LeaseOptions `sentinel:"" protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions,proto3" json:"lease_options,omitempty"`
+	LeaseOptions *LeaseOptions `protobuf:"bytes,1,opt,name=lease_options,json=leaseOptions,proto3" json:"lease_options,omitempty"`
 	// InternalData is a JSON object that is stored with the secret.
 	// This will be sent back during a Renew/Revoke for storing internal data
 	// used for those operations.
-	InternalData string `sentinel:"" protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
+	InternalData string `protobuf:"bytes,2,opt,name=internal_data,json=internalData,proto3" json:"internal_data,omitempty"`
 	// LeaseID is the ID returned to the user to manage this secret.
 	// This is generated by Vault core. Any set value will be ignored.
 	// For requests, this will always be blank.
-	LeaseID string `sentinel:"" protobuf:"bytes,3,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	LeaseID string `protobuf:"bytes,3,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
 }
 
 func (x *Secret) Reset() {
@@ -1072,29 +1068,29 @@ type Response struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Secret, if not nil, denotes that this response represents a secret.
-	Secret *Secret `sentinel:"" protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
+	Secret *Secret `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
 	// Auth, if not nil, contains the authentication information for
 	// this response. This is only checked and means something for
 	// credential backends.
-	Auth *Auth `sentinel:"" protobuf:"bytes,2,opt,name=auth,proto3" json:"auth,omitempty"`
+	Auth *Auth `protobuf:"bytes,2,opt,name=auth,proto3" json:"auth,omitempty"`
 	// Response data is a JSON object that must have string keys. For
 	// secrets, this data is sent down to the user as-is. To store internal
 	// data that you don't want the user to see, store it in
 	// Secret.InternalData.
-	Data string `sentinel:"" protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	Data string `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
 	// Redirect is an HTTP URL to redirect to for further authentication.
 	// This is only valid for credential backends. This will be blanked
 	// for any logical backend and ignored.
-	Redirect string `sentinel:"" protobuf:"bytes,4,opt,name=redirect,proto3" json:"redirect,omitempty"`
+	Redirect string `protobuf:"bytes,4,opt,name=redirect,proto3" json:"redirect,omitempty"`
 	// Warnings allow operations or backends to return warnings in response
 	// to user actions without failing the action outright.
-	Warnings []string `sentinel:"" protobuf:"bytes,5,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	Warnings []string `protobuf:"bytes,5,rep,name=warnings,proto3" json:"warnings,omitempty"`
 	// Information for wrapping the response in a cubbyhole
-	WrapInfo *ResponseWrapInfo `sentinel:"" protobuf:"bytes,6,opt,name=wrap_info,json=wrapInfo,proto3" json:"wrap_info,omitempty"`
+	WrapInfo *ResponseWrapInfo `protobuf:"bytes,6,opt,name=wrap_info,json=wrapInfo,proto3" json:"wrap_info,omitempty"`
 	// Headers will contain the http headers from the response. This value will
 	// be used in the audit broker to ensure we are auditing only the allowed
 	// headers.
-	Headers map[string]*Header `sentinel:"" protobuf:"bytes,7,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Headers map[string]*Header `protobuf:"bytes,7,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *Response) Reset() {
@@ -1185,27 +1181,27 @@ type ResponseWrapInfo struct {
 
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
-	TTL int64 `sentinel:"" protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
+	TTL int64 `protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
 	// The token containing the wrapped response
-	Token string `sentinel:"" protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	// The token accessor for the wrapped response token
-	Accessor string `sentinel:"" protobuf:"bytes,3,opt,name=accessor,proto3" json:"accessor,omitempty"`
+	Accessor string `protobuf:"bytes,3,opt,name=accessor,proto3" json:"accessor,omitempty"`
 	// The creation time. This can be used with the TTL to figure out an
 	// expected expiration.
-	CreationTime *timestamppb.Timestamp `sentinel:"" protobuf:"bytes,4,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
+	CreationTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=creation_time,json=creationTime,proto3" json:"creation_time,omitempty"`
 	// If the contained response is the output of a token creation call, the
 	// created token's accessor will be accessible here
-	WrappedAccessor string `sentinel:"" protobuf:"bytes,5,opt,name=wrapped_accessor,json=wrappedAccessor,proto3" json:"wrapped_accessor,omitempty"`
+	WrappedAccessor string `protobuf:"bytes,5,opt,name=wrapped_accessor,json=wrappedAccessor,proto3" json:"wrapped_accessor,omitempty"`
 	// WrappedEntityID is the entity identifier of the caller who initiated the
 	// wrapping request
-	WrappedEntityID string `sentinel:"" protobuf:"bytes,6,opt,name=wrapped_entity_id,json=wrappedEntityID,proto3" json:"wrapped_entity_id,omitempty"`
+	WrappedEntityID string `protobuf:"bytes,6,opt,name=wrapped_entity_id,json=wrappedEntityID,proto3" json:"wrapped_entity_id,omitempty"`
 	// The format to use. This doesn't get returned, it's only internal.
-	Format string `sentinel:"" protobuf:"bytes,7,opt,name=format,proto3" json:"format,omitempty"`
+	Format string `protobuf:"bytes,7,opt,name=format,proto3" json:"format,omitempty"`
 	// CreationPath is the original request path that was used to create
 	// the wrapped response.
-	CreationPath string `sentinel:"" protobuf:"bytes,8,opt,name=creation_path,json=creationPath,proto3" json:"creation_path,omitempty"`
+	CreationPath string `protobuf:"bytes,8,opt,name=creation_path,json=creationPath,proto3" json:"creation_path,omitempty"`
 	// Controls seal wrapping behavior downstream for specific use cases
-	SealWrap bool `sentinel:"" protobuf:"varint,9,opt,name=seal_wrap,json=sealWrap,proto3" json:"seal_wrap,omitempty"`
+	SealWrap bool `protobuf:"varint,9,opt,name=seal_wrap,json=sealWrap,proto3" json:"seal_wrap,omitempty"`
 }
 
 func (x *ResponseWrapInfo) Reset() {
@@ -1310,13 +1306,13 @@ type RequestWrapInfo struct {
 
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
-	TTL int64 `sentinel:"" protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
+	TTL int64 `protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
 	// The format to use for the wrapped response; if not specified it's a bare
 	// token
-	Format string `sentinel:"" protobuf:"bytes,2,opt,name=format,proto3" json:"format,omitempty"`
+	Format string `protobuf:"bytes,2,opt,name=format,proto3" json:"format,omitempty"`
 	// A flag to conforming backends that data for a given request should be
 	// seal wrapped
-	SealWrap bool `sentinel:"" protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap,proto3" json:"seal_wrap,omitempty"`
+	SealWrap bool `protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap,proto3" json:"seal_wrap,omitempty"`
 }
 
 func (x *RequestWrapInfo) Reset() {
@@ -1378,8 +1374,8 @@ type HandleRequestArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StorageID uint32   `sentinel:"" protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
-	Request   *Request `sentinel:"" protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	StorageID uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
+	Request   *Request `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
 }
 
 func (x *HandleRequestArgs) Reset() {
@@ -1434,8 +1430,8 @@ type HandleRequestReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Response *Response   `sentinel:"" protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Err      *ProtoError `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	Response *Response   `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	Err      *ProtoError `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *HandleRequestReply) Reset() {
@@ -1529,7 +1525,7 @@ type InitializeReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Err *ProtoError `sentinel:"" protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
+	Err *ProtoError `protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *InitializeReply) Reset() {
@@ -1577,7 +1573,7 @@ type SpecialPathsReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Paths *Paths `sentinel:"" protobuf:"bytes,1,opt,name=paths,proto3" json:"paths,omitempty"`
+	Paths *Paths `protobuf:"bytes,1,opt,name=paths,proto3" json:"paths,omitempty"`
 }
 
 func (x *SpecialPathsReply) Reset() {
@@ -1625,8 +1621,8 @@ type HandleExistenceCheckArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StorageID uint32   `sentinel:"" protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
-	Request   *Request `sentinel:"" protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	StorageID uint32   `protobuf:"varint,1,opt,name=storage_id,json=storageId,proto3" json:"storage_id,omitempty"`
+	Request   *Request `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
 }
 
 func (x *HandleExistenceCheckArgs) Reset() {
@@ -1681,9 +1677,9 @@ type HandleExistenceCheckReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CheckFound bool        `sentinel:"" protobuf:"varint,1,opt,name=check_found,json=checkFound,proto3" json:"check_found,omitempty"`
-	Exists     bool        `sentinel:"" protobuf:"varint,2,opt,name=exists,proto3" json:"exists,omitempty"`
-	Err        *ProtoError `sentinel:"" protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
+	CheckFound bool        `protobuf:"varint,1,opt,name=check_found,json=checkFound,proto3" json:"check_found,omitempty"`
+	Exists     bool        `protobuf:"varint,2,opt,name=exists,proto3" json:"exists,omitempty"`
+	Err        *ProtoError `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *HandleExistenceCheckReply) Reset() {
@@ -1745,9 +1741,9 @@ type SetupArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BrokerID    uint32            `sentinel:"" protobuf:"varint,1,opt,name=broker_id,json=brokerId,proto3" json:"broker_id,omitempty"`
-	Config      map[string]string `sentinel:"" protobuf:"bytes,2,rep,name=Config,proto3" json:"Config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	BackendUUID string            `sentinel:"" protobuf:"bytes,3,opt,name=backendUUID,proto3" json:"backendUUID,omitempty"`
+	BrokerID    uint32            `protobuf:"varint,1,opt,name=broker_id,json=brokerId,proto3" json:"broker_id,omitempty"`
+	Config      map[string]string `protobuf:"bytes,2,rep,name=Config,proto3" json:"Config,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	BackendUUID string            `protobuf:"bytes,3,opt,name=backendUUID,proto3" json:"backendUUID,omitempty"`
 }
 
 func (x *SetupArgs) Reset() {
@@ -1809,7 +1805,7 @@ type SetupReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Err string `sentinel:"" protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
+	Err string `protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *SetupReply) Reset() {
@@ -1857,7 +1853,7 @@ type TypeReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type uint32 `sentinel:"" protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty"`
+	Type uint32 `protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *TypeReply) Reset() {
@@ -1904,7 +1900,7 @@ type InvalidateKeyArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 }
 
 func (x *InvalidateKeyArgs) Reset() {
@@ -1951,9 +1947,9 @@ type StorageEntry struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Key      string `sentinel:"" protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value    []byte `sentinel:"" protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	SealWrap bool   `sentinel:"" protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap,proto3" json:"seal_wrap,omitempty"`
+	Key      string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value    []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	SealWrap bool   `protobuf:"varint,3,opt,name=seal_wrap,json=sealWrap,proto3" json:"seal_wrap,omitempty"`
 }
 
 func (x *StorageEntry) Reset() {
@@ -2014,7 +2010,7 @@ type StorageListArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Prefix string `sentinel:"" protobuf:"bytes,1,opt,name=prefix,proto3" json:"prefix,omitempty"`
+	Prefix string `protobuf:"bytes,1,opt,name=prefix,proto3" json:"prefix,omitempty"`
 }
 
 func (x *StorageListArgs) Reset() {
@@ -2061,8 +2057,8 @@ type StorageListReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Keys []string `sentinel:"" protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
-	Err  string   `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	Keys []string `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
+	Err  string   `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *StorageListReply) Reset() {
@@ -2116,7 +2112,7 @@ type StorageGetArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 }
 
 func (x *StorageGetArgs) Reset() {
@@ -2163,8 +2159,8 @@ type StorageGetReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Entry *StorageEntry `sentinel:"" protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
-	Err   string        `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	Entry *StorageEntry `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
+	Err   string        `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *StorageGetReply) Reset() {
@@ -2218,7 +2214,7 @@ type StoragePutArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Entry *StorageEntry `sentinel:"" protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
+	Entry *StorageEntry `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
 }
 
 func (x *StoragePutArgs) Reset() {
@@ -2265,7 +2261,7 @@ type StoragePutReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Err string `sentinel:"" protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
+	Err string `protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *StoragePutReply) Reset() {
@@ -2312,7 +2308,7 @@ type StorageDeleteArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 }
 
 func (x *StorageDeleteArgs) Reset() {
@@ -2359,7 +2355,7 @@ type StorageDeleteReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Err string `sentinel:"" protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
+	Err string `protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *StorageDeleteReply) Reset() {
@@ -2406,7 +2402,7 @@ type TTLReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TTL int64 `sentinel:"" protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
+	TTL int64 `protobuf:"varint,1,opt,name=TTL,proto3" json:"TTL,omitempty"`
 }
 
 func (x *TTLReply) Reset() {
@@ -2453,7 +2449,7 @@ type TaintedReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Tainted bool `sentinel:"" protobuf:"varint,1,opt,name=tainted,proto3" json:"tainted,omitempty"`
+	Tainted bool `protobuf:"varint,1,opt,name=tainted,proto3" json:"tainted,omitempty"`
 }
 
 func (x *TaintedReply) Reset() {
@@ -2500,7 +2496,7 @@ type CachingDisabledReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Disabled bool `sentinel:"" protobuf:"varint,1,opt,name=disabled,proto3" json:"disabled,omitempty"`
+	Disabled bool `protobuf:"varint,1,opt,name=disabled,proto3" json:"disabled,omitempty"`
 }
 
 func (x *CachingDisabledReply) Reset() {
@@ -2547,7 +2543,7 @@ type ReplicationStateReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	State int32 `sentinel:"" protobuf:"varint,1,opt,name=state,proto3" json:"state,omitempty"`
+	State int32 `protobuf:"varint,1,opt,name=state,proto3" json:"state,omitempty"`
 }
 
 func (x *ReplicationStateReply) Reset() {
@@ -2594,9 +2590,9 @@ type ResponseWrapDataArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data string `sentinel:"" protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-	TTL  int64  `sentinel:"" protobuf:"varint,2,opt,name=TTL,proto3" json:"TTL,omitempty"`
-	JWT  bool   `sentinel:"" protobuf:"varint,3,opt,name=JWT,proto3" json:"JWT,omitempty"`
+	Data string `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	TTL  int64  `protobuf:"varint,2,opt,name=TTL,proto3" json:"TTL,omitempty"`
+	JWT  bool   `protobuf:"varint,3,opt,name=JWT,proto3" json:"JWT,omitempty"`
 }
 
 func (x *ResponseWrapDataArgs) Reset() {
@@ -2657,8 +2653,8 @@ type ResponseWrapDataReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	WrapInfo *ResponseWrapInfo `sentinel:"" protobuf:"bytes,1,opt,name=wrap_info,json=wrapInfo,proto3" json:"wrap_info,omitempty"`
-	Err      string            `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	WrapInfo *ResponseWrapInfo `protobuf:"bytes,1,opt,name=wrap_info,json=wrapInfo,proto3" json:"wrap_info,omitempty"`
+	Err      string            `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *ResponseWrapDataReply) Reset() {
@@ -2712,7 +2708,7 @@ type MlockEnabledReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Enabled bool `sentinel:"" protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
 }
 
 func (x *MlockEnabledReply) Reset() {
@@ -2759,7 +2755,7 @@ type LocalMountReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Local bool `sentinel:"" protobuf:"varint,1,opt,name=local,proto3" json:"local,omitempty"`
+	Local bool `protobuf:"varint,1,opt,name=local,proto3" json:"local,omitempty"`
 }
 
 func (x *LocalMountReply) Reset() {
@@ -2806,7 +2802,7 @@ type EntityInfoArgs struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	EntityID string `sentinel:"" protobuf:"bytes,1,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityID string `protobuf:"bytes,1,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 }
 
 func (x *EntityInfoArgs) Reset() {
@@ -2853,8 +2849,8 @@ type EntityInfoReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Entity *logical.Entity `sentinel:"" protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
-	Err    string          `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	Entity *logical.Entity `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
+	Err    string          `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *EntityInfoReply) Reset() {
@@ -2908,8 +2904,8 @@ type GroupsForEntityReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Groups []*logical.Group `sentinel:"" protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
-	Err    string           `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	Groups []*logical.Group `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	Err    string           `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *GroupsForEntityReply) Reset() {
@@ -2963,8 +2959,8 @@ type PluginEnvReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PluginEnvironment *logical.PluginEnvironment `sentinel:"" protobuf:"bytes,1,opt,name=plugin_environment,json=pluginEnvironment,proto3" json:"plugin_environment,omitempty"`
-	Err               string                     `sentinel:"" protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
+	PluginEnvironment *logical.PluginEnvironment `protobuf:"bytes,1,opt,name=plugin_environment,json=pluginEnvironment,proto3" json:"plugin_environment,omitempty"`
+	Err               string                     `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 }
 
 func (x *PluginEnvReply) Reset() {
@@ -3018,7 +3014,7 @@ type GeneratePasswordFromPolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PolicyName string `sentinel:"" protobuf:"bytes,1,opt,name=policy_name,json=policyName,proto3" json:"policy_name,omitempty"`
+	PolicyName string `protobuf:"bytes,1,opt,name=policy_name,json=policyName,proto3" json:"policy_name,omitempty"`
 }
 
 func (x *GeneratePasswordFromPolicyRequest) Reset() {
@@ -3065,7 +3061,7 @@ type GeneratePasswordFromPolicyReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Password string `sentinel:"" protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
+	Password string `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
 }
 
 func (x *GeneratePasswordFromPolicyReply) Reset() {
@@ -3113,7 +3109,7 @@ type Connection struct {
 	unknownFields protoimpl.UnknownFields
 
 	// RemoteAddr is the network address that sent the request.
-	RemoteAddr string `sentinel:"" protobuf:"bytes,1,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
+	RemoteAddr string `protobuf:"bytes,1,opt,name=remote_addr,json=remoteAddr,proto3" json:"remote_addr,omitempty"`
 }
 
 func (x *Connection) Reset() {
@@ -4363,1090 +4359,4 @@ func file_sdk_plugin_pb_backend_proto_init() {
 	file_sdk_plugin_pb_backend_proto_rawDesc = nil
 	file_sdk_plugin_pb_backend_proto_goTypes = nil
 	file_sdk_plugin_pb_backend_proto_depIDxs = nil
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConnInterface
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
-
-// BackendClient is the client API for Backend service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type BackendClient interface {
-	// HandleRequest is used to handle a request and generate a response.
-	// The plugins must check the operation type and handle appropriately.
-	HandleRequest(ctx context.Context, in *HandleRequestArgs, opts ...grpc.CallOption) (*HandleRequestReply, error)
-	// SpecialPaths is a list of paths that are special in some way.
-	// See PathType for the types of special paths. The key is the type
-	// of the special path, and the value is a list of paths for this type.
-	// This is not a regular expression but is an exact match. If the path
-	// ends in '*' then it is a prefix-based match. The '*' can only appear
-	// at the end.
-	SpecialPaths(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SpecialPathsReply, error)
-	// HandleExistenceCheck is used to handle a request and generate a response
-	// indicating whether the given path exists or not; this is used to
-	// understand whether the request must have a Create or Update capability
-	// ACL applied. The first bool indicates whether an existence check
-	// function was found for the backend; the second indicates whether, if an
-	// existence check function was found, the item exists or not.
-	HandleExistenceCheck(ctx context.Context, in *HandleExistenceCheckArgs, opts ...grpc.CallOption) (*HandleExistenceCheckReply, error)
-	// Cleanup is invoked during an unmount of a backend to allow it to
-	// handle any cleanup like connection closing or releasing of file handles.
-	// Cleanup is called right before Vault closes the plugin process.
-	Cleanup(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
-	// InvalidateKey may be invoked when an object is modified that belongs
-	// to the backend. The backend can use this to clear any caches or reset
-	// internal state as needed.
-	InvalidateKey(ctx context.Context, in *InvalidateKeyArgs, opts ...grpc.CallOption) (*Empty, error)
-	// Setup is used to set up the backend based on the provided backend
-	// configuration. The plugin's setup implementation should use the provided
-	// broker_id to create a connection back to Vault for use with the Storage
-	// and SystemView clients.
-	Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error)
-	// Initialize is invoked just after mounting a backend to allow it to
-	// handle any initialization tasks that need to be performed.
-	Initialize(ctx context.Context, in *InitializeArgs, opts ...grpc.CallOption) (*InitializeReply, error)
-	// Type returns the BackendType for the particular backend
-	Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeReply, error)
-}
-
-type backendClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewBackendClient(cc grpc.ClientConnInterface) BackendClient {
-	return &backendClient{cc}
-}
-
-func (c *backendClient) HandleRequest(ctx context.Context, in *HandleRequestArgs, opts ...grpc.CallOption) (*HandleRequestReply, error) {
-	out := new(HandleRequestReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/HandleRequest", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) SpecialPaths(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SpecialPathsReply, error) {
-	out := new(SpecialPathsReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/SpecialPaths", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) HandleExistenceCheck(ctx context.Context, in *HandleExistenceCheckArgs, opts ...grpc.CallOption) (*HandleExistenceCheckReply, error) {
-	out := new(HandleExistenceCheckReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/HandleExistenceCheck", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) Cleanup(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/pb.Backend/Cleanup", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) InvalidateKey(ctx context.Context, in *InvalidateKeyArgs, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/pb.Backend/InvalidateKey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) Setup(ctx context.Context, in *SetupArgs, opts ...grpc.CallOption) (*SetupReply, error) {
-	out := new(SetupReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/Setup", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) Initialize(ctx context.Context, in *InitializeArgs, opts ...grpc.CallOption) (*InitializeReply, error) {
-	out := new(InitializeReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/Initialize", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeReply, error) {
-	out := new(TypeReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/Type", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// BackendServer is the server API for Backend service.
-type BackendServer interface {
-	// HandleRequest is used to handle a request and generate a response.
-	// The plugins must check the operation type and handle appropriately.
-	HandleRequest(context.Context, *HandleRequestArgs) (*HandleRequestReply, error)
-	// SpecialPaths is a list of paths that are special in some way.
-	// See PathType for the types of special paths. The key is the type
-	// of the special path, and the value is a list of paths for this type.
-	// This is not a regular expression but is an exact match. If the path
-	// ends in '*' then it is a prefix-based match. The '*' can only appear
-	// at the end.
-	SpecialPaths(context.Context, *Empty) (*SpecialPathsReply, error)
-	// HandleExistenceCheck is used to handle a request and generate a response
-	// indicating whether the given path exists or not; this is used to
-	// understand whether the request must have a Create or Update capability
-	// ACL applied. The first bool indicates whether an existence check
-	// function was found for the backend; the second indicates whether, if an
-	// existence check function was found, the item exists or not.
-	HandleExistenceCheck(context.Context, *HandleExistenceCheckArgs) (*HandleExistenceCheckReply, error)
-	// Cleanup is invoked during an unmount of a backend to allow it to
-	// handle any cleanup like connection closing or releasing of file handles.
-	// Cleanup is called right before Vault closes the plugin process.
-	Cleanup(context.Context, *Empty) (*Empty, error)
-	// InvalidateKey may be invoked when an object is modified that belongs
-	// to the backend. The backend can use this to clear any caches or reset
-	// internal state as needed.
-	InvalidateKey(context.Context, *InvalidateKeyArgs) (*Empty, error)
-	// Setup is used to set up the backend based on the provided backend
-	// configuration. The plugin's setup implementation should use the provided
-	// broker_id to create a connection back to Vault for use with the Storage
-	// and SystemView clients.
-	Setup(context.Context, *SetupArgs) (*SetupReply, error)
-	// Initialize is invoked just after mounting a backend to allow it to
-	// handle any initialization tasks that need to be performed.
-	Initialize(context.Context, *InitializeArgs) (*InitializeReply, error)
-	// Type returns the BackendType for the particular backend
-	Type(context.Context, *Empty) (*TypeReply, error)
-}
-
-// UnimplementedBackendServer can be embedded to have forward compatible implementations.
-type UnimplementedBackendServer struct {
-}
-
-func (*UnimplementedBackendServer) HandleRequest(context.Context, *HandleRequestArgs) (*HandleRequestReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HandleRequest not implemented")
-}
-func (*UnimplementedBackendServer) SpecialPaths(context.Context, *Empty) (*SpecialPathsReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SpecialPaths not implemented")
-}
-func (*UnimplementedBackendServer) HandleExistenceCheck(context.Context, *HandleExistenceCheckArgs) (*HandleExistenceCheckReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HandleExistenceCheck not implemented")
-}
-func (*UnimplementedBackendServer) Cleanup(context.Context, *Empty) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Cleanup not implemented")
-}
-func (*UnimplementedBackendServer) InvalidateKey(context.Context, *InvalidateKeyArgs) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InvalidateKey not implemented")
-}
-func (*UnimplementedBackendServer) Setup(context.Context, *SetupArgs) (*SetupReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Setup not implemented")
-}
-func (*UnimplementedBackendServer) Initialize(context.Context, *InitializeArgs) (*InitializeReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
-}
-func (*UnimplementedBackendServer) Type(context.Context, *Empty) (*TypeReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
-}
-
-func RegisterBackendServer(s *grpc.Server, srv BackendServer) {
-	s.RegisterService(&_Backend_serviceDesc, srv)
-}
-
-func _Backend_HandleRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HandleRequestArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).HandleRequest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/HandleRequest",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).HandleRequest(ctx, req.(*HandleRequestArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_SpecialPaths_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).SpecialPaths(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/SpecialPaths",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).SpecialPaths(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_HandleExistenceCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HandleExistenceCheckArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).HandleExistenceCheck(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/HandleExistenceCheck",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).HandleExistenceCheck(ctx, req.(*HandleExistenceCheckArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_Cleanup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Cleanup(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/Cleanup",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Cleanup(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_InvalidateKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InvalidateKeyArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).InvalidateKey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/InvalidateKey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).InvalidateKey(ctx, req.(*InvalidateKeyArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_Setup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetupArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Setup(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/Setup",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Setup(ctx, req.(*SetupArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InitializeArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Initialize(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/Initialize",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Initialize(ctx, req.(*InitializeArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_Type_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Type(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/Type",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Type(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Backend_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.Backend",
-	HandlerType: (*BackendServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "HandleRequest",
-			Handler:    _Backend_HandleRequest_Handler,
-		},
-		{
-			MethodName: "SpecialPaths",
-			Handler:    _Backend_SpecialPaths_Handler,
-		},
-		{
-			MethodName: "HandleExistenceCheck",
-			Handler:    _Backend_HandleExistenceCheck_Handler,
-		},
-		{
-			MethodName: "Cleanup",
-			Handler:    _Backend_Cleanup_Handler,
-		},
-		{
-			MethodName: "InvalidateKey",
-			Handler:    _Backend_InvalidateKey_Handler,
-		},
-		{
-			MethodName: "Setup",
-			Handler:    _Backend_Setup_Handler,
-		},
-		{
-			MethodName: "Initialize",
-			Handler:    _Backend_Initialize_Handler,
-		},
-		{
-			MethodName: "Type",
-			Handler:    _Backend_Type_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "sdk/plugin/pb/backend.proto",
-}
-
-// StorageClient is the client API for Storage service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type StorageClient interface {
-	List(ctx context.Context, in *StorageListArgs, opts ...grpc.CallOption) (*StorageListReply, error)
-	Get(ctx context.Context, in *StorageGetArgs, opts ...grpc.CallOption) (*StorageGetReply, error)
-	Put(ctx context.Context, in *StoragePutArgs, opts ...grpc.CallOption) (*StoragePutReply, error)
-	Delete(ctx context.Context, in *StorageDeleteArgs, opts ...grpc.CallOption) (*StorageDeleteReply, error)
-}
-
-type storageClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewStorageClient(cc grpc.ClientConnInterface) StorageClient {
-	return &storageClient{cc}
-}
-
-func (c *storageClient) List(ctx context.Context, in *StorageListArgs, opts ...grpc.CallOption) (*StorageListReply, error) {
-	out := new(StorageListReply)
-	err := c.cc.Invoke(ctx, "/pb.Storage/List", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *storageClient) Get(ctx context.Context, in *StorageGetArgs, opts ...grpc.CallOption) (*StorageGetReply, error) {
-	out := new(StorageGetReply)
-	err := c.cc.Invoke(ctx, "/pb.Storage/Get", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *storageClient) Put(ctx context.Context, in *StoragePutArgs, opts ...grpc.CallOption) (*StoragePutReply, error) {
-	out := new(StoragePutReply)
-	err := c.cc.Invoke(ctx, "/pb.Storage/Put", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *storageClient) Delete(ctx context.Context, in *StorageDeleteArgs, opts ...grpc.CallOption) (*StorageDeleteReply, error) {
-	out := new(StorageDeleteReply)
-	err := c.cc.Invoke(ctx, "/pb.Storage/Delete", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// StorageServer is the server API for Storage service.
-type StorageServer interface {
-	List(context.Context, *StorageListArgs) (*StorageListReply, error)
-	Get(context.Context, *StorageGetArgs) (*StorageGetReply, error)
-	Put(context.Context, *StoragePutArgs) (*StoragePutReply, error)
-	Delete(context.Context, *StorageDeleteArgs) (*StorageDeleteReply, error)
-}
-
-// UnimplementedStorageServer can be embedded to have forward compatible implementations.
-type UnimplementedStorageServer struct {
-}
-
-func (*UnimplementedStorageServer) List(context.Context, *StorageListArgs) (*StorageListReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
-}
-func (*UnimplementedStorageServer) Get(context.Context, *StorageGetArgs) (*StorageGetReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
-}
-func (*UnimplementedStorageServer) Put(context.Context, *StoragePutArgs) (*StoragePutReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Put not implemented")
-}
-func (*UnimplementedStorageServer) Delete(context.Context, *StorageDeleteArgs) (*StorageDeleteReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
-}
-
-func RegisterStorageServer(s *grpc.Server, srv StorageServer) {
-	s.RegisterService(&_Storage_serviceDesc, srv)
-}
-
-func _Storage_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StorageListArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StorageServer).List(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Storage/List",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StorageServer).List(ctx, req.(*StorageListArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Storage_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StorageGetArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StorageServer).Get(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Storage/Get",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StorageServer).Get(ctx, req.(*StorageGetArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Storage_Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StoragePutArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StorageServer).Put(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Storage/Put",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StorageServer).Put(ctx, req.(*StoragePutArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Storage_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StorageDeleteArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(StorageServer).Delete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Storage/Delete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StorageServer).Delete(ctx, req.(*StorageDeleteArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Storage_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.Storage",
-	HandlerType: (*StorageServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "List",
-			Handler:    _Storage_List_Handler,
-		},
-		{
-			MethodName: "Get",
-			Handler:    _Storage_Get_Handler,
-		},
-		{
-			MethodName: "Put",
-			Handler:    _Storage_Put_Handler,
-		},
-		{
-			MethodName: "Delete",
-			Handler:    _Storage_Delete_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "sdk/plugin/pb/backend.proto",
-}
-
-// SystemViewClient is the client API for SystemView service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type SystemViewClient interface {
-	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
-	DefaultLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error)
-	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
-	// authors should take care not to issue credentials that last longer than
-	// this value, as Vault will revoke them
-	MaxLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error)
-	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
-	// process of being unmounted. This should only be used in special
-	// circumstances; a primary use-case is as a guard in revocation functions.
-	// If revocation of a backend's leases fails it can keep the unmounting
-	// process from being successful. If the reason for this failure is not
-	// relevant when the mount is tainted (for instance, saving a CRL to disk
-	// when the stored CRL will be removed during the unmounting process
-	// anyways), we can ignore the errors to allow unmounting to complete.
-	Tainted(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TaintedReply, error)
-	// CachingDisabled returns true if caching is disabled. If true, no caches
-	// should be used, despite known slowdowns.
-	CachingDisabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CachingDisabledReply, error)
-	// ReplicationState indicates the state of cluster replication
-	ReplicationState(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ReplicationStateReply, error)
-	// ResponseWrapData wraps the given data in a cubbyhole and returns the
-	// token used to unwrap.
-	ResponseWrapData(ctx context.Context, in *ResponseWrapDataArgs, opts ...grpc.CallOption) (*ResponseWrapDataReply, error)
-	// MlockEnabled returns the configuration setting for enabling mlock on
-	// plugins.
-	MlockEnabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MlockEnabledReply, error)
-	// LocalMount, when run from a system view attached to a request, indicates
-	// whether the request is affecting a local mount or not
-	LocalMount(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LocalMountReply, error)
-	// EntityInfo returns the basic entity information for the given entity id
-	EntityInfo(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*EntityInfoReply, error)
-	// PluginEnv returns Vault environment information used by plugins
-	PluginEnv(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PluginEnvReply, error)
-	// GroupsForEntity returns the group membership information for the given
-	// entity id
-	GroupsForEntity(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*GroupsForEntityReply, error)
-	// GeneratePasswordFromPolicy generates a password from an existing password policy
-	GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error)
-}
-
-type systemViewClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewSystemViewClient(cc grpc.ClientConnInterface) SystemViewClient {
-	return &systemViewClient{cc}
-}
-
-func (c *systemViewClient) DefaultLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error) {
-	out := new(TTLReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/DefaultLeaseTTL", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) MaxLeaseTTL(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TTLReply, error) {
-	out := new(TTLReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/MaxLeaseTTL", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) Tainted(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TaintedReply, error) {
-	out := new(TaintedReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/Tainted", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) CachingDisabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*CachingDisabledReply, error) {
-	out := new(CachingDisabledReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/CachingDisabled", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) ReplicationState(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ReplicationStateReply, error) {
-	out := new(ReplicationStateReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/ReplicationState", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) ResponseWrapData(ctx context.Context, in *ResponseWrapDataArgs, opts ...grpc.CallOption) (*ResponseWrapDataReply, error) {
-	out := new(ResponseWrapDataReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/ResponseWrapData", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) MlockEnabled(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MlockEnabledReply, error) {
-	out := new(MlockEnabledReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/MlockEnabled", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) LocalMount(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*LocalMountReply, error) {
-	out := new(LocalMountReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/LocalMount", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) EntityInfo(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*EntityInfoReply, error) {
-	out := new(EntityInfoReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/EntityInfo", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) PluginEnv(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*PluginEnvReply, error) {
-	out := new(PluginEnvReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/PluginEnv", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) GroupsForEntity(ctx context.Context, in *EntityInfoArgs, opts ...grpc.CallOption) (*GroupsForEntityReply, error) {
-	out := new(GroupsForEntityReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/GroupsForEntity", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *systemViewClient) GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error) {
-	out := new(GeneratePasswordFromPolicyReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/GeneratePasswordFromPolicy", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// SystemViewServer is the server API for SystemView service.
-type SystemViewServer interface {
-	// DefaultLeaseTTL returns the default lease TTL set in Vault configuration
-	DefaultLeaseTTL(context.Context, *Empty) (*TTLReply, error)
-	// MaxLeaseTTL returns the max lease TTL set in Vault configuration; backend
-	// authors should take care not to issue credentials that last longer than
-	// this value, as Vault will revoke them
-	MaxLeaseTTL(context.Context, *Empty) (*TTLReply, error)
-	// Tainted, returns true if the mount is tainted. A mount is tainted if it is in the
-	// process of being unmounted. This should only be used in special
-	// circumstances; a primary use-case is as a guard in revocation functions.
-	// If revocation of a backend's leases fails it can keep the unmounting
-	// process from being successful. If the reason for this failure is not
-	// relevant when the mount is tainted (for instance, saving a CRL to disk
-	// when the stored CRL will be removed during the unmounting process
-	// anyways), we can ignore the errors to allow unmounting to complete.
-	Tainted(context.Context, *Empty) (*TaintedReply, error)
-	// CachingDisabled returns true if caching is disabled. If true, no caches
-	// should be used, despite known slowdowns.
-	CachingDisabled(context.Context, *Empty) (*CachingDisabledReply, error)
-	// ReplicationState indicates the state of cluster replication
-	ReplicationState(context.Context, *Empty) (*ReplicationStateReply, error)
-	// ResponseWrapData wraps the given data in a cubbyhole and returns the
-	// token used to unwrap.
-	ResponseWrapData(context.Context, *ResponseWrapDataArgs) (*ResponseWrapDataReply, error)
-	// MlockEnabled returns the configuration setting for enabling mlock on
-	// plugins.
-	MlockEnabled(context.Context, *Empty) (*MlockEnabledReply, error)
-	// LocalMount, when run from a system view attached to a request, indicates
-	// whether the request is affecting a local mount or not
-	LocalMount(context.Context, *Empty) (*LocalMountReply, error)
-	// EntityInfo returns the basic entity information for the given entity id
-	EntityInfo(context.Context, *EntityInfoArgs) (*EntityInfoReply, error)
-	// PluginEnv returns Vault environment information used by plugins
-	PluginEnv(context.Context, *Empty) (*PluginEnvReply, error)
-	// GroupsForEntity returns the group membership information for the given
-	// entity id
-	GroupsForEntity(context.Context, *EntityInfoArgs) (*GroupsForEntityReply, error)
-	// GeneratePasswordFromPolicy generates a password from an existing password policy
-	GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error)
-}
-
-// UnimplementedSystemViewServer can be embedded to have forward compatible implementations.
-type UnimplementedSystemViewServer struct {
-}
-
-func (*UnimplementedSystemViewServer) DefaultLeaseTTL(context.Context, *Empty) (*TTLReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DefaultLeaseTTL not implemented")
-}
-func (*UnimplementedSystemViewServer) MaxLeaseTTL(context.Context, *Empty) (*TTLReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MaxLeaseTTL not implemented")
-}
-func (*UnimplementedSystemViewServer) Tainted(context.Context, *Empty) (*TaintedReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Tainted not implemented")
-}
-func (*UnimplementedSystemViewServer) CachingDisabled(context.Context, *Empty) (*CachingDisabledReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CachingDisabled not implemented")
-}
-func (*UnimplementedSystemViewServer) ReplicationState(context.Context, *Empty) (*ReplicationStateReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReplicationState not implemented")
-}
-func (*UnimplementedSystemViewServer) ResponseWrapData(context.Context, *ResponseWrapDataArgs) (*ResponseWrapDataReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResponseWrapData not implemented")
-}
-func (*UnimplementedSystemViewServer) MlockEnabled(context.Context, *Empty) (*MlockEnabledReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MlockEnabled not implemented")
-}
-func (*UnimplementedSystemViewServer) LocalMount(context.Context, *Empty) (*LocalMountReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LocalMount not implemented")
-}
-func (*UnimplementedSystemViewServer) EntityInfo(context.Context, *EntityInfoArgs) (*EntityInfoReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EntityInfo not implemented")
-}
-func (*UnimplementedSystemViewServer) PluginEnv(context.Context, *Empty) (*PluginEnvReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PluginEnv not implemented")
-}
-func (*UnimplementedSystemViewServer) GroupsForEntity(context.Context, *EntityInfoArgs) (*GroupsForEntityReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GroupsForEntity not implemented")
-}
-func (*UnimplementedSystemViewServer) GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GeneratePasswordFromPolicy not implemented")
-}
-
-func RegisterSystemViewServer(s *grpc.Server, srv SystemViewServer) {
-	s.RegisterService(&_SystemView_serviceDesc, srv)
-}
-
-func _SystemView_DefaultLeaseTTL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).DefaultLeaseTTL(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/DefaultLeaseTTL",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).DefaultLeaseTTL(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_MaxLeaseTTL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).MaxLeaseTTL(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/MaxLeaseTTL",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).MaxLeaseTTL(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_Tainted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).Tainted(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/Tainted",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).Tainted(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_CachingDisabled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).CachingDisabled(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/CachingDisabled",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).CachingDisabled(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_ReplicationState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).ReplicationState(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/ReplicationState",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).ReplicationState(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_ResponseWrapData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResponseWrapDataArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).ResponseWrapData(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/ResponseWrapData",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).ResponseWrapData(ctx, req.(*ResponseWrapDataArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_MlockEnabled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).MlockEnabled(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/MlockEnabled",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).MlockEnabled(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_LocalMount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).LocalMount(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/LocalMount",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).LocalMount(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_EntityInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EntityInfoArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).EntityInfo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/EntityInfo",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).EntityInfo(ctx, req.(*EntityInfoArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_PluginEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).PluginEnv(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/PluginEnv",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).PluginEnv(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_GroupsForEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EntityInfoArgs)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).GroupsForEntity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/GroupsForEntity",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).GroupsForEntity(ctx, req.(*EntityInfoArgs))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SystemView_GeneratePasswordFromPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GeneratePasswordFromPolicyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).GeneratePasswordFromPolicy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/GeneratePasswordFromPolicy",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).GeneratePasswordFromPolicy(ctx, req.(*GeneratePasswordFromPolicyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _SystemView_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.SystemView",
-	HandlerType: (*SystemViewServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "DefaultLeaseTTL",
-			Handler:    _SystemView_DefaultLeaseTTL_Handler,
-		},
-		{
-			MethodName: "MaxLeaseTTL",
-			Handler:    _SystemView_MaxLeaseTTL_Handler,
-		},
-		{
-			MethodName: "Tainted",
-			Handler:    _SystemView_Tainted_Handler,
-		},
-		{
-			MethodName: "CachingDisabled",
-			Handler:    _SystemView_CachingDisabled_Handler,
-		},
-		{
-			MethodName: "ReplicationState",
-			Handler:    _SystemView_ReplicationState_Handler,
-		},
-		{
-			MethodName: "ResponseWrapData",
-			Handler:    _SystemView_ResponseWrapData_Handler,
-		},
-		{
-			MethodName: "MlockEnabled",
-			Handler:    _SystemView_MlockEnabled_Handler,
-		},
-		{
-			MethodName: "LocalMount",
-			Handler:    _SystemView_LocalMount_Handler,
-		},
-		{
-			MethodName: "EntityInfo",
-			Handler:    _SystemView_EntityInfo_Handler,
-		},
-		{
-			MethodName: "PluginEnv",
-			Handler:    _SystemView_PluginEnv_Handler,
-		},
-		{
-			MethodName: "GroupsForEntity",
-			Handler:    _SystemView_GroupsForEntity_Handler,
-		},
-		{
-			MethodName: "GeneratePasswordFromPolicy",
-			Handler:    _SystemView_GeneratePasswordFromPolicy_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "sdk/plugin/pb/backend.proto",
 }
