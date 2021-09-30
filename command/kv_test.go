@@ -752,7 +752,7 @@ func TestKVPatchCommand_RWMethodNotExists(t *testing.T) {
 	ui, cmd := testKVPatchCommand(t)
 	cmd.client = client
 
-	args := []string{"kv/patch/foo", "foo=a"}
+	args := []string{"-method", "rw", "kv/patch/foo", "foo=a"}
 	code := cmd.Run(args)
 	if code != 2 {
 		t.Fatalf("expected code to be 2 but was %d for cmd %#v with args %#v\n", code, cmd, args)
@@ -789,7 +789,7 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 	cmd.client = client
 
 	// Test single value
-	args := []string{"kv/patch/foo", "foo=aa"}
+	args := []string{"-method", "rw", "kv/patch/foo", "foo=aa"}
 	code := cmd.Run(args)
 	if code != 0 {
 		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
@@ -803,7 +803,10 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 	}
 
 	// Test multi value
-	args = []string{"kv/patch/foo", "foo=aaa bar=bbb"}
+	ui, cmd = testKVPatchCommand(t)
+	cmd.client = client
+
+	args = []string{"-method", "rw", "kv/patch/foo", "foo=aaa", "bar=bbb"}
 	code = cmd.Run(args)
 	if code != 0 {
 		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
