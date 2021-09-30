@@ -5,10 +5,16 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"github.com/go-test/deep"
+	"github.com/hashicorp/go-cleanhttp"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -17,14 +23,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/go-test/deep"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 )
 
 func TestHandler_parseMFAHandler(t *testing.T) {
@@ -917,7 +915,7 @@ func TestHandler_Patch_NotFound(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().JSONMergePatch("kv/data/foo", kvData)
+	resp, err := c.Logical().JSONMergePatch(context.Background(),"kv/data/foo", kvData)
 	if err == nil {
 		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
 	}
@@ -986,7 +984,7 @@ func TestHandler_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err = c.Logical().JSONMergePatch("kv/data/foo", patchData)
+	resp, err = c.Logical().JSONMergePatch(context.Background(),"kv/data/foo", patchData)
 	if err != nil {
 		t.Fatalf("patch request failed, err: %#v, resp: %#v\n", err, resp)
 	}

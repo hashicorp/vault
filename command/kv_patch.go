@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -278,7 +279,7 @@ func (c *KVPatchCommand) actualPatch(client *api.Client, path string, newData ma
 		data["options"].(map[string]interface{})["cas"] = c.flagCAS
 	}
 
-	secret, err := client.Logical().JSONMergePatch(path, data)
+	secret, err := client.Logical().JSONMergePatch(context.Background(), path, data)
 	if err != nil {
 		// If it's a 403, that probably means they don't have the patch capability in their policy. Fall back to
 		// the old way of doing it.
