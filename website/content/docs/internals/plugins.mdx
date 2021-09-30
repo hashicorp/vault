@@ -55,14 +55,14 @@ limited to:
 - Database root credentials rotation
 - WAL Rollback from a previously failed root credentials rotation operation
 
-The lifecycle of plugin processes should be managed by automatically and
-transparently Vault. Termination of these processes are typical in certain
-scenarios, such as the ones listed above. Vault will start plugin processes when
-needed, typically by lazily loading the plugin when a request that requires the
-plugin is received by Vault. A plugin process may be started or terminated
-through other internal processes within Vault as well. Since Vault manages and
-tracks the lifecycle of its plugins, these processes should not be terminated
-by anything other than Vault.
+The lifecycle of plugin processes are managed automatically by Vault.
+Termination of these processes are typical in certain scenarios, such as the
+ones listed above. Vault will start plugin processes when needed, typically by
+lazily loading the plugin when a request that requires the plugin is received by
+Vault. A plugin process may be started or terminated through other internal
+processes within Vault as well. Since Vault manages and tracks the lifecycle of
+its plugins, these processes should not be terminated by anything other than
+Vault.
 
 ## Plugin Communication
 
