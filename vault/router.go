@@ -864,18 +864,13 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 		matchFound := true
 		for i, wcPathPart := range splitCurrWCPath {
 			switch {
-			case wcPathPart == "+":
+			case wcPathPart == "+", wcPathPart == reqPathParts[i]:
 				segments = append(segments, reqPathParts[i])
-
-			case wcPathPart == reqPathParts[i]:
-				segments = append(segments, reqPathParts[i])
-
 			case isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(reqPathParts[i], wcPathPart):
 				segments = append(segments, reqPathParts[i:]...)
 			default:
 				// we encounted segments that did not match
-				// this flag will prevent false positives when currWCPath is a
-				// prefix
+				// this flag will prevent false positives when currWCPath is a prefix
 				matchFound = false
 				break
 			}
