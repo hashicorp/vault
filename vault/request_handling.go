@@ -52,9 +52,9 @@ type HandlerProperties struct {
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
 // ID. If the entity is merged into a different entity object, the entity into
 // which the given entity ID is merged into will be returned. This function
-// also returns the cumulative list of policies that the entity is entitled to.
-// This list includes the policies from the entity itself and from all the
-// groups in which the given entity ID is a member of.
+// also returns the cumulative list of policies that the entity is entitled to
+// if derivePolicies is set to true. This list includes the policies from the
+// entity itself and from all the groups in which the given entity ID is a member of.
 func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string, derivePolicies bool) (*identity.Entity, map[string][]string, error) {
 	if entityID == "" || c.identityStore == nil {
 		return nil, nil, nil
