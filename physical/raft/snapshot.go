@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -456,7 +457,15 @@ func (s *BoltSnapshotSink) Close() error {
 
 		// Move the directory into place
 		newPath := strings.TrimSuffix(s.dir, tmpSuffix)
-		if err := safeio.Rename(s.dir, newPath); err != nil {
+
+		var err error
+		if runtime.GOOS != "windows" {
+			err = safeio.Rename(s.dir, newPath)
+		} else {
+			err = os.Rename(s.dir, newPath)
+		}
+
+		if err != nil {
 			s.logger.Error("failed to move snapshot into place", "error", err)
 			return err
 		}
@@ -511,7 +520,11 @@ func (i *boltSnapshotInstaller) Install(filename string) error {
 	}
 
 	// Rename the snapshot to the FSM location
-	return safeio.Rename(i.filename, filename)
+	if runtime.GOOS != "windows" {
+		return safeio.Rename(i.filename, filename)
+	} else {
+		return os.Rename(i.filename, filename)
+	}
 }
 
 // snapshotName generates a name for the snapshot.

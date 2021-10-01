@@ -35,6 +35,10 @@
     .helper-text {
       font-weight: normal;
     }
+    &.justify-right {
+      display: flex;
+      justify-content: right;
+    }
   }
 
   .hs-icon {
