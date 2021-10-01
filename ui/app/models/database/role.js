@@ -80,6 +80,16 @@ export default Model.extend({
     theme: 'hashi short',
     defaultShown: 'Default',
   }),
+  elasticsearch_role_definition: attr('string', {
+    editType: 'json',
+    allowReset: true,
+    theme: 'hashi short',
+    defaultShown: 'Default',
+  }),
+  elasticsearch_roles: attr('string', {
+    editType: 'stringArray',
+    defaultShown: 'Default',
+  }),
 
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
@@ -110,6 +120,8 @@ export default Model.extend({
       'revocation_statements',
       'revocation_statement', // only for MongoDB (styling difference)
       'rotation_statements',
+      'elasticsearch_role_definition',
+      'elasticsearch_roles',
       'rollback_statements',
       'renew_statements',
     ];

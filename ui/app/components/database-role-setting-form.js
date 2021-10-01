@@ -31,6 +31,7 @@ const STATEMENT_FIELDS = {
     'mysql-aurora-database-plugin': [],
     'mysql-rds-database-plugin': [],
     'mysql-legacy-database-plugin': [],
+    'elasticsearch-database-plugin': [],
   },
   dynamic: {
     default: ['creation_statements', 'revocation_statements', 'rollback_statements', 'renew_statements'],
@@ -40,6 +41,11 @@ const STATEMENT_FIELDS = {
     'mysql-aurora-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-rds-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-legacy-database-plugin': ['creation_statements', 'revocation_statements'],
+    'elasticsearch-database-plugin': [
+      'creation_statements',
+      'elasticsearch_role_definition',
+      'elasticsearch_roles',
+    ],
   },
 };
 export default class DatabaseRoleSettingForm extends Component {
