@@ -80,6 +80,11 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/enterprise/license/faqs',
+    destination: '/docs/enterprise/license/faq',
+    permanent: true,
+  },
+  {
     source: '/docs/enterprise/hsm/configuration',
     destination: '/docs/configuration/seal/pkcs11',
     permanent: true,

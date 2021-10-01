@@ -19,8 +19,8 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
 )
@@ -125,6 +125,9 @@ type Config struct {
 
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
+
+	// CloneHeaders ensures that the source client's headers are copied to its clone.
+	CloneHeaders bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -200,7 +203,7 @@ func DefaultConfig() *Config {
 	return config
 }
 
-// ConfigureTLS takes a set of TLS configurations and applies those to the the
+// ConfigureTLS takes a set of TLS configurations and applies those to the
 // HTTP client.
 func (c *Config) ConfigureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
@@ -504,6 +507,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.Limiter = c.config.Limiter
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
+	newConfig.CloneHeaders = c.config.CloneHeaders
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -809,6 +813,26 @@ func (c *Client) SetLogger(logger retryablehttp.LeveledLogger) {
 	c.config.Logger = logger
 }
 
+// SetCloneHeaders to allow headers to be copied whenever the client is cloned.
+func (c *Client) SetCloneHeaders(cloneHeaders bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.CloneHeaders = cloneHeaders
+}
+
+// CloneHeaders gets the configured CloneHeaders value.
+func (c *Client) CloneHeaders() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CloneHeaders
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
@@ -839,10 +863,15 @@ func (c *Client) Clone() (*Client, error) {
 		OutputCurlString: config.OutputCurlString,
 		AgentAddress:     config.AgentAddress,
 		SRVLookup:        config.SRVLookup,
+		CloneHeaders:     config.CloneHeaders,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
 		return nil, err
+	}
+
+	if config.CloneHeaders {
+		client.SetHeaders(c.Headers().Clone())
 	}
 
 	return client, nil

@@ -11,8 +11,20 @@ const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 const Validations = buildValidations({
   path: validator('presence', {
     presence: true,
-    message: "Path can't be blank",
+    message: "Path can't be blank.",
   }),
+  maxVersions: [
+    validator('number', {
+      allowString: true,
+      integer: true,
+      message: 'Maximum versions must be a number.',
+    }),
+    validator('length', {
+      min: 1,
+      max: 16,
+      message: 'You cannot go over 16 characters.',
+    }),
+  ],
 });
 
 export default Model.extend(Validations, {
@@ -35,6 +47,26 @@ export default Model.extend(Validations, {
     helpText:
       'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
   }),
+  // KV 2 additional config default options
+  maxVersions: attr('number', {
+    defaultValue: 0,
+    label: 'Maximum number of versions',
+    subText:
+      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value.',
+  }),
+  casRequired: attr('boolean', {
+    defaultValue: false,
+    label: 'Require Check and Set',
+    subText:
+      'If checked, all keys will require the cas parameter to be set on all write requests. A key’s metadata settings can overwrite this value.',
+  }),
+  deleteVersionAfter: attr({
+    defaultValue: 0,
+    editType: 'ttl',
+    label: 'Automate secret deletion',
+    helperTextDisabled: 'A secret’s version must be manually deleted.',
+    helperTextEnabled: 'Delete all new versions of this secret after',
+  }),
 
   modelTypeForKV: computed('engineType', 'options.version', function() {
     let type = this.engineType;
@@ -48,8 +80,9 @@ export default Model.extend(Validations, {
 
   isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
 
-  formFields: computed('engineType', function() {
+  formFields: computed('engineType', 'options.version', function() {
     let type = this.engineType;
+    let version = this.options?.version;
     let fields = [
       'type',
       'path',
@@ -62,12 +95,22 @@ export default Model.extend(Validations, {
     if (type === 'kv' || type === 'generic') {
       fields.push('options.{version}');
     }
+    // version comes in as number not string
+    if (type === 'kv' && version === 2) {
+      fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
+    }
     return fields;
   }),
 
   formFieldGroups: computed('engineType', function() {
     let type = this.engineType;
-    let defaultGroup = { default: ['path'] };
+    let defaultGroup;
+    // KV has specific config options it adds on the enable engine. https://www.vaultproject.io/api/secret/kv/kv-v2#configure-the-kv-engine
+    if (type === 'kv') {
+      defaultGroup = { default: ['path', 'maxVersions', 'casRequired', 'deleteVersionAfter'] };
+    } else {
+      defaultGroup = { default: ['path'] };
+    }
     let optionsGroup = {
       'Method Options': [
         'description',

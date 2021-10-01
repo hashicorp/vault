@@ -68,8 +68,7 @@ management tool.
     $ vault auth enable kubernetes
     ```
 
-1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use `kubectl cluster-info` to validate the Kubernetes host address and TCP port. For the
-    list of available configuration options, please see the API documentation.
+1.  Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use `kubectl cluster-info` to validate the Kubernetes host address and TCP port. Kubernetes 1.21+ clusters may require setting the service account `issuer`, [as described here](/docs/auth/kubernetes#discovering-the-service-account-issuer). For the list of available configuration options, please see the [API documentation](/api/auth/kubernetes).
 
     ```text
     $ vault write auth/kubernetes/config \
@@ -99,8 +98,47 @@ management tool.
     This role authorizes the "vault-auth" service account in the default
     namespace and it gives it the default policy.
 
-    For the complete list of configuration options, please see the API
-    documentation.
+    For the complete list of configuration options, please see the [API
+    documentation](/api/auth/kubernetes).
+
+### Discovering the service account `issuer`
+
+Kubernetes 1.21+ clusters may require setting the service account
+[`issuer`](/api-docs/auth/kubernetes#issuer) to the same value as
+`kube-apiserver`'s `--service-account-issuer` flag. This is because the service
+account JWTs for these clusters may have an issuer specific to the cluster
+itself, instead of the old default of `kubernetes/serviceaccount`. If you are
+unable to check this value directly, you can run the following and look for the
+`"iss"` field to find the required value:
+
+```bash
+kubectl proxy &
+curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
+  | jq -r '.status.token' \
+  | cut -d . -f2 \
+  | base64 -D
+```
+
+Most clusters will also have that information available at the
+`.well-known/openid-configuration` endpoint:
+
+```bash
+kubectl proxy &
+curl --silent http://127.0.0.1:8001/.well-known/openid-configuration | jq -r .issuer
+```
+
+This value is then used when configuring Kubernetes auth, e.g.:
+
+```bash
+vault write auth/kubernetes/config \
+  token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
+  kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+  issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
+```
 
 ## Configuring Kubernetes
 

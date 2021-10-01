@@ -1,0 +1,4 @@
++```release-note:improvement
++auth/kubernetes: validate JWT against the provided role on alias look ahead operations
++```
+

@@ -80,7 +80,7 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 
 	core := cores[0]
 
-	sys := vault.TestDynamicSystemView(core.Core)
+	sys := vault.TestDynamicSystemView(core.Core, nil)
 
 	config := &logical.BackendConfig{
 		Logger: logging.NewVaultLogger(log.Debug),

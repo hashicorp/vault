@@ -19,11 +19,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -117,6 +117,10 @@ type ExpirationManager struct {
 	// Track expired leases that have been determined to be irrevocable (without
 	// manual intervention). We retain a subset of the lease info in memory
 	irrevocable sync.Map
+
+	// Track count for metrics reporting
+	// This value is protected by pendingLock
+	irrevocableLeaseCount int
 
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
@@ -455,6 +459,20 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	}
 	go c.expiration.Restore(errorFunc)
 
+	quit := c.expiration.quitCh
+	go func() {
+		t := time.NewTimer(24 * time.Hour)
+		for {
+			select {
+			case <-quit:
+				return
+			case <-t.C:
+				c.expiration.attemptIrrevocableLeasesRevoke()
+				t.Reset(24 * time.Hour)
+			}
+		}
+	}()
+
 	return nil
 }
 
@@ -539,6 +557,7 @@ func (m *ExpirationManager) invalidate(key string) {
 
 				if _, ok := m.irrevocable.Load(leaseID); ok {
 					m.irrevocable.Delete(leaseID)
+					m.irrevocableLeaseCount--
 
 					m.leaseCount--
 					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
@@ -886,6 +905,7 @@ func (m *ExpirationManager) Stop() error {
 		m.irrevocable.Delete(key)
 		return true
 	})
+	m.irrevocableLeaseCount = 0
 	m.pendingLock.Unlock()
 
 	if m.inRestoreMode() {
@@ -941,6 +961,39 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 	m.updatePending(le)
 
 	return nil
+}
+
+// should be run on a schedule. something like once a day, maybe once a week
+func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
+	m.irrevocable.Range(func(k, v interface{}) bool {
+		leaseID := k.(string)
+		le := v.(*leaseEntry)
+
+		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
+			// if we get an error (or no namespace) note it, but continue attempting
+			// to revoke other leases
+			leaseNS, err := m.getNamespaceFromLeaseID(m.core.activeContext, leaseID)
+			if err != nil {
+				m.logger.Debug("could not get lease namespace from ID", "error", err)
+				return true
+			}
+			if leaseNS == nil {
+				m.logger.Debug("could not get lease namespace from ID: nil namespace")
+				return true
+			}
+
+			ctxWithNS := namespace.ContextWithNamespace(m.core.activeContext, leaseNS)
+			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
+			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
+				// on failure, force some delay to mitigate resource spike while
+				// this is running. if revocations succeed, we are okay with
+				// the higher resource consumption.
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+
+		return true
+	})
 }
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
@@ -1017,7 +1070,11 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	m.pendingLock.Lock()
 	m.removeFromPending(ctx, leaseID, true)
 	m.nonexpiring.Delete(leaseID)
-	m.irrevocable.Delete(leaseID)
+
+	if _, ok := m.irrevocable.Load(le.LeaseID); ok {
+		m.irrevocable.Delete(leaseID)
+		m.irrevocableLeaseCount--
+	}
 	m.pendingLock.Unlock()
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
@@ -1812,6 +1869,12 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 		m.removeFromPending(m.quitContext, le.LeaseID, false)
 		m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+
+		// Increment count if the lease was not present in the irrevocable map
+		// prior to being added to it above
+		if !leaseInIrrevocable {
+			m.irrevocableLeaseCount++
+		}
 	} else {
 		// Create entry if it does not exist or reset if it does
 		if leaseInPending {
@@ -1960,7 +2023,6 @@ func (m *ExpirationManager) loadEntry(ctx context.Context, leaseID string) (*lea
 		m.deleteLockForLease(leaseID)
 	}
 	return leaseEntry, err
-
 }
 
 // loadEntryInternal is used when you need to load an entry but also need to
@@ -2295,16 +2357,19 @@ func (m *ExpirationManager) lookupLeasesByToken(ctx context.Context, te *logical
 
 // emitMetrics is invoked periodically to emit statistics
 func (m *ExpirationManager) emitMetrics() {
-	// All updates of this value are with the pendingLock held.
+	// All updates of these values are with the pendingLock held.
 	m.pendingLock.RLock()
-	num := m.leaseCount
+	allLeases := m.leaseCount
+	irrevocableLeases := m.irrevocableLeaseCount
 	m.pendingLock.RUnlock()
 
-	metrics.SetGauge([]string{"expire", "num_leases"}, float32(num))
+	metrics.SetGauge([]string{"expire", "num_leases"}, float32(allLeases))
+
+	metrics.SetGauge([]string{"expire", "num_irrevocable_leases"}, float32(irrevocableLeases))
 	// Check if lease count is greater than the threshold
-	if num > maxLeaseThreshold {
+	if allLeases > maxLeaseThreshold {
 		if atomic.LoadUint32(m.leaseCheckCounter) > 59 {
-			m.logger.Warn("lease count exceeds warning lease threshold", "have", num, "threshold", maxLeaseThreshold)
+			m.logger.Warn("lease count exceeds warning lease threshold", "have", allLeases, "threshold", maxLeaseThreshold)
 			atomic.StoreUint32(m.leaseCheckCounter, 0)
 		} else {
 			atomic.AddUint32(m.leaseCheckCounter, 1)
@@ -2445,7 +2510,8 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 }
 
 // Marks a pending lease as irrevocable. Because the lease is being moved from
-// pending to irrevocable, no total lease count metrics/quotas updates are needed
+// pending to irrevocable, no total lease count metrics/quotas updates are needed.
+// However, irrevocable lease count will need to be incremented
 // note: must be called with pending lock held
 func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseEntry, err error) {
 	if le == nil {
@@ -2472,6 +2538,7 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.persistEntry(ctx, le)
 
 	m.irrevocable.Store(le.LeaseID, m.inMemoryLeaseInfo(le))
+	m.irrevocableLeaseCount++
 	m.removeFromPending(ctx, le.LeaseID, false)
 	m.nonexpiring.Delete(le.LeaseID)
 }
@@ -2516,7 +2583,6 @@ func (m *ExpirationManager) getLeaseMountAccessor(ctx context.Context, leaseID s
 	return mountAccessor
 }
 
-// TODO SW if keep counts as a map, should update the RFC
 func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, includeChildNamespaces bool) (map[string]interface{}, error) {
 	requestNS, err := namespace.FromContext(ctx)
 	if err != nil {

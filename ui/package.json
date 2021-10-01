@@ -23,8 +23,8 @@
     "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
     "test:quick": "node scripts/start-vault.js",
     "test:quick-oss": "yarn test:quick -f='!enterprise'",
-    "build:storybook": "build-storybook -s ../pkg/web_ui",
-    "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
+    "build:storybook": "build-storybook -s ../http/web_ui",
+    "storybook": "start-storybook -p 6006 -s ../http/web_ui",
     "deploy:storybook": "yarn build && yarn build:storybook",
     "gen-story-md": "node scripts/gen-story-md.js",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
@@ -44,6 +44,7 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.12.1",
     "@babel/plugin-transform-block-scoping": "^7.12.1",
     "@ember/optional-features": "^2.0.0",
+    "@ember/render-modifiers": "^1.0.2",
     "@glimmer/component": "^1.0.2",
     "@glimmer/tracking": "^1.0.2",
     "@hashicorp/structure-icons": "^1.3.0",
@@ -92,10 +93,11 @@
     "ember-cli-string-helpers": "^4.0.0",
     "ember-cli-terser": "^4.0.0",
     "ember-composable-helpers": "^4.3.0",
-    "ember-concurrency": "^1.3.0",
+    "ember-concurrency": "^2.1.2",
     "ember-concurrency-test-waiter": "^0.3.2",
     "ember-copy": "^1.0.0",
     "ember-cp-validations": "^4.0.0-beta.12",
+    "ember-d3": "^0.5.1",
     "ember-data": "~3.22.0",
     "ember-data-model-fragments": "5.0.0-beta.0",
     "ember-engines": "^0.8.3",
@@ -188,7 +190,7 @@
     "xmlhttprequest-ssl": "^1.6.2"
   },
   "engines": {
-    "node": "10.* || >= 12"
+    "node": "14.*"
   },
   "ember": {
     "edition": "octane"

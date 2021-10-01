@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
@@ -16,7 +17,9 @@ export default Route.extend(ModelBoundaryRoute, {
   }),
 
   beforeModel() {
-    let authType = this.auth.getAuthType();
+    const authType = this.auth.getAuthType();
+    const baseUrl = window.location.origin;
+    const ns = this.namespaceService.path;
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
@@ -24,6 +27,15 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
-    this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
+    if (Ember.testing) {
+      // Don't redirect on the test
+      this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
+    } else {
+      let params = `?with=${authType}`;
+      if (ns) {
+        params = `${params}&namespace=${ns}`;
+      }
+      location.assign(`${baseUrl}/ui/vault/auth${params}`);
+    }
   },
 });
