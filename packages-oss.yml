@@ -197,7 +197,7 @@ layers:
                                g++-multilib \
                                ca-certificates \
                                git mercurial bzr \
-                               gnupg2 \
+                               gnupg \
                                libltdl-dev \
                                libltdl7 \
       						             bash \
