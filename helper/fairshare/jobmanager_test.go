@@ -312,10 +312,10 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 		j.AddJob(&job, queueID)
 
 		if _, ok := expected[queueID]; !ok {
-			expected[queueID] = 1
-		} else {
-			expected[queueID]++
+			expected[queueID] = 0
 		}
+
+		expected[queueID]++
 	}
 
 	pendingJobs := j.GetWorkQueueLengths()
@@ -326,10 +326,6 @@ func TestJobManager_GetWorkQueueLengths(t *testing.T) {
 
 func TestJobManager_removeLastQueueAccessed(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 1, newTestLogger("jobmanager-test"), nil)
-
-	j.addQueue("queue-0")
-	j.addQueue("queue-1")
-	j.addQueue("queue-2")
 
 	testCases := []struct {
 		lastQueueAccessed        int
@@ -376,6 +372,11 @@ func TestJobManager_removeLastQueueAccessed(t *testing.T) {
 
 	j.l.Lock()
 	defer j.l.Unlock()
+
+	j.addQueue("queue-0")
+	j.addQueue("queue-1")
+	j.addQueue("queue-2")
+
 	for _, tc := range testCases {
 		j.lastQueueAccessed = tc.lastQueueAccessed
 		j.removeLastQueueAccessed()
@@ -398,7 +399,7 @@ func TestJobManager_removeLastQueueAccessed(t *testing.T) {
 	}
 }
 
-func TestJobManager_getNextJob(t *testing.T) {
+func TestJobManager_EndToEnd(t *testing.T) {
 	testCases := []struct {
 		name    string
 		queueID string
@@ -439,17 +440,11 @@ func TestJobManager_getNextJob(t *testing.T) {
 
 	expectedOrder := []string{"job-1", "job-2", "job-4", "job-3", "job-5"}
 
-	// use one worker to guarantee ordering
-	numWorkers := 1
 	resultsCh := make(chan string)
 	defer close(resultsCh)
 
-	j := NewJobManager("test-job-mgr", numWorkers, newTestLogger("jobmanager-test"), nil)
-
-	doneCh := make(chan struct{})
 	var mu sync.Mutex
 	order := make([]string, 0)
-	timeout := time.After(5 * time.Second)
 
 	go func() {
 		for {
@@ -475,6 +470,8 @@ func TestJobManager_getNextJob(t *testing.T) {
 	}
 	onFail := func(_ error) {}
 
+	// use one worker to guarantee ordering
+	j := NewJobManager("test-job-mgr", 1, newTestLogger("jobmanager-test"), nil)
 	for _, tc := range testCases {
 		wg.Add(1)
 		job := newTestJob(t, tc.name, ex, onFail)
@@ -484,11 +481,13 @@ func TestJobManager_getNextJob(t *testing.T) {
 	j.Start()
 	defer j.Stop()
 
+	doneCh := make(chan struct{})
 	go func() {
 		wg.Wait()
 		doneCh <- struct{}{}
 	}()
 
+	timeout := time.After(5 * time.Second)
 	select {
 	case <-doneCh:
 		break
@@ -503,9 +502,245 @@ func TestJobManager_getNextJob(t *testing.T) {
 	}
 }
 
+func TestFairshare_StressTest(t *testing.T) {
+	var wg sync.WaitGroup
+	ex := func(name string) error {
+		wg.Done()
+		return nil
+	}
+	onFail := func(_ error) {}
+
+	j := NewJobManager("test-job-mgr", 15, nil, nil)
+	j.Start()
+	defer j.Stop()
+
+	for i := 0; i < 3000; i++ {
+		wg.Add(1)
+		job := newTestJob(t, fmt.Sprintf("a-job-%d", i), ex, onFail)
+		j.AddJob(&job, "a")
+	}
+	for i := 0; i < 4000; i++ {
+		wg.Add(1)
+		job := newTestJob(t, fmt.Sprintf("b-job-%d", i), ex, onFail)
+		j.AddJob(&job, "b")
+	}
+	for i := 0; i < 3000; i++ {
+		wg.Add(1)
+		job := newTestJob(t, fmt.Sprintf("c-job-%d", i), ex, onFail)
+		j.AddJob(&job, "c")
+	}
+
+	doneCh := make(chan struct{})
+	go func() {
+		wg.Wait()
+		doneCh <- struct{}{}
+	}()
+
+	timeout := time.After(5 * time.Second)
+	select {
+	case <-doneCh:
+		break
+	case <-timeout:
+		t.Fatal("timed out")
+	}
+}
+
 func TestFairshare_nilLoggerJobManager(t *testing.T) {
 	j := NewJobManager("test-job-mgr", 1, nil, nil)
 	if j.logger == nil {
 		t.Error("logger not set up properly")
+	}
+}
+
+func TestFairshare_getNextQueue(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 18, nil, nil)
+
+	for i := 0; i < 10; i++ {
+		job := newDefaultTestJob(t, fmt.Sprintf("job-%d", i))
+		j.AddJob(&job, "a")
+		j.AddJob(&job, "b")
+		j.AddJob(&job, "c")
+	}
+
+	j.l.Lock()
+	defer j.l.Unlock()
+
+	// fake out some number of workers with various remaining work scenario
+	// no queue can be assigned more than 6 workers
+	j.workerCount["a"] = 1
+	j.workerCount["b"] = 2
+	j.workerCount["c"] = 5
+
+	expectedOrder := []string{"a", "b", "c", "a", "b", "a", "b", "a", "b", "a"}
+
+	for _, expectedQueueID := range expectedOrder {
+		queueID, canAssignWorker := j.getNextQueue()
+
+		if !canAssignWorker {
+			t.Fatalf("expected have work true, got false for queue %q", queueID)
+		}
+		if queueID != expectedQueueID {
+			t.Errorf("expected queueID %q, got %q", expectedQueueID, queueID)
+		}
+
+		// simulate a worker being added to that queue
+		j.workerCount[queueID]++
+	}
+
+	// queues are saturated with work, we shouldn't be able to find a queue
+	// eligible for a worker (and last accessed queue shouldn't update)
+	expectedLastQueueAccessed := j.lastQueueAccessed
+	queueID, canAssignWork := j.getNextQueue()
+	if canAssignWork {
+		t.Error("should not be able to assign work with all queues saturated")
+	}
+	if queueID != "" {
+		t.Errorf("expected no queueID, got %s", queueID)
+	}
+	if j.lastQueueAccessed != expectedLastQueueAccessed {
+		t.Errorf("expected no last queue accessed update. had %d, got %d", expectedLastQueueAccessed, j.lastQueueAccessed)
+	}
+}
+
+func TestJobManager_pruneEmptyQueues(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 18, nil, nil)
+
+	// add a few jobs to test out queue pruning
+	// for test simplicity, we'll keep the number of workers per queue at 0
+	testJob := newDefaultTestJob(t, "job-0")
+	j.AddJob(&testJob, "a")
+	j.AddJob(&testJob, "a")
+	j.AddJob(&testJob, "b")
+
+	job, queueID := j.getNextJob()
+	if queueID != "a" || job == nil {
+		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
+	}
+
+	j.l.RLock()
+	if _, ok := j.queues["a"]; !ok {
+		t.Error("expected queue 'a' to exist")
+	}
+	if _, ok := j.queues["b"]; !ok {
+		t.Error("expected queue 'b' to exist")
+	}
+	j.l.RUnlock()
+
+	job, queueID = j.getNextJob()
+	if queueID != "b" || job == nil {
+		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
+	}
+
+	j.l.RLock()
+	if _, ok := j.queues["a"]; !ok {
+		t.Error("expected queue 'a' to exist")
+	}
+	if _, ok := j.queues["b"]; ok {
+		t.Error("expected queue 'b' to be pruned")
+	}
+	j.l.RUnlock()
+
+	job, queueID = j.getNextJob()
+	if queueID != "a" || job == nil {
+		t.Fatalf("bad next job: queueID %s, job: %#v", queueID, job)
+	}
+
+	j.l.RLock()
+	if _, ok := j.queues["a"]; ok {
+		t.Error("expected queue 'a' to be pruned")
+	}
+	if _, ok := j.queues["b"]; ok {
+		t.Error("expected queue 'b' to be pruned")
+	}
+	j.l.RUnlock()
+
+	job, queueID = j.getNextJob()
+	if job != nil {
+		t.Errorf("expected no more jobs (out of queues). queueID: %s, job: %#v", queueID, job)
+	}
+}
+
+func TestFairshare_WorkerCount_IncrementAndDecrement(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 18, nil, nil)
+
+	job := newDefaultTestJob(t, "job-0")
+	j.AddJob(&job, "a")
+	j.AddJob(&job, "b")
+	j.AddJob(&job, "c")
+
+	// test to make sure increment works
+	j.incrementWorkerCount("a")
+	workerCounts := j.GetWorkerCounts()
+	if workerCounts["a"] != 1 {
+		t.Fatalf("expected 1 worker on 'a', got %d", workerCounts["a"])
+	}
+	if workerCounts["b"] != 0 {
+		t.Fatalf("expected 0 workers on 'b', got %d", workerCounts["b"])
+	}
+	if workerCounts["c"] != 0 {
+		t.Fatalf("expected 0 workers on 'c', got %d", workerCounts["c"])
+	}
+
+	// test to make sure decrement works (when there is still work for the queue)
+	j.decrementWorkerCount("a")
+	workerCounts = j.GetWorkerCounts()
+	if workerCounts["a"] != 0 {
+		t.Fatalf("expected 0 workers on 'a', got %d", workerCounts["a"])
+	}
+
+	// add a worker to queue "a" and remove all work to ensure worker count gets
+	// cleared out for "a"
+	j.incrementWorkerCount("a")
+	j.l.Lock()
+	delete(j.queues, "a")
+	j.l.Unlock()
+
+	j.decrementWorkerCount("a")
+	workerCounts = j.GetWorkerCounts()
+	if _, ok := workerCounts["a"]; ok {
+		t.Fatalf("expected no worker count for 'a', got %#v", workerCounts)
+	}
+}
+
+func TestFairshare_queueWorkersSaturated(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 20, nil, nil)
+
+	job := newDefaultTestJob(t, "job-0")
+	j.AddJob(&job, "a")
+	j.AddJob(&job, "b")
+
+	// no more than 9 workers can be assigned to a single queue in this example
+	for i := 0; i < 8; i++ {
+		j.incrementWorkerCount("a")
+		j.incrementWorkerCount("b")
+
+		j.l.RLock()
+		if j.queueWorkersSaturated("a") {
+			j.l.RUnlock()
+			t.Fatalf("queue 'a' falsely saturated: %#v", j.GetWorkerCounts())
+		}
+		if j.queueWorkersSaturated("b") {
+			j.l.RUnlock()
+			t.Fatalf("queue 'b' falsely saturated: %#v", j.GetWorkerCounts())
+		}
+		j.l.RUnlock()
+	}
+
+	// adding the 9th and 10th workers should saturate the number of workers we
+	// can have per queue
+	for i := 8; i < 10; i++ {
+		j.incrementWorkerCount("a")
+		j.incrementWorkerCount("b")
+
+		j.l.RLock()
+		if !j.queueWorkersSaturated("a") {
+			j.l.RUnlock()
+			t.Fatalf("queue 'a' falsely unsaturated: %#v", j.GetWorkerCounts())
+		}
+		if !j.queueWorkersSaturated("b") {
+			j.l.RUnlock()
+			t.Fatalf("queue 'b' falsely unsaturated: %#v", j.GetWorkerCounts())
+		}
+		j.l.RUnlock()
 	}
 }

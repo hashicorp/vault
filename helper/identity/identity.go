@@ -75,12 +75,13 @@ func ToSDKAlias(a *Alias) *logical.Alias {
 	}
 
 	return &logical.Alias{
-		Name:          a.Name,
-		ID:            a.ID,
-		MountAccessor: a.MountAccessor,
-		MountType:     a.MountType,
-		Metadata:      metadata,
-		NamespaceID:   a.NamespaceID,
+		Name:           a.Name,
+		ID:             a.ID,
+		MountAccessor:  a.MountAccessor,
+		MountType:      a.MountType,
+		Metadata:       metadata,
+		NamespaceID:    a.NamespaceID,
+		CustomMetadata: a.CustomMetadata,
 	}
 }
 

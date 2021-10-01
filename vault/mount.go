@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -60,10 +60,11 @@ const (
 	identityMountPath  = "identity/"
 	cubbyholeMountPath = "cubbyhole/"
 
-	systemMountType    = "system"
-	identityMountType  = "identity"
-	cubbyholeMountType = "cubbyhole"
-	pluginMountType    = "plugin"
+	systemMountType      = "system"
+	identityMountType    = "identity"
+	cubbyholeMountType   = "cubbyhole"
+	pluginMountType      = "plugin"
+	mountTypeNSCubbyhole = "ns_cubbyhole"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false

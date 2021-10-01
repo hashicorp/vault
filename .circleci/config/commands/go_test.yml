@@ -14,15 +14,16 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/circleci/golang:1.16.5-buster"
+    default: "docker.mirror.hashicorp.services/circleci/golang:1.16.7-buster"
   use_docker:
     type: boolean
     default: false
   arch:
     type: string
     # Only supported for use_docker=false, and only other value allowed is 386
-    default: amd64
+    default: amd64 # must be 386 or amd64
 steps:
+  - configure-git
   - run:
       name: Compute test cache key
       command: |
@@ -30,9 +31,12 @@ steps:
   - restore_cache:
       keys:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
+  - restore_go_mod_cache
   - run:
       name: Run Go tests
       no_output_timeout: 60m
+      environment:
+        GOPRIVATE: 'github.com/hashicorp/*'
       command: |
         set -x
 
@@ -54,21 +58,36 @@ steps:
         USE_DOCKER=1
         <</ parameters.use_docker >>
 
-        # Split Go tests by prior test times.  If use_docker is true, only run
-        # tests that depend on docker, otherwise only those that don't.
-        if [ $USE_DOCKER == 1 ]; then
-          package_names=$(go list -test -json ./... |
-            jq -r 'select(.Deps != null) |
-              select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
-              .ForTest | select(. != null)' |
-              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-        else
-          package_names=$(go list -test -json ./... |
-            jq -r 'select(.Deps != null) |
-              select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
-              .ForTest | select(. != null)' |
-              sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname)
-        fi
+        # Check all directories with a go.mod file
+        modules=("." "api" "sdk")
+        all_package_names=""
+
+        for dir in "${modules[@]}"
+        do
+          pushd "$dir"
+          # Split Go tests by prior test times.  If use_docker is true, only run
+          # tests that depend on docker, otherwise only those that don't.
+          # The appended true condition ensures the command will succeed if no packages are found
+          if [ $USE_DOCKER == 1 ]; then
+            package_names=$(go list -test -json ./... |
+              jq -r 'select(.Deps != null) |
+                select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
+                .ForTest | select(. != null)' |
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+          else
+            package_names=$(go list -test -json ./... |
+              jq -r 'select(.Deps != null) |
+                select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
+                .ForTest | select(. != null)' |
+                sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
+          fi
+          # Move back into root directory
+          popd
+          # Append the test packages into the global list, if any are found
+          if [ -n "$package_names" ]; then
+            all_package_names+=" ${package_names}"
+          fi
+        done
 
         # After running tests split step, we are now running the following steps
         # in multiple different containers, each getting a different subset of
@@ -102,9 +121,17 @@ steps:
             TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
           fi
 
+
+
           # Start a docker testcontainer to run the tests in
-          docker run -d -e TEST_DOCKER_NETWORK_ID \
-            -e DOCKER_CERT_PATH -e DOCKER_HOST -e DOCKER_MACHINE_NAME -e DOCKER_TLS_VERIFY -e NO_PROXY \
+          docker run -d \
+            -e TEST_DOCKER_NETWORK_ID \
+            -e GOPRIVATE \
+            -e DOCKER_CERT_PATH \
+            -e DOCKER_HOST \
+            -e DOCKER_MACHINE_NAME \
+            -e DOCKER_TLS_VERIFY \
+            -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
             --network vaulttest --name \
             testcontainer << parameters.go_image >> \
@@ -116,19 +143,27 @@ steps:
           docker cp . testcontainer:/go/src/github.com/hashicorp/vault/
           docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
 
+          # Copy the downloaded modules inside the container.
+          docker exec testcontainer sh -c 'mkdir -p /go/pkg'
+          docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/go/pkg/mod
+
           docker exec -w /go/src/github.com/hashicorp/vault/ \
-            -e CIRCLECI -e GOCACHE=/tmp/gocache -e VAULT_CI_GO_TEST_RACE \
+            -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
+            -e GOCACHE=/tmp/gocache \
+            -e GO_TAGS \
+            -e GOPROXY="off" \
             -e VAULT_LICENSE_CI \
+            -e GOARCH=<< parameters.arch >> \
             testcontainer \
-            gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
-              -- \
+              gotestsum --format=short-verbose \
+                --junitfile test-results/go-test/results.xml \
+                --jsonfile test-results/go-test/results.json \
+                -- \
               -tags "${GO_TAGS} ${EXTRA_TAGS}" \
-              -timeout=60m \
-              -parallel=20 \
-              << parameters.extra_flags >> \
-              ${package_names}
+                -timeout=60m \
+                -parallel=20 \
+                << parameters.extra_flags >> \
+                ${all_package_names}
         else
           GOARCH=<< parameters.arch >> \
             GOCACHE=<< parameters.cache_dir >> \
@@ -140,7 +175,7 @@ steps:
               -timeout=60m \
               -parallel=20 \
               << parameters.extra_flags >> \
-              ${package_names}
+              ${all_package_names}
         fi
 
   - when:

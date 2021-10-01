@@ -436,7 +436,7 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		}
 
 		tlsConfig.NextProtos = []string{alpn}
-		cl.logger.Debug("creating rpc dialer", "alpn", alpn, "host", tlsConfig.ServerName)
+		cl.logger.Debug("creating rpc dialer", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
 		return cl.networkLayer.Dial(addr, timeout, tlsConfig)
 	}

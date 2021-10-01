@@ -22,8 +22,5 @@ export default Controller.extend({
         this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', type);
       });
     },
-    onConfigError: function(modelId) {
-      return this.transitionToRoute('vault.cluster.settings.configure-secret-backend', modelId);
-    },
   },
 });

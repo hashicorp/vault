@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"regexp"
@@ -19,10 +20,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
@@ -450,7 +451,8 @@ func generateCert(ctx context.Context,
 	b *backend,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
-	isCA bool) (*certutil.ParsedCertBundle, error) {
+	isCA bool,
+	randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
 
 	if input.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
@@ -495,7 +497,7 @@ func generateCert(ctx context.Context,
 		}
 	}
 
-	parsedBundle, err := certutil.CreateCertificate(data)
+	parsedBundle, err := certutil.CreateCertificateWithRandomSource(data, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +507,7 @@ func generateCert(ctx context.Context,
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
-func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCSRBundle, error) {
+func generateIntermediateCSR(b *backend, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
 	creation, err := generateCreationBundle(b, input, nil, nil)
 	if err != nil {
 		return nil, err
@@ -515,7 +517,7 @@ func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCS
 	}
 
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
-	parsedBundle, err := certutil.CreateCSR(creation, addBasicConstraints)
+	parsedBundle, err := certutil.CreateCSRWithRandomSource(creation, addBasicConstraints, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -1073,6 +1075,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			OtherSANs:                     otherSANs,
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
+			SignatureBits:                 data.role.SignatureBits,
 			NotAfter:                      notAfter,
 			KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 			ExtKeyUsage:                   parseExtKeyUsages(data.role),

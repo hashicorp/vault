@@ -2,13 +2,13 @@ package configutil
 
 import (
 	"fmt"
-	"github.com/hashicorp/hcl/hcl/token"
 	"io/ioutil"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/hcl/hcl/token"
 )
 
 // SharedConfig contains some shared values

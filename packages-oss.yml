@@ -38,7 +38,7 @@ inputs:
     PRODUCT_VERSION: 0.0.0-snapshot
 
     # GO_VERSION is the version of the Go toolchain to use to compile this package.
-    GO_VERSION: 1.16.5
+    GO_VERSION: 1.16.7
 
     # YARN_VERSION is the version of Yarn to install for the UI layer.
     YARN_VERSION: 1.19.1-1
@@ -82,7 +82,7 @@ inputs:
 #   - PACKAGE_ZIP_NAME        The name of the package zip file to create (relative to OUTPUT_DIR)
 #
 # NOTE: You MUST NOT use single quotes in the build command, because at present we do no escaping.
-build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/hashicorp/vault/sdk/version;
+build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/sdk/version;
   GO111MODULE=on
   go build -v
     -tags ui
@@ -104,6 +104,7 @@ build-command: VERSION_PKG_PATH=github.com/hashicorp/vault/vendor/github.com/has
 # is a useful data source for building CI/CD pipelines.
 packages:
   - inputs: { GOOS: darwin, GOARCH: amd64 }
+  - inputs: { GOOS: darwin, GOARCH: arm64 }
   - inputs: { GOOS: freebsd, GOARCH: 386 }
   - inputs: { GOOS: freebsd, GOARCH: amd64 }
   - inputs: { GOOS: freebsd, GOARCH: arm }
@@ -213,10 +214,6 @@ layers:
     dockerfile: |
       ENV GO111MODULE=off
       RUN go get golang.org/x/tools/cmd/goimports
-      RUN go get github.com/hashicorp/go-bindata
-      RUN go get github.com/hashicorp/go-bindata/go-bindata
-      RUN go get github.com/elazarl/go-bindata-assetfs
-      RUN go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
   - name: set-workdir
     dockerfile: |
       ENV REPO=github.com/hashicorp/vault
@@ -225,11 +222,14 @@ layers:
       WORKDIR $DIR
   - name: install-yarn
     dockerfile: |-
-      RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+      RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
       RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
       RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
       RUN apt-get update -y && apt-get install -y -q nodejs yarn={{.YARN_VERSION}} \
                             && rm -rf /var/lib/apt/lists/*
+  - name: make-ui-folder
+    dockerfile: |-
+      RUN mkdir -p http/web_ui 
   - name: ui-dependencies
     source-include: ui/package.json ui/yarn.lock
     dockerfile: |-
@@ -239,12 +239,6 @@ layers:
     source-include: ui/
     dockerfile: |-
       RUN { while true; do sleep 30; echo keepalive; done; } & cd ui && yarn --verbose run build
-  - name: build-static-assets
-    source-include: Makefile
-    dockerfile: |-
-      RUN go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
-      RUN mkdir -p http && mv bindata_assetfs.go http/
-      RUN goimports -w http/bindata_assetfs.go
   - name: go-modules
     source-include: "go.mod go.sum */go.mod */go.sum"
     dockerfile: |

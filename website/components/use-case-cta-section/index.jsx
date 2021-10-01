@@ -4,10 +4,11 @@ export default function UseCaseCtaSection() {
   return (
     <section className="g-section-block g-cta-section">
       <div>
-        <h2>Ready to get started?</h2>
+        <h2 className='g-type-display-2'>Ready to get started?</h2>
         <Button
           url="/downloads"
           title="Download"
+          label="Download CLI"
           linkType="download"
           theme={{
             variant: 'primary',

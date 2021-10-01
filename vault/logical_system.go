@@ -24,6 +24,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -34,8 +36,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -106,6 +106,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"leases/revoke-force/*",
 				"leases/lookup/*",
 				"storage/raft/snapshot-auto/config/*",
+				"leases",
 			},
 
 			Unauthenticated: []string{
@@ -185,12 +186,13 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
 	}
 
-	// If the node is in a DR secondary cluster, we need to allow the ability to
-	// remove a Raft peer without being authenticated by instead providing a DR
-	// operation token.
+	// If the node is in a DR secondary cluster, gate some raft operations by
+	// the DR operation token.
 	if core.IsDRSecondary() {
-		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/state")
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
@@ -896,6 +898,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -1562,7 +1571,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
 		headers := rawVal.([]string)
-
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
@@ -1867,6 +1875,31 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func expandStringValsWithCommas(configMap map[string]interface{}) error {
+	configParamNameSlice := []string{
+		"audit_non_hmac_request_keys",
+		"audit_non_hmac_response_keys",
+		"passthrough_request_headers",
+		"allowed_response_headers",
+	}
+	for _, paramName := range configParamNameSlice {
+		if raw, ok := configMap[paramName]; ok {
+			switch t := raw.(type) {
+			case string:
+				// To be consistent with auth tune, and in cases where a single comma separated strings
+				// is provided in the curl command, we split the entries by the commas.
+				rawNew := raw.(string)
+				res, err := parseutil.ParseCommaStringSlice(rawNew)
+				if err != nil {
+					return fmt.Errorf("invalid input parameter %v of type %v", paramName, t)
+				}
+				configMap[paramName] = res
+			}
+		}
+	}
+	return nil
+}
+
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1893,6 +1926,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -3546,18 +3586,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	resp := logical.ErrorResponse("The functionality has been removed on this path")
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": counters,
-		},
-	}
-
-	return resp, nil
+	return resp, logical.ErrPathFunctionalityRemoved
 }
 
 func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4752,8 +4783,8 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"internal-counters-requests": {
-		"Count of requests seen by this Vault cluster over time.",
-		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
+		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 	"internal-counters-tokens": {
 		"Count of active tokens in this Vault cluster.",
@@ -4787,6 +4818,6 @@ This path responds to the following HTTP methods.
 	},
 	"list-leases": {
 		"List leases associated with this Vault cluster",
-		"List leases associated with this Vault cluster",
+		"Requires sudo capability. List leases associated with this Vault cluster",
 	},
 }

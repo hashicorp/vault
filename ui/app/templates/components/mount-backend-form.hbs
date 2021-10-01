@@ -29,7 +29,7 @@
       @mode="enable"
       @noun={{if (eq mountType "auth") "Auth Method" "Secret Engine"}}
      />
-    <MessageError @model={{mountModel}} />
+    <MessageError @model={{model}} @errorMessage={{this.errorMessage}} />
     {{#if showEnable}}
       <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="default" @validationMessages={{validationMessages}} @onKeyUp={{action "onKeyUp"}} />
       <FormFieldGroups @model={{mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
@@ -68,7 +68,7 @@
           type="submit"
           data-test-mount-submit="true"
           class="button is-primary {{if mountBackend.isRunning "loading"}}"
-          disabled={{or mountBackend.isRunning validationError}}
+          disabled={{or mountBackend.isRunning isFormInvalid}}
         >
           {{#if (eq mountType "auth")}}
             Enable Method
