@@ -878,7 +878,7 @@ github.com/kr/pretty
 # github.com/kr/text v0.2.0
 ## explicit
 github.com/kr/text
-# github.com/lib/pq v1.8.0
+# github.com/lib/pq v1.10.3
 ## explicit
 github.com/lib/pq
 github.com/lib/pq/oid
