@@ -527,6 +527,29 @@ func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
 		Storage: storage,
 	})
 	expectError(t, resp, err)
+
+	// Create a client that depends on test key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key":          "test-key",
+			"id_token_ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update test key "test-key" -- should fail since id_token_ttl is greater than 2m
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
 }
 
 // TestOIDC_Path_OIDCKey tests the List operation for keys
