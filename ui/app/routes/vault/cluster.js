@@ -7,6 +7,7 @@ import Ember from 'ember';
 import getStorage from '../../lib/token-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
+import { assert } from '@ember/debug';
 
 const POLL_INTERVAL_MS = 10000;
 
@@ -40,6 +41,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const currentTokenName = this.auth.get('currentTokenName');
     // if no namespace queryParam and user authenticated,
     // use user's root namespace to redirect to properly param'd url
+    if (this.featureFlagService.managedNamespaceRoot && !this.version.hasNamespaces) {
+      window.alert('Cannot use Cloud Admin Namespace flag with OSS Vault');
+    }
     if (!namespace && currentTokenName && !Ember.testing) {
       const storage = getStorage().getItem(currentTokenName);
       namespace = storage?.userRootNamespace;
