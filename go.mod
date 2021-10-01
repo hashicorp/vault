@@ -115,7 +115,7 @@ require (
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0
-	github.com/lib/pq v1.8.0
+	github.com/lib/pq v1.10.3
 	github.com/mattn/go-colorable v0.1.8
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
