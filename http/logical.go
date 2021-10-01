@@ -479,8 +479,16 @@ WRITE_RESPONSE:
 		w.Header().Set("Content-Type", contentType)
 	}
 
-	if cacheControl, ok := resp.Data[logical.HTTPRawCacheControl].(string); ok {
+	if cacheControl, ok := resp.Data[logical.HTTPCacheControlHeader].(string); ok {
 		w.Header().Set("Cache-Control", cacheControl)
+	}
+
+	if pragma, ok := resp.Data[logical.HTTPPragmaHeader].(string); ok {
+		w.Header().Set("Pragma", pragma)
+	}
+
+	if wwwAuthn, ok := resp.Data[logical.HTTPWWWAuthenticateHeader].(string); ok {
+		w.Header().Set("WWW-Authenticate", wwwAuthn)
 	}
 
 	w.WriteHeader(status)

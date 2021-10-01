@@ -131,7 +131,7 @@ type GroupUpdater interface {
 var _ GroupUpdater = &Core{}
 
 type TokenStorer interface {
-	LookupToken(ctx context.Context, token string) (*logical.TokenEntry, error)
+	TokenStore() *TokenStore
 }
 
 var _ TokenStorer = &Core{}

@@ -481,6 +481,10 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	return c.tokenStore.Lookup(ctx, token)
 }
 
+func (c *Core) TokenStore() *TokenStore {
+	return c.tokenStore
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
