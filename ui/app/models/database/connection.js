@@ -118,6 +118,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'tls', group: 'pluginConfig', subgroup: 'TLS options' },
       { attr: 'tls_ca', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
   {
