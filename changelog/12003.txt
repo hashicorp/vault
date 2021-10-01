@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: add transform secrets engine to features list
+```

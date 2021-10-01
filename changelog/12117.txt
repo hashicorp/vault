@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Allow cloning `api.Client` HTTP headers via `api.Config.CloneHeaders` or `api.Client.SetCloneHeaders`.
+```

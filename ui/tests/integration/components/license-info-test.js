@@ -68,7 +68,7 @@ module('Integration | Component | license info', function(hooks) {
     let row = component.detailRows.filterBy('rowName', 'License state')[0];
     assert.ok(
       row.rowValue.includes(
-        'Stored licenses will be deprecated in Vault 1.11. We recommend autoloading your license.'
+        'Stored licenses will be deprecated in a future version of Vault. We recommend autoloading your license.'
       ),
       'Stored license includes recommendation to autoload'
     );

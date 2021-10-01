@@ -23,6 +23,9 @@
   &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-out {
     animation: drop-fade-below 0.15s reverse;
   }
+  &.smaller-font {
+    font-size: $size-8;
+  }
 }
 
 .ember-basic-dropdown-content--left.tool-tip {

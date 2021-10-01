@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {

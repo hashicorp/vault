@@ -18,7 +18,7 @@ import layout from '../templates/components/form-field';
  * ```
  *
  * @param [onChange=null] {Func} - Called whenever a value on the model changes via the component.
- * @param [onKeyUp=null] {Func} - Called whenever cp-validations is being used and you need to validation on keyup.  Send name of field and value of input.
+ * @param [onKeyUp=null] {Func} - A function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
  * @param attr=null {Object} - This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
  * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
  * @param [disabled=false] {Boolean} - whether the field is disabled
@@ -65,6 +65,8 @@ export default Component.extend({
    */
   attr: null,
 
+  mode: null,
+
   /*
    * @private
    * @param string
@@ -92,6 +94,11 @@ export default Component.extend({
    *
    */
   valuePath: or('attr.options.fieldValue', 'attr.name'),
+
+  isReadOnly: computed('attr.options.readOnly', 'mode', function() {
+    let readonly = this.attr.options?.readOnly || false;
+    return readonly && this.mode === 'edit';
+  }),
 
   model: null,
 

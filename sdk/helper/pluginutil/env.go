@@ -3,8 +3,8 @@ package pluginutil
 import (
 	"os"
 
+	"github.com/hashicorp/go-secure-stdlib/mlock"
 	version "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
 )
 
 var (

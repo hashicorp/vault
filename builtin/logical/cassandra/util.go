@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

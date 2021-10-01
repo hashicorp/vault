@@ -9,9 +9,7 @@ listener "tcp" {
 }
 
 backend "consul" {
-    address = "127.0.0.1:8500"
-    foo = "bar"
-    advertise_addr = "foo"
+    address = "127.0.0.1:1025"
 }
 
 ha_backend "consul" {
