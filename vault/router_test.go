@@ -582,13 +582,33 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 }
 
 func TestParseUnauthenticatedPaths_Error(t *testing.T) {
-	// inputs
-	invalidPaths := []string{
-		"/foo/+*",
+	type tcase struct {
+		paths []string
+		err   string
+	}
+	tcases := []tcase{
+		{
+			[]string{"/foo/+*"},
+			"path \"/foo/+*\": invalid use of wildcards ('+*' is forbidden)",
+		},
+		{
+			[]string{"/foo/*/*"},
+			"path \"/foo/*/*\": invalid use of wildcards (multiple '*' is forbidden)",
+		},
+		{
+			[]string{"*/foo/*"},
+			"path \"*/foo/*\": invalid use of wildcards (multiple '*' is forbidden)",
+		},
+		{
+			[]string{"*/foo/"},
+			"path \"*/foo/\": invalid use of wildcards ('*' is only allowed at the end of a path)",
+		},
 	}
 
-	_, err := parseUnauthenticatedPaths(invalidPaths)
-	if !strings.Contains(err.Error(), "path \"/foo/+*\": invalid use of wildcards ('+*' is forbidden)") {
-		t.Fatalf("err: %v", err)
+	for _, tc := range tcases {
+		_, err := parseUnauthenticatedPaths(tc.paths)
+		if err == nil || err != nil && !strings.Contains(err.Error(), tc.err) {
+			t.Fatalf("bad: path: %s expect: %v got %v", tc.paths, tc.err, err)
+		}
 	}
 }

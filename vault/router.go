@@ -886,14 +886,26 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	return false
 }
 
+func isValidWildcardPath(path string) (bool, error) {
+	switch {
+	case strings.Count(path, "*") > 1:
+		return false, fmt.Errorf("path %q: invalid use of wildcards (multiple '*' is forbidden)", path)
+	case strings.Contains(path, "+*"):
+		return false, fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
+	case strings.Contains(path, "*") && path[len(path)-1] != '*':
+		return false, fmt.Errorf("path %q: invalid use of wildcards ('*' is only allowed at the end of a path)", path)
+	}
+	return true, nil
+}
+
 // parseUnauthenticatedPaths converts a list of special paths to a
 // loginPathsEntry
 func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 	var tempPaths []string
 	tempWildcardPaths := make(map[string]bool, len(paths))
 	for _, path := range paths {
-		if strings.Contains(path, "+*") {
-			return nil, fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
+		if ok, err := isValidWildcardPath(path); !ok {
+			return nil, err
 		}
 
 		if path == "+" || strings.Count(path, "/+") > 0 || strings.HasPrefix(path, "+/") {
