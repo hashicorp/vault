@@ -1,0 +1,3 @@
+```release-note:feature
+**UI/Elasticsearch**: Elasticsearch DB is now supported by the UI
+```
