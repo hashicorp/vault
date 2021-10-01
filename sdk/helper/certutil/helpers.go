@@ -544,9 +544,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 		default:
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
-	case "ed25519":
-		return nil
-	case "any":
+	case "any", "ed25519":
 	default:
 		return fmt.Errorf("unknown key type %s", keyType)
 	}

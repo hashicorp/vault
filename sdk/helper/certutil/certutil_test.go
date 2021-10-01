@@ -503,15 +503,6 @@ func refreshECCertBundleWithChain() *CertBundle {
 	return ret
 }
 
-// func refreshEd25519CertBundle() *CertBundle {
-// 	initTest.Do(setCerts)
-// 	return &CertBundle{
-// 		Certificate: certEd25519Pem,
-// 		PrivateKey:  privEd25519KeyPem,
-// 		CAChain:     []string{issuingCaChainPem[0]},
-// 	}
-// }
-
 func refreshEd255198CertBundle() *CertBundle {
 	initTest.Do(setCerts)
 	return &CertBundle{
