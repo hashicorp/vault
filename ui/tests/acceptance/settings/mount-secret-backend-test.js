@@ -147,49 +147,4 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
-
-  test('version 2 with no create to sys/mounts endpoint does not allows mounting of secret engine', async function(assert) {
-    let backend = `kv-noMount-${new Date().getTime()}`;
-    const V2_POLICY = `
-      path "${backend}/*" {
-        capabilities = ["update","list","create","read","sudo","delete"]
-      }
-      path "sys/mounts/*"
-      {
-        capabilities = ["read", "delete", "list", "sudo"]
-      }
-
-      # List existing secrets engines.
-      path "sys/mounts"
-      {
-        capabilities = ["read"]
-      }
-    `;
-    await consoleComponent.runCommands([
-      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      'write -field=client_token auth/token/create policies=kv-v2-degrade',
-    ]);
-
-    let userToken = consoleComponent.lastLogOutput;
-    await logout.visit();
-    await authPage.login(userToken);
-    // create the engine
-    await mountSecrets.visit();
-    await mountSecrets.selectType('kv');
-    await mountSecrets
-      .next()
-      .path(backend)
-      .setMaxVersion(101)
-      .submit();
-    await settled();
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `You do not have access to the sys/mounts endpoint. The secret engine was not mounted.`
-    );
-    assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
-
-    await page.secretList();
-    await settled();
-    assert.dom(`[data-test-secret-backend-row=${backend}]`).doesNotExist();
-  });
 });
