@@ -539,14 +539,15 @@ func (p *ParsedCSRBundle) getSigner() (crypto.Signer, error) {
 			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
 		}
 
-	// case Ed25519PrivateKey:
-	// 	signer, err = x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes)
-	// 	if err != nil {
-	// 		return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private Ed25519 key: %s", err)}
-	// 	}
+	case Ed25519PrivateKey:
+		signerd, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes)
+		signer = signerd.(*ed25519.PrivateKey)
+		if err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private Ed25519 key: %s", err)}
+		}
 
 	default:
-		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA and EC are supported"}
+		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA, Ed25519 and EC are supported"}
 	}
 	return signer, nil
 }
