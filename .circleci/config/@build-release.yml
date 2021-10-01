@@ -11,7 +11,7 @@ executors:
   builder-machine:
     resource_class: xlarge
     machine:
-      image: ubuntu-1604:202007-01
+      image: ubuntu-2004:202010-01
     shell: /usr/bin/env bash -euo pipefail -c
     environment:
       AUTO_INSTALL_TOOLS: "YES"
