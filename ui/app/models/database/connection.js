@@ -257,7 +257,7 @@ export default Model.extend({
   }),
   insecure: attr('boolean', {
     defaultValue: false,
-    helpTwext: 'Not recommended. Default to false. Can be set to true to disable SSL verification.',
+    helpText: 'Not recommended. Default to false. Can be set to true to disable SSL verification.',
   }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
