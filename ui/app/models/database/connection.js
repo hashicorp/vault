@@ -128,17 +128,16 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'name' },
       { attr: 'verify_connection' },
       { attr: 'password_policy' },
-      { attr: 'connection_url', group: 'pluginConfig' },
+      { attr: 'url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
-      { attr: 'username_template', group: 'pluginConfig' },
       { attr: 'ca_cert', group: 'pluginConfig' },
       { attr: 'ca_path', group: 'pluginConfig' },
       { attr: 'client_cert', group: 'pluginConfig' },
       { attr: 'client_key', group: 'pluginConfig' },
-      { attr: 'insecure', group: 'pluginConfig' },
       { attr: 'tls_server_name', group: 'pluginConfig', subgroup: 'TLS options' },
-      { attr: 'root_rotation_statements', group: 'statements' },
+      { attr: 'insecure', group: 'pluginConfig' },
+      { attr: 'username_template', group: 'pluginConfig' },
     ],
   },
 ];
@@ -197,11 +196,12 @@ export default Model.extend({
 
   // common fields
   connection_url: attr('string', {
+    label: 'Connection URL',
     subText: 'The connection string used to connect to the database.',
   }),
   url: attr('string', {
-    subText:
-      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
+    label: 'URL',
+    subText: `The URL for Elasticsearch's API ("http://localhost:9200").`,
   }),
   username: attr('string', {
     subText: 'Optional. The name of the user to use as the "root" user when connecting to the database.',
@@ -219,8 +219,7 @@ export default Model.extend({
   }),
   ca_path: attr('string', {
     label: 'CA path',
-    subText:
-      "The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.",
+    subText: `The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.`,
   }),
   client_cert: attr('string', {
     subText: 'The path to the certificate for the Elasticsearch client to present for communication.',
@@ -257,7 +256,7 @@ export default Model.extend({
   }),
   insecure: attr('boolean', {
     defaultValue: false,
-    helpText: 'Not recommended. Default to false. Can be set to true to disable SSL verification.',
+    label: 'Disable SSL verification',
   }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
@@ -272,8 +271,8 @@ export default Model.extend({
     editType: 'file',
   }),
   tls_server_name: attr('string', {
-    label: 'TLS CA',
-    helpText: 'This, if set, is used to set the SNI host when connecting via 1TLS.',
+    label: 'TLS server name',
+    helpText: 'If set, this name is used to set the SNI host when connecting via 1TLS.',
   }),
   root_rotation_statements: attr({
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
