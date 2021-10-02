@@ -541,7 +541,7 @@ func (p *ParsedCSRBundle) getSigner() (crypto.Signer, error) {
 
 	case Ed25519PrivateKey:
 		signerd, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes)
-		signer = signerd.(*ed25519.PrivateKey)
+		signer = signerd.(ed25519.PrivateKey)
 		if err != nil {
 			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private Ed25519 key: %s", err)}
 		}
