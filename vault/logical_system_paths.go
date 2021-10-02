@@ -928,7 +928,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    pathInternalUINamespacesRead(b),
-					Unpublished: true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -939,7 +938,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalUIResultantACL,
-					Unpublished: true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -950,7 +948,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersRequests,
-					Unpublished: true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -961,7 +958,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersTokens,
-					Unpublished: true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -972,7 +968,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersEntities,
-					Unpublished: true,
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
