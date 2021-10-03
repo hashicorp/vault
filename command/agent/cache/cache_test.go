@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -1376,5 +1377,184 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
 			}
 		})
+	})
+}
+
+func TestCache_KV(t *testing.T) {
+	type testCase struct {
+		data  map[string]interface{}
+		clean func(map[string]interface{}) map[string]interface{}
+	}
+
+	validateSecret := func(t *testing.T, secret *api.Secret, tc testCase, requestID string, leaseDuration int) {
+		t.Helper()
+
+		if secret == nil {
+			t.Fatal("expected secret but got nil")
+		}
+		got := secret.Data
+		if tc.clean != nil {
+			got = tc.clean(got)
+		}
+		if !reflect.DeepEqual(tc.data, got) {
+			t.Fatalf("wrong data: expected: %#v, got: %#v", tc.data, got)
+		}
+		if requestID != "" && secret.RequestID != requestID {
+			t.Fatalf("unexpected request id: expected: %q, got: %q", requestID, secret.RequestID)
+		}
+		if secret.Renewable {
+			t.Fatal("secret should not be renewable")
+		}
+		if secret.LeaseID != "" {
+			t.Fatalf("unexpected lease id: %s", secret.LeaseID)
+		}
+		if secret.LeaseDuration != leaseDuration {
+			t.Fatalf("unexpected lease duration: expected: %d, got: %d", leaseDuration, secret.LeaseDuration)
+		}
+		if len(secret.Warnings) != 0 {
+			t.Fatalf("unexpected warnings: %#v", secret.Warnings)
+		}
+		if secret.Auth != nil {
+			t.Fatalf("unexpected auth information: %#v", secret.Auth)
+		}
+		if secret.WrapInfo != nil {
+			t.Fatalf("unexpected wrap information: %#v", secret.WrapInfo)
+		}
+	}
+
+	test := func(t *testing.T, mountInfo *api.MountInput, path string, first, second testCase, leaseDuration int) {
+		coreConfig := &vault.CoreConfig{
+			DisableMlock: true,
+			DisableCache: true,
+			Logger:       logging.NewVaultLogger(hclog.Trace),
+			LogicalBackends: map[string]logical.Factory{
+				"kv": kv.Factory,
+			},
+		}
+
+		cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+		defer cleanup()
+
+		err := testClient.Sys().Mount("kv", mountInfo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Write the secret
+		_, err = testClient.Logical().Write(path, first.data)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Read the secret and put it in cache
+		secret, err := testClient.Logical().Read(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		validateSecret(t, secret, first, "", leaseDuration)
+		requestID := secret.RequestID
+
+		// Overwrite the secret
+		_, err = testClient.Logical().Write(path, second.data)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Reading immediately will return the cached value
+		secret, err = testClient.Logical().Read(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		validateSecret(t, secret, first, requestID, leaseDuration)
+
+		// Wait for the cache to expire
+		time.Sleep(5 * time.Second)
+
+		// We should now get the updated version
+		secret, err = testClient.Logical().Read(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		validateSecret(t, secret, second, "", leaseDuration)
+	}
+
+	// KV v1 uses the default ttl for seccrets that do not set it so
+	// kv/my-secret should be cached for 3 seconds.
+	t.Run("kv-1-no-ttl", func(t *testing.T) {
+		mountInfo := &api.MountInput{
+			Type: "kv",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "3s",
+			},
+		}
+		first := testCase{
+			data: map[string]interface{}{
+				"value": "1",
+			},
+		}
+		second := testCase{
+			data: map[string]interface{}{
+				"value": "2",
+			},
+		}
+		// Since we set no TTL in KV v1, we expect the lease to use the default
+		// duration of the engine.
+		test(t, mountInfo, "kv/my-secret", first, second, 3)
+	})
+
+	// KV v1 uses the ttl field of a secret to set the lease duration so
+	// kv/my-secret should be cached for 2 seconds.
+	t.Run("kv1-with-ttl", func(t *testing.T) {
+		mountInfo := &api.MountInput{
+			Type: "kv",
+		}
+
+		first := testCase{
+			data: map[string]interface{}{
+				"value": "1",
+				"ttl":   "2",
+			},
+		}
+		second := testCase{
+			data: map[string]interface{}{
+				"value": "2",
+				"ttl":   "2",
+			},
+		}
+		// Since we set a TTL directly in the secret we expect the lease to use
+		// this for its duration instead of the default of the secret engine.
+		test(t, mountInfo, "kv/my-secret", first, second, 2)
+	})
+
+	// KV v2 does not uses the default ttl nor the ttl field to set the lease
+	// duration so this will not be cached at the moment also it could be
+	// expected to.
+	t.Run("kv-2", func(t *testing.T) {
+		mountInfo := &api.MountInput{
+			Type: "kv-v2",
+		}
+		clean := func(got map[string]interface{}) map[string]interface{} {
+			delete(got, "metadata")
+			return got
+		}
+		first := testCase{
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"value": "1",
+				},
+			},
+			clean: clean,
+		}
+		second := testCase{
+			data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"value": "2",
+				},
+			},
+			clean: clean,
+		}
+		// KV v2 does not set a lease duration but the secret will be cached
+		// for the duration of StaticSecretCacheDur
+		test(t, mountInfo, "kv/data/my-secret", first, second, 0)
 	})
 }
