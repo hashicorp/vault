@@ -99,7 +99,7 @@ func (p *mockDelayProxier) Send(ctx context.Context, req *SendRequest) (*SendRes
 	// If this is a cacheable response, we return a unique response every time
 	if p.cacheableResp {
 		rand.Seed(time.Now().Unix())
-		s := fmt.Sprintf(`{"lease_id": "%d", "renewable": true, "data": {"foo": "bar"}}`, rand.Int())
+		s := fmt.Sprintf(`{"lease_id": "%d", "lease_duration": 0, "renewable": true, "data": {"foo": "bar"}}`, rand.Int())
 		return newTestSendResponse(http.StatusOK, s), nil
 	}
 

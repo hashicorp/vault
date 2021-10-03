@@ -324,40 +324,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
-	// Short-circuit if the secret is not renewable
-	tokenRenewable, err := secret.TokenIsRenewable()
-	if err != nil {
-		c.logger.Error("failed to parse renewable param", "error", err)
-		return nil, err
-	}
-	if !secret.Renewable && !tokenRenewable {
-		c.logger.Debug("pass-through response; secret not renewable", "method", req.Request.Method, "path", req.Request.URL.Path)
-		return resp, nil
-	}
-
+	renewer := c.startRenewing
 	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
-	case secret.LeaseID != "":
-		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
-		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
-		if err != nil {
-			return nil, err
-		}
-		// If the lease belongs to a token that is not managed by the agent,
-		// return the response without caching it.
-		if entry == nil {
-			c.logger.Debug("pass-through lease response; token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
-			return resp, nil
-		}
-
-		// Derive a context for renewal using the token's context
-		renewCtxInfo = cachememdb.NewContextInfo(entry.RenewCtxInfo.Ctx)
-
-		index.Lease = secret.LeaseID
-		index.LeaseToken = req.Token
-
-		index.Type = cacheboltdb.SecretLeaseType
-
 	case secret.Auth != nil:
 		c.logger.Debug("processing auth response", "method", req.Request.Method, "path", req.Request.URL.Path)
 
@@ -389,10 +358,49 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		index.Type = cacheboltdb.AuthLeaseType
 
 	default:
-		// We shouldn't be hitting this, but will err on the side of caution and
-		// simply proxy.
-		c.logger.Debug("pass-through response; secret without lease and token", "method", req.Request.Method, "path", req.Request.URL.Path)
-		return resp, nil
+		if secret.LeaseDuration == 0 {
+			c.logger.Debug("pass-through response; secret with no lease in response", "method", req.Request.Method, "path", req.Request.URL.Path)
+			return resp, nil
+		}
+
+		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
+		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
+		if err != nil {
+			return nil, err
+		}
+		// If the lease belongs to a token that is not managed by the agent,
+		// return the response without caching it.
+		if entry == nil {
+			c.logger.Debug("pass-through lease response; token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
+			return resp, nil
+		}
+
+		// Derive a context for renewal using the token's context
+		renewCtxInfo = cachememdb.NewContextInfo(entry.RenewCtxInfo.Ctx)
+
+		index.Lease = secret.LeaseID
+		index.LeaseToken = req.Token
+
+		index.Type = cacheboltdb.SecretLeaseType
+
+		if !secret.Renewable {
+			renewer = func(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
+				// The secret is not renewable, we just evict it at the end of the lease
+				waitFor := time.Duration(secret.LeaseDuration) * time.Second
+				c.logger.Debug("storing static secret into the cache", "duration", waitFor.String())
+
+				select {
+				case <-ctx.Done():
+					break
+				case <-index.RenewCtxInfo.DoneCh:
+					break
+				case <-time.After(waitFor):
+					break
+				}
+
+				c.evict(id, req)
+			}
+		}
 	}
 
 	// Serialize the response to store it in the cached index
@@ -435,8 +443,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
-	// Start renewing the secret in the response
-	go c.startRenewing(renewCtx, index, req, secret)
+	go renewer(renewCtx, index, req, secret)
 
 	return resp, nil
 }
@@ -450,19 +457,23 @@ func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo 
 	return cachememdb.NewContextInfo(ctx)
 }
 
+func (c *LeaseCache) evict(id string, req *SendRequest) {
+	if c.shuttingDown.Load() {
+		c.logger.Trace("not evicting index from cache during shutdown", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
+		return
+	}
+	c.logger.Debug("evicting index from cache", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
+	err := c.Evict(id)
+	if err != nil {
+		c.logger.Error("failed to evict index", "id", id, "error", err)
+		return
+	}
+}
+
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
 	defer func() {
 		id := ctx.Value(contextIndexID).(string)
-		if c.shuttingDown.Load() {
-			c.logger.Trace("not evicting index from cache during shutdown", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
-			return
-		}
-		c.logger.Debug("evicting index from cache", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
-		err := c.Evict(id)
-		if err != nil {
-			c.logger.Error("failed to evict index", "id", id, "error", err)
-			return
-		}
+		c.evict(id, req)
 	}()
 
 	client, err := c.client.Clone()
