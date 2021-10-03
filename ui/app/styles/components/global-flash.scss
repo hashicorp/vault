@@ -9,5 +9,8 @@
 
   .message {
     box-shadow: $box-shadow-high;
+    .message-body {
+      word-break: break-all;
+    }
   }
 }

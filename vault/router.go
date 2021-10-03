@@ -59,7 +59,7 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
-type validateMountResponse struct {
+type ValidateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
@@ -75,9 +75,9 @@ func (r *Router) reset() {
 	r.mountAccessorCache = radix.New()
 }
 
-// validateMountByAccessor returns the mount type and ID for a given mount
+// ValidateMountByAccessor returns the mount type and ID for a given mount
 // accessor
-func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse {
+func (r *Router) ValidateMountByAccessor(accessor string) *ValidateMountResponse {
 	if accessor == "" {
 		return nil
 	}
@@ -92,7 +92,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		mountPath = credentialRoutePrefix + mountPath
 	}
 
-	return &validateMountResponse{
+	return &ValidateMountResponse{
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,
@@ -563,6 +563,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
 	case strings.HasPrefix(originalPath, "sys/"):
+	case strings.HasPrefix(originalPath, "identity/"):
 	case strings.HasPrefix(originalPath, cubbyholeMountPath):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a

@@ -26,7 +26,7 @@ func retryKVCommand(t *testing.T, client *api.Client, args []string) (code int, 
 
 	// Loop until return message does not indicate upgrade, or timeout.
 	timeout := time.After(20 * time.Second)
-	for true {
+	for {
 		ui, cmd := testKVPutCommand(t)
 		cmd.client = client
 		code = cmd.Run(args)

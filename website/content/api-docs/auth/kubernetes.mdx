@@ -38,7 +38,7 @@ access the Kubernetes API.
   extracted. Not every installation of Kubernetes exposes these
   keys.
 - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
-  use `kubernetes/serviceaccount` as the default issuer.
+  use `kubernetes/serviceaccount` as the default issuer. See [these instructions](/docs/platform/k8s/csi#setting-issuer-for-kubernetes-authentication) for looking up the issuer for a given Kubernetes cluster.
 - `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 
@@ -122,6 +122,14 @@ entities attempting to login.
 - `bound_service_account_namespaces` `(array: <required>)` - List of namespaces
   allowed to access this role. If set to "\*" all namespaces are allowed.
 - `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
+- `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
+  Valid choices are: `serviceaccount_uid`, `serviceaccount_name`
+  When `serviceaccount_uid` is specified, the machine generated UID from the service account will be used as the identity alias name.
+  When `serviceaccount_name` is specified, the service account's namespace and name will be used as the identity alias name e.g `vault/vault-auth`.
+  While it is strongly advised that you use `serviceaccount_uid`, you may also use `serviceaccount_name` in cases where
+  you want to set the alias ahead of time, and the risks are mitigated or otherwise acceptable given your use case.
+  It is very important to limit who is able to delete/create service accounts within a given cluster.
+  Please see (/api-docs/secret/identity/entity-alias#create-an-entity-alias), which further elaborates on the related security implications.
 
 @include 'tokenfields.mdx'
 

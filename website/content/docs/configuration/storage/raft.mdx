@@ -117,7 +117,8 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
 
 - `leader_api_addr` `(string: "")` - Address of a possible leader node.
 
-- `auto_join` `(string: "")` - Cloud auto-join configuration.
+- `auto_join` `(string: "")` - Cloud auto-join configuration, using
+  [go-discover](https://github.com/hashicorp/go-discover) syntax.
 
 - `auto_join_scheme` `(string: "")` - The optional URI protocol scheme for addresses
   discovered via auto-join.
@@ -156,7 +157,10 @@ by `\n`, but not a combination of both. Each [`retry_join`](#retry_join-stanza)
 stanza may contain either a [`leader_api_addr`](#leader_api_addr) value or a
 cloud [`auto_join`](#auto_join) configuration value, but not both. When an
 [`auto_join`](#auto_join) value is provided, Vault will automatically attempt to
-discover and resolve potential Raft leader addresses.
+discover and resolve potential Raft leader addresses using [go-discover](https://github.com/hashicorp/go-discover).
+See the go-discover
+[README](https://github.com/hashicorp/go-discover/blob/master/README.md)
+for details on the format of the `auto_join` value.
 
 By default, Vault will attempt to reach discovered peers using HTTPS and port
 8200.  Operators may override these through the

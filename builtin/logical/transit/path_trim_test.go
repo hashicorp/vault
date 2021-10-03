@@ -36,7 +36,7 @@ func TestTransit_Trim(t *testing.T) {
 	doReq(t, req)
 
 	// Get the policy and check that the archive has correct number of keys
-	p, _, err := b.lm.GetPolicy(namespace.RootContext(nil), keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(namespace.RootContext(nil), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "aes",
 	}, b.GetRandomReader())

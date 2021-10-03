@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add creation time to KV 2 version history and version view
+```

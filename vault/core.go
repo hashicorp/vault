@@ -66,15 +66,12 @@ const (
 
 	// The poison pill is used as a check during certain scenarios to indicate
 	// to standby nodes that they should seal
-	poisonPillPath = "core/poison-pill"
+	poisonPillPath   = "core/poison-pill"
+	poisonPillDRPath = "core/poison-pill-dr"
 
 	// coreLeaderPrefix is the prefix used for the UUID that contains
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
-
-	// knownPrimaryAddrsPrefix is used to store last-known cluster address
-	// information for primaries
-	knownPrimaryAddrsPrefix = "core/primary-addrs/"
 
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
@@ -572,6 +569,17 @@ type Core struct {
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
+}
+
+func (c *Core) HAState() consts.HAState {
+	switch {
+	case c.perfStandby:
+		return consts.PerfStandby
+	case c.standby:
+		return consts.Standby
+	default:
+		return consts.Active
+	}
 }
 
 // CoreConfig is used to parameterize a core
@@ -2722,7 +2730,7 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
 // If the given request's path is exempt, no rate limiting will be applied.
-func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error) {
+func (c *Core) ApplyRateLimitQuota(ctx context.Context, req *quotas.Request) (quotas.Response, error) {
 	req.Type = quotas.TypeRateLimit
 
 	resp := quotas.Response{
@@ -2736,7 +2744,7 @@ func (c *Core) ApplyRateLimitQuota(req *quotas.Request) (quotas.Response, error)
 			return resp, nil
 		}
 
-		return c.quotaManager.ApplyQuota(req)
+		return c.quotaManager.ApplyQuota(ctx, req)
 	}
 
 	return resp, nil
