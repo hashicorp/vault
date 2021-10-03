@@ -72,12 +72,13 @@ type cacheClearRequest struct {
 // the caching of responses. It passes the incoming request
 // to an underlying Proxier implementation.
 type LeaseCache struct {
-	client      *api.Client
-	proxier     Proxier
-	logger      hclog.Logger
-	db          *cachememdb.CacheMemDB
-	baseCtxInfo *cachememdb.ContextInfo
-	l           *sync.RWMutex
+	client                  *api.Client
+	proxier                 Proxier
+	logger                  hclog.Logger
+	db                      *cachememdb.CacheMemDB
+	baseCtxInfo             *cachememdb.ContextInfo
+	l                       *sync.RWMutex
+	nonLeasedSecretCacheDur time.Duration
 
 	// idLocks is used during cache lookup to ensure that identical requests made
 	// in parallel won't trigger multiple renewal goroutines.
@@ -97,11 +98,12 @@ type LeaseCache struct {
 // LeaseCacheConfig is the configuration for initializing a new
 // Lease.
 type LeaseCacheConfig struct {
-	Client      *api.Client
-	BaseContext context.Context
-	Proxier     Proxier
-	Logger      hclog.Logger
-	Storage     *cacheboltdb.BoltStorage
+	Client                  *api.Client
+	BaseContext             context.Context
+	Proxier                 Proxier
+	Logger                  hclog.Logger
+	Storage                 *cacheboltdb.BoltStorage
+	NonLeasedSecretCacheDur time.Duration
 }
 
 type inflightRequest struct {
@@ -144,15 +146,16 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
-		client:        conf.Client,
-		proxier:       conf.Proxier,
-		logger:        conf.Logger,
-		db:            db,
-		baseCtxInfo:   baseCtxInfo,
-		l:             &sync.RWMutex{},
-		idLocks:       locksutil.CreateLocks(),
-		inflightCache: gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-		ps:            conf.Storage,
+		client:                  conf.Client,
+		proxier:                 conf.Proxier,
+		logger:                  conf.Logger,
+		db:                      db,
+		baseCtxInfo:             baseCtxInfo,
+		l:                       &sync.RWMutex{},
+		idLocks:                 locksutil.CreateLocks(),
+		inflightCache:           gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+		ps:                      conf.Storage,
+		nonLeasedSecretCacheDur: conf.NonLeasedSecretCacheDur,
 	}, nil
 }
 
@@ -319,7 +322,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Fast path for responses with no secrets
-	if secret == nil {
+	if !isSecret(resp.ResponseBody) {
 		c.logger.Debug("pass-through response; no secret in response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		return resp, nil
 	}
@@ -357,12 +360,16 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 		index.Type = cacheboltdb.AuthLeaseType
 
-	default:
-		if secret.LeaseDuration == 0 {
-			c.logger.Debug("pass-through response; secret with no lease in response", "method", req.Request.Method, "path", req.Request.URL.Path)
-			return resp, nil
-		}
+	// If the secret is renewable we want to cache it whether it has a lease or
+	// not because it was the behavior before and we want to be as much backward
+	// compatible as possible.
+	// If lease_duration is 0, we only cache when the user explicitely configured
+	// the Vault Agent Cache to do so.
+	case secret.LeaseDuration == 0 && c.nonLeasedSecretCacheDur == 0 && !secret.Renewable:
+		c.logger.Debug("pass-through response; secret with no lease in response", "method", req.Request.Method, "path", req.Request.URL.Path)
+		return resp, nil
 
+	default:
 		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
 		if err != nil {
@@ -386,7 +393,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		if !secret.Renewable {
 			renewer = func(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
 				// The secret is not renewable, we just evict it at the end of the lease
-				waitFor := time.Duration(secret.LeaseDuration) * time.Second
+				waitFor := c.nonLeasedSecretCacheDur
+				if secret.LeaseDuration != 0 {
+					waitFor = time.Duration(secret.LeaseDuration) * time.Second
+				}
 				c.logger.Debug("storing static secret into the cache", "duration", waitFor.String())
 
 				select {
@@ -446,6 +456,20 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	go renewer(renewCtx, index, req, secret)
 
 	return resp, nil
+}
+
+func isSecret(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+	var d map[string]interface{}
+	if err := jsonutil.DecodeJSON(data, &d); err != nil {
+		return false
+	}
+	_, hasLeaseDuration := d["lease_duration"]
+	_, hasLeaseID := d["lease_id"]
+	_, hasRenewable := d["renewable"]
+	return hasLeaseDuration && hasLeaseID && hasRenewable
 }
 
 func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {

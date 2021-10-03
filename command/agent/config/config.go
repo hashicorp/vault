@@ -65,12 +65,14 @@ type Vault struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool        `hcl:"-"`
-	ForceAutoAuthToken  bool        `hcl:"-"`
-	EnforceConsistency  string      `hcl:"enforce_consistency"`
-	WhenInconsistent    string      `hcl:"when_inconsistent"`
-	Persist             *Persist    `hcl:"persist"`
+	UseAutoAuthTokenRaw        interface{}   `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken           bool          `hcl:"-"`
+	ForceAutoAuthToken         bool          `hcl:"-"`
+	EnforceConsistency         string        `hcl:"enforce_consistency"`
+	WhenInconsistent           string        `hcl:"when_inconsistent"`
+	Persist                    *Persist      `hcl:"persist"`
+	NonLeasedSecretCacheDurRaw interface{}   `hcl:"nonleased_secret_cache_duration"`
+	NonLeasedSecretCacheDur    time.Duration `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -347,6 +349,14 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 		}
 	}
 	result.Cache = &c
+
+	if result.Cache.NonLeasedSecretCacheDurRaw != nil {
+		var err error
+		if result.Cache.NonLeasedSecretCacheDur, err = parseutil.ParseDurationSecond(result.Cache.NonLeasedSecretCacheDurRaw); err != nil {
+			return err
+		}
+		result.Cache.NonLeasedSecretCacheDurRaw = nil
+	}
 
 	subs, ok := item.Val.(*ast.ObjectType)
 	if !ok {

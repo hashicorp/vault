@@ -21,6 +21,7 @@ auto_auth {
 
 cache {
 	use_auto_auth_token = true
+	nonleased_secret_cache_duration = 60
 	persist = {
 		type = "kubernetes"
 		path = "/vault/agent-cache/"

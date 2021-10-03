@@ -3,16 +3,16 @@ layout: docs
 page_title: Vault Agent Caching
 description: |-
   Vault Agent Caching allows client-side caching of responses containing newly
-  created tokens and responses containing leased secrets generated off of these
-  newly created tokens.
+  created tokens and responses containing secrets generated off of these newly
+  created tokens.
 ---
 
 # Vault Agent Caching
 
 Vault Agent Caching allows client-side caching of responses containing newly
-created tokens and responses containing leased secrets generated off of these
-newly created tokens. The renewals of the cached tokens and leases are also
-managed by the agent.
+created tokens and responses containing secrets generated off of these newly
+created tokens. The renewals of the cached tokens and leases are also managed
+by the agent.
 
 -> **Note:** Vault Agent Caching works best with servers/clusters that are
 running on Vault 1.1 and above due to changes that were introduced
@@ -31,10 +31,16 @@ specific scenarios.
    be cached by the agent only if the parent token is already being managed by
    the agent or if the new token is an orphan token.
 
-2. Leased secret creation requests are made through the agent using tokens that
-   are already managed by the agent. This means that any dynamic credentials
-   that are issued using the tokens managed by the agent, will be cached and
+2. Secret creation requests are made through the agent using tokens that are
+   already managed by the agent. This means that any dynamic credentials that
+   are issued using the tokens managed by the agent, will be cached and
    its renewals are taken care of.
+
+Leased secrets will be cached for the duration of their lease and will be
+automatically renewed. Secrets that have a lease duration but cannot be renewed
+like KV v1 will only be cached for the duration of their lease. Non-leased
+secrets like KV v2 will only be cached when `nonleased_secret_cache_duration`
+is set.
 
 ## Using Auto-Auth Token
 
@@ -210,6 +216,10 @@ page.
 
 - `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
    or `"forward"`.
+
+- `nonleased_secret_cache_duration` `(string or integer: optional)` - If specified,
+  configures how long Vault Agent should cache non-leased secrets such as KV v2.
+  When absent or set to 0 non-leased secrets will not be cached.
 
 ### Configuration (Persist)
 

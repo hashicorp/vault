@@ -63,9 +63,10 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			},
 		},
 		Cache: &Cache{
-			UseAutoAuthToken:    true,
-			UseAutoAuthTokenRaw: true,
-			ForceAutoAuthToken:  false,
+			UseAutoAuthToken:        true,
+			UseAutoAuthTokenRaw:     true,
+			ForceAutoAuthToken:      false,
+			NonLeasedSecretCacheDur: 60 * time.Second,
 			Persist: &Persist{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",

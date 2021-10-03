@@ -39,7 +39,7 @@ path "*" {
 // be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
 func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
-	return setupClusterAndAgentCommon(ctx, t, coreConfig, false)
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, false, 0*time.Second)
 }
 
 // setupClusterAndAgentOnStandby is a helper func used to set up a test cluster
@@ -47,10 +47,10 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 // should be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
 func setupClusterAndAgentOnStandby(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
-	return setupClusterAndAgentCommon(ctx, t, coreConfig, true)
+	return setupClusterAndAgentCommon(ctx, t, coreConfig, true, 0*time.Second)
 }
 
-func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool, nonLeasedSecretCacheDur time.Duration) (func(), *api.Client, *api.Client, *LeaseCache) {
 	t.Helper()
 
 	if ctx == nil {
@@ -140,10 +140,11 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      clienToUse,
-		BaseContext: ctx,
-		Proxier:     apiProxy,
-		Logger:      cacheLogger.Named("leasecache"),
+		Client:                  clienToUse,
+		BaseContext:             ctx,
+		Proxier:                 apiProxy,
+		Logger:                  cacheLogger.Named("leasecache"),
+		NonLeasedSecretCacheDur: nonLeasedSecretCacheDur,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1422,7 +1423,7 @@ func TestCache_KV(t *testing.T) {
 		}
 	}
 
-	test := func(t *testing.T, mountInfo *api.MountInput, path string, first, second testCase, leaseDuration int) {
+	test := func(t *testing.T, mountInfo *api.MountInput, path string, first, second testCase, leaseDuration int, nonLeasedSecretCacheDur time.Duration) {
 		coreConfig := &vault.CoreConfig{
 			DisableMlock: true,
 			DisableCache: true,
@@ -1432,7 +1433,7 @@ func TestCache_KV(t *testing.T) {
 			},
 		}
 
-		cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+		cleanup, _, testClient, leaseCache := setupClusterAndAgentCommon(namespace.RootContext(nil), t, coreConfig, false, nonLeasedSecretCacheDur)
 		defer cleanup()
 
 		err := testClient.Sys().Mount("kv", mountInfo)
@@ -1476,6 +1477,28 @@ func TestCache_KV(t *testing.T) {
 			t.Fatal(err)
 		}
 		validateSecret(t, secret, second, "", leaseDuration)
+
+		// Reading an endpoint that is not secret should not create an entry in
+		// the cache
+		_, err = testClient.Logical().Read("sys/health")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		entries, err := leaseCache.db.GetByPrefix(cachememdb.IndexNameRequestPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// We expect the login operation to be cached and fetching the secret
+		if len(entries) != 2 {
+			t.Fatalf("too many entries: %#v", entries[2])
+		}
+		if cachedPath := entries[0].RequestPath; cachedPath != "/v1/auth/userpass/login/foo" {
+			t.Fatalf("The first cache entry should be the authentication, not %q", cachedPath)
+		}
+		if cachedPath := entries[1].RequestPath; cachedPath != "/v1/"+path {
+			t.Fatalf("The secong cache entry should be reading the secret, not %q", cachedPath)
+		}
 	}
 
 	// KV v1 uses the default ttl for seccrets that do not set it so
@@ -1499,7 +1522,7 @@ func TestCache_KV(t *testing.T) {
 		}
 		// Since we set no TTL in KV v1, we expect the lease to use the default
 		// duration of the engine.
-		test(t, mountInfo, "kv/my-secret", first, second, 3)
+		test(t, mountInfo, "kv/my-secret", first, second, 3, 0*time.Second)
 	})
 
 	// KV v1 uses the ttl field of a secret to set the lease duration so
@@ -1523,7 +1546,7 @@ func TestCache_KV(t *testing.T) {
 		}
 		// Since we set a TTL directly in the secret we expect the lease to use
 		// this for its duration instead of the default of the secret engine.
-		test(t, mountInfo, "kv/my-secret", first, second, 2)
+		test(t, mountInfo, "kv/my-secret", first, second, 2, 0*time.Second)
 	})
 
 	// KV v2 does not uses the default ttl nor the ttl field to set the lease
@@ -1554,7 +1577,7 @@ func TestCache_KV(t *testing.T) {
 			clean: clean,
 		}
 		// KV v2 does not set a lease duration but the secret will be cached
-		// for the duration of StaticSecretCacheDur
-		test(t, mountInfo, "kv/data/my-secret", first, second, 0)
+		// for the duration of NonLeasedSecretCacheDur
+		test(t, mountInfo, "kv/data/my-secret", first, second, 0, 3*time.Second)
 	})
 }

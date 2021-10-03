@@ -168,8 +168,8 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	// Emulate 2 responses from the api proxy. One returns a new token and the
 	// other returns a lease.
 	responses := []*SendResponse{
-		newTestSendResponse(http.StatusCreated, `{"auth": {"client_token": "testtoken", "renewable": true}}`),
-		newTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+		newTestSendResponse(http.StatusCreated, `{"lease_id": "", "lease_duration": 0, "renewable": false, "auth": {"client_token": "testtoken", "renewable": true}}`),
+		newTestSendResponse(http.StatusOK, `{"lease_id": "foo", "lease_duration": 0, "renewable": true, "data": {"value": "foo"}}`),
 	}
 
 	lc := testNewLeaseCache(t, responses)
@@ -714,9 +714,9 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// Emulate 4 responses from the api proxy. The first two use the auto-auth
 	// token, and the last two use another token.
 	responses := []*SendResponse{
-		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
-		newTestSendResponse(202, `{"auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
+		newTestSendResponse(200, `{"lease_id": "", "lease_duration": 0, "renewable": false, "auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "lease_duration": 0, "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
+		newTestSendResponse(202, `{"lease_id": "", "lease_duration": 0, "renewable": false, "auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
 		newTestSendResponse(203, `{"lease_id": "secret2-lease", "renewable": true, "data": {"number": "two"}, "lease_duration": 600}`),
 	}
 
@@ -856,7 +856,7 @@ func TestEvictPersistent(t *testing.T) {
 	ctx := context.Background()
 
 	responses := []*SendResponse{
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "lease_duration": 0, "renewable": true, "data": {"value": "foo"}}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
@@ -927,8 +927,8 @@ func TestRegisterAutoAuth_sameToken(t *testing.T) {
 
 func Test_hasExpired(t *testing.T) {
 	responses := []*SendResponse{
-		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 60}`),
+		newTestSendResponse(200, `{"lease_id": "", "lease_duration": 0, "renewable": true, "auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "lease_duration": 0, "renewable": true, "data": {"value": "foo"}, "lease_duration": 60}`),
 	}
 	lc := testNewLeaseCache(t, responses)
 	lc.RegisterAutoAuthToken("autoauthtoken")
@@ -1004,8 +1004,8 @@ Date: Tue, 02 Mar 2021 17:54:16 GMT
 func TestLeaseCacheRestore_expired(t *testing.T) {
 	// Emulate 2 responses from the api proxy, both expired
 	responses := []*SendResponse{
-		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": -600}}`),
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": -600}`),
+		newTestSendResponse(200, `{"lease_id": "", "renewable": false, "lease_duration": 0, "auth": {"client_token": "testtoken", "renewable": true, "lease_duration": -600}}`),
+		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "lease_duration": 0, "data": {"value": "foo"}, "lease_duration": -600}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
