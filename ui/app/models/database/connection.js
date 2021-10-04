@@ -136,7 +136,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'ca_path', group: 'pluginConfig' },
       { attr: 'client_cert', group: 'pluginConfig' },
       { attr: 'client_key', group: 'pluginConfig' },
-      { attr: 'tls_server_name', group: 'pluginConfig', subgroup: 'TLS options' },
+      { attr: 'tls_server_name', group: 'pluginConfig' },
       { attr: 'insecure', group: 'pluginConfig' },
       { attr: 'username_template', group: 'pluginConfig' },
     ],
@@ -223,6 +223,7 @@ export default Model.extend({
     subText: `The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.`,
   }),
   client_cert: attr('string', {
+    label: 'Client certificate',
     subText: 'The path to the certificate for the Elasticsearch client to present for communication.',
   }),
   client_key: attr('string', {
