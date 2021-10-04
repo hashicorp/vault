@@ -1152,7 +1152,7 @@ func RequireState(states ...string) RequestCallback {
 }
 
 // CompareStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
-// if neither s1 or s2 is strictly greater.  An error is returned if s1 or s2
+// if neither s1 or s2 is strictly greater. An error is returned if s1 or s2
 // are invalid or from different clusters.
 func CompareStates(s1, s2 string) (int, error) {
 	w1, err := ParseRequiredState(s1, nil)
