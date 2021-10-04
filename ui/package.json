@@ -134,6 +134,7 @@
     "ivy-codemirror": "IvyApp/ivy-codemirror#fb09333c5144da47e14a9e6260f80577d5408374",
     "jsonlint": "^1.6.3",
     "loader.js": "^4.7.0",
+    "node-forge": "^0.10.0",
     "node-sass": "^4.10.0",
     "normalize.css": "4.1.1",
     "pretender": "^3.4.3",
