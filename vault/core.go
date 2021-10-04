@@ -2824,6 +2824,58 @@ func (c *Core) isPrimary() bool {
 	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
 }
 
+// CompareStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
+// if neither s1 or s2 is strictly greater.  An error is returned if s1 or s2
+// are invalid or from different clusters.
+func CompareStates(s1, s2 string) (int, error) {
+	w1, err := ParseRequiredState(s1, nil)
+	if err != nil {
+		return 0, err
+	}
+	w2, err := ParseRequiredState(s2, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	if w1.ClusterID != w2.ClusterID {
+		return 0, fmt.Errorf("don't know how to compare states with different ClusterIDs")
+	}
+
+	switch {
+	case w1.LocalIndex >= w2.LocalIndex && w1.ReplicatedIndex >= w2.ReplicatedIndex:
+		return 1, nil
+	// We've already handled the case where both are equal above, so really we're
+	// asking here if one or both are lesser.
+	case w1.LocalIndex <= w2.LocalIndex && w1.ReplicatedIndex <= w2.ReplicatedIndex:
+		return -1, nil
+	}
+
+	return 0, nil
+}
+
+func MergeStates(old []string, new string) []string {
+	if len(old) == 0 || len(old) > 2 {
+		return []string{new}
+	}
+
+	var ret []string
+	for _, o := range old {
+		c, err := CompareStates(o, new)
+		if err != nil {
+			return []string{new}
+		}
+		switch c {
+		case 1:
+			ret = append(ret, o)
+		case -1:
+			ret = append(ret, new)
+		case 0:
+			ret = append(ret, o, new)
+		}
+	}
+	return strutil.RemoveDuplicates(ret, false)
+}
+
 func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
