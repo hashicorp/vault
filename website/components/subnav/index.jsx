@@ -18,7 +18,7 @@ export default function ProductSubnav() {
           url: 'https://www.github.com/hashicorp/vault',
         },
         {
-          text: 'Try Cloud',
+          text: 'Try HCP Vault',
           url:
             'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=top_nav_vault',
         },

@@ -30,7 +30,7 @@ export default function Homepage({ content }) {
           buttons={[
             {
               external: false,
-              title: 'Try Cloud',
+              title: 'Try HCP Vault',
               url:
                 'https://portal.cloud.hashicorp.com/sign-up?utm_source=vault_io&utm_content=hero',
             },
