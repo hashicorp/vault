@@ -198,25 +198,25 @@ export default Model.extend({
   // common fields
   connection_url: attr('string', {
     label: 'Connection URL',
-    subText: 'The connection string used to connect to the database.',
+    subText:
+      'The connection string used to connect to the database. This allows for simple templating of username and password of the root use in the {{field_name}} format.',
   }),
   url: attr('string', {
     label: 'URL',
     subText: `The URL for Elasticsearch's API ("http://localhost:9200").`,
   }),
   username: attr('string', {
-    subText: 'Optional. The name of the user to use as the "root" user when connecting to the database.',
+    subText: `The name of the user to use as the "root" user when connecting to the database.`,
   }),
   password: attr('string', {
-    subText:
-      'Optional. The password to use when connecting to the database. Typically used in the connection_url field via the templating directive {{password}}.',
+    subText: 'The password to use when connecting with the above username.',
     editType: 'password',
   }),
 
   // optional
   ca_cert: attr('string', {
     label: 'CA certificate',
-    subText: "The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.",
+    subText: `The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.`,
   }),
   ca_path: attr('string', {
     label: 'CA path',
@@ -273,7 +273,7 @@ export default Model.extend({
   }),
   tls_server_name: attr('string', {
     label: 'TLS server name',
-    helpText: 'If set, this name is used to set the SNI host when connecting via 1TLS.',
+    subText: 'If set, this name is used to set the SNI host when connecting via 1TLS.',
   }),
   root_rotation_statements: attr({
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
