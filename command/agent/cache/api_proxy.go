@@ -7,10 +7,8 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
 )
 
 type EnforceConsistency int
@@ -132,7 +130,7 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		// Vault uses to do so.  So instead we compare any of the 0-2 saved states
 		// we have to the new header, keeping the newest 1-2 of these, and sending
 		// them to Vault to evaluate.
-		ap.lastIndexStates = vault.MergeStates(ap.lastIndexStates, newState)
+		ap.lastIndexStates = api.MergeStates(ap.lastIndexStates, newState)
 		ap.l.Unlock()
 	}
 
