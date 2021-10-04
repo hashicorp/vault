@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -560,5 +562,87 @@ func TestSetHeadersRaceSafe(t *testing.T) {
 		if resultingHeaders.Get(key) != value {
 			t.Fatal("expected " + value + " for " + key)
 		}
+	}
+}
+
+func TestMergeStates(t *testing.T) {
+	type testCase struct {
+		name     string
+		old      []string
+		new      string
+		expected []string
+	}
+
+	testCases := []testCase{
+		{
+			name:     "empty-old",
+			old:      nil,
+			new:      "v1:cid:1:0:",
+			expected: []string{"v1:cid:1:0:"},
+		},
+		{
+			name:     "old-smaller",
+			old:      []string{"v1:cid:1:0:"},
+			new:      "v1:cid:2:0:",
+			expected: []string{"v1:cid:2:0:"},
+		},
+		{
+			name:     "old-bigger",
+			old:      []string{"v1:cid:2:0:"},
+			new:      "v1:cid:1:0:",
+			expected: []string{"v1:cid:2:0:"},
+		},
+		{
+			name:     "mixed-single",
+			old:      []string{"v1:cid:1:0:"},
+			new:      "v1:cid:0:1:",
+			expected: []string{"v1:cid:0:1:", "v1:cid:1:0:"},
+		},
+		{
+			name:     "mixed-single-alt",
+			old:      []string{"v1:cid:0:1:"},
+			new:      "v1:cid:1:0:",
+			expected: []string{"v1:cid:0:1:", "v1:cid:1:0:"},
+		},
+		{
+			name:     "mixed-double",
+			old:      []string{"v1:cid:0:1:", "v1:cid:1:0:"},
+			new:      "v1:cid:2:0:",
+			expected: []string{"v1:cid:0:1:", "v1:cid:2:0:"},
+		},
+		{
+			name:     "newer-both",
+			old:      []string{"v1:cid:0:1:", "v1:cid:1:0:"},
+			new:      "v1:cid:2:1:",
+			expected: []string{"v1:cid:2:1:"},
+		},
+	}
+
+	b64enc := func(ss []string) []string {
+		var ret []string
+		for _, s := range ss {
+			ret = append(ret, base64.StdEncoding.EncodeToString([]byte(s)))
+		}
+		return ret
+	}
+	b64dec := func(ss []string) []string {
+		var ret []string
+		for _, s := range ss {
+			d, err := base64.StdEncoding.DecodeString(s)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ret = append(ret, string(d))
+		}
+		return ret
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			out := b64dec(MergeStates(b64enc(tc.old), base64.StdEncoding.EncodeToString([]byte(tc.new))))
+			if diff := deep.Equal(out, tc.expected); len(diff) != 0 {
+				t.Errorf("got=%v, expected=%v, diff=%v", out, tc.expected, diff)
+			}
+		})
 	}
 }
