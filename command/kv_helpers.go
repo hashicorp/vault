@@ -110,8 +110,24 @@ func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 	case p == mountPath, p == strings.TrimSuffix(mountPath, "/"):
 		return path.Join(mountPath, apiPrefix)
 	default:
-		p = strings.TrimPrefix(p, mountPath)
-		return path.Join(mountPath, apiPrefix, p)
+		tp := strings.TrimPrefix(p, mountPath)
+		for {
+			// If the entire mountPath is included in the path, we are done
+			if tp != p {
+				break
+			}
+			// Trim the parts of the mountPath that are not included in the
+			// path, for example, in cases where the mountPath contains
+			// namespaces which are not included in the path.
+			partialMountPath := strings.SplitN(mountPath, "/", 2)
+			if len(partialMountPath) == 1 || partialMountPath[1] == ""{
+				break
+			}
+			mountPath = partialMountPath[1]
+			tp = strings.TrimPrefix(p, mountPath)
+		}
+
+		return path.Join(mountPath, apiPrefix, tp)
 	}
 }
 
