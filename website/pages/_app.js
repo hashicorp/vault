@@ -65,7 +65,7 @@ export default function App({ Component, pageProps }) {
       <ProductSubnav />
       <Component {...pageProps} />
       <Footer openConsentManager={openConsentManager} />
-      <ConsentManager />
+      <ConsentManager className="g-consent-manager" />
     </ErrorBoundary>
   )
 }
