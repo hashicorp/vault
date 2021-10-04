@@ -329,6 +329,9 @@ func (c *Core) clearForwardingClients() {
 // ForwardRequest forwards a given request to the active node and returns the
 // response.
 func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, error) {
+	// checking if the node is perfStandby here to avoid a deadlock between
+	// Core.stateLock and Core.requestForwardingConnectionLock
+	isPerfStandby := c.PerfStandby()
 	c.requestForwardingConnectionLock.RLock()
 	defer c.requestForwardingConnectionLock.RUnlock()
 
@@ -369,7 +372,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// If we are a perf standby and the request was forwarded to the active node
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
-	if c.PerfStandby() && resp.LastRemoteWal > 0 {
+	if isPerfStandby && resp.LastRemoteWal > 0 {
 		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
 	}
 
