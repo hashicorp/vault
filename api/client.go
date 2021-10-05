@@ -175,7 +175,6 @@ func DefaultConfig() *Config {
 	}
 
 	transport := config.HttpClient.Transport.(*http.Transport)
-
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
