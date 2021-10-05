@@ -16,11 +16,10 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
-var DefaultCustomHeaders = map[string]string{
-	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-	"Content-Security-Policy":   "default-src 'none';   connect-src 'self';  img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'",
-	"X-Frame-Options":           "Deny",
-	"X-XSS-Protection":          "1; mode=block",
+var DefaultCustomHeaders = map[string]map[string]string {
+	"default": {
+		"Strict-Transport-Security": configutil.StrictTransportSecurity,
+	},
 }
 
 func boolPointer(x bool) *bool {
@@ -39,9 +38,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:8200",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 			DisableMlock: true,
@@ -74,9 +71,7 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -187,16 +182,12 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:444",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -355,9 +346,7 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:8200",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 			DisableMlock: true,
@@ -401,9 +390,7 @@ func testLoadConfigFile(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -550,9 +537,7 @@ func testLoadConfigFile_json(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -638,9 +623,7 @@ func testLoadConfigDir(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -849,9 +832,7 @@ listener "tcp" {
 					Profiling: configutil.ListenerProfiling{
 						UnauthenticatedPProfAccess: true,
 					},
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 		},
@@ -879,9 +860,7 @@ func testParseSeals(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 			Seals: []*configutil.KMS{
@@ -935,9 +914,7 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 				{
 					Type:    "tcp",
 					Address: "127.0.0.1:443",
-					CustomResponseHeaders: map[string]map[string]string{
-						"default": DefaultCustomHeaders,
-					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 

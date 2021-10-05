@@ -2653,8 +2653,8 @@ func (c *Core) getCustomHeadersListenerList(listenerAdd string) []*ListenerCusto
 		return nil
 	}
 
-	customHeadersList := customHeaders.([]*ListenerCustomHeaders)
-	if customHeadersList == nil {
+	customHeadersList, ok := customHeaders.([]*ListenerCustomHeaders)
+	if customHeadersList == nil || !ok {
 		return nil
 	}
 

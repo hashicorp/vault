@@ -24,71 +24,71 @@ type CustomHeader struct {
 }
 
 func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHeaders http.Header) []*ListenerCustomHeaders {
-	var ll []*ListenerCustomHeaders
+	var listenerCustomHeadersList []*ListenerCustomHeaders
 
 	for _, l := range ln {
-		lc := &ListenerCustomHeaders{
+		listenerCustomHeaderStruct := &ListenerCustomHeaders{
 			Address: l.Address,
 		}
-		lc.StatusCodeHeaderMap = make(map[string][]*CustomHeader)
-		lc.configuredHeadersStatusCodeMap = make(map[string][]string)
-		for sc, hv := range l.CustomResponseHeaders {
-			var chl []*CustomHeader
-			for h, v := range hv {
+		listenerCustomHeaderStruct.StatusCodeHeaderMap = make(map[string][]*CustomHeader)
+		listenerCustomHeaderStruct.configuredHeadersStatusCodeMap = make(map[string][]string)
+		for statusCode, headerValMap := range l.CustomResponseHeaders {
+			var customHeaderList []*CustomHeader
+			for headerName, headerVal := range headerValMap {
 				// Sanitizing custom headers
 				// X-Vault- prefix is reserved for Vault internal processes
-				if strings.HasPrefix(h, "X-Vault-") {
-					logger.Warn("custom headers starting with X-Vault are not valid", "header", h)
+				if strings.HasPrefix(headerName, "X-Vault-") {
+					logger.Warn("custom headers starting with X-Vault are not valid", "header", headerName)
 					continue
 				}
 
 				// Checking for UI headers, if any common header exists, we just log an error
 				if uiHeaders != nil {
-					exist := uiHeaders.Get(h)
+					exist := uiHeaders.Get(headerName)
 					if exist != "" {
-						logger.Warn("found a duplicate header in UI", "header:", h, "Headers defined in the server configuration take precedence.")
+						logger.Warn("found a duplicate header in UI", "header:", headerName, "Headers defined in the server configuration take precedence.")
 					}
 				}
 
 				// Checking if the header value is not an empty string
-				if v == "" {
-					logger.Warn("header value is an empty string", "header", h, "value", v)
+				if headerVal == "" {
+					logger.Warn("header value is an empty string", "header", headerName, "value", headerVal)
 					continue
 				}
 
 				ch := &CustomHeader{
-					Name:  h,
-					Value: v,
+					Name:  headerName,
+					Value: headerVal,
 				}
 
-				chl = append(chl, ch)
+				customHeaderList = append(customHeaderList, ch)
 
 				// setting up the reverse map of header to status code for easy lookups
-				lc.configuredHeadersStatusCodeMap[h] = append(lc.configuredHeadersStatusCodeMap[h], sc)
+				listenerCustomHeaderStruct.configuredHeadersStatusCodeMap[headerName] = append(listenerCustomHeaderStruct.configuredHeadersStatusCodeMap[headerName], statusCode)
 			}
-			lc.StatusCodeHeaderMap[sc] = chl
+			listenerCustomHeaderStruct.StatusCodeHeaderMap[statusCode] = customHeaderList
 		}
-		ll = append(ll, lc)
+		listenerCustomHeadersList = append(listenerCustomHeadersList, listenerCustomHeaderStruct)
 	}
 
-	return ll
+	return listenerCustomHeadersList
 }
 
-func (l *ListenerCustomHeaders) findCustomHeaderMatchStatusCode(sc string, hn string) string {
+func (l *ListenerCustomHeaders) findCustomHeaderMatchStatusCode(statusCode string, headerName string) string {
 	getHeader := func(ch []*CustomHeader) string {
 		for _, h := range ch {
-			if h.Name == hn {
+			if h.Name == headerName {
 				return h.Value
 			}
 		}
 		return ""
 	}
 
-	hm := l.StatusCodeHeaderMap
+	headerMap := l.StatusCodeHeaderMap
 
 	// starting with the most specific status code
-	if ch, ok := hm[sc]; ok {
-		h := getHeader(ch)
+	if customHeaderList, ok := headerMap[statusCode]; ok {
+		h := getHeader(customHeaderList)
 		if h != "" {
 			return h
 		}
@@ -96,14 +96,14 @@ func (l *ListenerCustomHeaders) findCustomHeaderMatchStatusCode(sc string, hn st
 
 	// Checking for the Yxx pattern
 	var firstDig string
-	if len(sc) == 3 {
-		firstDig = string(sc[0])
+	if len(statusCode) == 3 {
+		firstDig = string(statusCode[0])
 	}
 	if firstDig != "" {
 		s := fmt.Sprintf("%vxx", firstDig)
 		if configutil.IsValidStatusCodeCollection(s) {
-			if ch, ok := hm[s]; ok {
-				h := getHeader(ch)
+			if customHeaderList, ok := headerMap[s]; ok {
+				h := getHeader(customHeaderList)
 				if h != "" {
 					return h
 				}
@@ -113,7 +113,7 @@ func (l *ListenerCustomHeaders) findCustomHeaderMatchStatusCode(sc string, hn st
 
 	// At this point, we could not find a match for the given status code in the config file
 	// so, we just return the "default" ones
-	h := getHeader(hm["default"])
+	h := getHeader(headerMap["default"])
 	if h != "" {
 		return h
 	}
@@ -134,9 +134,9 @@ func (l *ListenerCustomHeaders) FetchHeaderForStatusCode(header, sc string) (str
 		return "", fmt.Errorf("failed to check if a header exist in config file due to invalid status code")
 	}
 
-	hn := textproto.CanonicalMIMEHeaderKey(header)
+	headerName := textproto.CanonicalMIMEHeaderKey(header)
 
-	h := l.findCustomHeaderMatchStatusCode(sc, hn)
+	h := l.findCustomHeaderMatchStatusCode(sc, headerName)
 
 	return h, nil
 }
@@ -150,9 +150,9 @@ func (l *ListenerCustomHeaders) ExistCustomResponseHeader(header string) bool {
 		return false
 	}
 
-	hn := textproto.CanonicalMIMEHeaderKey(header)
+	headerName := textproto.CanonicalMIMEHeaderKey(header)
 
-	hs := l.configuredHeadersStatusCodeMap
-	_, ok := hs[hn]
+	headerMap := l.configuredHeadersStatusCodeMap
+	_, ok := headerMap[headerName]
 	return ok
 }

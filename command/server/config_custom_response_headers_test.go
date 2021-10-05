@@ -12,8 +12,6 @@ var defaultCustomHeaders = map[string]string{
 	"Content-Security-Policy":   "default-src 'others'",
 	"X-Vault-Ignored":           "ignored",
 	"X-Custom-Header":           "Custom header value default",
-	"X-Frame-Options":           "Deny",
-	"X-XSS-Protection":          "1; mode=block",
 }
 
 var customHeaders307 = map[string]string{
@@ -38,6 +36,17 @@ var customHeader400 = map[string]string{
 	"Someheader-400": "400",
 }
 
+var defaultCustomHeadersMultiListener = map[string]string{
+	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+	"Content-Security-Policy":   "default-src 'others'",
+	"X-Vault-Ignored":           "ignored",
+	"X-Custom-Header":           "Custom header value default",
+}
+
+var defaultSTS = map[string]string{
+	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+}
+
 func TestCustomResponseHeadersConfigs(t *testing.T) {
 	expectedCustomResponseHeader := map[string]map[string]string{
 		"default": defaultCustomHeaders,
@@ -59,7 +68,7 @@ func TestCustomResponseHeadersConfigs(t *testing.T) {
 
 func TestCustomResponseHeadersConfigsMultipleListeners(t *testing.T) {
 	expectedCustomResponseHeader := map[string]map[string]string{
-		"default": defaultCustomHeaders,
+		"default": defaultCustomHeadersMultiListener,
 		"307":     customHeaders307,
 		"3xx":     customHeader3xx,
 		"200":     customHeaders200,
@@ -79,6 +88,22 @@ func TestCustomResponseHeadersConfigsMultipleListeners(t *testing.T) {
 		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
 	}
 	if diff := deep.Equal(expectedCustomResponseHeader["default"], config.Listeners[1].CustomResponseHeaders["default"]); diff != nil {
+		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+	}
+
+	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[2].CustomResponseHeaders); diff == nil {
+		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+	}
+
+	if diff := deep.Equal(defaultSTS, config.Listeners[2].CustomResponseHeaders["default"]); diff != nil {
+		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+	}
+
+	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[3].CustomResponseHeaders); diff == nil {
+		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+	}
+
+	if diff := deep.Equal(defaultSTS, config.Listeners[3].CustomResponseHeaders["default"]); diff != nil {
 		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
 	}
 }

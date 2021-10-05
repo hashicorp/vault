@@ -7,13 +7,6 @@ import (
 	"strings"
 )
 
-var DefaultHeaderNames = []string{
-	"Content-Security-Policy",
-	"X-XSS-Protection",
-	"X-Frame-Options",
-	"Strict-Transport-Security",
-}
-
 var ValidCustomStatusCodeCollection = []string{
 	"default",
 	"1xx",
@@ -23,96 +16,63 @@ var ValidCustomStatusCodeCollection = []string{
 	"5xx",
 }
 
-const (
-	contentSecurityPolicy   = "default-src 'none';   connect-src 'self';  img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'"
-	xXssProtection          = "1; mode=block"
-	xFrameOptions           = "Deny"
-	strictTransportSecurity = "max-age=31536000; includeSubDomains"
-)
+const StrictTransportSecurity = "max-age=31536000; includeSubDomains"
 
-func GetDefaultHeaderValue(h string) string {
-	switch h {
-	case "Content-Security-Policy":
-		return contentSecurityPolicy
-	case "X-XSS-Protection":
-		return xXssProtection
-	case "X-Frame-Options":
-		return xFrameOptions
-	case "Strict-Transport-Security":
-		return strictTransportSecurity
-	default:
-		return ""
-	}
-}
-
-func setDefaultResponseHeaders(c map[string]string) map[string]string {
-	defaults := make(map[string]string)
-	// adding all parsed default headers
-	for k, v := range c {
-		defaults[k] = v
-	}
-
-	// setting all default headers that are not included in the config
-	// file under the "default" category
-	for _, hn := range DefaultHeaderNames {
-		if _, ok := c[hn]; ok {
-			continue
-		}
-		hv := GetDefaultHeaderValue(hn)
-		if hv != "" {
-			defaults[hn] = hv
-		}
-	}
-
-	return defaults
-}
-
-func ParseCustomResponseHeaders(r interface{}) (map[string]map[string]string, error) {
+// ParseCustomResponseHeaders takes a raw config values for the
+// "custom_response_headers". It makes sure the config entry is passed in
+// as a map of status code to a map of header name and header values. It
+// verifies the validity of the status codes, and header values. It also
+// adds the default headers values.
+func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[string]string, error) {
 	h := make(map[string]map[string]string)
 	// if r is nil, we still should set the default custom headers
-	if r == nil {
-		de := h["default"]
-		h["default"] = setDefaultResponseHeaders(de)
+	if responseHeaders == nil {
+		h["default"] = map[string]string{"Strict-Transport-Security": StrictTransportSecurity}
 		return h, nil
 	}
 
-	if _, ok := r.([]map[string]interface{}); !ok {
-		return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a map")
+	if _, ok := responseHeaders.([]map[string]interface{}); !ok {
+		return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a slice of maps")
 	}
 
-	customResponseHeader := r.([]map[string]interface{})
+	customResponseHeader := responseHeaders.([]map[string]interface{})
 
 	for _, crh := range customResponseHeader {
 		for statusCode, responseHeader := range crh {
 			if _, ok := responseHeader.([]map[string]interface{}); !ok {
-				return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a map")
+				return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a slice of maps")
 			}
 
 			if !IsValidStatusCode(statusCode) {
 				return nil, fmt.Errorf("invalid status code found in the server configuration: %v", statusCode)
 			}
 
-			hvl := responseHeader.([]map[string]interface{})
-			if len(hvl) != 1 {
+			headerValList := responseHeader.([]map[string]interface{})
+			if len(headerValList) != 1 {
 				return nil, fmt.Errorf("invalid number of response headers exist")
 			}
-			hvm := hvl[0]
-			hv, err := parseHeaders(hvm)
+			headerValMap := headerValList[0]
+			headerVal, err := parseHeaders(headerValMap)
 			if err != nil {
 				return nil, err
 			}
 
-			h[statusCode] = hv
+			h[statusCode] = headerVal
 		}
 	}
 
-	// setting default custom headers
-	de := h["default"]
-	h["default"] = setDefaultResponseHeaders(de)
+	// setting Strict-Transport-Security as a default header
+	if h["default"] == nil {
+		h["default"] = make(map[string]string)
+	}
+	if _, ok := h["default"]["Strict-Transport-Security"]; !ok {
+		h["default"]["Strict-Transport-Security"] = StrictTransportSecurity
+	}
 
 	return h, nil
 }
 
+// IsValidStatusCodeCollection checks if the given status code is as expected
 func IsValidStatusCodeCollection(sc string) bool {
 	for _, v := range ValidCustomStatusCodeCollection {
 		if sc == v {
@@ -145,24 +105,24 @@ func parseHeaders(in map[string]interface{}) (map[string]string, error) {
 	hvMap := make(map[string]string)
 	for k, v := range in {
 		// parsing header name
-		hn := textproto.CanonicalMIMEHeaderKey(k)
+		headerName := textproto.CanonicalMIMEHeaderKey(k)
 		// parsing header values
 		s, err := parseHeaderValues(v)
 		if err != nil {
 			return nil, err
 		}
-		hvMap[hn] = s
+		hvMap[headerName] = s
 	}
 	return hvMap, nil
 }
 
-func parseHeaderValues(h interface{}) (string, error) {
+func parseHeaderValues(header interface{}) (string, error) {
 	var sl []string
-	if _, ok := h.([]interface{}); !ok {
+	if _, ok := header.([]interface{}); !ok {
 		return "", fmt.Errorf("headers must be given in a list of strings")
 	}
-	vli := h.([]interface{})
-	for _, vh := range vli {
+	headerValList := header.([]interface{})
+	for _, vh := range headerValList {
 		if _, ok := vh.(string); !ok {
 			return "", fmt.Errorf("found a non-string header value: %v", vh)
 		}
