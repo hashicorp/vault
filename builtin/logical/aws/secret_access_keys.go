@@ -182,6 +182,41 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	return resp, nil
 }
 
+func (b *backend) getSessionToken(ctx context.Context, s logical.Storage,
+	lifeTimeInSeconds int64) (*logical.Response, error) {
+
+	stsClient, err := b.clientSTS(ctx, s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+
+	getTokenInput := &sts.GetSessionTokenInput{
+		DurationSeconds: &lifeTimeInSeconds,
+	}
+
+	tokenResp, err := stsClient.GetSessionToken(getTokenInput)
+	if err != nil {
+		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
+	}
+
+	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+	}, map[string]interface{}{
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
+
+	// STS are purposefully short-lived and aren't renewable
+	resp.Secret.Renewable = false
+
+	return resp, nil
+}
+
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
 	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error,

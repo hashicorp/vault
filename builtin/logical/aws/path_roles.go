@@ -61,7 +61,7 @@ func pathRoles(b *backend) *framework.Path {
 
 			"credential_type": {
 				Type:        framework.TypeString,
-				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred),
+				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred, sessionTokenCred),
 			},
 
 			"role_arns": {
@@ -118,7 +118,7 @@ delimited key pairs.`,
 
 			"default_sts_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
+				Description: fmt.Sprintf("Default TTL for %s, %s, and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred, sessionTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Default STS TTL",
 				},
@@ -126,7 +126,7 @@ delimited key pairs.`,
 
 			"max_sts_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
+				Description: fmt.Sprintf("Max allowed TTL for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Max STS TTL",
 				},
@@ -550,19 +550,19 @@ func (r *awsRoleEntry) validate() error {
 		errors = multierror.Append(errors, fmt.Errorf("did not supply credential_type"))
 	}
 
-	allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred}
+	allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred, sessionTokenCred}
 	for _, credType := range r.CredentialTypes {
 		if !strutil.StrListContains(allowedCredentialTypes, credType) {
 			errors = multierror.Append(errors, fmt.Errorf("unrecognized credential type: %s", credType))
 		}
 	}
 
-	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
-		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred)  && !strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred))
 	}
 
-	if r.MaxSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
-		errors = multierror.Append(errors, fmt.Errorf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+	if r.MaxSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) && !strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("max_sts_ttl parameter only valid for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred))
 	}
 
 	if r.MaxSTSTTL > 0 &&
@@ -606,6 +606,7 @@ const (
 	assumedRoleCred     = "assumed_role"
 	iamUserCred         = "iam_user"
 	federationTokenCred = "federation_token"
+	sessionTokenCred    = "session_token"
 )
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
