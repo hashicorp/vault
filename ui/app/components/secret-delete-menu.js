@@ -121,12 +121,8 @@ export default class SecretDeleteMenu extends Component {
       return;
     }
     if (deleteType === 'destroy-all-versions' || deleteType === 'v1') {
-      let { id } = this.args.model;
       this.args.model.destroyRecord().then(() => {
-        if (deleteType === 'v1') {
-          return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
-        }
-        this.args.navToNearestAncestor.perform(id);
+        return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
       });
     } else {
       // if they do not have read access on the metadata endpoint we need to pull the version from modelForData so they can perform delete and undelete operations
