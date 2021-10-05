@@ -25,7 +25,7 @@ export default Component.extend({
   flashMessages: service(),
   router: service(),
   validationMessages: null,
-  isFormInvalid: true,
+  isFormInvalid: false,
   props: computed('model', function() {
     return this.model.serialize();
   }),
