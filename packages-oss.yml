@@ -185,7 +185,7 @@ package-aliases:
 # NOTE: At present, changing the names and/or adding/removing layers may
 # require updating the CI template file at .circleci/config/@build-release.yml.tpl
 # which references some of these layers by name.
-base-image: "debian@sha256:68f4e2259032a4e6f5035804e64438b52af8dd5889528b305b9059183ea4cd2a"
+base-image: "debian:bullseye-20210927@sha256:eaa533c53fa886f87e48b9420579e1a4698026159cc9190a02f1e9fe88f590ba"
 layers:
   - name: base
     dockerfile: |-
