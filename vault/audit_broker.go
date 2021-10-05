@@ -133,7 +133,9 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 		start := time.Now()
 		lrErr := be.backend.LogRequest(ctx, in)
-		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
+		metrics.MeasureSinceWithLabels([]string{"audit", "device", "log_request"}, start, []metrics.Label{
+			{"device_name", name},
+		})
 		if lrErr != nil {
 			a.logger.Error("backend failed to log request", "backend", name, "error", lrErr)
 		} else {
@@ -189,7 +191,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 
 		start := time.Now()
 		lrErr := be.backend.LogResponse(ctx, in)
-		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
+		metrics.MeasureSinceWithLabels([]string{"audit", "device", "log_response"}, start, []metrics.Label{
+			{"device_name", name},
+		})
 		if lrErr != nil {
 			a.logger.Error("backend failed to log response", "backend", name, "error", lrErr)
 		} else {
