@@ -146,7 +146,7 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 5
-	bo.MaxElapsedTime = time.Minute
+	bo.MaxElapsedTime = 2 * time.Minute
 
 	pieces := strings.Split(hostIPs[0], ":")
 	portInt, err := strconv.Atoi(pieces[1])

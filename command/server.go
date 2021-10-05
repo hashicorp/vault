@@ -24,7 +24,6 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
-	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
 	"github.com/hashicorp/go-multierror"
@@ -51,6 +50,7 @@ import (
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
+	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
@@ -96,7 +96,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.InterceptLogger
+	logger      hclog.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -106,7 +106,7 @@ type ServerCommand struct {
 	reloadedCh        chan (struct{}) // for tests
 	licenseReloadedCh chan (error)    // for tests
 
-	allLoggers []log.Logger
+	allLoggers []hclog.Logger
 
 	// new stuff
 	flagConfigs            []string
@@ -450,7 +450,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	c.logger = log.NewInterceptLogger(&log.LoggerOptions{
+	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
 		Output: c.gatedWriter,
 		Level:  level,
 		// Note that if logFormat is either unspecified or standard, then
@@ -725,7 +725,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
-	return 0
 }
 
 func logProxyEnvironmentVariables(logger hclog.Logger) {
@@ -760,15 +759,15 @@ func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet 
 		logLevelString = configLogLevel
 		switch configLogLevel {
 		case "trace":
-			c.logger.SetLevel(log.Trace)
+			c.logger.SetLevel(hclog.Trace)
 		case "debug":
-			c.logger.SetLevel(log.Debug)
+			c.logger.SetLevel(hclog.Debug)
 		case "notice", "info", "":
-			c.logger.SetLevel(log.Info)
+			c.logger.SetLevel(hclog.Info)
 		case "warn", "warning":
-			c.logger.SetLevel(log.Warn)
+			c.logger.SetLevel(hclog.Warn)
 		case "err", "error":
-			c.logger.SetLevel(log.Error)
+			c.logger.SetLevel(hclog.Error)
 		default:
 			return "", fmt.Errorf("unknown log level: %s", config.LogLevel)
 		}
@@ -776,7 +775,7 @@ func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet 
 	return logLevelString, nil
 }
 
-func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Level, string, bool, logging.LogFormat, error) {
+func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.Level, string, bool, logging.LogFormat, error) {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logOutput = os.Stderr
@@ -784,7 +783,7 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 		c.logOutput = os.Stdout
 	}
 	c.gatedWriter = gatedwriter.NewWriter(c.logOutput)
-	var level log.Level
+	var level hclog.Level
 	var logLevelWasNotSet bool
 	logFormat := logging.UnspecifiedFormat
 	logLevelString := c.flagLogLevel
@@ -793,17 +792,17 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 	case notSetValue, "":
 		logLevelWasNotSet = true
 		logLevelString = "info"
-		level = log.Info
+		level = hclog.Info
 	case "trace":
-		level = log.Trace
+		level = hclog.Trace
 	case "debug":
-		level = log.Debug
+		level = hclog.Debug
 	case "notice", "info":
-		level = log.Info
+		level = hclog.Info
 	case "warn", "warning":
-		level = log.Warn
+		level = hclog.Warn
 	case "err", "error":
-		level = log.Error
+		level = hclog.Error
 	default:
 		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
 	}
@@ -833,14 +832,14 @@ type quiescenceSink struct {
 	t *time.Timer
 }
 
-func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ...interface{}) {
+func (q quiescenceSink) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
 	q.t.Reset(100 * time.Millisecond)
 }
 
 func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, error) {
 	// Ensure that a backend is provided
 	if config.Storage == nil {
-		return nil, fmt.Errorf("A storage backend must be specified")
+		return nil, errors.New("A storage backend must be specified")
 	}
 
 	// Initialize the backend
@@ -866,7 +865,7 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 			config.ClusterAddr = envCA
 		}
 		if len(config.ClusterAddr) == 0 {
-			return nil, fmt.Errorf("Cluster address must be set when using raft storage")
+			return nil, errors.New("Cluster address must be set when using raft storage")
 		}
 	}
 
@@ -1097,13 +1096,13 @@ func (c *ServerCommand) Run(args []string) int {
 	config.LogFormat = logFormat.String()
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
+		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
 			Mutex:  &sync.Mutex{},
 			Output: c.gatedWriter,
-			Level:  log.Trace,
+			Level:  hclog.Trace,
 		})
 	} else {
-		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
+		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
 			Output: c.gatedWriter,
 			Level:  level,
 			// Note that if logFormat is either unspecified or standard, then
@@ -1115,7 +1114,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
 
-	c.allLoggers = []log.Logger{c.logger}
+	c.allLoggers = []hclog.Logger{c.logger}
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -1233,7 +1232,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if barrierSeal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+		c.UI.Error("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated.")
 		return 1
 	}
 
@@ -1519,7 +1518,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Check for new log level
 			var config *server.Config
-			var level log.Level
+			var level hclog.Level
 			for _, path := range c.flagConfigs {
 				current, err := server.LoadConfig(path)
 				if err != nil {
@@ -1546,15 +1545,15 @@ func (c *ServerCommand) Run(args []string) int {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {
 				case "trace":
-					level = log.Trace
+					level = hclog.Trace
 				case "debug":
-					level = log.Debug
+					level = hclog.Debug
 				case "notice", "info", "":
-					level = log.Info
+					level = hclog.Info
 				case "warn", "warning":
-					level = log.Warn
+					level = hclog.Warn
 				case "err", "error":
-					level = log.Error
+					level = hclog.Error
 				default:
 					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
 					goto RUNRELOADFUNCS
@@ -1673,7 +1672,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			if leaderCount == 0 {
 				buf := make([]byte, 1<<16)
 				runtime.Stack(buf, true)
-				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s\n", buf)
+				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s", buf)
 			}
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
@@ -1714,7 +1713,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = core.HandleRequest(ctx, req)
+		_, err = core.HandleRequest(ctx, req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to revoke initial root token: %w", err)
 		}
@@ -1852,7 +1851,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = testCluster.Cores[0].HandleRequest(ctx, req)
+		_, err = testCluster.Cores[0].HandleRequest(ctx, req)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
@@ -2696,7 +2695,7 @@ func SetStorageMigration(b physical.Backend, active bool) error {
 }
 
 type grpclogFaker struct {
-	logger log.Logger
+	logger hclog.Logger
 	log    bool
 }
 
