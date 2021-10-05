@@ -900,7 +900,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 
 	// Cache the key
 	if err := i.oidcCache.SetDefault(ns, "namedKeys/"+name, &key); err != nil {
-		i.logger.Debug("failed to cache key", "error", err)
+		i.logger.Warn("failed to cache key", "error", err)
 	}
 
 	return &key, nil
