@@ -1286,6 +1286,36 @@ func TestBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
+func TestBackend_SessionToken(t *testing.T) {
+	t.Parallel()
+	userName := generateUniqueName(t.Name())
+	accessKey := &awsAccessKey{}
+
+	roleData := map[string]interface{}{
+		"credential_type": sessionTokenCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createUser(t, userName, accessKey)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
+		},
+		Teardown: func() error {
+			return deleteTestUser(accessKey, userName)
+		},
+	})
+}
+
 func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueName(t.Name())
