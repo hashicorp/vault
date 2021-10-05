@@ -43,7 +43,7 @@ require (
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
-	github.com/fatih/color v1.11.0
+	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
@@ -63,8 +63,8 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.7.0
-	github.com/hashicorp/go-hclog v0.16.1
-	github.com/hashicorp/go-kms-wrapping v0.5.16
+	github.com/hashicorp/go-hclog v0.16.2
+	github.com/hashicorp/go-kms-wrapping v0.6.7
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
@@ -116,7 +116,7 @@ require (
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.10.3
-	github.com/mattn/go-colorable v0.1.8
+	github.com/mattn/go-colorable v0.1.11
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/miekg/dns v1.1.40 // indirect
@@ -135,7 +135,7 @@ require (
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
-	github.com/oracle/oci-go-sdk v12.5.0+incompatible
+	github.com/oracle/oci-go-sdk v13.1.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.6.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -171,7 +171,7 @@ require (
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 	google.golang.org/api v0.29.0
