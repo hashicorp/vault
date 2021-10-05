@@ -717,13 +717,13 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	responses := []*SendResponse{
 		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
 		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
+		// The auth token will get manually deleted from the bolt DB storage, causing both of the following two responses
+		// to be missing from the cache after a restore, because the lease is a child of the auth token.
 		newTestSendResponse(202, `{"auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
 		newTestSendResponse(203, `{"lease_id": "secret2-lease", "renewable": true, "data": {"number": "two"}, "lease_duration": 600}`),
 		// 204 No content gets special handling - avoid.
 		newTestSendResponse(250, `{"auth": {"client_token": "testtoken3", "renewable": true, "orphan": true, "lease_duration": 600}}`),
 		newTestSendResponse(251, `{"lease_id": "secret3-lease", "renewable": true, "data": {"number": "three"}, "lease_duration": 600}`),
-		newTestSendResponse(252, `{"auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
-		newTestSendResponse(253, `{"lease_id": "secret2-lease", "renewable": true, "data": {"number": "two"}, "lease_duration": 600}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
@@ -736,12 +736,12 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	assert.NoError(t, err)
 
 	cacheTests := []struct {
-		token   string
-		method  string
-		urlPath string
-		body    string
-		delete  bool
-		missing bool
+		token                     string
+		method                    string
+		urlPath                   string
+		body                      string
+		deleteFromPersistentStore bool // If true, will be deleted from bolt DB to induce an error on restore
+		expectMissingAfterRestore bool // If true, the response is not expected to be present in the restored cache
 	}{
 		{
 			// Make a request. A response with a new token is returned to the
@@ -761,11 +761,11 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 		},
 		{
 			// Simulate an approle login to get another token
-			method:  "PUT",
-			urlPath: "http://example.com/v1/auth/approle-expect-missing/login",
-			body:    `{"role_id": "my role", "secret_id": "my secret"}`,
-			delete:  true,
-			missing: true,
+			method:                    "PUT",
+			urlPath:                   "http://example.com/v1/auth/approle-expect-missing/login",
+			body:                      `{"role_id": "my role", "secret_id": "my secret"}`,
+			deleteFromPersistentStore: true,
+			expectMissingAfterRestore: true,
 		},
 		{
 			// Test caching with the token acquired from the approle login
@@ -773,7 +773,8 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 			method:  "GET",
 			urlPath: "http://example.com/v1/sample-expect-missing/api",
 			body:    `{"second": "input"}`,
-			missing: true,
+			// This will be missing from the restored cache because its parent token was deleted
+			expectMissingAfterRestore: true,
 		},
 		{
 			// Simulate another approle login to get another token
@@ -797,7 +798,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 			Token:   ct.token,
 			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
 		}
-		if ct.delete {
+		if ct.deleteFromPersistentStore {
 			deleteID, err = computeIndexID(sendReq)
 			assert.NoError(t, err)
 			// Now reset the body after calculating the index
@@ -825,8 +826,9 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Now we know the cache is working, so try restoring from the persisted
-	// cache's storage
-	restoredCache := testNewLeaseCache(t, nil)
+	// cache's storage. Responses 3 and 4 have been cleared from the cache, so
+	// re-send those.
+	restoredCache := testNewLeaseCache(t, responses[2:4])
 
 	err = restoredCache.Restore(context.Background(), boltStorage)
 	errors, ok := err.(*multierror.Error)
@@ -873,7 +875,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	assert.Len(t, afterDB, 5)
 
 	// And finally send the cache requests once to make sure they're all being
-	// served from the restoredCache
+	// served from the restoredCache unless they were intended to be missing after restore.
 	for i, ct := range cacheTests {
 		sendCacheReq := &SendRequest{
 			Token:   ct.token,
@@ -881,11 +883,10 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 		}
 		respCached, err := restoredCache.Send(context.Background(), sendCacheReq)
 		require.NoError(t, err, "failed to send request %+v", ct)
-		if ct.missing {
-			assert.Equal(t, responses[i+4].Response.StatusCode, respCached.Response.StatusCode, "expected proxied response")
+		assert.Equal(t, responses[i].Response.StatusCode, respCached.Response.StatusCode, "expected proxied response")
+		if ct.expectMissingAfterRestore {
 			require.Nil(t, respCached.CacheMeta)
 		} else {
-			assert.Equal(t, responses[i].Response.StatusCode, respCached.Response.StatusCode, "expected proxied response")
 			require.NotNil(t, respCached.CacheMeta)
 			assert.True(t, respCached.CacheMeta.Hit)
 		}
