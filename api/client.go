@@ -1215,7 +1215,7 @@ func parseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 
 	lastIndex := strings.LastIndexByte(s, ':')
 	if lastIndex == -1 {
-		return nil, fmt.Errorf("invalid state header format")
+		return nil, fmt.Errorf("invalid full state header format")
 	}
 	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
 	stateHMAC, err := hex.DecodeString(stateHMACRaw)
@@ -1237,11 +1237,11 @@ func parseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 	}
 	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("invalid state header format")
+		return nil, fmt.Errorf("invalid local index in state header: %w", err)
 	}
 	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("invalid state header format")
+		return nil, fmt.Errorf("invalid replicated index in state header: %w", err)
 	}
 
 	return &logical.WALState{
