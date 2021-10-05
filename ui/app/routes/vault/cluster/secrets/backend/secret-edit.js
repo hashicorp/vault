@@ -251,7 +251,15 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType === 'secret-v2') {
       // after the the base model fetch, kv-v2 has a second associated
       // version model that contains the secret data
-      secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+
+      // if no read access to metadata, return current Version from secret data endpoint's customMetadata.
+      if (!secretModel.currentVersion) {
+        let adapter = this.store.adapterFor('secret-v2-version');
+        secretModel.currentVersion = await adapter.getSecretDataVersion(backend, secret);
+        secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+      } else {
+        secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+      }
     }
     return {
       secret: secretModel,
@@ -308,6 +316,14 @@ export default Route.extend(UnloadModelRoute, {
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();
       let changedKeys = Object.keys(changed);
+
+      // when you don't have read access on metadata we add currentVersion to the model
+      // this makes it look like you have unsaved changes and prompts a browser warning
+      // here we are specifically ignoring it.
+      if (mode === 'edit' && (changedKeys.length && changedKeys[0] === 'currentVersion')) {
+        version && version.rollbackAttributes();
+        return true;
+      }
       // until we have time to move `backend` on a v1 model to a relationship,
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here
@@ -321,7 +337,7 @@ export default Route.extend(UnloadModelRoute, {
           )
         ) {
           version && version.rollbackAttributes();
-          this.unloadModel();
+          this.unloadModel(); // ARG TODO causes the flash of the warning
           return true;
         } else {
           transition.abort();

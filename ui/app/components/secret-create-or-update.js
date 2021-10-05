@@ -117,6 +117,8 @@ export default class SecretCreateOrUpdate extends Component {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
+    let changed = secret.changedAttributes();
+    let changedKeys = Object.keys(changed);
 
     return secretData
       .save()
@@ -125,7 +127,9 @@ export default class SecretCreateOrUpdate extends Component {
           if (isV2) {
             secret.set('id', key);
           }
-          if (isV2 && Object.keys(secret.changedAttributes()).length > 0) {
+          // this save saves to the metadata endpoint. Only saved if metadata has been added
+          // and if the currentVersion attr changed that's because we added it (only happens if they don't have read access to metadata on updated which does not allow you to change metadata)
+          if (isV2 && changedKeys.length > 0 && changedKeys[0] !== 'currentVersion') {
             // save secret metadata
             secret
               .save()
@@ -134,7 +138,7 @@ export default class SecretCreateOrUpdate extends Component {
               })
               .catch(e => {
                 // when mode is not create the metadata error is handled in secret-edit-metadata
-                if (this.mode === 'create') {
+                if (this.args.mode === 'create') {
                   this.error = e.errors.join(' ');
                 }
                 return;

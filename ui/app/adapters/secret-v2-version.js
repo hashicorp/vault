@@ -9,6 +9,7 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
   _url(backend, id, infix = 'data') {
     let url = `${this.buildURL()}/${encodePath(backend)}/${infix}/`;
+    console.log(url, 'URL');
     if (!isEmpty(id)) {
       url = url + encodePath(id);
     }
@@ -34,6 +35,14 @@ export default ApplicationAdapter.extend({
       }
       return errorOrModel;
     });
+  },
+
+  async getSecretDataVersion(backend, id) {
+    // used in secret-edit route when you don't have current version and you need it for pulling the correct secret-v2-version record
+    let url = this._url(backend, id);
+    console.log(url);
+    let response = await this.ajax(this._url(backend, id), 'GET');
+    return response.data.metadata.version;
   },
 
   queryRecord(id, options) {

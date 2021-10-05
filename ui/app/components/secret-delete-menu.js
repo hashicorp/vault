@@ -129,9 +129,11 @@ export default class SecretDeleteMenu extends Component {
         this.args.navToNearestAncestor.perform(id);
       });
     } else {
+      // if they do not have read access on the metadata endpoint we need to pull the version from modelForData so they can perform delete and undelete operations
+      let currentVersionForNoReadMetadata = this.args.modelForData?.version;
       return this.store
         .adapterFor('secret-v2-version')
-        .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType)
+        .v2DeleteOperation(this.store, this.args.modelForData.id, deleteType, currentVersionForNoReadMetadata)
         .then(resp => {
           if (Ember.testing) {
             return;
