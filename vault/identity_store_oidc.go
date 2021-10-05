@@ -502,6 +502,23 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 				return logical.ErrorResponse(errorMessage), nil
 			}
 		}
+
+		// ensure any clients referencing this key do not already have a id_token_ttl
+		// greater than the key's verification_ttl
+		clients, err := i.clientsReferencingTargetKeyName(ctx, req, name)
+		if err != nil {
+			return nil, err
+		}
+		for _, client := range clients {
+			if client.IDTokenTTL > key.VerificationTTL {
+				errorMessage := fmt.Sprintf(
+					"unable to update key %q because it is currently referenced by one or more clients with an id_token_ttl greater than %d seconds",
+					name,
+					key.VerificationTTL/time.Second,
+				)
+				return logical.ErrorResponse(errorMessage), nil
+			}
+		}
 	}
 
 	if allowedClientIDsRaw, ok := d.GetOk("allowed_client_ids"); ok {

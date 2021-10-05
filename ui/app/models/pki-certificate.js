@@ -17,27 +17,30 @@ export default Model.extend({
   DISPLAY_FIELDS: computed(function() {
     return [
       'certificate',
+      'commonName',
       'issuingCa',
       'caChain',
       'privateKey',
       'privateKeyType',
-      'serialNumber',
       'revocationTime',
+      'issueDate',
+      'expiryDate',
+      'serialNumber',
     ];
   }),
+
+  commonName: attr('string'),
+  expiryDate: attr('string', {
+    label: 'Expiration date',
+  }),
+  issueDate: attr('string'),
   role: attr('object', {
     readOnly: true,
   }),
-
   revocationTime: attr('number'),
-  commonName: attr('string', {
-    label: 'Common Name',
-  }),
-
   altNames: attr('string', {
     label: 'DNS/Email Subject Alternative Names (SANs)',
   }),
-
   ipSans: attr('string', {
     label: 'IP Subject Alternative Names (SANs)',
   }),
@@ -47,22 +50,18 @@ export default Model.extend({
     helpText:
       'The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8',
   }),
-
   ttl: attr({
     label: 'TTL',
     editType: 'ttl',
   }),
-
   format: attr('string', {
     defaultValue: 'pem',
     possibleValues: ['pem', 'der', 'pem_bundle'],
   }),
-
   excludeCnFromSans: attr('boolean', {
     label: 'Exclude Common Name from Subject Alternative Names (SANs)',
     defaultValue: false,
   }),
-
   certificate: attr('string', {
     masked: true,
   }),
