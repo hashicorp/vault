@@ -9,7 +9,6 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
   _url(backend, id, infix = 'data') {
     let url = `${this.buildURL()}/${encodePath(backend)}/${infix}/`;
-    console.log(url, 'URL');
     if (!isEmpty(id)) {
       url = url + encodePath(id);
     }
@@ -40,7 +39,6 @@ export default ApplicationAdapter.extend({
   async getSecretDataVersion(backend, id) {
     // used in secret-edit route when you don't have current version and you need it for pulling the correct secret-v2-version record
     let url = this._url(backend, id);
-    console.log(url);
     let response = await this.ajax(this._url(backend, id), 'GET');
     return response.data.metadata.version;
   },
@@ -76,28 +74,52 @@ export default ApplicationAdapter.extend({
     return this._url(backend, path);
   },
 
-  v2DeleteOperation(store, id, deleteType = 'delete') {
+  async deleteLatestVersion(backend, path) {
+    try {
+      await this.ajax(this._url(backend, path, 'data'), 'DELETE');
+      let model = store.peekRecord('secret-v2-version', id);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  async undeleteLatestVersion(backend, path, currentVersionForNoReadMetadata) {
+    try {
+      await this.ajax(this._url(backend, path, 'undelete'), 'POST', {
+        data: { versions: [currentVersionForNoReadMetadata] },
+      });
+      let model = store.peekRecord('secret-v2-version', id);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  async deleteByDeleteType(backend, path, deleteType, version) {
+    try {
+      await this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } });
+      let model = store.peekRecord('secret-v2-version', id);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  v2DeleteOperation(store, id, deleteType = 'delete', currentVersionForNoReadMetadata) {
     let [backend, path, version] = JSON.parse(id);
     // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-version'
     if ((!version && deleteType === 'delete') || deleteType === 'delete-latest-version') {
-      return this.ajax(this._url(backend, path, 'data'), 'DELETE')
-        .then(() => {
-          let model = store.peekRecord('secret-v2-version', id);
-          return model && model.rollbackAttributes() && model.reload();
-        })
-        .catch(e => {
-          return e;
-        });
+      // moved to async to away model reload which is a promise
+      return this.deleteLatestVersion(backend, path);
+    } else if (deleteType === 'undelete' && !version) {
+      // happens when no read access to metadata
+      return this.undeleteLatestVersion(backend, path, currentVersionForNoReadMetadata);
     } else {
-      return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } })
-        .then(() => {
-          let model = store.peekRecord('secret-v2-version', id);
-          // potential that model.reload() is never called.
-          return model && model.rollbackAttributes() && model.reload();
-        })
-        .catch(e => {
-          return e;
-        });
+      return this.deleteByDeleteType(backend, path, deleteType, version);
     }
   },
 

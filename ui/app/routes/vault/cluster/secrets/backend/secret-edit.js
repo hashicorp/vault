@@ -255,7 +255,12 @@ export default Route.extend(UnloadModelRoute, {
       // if no read access to metadata, return current Version from secret data endpoint's customMetadata.
       if (!secretModel.currentVersion) {
         let adapter = this.store.adapterFor('secret-v2-version');
-        secretModel.currentVersion = await adapter.getSecretDataVersion(backend, secret);
+        try {
+          secretModel.currentVersion = await adapter.getSecretDataVersion(backend, secret);
+        } catch {
+          // will get error if you have deleted the secret
+          // if this is the case do nothing
+        }
         secretModel = await this.fetchV2Models(capabilities, secretModel, params);
       } else {
         secretModel = await this.fetchV2Models(capabilities, secretModel, params);
