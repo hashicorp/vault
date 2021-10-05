@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/cap/jwt"
-	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -38,187 +36,187 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 		args    args
 		wantErr string
 	}{
-		//{
-		//	name: "invalid token request with provider not found",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Path = "oidc/provider/non-existent-provider/token"
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenInvalidRequest,
-		//},
-		//{
-		//	name: "invalid token request with missing basic auth header",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Headers = nil
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenInvalidRequest,
-		//},
-		//{
-		//	name: "invalid token request with client ID not found",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq:      validTokenReq(s, "", "non-existent-client-id", clientSecret),
-		//	},
-		//	wantErr: ErrTokenInvalidClient,
-		//},
-		//{
-		//	name: "invalid token request with client secret mismatch",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq:      validTokenReq(s, "", clientID, "wrong-client-secret"),
-		//	},
-		//	wantErr: ErrTokenInvalidClient,
-		//},
-		//{
-		//	name: "invalid token request with client_id not allowed by provider",
-		//	args: args{
-		//		clientReq: testClientReq(s),
-		//		providerReq: func() *logical.Request {
-		//			req := testProviderReq(s, clientID)
-		//			req.Data["allowed_client_ids"] = []string{"not-client-id"}
-		//			return req
-		//		}(),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq:      validTokenReq(s, "", clientID, clientSecret),
-		//	},
-		//	wantErr: ErrTokenInvalidClient,
-		//},
-		//{
-		//	name: "invalid token request with empty grant_type",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Data["grant_type"] = ""
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenInvalidRequest,
-		//},
-		//{
-		//	name: "invalid token request with unsupported grant_type",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Data["grant_type"] = "not-supported-grant-type"
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenUnsupportedGrantType,
-		//},
-		//{
-		//	name: "invalid token request with invalid code",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Data["code"] = "invalid-code"
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenInvalidGrant,
-		//},
-		//{
-		//	name: "invalid token request with missing redirect_uri",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Data["redirect_uri"] = ""
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenInvalidRequest,
-		//},
-		//{
-		//	name: "invalid token request with entity not found in client assignment",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, "not-entity-id", ""),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq:      validTokenReq(s, "", clientID, clientSecret),
-		//	},
-		//	wantErr: ErrTokenInvalidRequest,
-		//},
-		//{
-		//	name: "invalid token request with redirect_uri mismatch",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq: func() *logical.Request {
-		//			req := validTokenReq(s, "", clientID, clientSecret)
-		//			req.Data["redirect_uri"] = "https://not.original.redirect.uri:8251/callback"
-		//			return req
-		//		}(),
-		//	},
-		//	wantErr: ErrTokenInvalidGrant,
-		//},
-		//{
-		//	name: "invalid token request with group not found in client assignment",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, "", "not-group-id"),
-		//		authorizeReq:  validAuthorizeReq(s, clientID),
-		//		tokenReq:      validTokenReq(s, "", clientID, clientSecret),
-		//	},
-		//	wantErr: ErrTokenInvalidRequest,
-		//},
-		//{
-		//	name: "valid token request with max_age and auth_time claim",
-		//	args: args{
-		//		clientReq:     testClientReq(s),
-		//		providerReq:   testProviderReq(s, clientID),
-		//		assignmentReq: testAssignmentReq(s, entityID, groupID),
-		//		authorizeReq: func() *logical.Request {
-		//			req := validAuthorizeReq(s, clientID)
-		//			req.Data["max_age"] = "30"
-		//			return req
-		//		}(),
-		//		tokenReq: validTokenReq(s, "", clientID, clientSecret),
-		//		vaultTokenCreationTime: func() time.Time {
-		//			return time.Now()
-		//		},
-		//	},
-		//},
+		{
+			name: "invalid token request with provider not found",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Path = "oidc/provider/non-existent-provider/token"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with missing basic auth header",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Headers = nil
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with client ID not found",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq:      validTokenReq(s, "", "non-existent-client-id", clientSecret),
+			},
+			wantErr: ErrTokenInvalidClient,
+		},
+		{
+			name: "invalid token request with client secret mismatch",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq:      validTokenReq(s, "", clientID, "wrong-client-secret"),
+			},
+			wantErr: ErrTokenInvalidClient,
+		},
+		{
+			name: "invalid token request with client_id not allowed by provider",
+			args: args{
+				clientReq: testClientReq(s),
+				providerReq: func() *logical.Request {
+					req := testProviderReq(s, clientID)
+					req.Data["allowed_client_ids"] = []string{"not-client-id"}
+					return req
+				}(),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+			},
+			wantErr: ErrTokenInvalidClient,
+		},
+		{
+			name: "invalid token request with empty grant_type",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Data["grant_type"] = ""
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with unsupported grant_type",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Data["grant_type"] = "not-supported-grant-type"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenUnsupportedGrantType,
+		},
+		{
+			name: "invalid token request with invalid code",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Data["code"] = "invalid-code"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "invalid token request with missing redirect_uri",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Data["redirect_uri"] = ""
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with entity not found in client assignment",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, "not-entity-id", ""),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with redirect_uri mismatch",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := validTokenReq(s, "", clientID, clientSecret)
+					req.Data["redirect_uri"] = "https://not.original.redirect.uri:8251/callback"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "invalid token request with group not found in client assignment",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, "", "not-group-id"),
+				authorizeReq:  validAuthorizeReq(s, clientID),
+				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "valid token request with max_age and auth_time claim",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := validAuthorizeReq(s, clientID)
+					req.Data["max_age"] = "30"
+					return req
+				}(),
+				tokenReq: validTokenReq(s, "", clientID, clientSecret),
+				vaultTokenCreationTime: func() time.Time {
+					return time.Now()
+				},
+			},
+		},
 		{
 			name: "valid token request",
 			args: args{
@@ -337,65 +335,8 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			require.Empty(t, tokenRes.Error)
 			require.Empty(t, tokenRes.ErrorDescription)
 
-			// Get the issuer from the provider's openid configuration
-			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-				Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
-				Operation: logical.ReadOperation,
-				Storage:   s,
-			})
-			expectSuccess(t, resp, err)
-			discoveryResp := &providerDiscovery{}
-			require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp))
-
-			// Create a new JWT validator using the provider's public JWKS
-			// TODO: this request fails bc test isn't listening on addr:port
-			issuer := fmt.Sprintf("http://127.0.0.1:8200%s", discoveryResp.Issuer)
-			keySet, err := jwt.NewOIDCDiscoveryKeySet(ctx, issuer, "")
-			require.NoError(t, err)
-			require.NotNil(t, keySet)
-			validator, err := jwt.NewValidator(keySet)
-			require.NoError(t, err)
-			require.NotNil(t, validator)
-
-			// Verify the ID token signature using the provider's public JWKS
-			claims, err := validator.Validate(ctx, tokenRes.IDToken, jwt.Expected{
-				Issuer:            discoveryResp.Issuer,
-				Subject:           entityID,
-				Audiences:         []string{clientID},
-				SigningAlgorithms: []jwt.Alg{jwt.RS256},
-			})
-			require.NoError(t, err)
-			require.NotNil(t, claims)
-
-			// Assert that all required claims exist as top level keys in the ID token
-			for key := range claims {
-				require.True(t, strutil.StrListContains(requiredClaims, key))
-			}
-
-			// Use the access token to get the userinfo response
-			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-				Path:        "oidc/provider/test-provider/userinfo",
-				Operation:   logical.ReadOperation,
-				Storage:     s,
-				ClientToken: tokenRes.AccessToken,
-			})
-			expectSuccess(t, resp, err)
-			require.NotNil(t, resp)
-			require.NotNil(t, resp.Data[logical.HTTPRawBody])
-			require.NotNil(t, resp.Data[logical.HTTPStatusCode])
-			require.NotNil(t, resp.Data[logical.HTTPContentType])
-
-			// Strip out required claims (except subject) to validate the userinfo response
-			for _, key := range requiredClaims {
-				if key != "sub" {
-					delete(claims, key)
-				}
-			}
-
-			// Assert the userinfo response has the subject + claims from request scopes
-			userInfoRes := make(map[string]interface{})
-			require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &userInfoRes))
-			require.Equal(t, claims, userInfoResponse)
+			// TODO: Verify ID token using provider's keys
+			// TODO: Make assertions on the claims (at_hash, c_hash, auth_time, etc)
 		})
 	}
 }
