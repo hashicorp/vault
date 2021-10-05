@@ -1151,10 +1151,10 @@ func RequireState(states ...string) RequestCallback {
 	}
 }
 
-// CompareStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
+// CompareReplicationStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
 // if neither s1 or s2 is strictly greater. An error is returned if s1 or s2
 // are invalid or from different clusters.
-func CompareStates(s1, s2 string) (int, error) {
+func CompareReplicationStates(s1, s2 string) (int, error) {
 	w1, err := ParseRequiredState(s1, nil)
 	if err != nil {
 		return 0, err
@@ -1165,7 +1165,7 @@ func CompareStates(s1, s2 string) (int, error) {
 	}
 
 	if w1.ClusterID != w2.ClusterID {
-		return 0, fmt.Errorf("don't know how to compare states with different ClusterIDs")
+		return 0, fmt.Errorf("can't compare replication states with different ClusterIDs")
 	}
 
 	switch {
@@ -1187,7 +1187,7 @@ func MergeStates(old []string, new string) []string {
 
 	var ret []string
 	for _, o := range old {
-		c, err := CompareStates(o, new)
+		c, err := CompareReplicationStates(o, new)
 		if err != nil {
 			return []string{new}
 		}
