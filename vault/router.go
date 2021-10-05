@@ -838,40 +838,45 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	// check Login Paths containing wildcards
 	reqPathParts := strings.Split(remain, "/")
 	for wcPath := range pe.wildcardPaths {
-		if wcPath == "" {
-			continue
-		}
-		isPrefix := false
-
-		currWCPath := wcPath
-		if currWCPath[len(currWCPath)-1] == '*' {
-			isPrefix = true
-			currWCPath = currWCPath[0 : len(currWCPath)-1]
-		}
-
-		splitCurrWCPath := strings.Split(currWCPath, "/")
-
-		if len(reqPathParts) < len(splitCurrWCPath) {
-			// check if the path coming in is shorter; if so it can't match
-			continue
-		}
-		if !isPrefix && len(splitCurrWCPath) != len(reqPathParts) {
-			// If it's not a prefix we expect the same number of segments
-			continue
-		}
-
-		matchFound := true
-		for i, wcPathPart := range splitCurrWCPath {
-			if wcPathPart != "+" && wcPathPart != reqPathParts[i] && !(isPrefix && i == len(splitCurrWCPath)-1) {
-				matchFound = false
-				break
-			}
-		}
-		if matchFound {
+		if pathMatchesWildcardPath(reqPathParts, wcPath) {
 			return true
 		}
 	}
 	return false
+}
+
+// pathMatchesWildcardPath returns true if the path made up of the pathParts
+// slice matches the given wildcard path string
+func pathMatchesWildcardPath(pathParts []string, wcPath string) bool {
+	if wcPath == "" {
+		return false
+	}
+	isPrefix := false
+
+	currWCPath := wcPath
+	if currWCPath[len(currWCPath)-1] == '*' {
+		isPrefix = true
+		currWCPath = currWCPath[0 : len(currWCPath)-1]
+	}
+
+	splitCurrWCPath := strings.Split(currWCPath, "/")
+
+	if len(pathParts) < len(splitCurrWCPath) {
+		// check if the path coming in is shorter; if so it can't match
+		return false
+	}
+	if !isPrefix && len(splitCurrWCPath) != len(pathParts) {
+		// If it's not a prefix we expect the same number of segments
+		return false
+	}
+
+	for i, wcPathPart := range splitCurrWCPath {
+		if wcPathPart != "+" && wcPathPart != pathParts[i] && !(isPrefix && i == len(splitCurrWCPath)-1) {
+			// a segment did not match and we aren't looking for a prefix
+			return false
+		}
+	}
+	return true
 }
 
 func isValidWildcardPath(path string) (bool, error) {
