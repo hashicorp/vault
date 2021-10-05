@@ -283,8 +283,7 @@ export default Model.extend({
   }),
 
   isAvailablePlugin: computed('plugin_name', function() {
-    let isUnavailable = !AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name);
-    return isUnavailable;
+    return !!AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name);
   }),
 
   showAttrs: computed('plugin_name', function() {
