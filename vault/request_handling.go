@@ -213,13 +213,8 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		tokenCtx = namespace.ContextWithNamespace(ctx, tokenNS)
 	}
 
-	// Get the named policies
-	policies, err := c.policyStore.GetNamedPolicies(ctx, policyNames)
-	if err != nil {
-		return nil, nil, nil, nil, ErrInternalError
-	}
-
 	// Add the inline policy if it's set
+	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
 		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
 		if err != nil {
@@ -230,7 +225,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
-	acl, err := c.policyStore.ACLFromPolicies(tokenCtx, entity, policies)
+	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
 		if errwrap.ContainsType(err, new(TemplateError)) {
 			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
