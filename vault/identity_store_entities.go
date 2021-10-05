@@ -583,7 +583,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	// internal and external
 	groups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entity.ID, true, false)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for _, group := range groups {
@@ -767,6 +767,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
 		i.localNode.HAState() == consts.PerfStandby
+	var fromEntityGroups []*identity.Group
 	for _, fromEntityID := range fromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -814,6 +815,22 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		// the entity we are merging into is composed of.
 		toEntity.MergedEntityIDs = append(toEntity.MergedEntityIDs, fromEntity.ID)
 
+		// Remove entity ID as a member from all the groups it belongs, both
+		// internal and external
+		groups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, fromEntity.ID, true, false)
+		if err != nil {
+			return nil, err
+		}
+		for _, group := range groups {
+			group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, fromEntity.ID)
+			err = i.UpsertGroupInTxn(ctx, txn, group, persist && !isPerfSecondaryOrStandby)
+			if err != nil {
+				return nil, err
+			}
+
+			fromEntityGroups = append(fromEntityGroups, group)
+		}
+
 		// Delete the entity which we are merging from in MemDB using the same transaction
 		err = i.MemDBDeleteEntityByIDInTxn(txn, fromEntity.ID)
 		if err != nil {
@@ -833,6 +850,14 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	err = i.MemDBUpsertEntityInTxn(txn, toEntity)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, group := range fromEntityGroups {
+		group.MemberEntityIDs = append(group.MemberEntityIDs, toEntity.ID)
+		err = i.UpsertGroupInTxn(ctx, txn, group, persist && !isPerfSecondaryOrStandby)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if persist && !isPerfSecondaryOrStandby {

@@ -828,7 +828,8 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key-1",
+			"key":          "test-key-1",
+			"id_token_ttl": "1m",
 		},
 	})
 
@@ -883,7 +884,8 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key-2",
+			"key":          "test-key-2",
+			"id_token_ttl": "1m",
 		},
 	})
 
@@ -972,6 +974,53 @@ func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
 
+// TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": int64(60),
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" with an id_token_ttl longer than the
+	// verification_ttl -- should fail with error
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key":          "test-key",
+			"id_token_ttl": int64(3600),
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"a client's id_token_ttl cannot be greater than the verification_ttl of the key it references": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-client"
+	respReadTestClient, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	// Ensure that "test-client" was not created
+	expectSuccess(t, respReadTestClient, err)
+	if respReadTestClient != nil {
+		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestClient)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderClient_UpdateKey tests that a client
 // does not allow key modification on Update operations
 func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
@@ -1007,7 +1056,8 @@ func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key1",
+			"key":          "test-key1",
+			"id_token_ttl": "1m",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1018,7 +1068,8 @@ func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key2",
+			"key":          "test-key2",
+			"id_token_ttl": "1m",
 		},
 	})
 	expectError(t, resp, err)
@@ -1088,7 +1139,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key",
+			"key":          "test-key",
+			"id_token_ttl": "1m",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1104,7 +1156,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"redirect_uris":    []string{},
 		"assignments":      []string{},
 		"key":              "test-key",
-		"id_token_ttl":     int64(86400),
+		"id_token_ttl":     int64(60),
 		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
@@ -1207,6 +1259,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"key":           "test-key",
+			"id_token_ttl":  "1m",
 			"assignments":   []string{"test-assignment1", "test-assignment1"},
 			"redirect_uris": []string{"http://example.com", "http://notduplicate.com", "http://example.com"},
 		},
@@ -1224,7 +1277,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 		"redirect_uris":    []string{"http://example.com", "http://notduplicate.com"},
 		"assignments":      []string{"test-assignment1"},
 		"key":              "test-key",
-		"id_token_ttl":     int64(86400),
+		"id_token_ttl":     int64(60),
 		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
@@ -1351,7 +1404,8 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key",
+			"key":          "test-key",
+			"id_token_ttl": "1m",
 		},
 	})
 
@@ -1360,7 +1414,8 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key",
+			"key":          "test-key",
+			"id_token_ttl": "1m",
 		},
 	})
 
@@ -1948,8 +2003,9 @@ func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key":         "test-key",
-			"assignments": []string{"test-assignment"},
+			"key":          "test-key",
+			"assignments":  []string{"test-assignment"},
+			"id_token_ttl": "1m",
 		},
 	})
 	expectSuccess(t, resp, err)
