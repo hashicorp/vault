@@ -1,0 +1,3 @@
+```release-note:feature
+ui: creates bar chart component for displaying client count data by namespace 
+```

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 )
@@ -11,18 +12,20 @@ import (
 // InjectActivityLogDataThisMonth populates the in-memory client store
 // with some entities and tokens, overriding what was already there
 // It is currently used for API integration tests
-func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]struct{}, map[string]uint64) {
+func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]uint64, map[string]uint64) {
 	t.Helper()
+	tokens := make(map[string]uint64, 0)
+	entitiesByNS := make(map[string]uint64, 0)
+	tokens["root"] = 5
+	entitiesByNS["root"] = 5
 
-	activeEntities := map[string]struct{}{
-		"entity0": {},
-		"entity1": {},
-		"entity2": {},
-	}
-	tokens := map[string]uint64{
-		"ns0": 5,
-		"ns1": 1,
-		"ns2": 10,
+	if constants.IsEnterprise {
+		tokens["ns0"] = 5
+		tokens["ns1"] = 1
+		tokens["ns2"] = 1
+		entitiesByNS["ns0"] = 1
+		entitiesByNS["ns1"] = 1
+		entitiesByNS["ns2"] = 1
 	}
 
 	c.activityLog.l.Lock()
@@ -30,10 +33,9 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]struct{}
 	c.activityLog.fragmentLock.Lock()
 	defer c.activityLog.fragmentLock.Unlock()
 
-	c.activityLog.activeEntities = activeEntities
 	c.activityLog.currentSegment.tokenCount.CountByNamespaceID = tokens
-
-	return activeEntities, tokens
+	c.activityLog.entityTracker.entityCountByNamespaceID = entitiesByNS
+	return entitiesByNS, tokens
 }
 
 // Return the in-memory activeEntities from an activity log
@@ -42,7 +44,7 @@ func (c *Core) GetActiveEntities() map[string]struct{} {
 
 	c.stateLock.RLock()
 	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.activeEntities {
+	for k, v := range c.activityLog.entityTracker.activeEntities {
 		out[k] = v
 	}
 	c.activityLog.fragmentLock.RUnlock()
@@ -104,7 +106,7 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if a.currentSegment.currentEntities.Entities == nil {
 		t.Errorf("expected non-nil currentSegment.currentEntities.Entities")
 	}
-	if a.activeEntities == nil {
+	if a.entityTracker.activeEntities == nil {
 		t.Errorf("expected non-nil activeEntities")
 	}
 	if a.currentSegment.tokenCount == nil {
@@ -117,8 +119,8 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if len(a.currentSegment.currentEntities.Entities) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentEntities)
 	}
-	if len(a.activeEntities) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.activeEntities)
+	if len(a.entityTracker.activeEntities) > 0 {
+		t.Errorf("expected no active entity segment to be loaded. got: %v", a.entityTracker.activeEntities)
 	}
 	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
 		t.Errorf("expected no token counts to be loaded. got: %v", a.currentSegment.tokenCount.CountByNamespaceID)

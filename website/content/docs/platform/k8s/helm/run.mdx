@@ -53,7 +53,7 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.15.0        	1.8.1     	Official HashiCorp Vault Chart
+hashicorp/vault	0.16.1        	1.8.3     	Official HashiCorp Vault Chart
 ```
 
 -> **Important:** The Helm chart is new and under significant development.
@@ -72,17 +72,17 @@ Or install a specific version of the chart.
 # List the available releases
 $ helm search repo hashicorp/vault -l
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault	0.16.1       	1.8.3      	Official HashiCorp Vault Chart
+hashicorp/vault	0.16.0       	1.8.2      	Official HashiCorp Vault Chart
 hashicorp/vault	0.15.0       	1.8.1      	Official HashiCorp Vault Chart
 hashicorp/vault	0.14.0       	1.8.0      	Official HashiCorp Vault Chart
 hashicorp/vault	0.13.0       	1.7.3      	Official HashiCorp Vault Chart
 hashicorp/vault	0.12.0       	1.7.2      	Official HashiCorp Vault Chart
 hashicorp/vault	0.11.0       	1.7.0      	Official HashiCorp Vault Chart
 hashicorp/vault	0.10.0       	1.7.0      	Official HashiCorp Vault Chart
-hashicorp/vault	0.9.1        	1.6.2      	Official HashiCorp Vault Chart
-hashicorp/vault	0.9.0        	1.6.1      	Official HashiCorp Vault Chart
 
-# Install version 0.15.0
-$ helm install vault hashicorp/vault --version 0.15.0
+# Install version 0.16.1
+$ helm install vault hashicorp/vault --version 0.16.1
 ```
 
 The `helm install` command accepts parameters to override default configuration
@@ -305,9 +305,9 @@ server:
       }
 ```
 
-#### Amazon EKS Auto Unseal
+#### Amazon KMS Auto Unseal
 
-The Helm chart may be run with [AWS EKS for Auto
+The Helm chart may be run with [AWS KMS for Auto
 Unseal](/docs/configuration/seal/awskms). This enables Vault server pods to auto
 unseal if they are rescheduled.
 
@@ -316,17 +316,17 @@ are defined in each Vault server pod.
 
 ##### Create the Secret
 
-First, create a secret with your EKS access key/secret:
+First, create a secret with your KMS access key/secret:
 
 ```shell-session
-$ kubectl create secret generic eks-creds \
+$ kubectl create secret generic kms-creds \
     --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID?}" \
     --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
 ```
 
 ##### Config Example
 
-This is a Vault Helm configuration that uses AWS EKS:
+This is a Vault Helm configuration that uses AWS KMS:
 
 ```yaml
 global:
@@ -335,10 +335,10 @@ global:
 server:
   extraSecretEnvironmentVars:
     - envName: AWS_ACCESS_KEY_ID
-      secretName: eks-creds
+      secretName: kms-creds
       secretKey: AWS_ACCESS_KEY_ID
     - envName: AWS_SECRET_ACCESS_KEY
-      secretName: eks-creds
+      secretName: kms-creds
       secretKey: AWS_SECRET_ACCESS_KEY
 
   ha:
@@ -425,14 +425,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.14.0        	1.8.0     	Official HashiCorp Vault Chart
+hashicorp/vault	0.16.1        	1.8.3     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.14.0 \
+$ helm upgrade vault hashicorp/vault --version=0.16.1 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run

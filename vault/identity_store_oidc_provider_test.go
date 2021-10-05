@@ -2,14 +2,932 @@ package vault
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/square/go-jose.v2"
 )
+
+func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := new(logical.InmemStorage)
+
+	// Create a key
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data:      map[string]interface{}{},
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create an entity
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "test-entity",
+		},
+	})
+	expectSuccess(t, resp, err)
+	assert.NotNil(t, resp.Data["id"])
+	entityID := resp.Data["id"].(string)
+
+	// Create a group
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              "test-group",
+			"member_entity_ids": []string{entityID},
+		},
+	})
+	expectSuccess(t, resp, err)
+	assert.NotNil(t, resp.Data["id"])
+	groupID := resp.Data["id"].(string)
+
+	type args struct {
+		entityID          string
+		client            client
+		provider          provider
+		assignment        assignment
+		authorizeRequest  *logical.Request
+		tokenCreationTime func() time.Time
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "invalid authorize request with provider not found",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/non-existent-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with empty scopes",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with missing openid scope",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "groups email profile",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with missing response_type",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with unsupported response_type",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "id_token",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthUnsupportedResponseType,
+		},
+		{
+			name: "invalid authorize request with client_id not found",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "non-existent-client-id",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidClientID,
+		},
+		{
+			name: "invalid authorize request with client_id not allowed by provider",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				provider: provider{
+					AllowedClientIDs: []string{"not-client-id"},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthUnauthorizedClient,
+		},
+		{
+			name: "invalid authorize request with missing redirect_uri",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with redirect_uri not allowed by client",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://not.redirect.uri:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRedirectURI,
+		},
+		{
+			name: "invalid authorize request with missing state",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with missing nonce",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with request parameter provided",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"request":       "header.payload.signature",
+					},
+				},
+			},
+			wantErr: ErrAuthRequestNotSupported,
+		},
+		{
+			name: "invalid authorize request with request_uri parameter provided",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"request_uri":   "https://client.example.org/request.jwt",
+					},
+				},
+			},
+			wantErr: ErrAuthRequestURINotSupported,
+		},
+		{
+			name: "invalid authorize request with identity entity ID not found",
+			args: args{
+				entityID: "non-existent-entity",
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthAccessDenied,
+		},
+		{
+			name: "invalid authorize request with entity not found in client assignment",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{"not-entity-id"},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthAccessDenied,
+		},
+		{
+			name: "invalid authorize request with group not found in client assignment",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					GroupIDs: []string{"not-group-id"},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+			wantErr: ErrAuthAccessDenied,
+		},
+		{
+			name: "invalid authorize request with negative max_age",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "-1",
+					},
+				},
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "active re-authentication required with token creation time exceeding max_age requirement",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "30",
+					},
+				},
+				tokenCreationTime: func() time.Time {
+					return time.Now().Add(-time.Minute)
+				},
+			},
+			wantErr: ErrAuthMaxAgeReAuthenticate,
+		},
+		{
+			name: "valid authorize request with token creation time within max_age requirement",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+						"max_age":       "30",
+					},
+				},
+				tokenCreationTime: func() time.Time {
+					return time.Now()
+				},
+			},
+		},
+		{
+			name: "valid authorize request using update operation (HTTP PUT/POST)",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+		},
+		{
+			name: "valid authorize request using read operation (HTTP GET)",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					EntityIDs: []string{entityID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.ReadOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+		},
+		{
+			name: "valid authorize request using client assignment with group membership",
+			args: args{
+				entityID: entityID,
+				assignment: assignment{
+					GroupIDs: []string{groupID},
+				},
+				client: client{
+					RedirectURIs: []string{"https://localhost:8251/callback"},
+					Assignments:  []string{"test-assignment"},
+					Key:          "test-key",
+				},
+				authorizeRequest: &logical.Request{
+					Path:      "oidc/provider/test-provider/authorize",
+					Operation: logical.UpdateOperation,
+					Data: map[string]interface{}{
+						"client_id":     "",
+						"scope":         "openid",
+						"redirect_uri":  "https://localhost:8251/callback",
+						"response_type": "code",
+						"state":         "abcdefg",
+						"nonce":         "hijklmn",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a token entry and associate with the authorize request
+			creationTime := time.Now()
+			if tt.args.tokenCreationTime != nil {
+				creationTime = tt.args.tokenCreationTime()
+			}
+			te := &logical.TokenEntry{
+				Path:         "test",
+				Policies:     []string{"default"},
+				TTL:          time.Hour * 24,
+				CreationTime: creationTime.Unix(),
+			}
+			testMakeTokenDirectly(t, c.tokenStore, te)
+			assert.NotEmpty(t, te.ID)
+			tt.args.authorizeRequest.ClientToken = te.ID
+
+			// Create an assignment
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/assignment/test-assignment",
+				Operation: logical.CreateOperation,
+				Data: map[string]interface{}{
+					"group_ids":  tt.args.assignment.GroupIDs,
+					"entity_ids": tt.args.assignment.EntityIDs,
+				},
+				Storage: storage,
+			})
+			expectSuccess(t, resp, err)
+
+			// Create a client
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.CreateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"key":              "test-key",
+					"redirect_uris":    tt.args.client.RedirectURIs,
+					"assignments":      tt.args.client.Assignments,
+					"id_token_ttl":     tt.args.client.IDTokenTTL,
+					"access_token_ttl": tt.args.client.AccessTokenTTL,
+				},
+			})
+			expectSuccess(t, resp, err)
+
+			// Read the client ID
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.ReadOperation,
+				Storage:   storage,
+			})
+			expectSuccess(t, resp, err)
+			assert.NotNil(t, resp.Data["client_id"])
+			clientID := resp.Data["client_id"].(string)
+
+			// Use allowed client IDs if set by test args
+			if len(tt.args.provider.AllowedClientIDs) == 0 {
+				tt.args.provider.AllowedClientIDs = []string{clientID}
+			}
+
+			// Create a provider
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/provider/test-provider",
+				Operation: logical.CreateOperation,
+				Data: map[string]interface{}{
+					"issuer":             tt.args.provider.Issuer,
+					"allowed_client_ids": tt.args.provider.AllowedClientIDs,
+					"scopes":             tt.args.provider.Scopes,
+				},
+				Storage: storage,
+			})
+			expectSuccess(t, resp, err)
+
+			// Use the client ID if set by test args
+			if len(tt.args.authorizeRequest.Data["client_id"].(string)) == 0 {
+				tt.args.authorizeRequest.Data["client_id"] = clientID
+			}
+
+			// Send the request to the OIDC authorize endpoint
+			tt.args.authorizeRequest.Storage = storage
+			tt.args.authorizeRequest.EntityID = tt.args.entityID
+			resp, err = c.identityStore.HandleRequest(ctx, tt.args.authorizeRequest)
+
+			// Parse the response
+			var res struct {
+				Code             string `json:"code"`
+				State            string `json:"state"`
+				Error            string `json:"error"`
+				ErrorDescription string `json:"error_description"`
+			}
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.Data[logical.HTTPRawBody])
+			assert.NotNil(t, resp.Data[logical.HTTPContentType])
+			assert.Equal(t, "application/json", resp.Data[logical.HTTPContentType].(string))
+			assert.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &res))
+
+			if tt.wantErr != "" {
+				// Assert that we receive the expected error code
+				assert.Equal(t, tt.wantErr, res.Error)
+				assert.NotEmpty(t, res.ErrorDescription)
+				return
+			}
+
+			// Assert that we receive an authorization code (base62) and state
+			expectSuccess(t, resp, err)
+			assert.Regexp(t, "[a-zA-Z0-9]{32}", res.Code)
+			assert.NotEmpty(t, res.State)
+			assert.Empty(t, res.Error)
+			assert.Empty(t, res.ErrorDescription)
+		})
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderReadPublicKey_ProviderDoesNotExist tests that the
+// path can handle the read operation when the provider does not exist
+func TestOIDC_Path_OIDC_ProviderReadPublicKey_ProviderDoesNotExist(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Read "test-provider" .well-known keys
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectedResp := &logical.Response{}
+	if resp != expectedResp && err != nil {
+		t.Fatalf("expected empty response but got success; error:\n%v\nresp: %#v", err, resp)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderReadPublicKey tests the provider .well-known
+// keys endpoint read operations
+func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key-1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key-1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client-1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":          "test-key-1",
+			"id_token_ttl": "1m",
+		},
+	})
+
+	// get the clientID
+	resp, _ := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	clientID := resp.Data["client_id"].(string)
+
+	// Create a test provider "test-provider" and allow all client IDs -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer":             "https://example.com:8200",
+			"allowed_client_ids": []string{"*"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" .well-known keys
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	responseJWKS := &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
+	}
+
+	// Create a test key "test-key-2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key-2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client-2"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":          "test-key-2",
+			"id_token_ttl": "1m",
+		},
+	})
+
+	// Read "test-provider" .well-known keys
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	responseJWKS = &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != 4 {
+		t.Fatalf("expected 4 public key but instead got %d", len(responseJWKS.Keys))
+	}
+
+	// Update the test provider "test-provider" to only allow test-client-1 -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"allowed_client_ids": []string{clientID},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" .well-known keys
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	responseJWKS = &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
+	}
+}
 
 // TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
 // be created without a key parameter
@@ -56,6 +974,53 @@ func TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry(t *testing.T) {
 	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
 }
 
+// TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDC_ProviderClient_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": int64(60),
+		},
+		Storage: storage,
+	})
+
+	// Create a test client "test-client" with an id_token_ttl longer than the
+	// verification_ttl -- should fail with error
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key":          "test-key",
+			"id_token_ttl": int64(3600),
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"a client's id_token_ttl cannot be greater than the verification_ttl of the key it references": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	// Read "test-client"
+	respReadTestClient, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	// Ensure that "test-client" was not created
+	expectSuccess(t, respReadTestClient, err)
+	if respReadTestClient != nil {
+		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestClient)
+	}
+}
+
 // TestOIDC_Path_OIDC_ProviderClient_UpdateKey tests that a client
 // does not allow key modification on Update operations
 func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
@@ -91,18 +1056,20 @@ func TestOIDC_Path_OIDC_ProviderClient_UpdateKey(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key1",
+			"key":          "test-key1",
+			"id_token_ttl": "1m",
 		},
 	})
 	expectSuccess(t, resp, err)
 
-	// Create a test client "test-client" -- should fail
+	// Update the test client "test-client" -- should fail
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key2",
+			"key":          "test-key2",
+			"id_token_ttl": "1m",
 		},
 	})
 	expectError(t, resp, err)
@@ -172,7 +1139,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key",
+			"key":          "test-key",
+			"id_token_ttl": "1m",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -188,8 +1156,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"redirect_uris":    []string{},
 		"assignments":      []string{},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(60),
+		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -213,8 +1181,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 			"redirect_uris":    "http://localhost:3456/callback",
 			"assignments":      "my-assignment",
 			"key":              "test-key",
-			"id_token_ttl":     0,
-			"access_token_ttl": 0,
+			"id_token_ttl":     "90s",
+			"access_token_ttl": "1m",
 		},
 		Storage: storage,
 	})
@@ -231,8 +1199,8 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"redirect_uris":    []string{"http://localhost:3456/callback"},
 		"assignments":      []string{"my-assignment"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(90),
+		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -256,6 +1224,66 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	})
 	if resp != nil {
 		t.Fatalf("expected nil but got resp: %#v", resp)
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_DeDuplication tests that a
+// client doesn't have duplicate redirect URIs or Assignments
+func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test assignment "test-assignment1" -- should succeed
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/assignment/test-assignment1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":           "test-key",
+			"id_token_ttl":  "1m",
+			"assignments":   []string{"test-assignment1", "test-assignment1"},
+			"redirect_uris": []string{"http://example.com", "http://notduplicate.com", "http://example.com"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"redirect_uris":    []string{"http://example.com", "http://notduplicate.com"},
+		"assignments":      []string{"test-assignment1"},
+		"key":              "test-key",
+		"id_token_ttl":     int64(60),
+		"access_token_ttl": int64(86400),
+		"client_id":        resp.Data["client_id"],
+		"client_secret":    resp.Data["client_secret"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -293,8 +1321,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 			"redirect_uris":    "http://localhost:3456/callback",
 			"assignments":      "my-assignment",
 			"key":              "test-key",
-			"id_token_ttl":     0,
-			"access_token_ttl": 0,
+			"id_token_ttl":     "2m",
+			"access_token_ttl": "1h",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -310,8 +1338,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"redirect_uris":    []string{"http://localhost:3456/callback"},
 		"assignments":      []string{"my-assignment"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(120),
+		"access_token_ttl": int64(3600),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -324,7 +1352,9 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		Path:      "oidc/client/test-client",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"redirect_uris": "http://localhost:3456/callback2",
+			"redirect_uris":    "http://localhost:3456/callback2",
+			"id_token_ttl":     "30",
+			"access_token_ttl": "1m",
 		},
 		Storage: storage,
 	})
@@ -341,8 +1371,8 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"redirect_uris":    []string{"http://localhost:3456/callback2"},
 		"assignments":      []string{"my-assignment"},
 		"key":              "test-key",
-		"id_token_ttl":     0,
-		"access_token_ttl": 0,
+		"id_token_ttl":     int64(30),
+		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
 	}
@@ -374,7 +1404,8 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key",
+			"key":          "test-key",
+			"id_token_ttl": "1m",
 		},
 	})
 
@@ -383,7 +1414,8 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key": "test-key",
+			"key":          "test-key",
+			"id_token_ttl": "1m",
 		},
 	})
 
@@ -832,7 +1864,7 @@ func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
 	expectSuccess(t, resp, err)
 
 	// Create a test provider "test-provider"
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
@@ -886,8 +1918,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"groups":   []string{},
-		"entities": []string{},
+		"group_ids":  []string{},
+		"entity_ids": []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -898,8 +1930,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 		Path:      "oidc/assignment/test-assignment",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"groups":   "my-group",
-			"entities": "my-entity",
+			"group_ids":  "my-group",
+			"entity_ids": "my-entity",
 		},
 		Storage: storage,
 	})
@@ -913,8 +1945,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"groups":   []string{"my-group"},
-		"entities": []string{"my-entity"},
+		"group_ids":  []string{"my-group"},
+		"entity_ids": []string{"my-entity"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -971,8 +2003,9 @@ func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"key":         "test-key",
-			"assignments": []string{"test-assignment"},
+			"key":          "test-key",
+			"assignments":  []string{"test-assignment"},
+			"id_token_ttl": "1m",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -998,8 +2031,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_DeleteWithExistingClient(t *testing.T
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"groups":   []string{},
-		"entities": []string{},
+		"group_ids":  []string{},
+		"entity_ids": []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1018,8 +2051,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"groups":   "my-group",
-			"entities": "my-entity",
+			"group_ids":  "my-group",
+			"entity_ids": "my-entity",
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1032,8 +2065,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"groups":   []string{"my-group"},
-		"entities": []string{"my-entity"},
+		"group_ids":  []string{"my-group"},
+		"entity_ids": []string{"my-entity"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1044,7 +2077,7 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 		Path:      "oidc/assignment/test-assignment",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
-			"groups": "my-group2",
+			"group_ids": "my-group2",
 		},
 		Storage: storage,
 	})
@@ -1058,8 +2091,8 @@ func TestOIDC_Path_OIDC_ProviderAssignment_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"groups":   []string{"my-group2"},
-		"entities": []string{"my-entity"},
+		"group_ids":  []string{"my-group2"},
+		"entity_ids": []string{"my-entity"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1395,6 +2428,54 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 }
 
+// TestOIDC_Path_OIDCProvider_DeDuplication tests that a
+// provider doensn't have duplicate scopes or client IDs
+func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope1" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": {{identity.entity.groups.names}} }`,
+			"description": "desc1",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider" with duplicates
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes":             []string{"test-scope1", "test-scope1"},
+			"allowed_client_ids": []string{"test-id1", "test-id2", "test-id1"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-provider" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"issuer":             "",
+		"allowed_client_ids": []string{"test-id1", "test-id2"},
+		"scopes":             []string{"test-scope1"},
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 // TestOIDC_Path_OIDCProvider_Update tests Update operations for providers
 func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -1506,4 +2587,139 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	// validate list response
 	delete(expectedStrings, "test-provider2")
 	expectStrings(t, respListProvidersAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
+// TestOIDC_Path_OpenIDProviderConfig tests read operations for the
+// openid-configuration path
+func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test scope "test-scope-1" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope-1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a test provider "test-provider"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"scopes": []string{"test-scope-1"},
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Expect defaults from .well-known/openid-configuration
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+
+	basePath := "/v1/identity/oidc/provider/test-provider"
+	expected := &providerDiscovery{
+		Issuer:                basePath,
+		Keys:                  basePath + "/.well-known/keys",
+		ResponseTypes:         []string{"code"},
+		Scopes:                []string{"test-scope-1", "openid"},
+		Subjects:              []string{"public"},
+		IDTokenAlgs:           supportedAlgs,
+		AuthorizationEndpoint: "/ui/vault/identity/oidc/provider/test-provider/authorize",
+		TokenEndpoint:         basePath + "/token",
+		UserinfoEndpoint:      basePath + "/userinfo",
+		GrantTypes:            []string{"authorization_code"},
+		AuthMethods:           []string{"client_secret_basic"},
+		RequestURIParameter:   false,
+	}
+	discoveryResp := &providerDiscovery{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
+	if diff := deep.Equal(expected, discoveryResp); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Create a test scope "test-scope-2" -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/scope/test-scope-2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"template":    `{"groups": "{{identity.entity.groups.names}}"}`,
+			"description": "my-description",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update provider issuer config
+	testIssuer := "https://example.com:1234"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"issuer": testIssuer,
+			"scopes": []string{"test-scope-2"},
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Expect updates from .well-known/openid-configuration
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	// Validate
+	basePath = testIssuer + basePath
+	expected = &providerDiscovery{
+		Issuer:                basePath,
+		Keys:                  basePath + "/.well-known/keys",
+		ResponseTypes:         []string{"code"},
+		Scopes:                []string{"test-scope-2", "openid"},
+		Subjects:              []string{"public"},
+		IDTokenAlgs:           supportedAlgs,
+		AuthorizationEndpoint: testIssuer + "/ui/vault/identity/oidc/provider/test-provider/authorize",
+		TokenEndpoint:         basePath + "/token",
+		UserinfoEndpoint:      basePath + "/userinfo",
+		GrantTypes:            []string{"authorization_code"},
+		AuthMethods:           []string{"client_secret_basic"},
+		RequestURIParameter:   false,
+	}
+	discoveryResp = &providerDiscovery{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), discoveryResp)
+	if diff := deep.Equal(expected, discoveryResp); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestOIDC_Path_OpenIDProviderConfig_ProviderDoesNotExist tests read
+// operations for the openid-configuration path when the provider does not
+// exist
+func TestOIDC_Path_OpenIDProviderConfig_ProviderDoesNotExist(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Expect defaults from .well-known/openid-configuration
+	// test-provider does not exist
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider/test-provider/.well-known/openid-configuration",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectedResp := &logical.Response{}
+	if resp != expectedResp && err != nil {
+		t.Fatalf("expected empty response but got success; error:\n%v\nresp: %#v", err, resp)
+	}
 }

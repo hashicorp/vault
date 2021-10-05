@@ -15,9 +15,8 @@ Router.map(function() {
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
-      this.route('metrics', function() {
+      this.route('clients', function() {
         this.route('index', { path: '/' });
-        this.route('config');
         this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });
@@ -94,7 +93,7 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,
-          // we have to special-case ids of '' with thier own routes
+          // we have to special-case ids of '' with their own routes
           this.route('list-root', { path: '/list/' });
           this.route('create-root', { path: '/create/' });
           this.route('show-root', { path: '/show/' });
@@ -102,6 +101,8 @@ Router.map(function() {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
+          this.route('metadata', { path: '/metadata/*secret' });
+          this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
 

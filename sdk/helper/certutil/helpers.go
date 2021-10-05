@@ -164,6 +164,10 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKey = signer
 				parsedBundle.PrivateKeyType = ECPrivateKey
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+			case ed25519.PrivateKey:
+				parsedBundle.PrivateKey = signer
+				parsedBundle.PrivateKeyType = Ed25519PrivateKey
+				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			certPath = append(certPath, &CertBlock{
@@ -246,6 +250,16 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key: %v", err)}
 		}
+	case "ed25519":
+		privateKeyType = Ed25519PrivateKey
+		_, privateKey, err = ed25519.GenerateKey(randReader)
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error generating ed25519 private key: %v", err)}
+		}
+		privateKeyBytes, err = x509.MarshalPKCS8PrivateKey(privateKey.(ed25519.PrivateKey))
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error marshalling Ed25519 private key: %v", err)}
+		}
 	default:
 		return errutil.UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
 	}
@@ -309,7 +323,16 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 			return false, nil
 		}
 		return true, nil
-
+	case ed25519.PublicKey:
+		key1 := key1Iface.(ed25519.PublicKey)
+		key2, ok := key2Iface.(ed25519.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		if !key1.Equal(key2) {
+			return false, nil
+		}
+		return true, nil
 	default:
 		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
 	}
@@ -490,6 +513,17 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 	return asn1.ObjectIdentifier(ret), nil
 }
 
+func ValidateSignatureLength(keyBits int) error {
+	switch keyBits {
+	case 256:
+	case 384:
+	case 512:
+	default:
+		return fmt.Errorf("unsupported signature algorithm: %d", keyBits)
+	}
+	return nil
+}
+
 func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	switch keyType {
 	case "rsa":
@@ -510,7 +544,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 		default:
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
-	case "any":
+	case "any", "ed25519":
 	default:
 		return fmt.Errorf("unknown key type %s", keyType)
 	}
@@ -598,9 +632,25 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 	if data.SigningBundle != nil {
 		switch data.SigningBundle.PrivateKeyType {
 		case RSAPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			switch data.Params.SignatureBits {
+			case 256:
+				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			case 384:
+				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+			case 512:
+				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+			}
+		case Ed25519PrivateKey:
+			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			switch data.Params.SignatureBits {
+			case 256:
+				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			case 384:
+				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
+			case 512:
+				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
+			}
 		}
 
 		caCert := data.SigningBundle.Certificate
@@ -618,9 +668,25 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 
 		switch data.Params.KeyType {
 		case "rsa":
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			switch data.Params.SignatureBits {
+			case 256:
+				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			case 384:
+				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+			case 512:
+				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+			}
+		case "ed25519":
+			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			switch data.Params.SignatureBits {
+			case 256:
+				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			case 384:
+				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
+			case 512:
+				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
+			}
 		}
 
 		certTemplate.AuthorityKeyId = subjKeyID
@@ -715,6 +781,8 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 	case "ec":
 		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+	case "ed25519":
+		csrTemplate.SignatureAlgorithm = x509.PureEd25519
 	}
 
 	csr, err := x509.CreateCertificateRequest(randReader, csrTemplate, result.PrivateKey)
@@ -791,9 +859,23 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	switch data.SigningBundle.PrivateKeyType {
 	case RSAPrivateKey:
-		certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+		}
 	case ECPrivateKey:
-		certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
+		}
 	}
 
 	if data.Params.UseCSRValues {
