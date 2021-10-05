@@ -14,44 +14,12 @@
  */
 
 import Component from '@glimmer/component';
+import { getStatementFields, getRoleFields } from '../utils/database-role-fields';
 
-// Below fields are intended to be dynamic based on type of role and db.
-// example of usage: FIELDS[roleType][db]
-const ROLE_FIELDS = {
-  static: ['username', 'rotation_period'],
-  dynamic: ['ttl', 'max_ttl'],
-};
-
-const STATEMENT_FIELDS = {
-  static: {
-    default: ['rotation_statements'],
-    'mongodb-database-plugin': [],
-    'mssql-database-plugin': [],
-    'mysql-database-plugin': [],
-    'mysql-aurora-database-plugin': [],
-    'mysql-rds-database-plugin': [],
-    'mysql-legacy-database-plugin': [],
-    'elasticsearch-database-plugin': [],
-  },
-  dynamic: {
-    default: ['creation_statements', 'revocation_statements', 'rollback_statements', 'renew_statements'],
-    'mongodb-database-plugin': ['creation_statement', 'revocation_statement'],
-    'mssql-database-plugin': ['creation_statements', 'revocation_statements'],
-    'mysql-database-plugin': ['creation_statements', 'revocation_statements'],
-    'mysql-aurora-database-plugin': ['creation_statements', 'revocation_statements'],
-    'mysql-rds-database-plugin': ['creation_statements', 'revocation_statements'],
-    'mysql-legacy-database-plugin': ['creation_statements', 'revocation_statements'],
-    'elasticsearch-database-plugin': [
-      'creation_statements',
-      'elasticsearch_role_definition',
-      'elasticsearch_roles',
-    ],
-  },
-};
 export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {
     if (!this.args.roleType) return null;
-    let dbValidFields = ROLE_FIELDS[this.args.roleType];
+    let dbValidFields = getRoleFields(this.args.roleType);
     return this.args.attrs.filter(a => {
       return dbValidFields.includes(a.name);
     });
@@ -61,10 +29,7 @@ export default class DatabaseRoleSettingForm extends Component {
     const type = this.args.roleType;
     const plugin = this.args.dbType;
     if (!type) return null;
-    let dbValidFields = STATEMENT_FIELDS[type].default;
-    if (STATEMENT_FIELDS[type][plugin]) {
-      dbValidFields = STATEMENT_FIELDS[type][plugin];
-    }
+    let dbValidFields = getStatementFields(type, plugin);
     return this.args.attrs.filter(a => {
       return dbValidFields.includes(a.name);
     });
