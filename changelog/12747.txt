@@ -1,0 +1,3 @@
+```release-note:bug
+core/identity: Disallow entity alias creation when an alias for the specified entity and mount exists
+```
