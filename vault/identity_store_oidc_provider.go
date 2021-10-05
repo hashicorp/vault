@@ -881,20 +881,20 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 
 	if client.ClientID == "" {
 		// generate client_id
-		clientID, err := base62.Random(32)
+		clientID, err := base62.Random(29)
 		if err != nil {
 			return nil, err
 		}
-		client.ClientID = clientID
+		client.ClientID = "id_" + clientID
 	}
 
 	if client.ClientSecret == "" {
 		// generate client_secret
-		clientSecret, err := base62.Random(64)
+		clientSecret, err := base62.Random(57)
 		if err != nil {
 			return nil, err
 		}
-		client.ClientSecret = clientSecret
+		client.ClientSecret = "secret_" + clientSecret
 	}
 
 	// invalidate the cached client in memdb
