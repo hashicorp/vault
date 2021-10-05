@@ -130,7 +130,7 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		// Vault uses to do so.  So instead we compare any of the 0-2 saved states
 		// we have to the new header, keeping the newest 1-2 of these, and sending
 		// them to Vault to evaluate.
-		ap.lastIndexStates = api.MergeStates(ap.lastIndexStates, newState)
+		ap.lastIndexStates = api.MergeReplicationStates(ap.lastIndexStates, newState)
 		ap.l.Unlock()
 	}
 

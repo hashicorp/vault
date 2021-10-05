@@ -1151,15 +1151,15 @@ func RequireState(states ...string) RequestCallback {
 	}
 }
 
-// CompareReplicationStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
+// compareReplicationStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
 // if neither s1 or s2 is strictly greater. An error is returned if s1 or s2
 // are invalid or from different clusters.
-func CompareReplicationStates(s1, s2 string) (int, error) {
-	w1, err := ParseRequiredState(s1, nil)
+func compareReplicationStates(s1, s2 string) (int, error) {
+	w1, err := parseReplicationState(s1, nil)
 	if err != nil {
 		return 0, err
 	}
-	w2, err := ParseRequiredState(s2, nil)
+	w2, err := parseReplicationState(s2, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -1180,14 +1180,17 @@ func CompareReplicationStates(s1, s2 string) (int, error) {
 	return 0, nil
 }
 
-func MergeStates(old []string, new string) []string {
+// MergeReplicationStates returns a merged array of replication states by iterating
+// through all states in `old`. An iterated state is merged to the result before `new`
+// based on the result of compareReplicationStates
+func MergeReplicationStates(old []string, new string) []string {
 	if len(old) == 0 || len(old) > 2 {
 		return []string{new}
 	}
 
 	var ret []string
 	for _, o := range old {
-		c, err := CompareReplicationStates(o, new)
+		c, err := compareReplicationStates(o, new)
 		if err != nil {
 			return []string{new}
 		}
@@ -1203,7 +1206,7 @@ func MergeStates(old []string, new string) []string {
 	return strutil.RemoveDuplicates(ret, false)
 }
 
-func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
+func parseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return nil, err

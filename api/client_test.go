@@ -565,7 +565,7 @@ func TestSetHeadersRaceSafe(t *testing.T) {
 	}
 }
 
-func TestMergeStates(t *testing.T) {
+func TestMergeReplicationStates(t *testing.T) {
 	type testCase struct {
 		name     string
 		old      []string
@@ -639,7 +639,7 @@ func TestMergeStates(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			out := b64dec(MergeStates(b64enc(tc.old), base64.StdEncoding.EncodeToString([]byte(tc.new))))
+			out := b64dec(MergeReplicationStates(b64enc(tc.old), base64.StdEncoding.EncodeToString([]byte(tc.new))))
 			if diff := deep.Equal(out, tc.expected); len(diff) != 0 {
 				t.Errorf("got=%v, expected=%v, diff=%v", out, tc.expected, diff)
 			}
