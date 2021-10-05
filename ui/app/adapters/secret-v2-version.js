@@ -114,7 +114,10 @@ export default ApplicationAdapter.extend({
   v2DeleteOperation(store, id, deleteType = 'delete', currentVersionForNoReadMetadata) {
     let [backend, path, version] = JSON.parse(id);
     // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-version'
-    if (deleteType === 'delete' || deleteType === 'delete-latest-version') {
+    if (
+      (currentVersionForNoReadMetadata && deleteType === 'delete') ||
+      deleteType === 'delete-latest-version'
+    ) {
       // moved to async to away model reload which is a promise
       return this.deleteLatestVersion(backend, path);
     } else if (deleteType === 'undelete' && !version) {
