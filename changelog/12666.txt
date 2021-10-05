@@ -1,4 +1,4 @@
 
 ```release-note:improvement
-core: Make etcd parameter MaxCallSendMsgSize configurable
+storage/etcd: Make etcd parameter MaxCallSendMsgSize configurable
 ```
