@@ -42,7 +42,7 @@ const (
 	EnvVaultToken         = "VAULT_TOKEN"
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
-	EnvHTTPSProxy         = "VAULT_HTTPS_PROXY"
+	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
 )
 
 // Deprecated values
@@ -79,12 +79,6 @@ type Config struct {
 	// that client and modify as needed rather than start with an empty client
 	// (or http.DefaultClient).
 	HttpClient *http.Client
-
-	// HTTP proxy needed to access this Vault server. If present this will
-	// override any proxy picked up from the HTTP{,S}_PROXY environment
-	// variables. This should be a complete URL + port such as
-	// "http://proxy.example.com:99".
-	HttpProxy string
 
 	// MinRetryWait controls the minimum time to wait before retrying when a 5xx
 	// error occurs. Defaults to 1000 milliseconds.
@@ -180,28 +174,18 @@ func DefaultConfig() *Config {
 		Backoff:      retryablehttp.LinearJitterBackoff,
 	}
 
-	if err := config.ReadEnvironment(); err != nil {
-		config.Error = err
-		return config
-	}
-
 	transport := config.HttpClient.Transport.(*http.Transport)
-
-	if config.HttpProxy != "" {
-		url, err := url.Parse(config.HttpProxy)
-		if err != nil {
-			config.Error = err
-			return config
-		}
-
-		transport.Proxy = http.ProxyURL(url)
-	}
 
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
+		config.Error = err
+		return config
+	}
+
+	if err := config.ReadEnvironment(); err != nil {
 		config.Error = err
 		return config
 	}
@@ -289,7 +273,7 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
-	var envHTTPSProxy string
+	var envHTTPProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -358,8 +342,8 @@ func (c *Config) ReadEnvironment() error {
 		envTLSServerName = v
 	}
 
-	if v := os.Getenv(EnvHTTPSProxy); v != "" {
-		envHTTPSProxy = v
+	if v := os.Getenv(EnvHTTPProxy); v != "" {
+		envHTTPProxy = v
 	}
 
 	// Configure the HTTP clients TLS configuration.
@@ -398,8 +382,14 @@ func (c *Config) ReadEnvironment() error {
 		c.Timeout = envClientTimeout
 	}
 
-	if envHTTPSProxy != "" {
-		c.HttpProxy = envHTTPSProxy
+	if envHTTPProxy != "" {
+		url, err := url.Parse(envHTTPProxy)
+		if err != nil {
+			return err
+		}
+
+		transport := c.HttpClient.Transport.(*http.Transport)
+		transport.Proxy = http.ProxyURL(url)
 	}
 
 	return nil
