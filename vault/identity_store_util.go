@@ -341,6 +341,12 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					}
 				}
 
+				duplicateAccessors := getDuplicateAccessorsOnAliases(ctx, entity.Aliases)
+
+				// Log a warning if an entity has multiple aliases with the same accessor
+				if len(duplicateAccessors) > 0 {
+					i.logger.Warn("Duplicate aliases present for the same entity and accessor", "entity_name", entity.Name, "namespace_id", entity.NamespaceID, "duplicate_accessors", duplicateAccessors)
+				}
 				// Only update MemDB and don't hit the storage again
 				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
@@ -358,6 +364,25 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// getDuplicateAccessorsOnAliases returns a list of duplicate accessors present in the
+// passed in list of aliases
+func getDuplicateAccessorsOnAliases(ctx context.Context, aliases []*identity.Alias) []string {
+	accessorCounts := make(map[string]int)
+	duplicateAccessors := make([]string, 0)
+
+	for _, alias := range aliases {
+		accessorCounts[alias.MountAccessor] += 1
+	}
+
+	for accessor, accessorCount := range accessorCounts {
+		if accessorCount > 1 {
+			duplicateAccessors = append(duplicateAccessors, accessor)
+		}
+	}
+
+	return duplicateAccessors
 }
 
 // upsertEntityInTxn either creates or updates an existing entity. The

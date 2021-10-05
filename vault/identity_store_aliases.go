@@ -267,6 +267,12 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 		}
 	}
 
+	for _, alias := range entity.Aliases {
+		if alias.MountAccessor == mountAccessor {
+			return logical.ErrorResponse("Alias already exists for requested entity and mount accessor"), nil
+		}
+	}
+
 	entity.Aliases = append(entity.Aliases, alias)
 
 	// ID creation and other validations; This is more useful for new entities
