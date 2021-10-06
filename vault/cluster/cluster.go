@@ -444,7 +444,9 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		if err != nil {
 			return nil, err
 		}
-		logTLSConnection(cl.logger, conn.ConnectionState())
+		if cl.logger.IsTrace() {
+			logTLSConnection(cl.logger, conn.ConnectionState())
+		}
 		return conn, nil
 	}
 }
