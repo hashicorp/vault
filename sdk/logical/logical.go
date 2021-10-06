@@ -118,7 +118,7 @@ type Paths struct {
 
 	// Unauthenticated are the paths that can be accessed without any auth.
 	// These can't be regular expressions, it is either exact match, a prefix
-	// match or a wildcard match. For prefix match, append '*' as a suffix.
+	// match and/or a wildcard match. For prefix match, append '*' as a suffix.
 	// For a wildcard match, use '+' in the segment to match any identifier
 	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
 	Unauthenticated []string

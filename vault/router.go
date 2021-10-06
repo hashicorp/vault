@@ -60,12 +60,17 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
-// loginPathsEntry is used to hold the routeEntry loginPaths
-type loginPathsEntry struct {
-	paths *radix.Tree
+type wildcardPath struct {
 	// this sits in the hot path of requests so we are micro-optimizing by
 	// storing pre-split slices of path segments
-	wildcardPaths [][]string
+	segments []string
+	isPrefix bool
+}
+
+// loginPathsEntry is used to hold the routeEntry loginPaths
+type loginPathsEntry struct {
+	paths         *radix.Tree
+	wildcardPaths []wildcardPath
 }
 
 type ValidateMountResponse struct {
@@ -840,8 +845,8 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 
 	// check Login Paths containing wildcards
 	reqPathParts := strings.Split(remain, "/")
-	for _, wcPath := range pe.wildcardPaths {
-		if pathMatchesWildcardPath(reqPathParts, wcPath) {
+	for _, w := range pe.wildcardPaths {
+		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
 			return true
 		}
 	}
@@ -850,18 +855,13 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 
 // pathMatchesWildcardPath returns true if the path made up of the pathParts
 // slice matches the given wildcard path string
-func pathMatchesWildcardPath(pathParts, wcPath []string) bool {
+func pathMatchesWildcardPath(pathParts, wcPath []string, isPrefix bool) bool {
 	if len(wcPath) == 0 {
 		return false
 	}
-	isPrefix := false
 
 	currWCPath := make([]string, len(wcPath))
 	copy(currWCPath, wcPath)
-	if strings.Contains(currWCPath[len(currWCPath)-1], "*") {
-		isPrefix = true
-		currWCPath[len(currWCPath)-1] = strings.Replace(currWCPath[len(currWCPath)-1], "*", "", -1)
-	}
 
 	if len(pathParts) < len(currWCPath) {
 		// check if the path coming in is shorter; if so it can't match
@@ -909,7 +909,7 @@ func isValidWildcardPath(path string) (bool, error) {
 // loginPathsEntry
 func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 	var tempPaths []string
-	tempWildcardPaths := make([][]string, 0)
+	tempWildcardPaths := make([]wildcardPath, 0)
 	for _, path := range paths {
 		if ok, err := isValidWildcardPath(path); !ok {
 			return nil, err
@@ -918,8 +918,14 @@ func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 		if strings.Contains(path, "+") {
 			// Paths with wildcards are not stored in the radix tree because
 			// the radix tree does not handle wildcards in the middle of strings.
+			isPrefix := false
+			if path[len(path)-1] == '*' {
+				isPrefix = true
+				path = path[0 : len(path)-1]
+			}
 			// We are micro-optimizing by storing pre-split slices of path segments
-			tempWildcardPaths = append(tempWildcardPaths, strings.Split(path, "/"))
+			wcPath := wildcardPath{segments: strings.Split(path, "/"), isPrefix: isPrefix}
+			tempWildcardPaths = append(tempWildcardPaths, wcPath)
 		} else {
 			// accumulate paths that do not contain wildcards
 			// to be stored in the radix tree
