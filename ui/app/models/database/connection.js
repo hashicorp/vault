@@ -199,7 +199,7 @@ export default Model.extend({
   connection_url: attr('string', {
     label: 'Connection URL',
     subText:
-      'The connection string used to connect to the database. This allows for simple templating of username and password of the root use in the {{field_name}} format.',
+      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user in the {{field_name}} format.',
   }),
   url: attr('string', {
     label: 'URL',
