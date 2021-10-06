@@ -103,6 +103,7 @@ var (
 	enterprisePreSeal            = enterprisePreSealImpl
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
 	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
+	enterpriseSetupAPILock       = setupAPILockImpl
 	startReplication             = startReplicationImpl
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
@@ -1967,6 +1968,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
+	enterpriseSetupAPILock(c)
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
@@ -2208,6 +2210,8 @@ func startReplicationImpl(c *Core) error {
 func stopReplicationImpl(c *Core) error {
 	return nil
 }
+
+func setupAPILockImpl(c *Core) {}
 
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
