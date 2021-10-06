@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -871,8 +872,12 @@ func pathMatchesWildcardPath(pathParts []string, wcPath string) bool {
 	}
 
 	for i, wcPathPart := range splitCurrWCPath {
-		if wcPathPart != "+" && wcPathPart != pathParts[i] && !(isPrefix && i == len(splitCurrWCPath)-1) {
-			// a segment did not match and we aren't looking for a prefix
+		switch {
+		case wcPathPart == "+":
+		case wcPathPart == pathParts[i]:
+		case isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], wcPathPart):
+		default:
+			// we encounted segments that did not match
 			return false
 		}
 	}
@@ -880,6 +885,8 @@ func pathMatchesWildcardPath(pathParts []string, wcPath string) bool {
 }
 
 func isValidWildcardPath(path string) (bool, error) {
+	re := regexp.MustCompile(`\++\w|\w\++`)
+
 	switch {
 	case strings.Count(path, "*") > 1:
 		return false, fmt.Errorf("path %q: invalid use of wildcards (multiple '*' is forbidden)", path)
@@ -887,6 +894,8 @@ func isValidWildcardPath(path string) (bool, error) {
 		return false, fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
 	case strings.Contains(path, "*") && path[len(path)-1] != '*':
 		return false, fmt.Errorf("path %q: invalid use of wildcards ('*' is only allowed at the end of a path)", path)
+	case re.MatchString(path):
+		return false, fmt.Errorf("path %q: invalid use of wildcards ('+' is not allowed next to a non-slash)", path)
 	}
 	return true, nil
 }
@@ -901,7 +910,7 @@ func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 			return nil, err
 		}
 
-		if path == "+" || strings.Count(path, "/+") > 0 || strings.HasPrefix(path, "+/") {
+		if strings.Contains(path, "+") {
 			// paths with wildcards are not stored in the radix tree because
 			// the radix tree does not handle wildcards in the middle of strings
 			tempWildcardPaths[path] = true

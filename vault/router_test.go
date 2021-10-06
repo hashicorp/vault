@@ -385,9 +385,11 @@ func TestRouter_LoginPath(t *testing.T) {
 		// Wildcard cases
 
 		// "+/wildcard/glob2*"
+		{"auth/foo/bar/wildcard/glo", false},
 		{"auth/foo/bar/wildcard/glob2", true},
 		{"auth/foo/bar/wildcard/glob2/", true},
 		{"auth/foo/bar/wildcard/glob2/baz", true},
+
 		// "end1/+"
 		{"auth/foo/end1", false},
 		{"auth/foo/end1/", true},
@@ -602,6 +604,14 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 		{
 			[]string{"*/foo/"},
 			"path \"*/foo/\": invalid use of wildcards ('*' is only allowed at the end of a path)",
+		},
+		{
+			[]string{"/foo+"},
+			"path \"/foo+\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
+		},
+		{
+			[]string{"/+foo"},
+			"path \"/+foo\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
 		},
 	}
 
