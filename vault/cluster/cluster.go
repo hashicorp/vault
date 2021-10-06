@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"net"
 	"net/url"
 	"sync"
@@ -438,7 +440,23 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		tlsConfig.NextProtos = []string{alpn}
 		cl.logger.Debug("creating rpc dialer", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
-		return cl.networkLayer.Dial(addr, timeout, tlsConfig)
+		conn, err := cl.networkLayer.Dial(addr, timeout, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		logTLSConnection(cl.logger, conn.ConnectionState())
+		return conn, nil
+	}
+}
+
+func logTLSConnection(logger log.Logger, state tls.ConnectionState) {
+	cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
+	logger.Trace("TLS connection established", "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
+	for _, chain := range state.VerifiedChains {
+		for _, cert := range chain {
+			logger.Trace("Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
+				"signature_algorithm", cert.SignatureAlgorithm.String(), "public_key_algorithm", cert.PublicKeyAlgorithm.String(), "public_key_size", certutil.GetPublicKeySize(cert.PublicKey))
+		}
 	}
 }
 
