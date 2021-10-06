@@ -976,13 +976,13 @@ func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 }
 
 // GetPublicKeySize returns the key size in bits for a given arbitrary crypto.PublicKey
-// Returns -1 for an unsupported key type
+// Returns -1 for an unsupported key type.
 func GetPublicKeySize(key crypto.PublicKey) int {
 	if key, ok := key.(*rsa.PublicKey); ok {
 		return key.Size() * 8
 	}
 	if key, ok := key.(*ecdsa.PublicKey); ok {
-		return key.X.BitLen() + key.Y.BitLen()
+		return key.Params().BitSize
 	}
 	if key, ok := key.(ed25519.PublicKey); ok {
 		return len(key) * 8
