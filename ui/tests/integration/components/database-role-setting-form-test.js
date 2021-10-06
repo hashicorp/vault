@@ -20,6 +20,11 @@ const testCases = [
     ],
   },
   {
+    pluginType: 'elasticsearch-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statement', 'ttl', 'max_ttl'],
+  },
+  {
     pluginType: 'mongodb-database-plugin',
     staticRoleFields: ['username', 'rotation_period'],
     dynamicRoleFields: ['creation_statement', 'revocation_statement', 'ttl', 'max_ttl'],
