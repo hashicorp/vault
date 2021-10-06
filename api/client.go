@@ -42,6 +42,7 @@ const (
 	EnvVaultToken         = "VAULT_TOKEN"
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
+	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
 )
 
 // Deprecated values
@@ -271,6 +272,7 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
+	var envHTTPProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -339,6 +341,10 @@ func (c *Config) ReadEnvironment() error {
 		envTLSServerName = v
 	}
 
+	if v := os.Getenv(EnvHTTPProxy); v != "" {
+		envHTTPProxy = v
+	}
+
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
@@ -373,6 +379,16 @@ func (c *Config) ReadEnvironment() error {
 
 	if envClientTimeout != 0 {
 		c.Timeout = envClientTimeout
+	}
+
+	if envHTTPProxy != "" {
+		url, err := url.Parse(envHTTPProxy)
+		if err != nil {
+			return err
+		}
+
+		transport := c.HttpClient.Transport.(*http.Transport)
+		transport.Proxy = http.ProxyURL(url)
 	}
 
 	return nil
