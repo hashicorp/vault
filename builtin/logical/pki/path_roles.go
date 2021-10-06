@@ -379,14 +379,13 @@ for "generate_lease".`,
 			},
 			"device_flag": {
 				Type:    framework.TypeBool,
-				Default: true,
+				Default: false,
 				Description: `Set notAfter field to Y10K to compliant with IEEE 802.1AR-2018 standard`,
 			},
 			"iee_profile": {
 				Type:    framework.TypeString,
-				Default: "802.1AR-2018",
 				Description: `Set notAfter field to Y10K to compliant with IEEE 802.1AR-2018 standard for 
-                             root certificate`,
+                             root certificate. Valid value can be iee standard . Ex. 802.1AR-2018`,
 			},
 		},
 
