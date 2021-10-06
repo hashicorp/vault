@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -330,7 +331,9 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				// is enabled
 				if data.role.AllowBareDomains &&
 					(strings.EqualFold(sanitizedName, currDomain) ||
-						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
+						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
+							// Handle the use case of AllowedDomain being an email address
+							(isEmail && strings.EqualFold(name, currDomain))) {
 					valid = true
 					break
 				}
@@ -593,6 +596,18 @@ func signCert(b *backend,
 				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
 				data.role.KeyBits,
 				pubKey.Params().BitSize)}
+		}
+
+	case "ed25519":
+		// Verify that the key matches the role type
+		if csr.PublicKeyAlgorithm != x509.PublicKeyAlgorithm(x509.Ed25519) {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"role requires keys of type %s",
+				data.role.KeyType)}
+		}
+		_, ok := csr.PublicKey.(ed25519.PublicKey)
+		if !ok {
+			return nil, errutil.UserError{Err: "could not parse CSR's public key"}
 		}
 
 	case "any":

@@ -2,7 +2,11 @@ package api
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,6 +25,8 @@ import (
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
 )
@@ -42,6 +48,7 @@ const (
 	EnvVaultToken         = "VAULT_TOKEN"
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
+	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
 )
 
 // Deprecated values
@@ -271,6 +278,7 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
+	var envHTTPProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -339,6 +347,10 @@ func (c *Config) ReadEnvironment() error {
 		envTLSServerName = v
 	}
 
+	if v := os.Getenv(EnvHTTPProxy); v != "" {
+		envHTTPProxy = v
+	}
+
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
@@ -373,6 +385,16 @@ func (c *Config) ReadEnvironment() error {
 
 	if envClientTimeout != 0 {
 		c.Timeout = envClientTimeout
+	}
+
+	if envHTTPProxy != "" {
+		url, err := url.Parse(envHTTPProxy)
+		if err != nil {
+			return err
+		}
+
+		transport := c.HttpClient.Transport.(*http.Transport)
+		transport.Proxy = http.ProxyURL(url)
 	}
 
 	return nil
@@ -1143,6 +1165,106 @@ func RequireState(states ...string) RequestCallback {
 			req.Headers.Add("X-Vault-Index", s)
 		}
 	}
+}
+
+// compareReplicationStates returns 1 if s1 is newer or identical, -1 if s1 is older, and 0
+// if neither s1 or s2 is strictly greater. An error is returned if s1 or s2
+// are invalid or from different clusters.
+func compareReplicationStates(s1, s2 string) (int, error) {
+	w1, err := ParseReplicationState(s1, nil)
+	if err != nil {
+		return 0, err
+	}
+	w2, err := ParseReplicationState(s2, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	if w1.ClusterID != w2.ClusterID {
+		return 0, fmt.Errorf("can't compare replication states with different ClusterIDs")
+	}
+
+	switch {
+	case w1.LocalIndex >= w2.LocalIndex && w1.ReplicatedIndex >= w2.ReplicatedIndex:
+		return 1, nil
+	// We've already handled the case where both are equal above, so really we're
+	// asking here if one or both are lesser.
+	case w1.LocalIndex <= w2.LocalIndex && w1.ReplicatedIndex <= w2.ReplicatedIndex:
+		return -1, nil
+	}
+
+	return 0, nil
+}
+
+// MergeReplicationStates returns a merged array of replication states by iterating
+// through all states in `old`. An iterated state is merged to the result before `new`
+// based on the result of compareReplicationStates
+func MergeReplicationStates(old []string, new string) []string {
+	if len(old) == 0 || len(old) > 2 {
+		return []string{new}
+	}
+
+	var ret []string
+	for _, o := range old {
+		c, err := compareReplicationStates(o, new)
+		if err != nil {
+			return []string{new}
+		}
+		switch c {
+		case 1:
+			ret = append(ret, o)
+		case -1:
+			ret = append(ret, new)
+		case 0:
+			ret = append(ret, o, new)
+		}
+	}
+	return strutil.RemoveDuplicates(ret, false)
+}
+
+func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
+	cooked, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return nil, err
+	}
+	s := string(cooked)
+
+	lastIndex := strings.LastIndexByte(s, ':')
+	if lastIndex == -1 {
+		return nil, fmt.Errorf("invalid full state header format")
+	}
+	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
+	stateHMAC, err := hex.DecodeString(stateHMACRaw)
+	if err != nil {
+		return nil, fmt.Errorf("invalid state header HMAC: %v, %w", stateHMACRaw, err)
+	}
+
+	if len(hmacKey) != 0 {
+		hm := hmac.New(sha256.New, hmacKey)
+		hm.Write([]byte(state))
+		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
+			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
+		}
+	}
+
+	pieces := strings.Split(state, ":")
+	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
+		return nil, fmt.Errorf("invalid state header format")
+	}
+	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid local index in state header: %w", err)
+	}
+	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid replicated index in state header: %w", err)
+	}
+
+	return &logical.WALState{
+		ClusterID:       pieces[1],
+		LocalIndex:      localIndex,
+		ReplicatedIndex: replicatedIndex,
+	}, nil
 }
 
 // ForwardInconsistent returns a request callback that will add a request
