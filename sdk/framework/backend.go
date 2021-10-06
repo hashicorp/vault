@@ -42,10 +42,7 @@ type Backend struct {
 	// backend is in use).
 	//
 	// PathsSpecial is the list of path patterns that denote the paths above
-	// that require special privileges. These can't be regular expressions, it
-	// is either exact match, a prefix match or a wildcard match.  For prefix
-	// match, append '*' as a suffix. For a wildcard match, use '+' in the
-	// segment to match any identifier (e.g. 'foo/+/bar').
+	// that require special privileges.
 	Paths        []*Path
 	PathsSpecial *logical.Paths
 
