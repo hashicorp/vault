@@ -878,7 +878,7 @@ func pathMatchesWildcardPath(pathParts, wcPath []string) bool {
 		case wcPathPart == pathParts[i]:
 		case isPrefix && i == len(currWCPath)-1 && strings.HasPrefix(pathParts[i], wcPathPart):
 		default:
-			// we encounted segments that did not match
+			// we encountered segments that did not match
 			return false
 		}
 	}
