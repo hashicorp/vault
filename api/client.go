@@ -1155,11 +1155,11 @@ func RequireState(states ...string) RequestCallback {
 // if neither s1 or s2 is strictly greater. An error is returned if s1 or s2
 // are invalid or from different clusters.
 func compareReplicationStates(s1, s2 string) (int, error) {
-	w1, err := parseReplicationState(s1, nil)
+	w1, err := ParseReplicationState(s1, nil)
 	if err != nil {
 		return 0, err
 	}
-	w2, err := parseReplicationState(s2, nil)
+	w2, err := ParseReplicationState(s2, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -1206,7 +1206,7 @@ func MergeReplicationStates(old []string, new string) []string {
 	return strutil.RemoveDuplicates(ret, false)
 }
 
-func parseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
+func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return nil, err
