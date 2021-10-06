@@ -1,7 +1,9 @@
 import './style.css'
 import '@hashicorp/platform-util/nprogress/style.css'
 
-import Router from 'next/router'
+import { useEffect } from 'react'
+import * as Fathom from 'fathom-client'
+import Router, { useRouter } from 'next/router'
 import Head from 'next/head'
 import { ErrorBoundary } from '@hashicorp/platform-runtime-error-monitoring'
 import createConsentManager from '@hashicorp/react-consent-manager/loader'
@@ -21,6 +23,27 @@ const { ConsentManager, openConsentManager } = createConsentManager({
 })
 
 export default function App({ Component, pageProps }) {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Load Fathom analytics
+    Fathom.load('FTFQPPKW', {
+      includedDomains: ['vaultproject.io', 'www.vaultproject.io'],
+    })
+
+    function onRouteChangeComplete() {
+      Fathom.trackPageview()
+    }
+
+    // Record a pageview when route changes
+    router.events.on('routeChangeComplete', onRouteChangeComplete)
+
+    // Unassign event listener
+    return () => {
+      router.events.off('routeChangeComplete', onRouteChangeComplete)
+    }
+  }, [])
+
   useAnchorLinkAnalytics()
 
   return (
