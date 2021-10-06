@@ -613,6 +613,61 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
+func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, name string) ([]string, error) {
+	entry, err := s.Get(ctx, namedKeyConfigPath+name)
+	var keyIDs []string
+	if err != nil {
+		return keyIDs, err
+	}
+	if entry == nil {
+		return keyIDs, nil
+	}
+
+	var key *namedKey
+	if err := entry.DecodeJSON(&key); err != nil {
+		return keyIDs, err
+	}
+	keyIDs = make([]string, 0)
+	for _, k := range key.KeyRing {
+		keyIDs = append(keyIDs, k.KeyID)
+	}
+	return keyIDs, nil
+}
+
+// roleReferencesTargetKeyID returns a true if a role references the given
+// targetKeyID.
+func (i *IdentityStore) roleReferencesTargetKeyID(ctx context.Context, s logical.Storage, targetKeyID string) (bool, error) {
+	roleNames, err := s.List(ctx, roleConfigPath)
+	if err != nil {
+		return false, err
+	}
+
+	var tempRole role
+	for _, roleName := range roleNames {
+		entry, err := s.Get(ctx, roleConfigPath+roleName)
+		if err != nil {
+			return false, err
+		}
+		if entry != nil {
+			if err := entry.DecodeJSON(&tempRole); err != nil {
+				return false, err
+			}
+			ids, err := i.keyIDsByName(ctx, s, tempRole.Key)
+			if err != nil {
+				return false, err
+			}
+
+			for _, id := range ids {
+				if id == targetKeyID {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
 // rolesReferencingTargetKeyName returns a map of role names to roles
 // referencing targetKeyName.
 //
@@ -1548,6 +1603,13 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 	}
 
 	for _, keyID := range keyIDs {
+		ok, err := i.roleReferencesTargetKeyID(ctx, s, keyID)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
 		key, err := loadOIDCPublicKey(ctx, s, keyID)
 		if err != nil {
 			return nil, err
