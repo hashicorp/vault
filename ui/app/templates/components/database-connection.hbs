@@ -20,29 +20,29 @@
     <Toolbar>
       <ToolbarActions>
         {{#if @model.canDelete}}
-        <button
-          type="button"
-          class="toolbar-link"
-          {{on 'click' this.delete}}
-          data-test-database-connection-delete
-        >
-          Delete connection
-        </button>
+          <button
+            type="button"
+            class="toolbar-link"
+            {{on 'click' this.delete}}
+            data-test-database-connection-delete
+          >
+            Delete connection
+          </button>
         {{/if}}
         {{#if @model.canReset}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action 'reset'}}
-          @confirmTitle="Reset connection?"
-          @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
-          @confirmButtonText="Reset"
-          data-test-database-connection-reset
-        >
-          Reset connection
-        </ConfirmAction>
+          <ConfirmAction
+            @buttonClasses="toolbar-link"
+            @onConfirmAction={{action 'reset'}}
+            @confirmTitle="Reset connection?"
+            @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
+            @confirmButtonText="Reset"
+            data-test-database-connection-reset
+          >
+            Reset connection
+          </ConfirmAction>
         {{/if}}
         {{#if (or @model.canReset @model.canDelete)}}
-        <div class="toolbar-separator" />
+          <div class="toolbar-separator" />
         {{/if}}
         {{#if @model.canRotateRoot }}
           <ConfirmAction
@@ -57,25 +57,25 @@
           </ConfirmAction>
         {{/if}}
         {{#if @model.canAddRole}}
-        <ToolbarSecretLink
-          @secret=''
-          @mode="create"
-          @type="add"
-          @queryParams={{query-params initialKey=@model.name itemType="role"}}
-          @data-test-secret-create=true
-        >
-          Add role
-        </ToolbarSecretLink>
+          <ToolbarSecretLink
+            @secret=''
+            @mode="create"
+            @type="add"
+            @queryParams={{query-params initialKey=@model.name itemType="role"}}
+            @data-test-secret-create=true
+          >
+            Add role
+          </ToolbarSecretLink>
         {{/if}}
         {{#if @model.canEdit}}
-        <ToolbarSecretLink
-          @secret={{@model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
-          Edit configuration
-        </ToolbarSecretLink>
+          <ToolbarSecretLink
+            @secret={{@model.id}}
+            @mode="edit"
+            @data-test-edit-link=true
+            @replace=true
+          >
+            Edit configuration
+          </ToolbarSecretLink>
         {{/if}}
       </ToolbarActions>
     </Toolbar>
@@ -90,7 +90,7 @@
       {{/if}}
     {{/each}}
 
-  {{!-- Plugin Config Section --}}
+    {{!-- Plugin Config Section --}}
     <div class="form-section box is-shadowless is-fullwidth">
       <fieldset class="form-fieldset">
         <legend class="title is-5">Plugin config</legend>
@@ -104,24 +104,24 @@
             {{#each-in fieldGroup as |group fields|}}
               {{#if (eq group "default")}}
                 <div class="columns is-desktop is-multiline">
-                {{#each fields as |attr|}}
-                  {{#if (contains
-                    attr.name
-                    (array
-                      "max_open_connections"
-                      "max_idle_connections"
-                      "max_connection_lifetime"
-                    )
-                  )}}
-                    <div class="column is-one-third">
-                      {{form-field data-test-field attr=attr model=@model}}
-                    </div>
-                  {{else}}
-                    <div class="column is-full">
-                      {{form-field data-test-field attr=attr model=@model}}
-                    </div>
-                  {{/if}}
-                {{/each}}
+                  {{#each fields as |attr|}}
+                    {{#if (contains
+                      attr.name
+                      (array
+                        "max_open_connections"
+                        "max_idle_connections"
+                        "max_connection_lifetime"
+                      )
+                    )}}
+                      <div class="column is-one-third">
+                        {{form-field data-test-field attr=attr model=@model}}
+                      </div>
+                    {{else}}
+                      <div class="column is-full">
+                        {{form-field data-test-field attr=attr model=@model}}
+                      </div>
+                    {{/if}}
+                  {{/each}}
                 </div>
               {{else}}
                 <ToggleButton @class="is-block" @toggleAttr={{concat "show" (camelize group)}} @toggleTarget={{this}} @openLabel={{concat "Hide " group}} @closedLabel={{group}} @data-test-toggle-group={{group}} />
@@ -337,33 +337,33 @@
   {{/each}}
 {{/if}}
 
-  <Modal
-    @title="Rotate your root credentials?"
-    @onClose={{action 'continueWithoutRotate'}}
-    @isActive={{this.showSaveModal}}
-    @type="info"
-    @showCloseButton={{false}}
-  >
-    <section class="modal-card-body">
-      <p class="has-bottom-margin-s">It’s best practice to rotate the root credential immediately after the initial configuration of each database. Once rotated, <strong>only Vault knows the new root password</strong>.</p>
-      <p>Would you like to rotate your new credentials? You can also do this later.</p>
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-primary"
-        {{on 'click' this.continueWithRotate}}
-        data-test-enable-rotate-connection
-      >
-        Rotate and enable
-      </button>
-      <button
-        type="button"
-        class="button is-secondary"
-        {{on 'click' this.continueWithoutRotate}}
-        data-test-enable-connection
-      >
-        Enable without rotating
-      </button>
-    </footer>
-  </Modal>
+<Modal
+  @title="Rotate your root credentials?"
+  @onClose={{action 'continueWithoutRotate'}}
+  @isActive={{this.showSaveModal}}
+  @type="info"
+  @showCloseButton={{false}}
+>
+  <section class="modal-card-body">
+    <p class="has-bottom-margin-s">It’s best practice to rotate the root credential immediately after the initial configuration of each database. Once rotated, <strong>only Vault knows the new root password</strong>.</p>
+    <p>Would you like to rotate your new credentials? You can also do this later.</p>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      type="button"
+      class="button is-primary"
+      {{on 'click' this.continueWithRotate}}
+      data-test-enable-rotate-connection
+    >
+      Rotate and enable
+    </button>
+    <button
+      type="button"
+      class="button is-secondary"
+      {{on 'click' this.continueWithoutRotate}}
+      data-test-enable-connection
+    >
+      Enable without rotating
+    </button>
+  </footer>
+</Modal>
