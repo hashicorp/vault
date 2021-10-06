@@ -262,3 +262,12 @@ ci-verify:
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
 -include packagespec.mk
+
+version:
+ifneq (,$(wildcard version/version_base.go))
+	@$(CURDIR)/scripts/version.sh version/version_base.go
+else
+	@$(CURDIR)/scripts/version.sh version/version.go
+endif
+
+.PHONY: version
