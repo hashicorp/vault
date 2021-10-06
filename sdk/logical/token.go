@@ -97,7 +97,7 @@ type TokenEntry struct {
 	// Used for auditing. This could include things like "source", "user", "ip"
 	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta" sentinel:"meta"`
 
-	// InternalMeta is used to store internal metadata. This metadata will not be audit logged.
+	// InternalMeta is used to store internal metadata. This metadata will not be audit logged or returned from lookup APIs.
 	InternalMeta map[string]string `json:"internal_meta" mapstructure:"internal_meta" structs:"internal_meta"`
 
 	// Used for operators to be able to associate with the source
