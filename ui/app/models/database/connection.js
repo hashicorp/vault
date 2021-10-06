@@ -203,7 +203,7 @@ export default Model.extend({
   }),
   url: attr('string', {
     label: 'URL',
-    subText: `The URL for Elasticsearch's API ("http://localhost:9200").`,
+    subText: `The URL for Elasticsearch's API ("https://localhost:9200").`,
   }),
   username: attr('string', {
     subText: `The name of the user to use as the "root" user when connecting to the database.`,
