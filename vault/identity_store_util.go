@@ -341,7 +341,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					}
 				}
 
-				duplicateAccessors := getDuplicateAccessorsOnAliases(ctx, entity.Aliases)
+				duplicateAccessors := getDuplicateAccessorsOnAliases(entity.Aliases)
 
 				// Log a warning if an entity has multiple aliases with the same accessor
 				if len(duplicateAccessors) > 0 {
@@ -368,7 +368,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 // getDuplicateAccessorsOnAliases returns a list of duplicate accessors present in the
 // passed in list of aliases
-func getDuplicateAccessorsOnAliases(ctx context.Context, aliases []*identity.Alias) []string {
+func getDuplicateAccessorsOnAliases(aliases []*identity.Alias) []string {
 	accessorCounts := make(map[string]int)
 	duplicateAccessors := make([]string, 0)
 

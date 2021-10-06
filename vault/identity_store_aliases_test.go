@@ -450,6 +450,9 @@ func TestIdentityStore_AliasCreate_DuplicateAccessor(t *testing.T) {
 	// This will try to create a new alias with the same accessor and entity
 	resp, err = is.HandleRequest(ctx, aliasReq)
 
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error as alias already exists for this accessor and entity")
 	}
