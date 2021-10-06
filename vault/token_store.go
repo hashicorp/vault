@@ -913,19 +913,20 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		// encrypt, skip persistence
 		entry.ID = ""
 		pEntry := &pb.TokenEntry{
-			Parent:       entry.Parent,
-			Policies:     entry.Policies,
-			Path:         entry.Path,
-			Meta:         entry.Meta,
-			DisplayName:  entry.DisplayName,
-			CreationTime: entry.CreationTime,
-			TTL:          int64(entry.TTL),
-			Role:         entry.Role,
-			EntityID:     entry.EntityID,
-			NamespaceID:  entry.NamespaceID,
-			Type:         uint32(entry.Type),
-			InternalMeta: entry.InternalMeta,
-			InlinePolicy: entry.InlinePolicy,
+			Parent:                  entry.Parent,
+			Policies:                entry.Policies,
+			Path:                    entry.Path,
+			Meta:                    entry.Meta,
+			DisplayName:             entry.DisplayName,
+			CreationTime:            entry.CreationTime,
+			TTL:                     int64(entry.TTL),
+			Role:                    entry.Role,
+			EntityID:                entry.EntityID,
+			NamespaceID:             entry.NamespaceID,
+			Type:                    uint32(entry.Type),
+			InternalMeta:            entry.InternalMeta,
+			InlinePolicy:            entry.InlinePolicy,
+			SkipIdentityInheritance: entry.SkipIdentityInheritance,
 		}
 
 		boundCIDRs := make([]string, len(entry.BoundCIDRs))
