@@ -754,7 +754,7 @@ func (t *TemplateError) Error() string {
 
 // ACL is used to return an ACL which is built using the
 // named policies and pre-fetched policies if given.
-func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string, policies ...*Policy) (*ACL, error) {
+func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string, additionalPolicies ...*Policy) (*ACL, error) {
 	var allPolicies []*Policy
 
 	// Fetch the named policies
@@ -779,7 +779,7 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 	}
 
 	// Append any pre-fetched policies that were given
-	allPolicies = append(allPolicies, policies...)
+	allPolicies = append(allPolicies, additionalPolicies...)
 
 	var fetchedGroups bool
 	var groups []*identity.Group

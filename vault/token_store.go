@@ -3051,7 +3051,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	if out.EntityID != "" {
-		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID, out.InlinePolicy == "")
+		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID, out.SkipIdentityInheritance)
 		if err != nil {
 			return nil, err
 		}

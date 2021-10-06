@@ -87,8 +87,7 @@ type TokenEntry struct {
 	// Which named policies should be used
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
 
-	// InlinePolicy specifies ACL rules to be applied to this token entry. If provided,
-	// the token will not inherit policies from the associated Entity.
+	// InlinePolicy specifies ACL rules to be applied to this token entry.
 	InlinePolicy string `json:"inline_policy" mapstructure:"inline_policy" structs:"inline_policy"`
 
 	// Used for audit trails, this is something like "auth/user/login"
@@ -135,7 +134,12 @@ type TokenEntry struct {
 	CreationTimeDeprecated   int64         `json:"CreationTime" mapstructure:"CreationTime" structs:"CreationTime" sentinel:""`
 	ExplicitMaxTTLDeprecated time.Duration `json:"ExplicitMaxTTL" mapstructure:"ExplicitMaxTTL" structs:"ExplicitMaxTTL" sentinel:""`
 
+	// EntityID is the ID of the entity associated with this token.
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
+
+	// If SkipIdentityInheritance is true, the token will not
+	// inherit identity policies from the associated EntityID.
+	SkipIdentityInheritance bool `json:"skip_identity_inheritance" mapstructure:"skip_identity_inheritance" structs:"skip_identity_inheritance"`
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs" sentinel:""`

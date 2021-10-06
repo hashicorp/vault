@@ -53,9 +53,9 @@ type HandlerProperties struct {
 // ID. If the entity is merged into a different entity object, the entity into
 // which the given entity ID is merged into will be returned. This function
 // also returns the cumulative list of policies that the entity is entitled to
-// if derivePolicies is set to true. This list includes the policies from the
+// if skipDeriveEntityPolicies is set to false. This list includes the policies from the
 // entity itself and from all the groups in which the given entity ID is a member of.
-func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string, deriveEntityPolicies bool) (*identity.Entity, map[string][]string, error) {
+func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string, skipDeriveEntityPolicies bool) (*identity.Entity, map[string][]string, error) {
 	if entityID == "" || c.identityStore == nil {
 		return nil, nil, nil
 	}
@@ -81,7 +81,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 	}
 
 	policies := make(map[string][]string)
-	if entity != nil && derivePolicies {
+	if entity != nil && !skipDeriveEntityPolicies {
 		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
@@ -187,7 +187,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	// Add identity policies from all the namespaces
-	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.InlinePolicy == "")
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.SkipIdentityInheritance)
 	if err != nil {
 		return nil, nil, nil, nil, ErrInternalError
 	}
@@ -1066,7 +1066,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, true)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
 		if err != nil {
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
@@ -1371,7 +1371,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			resp.AddWarning(warning)
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, true)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}

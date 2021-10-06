@@ -40,7 +40,7 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	policyNames[tokenNS.ID] = te.Policies
 	policyCount += len(te.Policies)
 
-	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.InlinePolicy == "")
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.SkipIdentityInheritance)
 	if err != nil {
 		return nil, err
 	}
