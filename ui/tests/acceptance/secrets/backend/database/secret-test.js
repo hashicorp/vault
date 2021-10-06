@@ -179,7 +179,6 @@ const connectionTests = [
       assert
         .dom('[data-test-input="max_connection_lifetime"]')
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
       assert
         .dom('[data-test-input="root_rotation_statements"]')
         .exists(`Root rotation statements exists for ${name}`);
