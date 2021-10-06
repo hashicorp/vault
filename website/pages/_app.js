@@ -27,7 +27,7 @@ export default function App({ Component, pageProps }) {
 
   useEffect(() => {
     // Load Fathom analytics
-    Fathom.load('FTFQPPKW', {
+    Fathom.load('HASWVQNE', {
       includedDomains: ['vaultproject.io', 'www.vaultproject.io'],
     })
 
