@@ -3,6 +3,7 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { getRoleFields } from '../../utils/database-role-fields';
 
 export default Model.extend({
   idPrefix: 'role/',
@@ -90,11 +91,7 @@ export default Model.extend({
 
   get showFields() {
     let fields = ['name', 'database', 'type'];
-    if (this.type === 'dynamic') {
-      fields = fields.concat(['ttl', 'max_ttl', 'creation_statements', 'revocation_statements']);
-    } else {
-      fields = fields.concat(['username', 'rotation_period']);
-    }
+    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements', 'revocation_statements']);
     return expandAttributeMeta(this, fields);
   },
 
@@ -106,9 +103,9 @@ export default Model.extend({
       'username',
       'rotation_period',
       'creation_statements',
-      'creation_statement', // for JSON styling
+      'creation_statement', // for editType: JSON
       'revocation_statements',
-      'revocation_statement', // only for MongoDB (styling difference)
+      'revocation_statement', // only for MongoDB (editType: JSON)
       'rotation_statements',
       'rollback_statements',
       'renew_statements',
