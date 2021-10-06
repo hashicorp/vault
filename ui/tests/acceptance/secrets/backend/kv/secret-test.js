@@ -530,14 +530,14 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
-  test('version 2: with metadata no read or list but full access to the data endpoint', async function(assert) {
+  test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function(assert) {
     let backend = 'no-metadata-read';
     let V2_POLICY_NO_LIST = `
       path "${backend}/metadata/*" {
         capabilities = ["update","delete"]
       }
       path "${backend}/data/*" {
-        capabilities = ["create", "read", "update"]
+        capabilities = ["create", "read", "update", "delete"]
       }
     `;
     await consoleComponent.runCommands([
@@ -586,7 +586,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .dom('[data-test-popup-menu-trigger="version"]')
       .doesNotExist('the version drop down menu does not show');
 
-    // check metadata
+    // check metadata tab
     await click('[data-test-secret-metadata-tab]');
     await settled();
     assert
@@ -594,6 +594,21 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .hasText(
         'In order to edit secret metadata access, the UI requires read permissions; otherwise, data may be deleted. Edits can still be made via the API and CLI.'
       );
+    // destroy the version
+    await click('[data-test-secret-tab]');
+    await settled();
+    await click('[data-test-delete-open-modal]');
+    await settled();
+    assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists(); // we have a if Ember.testing catch in the delete action because it breaks things in testing
+    // we can however destroy the versions
+    await click('#destroy-all-versions');
+    await settled();
+    await click('[data-test-modal-delete]');
+    await settled();
+    assert.equal(currentURL(), '/vault/secrets/no-metadata-read/list', 'brings you back to the list page');
+    await visit('/vault/secrets/no-metadata-read/show/secret-path');
+    await settled();
+    assert.dom('[data-test-secret-not-found]').exists('secret no longer found');
   });
 
   // KV delete operations testing

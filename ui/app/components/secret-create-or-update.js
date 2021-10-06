@@ -127,7 +127,7 @@ export default class SecretCreateOrUpdate extends Component {
           if (isV2) {
             secret.set('id', key);
           }
-          // this save saves to the metadata endpoint. Only saved if metadata has been added
+          // this secret.save() saves to the metadata endpoint. Only saved if metadata has been added
           // and if the currentVersion attr changed that's because we added it (only happens if they don't have read access to metadata on mode = update which does not allow you to change metadata)
           if (isV2 && changedKeys.length > 0 && changedKeys[0] !== 'currentVersion') {
             // save secret metadata
