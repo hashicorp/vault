@@ -884,18 +884,22 @@ func pathMatchesWildcardPath(pathParts []string, wcPath string) bool {
 	return true
 }
 
+func wildcardError(path, msg string) error {
+	return fmt.Errorf("path %q: invalid use of wildcards %s", path, msg)
+}
+
 func isValidWildcardPath(path string) (bool, error) {
 	re := regexp.MustCompile(`\++\w|\w\++`)
 
 	switch {
 	case strings.Count(path, "*") > 1:
-		return false, fmt.Errorf("path %q: invalid use of wildcards (multiple '*' is forbidden)", path)
+		return false, wildcardError(path, "(multiple '*' is forbidden)")
 	case strings.Contains(path, "+*"):
-		return false, fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", path)
+		return false, wildcardError(path, "('+*' is forbidden)")
 	case strings.Contains(path, "*") && path[len(path)-1] != '*':
-		return false, fmt.Errorf("path %q: invalid use of wildcards ('*' is only allowed at the end of a path)", path)
+		return false, wildcardError(path, "('*' is only allowed at the end of a path)")
 	case re.MatchString(path):
-		return false, fmt.Errorf("path %q: invalid use of wildcards ('+' is not allowed next to a non-slash)", path)
+		return false, wildcardError(path, "('+' is not allowed next to a non-slash)")
 	}
 	return true, nil
 }
