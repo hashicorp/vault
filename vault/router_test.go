@@ -569,9 +569,9 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 
 	// outputs
 	wildcardPathsEntry := [][]string{
-		{"end/+"},
-		{"+/begin/*"},
-		{"middle/+/bar*"},
+		{"end", "+"},
+		{"+", "begin", "*"},
+		{"middle", "+", "bar*"},
 	}
 	expected := &loginPathsEntry{
 		paths:         pathsToRadix(paths),
