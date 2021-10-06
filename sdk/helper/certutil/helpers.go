@@ -979,13 +979,13 @@ func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 // Returns -1 for an unsupported key type
 func GetPublicKeySize(key crypto.PublicKey) int {
 	if key, ok := key.(*rsa.PublicKey); ok {
-		return key.Size()*8
+		return key.Size() * 8
 	}
 	if key, ok := key.(*ecdsa.PublicKey); ok {
-		return key.Params().BitSize
+		return key.X.BitLen() + key.Y.BitLen()
 	}
 	if key, ok := key.(ed25519.PublicKey); ok {
-		return len(key)*8
+		return len(key) * 8
 	}
 	if key, ok := key.(dsa.PublicKey); ok {
 		return key.Y.BitLen()

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"golang.org/x/crypto/ed25519"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
@@ -429,7 +430,7 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 }
 
 func TestGetPublicKeySize(t *testing.T) {
-	rsa, err := rsa.GenerateKey(rand.Reader,  3072)
+	rsa, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -441,14 +442,14 @@ func TestGetPublicKeySize(t *testing.T) {
 		t.Fatal(err)
 	}
 	if GetPublicKeySize(&ecdsa.PublicKey) != 384 {
-		t.Fatal("unexpected rsa key size")
+		t.Fatal("unexpected ecdsa key size")
 	}
-	ed25519,_, err := ed25519.GenerateKey(rand.Reader)
+	ed25519, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if GetPublicKeySize(ed25519) != 256 {
-		t.Fatal("unexpected rsa key size")
+		t.Fatal("unexpected ed25519 key size")
 	}
 	//Skipping DSA as too slow
 }
