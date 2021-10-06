@@ -256,8 +256,8 @@ ci-verify:
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
 version:
-ifneq (,$(wildcard version/version_base.go))
-	@$(CURDIR)/scripts/version.sh version/version_base.go
+ifneq (,$(wildcard sdk/version/version_base.go))
+	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
 else
 	@$(CURDIR)/scripts/version.sh version/version.go
 endif
