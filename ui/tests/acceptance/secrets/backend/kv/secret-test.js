@@ -530,11 +530,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
-  test('version 2: with metadata no read or list access but access to the data endpoint', async function(assert) {
+  test('version 2: with metadata no read or list but full access to the data endpoint', async function(assert) {
     let backend = 'no-metadata-read';
     let V2_POLICY_NO_LIST = `
       path "${backend}/metadata/*" {
-        capabilities = ["create","update"]
+        capabilities = ["update","delete"]
       }
       path "${backend}/data/*" {
         capabilities = ["create", "read", "update"]
@@ -575,6 +575,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
+    // check you can create new version
+    await click('[data-test-secret-edit="true"]');
+    await settled();
+    await fillIn('[data-test-secret-key]', 'version2');
+    await editPage.save();
+    await settled();
+    assert.dom('[data-test-row-label="version2"]').exists('the current version displayed is the new version');
+    assert
+      .dom('[data-test-popup-menu-trigger="version"]')
+      .doesNotExist('the version drop down menu does not show');
+
     // check metadata
     await click('[data-test-secret-metadata-tab]');
     await settled();

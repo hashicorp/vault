@@ -252,7 +252,7 @@ export default Route.extend(UnloadModelRoute, {
       // after the the base model fetch, kv-v2 has a second associated
       // version model that contains the secret data
 
-      // if no read access to metadata, return current Version from secret data endpoint's customMetadata.
+      // if no read access to metadata, return current Version from secret data.
       if (!secretModel.currentVersion) {
         let adapter = this.store.adapterFor('secret-v2-version');
         try {
@@ -342,7 +342,7 @@ export default Route.extend(UnloadModelRoute, {
           )
         ) {
           version && version.rollbackAttributes();
-          this.unloadModel(); // ARG TODO causes the flash of the warning
+          this.unloadModel();
           return true;
         } else {
           transition.abort();
