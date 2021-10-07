@@ -27,7 +27,7 @@ The following API endpoints have been deprecated and will be removed in a future
 * `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
   in GCP Secrets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
 
--> **Note:** Policies containing wildcard should be avoided when giving users read access
+-> **Note:** Policies containing globs should be avoided when giving users read access
 to `/gcp/roleset` to avoid giving users permissions to generate tokens.
 
 ## Go Version
