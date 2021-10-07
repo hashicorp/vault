@@ -1736,26 +1736,25 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	accessTokenIssuedAt := time.Now()
 	accessTokenExpiry := accessTokenIssuedAt.Add(client.AccessTokenTTL)
 	accessToken := &logical.TokenEntry{
-		Type:         logical.TokenTypeBatch,
-		NamespaceID:  ns.ID,
-		Path:         req.Path,
-		TTL:          client.AccessTokenTTL,
-		CreationTime: accessTokenIssuedAt.Unix(),
-		EntityID:     entity.ID,
-
-		// TODO: Move this to InternalMeta once support is checked in
+		Type:               logical.TokenTypeBatch,
+		NamespaceID:        ns.ID,
+		Path:               req.Path,
+		TTL:                client.AccessTokenTTL,
+		CreationTime:       accessTokenIssuedAt.Unix(),
+		EntityID:           entity.ID,
+		NoIdentityPolicies: true,
 		Meta: map[string]string{
+			"oidc_token_type": "access token",
+		},
+		InternalMeta: map[string]string{
 			accessTokenClientIDMeta: client.ClientID,
 			accessTokenScopesMeta:   strings.Join(authCodeEntry.scopes, scopesDelimiter),
 		},
-
-		// TODO: Uncomment below when support is checkedin
-		//SkipIdentityInheritance: true,
-		//InlinePolicy: fmt.Sprintf(`
-		//	path "identity/oidc/provider/%s/userinfo" {
-		//		capabilities = ["read", "update"]
-		//	}
-		//`, name),
+		InlinePolicy: fmt.Sprintf(`
+			path "identity/oidc/provider/%s/userinfo" {
+				capabilities = ["read", "update"]
+			}
+		`, name),
 	}
 	err = i.tokenStorer.CreateToken(ctx, accessToken)
 	if err != nil {
@@ -1914,7 +1913,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Get the client ID that originated the request from the token metadata
-	clientID, ok := te.Meta[accessTokenClientIDMeta]
+	clientID, ok := te.InternalMeta[accessTokenClientIDMeta]
 	if !ok {
 		return userInfoResponse(nil, ErrUserInfoServerError, "expected client ID in token metadata")
 	}
@@ -1950,7 +1949,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Get the scopes for the access token
-	scopes, ok := te.Meta[accessTokenScopesMeta]
+	scopes, ok := te.InternalMeta[accessTokenScopesMeta]
 	if !ok || len(scopes) == 0 {
 		return userInfoResponse(claims, "", "")
 	}
