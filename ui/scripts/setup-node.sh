@@ -5,7 +5,12 @@
 
 set -euo pipefail
 
+# Debugging
+set -x
+
 NODE_VERSION="$(cat .nvmrc)"
+
+echo "==> Setting up node v$NODE_VERSION (from .bashrc)"
 
 # shellcheck disable=SC1090
 command -v nvm || { source ~/.bashrc; }
