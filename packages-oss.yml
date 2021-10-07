@@ -223,7 +223,7 @@ layers:
       RUN mkdir -p $DIR
       WORKDIR $DIR
   - name: install-yarn
-    source-include: ui/.nvmrc ui/
+    source-include: ui/.nvmrc ui/scripts/install-nvm.sh ui/scripts/setup-node.sh
     dockerfile: |-
       RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
       RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
@@ -232,8 +232,8 @@ layers:
                        nodejs \
                        yarn={{.YARN_VERSION}} \
                   && rm -rf /var/lib/apt/lists/*
-      RUN cd ui && ./install-nvm.sh
-      RUN cd ui && ./setup-node.sh
+      RUN cd ui && ./scripts/install-nvm.sh
+      RUN cd ui && ./scripts/setup-node.sh
   - name: ui-dependencies
     source-include: ui/package.json ui/yarn.lock
     dockerfile: |-
