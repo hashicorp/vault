@@ -53,7 +53,7 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
   packages for Vault 1.8.0 and the 1.8.1-0 package, and is fixed in 1.8.1-1 and up.
 - The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give
   users the ability to generate tokens and key if globs are used in policies. To avoid issues like this,
-  globs should not be used in policies. The following policy grants a user the ability to read all
+  globs should be avoided in policies to help adhere to the principle of least privilege. The following policy grants a user the ability to read all
   rolesets, but would also allow them to generate tokens and keys:
 
   ```
