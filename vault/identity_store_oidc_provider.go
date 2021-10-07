@@ -1888,10 +1888,10 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
 	if te == nil {
-		return userInfoResponse(nil, ErrUserInfoInvalidToken, "access token is expired, revoked, malformed, or invalid")
+		return userInfoResponse(nil, ErrUserInfoInvalidToken, "access token is expired")
 	}
 	if te.Type != logical.TokenTypeBatch {
-		return userInfoResponse(nil, ErrUserInfoInvalidToken, "access token is expired, revoked, malformed, or invalid")
+		return userInfoResponse(nil, ErrUserInfoInvalidToken, "access token is malformed or invalid")
 	}
 
 	// Get the client ID that originated the request from the token metadata
