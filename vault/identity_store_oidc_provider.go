@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -1642,7 +1643,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	if client == nil {
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
-	if client.ClientSecret != clientSecret {
+	if subtle.ConstantTimeCompare([]byte(client.ClientSecret), []byte(clientSecret)) == 0 {
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
 
