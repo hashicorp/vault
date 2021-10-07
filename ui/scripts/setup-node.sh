@@ -9,6 +9,7 @@ set -euo pipefail
 set -x
 
 NODE_VERSION="$(cat .nvmrc)"
+NODE_VERSION="${NODE_VERSION#v}"
 
 echo "==> Setting up node v$NODE_VERSION (from .bashrc)"
 
