@@ -1,0 +1,3 @@
+```release-note: bug
+COMPONENT: Telemetry data getting counted twice
+```
