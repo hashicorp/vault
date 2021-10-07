@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
@@ -1509,7 +1510,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 
 	// Validate that the entity is a member of the client's assignments
-	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity.GetID(), client.Assignments)
+	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity, client.Assignments)
 	if err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
@@ -1722,7 +1723,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 
 	// Validate that the entity is a member of the client's assignments
-	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity.GetID(), client.Assignments)
+	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity, client.Assignments)
 	if err != nil {
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
@@ -1918,7 +1919,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Validate that the entity is a member of the client's assignments
-	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity.GetID(), client.Assignments)
+	isMember, err := i.entityHasAssignment(ctx, req.Storage, entity, client.Assignments)
 	if err != nil {
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
@@ -2065,11 +2066,15 @@ func computeHashClaim(alg string, input string) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(sum[:len(sum)/2]), nil
 }
 
-// entityHasAssignment returns true if the entity is a member of any of the
-// assignments' groups or entities. Otherwise, returns false or an error.
-func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entityID string, assignments []string) (bool, error) {
+// entityHasAssignment returns true if the entity is enabled and a member of any
+// of the assignments' groups or entities. Otherwise, returns false or an error.
+func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Storage, entity *identity.Entity, assignments []string) (bool, error) {
+	if entity.GetDisabled() {
+		return false, nil
+	}
+
 	// Get the group IDs that the entity is a member of
-	entityGroups, err := i.MemDBGroupsByMemberEntityID(entityID, true, false)
+	entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
 	if err != nil {
 		return false, err
 	}
@@ -2095,7 +2100,7 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 		}
 
 		// Check if the entity is a member of the assignment's entities
-		if strutil.StrListContains(assignment.EntityIDs, entityID) {
+		if strutil.StrListContains(assignment.EntityIDs, entity.GetID()) {
 			return true, nil
 		}
 	}
