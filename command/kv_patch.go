@@ -91,9 +91,8 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "method",
-		Target:  &c.flagMethod,
-		Default: "patch",
+		Name:   "method",
+		Target: &c.flagMethod,
 		Usage: `Specifies which method of patching to use. If set to "patch", then
 		an HTTP PATCH request will be issued. This is the default. If set to "rw",
 		then a read will be performed, then a local update, followed by a remote
@@ -175,7 +174,9 @@ func (c *KVPatchCommand) Run(args []string) int {
 	case "rw":
 		secret, code = c.readThenWrite(client, path, newData)
 	case "patch":
-		secret, code = c.mergePatch(client, path, newData)
+		secret, code = c.mergePatch(client, path, newData, false)
+	case "":
+		secret, code = c.mergePatch(client, path, newData, true)
 	default:
 		c.UI.Error(fmt.Sprintf("Unsupported method provided to -method flag: %s", c.flagMethod))
 		return 2
@@ -269,7 +270,7 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	return secret, 0
 }
 
-func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
+func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map[string]interface{}, rwFallback bool) (*api.Secret, int) {
 	data := map[string]interface{}{
 		"data":    newData,
 		"options": map[string]interface{}{},
@@ -282,8 +283,8 @@ func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map
 	secret, err := client.Logical().JSONMergePatch(context.Background(), path, data)
 	if err != nil {
 		// If it's a 403, that probably means they don't have the patch capability in their policy. Fall back to
-		// the old way of doing it.
-		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == 403 {
+		// the old way of doing it if the user didn't specify a -method. If they did, and it was "patch", then just error.
+		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == 403 && rwFallback {
 			c.UI.Warn(fmt.Sprintf("Data was written to %s but we recommend that you add the \"patch\" capability to your ACL policy in order to use HTTP PATCH in the future.", path))
 			return c.readThenWrite(client, path, newData)
 		}
