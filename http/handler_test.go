@@ -5,6 +5,15 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"net/textproto"
+	"net/url"
+	"reflect"
+	"strings"
+	"testing"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -15,14 +24,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"net/textproto"
-	"net/url"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 func TestHandler_parseMFAHandler(t *testing.T) {

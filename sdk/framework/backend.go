@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	jsonpatch "github.com/evanphx/json-patch"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy"
@@ -280,7 +280,6 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	return callback(ctx, req, &fd)
 }
 
-
 func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
 	var err error
 
@@ -300,7 +299,7 @@ func HandlePatchOperation(input *FieldData, resource map[string]interface{}, pre
 		}
 	}
 
-	if preprocessor!= nil {
+	if preprocessor != nil {
 		inputMap, err = preprocessor(inputMap)
 		if err != nil {
 			return nil, err
