@@ -265,16 +265,16 @@ func (w statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 		return
 	}
 
+	// Checking the validity of the status code
+	if status >= 600 || status < 100 {
+		return
+	}
+
 	// setter function to set the headers
 	setter := func(hvl []*vault.CustomHeader) {
 		for _, hv := range hvl {
 			w.Header().Set(hv.Name, hv.Value)
 		}
-	}
-
-	// Checking the validity of the status code
-	if status >= 600 || status < 100 {
-		return
 	}
 
 	// Setting the default headers first

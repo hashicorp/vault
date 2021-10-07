@@ -2708,15 +2708,14 @@ func (c *Core) ExistCustomResponseHeader(header string, listenerAdd string) bool
 		return false
 	}
 
-	exist := false
 	for _, l := range lch {
-		exist = l.ExistCustomResponseHeader(header)
+		exist := l.ExistCustomResponseHeader(header)
 		if exist {
 			return true
 		}
 	}
 
-	return exist
+	return false
 }
 
 func (c *Core) ReloadCustomResponseHeaders() error {
