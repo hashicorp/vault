@@ -90,7 +90,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	}
 
 	// Add identity policies from all the namespaces
-	entity, identityPolicies, err := e.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.SkipIdentityInheritance)
+	entity, identityPolicies, err := e.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
 		e.core.logger.Error("failed to fetch identity policies", "error", err)
 		return false

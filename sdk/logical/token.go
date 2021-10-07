@@ -137,9 +137,9 @@ type TokenEntry struct {
 	// EntityID is the ID of the entity associated with this token.
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
 
-	// If SkipIdentityInheritance is true, the token will not
-	// inherit identity policies from the associated EntityID.
-	SkipIdentityInheritance bool `json:"skip_identity_inheritance" mapstructure:"skip_identity_inheritance" structs:"skip_identity_inheritance"`
+	// If NoIdentityPolicies is true, the token will not inherit
+	// identity policies from the associated EntityID.
+	NoIdentityPolicies bool `json:"no_identity_policies" mapstructure:"no_identity_policies" structs:"no_identity_policies"`
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs" sentinel:""`

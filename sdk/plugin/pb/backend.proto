@@ -237,7 +237,7 @@ message TokenEntry {
 	uint32 type = 18;
 	map<string, string> internal_meta = 19;
 	string inline_policy = 20;
-	bool skip_identity_inheritance = 21;
+	bool no_identity_policies = 21;
 }
 
 message LeaseOptions {
