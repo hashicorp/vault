@@ -14,7 +14,7 @@ etc.
 */
 
 export function changelogUrlFor([version]) {
-  let url = 'https://www.github.com/hashicorp/vault/blob/master/CHANGELOG.md#';
+  let url = 'https://www.github.com/hashicorp/vault/blob/main/CHANGELOG.md#';
 
   try {
     // strip the '+prem' from enterprise versions and remove periods
