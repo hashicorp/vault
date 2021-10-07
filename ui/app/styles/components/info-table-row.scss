@@ -23,6 +23,8 @@
   .column {
     align-self: center;
     padding-left: 0px;
+    padding: $spacing-m;
+
     &.info-table-row-edit {
       padding-bottom: 0.3rem;
       padding-top: 0.3rem;
