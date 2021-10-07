@@ -24,8 +24,6 @@ const (
 	ListenerAcceptDeadline = 500 * time.Millisecond
 )
 
-var tlsConnectionLoggingEnabled = os.Getenv("VAULT_LOG_CLUSTER_TLS_SESSIONS") != ""
-
 // Client is used to lookup a client certificate.
 type Client interface {
 	ClientLookup(context.Context, *tls.CertificateRequestInfo) (*tls.Certificate, error)
@@ -65,11 +63,12 @@ type Listener struct {
 	shutdownWg *sync.WaitGroup
 	server     *http2.Server
 
-	networkLayer NetworkLayer
-	cipherSuites []uint16
-	advertise    net.Addr
-	logger       log.Logger
-	l            sync.RWMutex
+	networkLayer              NetworkLayer
+	cipherSuites              []uint16
+	advertise                 net.Addr
+	logger                    log.Logger
+	l                         sync.RWMutex
+	tlsConnectionLoggingLevel log.Level
 }
 
 func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
@@ -90,9 +89,10 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		shutdownWg: &sync.WaitGroup{},
 		server:     h2Server,
 
-		networkLayer: networkLayer,
-		cipherSuites: cipherSuites,
-		logger:       logger,
+		networkLayer:              networkLayer,
+		cipherSuites:              cipherSuites,
+		logger:                    logger,
+		tlsConnectionLoggingLevel: log.LevelFromString(os.Getenv("VAULT_CLUSTER_TLS_SESSION_LOG_LEVEL")),
 	}
 }
 
@@ -364,7 +364,7 @@ func (cl *Listener) Run(ctx context.Context) error {
 					continue
 				}
 
-				logTLSSessionStart(cl.logger, tlsConn.RemoteAddr().String(), tlsConn.ConnectionState())
+				cl.logTLSSessionStart(tlsConn.RemoteAddr().String(), tlsConn.ConnectionState())
 
 				// Now, set it back to unlimited
 				err = tlsConn.SetDeadline(time.Time{})
@@ -449,18 +449,18 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		if err != nil {
 			return nil, err
 		}
-		logTLSSessionStart(cl.logger, conn.RemoteAddr().String(), conn.ConnectionState())
+		cl.logTLSSessionStart(conn.RemoteAddr().String(), conn.ConnectionState())
 		return conn, nil
 	}
 }
 
-func logTLSSessionStart(logger log.Logger, peerAddress string, state tls.ConnectionState) {
-	if tlsConnectionLoggingEnabled && logger.IsTrace() {
+func (cl *Listener) logTLSSessionStart(peerAddress string, state tls.ConnectionState) {
+	if cl.tlsConnectionLoggingLevel != log.NoLevel {
 		cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
-		logger.Trace("TLS connection established", "peer", peerAddress, "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
+		cl.logger.Log(cl.tlsConnectionLoggingLevel, "TLS connection established", "peer", peerAddress, "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
 		for _, chain := range state.VerifiedChains {
 			for _, cert := range chain {
-				logger.Trace("Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
+				cl.logger.Log(cl.tlsConnectionLoggingLevel, "Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
 					"signature_algorithm", cert.SignatureAlgorithm.String(), "public_key_algorithm", cert.PublicKeyAlgorithm.String(), "public_key_size", certutil.GetPublicKeySize(cert.PublicKey))
 			}
 		}
