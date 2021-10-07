@@ -25,7 +25,6 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
 	// make sure this client is using the root token

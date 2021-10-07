@@ -175,7 +175,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	case "rw":
 		secret, code = c.readThenWrite(client, path, newData)
 	case "patch":
-		secret, code = c.actualPatch(client, path, newData)
+		secret, code = c.mergePatch(client, path, newData)
 	default:
 		c.UI.Error(fmt.Sprintf("Unsupported method provided to -method flag: %s", c.flagMethod))
 		return 2
@@ -269,7 +269,7 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	return secret, 0
 }
 
-func (c *KVPatchCommand) actualPatch(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
+func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map[string]interface{}) (*api.Secret, int) {
 	data := map[string]interface{}{
 		"data":    newData,
 		"options": map[string]interface{}{},
@@ -283,17 +283,12 @@ func (c *KVPatchCommand) actualPatch(client *api.Client, path string, newData ma
 	if err != nil {
 		// If it's a 403, that probably means they don't have the patch capability in their policy. Fall back to
 		// the old way of doing it.
-		if re, ok := err.(*api.ResponseError); ok {
-			if re.StatusCode == 403 {
-				c.UI.Warn(fmt.Sprintf("Data was written to %s but we recommend that you add the \"patch\" capability to your ACL policy in order to use HTTP PATCH in the future.", path))
-				return c.readThenWrite(client, path, newData)
-			}
+		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == 403 {
+			c.UI.Warn(fmt.Sprintf("Data was written to %s but we recommend that you add the \"patch\" capability to your ACL policy in order to use HTTP PATCH in the future.", path))
+			return c.readThenWrite(client, path, newData)
 		}
 
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
-		if secret != nil {
-			OutputSecret(c.UI, secret)
-		}
 		return nil, 2
 	}
 

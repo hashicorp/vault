@@ -676,8 +676,12 @@ func TestKvPatchCommand_StdinFull(t *testing.T) {
 	}
 
 	secretData := secretDataRaw.(map[string]interface{})
+	foo, ok := secretData["foo"].(string)
+	if !ok {
+		t.Fatal("expected foo to be a string but it wasn't")
+	}
 
-	if exp, act := "bar", secretData["foo"].(string); exp != act {
+	if exp, act := "bar", foo; exp != act {
 		t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
 	}
 }
