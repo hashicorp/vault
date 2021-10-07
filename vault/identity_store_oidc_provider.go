@@ -1694,7 +1694,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 	authCodeEntry, ok := authCodeEntryRaw.(*authCodeCacheEntry)
 	if !ok {
-		return tokenResponse(nil, ErrTokenServerError, "failed type assertion for authorization code entry")
+		return tokenResponse(nil, ErrTokenServerError, "authorization grant is invalid or expired")
 	}
 
 	// Ensure the authorization code was issued to the authenticated client
