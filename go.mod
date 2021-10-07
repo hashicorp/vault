@@ -6,8 +6,6 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
-replace github.com/hashicorp/vault-plugin-secrets-kv => ../vault-plugin-secrets-kv
-
 require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
@@ -112,13 +110,13 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20210811133805-e060c2307b24
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211007143158-2d15a6fec12b
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20210715043003-e02ca8f6408e
 	github.com/hashicorp/vault-testing-stepwise v0.1.1
 	github.com/hashicorp/vault/api v1.1.1
-	github.com/hashicorp/vault/sdk v0.2.1
+	github.com/hashicorp/vault/sdk v0.2.2-0.20211004171540-a8c7e135dd6a
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
