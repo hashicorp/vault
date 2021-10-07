@@ -279,8 +279,8 @@ module('Acceptance | secrets/database/*', function(hooks) {
       plugin: 'mongodb-database-plugin',
       id: 'horses-db',
       fields: [
-        { label: 'Connection Name', name: 'name', value: 'horses-db' },
-        { label: 'Connection url', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
+        { label: 'Connection name', name: 'name', value: 'horses-db' },
+        { label: 'Connection URL', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
         { label: 'Username', name: 'username', value: 'user', hideOnShow: true },
         { label: 'Password', name: 'password', password: 'so-secure', hideOnShow: true },
         { label: 'Write concern', name: 'write_concern' },

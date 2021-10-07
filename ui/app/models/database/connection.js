@@ -169,7 +169,7 @@ export default Model.extend({
   }),
   // required
   name: attr('string', {
-    label: 'Connection Name',
+    label: 'Connection name',
   }),
   plugin_name: attr('string', {
     label: 'Database plugin',
