@@ -714,6 +714,8 @@ func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cachebolt
 func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// Emulate responses from the api proxy. The first two use the auto-auth
 	// token, and the others use another token.
+	// The test re-sends each request to ensure that the response is cached
+	// so the number of responses and cacheTests specified should always be equal.
 	responses := []*SendResponse{
 		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
 		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
@@ -733,7 +735,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 
 	// Register an auto-auth token so that the token and lease requests are cached
 	err := lc.RegisterAutoAuthToken("autoauthtoken")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cacheTests := []struct {
 		token                     string
@@ -791,7 +793,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 		},
 	}
 
-	var deleteID string
+	var deleteIDs []string
 	for i, ct := range cacheTests {
 		// Send once to cache
 		sendReq := &SendRequest{
@@ -799,8 +801,9 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 			Request: httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body)),
 		}
 		if ct.deleteFromPersistentStore {
-			deleteID, err = computeIndexID(sendReq)
-			assert.NoError(t, err)
+			deleteID, err := computeIndexID(sendReq)
+			require.NoError(t, err)
+			deleteIDs = append(deleteIDs, deleteID)
 			// Now reset the body after calculating the index
 			sendReq.Request = httptest.NewRequest(ct.method, ct.urlPath, strings.NewReader(ct.body))
 		}
@@ -822,8 +825,11 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 		assert.True(t, respCached.CacheMeta.Hit)
 	}
 
-	err = boltStorage.Delete(deleteID)
-	assert.NoError(t, err)
+	require.NotEmpty(t, deleteIDs)
+	for _, deleteID := range deleteIDs {
+		err = boltStorage.Delete(deleteID)
+		require.NoError(t, err)
+	}
 
 	// Now we know the cache is working, so try restoring from the persisted
 	// cache's storage. Responses 3 and 4 have been cleared from the cache, so

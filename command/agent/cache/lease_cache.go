@@ -1021,6 +1021,7 @@ func (c *LeaseCache) restoreTokens(tokens [][]byte) error {
 		}
 		c.logger.Trace("restored token", "id", newIndex.ID)
 	}
+
 	return errors.ErrorOrNil()
 }
 
