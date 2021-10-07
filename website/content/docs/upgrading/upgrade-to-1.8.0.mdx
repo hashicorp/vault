@@ -52,8 +52,8 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
   [issue](https://github.com/hashicorp/vault/issues/12275) affects RedHat
   packages for Vault 1.8.0 and the 1.8.1-0 package, and is fixed in 1.8.1-1 and up.
 - The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give
-  users the ability to generate tokens and key if wildcards are used in policies. To avoid issues like this,
-  wildcards should not be used in policies. The following policy grants a user the ability to read all
+  users the ability to generate tokens and key if globs are used in policies. To avoid issues like this,
+  globs should not be used in policies. The following policy grants a user the ability to read all
   rolesets, but would also allow them to generate tokens and keys:
 
   ```
