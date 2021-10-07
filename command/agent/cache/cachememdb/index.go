@@ -60,6 +60,9 @@ type Index struct {
 	// RequestToken is the token used in the request
 	RequestToken string
 
+	// RequestTokenIndexID is the ID of the RequestToken's entry in the cache
+	RequestTokenIndexID string
+
 	// RequestHeader is the header used in the request
 	RequestHeader http.Header
 

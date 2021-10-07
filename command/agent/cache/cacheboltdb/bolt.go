@@ -149,15 +149,6 @@ func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, inde
 	})
 }
 
-func getBucketIDs(b *bolt.Bucket) ([][]byte, error) {
-	ids := [][]byte{}
-	err := b.ForEach(func(k, v []byte) error {
-		ids = append(ids, k)
-		return nil
-	})
-	return ids, err
-}
-
 // Delete an index (token or lease) by id from bolt storage
 func (b *BoltStorage) Delete(id string) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
