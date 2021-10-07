@@ -1537,7 +1537,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		}
 
 		// Look up the token associated with the request
-		te, err := i.tokenStorer.TokenStore().Lookup(ctx, req.ClientToken)
+		te, err := i.tokenStorer.LookupToken(ctx, req.ClientToken)
 		if err != nil {
 			return authResponse("", state, ErrAuthServerError, err.Error())
 		}
@@ -1747,14 +1747,15 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 			accessTokenScopesMeta:   strings.Join(authCodeEntry.scopes, scopesDelimiter),
 		},
 
-		// TODO: Add the InlinePolicy once support is checked in
+		// TODO: Uncomment below when support is checkedin
+		//SkipIdentityInheritance: true,
 		//InlinePolicy: fmt.Sprintf(`
 		//	path "identity/oidc/provider/%s/userinfo" {
 		//		capabilities = ["read", "update"]
 		//	}
 		//`, name),
 	}
-	err = i.tokenStorer.TokenStore().create(ctx, accessToken)
+	err = i.tokenStorer.CreateToken(ctx, accessToken)
 	if err != nil {
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
@@ -1882,7 +1883,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Look up the access token
-	te, err := i.tokenStorer.TokenStore().Lookup(ctx, req.ClientToken)
+	te, err := i.tokenStorer.LookupToken(ctx, req.ClientToken)
 	if err != nil {
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
