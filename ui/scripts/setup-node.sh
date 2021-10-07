@@ -13,6 +13,9 @@ echo "==> Setting up node v$NODE_VERSION (from .nvmrc)"
 # shellcheck disable=SC1090
 command -v nvm || {
 	echo "==> Sourcing .bashrc..."
+	echo "==> Debug; bashrc contents:"
+	cat ~/.bashrc
+	echo "==> END bashrc contents"
 	source ~/.bashrc
 }
 command -v nvm || { echo "ERROR: nvm not installed"; exit 1; }
