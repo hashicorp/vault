@@ -223,15 +223,17 @@ layers:
       RUN mkdir -p $DIR
       WORKDIR $DIR
   - name: install-yarn
+    source-include: ui/.nvmrc ui/
     dockerfile: |-
-      RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
       RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
       RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
       RUN apt-get update -y \
                   && apt-get install --no-install-recommends -y -q \
-                    yarn={{.YARN_VERSION}} \
-                    nodejs=10.24.1-deb-1nodesource1 \
+                       nodejs \
+                       yarn={{.YARN_VERSION}} \
                   && rm -rf /var/lib/apt/lists/*
+      RUN cd ui && ./install-nvm.sh
+      RUN cd ui && ./setup-node.sh
   - name: ui-dependencies
     source-include: ui/package.json ui/yarn.lock
     dockerfile: |-
