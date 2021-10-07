@@ -361,6 +361,8 @@ func (cl *Listener) Run(ctx context.Context) error {
 					continue
 				}
 
+				logTLSConnectionState(cl.logger, tlsConn.ConnectionState())
+
 				// Now, set it back to unlimited
 				err = tlsConn.SetDeadline(time.Time{})
 				if err != nil {
@@ -444,20 +446,20 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		if err != nil {
 			return nil, err
 		}
-		if cl.logger.IsTrace() {
-			logTLSConnection(cl.logger, conn.ConnectionState())
-		}
+		logTLSConnectionState(cl.logger, conn.ConnectionState())
 		return conn, nil
 	}
 }
 
-func logTLSConnection(logger log.Logger, state tls.ConnectionState) {
-	cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
-	logger.Trace("TLS connection established", "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
-	for _, chain := range state.VerifiedChains {
-		for _, cert := range chain {
-			logger.Trace("Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
-				"signature_algorithm", cert.SignatureAlgorithm.String(), "public_key_algorithm", cert.PublicKeyAlgorithm.String(), "public_key_size", certutil.GetPublicKeySize(cert.PublicKey))
+func logTLSConnectionState(logger log.Logger, state tls.ConnectionState) {
+	if logger.IsTrace() {
+		cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
+		logger.Trace("TLS connection established", "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
+		for _, chain := range state.VerifiedChains {
+			for _, cert := range chain {
+				logger.Trace("Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
+					"signature_algorithm", cert.SignatureAlgorithm.String(), "public_key_algorithm", cert.PublicKeyAlgorithm.String(), "public_key_size", certutil.GetPublicKeySize(cert.PublicKey))
+			}
 		}
 	}
 }
