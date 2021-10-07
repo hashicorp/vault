@@ -45,4 +45,28 @@ export default RESTSerializer.extend({
     }
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
+
+  // add serialize function this._super
+  // serialize(snapshot, requestType) {
+  //   let data = this._super(snapshot, requestType);
+  //   if (data.database) {
+  //     const db = data.database[0];
+  //     data.db_name = db;
+  //     delete data.database;
+  //   }
+  //   // This is necessary because the input for MongoDB is a json string
+  //   // rather than an array, so we transpose that here
+  //   if (data.creation_statement) {
+  //     const singleStatement = data.creation_statement;
+  //     data.creation_statements = [singleStatement];
+  //     delete data.creation_statement;
+  //   }
+  //   if (data.revocation_statement) {
+  //     const singleStatement = data.revocation_statement;
+  //     data.revocation_statements = [singleStatement];
+  //     delete data.revocation_statement;
+  //   }
+
+  //   return data;
+  // },
 });
