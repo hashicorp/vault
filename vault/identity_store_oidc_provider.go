@@ -1836,7 +1836,15 @@ func tokenResponse(response map[string]interface{}, errorCode, errorDescription 
 
 	// Set the error response and status code if error code isn't empty
 	if errorCode != "" {
-		statusCode = http.StatusBadRequest
+		switch errorCode {
+		case ErrTokenInvalidClient:
+			statusCode = http.StatusUnauthorized
+		case ErrTokenServerError:
+			statusCode = http.StatusInternalServerError
+		default:
+			statusCode = http.StatusBadRequest
+		}
+
 		response = map[string]interface{}{
 			"error":             errorCode,
 			"error_description": errorDescription,
@@ -1848,17 +1856,26 @@ func tokenResponse(response map[string]interface{}, errorCode, errorDescription 
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPStatusCode:  statusCode,
-			logical.HTTPRawBody:     body,
-			logical.HTTPContentType: "application/json",
+	data := map[string]interface{}{
+		logical.HTTPStatusCode:  statusCode,
+		logical.HTTPRawBody:     body,
+		logical.HTTPContentType: "application/json",
 
-			// Token responses must include the following HTTP response headers
-			// https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse
-			logical.HTTPCacheControlHeader: "no-store",
-			logical.HTTPPragmaHeader:       "no-cache",
-		},
+		// Token responses must include the following HTTP response headers
+		// https://openid.net/specs/openid-connect-core-1_0.html#TokenResponse
+		logical.HTTPCacheControlHeader: "no-store",
+		logical.HTTPPragmaHeader:       "no-cache",
+	}
+
+	// Set the WWW-Authenticate response header when returning the
+	// invalid_client error code per the OAuth 2.0 spec at
+	// https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+	if errorCode == ErrTokenInvalidClient {
+		data[logical.HTTPWWWAuthenticateHeader] = "Basic"
+	}
+
+	return &logical.Response{
+		Data: data,
 	}, nil
 }
 

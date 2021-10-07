@@ -317,7 +317,10 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				// Assert that we receive the expected status code
 				statusCode := resp.Data[logical.HTTPStatusCode].(int)
 				switch tokenRes.Error {
-				case ErrAuthServerError:
+				case ErrTokenInvalidClient:
+					require.Equal(t, http.StatusUnauthorized, statusCode)
+					require.Equal(t, "Basic", resp.Data[logical.HTTPWWWAuthenticateHeader])
+				case ErrTokenServerError:
 					require.Equal(t, http.StatusInternalServerError, statusCode)
 				default:
 					require.Equal(t, http.StatusBadRequest, statusCode)
