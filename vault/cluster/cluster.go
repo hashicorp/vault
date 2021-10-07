@@ -364,7 +364,7 @@ func (cl *Listener) Run(ctx context.Context) error {
 					continue
 				}
 
-				logTLSSessionStart(cl.logger, tlsConn.ConnectionState())
+				logTLSSessionStart(cl.logger, tlsConn.RemoteAddr().String(), tlsConn.ConnectionState())
 
 				// Now, set it back to unlimited
 				err = tlsConn.SetDeadline(time.Time{})
@@ -449,15 +449,15 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		if err != nil {
 			return nil, err
 		}
-		logTLSSessionStart(cl.logger, conn.ConnectionState())
+		logTLSSessionStart(cl.logger, conn.RemoteAddr().String(), conn.ConnectionState())
 		return conn, nil
 	}
 }
 
-func logTLSSessionStart(logger log.Logger, state tls.ConnectionState) {
+func logTLSSessionStart(logger log.Logger, peerAddress string, state tls.ConnectionState) {
 	if tlsConnectionLoggingEnabled && logger.IsTrace() {
 		cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
-		logger.Trace("TLS connection established", "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
+		logger.Trace("TLS connection established", "peer", peerAddress, "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
 		for _, chain := range state.VerifiedChains {
 			for _, cert := range chain {
 				logger.Trace("Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
