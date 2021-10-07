@@ -118,7 +118,7 @@ curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/de
   -X POST \
   -d '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
   | jq -r '.status.token' \
-  | cut -d. -f2 \
+  | cut -d . -f2 \
   | base64 -D
 ```
 

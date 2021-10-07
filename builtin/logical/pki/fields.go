@@ -270,8 +270,8 @@ Set to 384 for SHA384 and 512 for SHA512.
 		Type:    framework.TypeString,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
-and "ec" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec"},
+"ec" and "ed25519" are the only valid values.`,
+		AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},

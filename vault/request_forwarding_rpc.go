@@ -15,6 +15,8 @@ import (
 )
 
 type forwardedRequestRPCServer struct {
+	UnimplementedRequestForwardingServer
+
 	core                  *Core
 	handler               http.Handler
 	perfStandbySlots      chan struct{}

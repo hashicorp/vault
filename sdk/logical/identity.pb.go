@@ -26,18 +26,18 @@ type Entity struct {
 	unknownFields protoimpl.UnknownFields
 
 	// ID is the unique identifier for the entity
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	// Name is the human-friendly unique identifier for the entity
-	Name string `sentinel:"" protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Aliases contains thhe alias mappings for the given entity
-	Aliases []*Alias `sentinel:"" protobuf:"bytes,3,rep,name=aliases,proto3" json:"aliases,omitempty"`
+	Aliases []*Alias `protobuf:"bytes,3,rep,name=aliases,proto3" json:"aliases,omitempty"`
 	// Metadata represents the custom data tied to this entity
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Metadata map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Disabled is true if the entity is disabled.
-	Disabled bool `sentinel:"" protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
+	Disabled bool `protobuf:"varint,5,opt,name=disabled,proto3" json:"disabled,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this entity
 	// belongs to.
-	NamespaceID string `sentinel:"" protobuf:"bytes,6,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	NamespaceID string `protobuf:"bytes,6,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Entity) Reset() {
@@ -120,26 +120,26 @@ type Alias struct {
 	unknownFields protoimpl.UnknownFields
 
 	// MountType is the backend mount's type to which this identity belongs
-	MountType string `sentinel:"" protobuf:"bytes,1,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
+	MountType string `protobuf:"bytes,1,opt,name=mount_type,json=mountType,proto3" json:"mount_type,omitempty"`
 	// MountAccessor is the identifier of the mount entry to which this
 	// identity belongs
-	MountAccessor string `sentinel:"" protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
+	MountAccessor string `protobuf:"bytes,2,opt,name=mount_accessor,json=mountAccessor,proto3" json:"mount_accessor,omitempty"`
 	// Name is the identifier of this identity in its authentication source
-	Name string `sentinel:"" protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// Metadata represents the custom data tied to this alias. Fields added
 	// to it should have a low rate of change (or no change) because each
 	// change incurs a storage write, so quickly-changing fields can have
 	// a significant performance impact at scale. See the SDK's
 	// "aliasmetadata" package for a helper that eases and standardizes
 	// using this safely.
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Metadata map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// ID is the unique identifier for the alias
-	ID string `sentinel:"" protobuf:"bytes,5,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID string `protobuf:"bytes,5,opt,name=ID,proto3" json:"ID,omitempty"`
 	// NamespaceID is the identifier of the namespace to which this alias
 	// belongs.
-	NamespaceID string `sentinel:"" protobuf:"bytes,6,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	NamespaceID string `protobuf:"bytes,6,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
 	// Custom Metadata represents the custom data tied to this alias
-	CustomMetadata map[string]string `sentinel:"" protobuf:"bytes,7,rep,name=custom_metadata,json=customMetadata,proto3" json:"custom_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	CustomMetadata map[string]string `protobuf:"bytes,7,rep,name=custom_metadata,json=customMetadata,proto3" json:"custom_metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *Alias) Reset() {
@@ -229,14 +229,14 @@ type Group struct {
 	unknownFields protoimpl.UnknownFields
 
 	// ID is the unique identifier for the group
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	// Name is the human-friendly unique identifier for the group
-	Name string `sentinel:"" protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Metadata represents the custom data tied to this group
-	Metadata map[string]string `sentinel:"" protobuf:"bytes,3,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Metadata map[string]string `protobuf:"bytes,3,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// NamespaceID is the identifier of the namespace to which this group
 	// belongs to.
-	NamespaceID string `sentinel:"" protobuf:"bytes,4,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	NamespaceID string `protobuf:"bytes,4,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
 }
 
 func (x *Group) Reset() {
