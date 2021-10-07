@@ -3,14 +3,10 @@ package vault
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -108,6 +103,7 @@ var (
 	enterprisePreSeal            = enterprisePreSealImpl
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
 	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
+	enterpriseSetupAPILock       = setupAPILockImpl
 	startReplication             = startReplicationImpl
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
@@ -1972,6 +1968,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
+	enterpriseSetupAPILock(c)
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
@@ -2213,6 +2210,8 @@ func startReplicationImpl(c *Core) error {
 func stopReplicationImpl(c *Core) error {
 	return nil
 }
+
+func setupAPILockImpl(c *Core) {}
 
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
@@ -2822,51 +2821,6 @@ func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 
 func (c *Core) isPrimary() bool {
 	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
-}
-
-func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
-	cooked, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil {
-		return nil, err
-	}
-	s := string(cooked)
-
-	lastIndex := strings.LastIndexByte(s, ':')
-	if lastIndex == -1 {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
-	stateHMAC, err := hex.DecodeString(stateHMACRaw)
-	if err != nil {
-		return nil, fmt.Errorf("invalid state header HMAC: %v, %w", stateHMACRaw, err)
-	}
-
-	if len(hmacKey) != 0 {
-		hm := hmac.New(sha256.New, hmacKey)
-		hm.Write([]byte(state))
-		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
-			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
-		}
-	}
-
-	pieces := strings.Split(state, ":")
-	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-
-	return &logical.WALState{
-		ClusterID:       pieces[1],
-		LocalIndex:      localIndex,
-		ReplicatedIndex: replicatedIndex,
-	}, nil
 }
 
 type LicenseState struct {
