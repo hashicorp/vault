@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"net"
 	"net/url"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -22,6 +23,8 @@ import (
 const (
 	ListenerAcceptDeadline = 500 * time.Millisecond
 )
+
+var tlsConnectionLoggingEnabled = os.Getenv("VAULT_LOG_CLUSTER_TLS_SESSIONS") != ""
 
 // Client is used to lookup a client certificate.
 type Client interface {
@@ -361,7 +364,7 @@ func (cl *Listener) Run(ctx context.Context) error {
 					continue
 				}
 
-				logTLSConnectionState(cl.logger, tlsConn.ConnectionState())
+				logTLSSessionStart(cl.logger, tlsConn.ConnectionState())
 
 				// Now, set it back to unlimited
 				err = tlsConn.SetDeadline(time.Time{})
@@ -446,13 +449,13 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		if err != nil {
 			return nil, err
 		}
-		logTLSConnectionState(cl.logger, conn.ConnectionState())
+		logTLSSessionStart(cl.logger, conn.ConnectionState())
 		return conn, nil
 	}
 }
 
-func logTLSConnectionState(logger log.Logger, state tls.ConnectionState) {
-	if logger.IsTrace() {
+func logTLSSessionStart(logger log.Logger, state tls.ConnectionState) {
+	if tlsConnectionLoggingEnabled && logger.IsTrace() {
 		cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
 		logger.Trace("TLS connection established", "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
 		for _, chain := range state.VerifiedChains {
