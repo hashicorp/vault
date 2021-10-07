@@ -235,6 +235,9 @@ message TokenEntry {
 	string namespace_id = 16;
 	string cubbyhole_id = 17;
 	uint32 type = 18;
+	map<string, string> internal_meta = 19;
+	string inline_policy = 20;
+	bool no_identity_policies = 21;
 }
 
 message LeaseOptions {

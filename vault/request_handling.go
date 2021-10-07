@@ -52,10 +52,10 @@ type HandlerProperties struct {
 // fetchEntityAndDerivedPolicies returns the entity object for the given entity
 // ID. If the entity is merged into a different entity object, the entity into
 // which the given entity ID is merged into will be returned. This function
-// also returns the cumulative list of policies that the entity is entitled to.
-// This list includes the policies from the entity itself and from all the
-// groups in which the given entity ID is a member of.
-func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string) (*identity.Entity, map[string][]string, error) {
+// also returns the cumulative list of policies that the entity is entitled to
+// if skipDeriveEntityPolicies is set to false. This list includes the policies from the
+// entity itself and from all the groups in which the given entity ID is a member of.
+func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *namespace.Namespace, entityID string, skipDeriveEntityPolicies bool) (*identity.Entity, map[string][]string, error) {
 	if entityID == "" || c.identityStore == nil {
 		return nil, nil, nil
 	}
@@ -81,7 +81,7 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 	}
 
 	policies := make(map[string][]string)
-	if entity != nil {
+	if entity != nil && !skipDeriveEntityPolicies {
 		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
 
 		// Attach the policies on the entity
@@ -172,9 +172,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 	}
 
-	policies := make(map[string][]string)
+	policyNames := make(map[string][]string)
 	// Add tokens policies
-	policies[te.NamespaceID] = append(policies[te.NamespaceID], te.Policies...)
+	policyNames[te.NamespaceID] = append(policyNames[te.NamespaceID], te.Policies...)
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, c)
 	if err != nil {
@@ -187,21 +187,21 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	// Add identity policies from all the namespaces
-	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
 		return nil, nil, nil, nil, ErrInternalError
 	}
 	for nsID, nsPolicies := range identityPolicies {
-		policies[nsID] = append(policies[nsID], nsPolicies...)
+		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
 	}
 
 	// Attach token's namespace information to the context. Wrapping tokens by
 	// should be able to be used anywhere, so we also special case behavior.
 	var tokenCtx context.Context
-	if len(policies) == 1 &&
-		len(policies[te.NamespaceID]) == 1 &&
-		(policies[te.NamespaceID][0] == responseWrappingPolicyName ||
-			policies[te.NamespaceID][0] == controlGroupPolicyName) &&
+	if len(policyNames) == 1 &&
+		len(policyNames[te.NamespaceID]) == 1 &&
+		(policyNames[te.NamespaceID][0] == responseWrappingPolicyName ||
+			policyNames[te.NamespaceID][0] == controlGroupPolicyName) &&
 		(strings.HasSuffix(req.Path, "sys/wrapping/unwrap") ||
 			strings.HasSuffix(req.Path, "sys/wrapping/lookup") ||
 			strings.HasSuffix(req.Path, "sys/wrapping/rewrap")) {
@@ -213,9 +213,19 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		tokenCtx = namespace.ContextWithNamespace(ctx, tokenNS)
 	}
 
+	// Add the inline policy if it's set
+	policies := make([]*Policy, 0)
+	if te.InlinePolicy != "" {
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
+		if err != nil {
+			return nil, nil, nil, nil, ErrInternalError
+		}
+		policies = append(policies, inlinePolicy)
+	}
+
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
-	acl, err := c.policyStore.ACL(tokenCtx, entity, policies)
+	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
 		if errwrap.ContainsType(err, new(TemplateError)) {
 			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
@@ -1056,7 +1066,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
 		if err != nil {
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
@@ -1361,7 +1371,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			resp.AddWarning(warning)
 		}
 
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID)
+		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
