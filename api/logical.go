@@ -155,13 +155,10 @@ func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[stri
 }
 
 func (c *Logical) WriteBytes(path string, data []byte) (*Secret, error) {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	r.BodyBytes = data
 
-	return c.write(ctx, path, r)
+	return c.write(context.Background(), path, r)
 }
 
 func (c *Logical) write(ctx context.Context, path string, request *Request) (*Secret, error) {

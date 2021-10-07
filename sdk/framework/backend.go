@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	jsonpatch "github.com/evanphx/json-patch"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy"
@@ -280,7 +280,13 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	return callback(ctx, req, &fd)
 }
 
-
+// HandlePatchOperation acts as an abstraction for performing JSON merge patch
+// operations (see https://datatracker.ietf.org/doc/html/rfc7396) for HTTP
+// PATCH requests. It is responsible for properly processing and marshalling
+// the input and existing resource prior to performing the JSON merge operation
+// using the MergePatch function from the json-patch library. The preprocessor
+// is an arbitrary func that can be provided to further process the input. The
+// MergePatch function accepts and returns byte arrays.
 func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
 	var err error
 
@@ -300,7 +306,7 @@ func HandlePatchOperation(input *FieldData, resource map[string]interface{}, pre
 		}
 	}
 
-	if preprocessor!= nil {
+	if preprocessor != nil {
 		inputMap, err = preprocessor(inputMap)
 		if err != nil {
 			return nil, err
