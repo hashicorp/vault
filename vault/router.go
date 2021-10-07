@@ -23,6 +23,9 @@ var deniedPassthroughRequestHeaders = []string{
 	consts.AuthHeaderName,
 }
 
+// matches when '+' is next to a non-slash char
+var wcAdjacentNonSlashRegEx = regexp.MustCompile(`\+[^/]|[^/]\+`).MatchString
+
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
 	l                  sync.RWMutex
@@ -800,6 +803,10 @@ func (r *Router) RootPath(ctx context.Context, path string) bool {
 }
 
 // LoginPath checks if the given path is used for logins
+// Matching Priority
+//  1. prefix
+//  2. exact
+//  3. wildcard
 func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -827,10 +834,6 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 		return false
 	}
 
-	// Matching Priority
-	//  1. prefix
-	//  2. exact
-	//  3. wildcard
 	if ok {
 		prefixMatch := raw.(bool)
 		if prefixMatch {
@@ -853,30 +856,27 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	return false
 }
 
-// pathMatchesWildcardPath returns true if the path made up of the pathParts
-// slice matches the given wildcard path string
-func pathMatchesWildcardPath(pathParts, wcPath []string, isPrefix bool) bool {
+// pathMatchesWildcardPath returns true if the path made up of the path slice
+// matches the given wildcard path slice
+func pathMatchesWildcardPath(path, wcPath []string, isPrefix bool) bool {
 	if len(wcPath) == 0 {
 		return false
 	}
 
-	currWCPath := make([]string, len(wcPath))
-	copy(currWCPath, wcPath)
-
-	if len(pathParts) < len(currWCPath) {
+	if len(path) < len(wcPath) {
 		// check if the path coming in is shorter; if so it can't match
 		return false
 	}
-	if !isPrefix && len(currWCPath) != len(pathParts) {
+	if !isPrefix && len(wcPath) != len(path) {
 		// If it's not a prefix we expect the same number of segments
 		return false
 	}
 
-	for i, wcPathPart := range currWCPath {
+	for i, wcPathPart := range wcPath {
 		switch {
 		case wcPathPart == "+":
-		case wcPathPart == pathParts[i]:
-		case isPrefix && i == len(currWCPath)-1 && strings.HasPrefix(pathParts[i], wcPathPart):
+		case wcPathPart == path[i]:
+		case isPrefix && i == len(wcPath)-1 && strings.HasPrefix(path[i], wcPathPart):
 		default:
 			// we encountered segments that did not match
 			return false
@@ -889,9 +889,7 @@ func wildcardError(path, msg string) error {
 	return fmt.Errorf("path %q: invalid use of wildcards %s", path, msg)
 }
 
-func isValidWildcardPath(path string) (bool, error) {
-	re := regexp.MustCompile(`\++\w|\w\++`)
-
+func isValidUnauthenticatedPath(path string) (bool, error) {
 	switch {
 	case strings.Count(path, "*") > 1:
 		return false, wildcardError(path, "(multiple '*' is forbidden)")
@@ -899,7 +897,7 @@ func isValidWildcardPath(path string) (bool, error) {
 		return false, wildcardError(path, "('+*' is forbidden)")
 	case strings.Contains(path, "*") && path[len(path)-1] != '*':
 		return false, wildcardError(path, "('*' is only allowed at the end of a path)")
-	case re.MatchString(path):
+	case wcAdjacentNonSlashRegEx(path):
 		return false, wildcardError(path, "('+' is not allowed next to a non-slash)")
 	}
 	return true, nil
@@ -911,7 +909,7 @@ func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
 	var tempPaths []string
 	tempWildcardPaths := make([]wildcardPath, 0)
 	for _, path := range paths {
-		if ok, err := isValidWildcardPath(path); !ok {
+		if ok, err := isValidUnauthenticatedPath(path); !ok {
 			return nil, err
 		}
 

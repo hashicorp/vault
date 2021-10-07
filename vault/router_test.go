@@ -613,6 +613,10 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 			[]string{"/+foo"},
 			"path \"/+foo\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
 		},
+		{
+			[]string{"/++"},
+			"path \"/++\": invalid use of wildcards ('+' is not allowed next to a non-slash)",
+		},
 	}
 
 	for _, tc := range tcases {
