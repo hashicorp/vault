@@ -927,7 +927,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/namespaces",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Summary: "There is no description of this in vault docs",
 					Callback:    pathInternalUINamespacesRead(b),
 				},
 			},
@@ -938,7 +937,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/resultant-acl",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Summary: "There is no description of this in vault docs",
 					Callback:    b.pathInternalUIResultantACL,
 				},
 			},
@@ -949,7 +947,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/requests",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Summary: "There is no description of this in vault docs",
 					Callback:    b.pathInternalCountersRequests,
 				},
 			},
@@ -960,7 +957,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/tokens",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Summary: "There is no description of this in vault docs",
 					Callback:    b.pathInternalCountersTokens,
 				},
 			},
@@ -971,7 +967,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/entities",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Summary: "There is no description of this in vault docs",
 					Callback:    b.pathInternalCountersEntities,
 				},
 			},
