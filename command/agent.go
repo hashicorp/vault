@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -40,6 +41,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -470,7 +473,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var leaseCache *cache.LeaseCache
 	var previousToken string
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Listeners) != 0 {
+	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -666,11 +669,25 @@ func (c *AgentCommand) Run(args []string) int {
 		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
 
 		var listeners []net.Listener
+
+		// If there are templates, add an in-process listener
+		if len(config.Templates) > 0 {
+			config.Listeners = append(config.Listeners, &configutil.Listener{Type: "bufconn"})
+		}
 		for i, lnConfig := range config.Listeners {
-			ln, tlsConf, err := cache.StartListener(lnConfig)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
-				return 1
+			var ln net.Listener
+			var tlsConf *tls.Config
+
+			if lnConfig.Type == "bufconn" {
+				inProcListener := listenerutil.NewBufConnListener()
+				config.Cache.InProcDialer = inProcListener
+				ln = inProcListener
+			} else {
+				ln, tlsConf, err = cache.StartListener(lnConfig)
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
+					return 1
+				}
 			}
 
 			listeners = append(listeners, ln)

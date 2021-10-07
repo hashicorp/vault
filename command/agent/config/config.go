@@ -65,12 +65,13 @@ type Vault struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool        `hcl:"-"`
-	ForceAutoAuthToken  bool        `hcl:"-"`
-	EnforceConsistency  string      `hcl:"enforce_consistency"`
-	WhenInconsistent    string      `hcl:"when_inconsistent"`
-	Persist             *Persist    `hcl:"persist"`
+	UseAutoAuthTokenRaw interface{}              `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool                     `hcl:"-"`
+	ForceAutoAuthToken  bool                     `hcl:"-"`
+	EnforceConsistency  string                   `hcl:"enforce_consistency"`
+	WhenInconsistent    string                   `hcl:"when_inconsistent"`
+	Persist             *Persist                 `hcl:"persist"`
+	InProcDialer        ctconfig.TransportDialer `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -196,8 +197,8 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if result.Cache != nil {
-		if len(result.Listeners) < 1 {
-			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		if len(result.Listeners) < 1 && len(result.Templates) < 1 {
+			return nil, fmt.Errorf("at least one listener required when cache enabled and no templates defined")
 		}
 
 		if result.Cache.UseAutoAuthToken {

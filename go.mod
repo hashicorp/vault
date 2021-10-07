@@ -8,6 +8,8 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
+replace github.com/hashicorp/consul-template => github.com/tvoran/consul-template v0.27.2-0.20211001014530-1148ff14aa78
+
 require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
@@ -162,6 +164,7 @@ require (
 	github.com/rboyer/safeio v0.2.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
+	github.com/ryboe/q v1.0.14 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.7.1
@@ -188,7 +191,7 @@ require (
 	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/net v0.0.0-20210928044308-7d9f5e0b762b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
