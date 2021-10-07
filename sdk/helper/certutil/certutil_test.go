@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"golang.org/x/crypto/ed25519"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
