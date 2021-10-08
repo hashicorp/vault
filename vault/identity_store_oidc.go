@@ -642,25 +642,19 @@ func (i *IdentityStore) roleReferencesTargetKeyID(ctx context.Context, s logical
 		return false, err
 	}
 
-	var tempRole role
 	for _, roleName := range roleNames {
-		entry, err := s.Get(ctx, roleConfigPath+roleName)
+		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
 			return false, err
 		}
-		if entry != nil {
-			if err := entry.DecodeJSON(&tempRole); err != nil {
-				return false, err
-			}
-			ids, err := i.keyIDsByName(ctx, s, tempRole.Key)
-			if err != nil {
-				return false, err
-			}
+		ids, err := i.keyIDsByName(ctx, s, role.Key)
+		if err != nil {
+			return false, err
+		}
 
-			for _, id := range ids {
-				if id == targetKeyID {
-					return true, nil
-				}
+		for _, id := range ids {
+			if id == targetKeyID {
+				return true, nil
 			}
 		}
 	}
