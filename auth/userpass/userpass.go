@@ -7,13 +7,14 @@ import (
 )
 
 type UserpassAuth struct {
-	MountPath string
-	Username  string
-	Password  string
+	mountPath string
+	username  string
+	password  string
 }
 
 type LoginOption func(a *UserpassAuth)
 
+// Supported options: WithMountPath
 func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMethod, error) {
 	if username == "" {
 		return nil, fmt.Errorf("no user name provided for login")
@@ -28,9 +29,9 @@ func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMe
 	)
 
 	a := &UserpassAuth{
-		MountPath: defaultMountPath,
-		Username:  username,
-		Password:  password,
+		mountPath: defaultMountPath,
+		username:  username,
+		password:  password,
 	}
 
 	// Loop through each option
@@ -46,10 +47,10 @@ func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMe
 
 func (a *UserpassAuth) Login(client *api.Client) (*api.Secret, error) {
 	loginData := map[string]interface{}{
-		"password": a.Password,
+		"password": a.password,
 	}
 
-	path := fmt.Sprintf("auth/%s/login/%s", a.MountPath, a.Username)
+	path := fmt.Sprintf("auth/%s/login/%s", a.mountPath, a.username)
 	resp, err := client.Logical().Write(path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with userpass auth: %w", err)
@@ -60,6 +61,6 @@ func (a *UserpassAuth) Login(client *api.Client) (*api.Secret, error) {
 
 func WithMountPath(mountPath string) LoginOption {
 	return func(a *UserpassAuth) {
-		a.MountPath = mountPath
+		a.mountPath = mountPath
 	}
 }

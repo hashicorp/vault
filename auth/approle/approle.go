@@ -9,16 +9,20 @@ import (
 )
 
 type AppRoleAuth struct {
-	MountPath string
-	RoleID    string
-	// The recommended secure pattern for a secret ID is to unwrap a one-time-use response-wrapping token that was placed here by a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices)
-	// To indicate that the filepath is a wrapping token and not just a plaintext secret ID, initialize NewAppRoleAuth with the WithWrappingToken LoginOption.
-	PathToSecretID string
+	mountPath      string
+	roleID         string
+	pathToSecretID string
 	unwrap         bool
 }
 
 type LoginOption func(a *AppRoleAuth)
 
+// NewAppRoleAuth initializes a new AppRole auth method interface to be passed as a parameter to the client.Auth().Login method.
+//
+// For a secret ID, the recommended secure pattern is to unwrap a one-time-use response-wrapping token that was placed here by a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices)
+// To indicate that the filepath points to this wrapping token and not just a plaintext secret ID, initialize NewAppRoleAuth with the WithWrappingToken LoginOption.
+//
+// Supported options: WithMountPath, WithWrappingToken
 func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.AuthMethod, error) {
 	if roleID == "" {
 		return nil, fmt.Errorf("no role ID provided for login")
@@ -33,9 +37,9 @@ func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.Aut
 	)
 
 	a := &AppRoleAuth{
-		MountPath:      defaultMountPath,
-		RoleID:         roleID,
-		PathToSecretID: pathToSecretID,
+		mountPath:      defaultMountPath,
+		roleID:         roleID,
+		pathToSecretID: pathToSecretID,
 	}
 
 	// Loop through each option
@@ -51,10 +55,10 @@ func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.Aut
 
 func (a *AppRoleAuth) Login(client *api.Client) (*api.Secret, error) {
 	loginData := map[string]interface{}{
-		"role_id": a.RoleID,
+		"role_id": a.roleID,
 	}
 
-	secretIDBytes, err := ioutil.ReadFile(a.PathToSecretID)
+	secretIDBytes, err := ioutil.ReadFile(a.pathToSecretID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read file containing secret ID: %w", err)
 	}
@@ -71,7 +75,7 @@ func (a *AppRoleAuth) Login(client *api.Client) (*api.Secret, error) {
 		loginData["secret_id"] = secretID
 	}
 
-	path := fmt.Sprintf("auth/%s/login", a.MountPath)
+	path := fmt.Sprintf("auth/%s/login", a.mountPath)
 	resp, err := client.Logical().Write(path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with app role auth: %w", err)
@@ -82,7 +86,7 @@ func (a *AppRoleAuth) Login(client *api.Client) (*api.Secret, error) {
 
 func WithMountPath(mountPath string) LoginOption {
 	return func(a *AppRoleAuth) {
-		a.MountPath = mountPath
+		a.mountPath = mountPath
 	}
 }
 
