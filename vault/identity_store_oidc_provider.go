@@ -33,6 +33,10 @@ const (
 	clientPath         = oidcProviderPrefix + "client/"
 	providerPath       = oidcProviderPrefix + "provider/"
 
+	clientIDLength     = 32
+	clientSecretLength = 64
+	clientSecretPrefix = "hvo_secret_"
+
 	// Error constants used in the Authorization Endpoint. See details at
 	// https://openid.net/specs/openid-connect-core-1_0.html#AuthError.
 	ErrAuthUnsupportedResponseType = "unsupported_response_type"
@@ -881,20 +885,20 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 
 	if client.ClientID == "" {
 		// generate client_id
-		clientID, err := base62.Random(29)
+		clientID, err := base62.Random(clientIDLength)
 		if err != nil {
 			return nil, err
 		}
-		client.ClientID = "id_" + clientID
+		client.ClientID = clientID
 	}
 
 	if client.ClientSecret == "" {
 		// generate client_secret
-		clientSecret, err := base62.Random(57)
+		clientSecret, err := base62.Random(clientSecretLength)
 		if err != nil {
 			return nil, err
 		}
-		client.ClientSecret = "secret_" + clientSecret
+		client.ClientSecret = clientSecretPrefix + clientSecret
 	}
 
 	// invalidate the cached client in memdb

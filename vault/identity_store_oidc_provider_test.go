@@ -1166,11 +1166,11 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		t.Fatal(diff)
 	}
 	clientID := resp.Data["client_id"].(string)
-	if !strings.HasPrefix(clientID, "id_") && len(clientID) != 32 {
+	if len(clientID) != clientIDLength {
 		t.Fatalf("client_id format is incorrect: %#v", clientID)
 	}
 	clientSecret := resp.Data["client_secret"].(string)
-	if !strings.HasPrefix(clientSecret, "id_") && len(clientSecret) != 64 {
+	if !strings.HasPrefix(clientSecret, clientSecretPrefix) || len(clientSecret) != clientSecretLength+len(clientSecretPrefix) {
 		t.Fatalf("client_secret format is incorrect: %#v", clientSecret)
 	}
 
