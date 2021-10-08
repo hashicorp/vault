@@ -307,20 +307,20 @@
   </EmptyState>
 {{else}}
   {{#each @model.showAttrs as |attr|}}
-    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+    {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
         />
       {{else if (eq attr.type "array")}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{or (get @model attr.name) defaultDisplay}}
+          @value={{get @model attr.name}}
           @isLink={{true}}
           @queryParam="role"
           @type={{attr.type}}
@@ -328,9 +328,9 @@
       {{else}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{or (get @model attr.name) defaultDisplay}}
+          @value={{get @model attr.name}}
         />
       {{/if}}
     {{/let}}

@@ -119,8 +119,8 @@ export default Model.extend({
     defaultValue: '0s',
   }),
   insecure: attr('boolean', {
-    defaultValue: false,
     label: 'Disable SSL verification',
+    defaultValue: false,
   }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
