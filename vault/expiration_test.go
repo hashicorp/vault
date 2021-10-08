@@ -32,6 +32,17 @@ var testImagePull sync.Once
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
 	c, _, _ := TestCoreUnsealed(t)
+
+	// Wait until the expiration manager is out of restore mode.
+	// This was added to prevent sporadic failures of TestExpiration_unrecoverableErrorMakesIrrevocable.
+	timeout := time.Now().Add(time.Second * 10)
+ 	for c.expiration.inRestoreMode() {
+		if time.Now().After(timeout) {
+			t.Fatal("ExpirationManager is still in restore mode after 10 seconds")
+		}
+		time.Sleep(50*time.Millisecond)
+	}
+
 	return c.expiration
 }
 
@@ -3077,20 +3088,22 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc.job.OnFailure(tc.err)
+		t.Run(tc.err.Error(), func(t *testing.T) {
+			tc.job.OnFailure(tc.err)
 
-		le, err := exp.loadEntry(ctx, tc.job.leaseID)
-		if err != nil {
-			t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
-		}
-		if le == nil {
-			t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
-		}
+			le, err := exp.loadEntry(ctx, tc.job.leaseID)
+			if err != nil {
+				t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
+			}
+			if le == nil {
+				t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
+			}
 
-		isIrrevocable := le.isIrrevocable()
-		if isIrrevocable != tc.shouldBeIrrevocable {
-			t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
-		}
+			isIrrevocable := le.isIrrevocable()
+			if isIrrevocable != tc.shouldBeIrrevocable {
+				t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
+			}
+		})
 	}
 }
 
