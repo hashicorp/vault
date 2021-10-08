@@ -94,9 +94,8 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 		Name:   "method",
 		Target: &c.flagMethod,
 		Usage: `Specifies which method of patching to use. If set to "patch", then
-		an HTTP PATCH request will be issued. This is the default. If set to "rw",
-		then a read will be performed, then a local update, followed by a remote
-		update.`,
+		an HTTP PATCH request will be issued. If set to "rw", then a read will be
+		performed, then a local update, followed by a remote update.`,
 	})
 
 	return set
@@ -264,7 +263,7 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	}
 
 	if c.flagField != "" {
-		return secret, PrintRawField(c.UI, secret, c.flagField)
+		return nil, PrintRawField(c.UI, secret, c.flagField)
 	}
 
 	return secret, 0
@@ -299,6 +298,10 @@ func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return nil, 0
+	}
+
+	if c.flagField != "" {
+		return nil, PrintRawField(c.UI, secret, c.flagField)
 	}
 
 	return secret, 0
