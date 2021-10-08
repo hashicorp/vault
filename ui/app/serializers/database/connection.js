@@ -1,5 +1,5 @@
 import RESTSerializer from '@ember-data/serializer/rest';
-import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-role-fields';
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
 export default RESTSerializer.extend({
   primaryKey: 'name',
