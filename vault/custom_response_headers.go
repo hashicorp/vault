@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"net/http"
 	"net/textproto"
 	"strings"
@@ -72,73 +71,6 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 	}
 
 	return listenerCustomHeadersList
-}
-
-func (l *ListenerCustomHeaders) findCustomHeaderMatchStatusCode(statusCode string, headerName string) string {
-	getHeader := func(ch []*CustomHeader) string {
-		for _, h := range ch {
-			if h.Name == headerName {
-				return h.Value
-			}
-		}
-		return ""
-	}
-
-	headerMap := l.StatusCodeHeaderMap
-
-	// starting with the most specific status code
-	if customHeaderList, ok := headerMap[statusCode]; ok {
-		h := getHeader(customHeaderList)
-		if h != "" {
-			return h
-		}
-	}
-
-	// Checking for the Yxx pattern
-	var firstDig string
-	if len(statusCode) == 3 {
-		firstDig = string(statusCode[0])
-	}
-	if firstDig != "" {
-		s := fmt.Sprintf("%vxx", firstDig)
-		if configutil.IsValidStatusCodeCollection(s) {
-			if customHeaderList, ok := headerMap[s]; ok {
-				h := getHeader(customHeaderList)
-				if h != "" {
-					return h
-				}
-			}
-		}
-	}
-
-	// At this point, we could not find a match for the given status code in the config file
-	// so, we just return the "default" ones
-	h := getHeader(headerMap["default"])
-	if h != "" {
-		return h
-	}
-
-	return ""
-}
-
-func (l *ListenerCustomHeaders) FetchHeaderForStatusCode(header, sc string) (string, error) {
-	if header == "" {
-		return "", fmt.Errorf("invalid target header")
-	}
-
-	if l.StatusCodeHeaderMap == nil {
-		return "", fmt.Errorf("custom headers not configured")
-	}
-
-	if !configutil.IsValidStatusCode(sc) {
-		return "", fmt.Errorf("failed to check if a header exist in config file due to invalid status code")
-	}
-
-	headerName := textproto.CanonicalMIMEHeaderKey(header)
-
-	h := l.findCustomHeaderMatchStatusCode(sc, headerName)
-
-	return h, nil
 }
 
 func (l *ListenerCustomHeaders) ExistCustomResponseHeader(header string) bool {

@@ -2655,7 +2655,8 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
-func (c *Core) getCustomHeadersListenerList(listenerAdd string) []*ListenerCustomHeaders {
+func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
+
 	customHeaders := c.customListenerHeader.Load()
 	if customHeaders == nil {
 		return nil
@@ -2666,49 +2667,28 @@ func (c *Core) getCustomHeadersListenerList(listenerAdd string) []*ListenerCusto
 		return nil
 	}
 
-	// either looking for a specific listener, or if listener address isn't given,
-	// checking for all available listeners
-	var lch []*ListenerCustomHeaders
-	if listenerAdd == "" {
-		return customHeadersList
-	} else {
-		for _, l := range customHeadersList {
-			if l.Address == listenerAdd {
-				lch = append(lch, l)
-				return lch
-			}
+	for _, l := range customHeadersList {
+		if l.Address == listenerAdd {
+			return l
 		}
 	}
-
 	return nil
-}
-
-func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
-	if listenerAdd == "" {
-		return nil
-	}
-	lch := c.getCustomHeadersListenerList(listenerAdd)
-	if lch == nil {
-		return nil
-	}
-	if len(lch) != 1 {
-		c.logger.Warn("multiple listeners with the same address configured")
-		return nil
-	}
-
-	return lch[0]
 }
 
 // ExistCustomResponseHeader support checking for custom headers per listener address
 // If the address is an empty string, it checks all listeners for the header.
-func (c *Core) ExistCustomResponseHeader(header string, listenerAdd string) bool {
-	lch := c.getCustomHeadersListenerList(listenerAdd)
-	if lch == nil {
-		c.logger.Warn("no listener config found", "address", listenerAdd)
+func (c *Core) ExistCustomResponseHeader(header string) bool {
+	customHeaders := c.customListenerHeader.Load()
+	if customHeaders == nil {
 		return false
 	}
 
-	for _, l := range lch {
+	customHeadersList, ok := customHeaders.([]*ListenerCustomHeaders)
+	if customHeadersList == nil || !ok {
+		return false
+	}
+
+	for _, l := range customHeadersList {
 		exist := l.ExistCustomResponseHeader(header)
 		if exist {
 			return true
@@ -2727,8 +2707,7 @@ func (c *Core) ReloadCustomResponseHeaders() error {
 	if lns == nil {
 		return fmt.Errorf("no listener configured")
 	}
-
-	c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
+	//c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 
 	uiHeaders, err := c.UIHeaders()
 	if err != nil {

@@ -62,34 +62,7 @@ func TestCustomResponseHeaders(t *testing.T) {
 	testResponseHeader(t, resp, defaultCustomHeaders)
 	testResponseHeader(t, resp, customHeader4xx)
 
-	resp = testHttpGet(t, token, addr+"/v1/sys/generate-recovery-token/attempt")
-	testResponseStatus(t, resp, 404)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/generate-recovery-token/update")
-	testResponseStatus(t, resp, 404)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/config/state/")
-	testResponseStatus(t, resp, 404)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-
 	resp = testHttpGet(t, token, addr+"/v1/sys/seal")
-	testResponseStatus(t, resp, 405)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-	testResponseHeader(t, resp, customHeader405)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/step-down")
-	testResponseStatus(t, resp, 405)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-	testResponseHeader(t, resp, customHeader405)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/unseal")
 	testResponseStatus(t, resp, 405)
 	testResponseHeader(t, resp, defaultCustomHeaders)
 	testResponseHeader(t, resp, customHeader4xx)
@@ -108,22 +81,6 @@ func TestCustomResponseHeaders(t *testing.T) {
 	testResponseHeader(t, resp, customHeader200)
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/update")
-	testResponseStatus(t, resp, 400)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-	testResponseHeader(t, resp, customHeader400)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/init")
-	testResponseStatus(t, resp, 200)
-	testResponseHeader(t, resp, customHeader200)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/update")
-	testResponseStatus(t, resp, 400)
-	testResponseHeader(t, resp, defaultCustomHeaders)
-	testResponseHeader(t, resp, customHeader4xx)
-	testResponseHeader(t, resp, customHeader400)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/rekey/verify")
 	testResponseStatus(t, resp, 400)
 	testResponseHeader(t, resp, defaultCustomHeaders)
 	testResponseHeader(t, resp, customHeader4xx)
@@ -150,22 +107,6 @@ func TestCustomResponseHeaders(t *testing.T) {
 	testResponseHeader(t, resp, customHeader4xx)
 
 	resp = testHttpGet(t, token, addr+"/")
-	testResponseStatus(t, resp, 200)
-	testResponseHeader(t, resp, customHeader200)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/host-info")
-	testResponseStatus(t, resp, 200)
-	testResponseHeader(t, resp, customHeader200)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/init")
-	testResponseStatus(t, resp, 200)
-	testResponseHeader(t, resp, customHeader200)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/seal-status")
-	testResponseStatus(t, resp, 200)
-	testResponseHeader(t, resp, customHeader200)
-
-	resp = testHttpGet(t, token, addr+"/v1/sys/auth")
 	testResponseStatus(t, resp, 200)
 	testResponseHeader(t, resp, customHeader200)
 

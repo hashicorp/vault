@@ -225,15 +225,15 @@ type statusHeaderResponseWriter struct {
 	headers     map[string][]*vault.CustomHeader
 }
 
-func (w statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
+func (w *statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
 	return w.wrapped
 }
 
-func (w statusHeaderResponseWriter) Header() http.Header {
+func (w *statusHeaderResponseWriter) Header() http.Header {
 	return w.wrapped.Header()
 }
 
-func (w statusHeaderResponseWriter) Write(buf []byte) (int, error) {
+func (w *statusHeaderResponseWriter) Write(buf []byte) (int, error) {
 	// It is allowed to only call ResponseWriter.Write and skip
 	// ResponseWriter.WriteHeader. An example of such a situation is
 	// "handleUIStub". The Write function will internally set the status code
@@ -249,7 +249,7 @@ func (w statusHeaderResponseWriter) Write(buf []byte) (int, error) {
 	return w.wrapped.Write(buf)
 }
 
-func (w statusHeaderResponseWriter) WriteHeader(statusCode int) {
+func (w *statusHeaderResponseWriter) WriteHeader(statusCode int) {
 	w.setCustomResponseHeaders(statusCode)
 	w.wrapped.WriteHeader(statusCode)
 	w.statusCode = statusCode
@@ -258,7 +258,7 @@ func (w statusHeaderResponseWriter) WriteHeader(statusCode int) {
 	w.wroteHeader = true
 }
 
-func (w statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
+func (w *statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 	sch := w.headers
 	if sch == nil {
 		w.logger.Warn("status code header map not configured")
@@ -1231,17 +1231,10 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 func respondOk(w http.ResponseWriter, body interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var status int
 	if body == nil {
-		status = http.StatusNoContent
+		w.WriteHeader(http.StatusNoContent)
 	} else {
-		status = http.StatusOK
-	}
-
-	w.WriteHeader(status)
-
-	if body != nil {
-
+		w.WriteHeader(http.StatusOK)
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}

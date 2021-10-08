@@ -2623,7 +2623,7 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
-		if b.Core.ExistCustomResponseHeader(header, "") {
+		if b.Core.ExistCustomResponseHeader(header) {
 			return logical.ErrorResponse("This header already exists in the server configuration and cannot be set in the UI."), logical.ErrInvalidRequest
 		}
 		value.Add(header, v)

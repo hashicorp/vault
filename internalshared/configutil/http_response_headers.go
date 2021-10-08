@@ -5,6 +5,8 @@ import (
 	"net/textproto"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 )
 
 var ValidCustomStatusCodeCollection = []string{
@@ -31,15 +33,15 @@ func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[str
 		return h, nil
 	}
 
-	if _, ok := responseHeaders.([]map[string]interface{}); !ok {
+	customResponseHeader, ok := responseHeaders.([]map[string]interface{})
+	if !ok {
 		return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a slice of maps")
 	}
 
-	customResponseHeader := responseHeaders.([]map[string]interface{})
-
 	for _, crh := range customResponseHeader {
 		for statusCode, responseHeader := range crh {
-			if _, ok := responseHeader.([]map[string]interface{}); !ok {
+			headerValList, ok := responseHeader.([]map[string]interface{})
+			if !ok {
 				return nil, fmt.Errorf("response headers were not configured correctly. please make sure they're in a slice of maps")
 			}
 
@@ -47,7 +49,6 @@ func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[str
 				return nil, fmt.Errorf("invalid status code found in the server configuration: %v", statusCode)
 			}
 
-			headerValList := responseHeader.([]map[string]interface{})
 			if len(headerValList) != 1 {
 				return nil, fmt.Errorf("invalid number of response headers exist")
 			}
@@ -74,13 +75,7 @@ func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[str
 
 // IsValidStatusCodeCollection checks if the given status code is as expected
 func IsValidStatusCodeCollection(sc string) bool {
-	for _, v := range ValidCustomStatusCodeCollection {
-		if sc == v {
-			return true
-		}
-	}
-
-	return false
+	return strutil.StrListContains(ValidCustomStatusCodeCollection, sc)
 }
 
 // IsValidStatusCode checking for status codes outside the boundary
