@@ -257,6 +257,8 @@ ci-verify:
 
 .PHONY: build
 build: static-dist
+	@go build -v -tags ui -ldflags " -X $VERSION_PKG_PATH.Version=${VAULT_VERSION}" -o dist/vault
+
 version:
 ifneq (,$(wildcard sdk/version/version_base.go))
 	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
