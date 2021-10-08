@@ -646,11 +646,12 @@ func TestOIDC_PublicKeys_NoRole(t *testing.T) {
 	s := &logical.InmemStorage{}
 
 	// Create a test key "test-key"
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Storage:   s,
 	})
+	expectSuccess(t, resp, err)
 
 	// .well-known/keys should contain 0 public keys
 	assertPublicKeyCount(t, ctx, s, c, 0)

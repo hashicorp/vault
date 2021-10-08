@@ -613,9 +613,10 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
+// keyIDsByName will return a slice of key IDs for the given key name
 func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, name string) ([]string, error) {
-	entry, err := s.Get(ctx, namedKeyConfigPath+name)
 	var keyIDs []string
+	entry, err := s.Get(ctx, namedKeyConfigPath+name)
 	if err != nil {
 		return keyIDs, err
 	}
