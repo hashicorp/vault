@@ -179,6 +179,7 @@ const connectionTests = [
       assert
         .dom('[data-test-input="max_connection_lifetime"]')
         .exists(`Max connection lifetime exists for ${name}`);
+      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
       assert
         .dom('[data-test-input="root_rotation_statements"]')
         .exists(`Root rotation statements exists for ${name}`);
@@ -255,6 +256,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
       } else {
         await connectionPage.connectionUrl(testCase.url);
       }
+      // skip adding oracle db connection since plugin doesn't exists
       if (testCase.plugin === 'oracle-database-plugin') {
         testCase.requiredFields(assert, testCase.name);
         continue;
