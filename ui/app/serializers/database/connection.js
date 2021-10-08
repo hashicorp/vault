@@ -1,4 +1,5 @@
 import RESTSerializer from '@ember-data/serializer/rest';
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-role-fields';
 
 export default RESTSerializer.extend({
   primaryKey: 'name',
@@ -46,27 +47,19 @@ export default RESTSerializer.extend({
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
   },
 
-  // add serialize function this._super
-  // serialize(snapshot, requestType) {
-  //   let data = this._super(snapshot, requestType);
-  //   if (data.database) {
-  //     const db = data.database[0];
-  //     data.db_name = db;
-  //     delete data.database;
-  //   }
-  //   // This is necessary because the input for MongoDB is a json string
-  //   // rather than an array, so we transpose that here
-  //   if (data.creation_statement) {
-  //     const singleStatement = data.creation_statement;
-  //     data.creation_statements = [singleStatement];
-  //     delete data.creation_statement;
-  //   }
-  //   if (data.revocation_statement) {
-  //     const singleStatement = data.revocation_statement;
-  //     data.revocation_statements = [singleStatement];
-  //     delete data.revocation_statement;
-  //   }
+  serialize(snapshot, requestType) {
+    let data = this._super(snapshot, requestType);
+    let pluginAttributes = AVAILABLE_PLUGIN_TYPES.find(plugin => plugin.value === data.plugin_name)
+      .fields.map(fields => fields.attr)
+      .concat('backend');
 
-  //   return data;
-  // },
+    // filter data to only allow plugin specific attrs
+    let allowedAttributes = Object.keys(data).filter(dataAttrs => pluginAttributes.includes(dataAttrs));
+    for (const key in data) {
+      if (!allowedAttributes.includes(key)) {
+        delete data[key];
+      }
+    }
+    return data;
+  },
 });
