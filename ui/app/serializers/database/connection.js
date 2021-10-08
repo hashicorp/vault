@@ -52,9 +52,11 @@ export default RESTSerializer.extend({
     if (!data.plugin_name) {
       return data;
     }
-    let pluginAttributes = AVAILABLE_PLUGIN_TYPES.find(plugin => plugin.value === data.plugin_name)
-      .fields.map(fields => fields.attr)
-      .concat('backend');
+    let pluginType = AVAILABLE_PLUGIN_TYPES.find(plugin => plugin.value === data.plugin_name);
+    if (!pluginType) {
+      return data;
+    }
+    let pluginAttributes = pluginType.fields.map(fields => fields.attr).concat('backend');
 
     // filter data to only allow plugin specific attrs
     let allowedAttributes = Object.keys(data).filter(dataAttrs => pluginAttributes.includes(dataAttrs));
