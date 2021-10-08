@@ -387,6 +387,7 @@ func TestRouter_LoginPath(t *testing.T) {
 		// "+/wildcard/glob2*"
 		{"auth/foo/bar/wildcard/glo", false},
 		{"auth/foo/bar/wildcard/glob2", true},
+		{"auth/foo/bar/wildcard/glob2222", true},
 		{"auth/foo/bar/wildcard/glob2/", true},
 		{"auth/foo/bar/wildcard/glob2/baz", true},
 
