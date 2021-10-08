@@ -49,6 +49,9 @@ export default RESTSerializer.extend({
 
   serialize(snapshot, requestType) {
     let data = this._super(snapshot, requestType);
+    if (!data.plugin_name) {
+      return data;
+    }
     let pluginAttributes = AVAILABLE_PLUGIN_TYPES.find(plugin => plugin.value === data.plugin_name)
       .fields.map(fields => fields.attr)
       .concat('backend');
