@@ -259,7 +259,7 @@ func metricLabelsMatch(t *testing.T, actual []metrics.Label, expected map[string
 
 func TestCoreMetrics_EntityGauges(t *testing.T) {
 	ctx := namespace.RootContext(nil)
-	is, ghAccessor, core := testIdentityStoreWithGithubAuth(ctx, t)
+	is, ghAccessor, upAccessor, core := testIdentityStoreWithGithubUserpassAuth(ctx, t)
 
 	// Create an entity
 	alias1 := &logical.Alias{
@@ -278,12 +278,11 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "entity-alias",
 		Data: map[string]interface{}{
-			"name":           "githubuser2",
+			"name":           "userpassuser",
 			"canonical_id":   entity.ID,
-			"mount_accessor": ghAccessor,
+			"mount_accessor": upAccessor,
 		},
 	}
-
 	resp, err := is.HandleRequest(ctx, registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -312,12 +311,16 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if len(glv) != 1 {
+	if len(glv) != 2 {
 		t.Fatalf("Wrong number of gauges %v, expected %v", len(glv), 1)
 	}
 
-	if glv[0].Value != 2.0 {
-		t.Errorf("Alias count %v, expected %v", glv[0].Value, 2.0)
+	if glv[0].Value != 1.0 {
+		t.Errorf("Alias count %v, expected %v", glv[0].Value, 1.0)
+	}
+
+	if glv[1].Value != 1.0 {
+		t.Errorf("Alias count %v, expected %v", glv[0].Value, 1.0)
 	}
 
 	metricLabelsMatch(t, glv[0].Labels,
@@ -325,5 +328,12 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 			"namespace":   "root",
 			"auth_method": "github",
 			"mount_point": "auth/github/",
+		})
+
+	metricLabelsMatch(t, glv[1].Labels,
+		map[string]string{
+			"namespace":   "root",
+			"auth_method": "userpass",
+			"mount_point": "auth/userpass/",
 		})
 }

@@ -1012,18 +1012,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
 
-	aliasRegisterData3 := map[string]interface{}{
-		"name":           "testaliasname3",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
-	}
-
-	aliasRegisterData4 := map[string]interface{}{
-		"name":           "testaliasname4",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
-	}
-
 	registerReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "entity",
@@ -1040,7 +1028,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	// Set entity ID in alias registration data and register alias
 	aliasRegisterData1["entity_id"] = entityID1
-	aliasRegisterData2["entity_id"] = entityID1
 
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1054,13 +1041,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	// Register the alias
-	aliasReq.Data = aliasRegisterData2
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
 	entity1, err := is.MemDBEntityByID(entityID1, false)
 	if err != nil {
 		t.Fatal(err)
@@ -1068,8 +1048,8 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	if entity1 == nil {
 		t.Fatalf("failed to create entity: %v", err)
 	}
-	if len(entity1.Aliases) != 2 {
-		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1.Aliases))
+	if len(entity1.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1.Aliases))
 	}
 
 	entity1GroupReq := &logical.Request{
@@ -1094,23 +1074,15 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	entityID2 := resp.Data["id"].(string)
 	// Set entity ID in alias registration data and register alias
-	aliasRegisterData3["entity_id"] = entityID2
-	aliasRegisterData4["entity_id"] = entityID2
+	aliasRegisterData2["entity_id"] = entityID2
 
 	aliasReq = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "alias",
-		Data:      aliasRegisterData3,
+		Data:      aliasRegisterData2,
 	}
 
 	// Register the alias
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	// Register the alias
-	aliasReq.Data = aliasRegisterData4
 	resp, err = is.HandleRequest(ctx, aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -1124,8 +1096,8 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("failed to create entity: %v", err)
 	}
 
-	if len(entity2.Aliases) != 2 {
-		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity2.Aliases))
+	if len(entity2.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity2.Aliases))
 	}
 
 	entity2GroupReq := &logical.Request{
@@ -1175,8 +1147,8 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	entity1Aliases := resp.Data["aliases"].([]interface{})
-	if len(entity1Aliases) != 4 {
-		t.Fatalf("bad: number of aliases in entity; expected: 4, actual: %d", len(entity1Aliases))
+	if len(entity1Aliases) != 2 {
+		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1Aliases))
 	}
 
 	for _, aliasRaw := range entity1Aliases {

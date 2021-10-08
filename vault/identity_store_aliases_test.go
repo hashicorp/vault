@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	credGithub "github.com/hashicorp/vault/builtin/credential/github"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -499,44 +497,7 @@ func TestIdentityStore_AliasUpdate__DuplicateAccessor(t *testing.T) {
 	var resp *logical.Response
 	ctx := namespace.RootContext(nil)
 
-	// Setup 2 auth backends, github and userpass
-	err = AddTestCredentialBackend("github", credGithub.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	c, _, _ := TestCoreUnsealed(t)
-
-	githubMe := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "github/",
-		Type:        "github",
-		Description: "github auth",
-	}
-
-	err = c.enableCredential(ctx, githubMe)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	userpassMe := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "userpass/",
-		Type:        "userpass",
-		Description: "userpass",
-	}
-
-	err = c.enableCredential(ctx, userpassMe)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	is, githubAccessor := c.identityStore, githubMe.Accessor
+	is, ghAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
 
 	// Create 1 entity and 2 aliases on it, one for each mount
 	resp, err = is.HandleRequest(ctx, &logical.Request{
@@ -553,7 +514,7 @@ func TestIdentityStore_AliasUpdate__DuplicateAccessor(t *testing.T) {
 
 	alias1Data := map[string]interface{}{
 		"name":           "testaliasname1",
-		"mount_accessor": githubAccessor,
+		"mount_accessor": ghAccessor,
 		"canonical_id":   entityID,
 	}
 
@@ -571,7 +532,7 @@ func TestIdentityStore_AliasUpdate__DuplicateAccessor(t *testing.T) {
 
 	alias2Data := map[string]interface{}{
 		"name":           "testaliasname2",
-		"mount_accessor": userpassMe.Accessor,
+		"mount_accessor": upAccessor,
 		"canonical_id":   entityID,
 	}
 
@@ -586,7 +547,7 @@ func TestIdentityStore_AliasUpdate__DuplicateAccessor(t *testing.T) {
 
 	// Attempt to update the userpass mount to point to the github mount
 	updateData := map[string]interface{}{
-		"mount_accessor": githubAccessor,
+		"mount_accessor": ghAccessor,
 	}
 
 	aliasReq.Data = updateData
