@@ -46,7 +46,7 @@ export default Component.extend({
   }),
 
   valueIsEmpty: computed('value', function() {
-    let value = this.value;
+    let { value } = this;
     if (typeOf(value) === 'array' && value.length === 0) {
       return true;
     } else if (value === undefined) {
