@@ -679,7 +679,7 @@ func (c *AgentCommand) Run(args []string) int {
 			var tlsConf *tls.Config
 
 			if lnConfig.Type == "bufconn" {
-				inProcListener := listenerutil.NewBufConnListener()
+				inProcListener := listenerutil.NewBufConnListenerDialer()
 				config.Cache.InProcDialer = inProcListener
 				ln = inProcListener
 			} else {

@@ -144,7 +144,7 @@ func TestCacheConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			agentConfig := newAgentConfig(listeners, tc.cacheEnabled, tc.persistentCacheEnabled)
 			if tc.setDialer && tc.cacheEnabled {
-				bListener := listenerutil.NewBufConnListener()
+				bListener := listenerutil.NewBufConnListenerDialer()
 				defer bListener.Close()
 				agentConfig.Cache.InProcDialer = bListener
 			}
@@ -173,7 +173,7 @@ func TestCacheConfigNoListener(t *testing.T) {
 	listeners := []*configutil.Listener{}
 
 	agentConfig := newAgentConfig(listeners, true, true)
-	bListener := listenerutil.NewBufConnListener()
+	bListener := listenerutil.NewBufConnListenerDialer()
 	defer bListener.Close()
 	agentConfig.Cache.InProcDialer = bListener
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
