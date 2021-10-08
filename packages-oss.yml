@@ -232,17 +232,17 @@ layers:
                        nodejs \
                        yarn={{.YARN_VERSION}} \
                   && rm -rf /var/lib/apt/lists/*
-      RUN cd ui && ./scripts/install-nvm.sh
-      RUN cd ui && ./scripts/setup-node.sh
+      ENV NVM_DIR /usr/local/nvm
+      RUN cd ui && ./scripts/install-nvm.sh && . $NVM_DIR/nvm.sh && ./scripts/setup-node.sh
   - name: ui-dependencies
     source-include: ui/package.json ui/yarn.lock
     dockerfile: |-
-      RUN cd ui && yarn install
-      RUN cd ui && npm rebuild node-sass
+      RUN NODE_PATH=$NVM_DIR/$(cat ui/.nvmrc)/lib/node_modules && PATH=$NVM_DIR/$(cat ui/.nvmrc)/bin:$PATH && cd ui && yarn install
+      RUN NODE_PATH=$NVM_DIR/$(cat ui/.nvmrc)/lib/node_modules && PATH=$NVM_DIR/$(cat ui/.nvmrc)/bin:$PATH && cd ui && npm rebuild node-sass
   - name: build-ui
     source-include: ui/
     dockerfile: |-
-      RUN cd ui && yarn run build
+      RUN NODE_PATH=$NVM_DIR/$(cat ui/.nvmrc)/lib/node_modules && PATH=$NVM_DIR/$(cat ui/.nvmrc)/bin:$PATH && cd ui && yarn run build
   - name: build-static-assets
     source-include: Makefile
     dockerfile: |-
