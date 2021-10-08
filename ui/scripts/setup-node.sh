@@ -23,5 +23,7 @@ command -v nvm || { echo "ERROR: nvm not installed"; exit 1; }
 echo "==> nvm install $NODE_VERSION"
 nvm install "$NODE_VERSION"
 
+nvm alias default "$NODE_VERSION"
+
 echo "==> nvm use $NODE_VERSION"
-nvm use "$NODE_VERSION"
+nvm use default

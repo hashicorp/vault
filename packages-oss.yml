@@ -187,7 +187,8 @@ base-image: "debian:bullseye-20210927@sha256:eaa533c53fa886f87e48b9420579e1a4698
 layers:
   - name: base
     dockerfile: |-
-      RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
+      RUN apt-get update -y --fix-missing
+          && apt-get install --no-install-recommends -y -q \
                                curl \
                                zip \
                                build-essential \
@@ -199,7 +200,7 @@ layers:
                                libltdl-dev \
                                libltdl7 \
       						             bash \
-                            && rm -rf /var/lib/apt/lists/*
+                               libssl-dev
   - name: install-go
     dockerfile: |-
       ENV GOPATH /gopath
@@ -233,6 +234,7 @@ layers:
                        yarn={{.YARN_VERSION}} \
                   && rm -rf /var/lib/apt/lists/*
       ENV NVM_DIR /usr/local/nvm
+      RUN mkdir $NVM_DIR
       RUN cd ui && ./scripts/install-nvm.sh && . $NVM_DIR/nvm.sh && ./scripts/setup-node.sh
   - name: ui-dependencies
     source-include: ui/package.json ui/yarn.lock
