@@ -255,6 +255,8 @@ ci-verify:
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
+.PHONY: build
+build: static-dist
 version:
 ifneq (,$(wildcard sdk/version/version_base.go))
 	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
