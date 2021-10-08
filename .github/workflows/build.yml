@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, freebsd, windows ]
+        goos: [ linux, freebsd, windows, netbsd, openbsd ]
         goarch: [ "386" ]
         go: [ "1.16" ]
       fail-fast: true
@@ -44,10 +44,24 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
+      - name: Setup go tools
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'npm'
+      - name: Setup yarn
+        run: npm install --global yarn@1.19.1
       - name: Build
         run: |
           mkdir dist out
-          go build -o dist/ .
+          make build ${{ matrix.goos }} ${{ matrix.goarch }}
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -86,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [linux, freebsd, solaris, windows]
+        goos: [linux, freebsd, solaris, windows, netbsd, openbsd]
         goarch: ["amd64"]
         go: ["1.16"]
       fail-fast: true
@@ -105,11 +119,24 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-
+      - name: Setup go tools
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'npm'
+      - name: Setup yarn
+        run: npm install --global yarn@1.19.1
       - name: Build
         run: |
           mkdir dist out
-          go build -o dist/
+          make build ${{ matrix.goos }} ${{ matrix.goarch }}
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -167,11 +194,24 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-
+      - name: Setup go tools
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'npm'
+      - name: Setup yarn
+        run: npm install --global yarn@1.19.1
       - name: Build
         run: |
           mkdir dist out
-          go build -o dist/
+          make build ${{ matrix.goos }} ${{ matrix.goarch }}
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -227,11 +267,24 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-
+      - name: Setup go tools
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'npm'
+      - name: Setup yarn
+        run: npm install --global yarn@1.19.1
       - name: Build
         run: |
           mkdir dist out
-          go build -o dist/
+          make build ${{ matrix.goos }} ${{ matrix.goarch }}
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -271,7 +324,7 @@ jobs:
     strategy:
       matrix:
         goos: [ darwin ]
-        goarch: [ "amd64" ]
+        goarch: [ "amd64", "arm64" ]
         go: [ "1.16" ]
       fail-fast: true
 
@@ -288,11 +341,24 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-
+      - name: Setup go tools
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'npm'
+      - name: Setup yarn
+        run: npm install --global yarn@1.19.1
       - name: Build
         run: |
           mkdir dist out
-          go build -o dist/
+          make build ${{ matrix.goos }} ${{ matrix.goarch }}
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
