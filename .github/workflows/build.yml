@@ -61,7 +61,7 @@ jobs:
       - name: Build
         run: |
           mkdir dist out
-          make build ${{ matrix.goos }} ${{ matrix.goarch }} ${{ needs.get-product-version.outputs.product-version }}
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -136,7 +136,7 @@ jobs:
       - name: Build
         run: |
           mkdir dist out
-          make build ${{ matrix.goos }} ${{ matrix.goarch }} ${{ needs.get-product-version.outputs.product-version }}
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -211,7 +211,7 @@ jobs:
       - name: Build
         run: |
           mkdir dist out
-          make build ${{ matrix.goos }} ${{ matrix.goarch }} ${{ needs.get-product-version.outputs.product-version }}
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -284,7 +284,7 @@ jobs:
       - name: Build
         run: |
           mkdir dist out
-          make build ${{ matrix.goos }} ${{ matrix.goarch }} ${{ needs.get-product-version.outputs.product-version }}
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -358,7 +358,7 @@ jobs:
       - name: Build
         run: |
           mkdir dist out
-          make build ${{ matrix.goos }} ${{ matrix.goarch }} ${{ needs.get-product-version.outputs.product-version }}
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
