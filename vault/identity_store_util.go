@@ -341,11 +341,11 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					}
 				}
 
-				duplicateAccessors := getDuplicateAccessorsOnAliases(entity.Aliases)
+				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
 
 				// Log a warning if an entity has multiple aliases with the same accessor
-				if len(duplicateAccessors) > 0 {
-					i.logger.Warn("Duplicate aliases present for the same entity and accessor", "entity_name", entity.Name, "namespace_id", entity.NamespaceID, "duplicate_accessors", duplicateAccessors)
+				if len(mountAccessors) > 0 {
+					i.logger.Warn("Multiple aliases present for entity on mount(s), remove duplicates to avoid ACL templating issues", "entity_name", entity.Name, "namespace_id", entity.NamespaceID, "mount_accessors", mountAccessors)
 				}
 				// Only update MemDB and don't hit the storage again
 				err = i.upsertEntity(nsCtx, entity, nil, false)
@@ -366,11 +366,11 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	return nil
 }
 
-// getDuplicateAccessorsOnAliases returns a list of duplicate accessors present in the
-// passed in list of aliases
-func getDuplicateAccessorsOnAliases(aliases []*identity.Alias) []string {
+// getAccessorsOnDuplicateAliases returns a list of accessors by checking aliases in
+// the passed in list which belong to the same accessor(s)
+func getAccessorsOnDuplicateAliases(aliases []*identity.Alias) []string {
 	accessorCounts := make(map[string]int)
-	duplicateAccessors := make([]string, 0)
+	var mountAccessors []string
 
 	for _, alias := range aliases {
 		accessorCounts[alias.MountAccessor] += 1
@@ -378,11 +378,11 @@ func getDuplicateAccessorsOnAliases(aliases []*identity.Alias) []string {
 
 	for accessor, accessorCount := range accessorCounts {
 		if accessorCount > 1 {
-			duplicateAccessors = append(duplicateAccessors, accessor)
+			mountAccessors = append(mountAccessors, accessor)
 		}
 	}
 
-	return duplicateAccessors
+	return mountAccessors
 }
 
 // upsertEntityInTxn either creates or updates an existing entity. The
