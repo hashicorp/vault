@@ -614,7 +614,7 @@ func TestAgent_RequireAutoAuthWithForce(t *testing.T) {
 	// Create a config file
 	config := `
 cache {
-    use_auto_auth_token = "force" 
+    use_auto_auth_token = "force"
 }
 
 listener "tcp" {
@@ -1998,4 +1998,94 @@ vault {
 			}
 		})
 	}
+}
+
+func TestAgent_Quit(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Error)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores: 1,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := "127.0.0.1:18123"
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
+listener "tcp" {
+	address = "%s"
+	tls_disable = true
+}
+
+cache {}
+`, serverClient.Address(), listenAddr)
+
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(serverClient.Token())
+	client.SetMaxRetries(0)
+	err = client.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.RawRequest(client.NewRequest("POST", "/agent/v1/quit"))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	time.Sleep(time.Second)
+
+	select {
+	case <-cmd.ShutdownCh:
+	default:
+		t.Fatalf("agent did not quit")
+	}
+
+	wg.Wait()
 }

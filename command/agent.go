@@ -685,6 +685,7 @@ func (c *AgentCommand) Run(args []string) int {
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle(consts.AgentPathQuit, c.handleQuit())
 			mux.Handle("/", muxHandler)
 
 			scheme := "https://"
@@ -978,4 +979,20 @@ func getServiceAccountJWT(tokenFile string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(token)), nil
+}
+
+func (c *AgentCommand) handleQuit() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Only handle POST/PUT requests
+		switch r.Method {
+		case http.MethodPost:
+		case http.MethodPut:
+		default:
+			w.WriteHeader(405)
+			return
+		}
+
+		c.logger.Debug("received quit request")
+		close(c.ShutdownCh)
+	})
 }
