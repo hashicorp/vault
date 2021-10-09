@@ -3170,6 +3170,107 @@ func TestHandlePoliciesPasswordDelete(t *testing.T) {
 	}
 }
 
+func TestHandlePoliciesPasswordList(t *testing.T) {
+	type testCase struct {
+		storage logical.Storage
+
+		expectErr    bool
+		expectedResp *logical.Response
+	}
+
+	tests := map[string]testCase{
+		"no policies": {
+			storage: new(logical.InmemStorage),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{},
+			},
+		},
+		"one policy": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"testpolicy"},
+				},
+			},
+		},
+		"two policies": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("unrelated_policy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 20\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"abcdefghij\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{
+						"testpolicy",
+						"unrelated_policy",
+					},
+				},
+			},
+		},
+		"storage failure": {
+			storage: new(logical.InmemStorage).FailList(true),
+
+			expectErr: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+
+			req := &logical.Request{
+				Storage: test.storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordList(ctx, req, nil)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+			if !reflect.DeepEqual(actualResp, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", actualResp, test.expectedResp)
+			}
+		})
+	}
+}
+
 func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		type testCase struct {

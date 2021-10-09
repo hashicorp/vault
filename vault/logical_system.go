@@ -2283,6 +2283,16 @@ const (
 	maxPasswordLength = 100
 )
 
+// handlePoliciesPasswordList returns the list of password policies
+func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	keys, err := req.Storage.List(ctx, "password_policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(keys), nil
+}
+
 // handlePoliciesPasswordSet saves/updates password policies
 func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 	policyName := data.Get("name").(string)
