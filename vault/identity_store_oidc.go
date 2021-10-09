@@ -984,7 +984,7 @@ func populateTemplates(claims map[string]interface{}, logger hclog.Logger, ns *n
 
 			for k, v := range parsed {
 				if _, conflict := claims[k]; conflict {
-					return fmt.Errorf("found conflicting top level OIDC claim key %q", k)
+					return fmt.Errorf("found conflicting top level OIDC claim key: %s", k)
 				}
 
 				if !strutil.StrListContains(requiredClaims, k) {

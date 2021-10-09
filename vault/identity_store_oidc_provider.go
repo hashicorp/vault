@@ -1446,10 +1446,18 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 
 	// Validate that a scope parameter is present and contains the openid scope value
-	scopes := strutil.ParseStringSlice(d.Get("scope").(string), scopesDelimiter)
-	if len(scopes) == 0 || !strutil.StrListContains(scopes, openIDScope) {
+	requestedScopes := strutil.ParseDedupAndSortStrings(d.Get("scope").(string), scopesDelimiter)
+	if len(requestedScopes) == 0 || !strutil.StrListContains(requestedScopes, openIDScope) {
 		return authResponse("", state, ErrAuthInvalidRequest,
 			fmt.Sprintf("scope parameter must contain the %q value", openIDScope))
+	}
+
+	// Scope values that are not supported by the provider should be ignored
+	scopes := make([]string, 0)
+	for _, scope := range requestedScopes {
+		if strutil.StrListContains(provider.Scopes, scope) && scope != openIDScope {
+			scopes = append(scopes, scope)
+		}
 	}
 
 	// Validate the response type
@@ -1528,7 +1536,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		entityID:    entity.GetID(),
 		redirectURI: redirectURI,
 		nonce:       nonce,
-		scopes:      strutil.StrListDelete(scopes, openIDScope),
+		scopes:      scopes,
 	}
 
 	// Validate the optional max_age parameter to check if an active re-authentication

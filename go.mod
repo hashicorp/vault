@@ -59,6 +59,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/gorilla/mux v1.7.3 // indirect
+	github.com/hashicorp/cap v0.1.0
 	github.com/hashicorp/consul-template v0.27.0
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -141,7 +142,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v1.4.1
-	github.com/mitchellh/pointerstructure v1.0.0 // indirect
+	github.com/mitchellh/pointerstructure v1.0.0
 	github.com/mitchellh/reflectwalk v1.0.1
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/morikuni/aec v1.0.0 // indirect
