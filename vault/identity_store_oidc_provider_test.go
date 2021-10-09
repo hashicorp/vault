@@ -337,9 +337,6 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			require.NotEmpty(t, tokenRes.ExpiresIn)
 			require.Empty(t, tokenRes.Error)
 			require.Empty(t, tokenRes.ErrorDescription)
-
-			// TODO: Verify ID token using provider's keys
-			// TODO: Make assertions on the claims (at_hash, c_hash, auth_time, etc)
 		})
 	}
 }
