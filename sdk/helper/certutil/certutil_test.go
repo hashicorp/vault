@@ -455,6 +455,31 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 	}
 }
 
+func TestGetPublicKeySize(t *testing.T) {
+	rsa, err := rsa.GenerateKey(rand.Reader, 3072)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(&rsa.PublicKey) != 3072 {
+		t.Fatal("unexpected rsa key size")
+	}
+	ecdsa, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(&ecdsa.PublicKey) != 384 {
+		t.Fatal("unexpected ecdsa key size")
+	}
+	ed25519, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(ed25519) != 256 {
+		t.Fatal("unexpected ed25519 key size")
+	}
+	//Skipping DSA as too slow
+}
+
 func refreshRSA8CertBundle() *CertBundle {
 	initTest.Do(setCerts)
 	return &CertBundle{

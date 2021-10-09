@@ -3,6 +3,7 @@ package certutil
 import (
 	"bytes"
 	"crypto"
+	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -1001,4 +1002,23 @@ func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 		return certs, errors.New("data does not contain any valid RSA or ECDSA certificates")
 	}
 	return certs, nil
+}
+
+// GetPublicKeySize returns the key size in bits for a given arbitrary crypto.PublicKey
+// Returns -1 for an unsupported key type.
+func GetPublicKeySize(key crypto.PublicKey) int {
+	if key, ok := key.(*rsa.PublicKey); ok {
+		return key.Size() * 8
+	}
+	if key, ok := key.(*ecdsa.PublicKey); ok {
+		return key.Params().BitSize
+	}
+	if key, ok := key.(ed25519.PublicKey); ok {
+		return len(key) * 8
+	}
+	if key, ok := key.(dsa.PublicKey); ok {
+		return key.Y.BitLen()
+	}
+
+	return -1
 }

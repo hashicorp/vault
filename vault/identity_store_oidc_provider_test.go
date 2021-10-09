@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -1350,6 +1351,17 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
+	}
+	clientID := resp.Data["client_id"].(string)
+	if len(clientID) != clientIDLength {
+		t.Fatalf("client_id format is incorrect: %#v", clientID)
+	}
+	clientSecret := resp.Data["client_secret"].(string)
+	if !strings.HasPrefix(clientSecret, clientSecretPrefix) {
+		t.Fatalf("client_secret format is incorrect: %#v", clientSecret)
+	}
+	if len(clientSecret) != clientSecretLength+len(clientSecretPrefix) {
+		t.Fatalf("client_secret format is incorrect: %#v", clientSecret)
 	}
 
 	// Create a test assignment "my-assignment" -- should succeed
