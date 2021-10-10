@@ -1875,6 +1875,40 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Core.authLock.RLock()
+	defer b.Core.authLock.RUnlock()
+
+	for _, entry := range b.Core.auth.Entries {
+		// Only show entry for current namespace
+		if entry.Namespace().Path != ns.Path || entry.Path != path{
+			continue
+		}
+
+		cont, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			return nil, err
+		}
+		if cont {
+			continue
+		}
+
+		return &logical.Response{
+			Data: mountInfo(entry),
+		}, nil
+	}
+
+	return logical.ErrorResponse("No auth engine at %s", path), nil
+}
+
 func expandStringValsWithCommas(configMap map[string]interface{}) error {
 	configParamNameSlice := []string{
 		"audit_non_hmac_request_keys",

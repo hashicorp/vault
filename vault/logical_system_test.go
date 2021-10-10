@@ -1509,6 +1509,15 @@ func TestSystemBackend_authTable(t *testing.T) {
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
 		t.Fatal(diff)
 	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "auth/token")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if diff := deep.Equal(resp.Data, exp["token/"]); diff != nil {
+		t.Fatal(diff)
+	}
 }
 
 func TestSystemBackend_enableAuth(t *testing.T) {

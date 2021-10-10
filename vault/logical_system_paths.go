@@ -1475,6 +1475,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadAuth,
+					Summary: "Read the configuration of the auth engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
 					Summary:  "Enables a new auth method.",

@@ -134,6 +134,67 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
+## Read Auth Method configuration
+
+This endpoints returns the configuration of the auth method at the given path.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `GET`  | `/sys/auth/path` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/auth/my-auth
+```
+
+### Sample Response
+
+```json
+{
+  "uuid": "4b42d1a4-0a0d-3c88-ae90-997e0c8b41be",
+  "type": "github",
+  "accessor": "auth_github_badd7fd0",
+  "local": false,
+  "seal_wrap": false,
+  "external_entropy_access": false,
+  "options": null,
+  "config": {
+    "default_lease_ttl": 0,
+    "force_no_cache": false,
+    "max_lease_ttl": 0,
+    "token_type": "default-service"
+  },
+  "description": "",
+  "request_id": "8d2a1e33-4c00-46a5-f50d-4dc5f5d96f12",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "accessor": "auth_github_badd7fd0",
+    "config": {
+      "default_lease_ttl": 0,
+      "force_no_cache": false,
+      "max_lease_ttl": 0,
+      "token_type": "default-service"
+    },
+    "description": "",
+    "external_entropy_access": false,
+    "local": false,
+    "options": null,
+    "seal_wrap": false,
+    "type": "github",
+    "uuid": "4b42d1a4-0a0d-3c88-ae90-997e0c8b41be"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+
 ## Disable Auth Method
 
 This endpoint disables the auth method at the given auth path.
