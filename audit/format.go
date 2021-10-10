@@ -122,6 +122,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			Data:                          req.Data,
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
+			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
@@ -284,6 +285,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Data:                          req.Data,
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
+			RemotePort:                    getRemotePort(req),
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
@@ -346,6 +348,7 @@ type AuditRequest struct {
 	Data                          map[string]interface{} `json:"data,omitempty"`
 	PolicyOverride                bool                   `json:"policy_override,omitempty"`
 	RemoteAddr                    string                 `json:"remote_address,omitempty"`
+	RemotePort                    int                    `json:"remote_port,omitempty"`
 	WrapTTL                       int                    `json:"wrap_ttl,omitempty"`
 	Headers                       map[string][]string    `json:"headers,omitempty"`
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
@@ -404,6 +407,14 @@ func getRemoteAddr(req *logical.Request) string {
 		return req.Connection.RemoteAddr
 	}
 	return ""
+}
+
+// getRemotePort safely gets the remote port avoiding a nil pointer
+func getRemotePort(req *logical.Request) int {
+	if req != nil && req.Connection != nil {
+		return req.Connection.RemotePort
+	}
+	return 0
 }
 
 func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {

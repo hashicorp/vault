@@ -491,14 +491,18 @@ WRITE_RESPONSE:
 // attaching to a logical request
 func getConnection(r *http.Request) (connection *logical.Connection) {
 	var remoteAddr string
+	var remotePort int
 
-	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	remoteAddr, port, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remoteAddr = ""
+	} else {
+		remotePort, _ = strconv.Atoi(port)
 	}
 
 	connection = &logical.Connection{
 		RemoteAddr: remoteAddr,
+		RemotePort: remotePort,
 		ConnState:  r.TLS,
 	}
 	return
