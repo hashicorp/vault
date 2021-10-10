@@ -90,7 +90,9 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
 
-				// TODO: fill in properly when this is supported
+				// TODO: fill in properly when wildcards are supported
+				"oidc/provider/test-provider/.well-known/*",
+				"oidc/provider/test-provider/token",
 				"oidc/provider/my-provider/.well-known/*",
 				"oidc/provider/my-provider/token",
 			},

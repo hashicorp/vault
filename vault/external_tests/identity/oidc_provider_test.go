@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -151,8 +152,16 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 		"password": testPassword,
 	})
 	require.NoError(t, err)
-	active.SetToken(resp.Auth.ClientToken)
-	standby.SetToken(resp.Auth.ClientToken)
+	clientToken := resp.Auth.ClientToken
+
+	// Look up the token to get its creation time. This will be used for test
+	// cases that make assertions on the max_age parameter and auth_time claim.
+	resp, err = active.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": clientToken,
+	})
+	require.NoError(t, err)
+	expectedAuthTime, err := strconv.Atoi(string(resp.Data["creation_time"].(json.Number)))
+	require.NoError(t, err)
 
 	// Read the issuer from the OIDC provider's discovery document
 	var discovery struct {
@@ -235,6 +244,21 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 			},
 		},
 		{
+			name: "active: authorization code flow with max_age parameter",
+			args: args{
+				options: []oidc.Option{
+					oidc.WithScopes("openid"),
+					oidc.WithMaxAge(60),
+				},
+				expected: []expectedClaim{
+					{
+						key:   "auth_time",
+						value: expectedAuthTime,
+					},
+				},
+			},
+		},
+		{
 			name: "standby: authorization code flow with additional scopes",
 			args: args{
 				useStandby: true,
@@ -265,14 +289,14 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cl := active
+			client := active
 			if tt.args.useStandby {
-				cl = standby
+				client = standby
 			}
+			client.SetToken(clientToken)
 
 			// Create the client-side OIDC request state
-			oidcRequest, err := oidc.NewRequest(10*time.Minute, testRedirectURI,
-				oidc.WithScopes("openid user groups"))
+			oidcRequest, err := oidc.NewRequest(10*time.Minute, testRedirectURI, tt.args.options...)
 			require.NoError(t, err)
 
 			// Get the URL for the authorization endpoint from the OIDC client
@@ -289,7 +313,7 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 				Code  string `json:"code"`
 				State string `json:"state"`
 			}
-			decodeRawRequest(t, cl, http.MethodGet, authURLPath, parsedAuthURL.Query(), &authResp)
+			decodeRawRequest(t, client, http.MethodGet, authURLPath, parsedAuthURL.Query(), &authResp)
 
 			// The returned state must match the OIDC client state
 			require.Equal(t, oidcRequest.State(), authResp.State)
@@ -330,7 +354,7 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 			// Assert that claims given by the scope templates are populated
 			for _, expected := range tt.args.expected {
 				actualValue := getClaim(t, allClaims, expected.key)
-				require.Equal(t, expected.value, actualValue)
+				require.EqualValues(t, expected.value, actualValue)
 			}
 		})
 	}
