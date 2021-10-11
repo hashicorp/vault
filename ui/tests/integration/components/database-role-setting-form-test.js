@@ -55,6 +55,11 @@ const testCases = [
     staticRoleFields: ['username', 'rotation_period'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
   },
+  {
+    pluginType: 'oracle-database-plugin',
+    staticRoleFields: ['username', 'rotation_period'],
+    dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
+  },
 ];
 
 // used to calculate checks that fields do NOT show up
