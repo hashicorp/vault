@@ -634,34 +634,6 @@ func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, nam
 	return keyIDs, nil
 }
 
-// roleReferencesTargetKeyID returns true if a role references the given
-// targetKeyID.
-func (i *IdentityStore) roleReferencesTargetKeyID(ctx context.Context, s logical.Storage, targetKeyID string) (bool, error) {
-	roleNames, err := s.List(ctx, roleConfigPath)
-	if err != nil {
-		return false, err
-	}
-
-	for _, roleName := range roleNames {
-		role, err := i.getOIDCRole(ctx, s, roleName)
-		if err != nil {
-			return false, err
-		}
-		ids, err := i.keyIDsByName(ctx, s, role.Key)
-		if err != nil {
-			return false, err
-		}
-
-		for _, id := range ids {
-			if id == targetKeyID {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
 // rolesReferencingTargetKeyName returns a map of role names to roles
 // referencing targetKeyName.
 //
@@ -1587,28 +1559,37 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	keyIDs, err := listOIDCPublicKeys(ctx, s)
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0),
+	}
+
+	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
 
-	jwks := &jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
-	}
-
-	for _, keyID := range keyIDs {
-		ok, err := i.roleReferencesTargetKeyID(ctx, s, keyID)
+	for _, roleName := range roleNames {
+		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
+		if role == nil {
+			// only return keys that are associated with a role
 			continue
 		}
-		key, err := loadOIDCPublicKey(ctx, s, keyID)
+
+		keyIDs, err := i.keyIDsByName(ctx, s, role.Key)
 		if err != nil {
 			return nil, err
 		}
-		jwks.Keys = append(jwks.Keys, *key)
+
+		for _, keyID := range keyIDs {
+			key, err := loadOIDCPublicKey(ctx, s, keyID)
+			if err != nil {
+				return nil, err
+			}
+			jwks.Keys = append(jwks.Keys, *key)
+		}
 	}
 
 	if err := i.oidcCache.SetDefault(ns, "jwks", jwks); err != nil {
