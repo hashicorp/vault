@@ -1,0 +1,3 @@
+```release-note:improvement
+diagnose: Test for missing or partial telemetry configurations.
+```
