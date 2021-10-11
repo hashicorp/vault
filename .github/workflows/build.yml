@@ -60,6 +60,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
+          go mod vendor
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
