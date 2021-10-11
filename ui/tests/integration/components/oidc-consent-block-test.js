@@ -22,6 +22,8 @@ module('Integration | Component | oidc-consent-block', function(hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
+    assert.dom('[data-test-edit-form-submit]').hasText('Yes', 'form button has correct submit text');
+    assert.dom('[data-test-cancel-button]').hasText('No', 'form button has correct cancel text');
   });
 
   test('it calls the success callback when user clicks "Yes"', async function(assert) {

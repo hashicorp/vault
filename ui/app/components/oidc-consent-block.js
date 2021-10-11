@@ -16,7 +16,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 export default class OidcConsentBlockComponent extends Component {
-  @tracked didCancel;
+  @tracked didCancel = false;
 
   get win() {
     return this.window || window;
@@ -42,7 +42,12 @@ export default class OidcConsentBlockComponent extends Component {
     evt.preventDefault();
     let { redirect, ...params } = this.args;
     let redirectUrl = this.buildUrl(redirect, params);
-    this.win.location.replace(redirectUrl);
+    if (this.args.onSuccess) {
+      // Used for testing, but also makes redirect override available
+      this.args.onSuccess(redirect, params);
+    } else {
+      this.win.location.replace(redirectUrl);
+    }
   }
 
   @action
