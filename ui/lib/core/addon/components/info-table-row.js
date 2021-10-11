@@ -47,10 +47,9 @@ export default Component.extend({
 
   valueIsEmpty: computed('value', function() {
     let { value } = this;
-    console.log('value', value);
     if (typeOf(value) === 'array' && value.length === 0) {
       return true;
-    } else if (value === undefined || null || '') {
+    } else if (value === undefined) {
       return true;
     } else {
       return false;
