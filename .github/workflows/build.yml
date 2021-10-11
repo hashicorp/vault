@@ -59,7 +59,8 @@ jobs:
           go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
           mkdir dist out
           echo $PATH
-          ls /home/runner/go/bin
+          go env
+          tree /home/runner/go/bin
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
