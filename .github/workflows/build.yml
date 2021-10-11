@@ -46,7 +46,8 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Setup go tools
         run: |
-          export $(go env) || true
+          export $(go env | grep GOHOSTOS=)
+          export $(go env | grep GOHOSTARCH=)
           export GOOS=$GOHOSTOS
           export GOARCH=$GOHOSTARCH
           go get golang.org/x/tools/cmd/goimports
