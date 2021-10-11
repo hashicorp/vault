@@ -2080,7 +2080,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	limit := time.Now().Add(3 * time.Second)
+	limit := time.Now().Add(10 * time.Second)
 	for time.Now().Before(limit) {
 		indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
 		if err != nil {
