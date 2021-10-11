@@ -1563,6 +1563,7 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		Keys: make([]jose.JSONWebKey, 0),
 	}
 
+	// only return keys that are associated with a role
 	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
@@ -1574,7 +1575,6 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 			return nil, err
 		}
 		if role == nil {
-			// only return keys that are associated with a role
 			continue
 		}
 
