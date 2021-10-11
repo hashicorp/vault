@@ -53,10 +53,12 @@ jobs:
           go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
       - name: Setup node
         uses: actions/setup-node@v2
+        working-directory: ui
         with:
           node-version: '14'
           cache: 'npm'
       - name: Setup yarn
+        working-directory: ui
         run: npm install --global yarn@1.19.1
       - name: Build
         run: |
