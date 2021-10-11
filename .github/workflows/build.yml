@@ -56,7 +56,7 @@ jobs:
         with:
           node-version: '14'
           cache: 'npm'
-          cache-dependency-path: ui/yarn.lock
+          cache-dependency-path: 'ui/yarn.lock'
       - name: Setup yarn
         working-directory: ui
         run: npm install --global yarn@1.19.1
