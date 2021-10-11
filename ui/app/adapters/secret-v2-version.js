@@ -77,7 +77,7 @@ export default ApplicationAdapter.extend({
   async deleteLatestVersion(backend, path) {
     try {
       await this.ajax(this._url(backend, path, 'data'), 'DELETE');
-      let model = store.peekRecord('secret-v2-version', id);
+      let model = this.store.peekRecord('secret-v2-version', path);
       await model.reload();
       return model && model.rollbackAttributes();
     } catch (e) {
@@ -85,12 +85,25 @@ export default ApplicationAdapter.extend({
     }
   },
 
-  async undeleteLatestVersion(backend, path, currentVersionForNoReadMetadata) {
+  async undeleteVersion(backend, path, currentVersionForNoReadMetadata) {
     try {
       await this.ajax(this._url(backend, path, 'undelete'), 'POST', {
         data: { versions: [currentVersionForNoReadMetadata] },
       });
-      let model = store.peekRecord('secret-v2-version', id);
+      let model = this.store.peekRecord('secret-v2-version', path);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  async softDelete(backend, path, version) {
+    try {
+      await this.ajax(this._url(backend, path, 'delete'), 'POST', {
+        data: { versions: [version] },
+      });
+      let model = this.store.peekRecord('secret-v2-version', path);
       await model.reload();
       return model && model.rollbackAttributes();
     } catch (e) {
@@ -103,7 +116,7 @@ export default ApplicationAdapter.extend({
       await this.ajax(this._url(backend, path, deleteType), 'POST', {
         data: { versions: [version] },
       });
-      let model = store.peekRecord('secret-v2-version', id);
+      let model = this.store.peekRecord('secret-v2-version', path);
       await model.reload();
       return model && model.rollbackAttributes();
     } catch (e) {
@@ -122,7 +135,9 @@ export default ApplicationAdapter.extend({
       return this.deleteLatestVersion(backend, path);
     } else if (deleteType === 'undelete' && !version) {
       // happens when no read access to metadata
-      return this.undeleteLatestVersion(backend, path, currentVersionForNoReadMetadata);
+      return this.undeleteVersion(backend, path, currentVersionForNoReadMetadata);
+    } else if (deleteType === 'soft-delete') {
+      return this.softDelete(backend, path, version);
     } else {
       return this.deleteByDeleteType(backend, path, deleteType, version);
     }
