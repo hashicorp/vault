@@ -257,6 +257,7 @@ ci-verify:
 
 .PHONY: build
 build: static-dist
+	@echo "--> Building go"
 	@go build -v -tags ui -ldflags " -X $VERSION_PKG_PATH.Version=${VAULT_VERSION}" -o dist/vault
 
 version:
