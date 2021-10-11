@@ -32,9 +32,9 @@ type Item struct {
 	// this ID will be an internal ID. In other words, outside of the use-case
 	// described above, the caller *must not* rely on this value to be
 	// consistent with what they passed in.
-	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// message is the contents of the item
-	Message *anypb.Any `sentinel:"" protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Message *anypb.Any `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (x *Item) Reset() {
@@ -95,11 +95,11 @@ type Bucket struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Key is the storage path where the bucket gets stored
-	Key string `sentinel:"" protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key string `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 	// Items holds the items contained within this bucket. Used by v1.
-	Items []*Item `sentinel:"" protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	Items []*Item `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
 	// ItemMap stores a mapping of item ID to message. Used by v2.
-	ItemMap map[string]*anypb.Any `sentinel:"" protobuf:"bytes,3,rep,name=item_map,json=itemMap,proto3" json:"item_map,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	ItemMap map[string]*anypb.Any `protobuf:"bytes,3,rep,name=item_map,json=itemMap,proto3" json:"item_map,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *Bucket) Reset() {

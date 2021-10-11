@@ -11,7 +11,7 @@
  *  @modelForData={{@modelForData}}
  *  @isV2=true
  *  @secretData={{@secretData}}
- *  @canCreateSecretMetadata=true
+ *  @canCreateSecretMetadata=false
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
@@ -20,7 +20,7 @@
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
  * @param {boolean} isV2 - whether or not KV1 or KV2
  * @param {object} secretData - class that is created in secret-edit
- * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret create access.
+ * @param {boolean} canUpdateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret update. create is not enough for metadata.
  */
 
 import Component from '@glimmer/component';

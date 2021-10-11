@@ -40,6 +40,9 @@ jobs:
           elif grep -q ':bugs$' $changelog_files; then
             echo "Found invalid type (bugs) in changelog - did you mean bug?"
             exit 1
+          elif grep -q ':fix$' $changelog_files; then
+            echo "Found invalid type (fix) in changelog - did you mean bug?"
+            exit 1
           elif ! grep -q '```release-note:' $changelog_files; then
             # People often make changelog files like ```changelog:, which is incorrect.
             echo "Changelog file did not contain 'release-note' heading - check formatting."

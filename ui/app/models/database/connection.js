@@ -121,6 +121,26 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'root_rotation_statements', group: 'statements' },
     ],
   },
+  {
+    value: 'elasticsearch-database-plugin',
+    displayName: 'Elasticsearch',
+    fields: [
+      { attr: 'plugin_name' },
+      { attr: 'name' },
+      { attr: 'verify_connection' },
+      { attr: 'password_policy' },
+      { attr: 'url', group: 'pluginConfig' },
+      { attr: 'username', group: 'pluginConfig', show: false },
+      { attr: 'password', group: 'pluginConfig', show: false },
+      { attr: 'ca_cert', group: 'pluginConfig' },
+      { attr: 'ca_path', group: 'pluginConfig' },
+      { attr: 'client_cert', group: 'pluginConfig' },
+      { attr: 'client_key', group: 'pluginConfig' },
+      { attr: 'tls_server_name', group: 'pluginConfig' },
+      { attr: 'insecure', group: 'pluginConfig' },
+      { attr: 'username_template', group: 'pluginConfig' },
+    ],
+  },
 ];
 
 /**
@@ -149,7 +169,7 @@ export default Model.extend({
   }),
   // required
   name: attr('string', {
-    label: 'Connection Name',
+    label: 'Connection name',
   }),
   plugin_name: attr('string', {
     label: 'Database plugin',
@@ -177,22 +197,38 @@ export default Model.extend({
 
   // common fields
   connection_url: attr('string', {
-    subText: 'The connection string used to connect to the database.',
+    label: 'Connection URL',
+    subText:
+      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user in the {{field_name}} format.',
   }),
   url: attr('string', {
-    subText:
-      'The connection string used to connect to the database. This allows for simple templating of username and password of the root user.',
+    label: 'URL',
+    subText: `The URL for Elasticsearch's API ("https://localhost:9200").`,
   }),
   username: attr('string', {
-    subText: 'Optional. The name of the user to use as the "root" user when connecting to the database.',
+    subText: `The name of the user to use as the "root" user when connecting to the database.`,
   }),
   password: attr('string', {
-    subText:
-      'Optional. The password to use when connecting to the database. Typically used in the connection_url field via the templating directive {{password}}.',
+    subText: 'The password to use when connecting with the above username.',
     editType: 'password',
   }),
 
   // optional
+  ca_cert: attr('string', {
+    label: 'CA certificate',
+    subText: `The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.`,
+  }),
+  ca_path: attr('string', {
+    label: 'CA path',
+    subText: `The path to a directory of PEM-encoded CA cert files to use to verify the Elasticsearch server's identity.`,
+  }),
+  client_cert: attr('string', {
+    label: 'Client certificate',
+    subText: 'The path to the certificate for the Elasticsearch client to present for communication.',
+  }),
+  client_key: attr('string', {
+    subText: 'The path to the key for the Elasticsearch client to use for communication.',
+  }),
   hosts: attr('string', {}),
   host: attr('string', {}),
   port: attr('string', {}),
@@ -220,6 +256,10 @@ export default Model.extend({
   max_connection_lifetime: attr('string', {
     defaultValue: '0s',
   }),
+  insecure: attr('boolean', {
+    defaultValue: false,
+    label: 'Disable SSL verification',
+  }),
   tls: attr('string', {
     label: 'TLS Certificate Key',
     helpText:
@@ -232,10 +272,18 @@ export default Model.extend({
       'x509 CA file for validating the certificate presented by the MongoDB server. Must be PEM encoded.',
     editType: 'file',
   }),
+  tls_server_name: attr('string', {
+    label: 'TLS server name',
+    subText: 'If set, this name is used to set the SNI host when connecting via 1TLS.',
+  }),
   root_rotation_statements: attr({
     subText: `The database statements to be executed to rotate the root user's credentials. If nothing is entered, Vault will use a reasonable default.`,
     editType: 'stringArray',
     defaultShown: 'Default',
+  }),
+
+  isAvailablePlugin: computed('plugin_name', function() {
+    return !!AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name);
   }),
 
   showAttrs: computed('plugin_name', function() {

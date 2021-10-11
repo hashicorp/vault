@@ -52,6 +52,26 @@ module('Integration | Component | client count history', function(hooks) {
   test('it shows data when available from query', async function(assert) {
     Object.assign(this.model.config, { queriesAvailable: true, configPath: { canRead: true } });
     Object.assign(this.model.activity, {
+      byNamespace: [
+        {
+          counts: {
+            clients: 2725,
+            distinct_entities: 1137,
+            non_entity_tokens: 1588,
+          },
+          namespace_id: '8VIZc',
+          namespace_path: 'nsTest5/',
+        },
+        {
+          counts: {
+            clients: 200,
+            distinct_entities: 100,
+            non_entity_tokens: 100,
+          },
+          namespace_id: 'sd3Zc',
+          namespace_path: 'nsTest1/',
+        },
+      ],
       total: {
         clients: 1234,
         distinct_entities: 234,
@@ -63,5 +83,7 @@ module('Integration | Component | client count history', function(hooks) {
     assert.dom('[data-test-pricing-metrics-form]').exists('Date range form component exists');
     assert.dom('[data-test-tracking-disabled]').doesNotExist('Flash message does not exists');
     assert.dom('[data-test-client-count-stats]').exists('Client count data exists');
+    assert.dom('[data-test-client-count-graph]').exists('Top 10 namespaces chart exists');
+    assert.dom('[data-test-empty-state-title]').hasText('No namespace selected');
   });
 });

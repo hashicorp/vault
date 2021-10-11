@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | bar-chart', function(hooks) {
@@ -75,7 +75,11 @@ module('Integration | Component | bar-chart', function(hooks) {
           </button>
       </BarChart>
     `);
-
-    assert.dom('.bar-chart-wrapper').exists('it renders');
+    assert.dom('[data-test-bar-chart]').exists('bar chart renders');
+    assert.dom('[data-test-bar-chart] .chart-title').hasText('Top Namespaces', 'displays title');
+    assert
+      .dom('[data-test-bar-chart] .chart-description')
+      .hasText('Each namespaces client count includes clients in child namespaces.', 'displays description');
+    assert.equal(findAll('.data-bar').length, 8, 'bars render');
   });
 });
