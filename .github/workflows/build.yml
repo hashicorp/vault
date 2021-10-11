@@ -109,8 +109,6 @@ jobs:
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
       DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
@@ -134,7 +132,11 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
+          go mod vendor
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
@@ -183,8 +185,6 @@ jobs:
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
       DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
@@ -208,7 +208,11 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
+          go mod vendor
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
@@ -255,8 +259,6 @@ jobs:
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
       DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
@@ -280,7 +282,11 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
+          go mod vendor
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
@@ -325,13 +331,7 @@ jobs:
         goarch: [ "amd64", "arm64" ]
         go: [ "1.16" ]
       fail-fast: true
-
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
-
     steps:
       - uses: actions/checkout@v2
 
@@ -353,7 +353,11 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
+          go mod vendor
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
