@@ -13,6 +13,7 @@ export const STATEMENT_FIELDS = {
     'mysql-rds-database-plugin': [],
     'mysql-legacy-database-plugin': [],
     'elasticsearch-database-plugin': [],
+    'oracle-database-plugin': [],
   },
   dynamic: {
     default: ['creation_statements', 'revocation_statements', 'rollback_statements', 'renew_statements'],
@@ -23,6 +24,7 @@ export const STATEMENT_FIELDS = {
     'mysql-rds-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-legacy-database-plugin': ['creation_statements', 'revocation_statements'],
     'elasticsearch-database-plugin': ['creation_statement'],
+    'oracle-database-plugin': ['creation_statements', 'revocation_statements'],
   },
 };
 
