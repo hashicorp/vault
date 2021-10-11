@@ -624,18 +624,17 @@ func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, nam
 		return keyIDs, nil
 	}
 
-	var key *namedKey
+	var key namedKey
 	if err := entry.DecodeJSON(&key); err != nil {
 		return keyIDs, err
 	}
-	keyIDs = make([]string, 0)
 	for _, k := range key.KeyRing {
 		keyIDs = append(keyIDs, k.KeyID)
 	}
 	return keyIDs, nil
 }
 
-// roleReferencesTargetKeyID returns a true if a role references the given
+// roleReferencesTargetKeyID returns true if a role references the given
 // targetKeyID.
 func (i *IdentityStore) roleReferencesTargetKeyID(ctx context.Context, s logical.Storage, targetKeyID string) (bool, error) {
 	roleNames, err := s.List(ctx, roleConfigPath)
