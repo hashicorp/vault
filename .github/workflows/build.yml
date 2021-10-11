@@ -34,8 +34,6 @@ jobs:
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     env:
-      GOOS: ${{ matrix.goos }}
-      GOARCH: ${{ matrix.goarch }}
       DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
@@ -46,10 +44,6 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Setup go tools
         run: |
-          export $(go env | grep GOHOSTOS=)
-          export $(go env | grep GOHOSTARCH=)
-          export GOOS=$GOHOSTOS
-          export GOARCH=$GOHOSTARCH
           go get golang.org/x/tools/cmd/goimports
           go get github.com/hashicorp/go-bindata
           go get github.com/hashicorp/go-bindata/go-bindata
@@ -62,10 +56,11 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir dist out
-          echo $PATH
-          ls /home/runner/go/bin
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
