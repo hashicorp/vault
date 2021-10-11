@@ -989,7 +989,6 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 		}
 	}
 
-	var wg sync.WaitGroup
 	leasesMap := make(map[string]indexAndChannel)
 
 	// Fetch all the auth and secret leases we'll process upfront.
@@ -1015,7 +1014,6 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 					errors = multierror.Append(errors, fmt.Errorf("failed to restore lease with id=%s, path=%s due to hash collision", newIndex.ID, newIndex.RequestPath))
 					continue
 				}
-				wg.Add(1)
 				leasesMap[newIndex.ID] = indexAndChannel{
 					index: newIndex,
 					ch:    make(chan struct{}),
@@ -1024,21 +1022,11 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 		}
 	}
 
-	errorsCh := make(chan error)
-	go func() {
-		for {
-			select {
-			case err, ok := <-errorsCh:
-				if !ok {
-					return
-				}
-				errors = multierror.Append(errors, err)
-			}
-		}
-	}()
-
 	// Now restore the auth and secret leases.
+	wg := sync.WaitGroup{}
+	mtx := sync.Mutex{}
 	for id, lease := range leasesMap {
+		wg.Add(1)
 		go func(id string, lease indexAndChannel) {
 			defer wg.Done()
 			defer close(lease.ch)
@@ -1054,11 +1042,15 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 			}
 
 			if err := c.restoreLeaseRenewCtx(lease.index, leasesMap); err != nil {
-				errorsCh <- err
+				mtx.Lock()
+				errors = multierror.Append(errors, err)
+				mtx.Unlock()
 				return
 			}
 			if err := c.db.Set(lease.index); err != nil {
-				errorsCh <- err
+				mtx.Lock()
+				errors = multierror.Append(errors, err)
+				mtx.Unlock()
 				return
 			}
 			c.logger.Trace("restored lease", "id", id, "path", lease.index.RequestPath)
@@ -1066,7 +1058,6 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 	}
 
 	wg.Wait()
-	close(errorsCh)
 
 	return errors.ErrorOrNil()
 }
