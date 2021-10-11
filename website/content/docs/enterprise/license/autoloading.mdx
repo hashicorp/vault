@@ -12,12 +12,12 @@ As of Vault 1.8 those options still exist but are deprecated, and the recommende
 mechanism for managing licenses is called License Autoloading.  New clusters are
 required to use the autoloading method.
 
-License Autoloading can be done using one of these mechanisms, in increasing order
+License Autoloading can be done using one of these mechanisms, in decreasing order
 of priority (i.e. `VAULT_LICENSE` takes precedence over `VAULT_LICENSE_PATH`, which
 takes precedence over `license_path` in config.)
-* [license_path in config](/docs/configuration#license_path)
-* [VAULT_LICENSE_PATH environment variable](/docs/commands#vault_license_path)
 * [VAULT_LICENSE environment variable](/docs/commands#vault_license)
+* [VAULT_LICENSE_PATH environment variable](/docs/commands#vault_license_path)
+* [license_path in config](/docs/configuration#license_path)
 
 Nodes within a cluster should be consistently licensed. All nodes in a cluster
 should use autoloading, or none should. If autoloading is used, all nodes should
