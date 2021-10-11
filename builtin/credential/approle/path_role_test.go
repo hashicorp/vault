@@ -993,6 +993,34 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	}
 }
 
+func TestAppRoleSecretIDLookup(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+	createRole(t, b, storage, "role1", "a,b")
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id-accessor/lookup",
+		Data: map[string]interface{}{
+			"secret_id_accessor": "invalid",
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"http_content_type": "application/json",
+			"http_raw_body":     `{"request_id":"","lease_id":"","renewable":false,"lease_duration":0,"data":{"error":"failed to find accessor entry for secret_id_accessor: \"invalid\""},"wrap_info":null,"warnings":null,"auth":null}`,
+			"http_status_code":  404,
+		},
+	}
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("resp:%#v expected:%#v", resp, expected)
+	}
+}
+
 func TestAppRoleRoleListSecretID(t *testing.T) {
 	var resp *logical.Response
 	var err error

@@ -323,6 +323,12 @@ can be supplied. If a MFA method expects multiple credential values, or if there
 are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
 used.
 
+### `VAULT_HTTP_PROXY`
+
+HTTP proxy location which should be used to access Vault. When present, this
+overrides any other proxies found in the environment. Format should be
+`http://server:port`.
+
 ## Flags
 
 There are different CLI flags that are available depending on subcommands. Some

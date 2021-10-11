@@ -831,6 +831,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
+	// Validate the inline policy if it's set
+	if entry.InlinePolicy != "" {
+		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy); err != nil {
+			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
+		}
+	}
+
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
 		// In case it was default, force to service
@@ -906,17 +913,20 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		// encrypt, skip persistence
 		entry.ID = ""
 		pEntry := &pb.TokenEntry{
-			Parent:       entry.Parent,
-			Policies:     entry.Policies,
-			Path:         entry.Path,
-			Meta:         entry.Meta,
-			DisplayName:  entry.DisplayName,
-			CreationTime: entry.CreationTime,
-			TTL:          int64(entry.TTL),
-			Role:         entry.Role,
-			EntityID:     entry.EntityID,
-			NamespaceID:  entry.NamespaceID,
-			Type:         uint32(entry.Type),
+			Parent:             entry.Parent,
+			Policies:           entry.Policies,
+			Path:               entry.Path,
+			Meta:               entry.Meta,
+			DisplayName:        entry.DisplayName,
+			CreationTime:       entry.CreationTime,
+			TTL:                int64(entry.TTL),
+			Role:               entry.Role,
+			EntityID:           entry.EntityID,
+			NamespaceID:        entry.NamespaceID,
+			Type:               uint32(entry.Type),
+			InternalMeta:       entry.InternalMeta,
+			InlinePolicy:       entry.InlinePolicy,
+			NoIdentityPolicies: entry.NoIdentityPolicies,
 		}
 
 		boundCIDRs := make([]string, len(entry.BoundCIDRs))
@@ -3042,7 +3052,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	if out.EntityID != "" {
-		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID)
+		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID, out.NoIdentityPolicies)
 		if err != nil {
 			return nil, err
 		}
