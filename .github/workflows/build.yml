@@ -52,7 +52,7 @@ jobs:
           go get github.com/elazarl/go-bindata-assetfs
           go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
       - name: Setup node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v2.4.1
         with:
           node-version: '14'
           cache: 'npm'
