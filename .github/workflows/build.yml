@@ -44,13 +44,6 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-      - name: Setup go tools
-        run: |
-          go get golang.org/x/tools/cmd/goimports
-          go get github.com/hashicorp/go-bindata
-          go get github.com/hashicorp/go-bindata/go-bindata
-          go get github.com/elazarl/go-bindata-assetfs
-          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -59,6 +52,11 @@ jobs:
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
         run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
           mkdir dist out
           echo $PATH
           ls /home/runner/go/bin
