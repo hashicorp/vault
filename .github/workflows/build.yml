@@ -71,7 +71,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
@@ -145,7 +145,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
@@ -219,7 +219,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
@@ -291,7 +291,7 @@ jobs:
 
       - name: Package
         if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/package@v1
+        uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
           description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
