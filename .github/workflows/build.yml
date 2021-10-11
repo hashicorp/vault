@@ -55,11 +55,8 @@ jobs:
         uses: actions/setup-node@v2.4.1
         with:
           node-version: '14'
-          cache: 'npm'
+          cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
-      - name: Setup yarn
-        working-directory: ui
-        run: npm install --global yarn@1.19.1
       - name: Build
         run: |
           mkdir dist out
