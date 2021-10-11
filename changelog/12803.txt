@@ -1,3 +1,0 @@
-```release-note:improvement
-secrets/database: Fix bug in AzureSQL example config provided in docs
-```
