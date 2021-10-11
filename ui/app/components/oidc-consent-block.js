@@ -11,10 +11,12 @@
  * @param {string} [state] - state is a string which is required to return on redirect if provided, but optional generally
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
+const validParameters = ['code', 'state'];
 export default class OidcConsentBlockComponent extends Component {
   @tracked didCancel = false;
 
@@ -26,7 +28,7 @@ export default class OidcConsentBlockComponent extends Component {
     try {
       let url = new URL(urlString);
       Object.keys(params).forEach(key => {
-        if (params[key]) {
+        if (params[key] && validParameters.includes(key)) {
           url.searchParams.append(key, params[key]);
         }
       });
@@ -42,9 +44,8 @@ export default class OidcConsentBlockComponent extends Component {
     evt.preventDefault();
     let { redirect, ...params } = this.args;
     let redirectUrl = this.buildUrl(redirect, params);
-    if (this.args.onSuccess) {
-      // Used for testing, but also makes redirect override available
-      this.args.onSuccess(redirect, params);
+    if (Ember.testing) {
+      this.args.testRedirect(redirectUrl.toString());
     } else {
       this.win.location.replace(redirectUrl);
     }
