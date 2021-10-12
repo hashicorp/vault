@@ -169,7 +169,6 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
