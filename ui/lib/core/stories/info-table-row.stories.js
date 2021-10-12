@@ -12,11 +12,11 @@ storiesOf('InfoTable/InfoTableRow', module)
       template: hbs`
       <h5 class="title is-5">Info Table Row</h5>
       <InfoTableRow 
-      @value={{value}} 
-      @label={{label}} 
-      @helperText={{helperText}} 
-      @alwaysRender={{alwaysRender}} 
-      @tooltipText={{tooltipText}} />
+        @value={{value}} 
+        @label={{label}} 
+        @helperText={{helperText}} 
+        @alwaysRender={{alwaysRender}} 
+        @tooltipText={{tooltipText}} />
     `,
       context: {
         label: text('Label', 'TTL'),
@@ -33,7 +33,11 @@ storiesOf('InfoTable/InfoTableRow', module)
     () => ({
       template: hbs`
       <h5 class="title is-5">Info Table Row</h5>
-      <InfoTableRow @value={{value}} @label={{label}} @helperText={{helperText}} @alwaysRender={{alwaysRender}} />
+      <InfoTableRow 
+        @value={{value}} 
+        @label={{label}} 
+        @helperText={{helperText}} 
+        @alwaysRender={{alwaysRender}} />
     `,
       context: {
         label: 'Local mount?',
