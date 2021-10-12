@@ -12,49 +12,45 @@
     "@hashicorp/platform-util": "^0.1.0",
     "@hashicorp/react-alert-banner": "^7.0.1",
     "@hashicorp/react-button": "^6.0.1",
-    "@hashicorp/react-case-study-slider": "^7.0.1",
-    "@hashicorp/react-code-block": "^4.1.5",
     "@hashicorp/react-consent-manager": "^7.0.1",
-    "@hashicorp/react-content": "^8.0.2",
-    "@hashicorp/react-docs-page": "^14.4.0",
+    "@hashicorp/react-docs-page": "^14.4.2",
     "@hashicorp/react-featured-slider": "^5.0.1",
     "@hashicorp/react-hashi-stack-menu": "^2.0.7",
     "@hashicorp/react-head": "^3.1.2",
     "@hashicorp/react-hero": "^8.0.2",
     "@hashicorp/react-image": "^4.0.3",
     "@hashicorp/react-inline-svg": "^6.0.3",
-    "@hashicorp/react-logo-grid": "^5.0.1",
     "@hashicorp/react-markdown-page": "^1.4.3",
     "@hashicorp/react-product-downloads-page": "^2.5.2",
     "@hashicorp/react-section-header": "^5.0.4",
-    "@hashicorp/react-subnav": "^9.0.1",
-    "@hashicorp/react-tabs": "^7.0.1",
-    "@hashicorp/react-text-split": "^4.0.0",
+    "@hashicorp/react-subnav": "^9.1.1",
     "@hashicorp/react-text-splits": "^3.2.7",
     "@hashicorp/react-use-cases": "^5.0.0",
     "@hashicorp/react-vertical-text-block-list": "^7.0.0",
     "next": "^11.1.2",
-    "next-mdx-remote": "3.0.2",
+    "next-mdx-remote": "3.0.6",
     "next-remote-watch": "1.0.0",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "tippy.js": "4.0.0"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@hashicorp/platform-cli": "^1.2.0",
     "@hashicorp/platform-nextjs-plugin": "^1.0.1",
     "@hashicorp/platform-types": "^0.1.1",
-    "@types/react": "^17.0.11",
+    "@types/react": "^17.0.27",
     "dart-linkcheck": "^2.0.15",
-    "husky": "^4.3.8",
-    "inquirer": "^8.1.1",
-    "prettier": "^2.3.1",
-    "typescript": "^4.3.5"
+    "prettier": "^2.4.1",
+    "simple-git-hooks": "^2.6.1",
+    "typescript": "^4.4.3"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "next-hashicorp precommit"
-    }
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=12.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hashicorp/vault",
+    "directory": "website"
   },
   "scripts": {
     "build": "next build",
@@ -65,10 +61,11 @@
     "generate:readme": "next-hashicorp markdown-blocks README.md",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
+    "postinstall": "simple-git-hooks",
     "start": "next-remote-watch './content/**/*.mdx'",
     "static": "npm run build && npm run export && cp _redirects out/."
   },
-  "engines": {
-    "npm": ">=7.0.0"
+  "simple-git-hooks": {
+    "pre-commit": "cd website && ./node_modules/.bin/next-hashicorp precommit"
   }
 }
