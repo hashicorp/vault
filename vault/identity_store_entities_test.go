@@ -896,7 +896,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 	registerData := map[string]interface{}{
 		"name":     "testentityname",
 		"metadata": []string{"someusefulkey=someusefulvalue"},
-		"policies": []string{"testpolicy1", "testpolicy2"},
+		"policies": []string{"testpolicy1", "testpolicy1", "testpolicy2", "testpolicy2"},
 	}
 
 	registerReq := &logical.Request{
@@ -932,7 +932,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 
 	if resp.Data["id"] != id ||
 		resp.Data["name"] != registerData["name"] ||
-		!reflect.DeepEqual(resp.Data["policies"], registerData["policies"]) {
+		!reflect.DeepEqual(resp.Data["policies"], strutil.RemoveDuplicates(registerData["policies"].([]string), false)) {
 		t.Fatalf("bad: entity response")
 	}
 

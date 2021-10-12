@@ -238,7 +238,8 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 		// Update the policies if supplied
 		entityPoliciesRaw, ok := d.GetOk("policies")
 		if ok {
-			entity.Policies = entityPoliciesRaw.([]string)
+			filteredPolicies := strutil.RemoveDuplicates(entityPoliciesRaw.([]string), false)
+			entity.Policies = filteredPolicies
 		}
 
 		if strutil.StrListContains(entity.Policies, "root") {
