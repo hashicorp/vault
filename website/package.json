@@ -41,7 +41,17 @@
     "dart-linkcheck": "^2.0.15",
     "inquirer": "^8.1.1",
     "prettier": "^2.4.1",
+    "simple-git-hooks": "^2.6.1",
     "typescript": "^4.4.3"
+  },
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=12.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hashicorp/vault",
+    "directory": "website"
   },
   "scripts": {
     "build": "next build",
@@ -52,10 +62,11 @@
     "generate:readme": "next-hashicorp markdown-blocks README.md",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
+    "postinstall": "simple-git-hooks",
     "start": "next-remote-watch './content/**/*.mdx'",
     "static": "npm run build && npm run export && cp _redirects out/."
   },
-  "engines": {
-    "npm": ">=7.0.0"
+  "simple-git-hooks": {
+    "pre-commit": "cd website && ./node_modules/.bin/next-hashicorp precommit"
   }
 }
