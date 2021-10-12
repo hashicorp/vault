@@ -377,7 +377,6 @@ jobs:
         uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{env.version}}
-          target: default
           arch: ${{matrix.arch}}
           workdir: .release/docker
           tags: |
