@@ -1,0 +1,3 @@
+```release-note:bug
+identity: removing duplicate policies on creating entities
+```
