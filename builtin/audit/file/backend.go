@@ -12,7 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -73,7 +72,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Check if mode is provided
-	mode := os.FileMode(0600)
+	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
 		if err != nil {
@@ -121,7 +120,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		// otherwise it will be too late to catch later without problems
 		// (ref: https://github.com/hashicorp/vault/issues/550)
 		if err := b.open(); err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("sanity check failed; unable to open %q for writing: {{err}}", path), err)
+			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
 		}
 	}
 
@@ -256,6 +255,24 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	}
 
 	return b.log(ctx, buf, writer)
+}
+
+func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	var writer io.Writer
+	switch b.path {
+	case "stdout":
+		writer = os.Stdout
+	case "discard":
+		return nil
+	}
+
+	var buf bytes.Buffer
+	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+		return err
+	}
+
+	return b.log(ctx, &buf, writer)
 }
 
 // The file lock must be held before calling this

@@ -3,8 +3,8 @@
   shape of data at a specific path to hydrate a model with attrs it
   has less (or no) information about.
 */
+import Model from '@ember-data/model';
 import Service from '@ember/service';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { assign } from '@ember/polyfills';
@@ -14,6 +14,7 @@ import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { dasherize, capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
+import buildValidations from 'vault/utils/build-api-validators';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -50,7 +51,7 @@ export default Service.extend({
       return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName);
     } else {
       debug(`Creating new Model for ${modelType}`);
-      newModel = DS.Model.extend({});
+      newModel = Model.extend({});
     }
 
     // we don't have an apiPath for dynamic secrets
@@ -280,11 +281,18 @@ export default Service.extend({
       // if our newModel doesn't have fieldGroups already
       // we need to create them
       try {
+        // Initialize prototype to access field groups
         let fieldGroups = newModel.proto().fieldGroups;
         if (!fieldGroups) {
           debug(`Constructing fieldGroups for ${backend}`);
           fieldGroups = this.getFieldGroups(newModel);
           newModel = newModel.extend({ fieldGroups });
+          // Build and add validations on model
+          // NOTE: For initial phase, initialize validations only for user pass auth
+          if (backend === 'userpass') {
+            let validations = buildValidations(fieldGroups);
+            newModel = newModel.extend(validations);
+          }
         }
       } catch (err) {
         // eat the error, fieldGroups is computed in the model definition

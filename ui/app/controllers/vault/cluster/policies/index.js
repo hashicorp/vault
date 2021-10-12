@@ -21,18 +21,18 @@ export default Controller.extend({
   isLoading: false,
 
   filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
-    var filter = this.get('filter');
-    var content = this.get('model');
+    var filter = this.filter;
+    var content = this.model;
     return !!(content && content.length && content.findBy('id', filter));
   }),
 
   firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
-    var filter = this.get('filter');
-    var content = this.get('model');
+    var filter = this.filter;
+    var content = this.model;
     if (!content) {
       return;
     }
-    var filterMatchesKey = this.get('filterMatchesKey');
+    var filterMatchesKey = this.filterMatchesKey;
     var re = new RegExp('^' + filter);
     return filterMatchesKey
       ? null
@@ -51,15 +51,15 @@ export default Controller.extend({
     deletePolicy(model) {
       let policyType = model.get('policyType');
       let name = model.id;
-      let flash = this.get('flashMessages');
+      let flash = this.flashMessages;
       model
         .destroyRecord()
         .then(() => {
           // this will clear the dataset cache on the store
           this.send('reload');
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
-          if (this.get('wizard.featureState') === 'delete') {
-            this.get('wizard').transitionFeatureMachine('delete', 'CONTINUE', policyType);
+          if (this.wizard.featureState === 'delete') {
+            this.wizard.transitionFeatureMachine('delete', 'CONTINUE', policyType);
           }
         })
         .catch(e => {

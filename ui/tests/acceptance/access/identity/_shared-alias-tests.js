@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -11,14 +11,17 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
+    await settled();
   } else {
     await createItemPage.createItem(itemType);
+    await settled();
   }
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
-
+  await settled();
   await page.editForm.name(name).submit();
+  await settled();
   assert.ok(
     aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved'),
     `${itemType}: shows a flash message`
@@ -34,6 +37,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   assert.ok(aliasShowPage.nameContains(name), `${itemType}: renders the name on the show page`);
 
   await aliasIndexPage.visit({ item_type: itemType });
+  await settled();
   assert.equal(
     aliasIndexPage.items.filterBy('name', name).length,
     1,
@@ -42,9 +46,11 @@ export const testAliasCRUD = async function(name, itemType, assert) {
 
   let item = aliasIndexPage.items.filterBy('name', name)[0];
   await item.menu();
-
+  await settled();
   await aliasIndexPage.delete();
+  await settled();
   await aliasIndexPage.confirmDelete();
+  await settled();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
@@ -59,26 +65,30 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
+    await settled();
   } else {
     await createItemPage.createItem(itemType);
+    await settled();
   }
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
-
+  await settled();
   await page.editForm.name(name).submit();
-
+  await settled();
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
   await aliasShowPage.edit();
-
+  await settled();
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.edit',
     `${itemType}: navigates to edit on create`
   );
   await page.editForm.delete();
+  await settled();
   await page.editForm.confirmDelete();
+  await settled();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`

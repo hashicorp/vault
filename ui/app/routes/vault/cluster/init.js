@@ -6,7 +6,7 @@ export default ClusterRoute.extend({
 
   activate() {
     // always start from idle instead of using the current state
-    this.get('wizard').transitionTutorialMachine('idle', 'INIT');
-    this.get('wizard').set('initEvent', 'START');
+    this.wizard.transitionTutorialMachine('idle', 'INIT');
+    this.wizard.set('initEvent', 'START');
   },
 });

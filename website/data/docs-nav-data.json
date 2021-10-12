@@ -1,0 +1,1803 @@
+[
+  {
+    "title": "What is Vault?",
+    "path": "what-is-vault"
+  },
+  {
+    "title": "Use Cases",
+    "path": "use-cases"
+  },
+
+  {
+    "divider": true
+  },
+  {
+    "title": "Browser Support",
+    "path": "browser-support"
+  },
+  {
+    "title": "Installing Vault",
+    "path": "install"
+  },
+  {
+    "title": "Internals",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "internals"
+      },
+      {
+        "title": "Architecture",
+        "path": "internals/architecture"
+      },
+      {
+        "title": "High Availability",
+        "path": "internals/high-availability"
+      },
+      {
+        "title": "Integrated Storage",
+        "path": "internals/integrated-storage"
+      },
+      {
+        "title": "Security Model",
+        "path": "internals/security"
+      },
+      {
+        "title": "Telemetry",
+        "path": "internals/telemetry"
+      },
+      {
+        "title": "Token Authentication",
+        "path": "internals/token"
+      },
+      {
+        "title": "Key Rotation",
+        "path": "internals/rotation"
+      },
+      {
+        "title": "Replication",
+        "path": "internals/replication"
+      },
+      {
+        "title": "Plugins",
+        "path": "internals/plugins"
+      },
+      {
+        "title": "Limits and Maximums",
+        "path": "internals/limits"
+      }
+    ]
+  },
+  {
+    "title": "Concepts",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "concepts"
+      },
+      {
+        "title": "'Dev' Server",
+        "path": "concepts/dev-server"
+      },
+      {
+        "title": "Seal/Unseal",
+        "path": "concepts/seal"
+      },
+      {
+        "title": "Lease, Renew, and Revoke",
+        "path": "concepts/lease"
+      },
+      {
+        "title": "Authentication",
+        "path": "concepts/auth"
+      },
+      {
+        "title": "Tokens",
+        "path": "concepts/tokens"
+      },
+      {
+        "title": "Response Wrapping",
+        "path": "concepts/response-wrapping"
+      },
+      {
+        "title": "Policies",
+        "path": "concepts/policies"
+      },
+      {
+        "title": "Password Policies",
+        "path": "concepts/password-policies"
+      },
+      {
+        "title": "Username Templating",
+        "path": "concepts/username-templating"
+      },
+      {
+        "title": "High Availability",
+        "path": "concepts/ha"
+      },
+      {
+        "title": "Storage",
+        "path": "concepts/storage"
+      },
+      {
+        "title": "Integrated Storage",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/integrated-storage"
+          },
+          {
+            "title": "Autopilot",
+            "path": "concepts/integrated-storage/autopilot"
+          }
+        ]
+      },
+      {
+        "title": "PGP, GPG, and Keybase",
+        "path": "concepts/pgp-gpg-keybase"
+      },
+      {
+        "title": "Recovery Mode",
+        "path": "concepts/recovery-mode"
+      },
+      {
+        "title": "Resource Quotas",
+        "path": "concepts/resource-quotas"
+      },
+      {
+        "title": "Client Count",
+        "path": "concepts/client-count"
+      },
+      {
+        "title": "Transform",
+        "path": "concepts/transform"
+      }
+    ]
+  },
+  {
+    "title": "Configuration",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "configuration"
+      },
+      {
+        "title": "<code>listener</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "configuration/listener"
+          },
+          {
+            "title": "TCP",
+            "path": "configuration/listener/tcp"
+          }
+        ]
+      },
+      {
+        "title": "<code>replication</code>",
+        "path": "configuration/replication"
+      },
+      {
+        "title": "<code>seal</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "configuration/seal"
+          },
+          {
+            "title": "AliCloud KMS",
+            "path": "configuration/seal/alicloudkms"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "configuration/seal/awskms"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "configuration/seal/azurekeyvault"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "configuration/seal/gcpckms"
+          },
+          {
+            "title": "OCI KMS",
+            "path": "configuration/seal/ocikms"
+          },
+          {
+            "title": "HSM PKCS11 <sup>ENT</sup>",
+            "path": "configuration/seal/pkcs11"
+          },
+          {
+            "title": "Vault Transit",
+            "path": "configuration/seal/transit"
+          }
+        ]
+      },
+      {
+        "title": "<code>sentinel</code>",
+        "path": "configuration/sentinel"
+      },
+      {
+        "title": "<code>service_registration</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "configuration/service-registration"
+          },
+          {
+            "title": "Consul",
+            "path": "configuration/service-registration/consul"
+          },
+          {
+            "title": "Kubernetes",
+            "path": "configuration/service-registration/kubernetes"
+          }
+        ]
+      },
+      {
+        "title": "<code>storage</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "configuration/storage"
+          },
+          {
+            "title": "Aerospike",
+            "path": "configuration/storage/aerospike"
+          },
+          {
+            "title": "Alicloud OSS",
+            "path": "configuration/storage/alicloudoss",
+            "hidden": true
+          },
+          {
+            "title": "Azure",
+            "path": "configuration/storage/azure"
+          },
+          {
+            "title": "Cassandra",
+            "path": "configuration/storage/cassandra"
+          },
+          {
+            "title": "CockroachDB",
+            "path": "configuration/storage/cockroachdb"
+          },
+          {
+            "title": "Consul",
+            "path": "configuration/storage/consul"
+          },
+          {
+            "title": "CouchDB",
+            "path": "configuration/storage/couchdb"
+          },
+          {
+            "title": "DynamoDB",
+            "path": "configuration/storage/dynamodb"
+          },
+          {
+            "title": "Etcd",
+            "path": "configuration/storage/etcd"
+          },
+          {
+            "title": "Filesystem",
+            "path": "configuration/storage/filesystem"
+          },
+          {
+            "title": "FoundationDB",
+            "path": "configuration/storage/foundationdb"
+          },
+          {
+            "title": "Google Cloud Spanner",
+            "path": "configuration/storage/google-cloud-spanner"
+          },
+          {
+            "title": "Google Cloud Storage",
+            "path": "configuration/storage/google-cloud-storage"
+          },
+          {
+            "title": "In-Memory",
+            "path": "configuration/storage/in-memory"
+          },
+          {
+            "title": "Manta",
+            "path": "configuration/storage/manta"
+          },
+          {
+            "title": "MSSQL",
+            "path": "configuration/storage/mssql"
+          },
+          {
+            "title": "MySQL",
+            "path": "configuration/storage/mysql"
+          },
+          {
+            "title": "OCI Object Storage",
+            "path": "configuration/storage/oci-object-storage"
+          },
+          {
+            "title": "PostgreSQL",
+            "path": "configuration/storage/postgresql"
+          },
+          {
+            "title": "Integrated Storage (Raft)",
+            "path": "configuration/storage/raft"
+          },
+          {
+            "title": "S3",
+            "path": "configuration/storage/s3"
+          },
+          {
+            "title": "Swift",
+            "path": "configuration/storage/swift"
+          },
+          {
+            "title": "Zookeeper",
+            "path": "configuration/storage/zookeeper"
+          }
+        ]
+      },
+      {
+        "title": "<code>telemetry</code>",
+        "path": "configuration/telemetry"
+      },
+      {
+        "title": "<code>ui</code>",
+        "path": "configuration/ui"
+      },
+      {
+        "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
+        "path": "configuration/entropy-augmentation"
+      }
+    ]
+  },
+  {
+    "title": "Commands (CLI)",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "commands"
+      },
+      {
+        "title": "<code>agent</code>",
+        "path": "commands/agent"
+      },
+      {
+        "title": "<code>audit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/audit"
+          },
+          {
+            "title": "<code>disable</code>",
+            "path": "commands/audit/disable"
+          },
+          {
+            "title": "<code>enable</code>",
+            "path": "commands/audit/enable"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/audit/list"
+          }
+        ]
+      },
+      {
+        "title": "<code>auth</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/auth"
+          },
+          {
+            "title": "<code>disable</code>",
+            "path": "commands/auth/disable"
+          },
+          {
+            "title": "<code>enable</code>",
+            "path": "commands/auth/enable"
+          },
+          {
+            "title": "<code>help</code>",
+            "path": "commands/auth/help"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/auth/list"
+          },
+          {
+            "title": "<code>tune</code>",
+            "path": "commands/auth/tune"
+          }
+        ]
+      },
+      {
+        "title": "<code>debug</code>",
+        "path": "commands/debug"
+      },
+      {
+        "title": "<code>delete</code>",
+        "path": "commands/delete"
+      },
+      {
+        "title": "<code>help</code>",
+        "path": "commands/help",
+        "hidden": true
+      },
+      {
+        "title": "<code>kv</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/kv"
+          },
+          {
+            "title": "<code>delete</code>",
+            "path": "commands/kv/delete"
+          },
+          {
+            "title": "<code>destroy</code>",
+            "path": "commands/kv/destroy"
+          },
+          {
+            "title": "<code>enable-versioning</code>",
+            "path": "commands/kv/enable-versioning"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/kv/get"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/kv/list"
+          },
+          {
+            "title": "<code>metadata</code>",
+            "path": "commands/kv/metadata"
+          },
+          {
+            "title": "<code>patch</code>",
+            "path": "commands/kv/patch"
+          },
+          {
+            "title": "<code>put</code>",
+            "path": "commands/kv/put"
+          },
+          {
+            "title": "<code>rollback</code>",
+            "path": "commands/kv/rollback"
+          },
+          {
+            "title": "<code>undelete</code>",
+            "path": "commands/kv/undelete"
+          }
+        ]
+      },
+      {
+        "title": "<code>lease</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/lease"
+          },
+          {
+            "title": "<code>lookup</code>",
+            "path": "commands/lease/lookup",
+            "hidden": true
+          },
+          {
+            "title": "<code>renew</code>",
+            "path": "commands/lease/renew"
+          },
+          {
+            "title": "<code>revoke</code>",
+            "path": "commands/lease/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>license</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/license"
+          },
+          {
+            "title": "<code>get</code>",
+            "path": "commands/license/get"
+          },
+          {
+            "title": "<code>inspect</code>",
+            "path": "commands/license/inspect"
+          }
+        ]
+      },
+      {
+        "title": "<code>list</code>",
+        "path": "commands/list"
+      },
+      {
+        "title": "<code>login</code>",
+        "path": "commands/login"
+      },
+      {
+        "title": "<code>monitor</code>",
+        "path": "commands/monitor"
+      },
+      {
+        "title": "<code>namespace</code>",
+        "path": "commands/namespace"
+      },
+      {
+        "title": "<code>operator</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/operator"
+          },
+          {
+            "title": "<code>diagnose</code>",
+            "path": "commands/operator/diagnose"
+          },
+          {
+            "title": "<code>generate-root</code>",
+            "path": "commands/operator/generate-root"
+          },
+          {
+            "title": "<code>init</code>",
+            "path": "commands/operator/init"
+          },
+          {
+            "title": "<code>key-status</code>",
+            "path": "commands/operator/key-status"
+          },
+          {
+            "title": "<code>migrate</code>",
+            "path": "commands/operator/migrate"
+          },
+          {
+            "title": "<code>raft</code>",
+            "path": "commands/operator/raft"
+          },
+          {
+            "title": "<code>rekey</code>",
+            "path": "commands/operator/rekey"
+          },
+          {
+            "title": "<code>rotate</code>",
+            "path": "commands/operator/rotate"
+          },
+          {
+            "title": "<code>seal</code>",
+            "path": "commands/operator/seal"
+          },
+          {
+            "title": "<code>step-down</code>",
+            "path": "commands/operator/step-down"
+          },
+          {
+            "title": "<code>unseal</code>",
+            "path": "commands/operator/unseal"
+          },
+          {
+            "title": "<code>usage</code>",
+            "path": "commands/operator/usage"
+          }
+        ]
+      },
+      {
+        "title": "<code>path-help</code>",
+        "path": "commands/path-help"
+      },
+      {
+        "title": "<code>plugin</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/plugin"
+          },
+          {
+            "title": "<code>deregister</code>",
+            "path": "commands/plugin/deregister"
+          },
+          {
+            "title": "<code>info</code>",
+            "path": "commands/plugin/info"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/plugin/list"
+          },
+          {
+            "title": "<code>register</code>",
+            "path": "commands/plugin/register"
+          },
+          {
+            "title": "<code>reload</code>",
+            "path": "commands/plugin/reload"
+          }
+        ]
+      },
+      {
+        "title": "<code>policy</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/policy"
+          },
+          {
+            "title": "<code>delete</code>",
+            "path": "commands/policy/delete"
+          },
+          {
+            "title": "<code>fmt</code>",
+            "path": "commands/policy/fmt"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/policy/list"
+          },
+          {
+            "title": "<code>read</code>",
+            "path": "commands/policy/read"
+          },
+          {
+            "title": "<code>write</code>",
+            "path": "commands/policy/write"
+          }
+        ]
+      },
+      {
+        "title": "<code>read</code>",
+        "path": "commands/read"
+      },
+      {
+        "title": "<code>secrets</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/secrets"
+          },
+          {
+            "title": "<code>disable</code>",
+            "path": "commands/secrets/disable"
+          },
+          {
+            "title": "<code>enable</code>",
+            "path": "commands/secrets/enable"
+          },
+          {
+            "title": "<code>list</code>",
+            "path": "commands/secrets/list"
+          },
+          {
+            "title": "<code>move</code>",
+            "path": "commands/secrets/move"
+          },
+          {
+            "title": "<code>tune</code>",
+            "path": "commands/secrets/tune"
+          }
+        ]
+      },
+      {
+        "title": "<code>server</code>",
+        "path": "commands/server"
+      },
+      {
+        "title": "<code>ssh</code>",
+        "path": "commands/ssh"
+      },
+      {
+        "title": "<code>status</code>",
+        "path": "commands/status"
+      },
+      {
+        "title": "<code>token</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/token"
+          },
+          {
+            "title": "<code>capabilities</code>",
+            "path": "commands/token/capabilities"
+          },
+          {
+            "title": "<code>create</code>",
+            "path": "commands/token/create"
+          },
+          {
+            "title": "<code>lookup</code>",
+            "path": "commands/token/lookup"
+          },
+          {
+            "title": "<code>renew</code>",
+            "path": "commands/token/renew"
+          },
+          {
+            "title": "<code>revoke</code>",
+            "path": "commands/token/revoke"
+          }
+        ]
+      },
+      {
+        "title": "<code>unwrap</code>",
+        "path": "commands/unwrap"
+      },
+      {
+        "title": "<code>version</code>",
+        "path": "commands/version"
+      },
+      {
+        "title": "<code>write</code>",
+        "path": "commands/write"
+      },
+      {
+        "title": "Token Helpers",
+        "path": "commands/token-helper"
+      }
+    ]
+  },
+  {
+    "title": "Vault Agent",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "agent"
+      },
+      {
+        "title": "Auto-Auth",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "agent/autoauth"
+          },
+          {
+            "title": "Methods",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "agent/autoauth/methods"
+              },
+              {
+                "title": "AliCloud",
+                "path": "agent/autoauth/methods/alicloud"
+              },
+              {
+                "title": "AppRole",
+                "path": "agent/autoauth/methods/approle"
+              },
+              {
+                "title": "AWS",
+                "path": "agent/autoauth/methods/aws"
+              },
+              {
+                "title": "Azure",
+                "path": "agent/autoauth/methods/azure"
+              },
+              {
+                "title": "Cert",
+                "path": "agent/autoauth/methods/cert"
+              },
+              {
+                "title": "CF",
+                "path": "agent/autoauth/methods/cf"
+              },
+              {
+                "title": "GCP",
+                "path": "agent/autoauth/methods/gcp"
+              },
+              {
+                "title": "JWT",
+                "path": "agent/autoauth/methods/jwt"
+              },
+              {
+                "title": "Kerberos",
+                "path": "agent/autoauth/methods/kerberos"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "agent/autoauth/methods/kubernetes"
+              }
+            ]
+          },
+          {
+            "title": "Sinks",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "agent/autoauth/sinks"
+              },
+              {
+                "title": "File",
+                "path": "agent/autoauth/sinks/file"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Caching",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "agent/caching"
+          },
+          {
+            "title": "Persistent Caching",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "agent/caching/persistent-caches"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "agent/caching/persistent-caches/kubernetes"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Templates",
+        "path": "agent/template"
+      },
+      {
+        "title": "Template Config",
+        "path": "agent/template-config"
+      },
+      {
+        "title": "Windows service",
+        "path": "agent/winsvc"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Secrets Engines",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "secrets"
+      },
+      {
+        "title": "Active Directory",
+        "path": "secrets/ad"
+      },
+      {
+        "title": "AliCloud",
+        "path": "secrets/alicloud"
+      },
+      {
+        "title": "AWS",
+        "path": "secrets/aws"
+      },
+      {
+        "title": "Azure",
+        "path": "secrets/azure"
+      },
+      {
+        "title": "Cassandra",
+        "path": "secrets/cassandra",
+        "hidden": true
+      },
+      {
+        "title": "Consul",
+        "path": "secrets/consul"
+      },
+      {
+        "title": "Cubbyhole",
+        "path": "secrets/cubbyhole"
+      },
+      {
+        "title": "Databases",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/databases"
+          },
+          {
+            "title": "Cassandra",
+            "path": "secrets/databases/cassandra"
+          },
+          {
+            "title": "Couchbase",
+            "path": "secrets/databases/couchbase"
+          },
+          {
+            "title": "Elasticsearch",
+            "path": "secrets/databases/elasticdb"
+          },
+          {
+            "title": "HanaDB",
+            "path": "secrets/databases/hanadb"
+          },
+          {
+            "title": "InfluxDB",
+            "path": "secrets/databases/influxdb"
+          },
+          {
+            "title": "MongoDB",
+            "path": "secrets/databases/mongodb"
+          },
+          {
+            "title": "MongoDB Atlas",
+            "path": "secrets/databases/mongodbatlas"
+          },
+          {
+            "title": "MSSQL",
+            "path": "secrets/databases/mssql"
+          },
+          {
+            "title": "MySQL/MariaDB",
+            "path": "secrets/databases/mysql-maria"
+          },
+          {
+            "title": "Oracle",
+            "path": "secrets/databases/oracle"
+          },
+          {
+            "title": "PostgreSQL",
+            "path": "secrets/databases/postgresql"
+          },
+          {
+            "title": "Redshift",
+            "path": "secrets/databases/redshift"
+          },
+          {
+            "title": "Snowflake",
+            "path": "secrets/databases/snowflake"
+          },
+          {
+            "title": "Custom",
+            "path": "secrets/databases/custom"
+          }
+        ]
+      },
+      {
+        "title": "Google Cloud",
+        "path": "secrets/gcp"
+      },
+      {
+        "title": "Google Cloud KMS",
+        "path": "secrets/gcpkms"
+      },
+      {
+        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/key-management"
+          },
+          {
+            "title": "Azure Key Vault",
+            "path": "secrets/key-management/azurekeyvault"
+          },
+          {
+            "title": "AWS KMS",
+            "path": "secrets/key-management/awskms"
+          }
+        ]
+      },
+      {
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secrets/kmip"
+      },
+      {
+        "title": "Key/Value",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/kv"
+          },
+          {
+            "title": "K/V Version 1",
+            "path": "secrets/kv/kv-v1"
+          },
+          {
+            "title": "K/V Version 2",
+            "path": "secrets/kv/kv-v2"
+          }
+        ]
+      },
+      {
+        "title": "Identity",
+        "path": "secrets/identity"
+      },
+      {
+        "title": "MongoDB Atlas",
+        "path": "secrets/mongodbatlas"
+      },
+      {
+        "title": "Nomad",
+        "path": "secrets/nomad"
+      },
+      {
+        "title": "OpenLDAP",
+        "path": "secrets/openldap"
+      },
+      {
+        "title": "PKI (Certificates)",
+        "path": "secrets/pki"
+      },
+      {
+        "title": "RabbitMQ",
+        "path": "secrets/rabbitmq"
+      },
+      {
+        "title": "SSH",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/ssh"
+          },
+          {
+            "title": "Signed Certificates",
+            "path": "secrets/ssh/signed-ssh-certificates"
+          },
+          {
+            "title": "SSH OTP",
+            "path": "secrets/ssh/one-time-ssh-passwords"
+          },
+          {
+            "title": "Dynamic Key",
+            "path": "secrets/ssh/dynamic-ssh-keys"
+          }
+        ]
+      },
+      {
+        "title": "Terraform Cloud",
+        "path": "secrets/terraform"
+      },
+      {
+        "title": "TOTP",
+        "path": "secrets/totp"
+      },
+      {
+        "title": "Transform <sup>ENTERPRISE</sup>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/transform"
+          },
+          {
+            "title": "FF3-1 Tweak Usage",
+            "path": "secrets/transform/ff3-tweak-details",
+            "hidden": true
+          },
+          {
+            "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
+            "path": "secrets/transform/tokenization"
+          }
+        ]
+      },
+      {
+        "title": "Transit",
+        "path": "secrets/transit"
+      },
+      {
+        "title": "Venafi (Certificates)",
+        "path": "secrets/venafi"
+      }
+    ]
+  },
+  {
+    "title": "Auth Methods",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "auth"
+      },
+      {
+        "title": "AppRole",
+        "path": "auth/approle"
+      },
+      {
+        "title": "AliCloud",
+        "path": "auth/alicloud"
+      },
+      {
+        "title": "AWS",
+        "path": "auth/aws"
+      },
+      {
+        "title": "Azure",
+        "path": "auth/azure"
+      },
+      {
+        "title": "Cloud Foundry",
+        "path": "auth/cf"
+      },
+      {
+        "title": "GitHub",
+        "path": "auth/github"
+      },
+      {
+        "title": "Google Cloud",
+        "path": "auth/gcp"
+      },
+      {
+        "title": "JWT/OIDC",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/jwt"
+          },
+          {
+            "title": "OIDC Providers",
+            "path": "auth/jwt/oidc_providers"
+          }
+        ]
+      },
+      {
+        "title": "Kerberos",
+        "path": "auth/kerberos"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "auth/kubernetes"
+      },
+      {
+        "title": "LDAP",
+        "path": "auth/ldap"
+      },
+      {
+        "title": "Oracle Cloud Infrastructure",
+        "path": "auth/oci"
+      },
+      {
+        "title": "Okta",
+        "path": "auth/okta"
+      },
+      {
+        "title": "RADIUS",
+        "path": "auth/radius"
+      },
+      {
+        "title": "TLS Certificates",
+        "path": "auth/cert"
+      },
+      {
+        "title": "Tokens",
+        "path": "auth/token"
+      },
+      {
+        "title": "Username &amp; Password",
+        "path": "auth/userpass"
+      },
+      {
+        "divider": true
+      },
+      {
+        "title": "App ID <sup>DEPRECATED</sup>",
+        "path": "auth/app-id"
+      },
+      {
+        "title": "MFA <sup>LEGACY / UNSUPPORTED</sup>",
+        "path": "auth/mfa"
+      }
+    ]
+  },
+  {
+    "title": "Audit Devices",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "audit"
+      },
+      {
+        "title": "File",
+        "path": "audit/file"
+      },
+      {
+        "title": "Syslog",
+        "path": "audit/syslog"
+      },
+      {
+        "title": "Socket",
+        "path": "audit/socket"
+      }
+    ]
+  },
+  {
+    "title": "Plugin Backends",
+    "path": "plugin"
+  },
+  {
+    "title": "Plugin Portal",
+    "path": "plugin-portal"
+  },
+
+  {
+    "title": "Vault Integration Program",
+    "path": "partnerships"
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Platforms",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "platform"
+      },
+      {
+        "title": "Kubernetes",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/k8s"
+          },
+          {
+            "title": "Helm Chart",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/helm"
+              },
+              {
+                "title": "Running Vault",
+                "path": "platform/k8s/helm/run"
+              },
+              {
+                "title": "Enterprise Licensing",
+                "path": "platform/k8s/helm/enterprise"
+              },
+              {
+                "title": "Running Vault on OpenShift",
+                "path": "platform/k8s/helm/openshift"
+              },
+              {
+                "title": "Configuration",
+                "path": "platform/k8s/helm/configuration"
+              },
+              {
+                "title": "Examples",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "platform/k8s/helm/examples"
+                  },
+                  {
+                    "title": "Development",
+                    "path": "platform/k8s/helm/examples/development"
+                  },
+                  {
+                    "title": "Standalone with Load Balanced UI",
+                    "path": "platform/k8s/helm/examples/standalone-load-balanced-ui"
+                  },
+                  {
+                    "title": "Standalone with TLS",
+                    "path": "platform/k8s/helm/examples/standalone-tls"
+                  },
+                  {
+                    "title": "Standalone with Audit Storage",
+                    "path": "platform/k8s/helm/examples/standalone-audit"
+                  },
+                  {
+                    "title": "External Vault",
+                    "path": "platform/k8s/helm/examples/external"
+                  },
+                  {
+                    "title": "Using Kubernetes Auth Method",
+                    "path": "platform/k8s/helm/examples/kubernetes-auth"
+                  },
+                  {
+                    "title": "HA Cluster with Consul",
+                    "path": "platform/k8s/helm/examples/ha-with-consul"
+                  },
+                  {
+                    "title": "HA Cluster with Raft",
+                    "path": "platform/k8s/helm/examples/ha-with-raft"
+                  },
+                  {
+                    "title": "HA Enterprise Cluster with Raft",
+                    "path": "platform/k8s/helm/examples/enterprise-with-raft"
+                  },
+                  {
+                    "title": "HA Enterprise DR Clusters with Raft",
+                    "path": "platform/k8s/helm/examples/enterprise-dr-with-raft"
+                  },
+                  {
+                    "title": "HA Enterprise Performance Clusters with Raft",
+                    "path": "platform/k8s/helm/examples/enterprise-perf-with-raft"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS Configuration",
+                    "path": "platform/k8s/helm/examples/injector-tls"
+                  },
+                  {
+                    "title": "Vault Agent Injector TLS with Cert-Manager",
+                    "path": "platform/k8s/helm/examples/injector-tls-cert-manager"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Agent Injector",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/injector"
+              },
+              {
+                "title": "Annotations",
+                "path": "platform/k8s/injector/annotations"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/injector/installation"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/injector/examples"
+              }
+            ]
+          },
+          {
+            "title": "Vault CSI Provider",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/csi"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/csi/installation"
+              },
+              {
+                "title": "Configurations",
+                "path": "platform/k8s/csi/configurations"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/csi/examples"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "AWS Marketplace",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/aws-mp"
+          },
+          {
+            "title": "Running Vault",
+            "path": "platform/aws-mp/run"
+          }
+        ]
+      },
+      {
+        "title": "ServiceNow",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/servicenow"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/servicenow/installation"
+          },
+          {
+            "title": "Configuration",
+            "path": "platform/servicenow/configuration"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/servicenow/troubleshooting"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Versus Other Software",
+    "path": "vs",
+    "hidden": true
+  },
+  {
+    "title": "Upgrade Guides",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "upgrading"
+      },
+      {
+        "title": "Upgrade Plugins",
+        "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.9.0",
+        "path": "upgrading/upgrade-to-1.9.0",
+        "hidden": true
+      },
+      {
+        "title": "Upgrade to 1.8.0",
+        "path": "upgrading/upgrade-to-1.8.0"
+      },
+      {
+        "title": "Upgrade to 1.7.0",
+        "path": "upgrading/upgrade-to-1.7.0"
+      },
+      {
+        "title": "Upgrade to 1.6.3",
+        "path": "upgrading/upgrade-to-1.6.3"
+      },
+      {
+        "title": "Upgrade to 1.6.2",
+        "path": "upgrading/upgrade-to-1.6.2"
+      },
+      {
+        "title": "Upgrade to 1.6.1",
+        "path": "upgrading/upgrade-to-1.6.1"
+      },
+      {
+        "title": "Upgrade to 1.6.0",
+        "path": "upgrading/upgrade-to-1.6.0"
+      },
+      {
+        "title": "Upgrade to 1.5.3",
+        "path": "upgrading/upgrade-to-1.5.3"
+      },
+      {
+        "title": "Upgrade to 1.5.2",
+        "path": "upgrading/upgrade-to-1.5.2"
+      },
+      {
+        "title": "Upgrade to 1.5.1",
+        "path": "upgrading/upgrade-to-1.5.1"
+      },
+      {
+        "title": "Upgrade to 1.5.0",
+        "path": "upgrading/upgrade-to-1.5.0"
+      },
+      {
+        "title": "Upgrade to 1.4.6",
+        "path": "upgrading/upgrade-to-1.4.6"
+      },
+      {
+        "title": "Upgrade to 1.4.5",
+        "path": "upgrading/upgrade-to-1.4.5"
+      },
+      {
+        "title": "Upgrade to 1.4.4",
+        "path": "upgrading/upgrade-to-1.4.4"
+      },
+      {
+        "title": "Upgrade to 1.4.1",
+        "path": "upgrading/upgrade-to-1.4.1"
+      },
+      {
+        "title": "Upgrade to 1.4.0",
+        "path": "upgrading/upgrade-to-1.4.0"
+      },
+      {
+        "title": "Upgrade to 1.3.10",
+        "path": "upgrading/upgrade-to-1.3.10"
+      },
+      {
+        "title": "Upgrade to 1.3.9",
+        "path": "upgrading/upgrade-to-1.3.9"
+      },
+      {
+        "title": "Upgrade to 1.3.8",
+        "path": "upgrading/upgrade-to-1.3.8"
+      },
+      {
+        "title": "Upgrade to 1.3.5",
+        "path": "upgrading/upgrade-to-1.3.5"
+      },
+      {
+        "title": "Upgrade to 1.3.4",
+        "path": "upgrading/upgrade-to-1.3.4"
+      },
+      {
+        "title": "Upgrade to 1.3.3",
+        "path": "upgrading/upgrade-to-1.3.3"
+      },
+      {
+        "title": "Upgrade to 1.3.2",
+        "path": "upgrading/upgrade-to-1.3.2"
+      },
+      {
+        "title": "Upgrade to 1.3.0",
+        "path": "upgrading/upgrade-to-1.3.0"
+      },
+      {
+        "title": "Upgrade to 1.2.7",
+        "path": "upgrading/upgrade-to-1.2.7"
+      },
+      {
+        "title": "Upgrade to 1.2.6",
+        "path": "upgrading/upgrade-to-1.2.6"
+      },
+      {
+        "title": "Upgrade to 1.2.5",
+        "path": "upgrading/upgrade-to-1.2.5"
+      },
+      {
+        "title": "Upgrade to 1.2.4",
+        "path": "upgrading/upgrade-to-1.2.4"
+      },
+      {
+        "title": "Upgrade to 1.2.1",
+        "path": "upgrading/upgrade-to-1.2.1"
+      },
+      {
+        "title": "Upgrade to 1.2.0",
+        "path": "upgrading/upgrade-to-1.2.0"
+      },
+      {
+        "title": "Upgrade to 1.1.2",
+        "path": "upgrading/upgrade-to-1.1.2"
+      },
+      {
+        "title": "Upgrade to 1.1.1",
+        "path": "upgrading/upgrade-to-1.1.1"
+      },
+      {
+        "title": "Upgrade to 1.1.0",
+        "path": "upgrading/upgrade-to-1.1.0"
+      },
+      {
+        "title": "Upgrade to 1.0.0",
+        "path": "upgrading/upgrade-to-1.0.0"
+      },
+      {
+        "title": "Upgrade to 0.11.6",
+        "path": "upgrading/upgrade-to-0.11.6"
+      },
+      {
+        "title": "Upgrade to 0.11.2",
+        "path": "upgrading/upgrade-to-0.11.2"
+      },
+      {
+        "title": "Upgrade to 0.11.0",
+        "path": "upgrading/upgrade-to-0.11.0"
+      },
+      {
+        "title": "Upgrade to 0.10.4",
+        "path": "upgrading/upgrade-to-0.10.4"
+      },
+      {
+        "title": "Upgrade to 0.10.2",
+        "path": "upgrading/upgrade-to-0.10.2"
+      },
+      {
+        "title": "Upgrade to 0.10.0",
+        "path": "upgrading/upgrade-to-0.10.0"
+      },
+      {
+        "title": "Upgrade to 0.9.6",
+        "path": "upgrading/upgrade-to-0.9.6"
+      },
+      {
+        "title": "Upgrade to 0.9.3",
+        "path": "upgrading/upgrade-to-0.9.3"
+      },
+      {
+        "title": "Upgrade to 0.9.2",
+        "path": "upgrading/upgrade-to-0.9.2"
+      },
+      {
+        "title": "Upgrade to 0.9.1",
+        "path": "upgrading/upgrade-to-0.9.1"
+      },
+      {
+        "title": "Upgrade to 0.9.0",
+        "path": "upgrading/upgrade-to-0.9.0"
+      },
+      {
+        "title": "Upgrade to 0.8.0",
+        "path": "upgrading/upgrade-to-0.8.0"
+      },
+      {
+        "title": "Upgrade to 0.7.0",
+        "path": "upgrading/upgrade-to-0.7.0"
+      },
+      {
+        "title": "Upgrade to 0.6.4",
+        "path": "upgrading/upgrade-to-0.6.4"
+      },
+      {
+        "title": "Upgrade to 0.6.3",
+        "path": "upgrading/upgrade-to-0.6.3"
+      },
+      {
+        "title": "Upgrade to 0.6.2",
+        "path": "upgrading/upgrade-to-0.6.2"
+      },
+      {
+        "title": "Upgrade to 0.6.1",
+        "path": "upgrading/upgrade-to-0.6.1"
+      },
+      {
+        "title": "Upgrade to 0.6.0",
+        "path": "upgrading/upgrade-to-0.6.0"
+      },
+      {
+        "title": "Upgrade to 0.5.1",
+        "path": "upgrading/upgrade-to-0.5.1"
+      },
+      {
+        "title": "Upgrade to 0.5.0",
+        "path": "upgrading/upgrade-to-0.5.0"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Release Notes",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "release-notes"
+      },
+      {
+        "title": "1.5.0",
+        "path": "release-notes/1.5.0"
+      },
+      {
+        "title": "1.6.0",
+        "path": "release-notes/1.6.0"
+      },
+      {
+        "title": "1.7.0",
+        "path": "release-notes/1.7.0"
+      },
+      {
+        "title": "1.8.0",
+        "path": "release-notes/1.8.0"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+
+  {
+    "title": "Glossary",
+    "path": "glossary"
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "Vault Enterprise",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "enterprise"
+      },
+      {
+        "title": "License",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/license"
+          },
+          {
+            "title": "Autoloading",
+            "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "FAQ",
+            "path": "enterprise/license/faq"
+          }
+        ]
+      },
+
+      {
+        "title": "Replication",
+        "path": "enterprise/replication"
+      },
+
+      {
+        "title": "HSM Support",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/hsm"
+          },
+          {
+            "title": "Behavioral Changes",
+            "path": "enterprise/hsm/behavior"
+          },
+          {
+            "title": "Security",
+            "path": "enterprise/hsm/security"
+          }
+        ]
+      },
+      {
+        "title": "Automated Integrated Storage Snapshots",
+        "path": "enterprise/automated-integrated-storage-snapshots"
+      },
+      {
+        "title": "Lease Count Quotas",
+        "path": "enterprise/lease-count-quotas"
+      },
+      {
+        "title": "Entropy Augmentation",
+        "path": "enterprise/entropy-augmentation"
+      },
+      {
+        "title": "Seal Wrap / FIPS 140-2",
+        "path": "enterprise/sealwrap"
+      },
+      {
+        "title": "Namespaces",
+        "path": "enterprise/namespaces"
+      },
+      {
+        "title": "Performance Standbys",
+        "path": "enterprise/performance-standby"
+      },
+      {
+        "title": "Eventual Consistency",
+        "path": "enterprise/consistency"
+      },
+      {
+        "title": "Control Groups",
+        "path": "enterprise/control-groups"
+      },
+      {
+        "title": "MFA",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/mfa"
+          },
+          {
+            "title": "Duo MFA",
+            "path": "enterprise/mfa/mfa-duo"
+          },
+          {
+            "title": "Okta MFA",
+            "path": "enterprise/mfa/mfa-okta"
+          },
+          {
+            "title": "PingID MFA",
+            "path": "enterprise/mfa/mfa-pingid"
+          },
+          {
+            "title": "TOTP MFA",
+            "path": "enterprise/mfa/mfa-totp"
+          }
+        ]
+      },
+      {
+        "title": "Sentinel",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/sentinel"
+          },
+          {
+            "title": "Examples",
+            "path": "enterprise/sentinel/examples"
+          },
+          {
+            "title": "Properties",
+            "path": "enterprise/sentinel/properties"
+          }
+        ]
+      }
+    ]
+  }
+]

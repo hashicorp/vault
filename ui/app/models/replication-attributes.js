@@ -1,12 +1,12 @@
 import { match, not } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import attr from 'ember-data/attr';
+import { attr } from '@ember-data/model';
 import Fragment from 'ember-data-model-fragments/fragment';
 
 export default Fragment.extend({
   clusterId: attr('string'),
-  clusterIdDisplay: computed('mode', function() {
-    const clusterId = this.get('clusterId');
+  clusterIdDisplay: computed('clusterId', 'mode', function() {
+    const clusterId = this.clusterId;
     return clusterId ? clusterId.split('-')[0] : null;
   }),
   mode: attr('string'),
@@ -23,11 +23,11 @@ export default Fragment.extend({
   // secondary attrs
   isSecondary: match('mode', /secondary/),
   connection_state: attr('string'),
-  modeForUrl: computed('mode', function() {
-    const mode = this.get('mode');
+  modeForUrl: computed('isPrimary', 'isSecondary', 'mode', function() {
+    const mode = this.mode;
     return mode === 'bootstrapping'
       ? 'bootstrapping'
-      : (this.get('isSecondary') && 'secondary') || (this.get('isPrimary') && 'primary');
+      : (this.isSecondary && 'secondary') || (this.isPrimary && 'primary');
   }),
   modeForHeader: computed('mode', function() {
     const mode = this.mode;
@@ -48,8 +48,8 @@ export default Fragment.extend({
   lastWAL: attr('number'),
   merkleRoot: attr('string'),
   merkleSyncProgress: attr('object'),
-  syncProgress: computed('state', 'merkleSyncProgress', function() {
-    const { state, merkleSyncProgress } = this.getProperties('state', 'merkleSyncProgress');
+  get syncProgress() {
+    const { state, merkleSyncProgress } = this;
     if (state !== 'merkle-sync' || !merkleSyncProgress) {
       return null;
     }
@@ -58,10 +58,10 @@ export default Fragment.extend({
       progress: sync_progress,
       total: sync_total_keys,
     };
-  }).volatile(),
+  },
 
   syncProgressPercent: computed('syncProgress', function() {
-    const syncProgress = this.get('syncProgress');
+    const syncProgress = this.syncProgress;
     if (!syncProgress) {
       return null;
     }
@@ -80,6 +80,6 @@ export default Fragment.extend({
       unsupported: 'Not supported',
     };
 
-    return displays[this.get('mode')] || 'Disabled';
+    return displays[this.mode] || 'Disabled';
   }),
 });

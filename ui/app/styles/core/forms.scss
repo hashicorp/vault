@@ -11,6 +11,11 @@ label {
   }
 }
 
+.masked-font {
+  font-family: obscure, text-security-square;
+  letter-spacing: 2px;
+}
+
 .label {
   color: $grey-darker;
   text-transform: uppercase;
@@ -51,6 +56,10 @@ label {
 .b-checkbox .is-label {
   display: inline;
   margin-left: $size-10;
+}
+
+.b-checkbox > .sub-text {
+  padding-left: 2rem;
 }
 
 .help {
@@ -218,6 +227,7 @@ label {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
     background-color: $ui-gray-100;
+    cursor: not-allowed;
   }
 }
 .field.has-addons {
@@ -310,4 +320,12 @@ label {
   color: $grey;
   position: absolute;
   right: 8px;
+}
+
+fieldset.form-fieldset {
+  border: none;
+}
+
+.has-error-border {
+  border: 1px solid $red-500;
 }

@@ -39,7 +39,7 @@ func TestMakeConfig(t *testing.T) {
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
 				pluginSets: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -65,7 +65,7 @@ func TestMakeConfig(t *testing.T) {
 					MagicCookieValue: "magic_cookie_value",
 				},
 				VersionedPlugins: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -98,7 +98,7 @@ func TestMakeConfig(t *testing.T) {
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
 				pluginSets: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -127,7 +127,7 @@ func TestMakeConfig(t *testing.T) {
 					MagicCookieValue: "magic_cookie_value",
 				},
 				VersionedPlugins: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -162,7 +162,7 @@ func TestMakeConfig(t *testing.T) {
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
 				pluginSets: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -188,7 +188,7 @@ func TestMakeConfig(t *testing.T) {
 					MagicCookieValue: "magic_cookie_value",
 				},
 				VersionedPlugins: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -221,7 +221,7 @@ func TestMakeConfig(t *testing.T) {
 				sha256:  []byte("some_sha256"),
 				env:     []string{"initial=true"},
 				pluginSets: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},
@@ -247,7 +247,7 @@ func TestMakeConfig(t *testing.T) {
 					MagicCookieValue: "magic_cookie_value",
 				},
 				VersionedPlugins: map[int]plugin.PluginSet{
-					1: plugin.PluginSet{
+					1: {
 						"bogus": nil,
 					},
 				},

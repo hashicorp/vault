@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -17,12 +16,12 @@ func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "The organization users must be part of",
 			},
 
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
 are running GitHub Enterprise or an
@@ -32,12 +31,12 @@ API-compatible authentication server.`,
 					Group: "GitHub Options",
 				},
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
@@ -147,7 +146,7 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 	var result config
 	if entry != nil {
 		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, errwrap.Wrapf("error reading configuration: {{err}}", err)
+			return nil, fmt.Errorf("error reading configuration: %w", err)
 		}
 	}
 

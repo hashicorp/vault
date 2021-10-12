@@ -26,3 +26,14 @@ message LogFragment {
 	// indexed by namespace ID
 	map<string,uint64> non_entity_tokens = 3;
 }
+
+message EntityActivityLog {
+	repeated EntityRecord entities = 1;
+}
+
+message TokenCount {
+	map<string,uint64> count_by_namespace_id = 1;
+}
+
+message LogFragmentResponse {
+}

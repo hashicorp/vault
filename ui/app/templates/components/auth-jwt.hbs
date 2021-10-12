@@ -18,21 +18,18 @@
         data-test-role
       />
     </div>
-    <AlertInline @type="info" @message="Leave blank to sign in with the default role if one is configured" />
+    <AlertInline
+      @sizeSmall=true 
+      @paddingTop=true
+      @type="info" 
+      @message="Leave blank to sign in with the default role if one is configured"
+    />
   </div>
   {{#unless this.isOIDC}}
     <div class="field">
       <label for="token" class="is-label">JWT Token</label>
       <div class="control">
-        {{input
-          type="password"
-          value=jwt
-          name="jwt"
-          class="input"
-          autocomplete="off"
-          spellcheck="false"
-          data-test-jwt=true
-        }}
+        <Input @type="password" @value={{jwt}} @name="jwt" class="input" @autocomplete="off" @spellcheck="false" data-test-jwt={{true}} />
       </div>
     </div>
   {{/unless}}

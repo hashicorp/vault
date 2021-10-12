@@ -74,5 +74,4 @@ func TestSysConfigCors(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-
 }

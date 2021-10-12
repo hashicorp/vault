@@ -50,7 +50,7 @@ export default Component.extend({
     // If after decoding it's not b64, we want
     // the original as it was only encoded when we used `readAsDataURL`.
     const fileData = decoded.match(BASE_64_REGEX) ? decoded : b64File;
-    yield this.get('onChange')(this.get('index'), { value: fileData, fileName: filename });
+    yield this.onChange(this.index, { value: fileData, fileName: filename });
   }).withTestWaiter(),
 
   actions: {
@@ -64,12 +64,12 @@ export default Component.extend({
       }
     },
     updateData(e) {
-      const key = this.get('key');
+      const key = this.key;
       set(key, 'value', e.target.value);
-      this.get('onChange')(this.get('index'), this.get('key'));
+      this.onChange(this.index, this.key);
     },
     clearKey() {
-      this.get('onChange')(this.get('index'), { value: '' });
+      this.onChange(this.index, { value: '' });
     },
   },
 });

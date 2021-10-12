@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVDestroyCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVDestroyCommand)(nil)
+var (
+	_ cli.Command             = (*KVDestroyCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVDestroyCommand)(nil)
+)
 
 type KVDestroyCommand struct {
 	*BaseCommand

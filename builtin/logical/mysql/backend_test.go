@@ -160,7 +160,6 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 			testAccStepReadLease(t),
 		},
 	})
-
 }
 
 func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
@@ -193,7 +192,6 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 }
 
 func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
-
 	pathData := make(map[string]interface{})
 	if wildCard == true {
 		pathData = map[string]interface{}{
@@ -211,7 +209,6 @@ func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
 		Path:      "roles/web",
 		Data:      pathData,
 	}
-
 }
 
 func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
@@ -298,10 +295,12 @@ const testRoleWildCard = `
 CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 GRANT SELECT ON *.* TO '{{name}}'@'%';
 `
+
 const testRoleHost = `
 CREATE USER '{{name}}'@'10.1.1.2' IDENTIFIED BY '{{password}}';
 GRANT SELECT ON *.* TO '{{name}}'@'10.1.1.2';
 `
+
 const testRevocationSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'10.1.1.2'; 
 DROP USER '{{name}}'@'10.1.1.2';

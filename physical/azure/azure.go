@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -41,9 +41,11 @@ var _ physical.Backend = (*AzureBackend)(nil)
 
 // NewAzureBackend constructs an Azure backend using a pre-existing
 // bucket. Credentials can be provided to the backend, sourced
-// from the environment, AWS credential files or by IAM role.
+// from the environment, via HCL or by using managed identities.
 func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	name := os.Getenv("AZURE_BLOB_CONTAINER")
+	useMSI := false
+
 	if name == "" {
 		name = conf["container"]
 		if name == "" {
@@ -63,7 +65,8 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if accountKey == "" {
 		accountKey = conf["accountKey"]
 		if accountKey == "" {
-			return nil, fmt.Errorf("'accountKey' must be set")
+			logger.Info("accountKey not set, using managed identity auth")
+			useMSI = true
 		}
 	}
 
@@ -81,33 +84,63 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	var environment azure.Environment
+	var URL *url.URL
 	var err error
 
-	if environmentURL != "" {
-		environment, err = azure.EnvironmentFromURL(environmentURL)
-		if err != nil {
-			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for URL %q: {{err}}",
-				environmentURL)
-			return nil, errwrap.Wrapf(errorMsg, err)
+	testHost := conf["testHost"]
+	switch {
+	case testHost != "":
+		URL = &url.URL{Scheme: "http", Host: testHost, Path: fmt.Sprintf("/%s/%s", accountName, name)}
+	default:
+		if environmentURL != "" {
+			environment, err = azure.EnvironmentFromURL(environmentURL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to look up Azure environment descriptor for URL %q: %w", environmentURL, err)
+			}
+		} else {
+			environment, err = azure.EnvironmentFromName(environmentName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to look up Azure environment descriptor for name %q: %w", environmentName, err)
+			}
 		}
+		URL, err = url.Parse(
+			fmt.Sprintf("https://%s.blob.%s/%s", accountName, environment.StorageEndpointSuffix, name))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Azure client: %w", err)
+		}
+	}
+
+	var credential azblob.Credential
+	if useMSI {
+		authToken, err := getAuthTokenFromIMDS(environment.ResourceIdentifiers.Storage)
+		if err != nil {
+			return nil, fmt.Errorf("failed to obtain auth token from IMDS %q: %w", environmentName, err)
+		}
+
+		credential = azblob.NewTokenCredential(authToken.OAuthToken(), func(c azblob.TokenCredential) time.Duration {
+			err = authToken.Refresh()
+			if err != nil {
+				logger.Error("couldn't refresh token credential", "error", err)
+				return 0
+			}
+
+			expIn, err := authToken.Token().ExpiresIn.Int64()
+			if err != nil {
+				logger.Error("couldn't retrieve jwt claim for 'expiresIn' from refreshed token", "error", err)
+				return 0
+			}
+
+			logger.Debug("token refreshed, new token expires in", "access_token_expiry", expIn)
+			c.SetToken(authToken.OAuthToken())
+
+			// tokens are valid for 23h59m (86399s) by default, refresh after ~21h
+			return time.Duration(int(float64(expIn)*0.9)) * time.Second
+		})
 	} else {
-		environment, err = azure.EnvironmentFromName(environmentName)
+		credential, err = azblob.NewSharedKeyCredential(accountName, accountKey)
 		if err != nil {
-			errorMsg := fmt.Sprintf("failed to look up Azure environment descriptor for name %q: {{err}}",
-				environmentName)
-			return nil, errwrap.Wrapf(errorMsg, err)
+			return nil, fmt.Errorf("failed to create Azure client: %w", err)
 		}
-	}
-
-	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
-	}
-
-	URL, err := url.Parse(
-		fmt.Sprintf("https://%s.blob.%s/%s", accountName, environment.StorageEndpointSuffix, name))
-	if err != nil {
-		return nil, errwrap.Wrapf("failed to create Azure client: {{err}}", err)
 	}
 
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -124,10 +157,10 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			case azblob.ServiceCodeContainerNotFound:
 				_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 				if err != nil {
-					return nil, errwrap.Wrapf(fmt.Sprintf("failed to create %q container: {{err}}", name), err)
+					return nil, fmt.Errorf("failed to create %q container: %w", name, err)
 				}
 			default:
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get properties for container %q: {{err}}", name), err)
+				return nil, fmt.Errorf("failed to get properties for container %q: %w", name, err)
 			}
 		}
 	}
@@ -137,7 +170,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -179,7 +212,9 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
-	res, err := blobURL.Download(ctx, 0, 0, azblob.BlobAccessConditions{}, false)
+	clientOptions := azblob.ClientProvidedKeyOptions{}
+
+	res, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false, clientOptions)
 	if err != nil {
 		var e azblob.StorageError
 		if errors.As(err, &e) {
@@ -187,15 +222,15 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 			case azblob.ServiceCodeBlobNotFound:
 				return nil, nil
 			default:
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to download blob %q: {{err}}", key), err)
+				return nil, fmt.Errorf("failed to download blob %q: %w", key, err)
 			}
 		}
 		return nil, err
 	}
 
 	reader := res.Body(azblob.RetryReaderOptions{})
-
 	defer reader.Close()
+
 	data, err := ioutil.ReadAll(reader)
 
 	ent := &physical.Entry{
@@ -222,7 +257,7 @@ func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 			case azblob.ServiceCodeBlobNotFound:
 				return nil
 			default:
-				return errwrap.Wrapf(fmt.Sprintf("failed to delete blob %q: {{err}}", key), err)
+				return fmt.Errorf("failed to delete blob %q: %w", key, err)
 			}
 		}
 	}
@@ -238,7 +273,7 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
 
-	keys := []string{}
+	var keys []string
 	for marker := (azblob.Marker{}); marker.NotDone(); {
 		listBlob, err := a.container.ListBlobsFlatSegment(ctx, marker, azblob.ListBlobsSegmentOptions{
 			Prefix:     prefix,
@@ -264,4 +299,29 @@ func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error
 
 	sort.Strings(keys)
 	return keys, nil
+}
+
+// getAuthTokenFromIMDS uses the Azure Instance Metadata Service to retrieve a short-lived credential using OAuth
+// more info on this https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview
+func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) {
+	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	if err != nil {
+		return nil, err
+	}
+
+	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := spt.Refresh(); err != nil {
+		return nil, err
+	}
+
+	token := spt.Token()
+	if token.IsZero() {
+		return nil, err
+	}
+
+	return spt, nil
 }

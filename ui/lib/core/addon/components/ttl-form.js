@@ -52,7 +52,7 @@ export default Component.extend({
     ];
   }),
   handleChange() {
-    let { time, unit, seconds } = this.getProperties('time', 'unit', 'seconds');
+    let { time, unit, seconds } = this;
     const ttl = {
       seconds,
       timeString: time + unit,

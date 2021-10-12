@@ -10,6 +10,7 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
+  noMetadataPermissions: false,
   queryParams: {
     page: {
       refreshModel: true,
@@ -73,6 +74,7 @@ export default Route.extend({
     let secretEngine = this.store.peekRecord('secret-engine', backend);
     let type = secretEngine.get('engineType');
     let types = {
+      database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
@@ -86,19 +88,20 @@ export default Route.extend({
     return types[type];
   },
 
-  model(params) {
+  async model(params) {
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
+    const modelType = this.getModelType(backend, params.tab);
 
     return hash({
       secret,
       secrets: this.store
-        .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
+        .lazyPaginatedQuery(modelType, {
           id: secret,
           backend,
           responsePath: 'data.keys',
-          page: params.page,
+          page: params.page || 1,
           pageFilter: params.pageFilter,
         })
         .then(model => {
@@ -108,6 +111,9 @@ export default Route.extend({
         .catch(err => {
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
+            return [];
+          } else if (backendModel.engineType === 'kv' && backendModel.isV2KV) {
+            this.set('noMetadataPermissions', true);
             return [];
           } else {
             // else we're throwing and dealing with this in the error action
@@ -146,16 +152,17 @@ export default Route.extend({
     let model = resolvedModel.secrets;
     let backend = this.enginePathParam();
     let backendModel = this.store.peekRecord('secret-engine', backend);
-    let has404 = this.get('has404');
+    let has404 = this.has404;
+    let noMetadataPermissions = this.noMetadataPermissions;
     // only clear store cache if this is a new model
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
     }
-
     controller.set('hasModel', true);
     controller.setProperties({
       model,
       has404,
+      noMetadataPermissions,
       backend,
       backendModel,
       baseKey: { id: secret },
@@ -171,7 +178,7 @@ export default Route.extend({
       }
       controller.setProperties({
         filter: filter || '',
-        page: model.get('meta.currentPage') || 1,
+        page: model.meta?.currentPage || 1,
       });
     }
   },
@@ -189,6 +196,7 @@ export default Route.extend({
       let secret = this.secretParam();
       let backend = this.enginePathParam();
       let is404 = error.httpStatus === 404;
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       let hasModel = this.controllerFor(this.routeName).get('hasModel');
 
       // this will occur if we've deleted something,

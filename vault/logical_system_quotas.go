@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
@@ -191,6 +192,15 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
 		}
+		// Disallow creation of new quota that has properties similar to an
+		// existing quota.
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
+		if err != nil {
+			return nil, err
+		}
+		if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
+			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
+		}
 
 		// If a quota already exists, fetch and update it.
 		quota, err := b.Core.quotaManager.QuotaByName(qType, name)
@@ -200,24 +210,18 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			// Disallow creation of new quota that has properties similar to an
-			// existing quota.
-			quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
-			if err != nil {
-				return nil, err
-			}
-			if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
-				return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
-			}
-
 			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
 			rlq := quota.(*quotas.RateLimitQuota)
+			// Re-inserting the already indexed object in memdb might cause problems.
+			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
+			rlq = rlq.Clone()
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
+			quota = rlq
 		}
 
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)

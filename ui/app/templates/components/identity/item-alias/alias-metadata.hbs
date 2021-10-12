@@ -1,4 +1,4 @@
-{{#each-in model.metadata as |key value|}}
+{{#each-in @model.metadata as |key value|}}
   <div class="info-table-row is-mobile">
     <div class="is-flex is-fullwidth">
       <div class="column is-one-quarter">
@@ -15,6 +15,6 @@
   </div>
 {{else}}
   <EmptyState
-    @title="No metadata associated with {{model.name}} yet"
+    @title="No metadata associated with {{@model.name}} yet"
   />
 {{/each-in}}

@@ -3,15 +3,14 @@
 package foundationdb
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"bytes"
-	"encoding/binary"
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
@@ -22,7 +21,6 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -53,10 +51,12 @@ var (
 )
 
 // Verify FDBBackend satisfies the correct interfaces
-var _ physical.Backend = (*FDBBackend)(nil)
-var _ physical.Transactional = (*FDBBackend)(nil)
-var _ physical.HABackend = (*FDBBackend)(nil)
-var _ physical.Lock = (*FDBBackendLock)(nil)
+var (
+	_ physical.Backend       = (*FDBBackend)(nil)
+	_ physical.Transactional = (*FDBBackend)(nil)
+	_ physical.HABackend     = (*FDBBackend)(nil)
+	_ physical.Lock          = (*FDBBackendLock)(nil)
+)
 
 // FDBBackend is a physical backend that stores data at a specific
 // prefix within FoundationDB.
@@ -164,7 +164,7 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 
 	fdbApiVersionInt, err := strconv.Atoi(fdbApiVersionStr)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse fdb_api_version parameter: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse fdb_api_version parameter: %w", err)
 	}
 
 	// Check requested FDB API version against minimum required API version
@@ -185,18 +185,18 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	if ok {
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse ha_enabled parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse ha_enabled parameter: %w", err)
 		}
 	}
 
 	instanceUUID, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errwrap.Wrapf("could not generate instance UUID: {{err}}", err)
+		return nil, fmt.Errorf("could not generate instance UUID: %w", err)
 	}
 	logger.Debug("Instance UUID", "uuid", instanceUUID)
 
 	if err := fdb.APIVersion(fdbApiVersionInt); err != nil {
-		return nil, errwrap.Wrapf("failed to set FDB API version: {{err}}", err)
+		return nil, fmt.Errorf("failed to set FDB API version: %w", err)
 	}
 
 	if tlsEnabled {
@@ -206,39 +206,39 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 		if ok {
 			err := opts.SetTLSPassword(tlsPassword)
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to set TLS password: {{err}}", err)
+				return nil, fmt.Errorf("failed to set TLS password: %w", err)
 			}
 		}
 
 		err := opts.SetTLSCaPath(tlsCAFile)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to set TLS CA bundle path: {{err}}", err)
+			return nil, fmt.Errorf("failed to set TLS CA bundle path: %w", err)
 		}
 
 		err = opts.SetTLSCertPath(tlsCertFile)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to set TLS certificate path: {{err}}", err)
+			return nil, fmt.Errorf("failed to set TLS certificate path: %w", err)
 		}
 
 		err = opts.SetTLSKeyPath(tlsKeyFile)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to set TLS key path: {{err}}", err)
+			return nil, fmt.Errorf("failed to set TLS key path: %w", err)
 		}
 
 		err = opts.SetTLSVerifyPeers([]byte(tlsVerifyPeers))
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to set TLS peer verification criteria: {{err}}", err)
+			return nil, fmt.Errorf("failed to set TLS peer verification criteria: %w", err)
 		}
 	}
 
 	db, err := fdb.Open(fdbClusterFile, []byte("DB"))
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to open database with cluster file '%s': {{err}}", fdbClusterFile), err)
+		return nil, fmt.Errorf("failed to open database with cluster file '%s': %w", fdbClusterFile, err)
 	}
 
 	topDir, err := directory.CreateOrOpen(db, dirPath, nil)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to create/open top-level directory '%s': {{err}}", path), err)
+		return nil, fmt.Errorf("failed to create/open top-level directory '%s': %w", path, err)
 	}
 
 	// Setup the backend
@@ -261,7 +261,7 @@ func (f *FDBBackend) incDirsRefcount(tr fdb.Transaction, path string) error {
 	for i := len(pathElements) - 1; i != 0; i-- {
 		dPath, err := decoratePath(strings.Join(pathElements[:i], "/") + "/")
 		if err != nil {
-			return errwrap.Wrapf("error incrementing directories refcount: {{err}}", err)
+			return fmt.Errorf("error incrementing directories refcount: %w", err)
 		}
 
 		// Atomic +1
@@ -286,7 +286,7 @@ func (f *FDBBackend) decDirsRefcount(tr fdb.Transaction, path string) error {
 	for i := len(pathElements) - 1; i != 0; i-- {
 		dPath, err := decoratePath(strings.Join(pathElements[:i], "/") + "/")
 		if err != nil {
-			return errwrap.Wrapf("error decrementing directories refcount: {{err}}", err)
+			return fmt.Errorf("error decrementing directories refcount: %w", err)
 		}
 
 		metaFKey := fdb.Key(concat(f.metaKeysSpace.Bytes(), dPath...))
@@ -305,7 +305,7 @@ func (f *FDBBackend) decDirsRefcount(tr fdb.Transaction, path string) error {
 	for _, todo := range dirsTodo {
 		value, err := todo.future.Get()
 		if err != nil {
-			return errwrap.Wrapf("error getting directory refcount while decrementing: {{err}}", err)
+			return fmt.Errorf("error getting directory refcount while decrementing: %w", err)
 		}
 
 		// The directory entry does not exist; this is not expected
@@ -316,7 +316,7 @@ func (f *FDBBackend) decDirsRefcount(tr fdb.Transaction, path string) error {
 		var count int64
 		err = binary.Read(bytes.NewReader(value), binary.LittleEndian, &count)
 		if err != nil {
-			return errwrap.Wrapf("error reading directory refcount while decrementing: {{err}}", err)
+			return fmt.Errorf("error reading directory refcount while decrementing: %w", err)
 		}
 
 		if count > 1 {
@@ -345,7 +345,7 @@ func (f *FDBBackend) internalPut(tr fdb.Transaction, decoratedPath []byte, path 
 
 	value, err := metaFuture.Get()
 	if err != nil {
-		return errwrap.Wrapf("Put error while getting meta key: {{err}}", err)
+		return fmt.Errorf("Put error while getting meta key: %w", err)
 	}
 
 	if value == nil {
@@ -365,7 +365,7 @@ func (f *FDBBackend) internalClear(tr fdb.Transaction, decoratedPath []byte, pat
 
 	value, err := tr.Get(metaFKey).Get()
 	if err != nil {
-		return errwrap.Wrapf("Delete error while getting meta key: {{err}}", err)
+		return fmt.Errorf("Delete error while getting meta key: %w", err)
 	}
 
 	if value != nil {
@@ -398,7 +398,7 @@ func (f *FDBBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry)
 
 		decoratedPath, err := decoratePath(op.Entry.Key)
 		if err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("could not build decorated path for transaction item %s: {{err}}", op.Entry.Key), err)
+			return fmt.Errorf("could not build decorated path for transaction item %s: %w", op.Entry.Key, err)
 		}
 
 		todo[i] = &TxnTodo{
@@ -418,15 +418,14 @@ func (f *FDBBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry)
 			}
 
 			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("operation %s failed for transaction item %s: {{err}}", txnTodo.op.Operation, txnTodo.op.Entry.Key), err)
+				return nil, fmt.Errorf("operation %s failed for transaction item %s: %w", txnTodo.op.Operation, txnTodo.op.Entry.Key, err)
 			}
 		}
 
 		return nil, nil
 	})
-
 	if err != nil {
-		return errwrap.Wrapf("transaction failed: {{err}}", err)
+		return fmt.Errorf("transaction failed: %w", err)
 	}
 
 	return nil
@@ -438,7 +437,7 @@ func (f *FDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 
 	decoratedPath, err := decoratePath(entry.Key)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("could not build decorated path to put item %s: {{err}}", entry.Key), err)
+		return fmt.Errorf("could not build decorated path to put item %s: %w", entry.Key, err)
 	}
 
 	_, err = f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
@@ -451,7 +450,7 @@ func (f *FDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	})
 
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("put failed for item %s: {{err}}", entry.Key), err)
+		return fmt.Errorf("put failed for item %s: %w", entry.Key, err)
 	}
 
 	return nil
@@ -464,7 +463,7 @@ func (f *FDBBackend) Get(ctx context.Context, key string) (*physical.Entry, erro
 
 	decoratedPath, err := decoratePath(key)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("could not build decorated path to get item %s: {{err}}", key), err)
+		return nil, fmt.Errorf("could not build decorated path to get item %s: %w", key, err)
 	}
 
 	fkey := fdb.Key(concat(f.dataSpace.Bytes(), decoratedPath...))
@@ -477,9 +476,8 @@ func (f *FDBBackend) Get(ctx context.Context, key string) (*physical.Entry, erro
 
 		return value, nil
 	})
-
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("get failed for item %s: {{err}}", key), err)
+		return nil, fmt.Errorf("get failed for item %s: %w", key, err)
 	}
 	if value.([]byte) == nil {
 		return nil, nil
@@ -497,7 +495,7 @@ func (f *FDBBackend) Delete(ctx context.Context, key string) error {
 
 	decoratedPath, err := decoratePath(key)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("could not build decorated path to delete item %s: {{err}}", key), err)
+		return fmt.Errorf("could not build decorated path to delete item %s: %w", key, err)
 	}
 
 	_, err = f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
@@ -510,7 +508,7 @@ func (f *FDBBackend) Delete(ctx context.Context, key string) error {
 	})
 
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("delete failed for item %s: {{err}}", key), err)
+		return fmt.Errorf("delete failed for item %s: %w", key, err)
 	}
 
 	return nil
@@ -526,7 +524,7 @@ func (f *FDBBackend) List(ctx context.Context, prefix string) ([]string, error) 
 
 	decoratedPrefix, err := decoratePrefix(prefix)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("could not build decorated path to list prefix %s: {{err}}", prefix), err)
+		return nil, fmt.Errorf("could not build decorated path to list prefix %s: %w", prefix, err)
 	}
 
 	// The beginning of the range is /\x02foo/\x02bar/\x01 (the decorated prefix) to list foo/bar/
@@ -551,9 +549,8 @@ func (f *FDBBackend) List(ctx context.Context, prefix string) ([]string, error) 
 
 		return dirList, nil
 	})
-
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("could not list prefix %s: {{err}}", prefix), err)
+		return nil, fmt.Errorf("could not list prefix %s: %w", prefix, err)
 	}
 
 	return content.([]string), nil
@@ -637,7 +634,7 @@ func (fl *FDBBackendLock) getLockContent(tr fdb.Transaction) (*FDBBackendLockCon
 
 	content, err := unpackLock(tupleContent)
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to unpack lock %s: {{err}}", fl.key), err)
+		return nil, fmt.Errorf("failed to unpack lock %s: %w", fl.key, err)
 	}
 
 	return content, nil
@@ -659,14 +656,14 @@ func (fl *FDBBackendLock) acquireTryLock(acquired chan struct{}, errors chan err
 	wonTheRace, err := fl.f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		tupleContent, err := tr.Get(fl.fkey).Get()
 		if err != nil {
-			return nil, errwrap.Wrapf("could not read lock: {{err}}", err)
+			return nil, fmt.Errorf("could not read lock: %w", err)
 		}
 
 		// Lock exists
 		if tupleContent != nil {
 			content, err := unpackLock(tupleContent)
 			if err != nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to unpack lock %s: {{err}}", fl.key), err)
+				return nil, fmt.Errorf("failed to unpack lock %s: %w", fl.key, err)
 			}
 
 			if fl.isOwned(content) {
@@ -690,7 +687,6 @@ func (fl *FDBBackendLock) acquireTryLock(acquired chan struct{}, errors chan err
 
 		return true, nil
 	})
-
 	if err != nil {
 		errors <- err
 		return false, err
@@ -752,7 +748,6 @@ func (fl *FDBBackendLock) maintainLock(lost <-chan struct{}) {
 
 				return nil, nil
 			})
-
 			if err != nil {
 				fl.f.logger.Error("lock maintain", "error", err)
 			}
@@ -789,7 +784,6 @@ func (fl *FDBBackendLock) watchLock(lost chan struct{}) {
 
 			return future, nil
 		})
-
 		if err != nil {
 			fl.f.logger.Error("lock watch", "error", err)
 			break
@@ -847,7 +841,7 @@ func (fl *FDBBackendLock) Unlock() error {
 	_, err := fl.f.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		content, err := fl.getLockContent(tr)
 		if err != nil {
-			return nil, errwrap.Wrapf("could not get lock content: {{err}}", err)
+			return nil, fmt.Errorf("could not get lock content: %w", err)
 		}
 
 		// We don't own the lock
@@ -859,9 +853,8 @@ func (fl *FDBBackendLock) Unlock() error {
 
 		return nil, nil
 	})
-
 	if err != nil {
-		return errwrap.Wrapf("unlock failed: {{err}}", err)
+		return fmt.Errorf("unlock failed: %w", err)
 	}
 
 	return nil
@@ -871,14 +864,13 @@ func (fl *FDBBackendLock) Value() (bool, string, error) {
 	tupleContent, err := fl.f.db.ReadTransact(func(rtr fdb.ReadTransaction) (interface{}, error) {
 		tupleContent, err := rtr.Get(fl.fkey).Get()
 		if err != nil {
-			return nil, errwrap.Wrapf("could not read lock: {{err}}", err)
+			return nil, fmt.Errorf("could not read lock: %w", err)
 		}
 
 		return tupleContent, nil
 	})
-
 	if err != nil {
-		return false, "", errwrap.Wrapf(fmt.Sprintf("get lock value failed for lock %s: {{err}}", fl.key), err)
+		return false, "", fmt.Errorf("get lock value failed for lock %s: %w", fl.key, err)
 	}
 	if tupleContent.([]byte) == nil {
 		return false, "", nil
@@ -886,7 +878,7 @@ func (fl *FDBBackendLock) Value() (bool, string, error) {
 
 	content, err := unpackLock(tupleContent.([]byte))
 	if err != nil {
-		return false, "", errwrap.Wrapf(fmt.Sprintf("get lock value failed to unpack lock %s: {{err}}", fl.key), err)
+		return false, "", fmt.Errorf("get lock value failed to unpack lock %s: %w", fl.key, err)
 	}
 
 	return true, content.value, nil

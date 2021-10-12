@@ -1,10 +1,8 @@
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import attachCapabilities from 'vault/lib/attach-capabilities';
-
-const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
@@ -35,10 +33,10 @@ const TWEAK_SOURCE = [
   },
 ];
 
-const Model = DS.Model.extend({
+const ModelExport = Model.extend({
   useOpenAPI: false,
   name: attr('string', {
-    // TODO: make this required for making a transformation
+    // CBS TODO: make this required for making a transformation
     label: 'Name',
     fieldValue: 'id',
     readOnly: true,
@@ -55,7 +53,7 @@ const Model = DS.Model.extend({
     defaultValue: 'supplied',
     label: 'Tweak source',
     possibleValues: TWEAK_SOURCE,
-    subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // TODO: I do not include the link here.  Need to figure out the best way to approach this.
+    subText: `A tweak value is used when performing FPE transformations. This can be supplied, generated, or internal.`, // CBS TODO: I do not include the link here.  Need to figure out the best way to approach this.
   }),
   masking_character: attr('string', {
     characterLimit: 1,
@@ -66,7 +64,7 @@ const Model = DS.Model.extend({
   template: attr('array', {
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
-    label: 'Template', // TODO: make this required for making a transformation
+    label: 'Template', // CBS TODO: make this required for making a transformation
     models: ['transform/template'],
     selectLimit: 1,
     onlyAllowExisting: true,
@@ -89,7 +87,7 @@ const Model = DS.Model.extend({
     return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
   }),
   transformFieldAttrs: computed('transformAttrs', function() {
-    return expandAttributeMeta(this, this.get('transformAttrs'));
+    return expandAttributeMeta(this, this.transformAttrs);
   }),
 
   backend: attr('string', {
@@ -97,6 +95,6 @@ const Model = DS.Model.extend({
   }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   updatePath: apiPath`${'backend'}/transformation/${'id'}`,
 });

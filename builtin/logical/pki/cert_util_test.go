@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"testing"
-
 	"strings"
+	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -163,30 +162,104 @@ func TestPki_PermitFQDNs(t *testing.T) {
 	var b backend
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
-	apiData := &framework.FieldData{
-		Schema: fields,
-		Raw: map[string]interface{}{
-			"common_name": "example.com.",
-			"ttl":         3600,
+	cases := map[string]struct {
+		input    *inputBundle
+		expectedDnsNames []string
+		expectedEmails []string
+	}{
+		"base valid case": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "example.com.",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowAnyName:     true,
+					MaxTTL:           3600,
+					EnforceHostnames: true,
+				},
+			},
+			expectedDnsNames: []string{"example.com."},
+			expectedEmails: []string{},
+		},
+		"case insensitivity validation": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "Example.Net",
+						"alt_names":   "eXaMPLe.COM",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"example.net", "EXAMPLE.COM"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
+			expectedEmails: []string{},
+		},
+		"case email as AllowedDomain with bare domains": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "test@testemail.com",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"test@testemail.com"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{},
+			expectedEmails: []string{"test@testemail.com"},
+		},
+		"case email common name with bare domains": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "test@testemail.com",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"testemail.com"},
+					AllowBareDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{},
+			expectedEmails: []string{"test@testemail.com"},
 		},
 	}
-	input := &inputBundle{
-		apiData: apiData,
-		role: &roleEntry{
-			AllowAnyName:     true,
-			MaxTTL:           3600,
-			EnforceHostnames: true,
-		},
-	}
-	cb, err := generateCreationBundle(&b, input, nil, nil)
-	if err != nil {
-		t.Fatalf("Error: %v", err)
-	}
 
-	expected := []string{"example.com."}
-	actual := cb.Params.DNSNames
+	for name, testCase := range cases {
+		t.Run(name, func(t *testing.T) {
+			cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			if err != nil {
+				t.Fatalf("Error: %v", err)
+			}
 
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("Expected %v, got %v", expected, actual)
+			actualDnsNames := cb.Params.DNSNames
+
+			if !reflect.DeepEqual(testCase.expectedDnsNames, actualDnsNames) {
+				t.Fatalf("Expected dns names %v, got %v", testCase.expectedDnsNames, actualDnsNames)
+			}
+
+			actualEmails := cb.Params.EmailAddresses
+
+			if !reflect.DeepEqual(testCase.expectedEmails, actualEmails) {
+				t.Fatalf("Expected email addresses %v, got %v", testCase.expectedEmails, actualEmails)
+			}
+		})
 	}
 }

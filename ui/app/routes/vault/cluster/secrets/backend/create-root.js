@@ -36,15 +36,23 @@ export default EditBase.extend({
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
     if (modelType === 'transform') {
-      modelType = transformModel(transition.queryParams);
+      modelType = transformModel(transition.to.queryParams);
+    }
+    if (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role') {
+      modelType = 'database/role';
     }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
-      if (this.get('wizard.featureState') === 'details' && this.get('wizard.componentState') === 'transit') {
-        this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', 'transit');
+      if (this.wizard.featureState === 'details' && this.wizard.componentState === 'transit') {
+        this.wizard.transitionFeatureMachine('details', 'CONTINUE', 'transit');
       }
       return this.store.createRecord(modelType);
     }
-
+    // create record in capabilities that checks for access to create metadata
+    // this record is then maybeQueryRecord in the component secret-create-or-update
+    if (modelType === 'secret-v2') {
+      // only check for kv2 secrets
+      this.store.findRecord('capabilities', `${backend}/metadata/`);
+    }
     return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },
 

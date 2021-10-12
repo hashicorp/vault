@@ -51,7 +51,6 @@ func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 
 // ParseLogFormat parses the log format from the provided string.
 func ParseLogFormat(format string) (LogFormat, error) {
-
 	switch strings.ToLower(strings.TrimSpace(format)) {
 	case "":
 		return UnspecifiedFormat, nil

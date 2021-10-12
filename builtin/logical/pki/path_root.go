@@ -2,18 +2,23 @@ package pki
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"golang.org/x/crypto/ed25519"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -100,9 +105,13 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 		},
 
 		Fields: map[string]*framework.FieldSchema{
-			"certificate": &framework.FieldSchema{
+			"certificate": {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
+			},
+			"allow_different_signature_algorithm": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `If true, allow the public key type of the signer to differ from the self issued certificate.`,
 			},
 		},
 
@@ -146,7 +155,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := generateCert(ctx, b, input, nil, true)
+	parsedBundle, err := generateCert(ctx, b, input, nil, true, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -158,7 +167,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
 	resp := &logical.Response{
@@ -221,7 +230,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
+		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
 
 	// For ease of later use, also store just the certificate at a known
@@ -314,17 +323,17 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 	}
 
 	if err := parsedBundle.Verify(); err != nil {
-		return nil, errwrap.Wrapf("verification of parsed bundle failed: {{err}}", err)
+		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
 	}
 
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw cert bundle to cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
 	resp := &logical.Response{
@@ -371,7 +380,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to store certificate locally: {{err}}", err)
+		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
@@ -418,7 +427,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
-		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
+		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
 	}
 
 	urls := &certutil.URLEntries{}
@@ -429,9 +438,28 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
 
+	// If the requested signature algorithm isn't the same as the signing certificate, and
+	// the user has requested a cross-algorithm signature, reset the template's signing algorithm
+	// to that of the signing key
+	signingPubType, signingAlgorithm, err := publicKeyType(signingBundle.Certificate.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("error determining signing certificate algorithm type: %e", err)
+	}
+	certPubType, _, err := publicKeyType(cert.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("error determining template algorithm type: %e", err)
+	}
+
+	if signingPubType != certPubType {
+		b, ok := data.GetOk("allow_different_signature_algorithm")
+		if ok && b.(bool) {
+			cert.SignatureAlgorithm = signingAlgorithm
+		}
+	}
+
 	newCert, err := x509.CreateCertificate(rand.Reader, cert, signingBundle.Certificate, cert.PublicKey, signingBundle.PrivateKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("error signing self-issued certificate: {{err}}", err)
+		return nil, fmt.Errorf("error signing self-issued certificate: %w", err)
 	}
 	if len(newCert) == 0 {
 		return nil, fmt.Errorf("nil cert was created when signing self-issued certificate")
@@ -447,6 +475,34 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 			"issuing_ca":  signingCB.Certificate,
 		},
 	}, nil
+}
+
+// Adapted from similar code in https://github.com/golang/go/blob/4a4221e8187189adcc6463d2d96fe2e8da290132/src/crypto/x509/x509.go#L1342,
+// may need to be updated in the future.
+func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAlgo x509.SignatureAlgorithm, err error) {
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		pubType = x509.RSA
+		sigAlgo = x509.SHA256WithRSA
+	case *ecdsa.PublicKey:
+		pubType = x509.ECDSA
+		switch pub.Curve {
+		case elliptic.P224(), elliptic.P256():
+			sigAlgo = x509.ECDSAWithSHA256
+		case elliptic.P384():
+			sigAlgo = x509.ECDSAWithSHA384
+		case elliptic.P521():
+			sigAlgo = x509.ECDSAWithSHA512
+		default:
+			err = errors.New("x509: unknown elliptic curve")
+		}
+	case ed25519.PublicKey:
+		pubType = x509.Ed25519
+		sigAlgo = x509.PureEd25519
+	default:
+		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
+	}
+	return
 }
 
 const pathGenerateRootHelpSyn = `

@@ -7,7 +7,7 @@ export default create({
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
   keyType: fillable('[data-test-input="keyType"]'),
   defaultUser: fillable('[data-test-input="defaultUser"]'),
-  toggleMore: clickable('[data-test-toggle-more]'),
+  toggleMore: clickable('[data-test-toggle-group="Options"]'),
   name: fillable('[data-test-input="name"]'),
   CIDR: fillable('[data-test-input="cidrList"]'),
   save: clickable('[data-test-role-ssh-create]'),

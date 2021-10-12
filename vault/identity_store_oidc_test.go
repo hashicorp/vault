@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +19,164 @@ import (
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
+
+// TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
+// without a key parameter
+func TestOIDC_Path_OIDC_RoleNoKeyParameter(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test role "test-role1" without a key param -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"the key parameter is required": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDC_RoleNilKeyEntry tests that a role cannot be created when
+// a key parameter is provided but the key does not exist
+func TestOIDC_Path_OIDC_RoleNilKeyEntry(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test role "test-role1" with a non-existent key -- should fail
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+	// validate error message
+	expectedStrings := map[string]interface{}{
+		"cannot find key \"test-key\"": true,
+	}
+	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+}
+
+// TestOIDC_Path_OIDCRole_UpdateNoKey test that we cannot update a role without
+// prividing a key param
+func TestOIDC_Path_OIDCRole_UpdateNoKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+			"rotation_period":  "2m",
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role1" with a valid key -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": "1m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-role1" without prividing a key param -- should succeed
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"ttl": "2m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-role1" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"key":       "test-key",
+		"ttl":       int64(120),
+		"template":  "",
+		"client_id": resp.Data["client_id"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+// TestOIDC_Path_OIDCRole_UpdateEmptyKey test that we cannot update a role with an
+// empty key
+func TestOIDC_Path_OIDCRole_UpdateEmptyKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test role "test-role1" with a valid key -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-role1" with valid parameters -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"key": "",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+
+	// Read "test-role1" again and validate
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
+	expected := map[string]interface{}{
+		"key":       "test-key",
+		"ttl":       int64(86400),
+		"template":  "",
+		"client_id": resp.Data["client_id"],
+	}
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+}
 
 // TestOIDC_Path_OIDCRoleRole tests CRUD operations for roles
 func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
@@ -110,6 +270,48 @@ func TestOIDC_Path_OIDCRoleRole(t *testing.T) {
 	}
 	if respReadTestRole1AfterDelete != nil {
 		t.Fatalf("Expected role to have been deleted but read response was:\n%#v", respReadTestRole1AfterDelete)
+	}
+}
+
+// TestOIDC_Path_OIDCRole_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDCRole_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": int64(60),
+		},
+		Storage: storage,
+	})
+
+	// Create a test role "test-role1" with a ttl longer than the
+	// verification_ttl -- should fail with error
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": int64(3600),
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+
+	// Read "test-role1"
+	respReadTestRole1, err3 := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role1",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	// Ensure that "test-role1" was not created
+	expectSuccess(t, respReadTestRole1, err3)
+	if respReadTestRole1 != nil {
+		t.Fatalf("Expected a nil response but instead got:\n%#v", respReadTestRole1)
 	}
 }
 
@@ -253,7 +455,7 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage: storage,
 	})
 	expectSuccess(t, resp, err)
-	//fmt.Printf("resp is:\n%#v", resp)
+	// fmt.Printf("resp is:\n%#v", resp)
 
 	// Delete test-key -- should fail because test-role depends on test-key
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -282,6 +484,72 @@ func TestOIDC_Path_OIDCKeyKey(t *testing.T) {
 		Storage:   storage,
 	})
 	expectSuccess(t, resp, err)
+}
+
+// TestOIDC_Path_OIDCKey_InvalidTokenTTL tests the TokenTTL validation
+func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Create a test key "test-key" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Create a role that depends on test key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/allowed-test-role",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+			"ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update "test-key" -- should fail since allowed-test-role ttl is less than 2m
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"rotation_period":    "10m",
+			"verification_ttl":   "2m",
+			"allowed_client_ids": "allowed-test-role",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
+
+	// Create a client that depends on test key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key":          "test-key",
+			"id_token_ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update test key "test-key" -- should fail since id_token_ttl is greater than 2m
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
 }
 
 // TestOIDC_Path_OIDCKey tests the List operation for keys
@@ -335,6 +603,40 @@ func TestOIDC_Path_OIDCKey(t *testing.T) {
 	expectStrings(t, respListKeyAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
+// TestOIDC_Path_OIDCKey_DeleteWithExistingClient tests that a key cannot be
+// deleted if it is referenced by an existing client
+func TestOIDC_Path_OIDCKey_DeleteWithExistingClient(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	storage := &logical.InmemStorage{}
+
+	// Prepare test key test-key
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+	})
+
+	// Create a test client "test-client" -- should succeed
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+	})
+	expectSuccess(t, resp, err)
+
+	// Delete test key "test-key" -- should fail
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectError(t, resp, err)
+}
+
 // TestOIDC_PublicKeys tests that public keys are updated by
 // key creation, rotation, and deletion
 func TestOIDC_PublicKeys(t *testing.T) {
@@ -349,7 +651,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key
+	// .well-known/keys should contain 2 public keys
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
@@ -359,8 +661,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	// parse response
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// rotate test-key a few times, each rotate should increase the length of public keys returned
@@ -378,7 +680,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// .well-known/keys should contain 3 public keys
+	// .well-known/keys should contain 4 public keys
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
 		Operation: logical.ReadOperation,
@@ -387,8 +689,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 3 {
-		t.Fatalf("expected 3 public keys but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 4 {
+		t.Fatalf("expected 4 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 
 	// create another named key
@@ -405,7 +707,7 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key, all of the public keys
+	// .well-known/keys should contain 2 public key, all of the public keys
 	// from named key "test-key" should have been deleted
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/.well-known/keys",
@@ -415,8 +717,8 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	expectSuccess(t, resp, err)
 	// parse response
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public keys but instead got %d", len(responseJWKS.Keys))
+	if len(responseJWKS.Keys) != 2 {
+		t.Fatalf("expected 2 public keys but instead got %d", len(responseJWKS.Keys))
 	}
 }
 
@@ -531,13 +833,24 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
-	// Validate the signature
-	claims := &jwt.Claims{}
-	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
-		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	keyCount := len(responseJWKS.Keys)
+	errorCount := 0
+	for _, key := range responseJWKS.Keys {
+		// Validate the signature
+		claims := &jwt.Claims{}
+		if err := parsedToken.Claims(key, claims); err != nil {
+			t.Logf("unable to validate signed token, err:\n%#v", err)
+			errorCount += 1
+		}
+	}
+	if errorCount == keyCount {
+		t.Fatalf("unable to validate signed token with any of the .well-known keys")
 	}
 }
 
@@ -560,7 +873,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 
 	cyclePeriod := 2 * time.Second
 
-	var testSets = []struct {
+	testSets := []struct {
 		namedKey  *namedKey
 		testCases []struct {
 			cycle         int
@@ -576,6 +889,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				RotationPeriod:  1 * cyclePeriod,
 				KeyRing:         nil,
 				SigningKey:      jwk,
+				NextSigningKey:  jwk,
 				NextRotation:    time.Now(),
 			},
 			[]struct {
@@ -585,8 +899,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			}{
 				{1, 1, 1},
 				{2, 2, 2},
-				{3, 2, 2},
-				{4, 2, 2},
+				{3, 3, 3},
+				{4, 3, 3},
+				{5, 3, 3},
+				{6, 3, 3},
+				{7, 3, 3},
 			},
 		},
 	}
@@ -694,6 +1011,9 @@ func TestOIDC_Config(t *testing.T) {
 				"issuer": iss,
 			},
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if resp == nil || !resp.IsError() {
 			t.Fatalf("Expected issuer %q to fail but it succeeded.", iss)
 		}
@@ -718,7 +1038,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": keyName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -747,7 +1067,7 @@ func TestOIDC_pathOIDCKeyExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": keyName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -778,7 +1098,7 @@ func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": roleName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -807,7 +1127,7 @@ func TestOIDC_pathOIDCRoleExistenceCheck(t *testing.T) {
 		&framework.FieldData{
 			Raw: map[string]interface{}{"name": roleName},
 			Schema: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type: framework.TypeString,
 				},
 			},
@@ -1010,11 +1330,11 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 }
 
 func TestOIDC_Flush(t *testing.T) {
-	c := newOIDCCache()
+	c := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 	ns := []*namespace.Namespace{
-		noNamespace, //ns[0] is nilNamespace
-		&namespace.Namespace{ID: "ns1"},
-		&namespace.Namespace{ID: "ns2"},
+		noNamespace, // ns[0] is nilNamespace
+		{ID: "ns1"},
+		{ID: "ns2"},
 	}
 
 	// populateNs populates cache by ns with some data
@@ -1070,7 +1390,7 @@ func TestOIDC_Flush(t *testing.T) {
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
-	cache := newOIDCCache()
+	cache := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 
 	if _, _, err := cache.Get(nil, "foo"); err == nil {
 		t.Fatal("expected error, got nil")
@@ -1085,6 +1405,64 @@ func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
 	}
 }
 
+func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// get default value
+	header, err := c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedHeader := ""
+	if header != expectedHeader {
+		t.Fatalf("expected %s, got %s", expectedHeader, header)
+	}
+
+	// set nextRun
+	nextRun := time.Now().Add(24 * time.Hour)
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedNextRun := "max-age=86400"
+	if header != expectedNextRun {
+		t.Fatalf("expected %s, got %s", expectedNextRun, header)
+	}
+
+	// set jwksCacheControlMaxAge
+	durationSeconds := 60
+	jwksCacheControlMaxAge := time.Duration(durationSeconds) * time.Second
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	if header == "" {
+		t.Fatalf("expected header to be set, got %s", header)
+	}
+
+	maxAgeValue := strings.Split(header, "=")[1]
+	headerVal, err := strconv.Atoi(maxAgeValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// headerVal will be a random value between 0 and jwksCacheControlMaxAge (in seconds)
+	if headerVal > durationSeconds {
+		t.Logf("jwksCacheControlMaxAge: %d", int(jwksCacheControlMaxAge))
+		t.Fatalf("unexpected header value, got %d expected less than %d", headerVal, durationSeconds)
+	}
+}
+
 // some helpers
 func expectSuccess(t *testing.T, resp *logical.Response, err error) {
 	t.Helper()
@@ -1094,6 +1472,7 @@ func expectSuccess(t *testing.T, resp *logical.Response, err error) {
 }
 
 func expectError(t *testing.T, resp *logical.Response, err error) {
+	t.Helper()
 	if err == nil {
 		if resp == nil || !resp.IsError() {
 			t.Fatalf("expected error but got success; error:\n%v\nresp: %#v", err, resp)
@@ -1104,6 +1483,7 @@ func expectError(t *testing.T, resp *logical.Response, err error) {
 // expectString fails unless every string in actualStrings is also included in expectedStrings and
 // the length of actualStrings and expectedStrings are the same
 func expectStrings(t *testing.T, actualStrings []string, expectedStrings map[string]interface{}) {
+	t.Helper()
 	if len(actualStrings) != len(expectedStrings) {
 		t.Fatalf("expectStrings mismatch:\nactual strings:\n%#v\nexpected strings:\n%#v\n", actualStrings, expectedStrings)
 	}

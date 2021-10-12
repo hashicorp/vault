@@ -42,16 +42,16 @@ export default Component.extend({
   isSummaryDashboard: false,
   replicationDetails: null,
   replicationDetailsSummary: null,
-  isSyncing: computed('replicationDetails.{state}', 'isSecondary', function() {
+  isSyncing: computed('replicationDetails.state', 'isSecondary', function() {
     const { state } = this.replicationDetails;
     const isSecondary = this.isSecondary;
     return isSecondary && state && clusterStates([state]).isSyncing;
   }),
-  isReindexing: computed('replicationDetails.{reindex_in_progress}', function() {
+  isReindexing: computed('replicationDetails.reindex_in_progress', function() {
     const { replicationDetails } = this;
     return !!replicationDetails.reindex_in_progress;
   }),
-  reindexingStage: computed('replicationDetails.{reindex_stage}', function() {
+  reindexingStage: computed('replicationDetails.reindex_stage', function() {
     const { replicationDetails } = this;
     const stage = replicationDetails.reindex_stage;
     // specify the stage if we have one
@@ -73,24 +73,20 @@ export default Component.extend({
 
     return progressBar;
   }),
-  summaryState: computed(
-    'replicationDetailsSummary.dr.{state}',
-    'replicationDetailsSummary.performance.{state}',
-    function() {
-      const { replicationDetailsSummary } = this;
-      const drState = replicationDetailsSummary.dr.state;
-      const performanceState = replicationDetailsSummary.performance.state;
+  summaryState: computed('replicationDetailsSummary.{dr.state,performance.state}', function() {
+    const { replicationDetailsSummary } = this;
+    const drState = replicationDetailsSummary.dr.state;
+    const performanceState = replicationDetailsSummary.performance.state;
 
-      if (drState !== performanceState) {
-        // when DR and Performance is enabled on the same cluster,
-        // the states should always be the same
-        // we are leaving this console log statement to be sure
-        console.log('DR State: ', drState, 'Performance State: ', performanceState);
-      }
-
-      return drState;
+    if (drState !== performanceState) {
+      // when DR and Performance is enabled on the same cluster,
+      // the states should always be the same
+      // we are leaving this console log statement to be sure
+      console.log('DR State: ', drState, 'Performance State: ', performanceState);
     }
-  ),
+
+    return drState;
+  }),
   reindexMessage: computed('isSecondary', 'progressBar', function() {
     if (!this.isSecondary) {
       return htmlSafe(

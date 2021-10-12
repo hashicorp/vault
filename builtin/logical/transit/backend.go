@@ -2,16 +2,20 @@ package transit
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"strings"
+	"sync"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+// Minimum cache size for transit backend
+const minCacheSize = 10
 
+func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
 	if err != nil {
 		return nil, err
@@ -67,7 +71,12 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		var err error
 		cacheSize, err = GetCacheSizeFromStorage(ctx, conf.StorageView)
 		if err != nil {
-			return nil, errwrap.Wrapf("Error retrieving cache size from storage: {{err}}", err)
+			return nil, fmt.Errorf("Error retrieving cache size from storage: %w", err)
+		}
+
+		if cacheSize != 0 && cacheSize < minCacheSize {
+			b.Logger().Warn("size %d is less than minimum %d. Cache size is set to %d", cacheSize, minCacheSize, minCacheSize)
+			cacheSize = minCacheSize
 		}
 	}
 
@@ -83,6 +92,9 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 type backend struct {
 	*framework.Backend
 	lm *keysutil.LockManager
+	// Lock to make changes to any of the backend's cache configuration.
+	configMutex sync.RWMutex
+	cacheSizeChanged bool
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -101,7 +113,41 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 	return size, nil
 }
 
-func (b *backend) invalidate(_ context.Context, key string) {
+// Update cache size and get policy
+func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, rand io.Reader) (retP *keysutil.Policy, retUpserted bool, retErr error) {
+	// Acquire read lock to read cacheSizeChanged
+	b.configMutex.RLock()
+	if b.lm.GetUseCache() && b.cacheSizeChanged {
+		var err error
+		currentCacheSize := b.lm.GetCacheSize()
+		storedCacheSize, err := GetCacheSizeFromStorage(ctx, polReq.Storage)
+		if err != nil {
+			b.configMutex.RUnlock()
+			return nil, false, err
+		}
+		if currentCacheSize != storedCacheSize {
+			err = b.lm.InitCache(storedCacheSize)
+			if err != nil {
+				b.configMutex.RUnlock()
+				return nil, false, err
+			}
+		}
+		// Release the read lock and acquire the write lock
+		b.configMutex.RUnlock()
+		b.configMutex.Lock()
+		defer b.configMutex.Unlock()
+		b.cacheSizeChanged = false
+	} else {
+		b.configMutex.RUnlock()
+	}
+	p, _, err := b.lm.GetPolicy(ctx, polReq, rand)
+	if err != nil {
+		return p, false, err
+	}
+	return p, true, nil
+}
+
+func (b *backend) invalidate(ctx context.Context, key string) {
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("invalidating key", "key", key)
 	}
@@ -109,5 +155,10 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	case strings.HasPrefix(key, "policy/"):
 		name := strings.TrimPrefix(key, "policy/")
 		b.lm.InvalidatePolicy(name)
+	case strings.HasPrefix(key, "cache-config/"):
+		// Acquire the lock to set the flag to indicate that cache size needs to be refreshed from storage
+		b.configMutex.Lock()
+		defer b.configMutex.Unlock()
+		b.cacheSizeChanged = true
 	}
 }

@@ -17,18 +17,11 @@
     </div>
     <div class="control">
       {{#if (eq param "alias name")}}
-        {{mount-accessor-select
-          value=aliasMountAccessor
-          onChange=(action (mut aliasMountAccessor))
-        }}
+        <MountAccessorSelect @value={{aliasMountAccessor}} @onChange={{action (mut aliasMountAccessor)}} />
       {{/if}}
     </div>
     <div class="control is-expanded">
-      {{input
-        class="input"
-        value=paramValue
-        placeholder=(capitalize param)
-      }}
+      <Input class="input" @value={{paramValue}} placeholder={{capitalize param}} />
     </div>
     <div class="control">
       <button type="submit" class="button is-hidden">Lookup</button>

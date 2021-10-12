@@ -156,7 +156,6 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatal("bad status")
 	}
-
 }
 
 func TestPlugin_GetParams(t *testing.T) {

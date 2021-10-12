@@ -1,11 +1,10 @@
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { computed } from '@ember/object';
-const { attr } = DS;
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const Model = DS.Model.extend({
+const ModelExport = Model.extend({
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
   role: attr({ readOnly: true }),
@@ -31,6 +30,6 @@ const Model = DS.Model.extend({
   }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   deletePath: apiPath`${'backend'}/scope/${'scope'}/role/${'role'}/credentials/revoke`,
 });

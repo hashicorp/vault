@@ -64,7 +64,6 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (fun
 
 		return docker.NewServiceURLParse(connURL)
 	})
-
 	if err != nil {
 		t.Fatalf("could not start docker mongo: %s", err)
 	}

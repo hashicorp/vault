@@ -8,15 +8,15 @@ export default Component.extend({
   role: 'button',
   attributeBindings: ['role', 'download', 'href'],
   download: computed('filename', 'extension', function() {
-    return `${this.get('filename')}-${new Date().toISOString()}.${this.get('extension')}`;
+    return `${this.filename}-${new Date().toISOString()}.${this.extension}`;
   }),
 
   fileLike: computed('data', 'mime', 'stringify', 'download', function() {
     let file;
-    let data = this.get('data');
-    let filename = this.get('download');
-    let mime = this.get('mime');
-    if (this.get('stringify')) {
+    let data = this.data;
+    let filename = this.download;
+    let mime = this.mime;
+    if (this.stringify) {
       data = JSON.stringify(data, null, 2);
     }
     if (window.navigator.msSaveOrOpenBlob) {
@@ -29,7 +29,7 @@ export default Component.extend({
   }),
 
   href: computed('fileLike', function() {
-    return window.URL.createObjectURL(this.get('fileLike'));
+    return window.URL.createObjectURL(this.fileLike);
   }),
 
   click(event) {
@@ -37,7 +37,7 @@ export default Component.extend({
       return;
     }
     event.preventDefault();
-    let file = this.get('fileLike');
+    let file = this.fileLike;
     //lol whyyyy
     window.navigator.msSaveOrOpenBlob(file, file.name);
   },

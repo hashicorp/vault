@@ -1,0 +1,167 @@
+---
+layout: api
+page_title: /sys/storage/raft/autopilot - HTTP API
+description: |-
+
+  The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Integrated Storage backend.
+
+  These endpoints are inactive on DR secondaries currently.
+---
+
+# `/sys/storage/raft/autopilot`
+
+The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot 
+with Vault's [Integrated Storage backend](/docs/internals/integrated-storage). 
+For a tutorial on integrated storage autopilot, see the [Learn guide here](https://learn.hashicorp.com/tutorials/vault/raft-autopilot?in=vault/raft).
+
+## Get Cluster State
+
+This endpoint is used to retrieve the raft cluster state. See the [docs page](/docs/commands/operator/raft#autopilot-state) for a description of the output. 
+
+| Method | Path                                |
+| :----- | :---------------------------------- |
+| `GET`  | `/sys/storage/raft/autopilot/state` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/storage/raft/autopilot/state
+```
+
+### Sample Response
+
+```json
+{
+  "Healthy": true,
+  "FailureTolerance": 1,
+  "Servers": {
+    "raft1": {
+      "ID": "raft1",
+      "Name": "raft1",
+      "Address": "127.0.0.1:8201",
+      "NodeStatus": "alive",
+      "LastContact": "0s",
+      "LastTerm": 3,
+      "LastIndex": 459,
+      "Healthy": true,
+      "StableSince": "2021-03-19T20:14:11.831678-04:00",
+      "Status": "leader",
+      "Meta": null
+    },
+    "raft2": {
+      "ID": "raft2",
+      "Name": "raft2",
+      "Address": "127.0.0.2:8201",
+      "NodeStatus": "alive",
+      "LastContact": "516.49595ms",
+      "LastTerm": 3,
+      "LastIndex": 459,
+      "Healthy": true,
+      "StableSince": "2021-03-19T20:14:19.831931-04:00",
+      "Status": "voter",
+      "Meta": null
+    },
+    "raft3": {
+      "ID": "raft3",
+      "Name": "raft3",
+      "Address": "127.0.0.3:8201",
+      "NodeStatus": "alive",
+      "LastContact": "196.706591ms",
+      "LastTerm": 3,
+      "LastIndex": 459,
+      "Healthy": true,
+      "StableSince": "2021-03-19T20:14:25.83565-04:00",
+      "Status": "voter",
+      "Meta": null
+    }
+  },
+  "Leader": "raft1",
+  "Voters": ["raft1", "raft2", "raft3"],
+  "NonVoters": null
+}
+```
+
+## Get Configuration
+
+This endpoint is used to get the configuration of the autopilot subsystem of integrated storage.
+
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
+| `GET`  | `/sys/storage/raft/autopilot/configuration` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/storage/raft/autopilot/configuration
+```
+
+### Sample Response
+
+```json
+{
+  "cleanup_dead_servers": false,
+  "dead_server_last_contact_threshold": "24h0m0s",
+  "last_contact_threshold": "10s",
+  "max_trailing_logs": 1000,
+  "min_quorum": 0,
+  "server_stabilization_time": "10s"
+}
+```
+
+## Set Configuration
+
+This endpoint is used to modify the configuration of the autopilot subsystem of integrated storage.
+
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
+| `POST` | `/sys/storage/raft/autopilot/configuration` |
+
+### Parameters
+
+- `cleanup_dead_servers` `(bool: false)` - Controls whether to remove dead servers from
+  the Raft peer list periodically or when a new server joins. This requires that
+  `min-quorum` is also set.
+
+- `last_contact_threshold` `(string: "10s")` - Limit on the amount of time a server can
+  go without leader contact before being considered unhealthy.
+
+- `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
+  a server can go without leader contact before being considered failed. This
+  takes effect only when `cleanup_dead_servers` is set.
+
+- `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
+  can be behind before being considered unhealthy.
+
+- `min_quorum` `(int: 3)` - Minimum number of servers allowed in a cluster before
+  autopilot can prune dead servers. This should at least be 3. Applicable only for
+  voting nodes.
+
+- `server_stabilization_time` `(string: "10s")` - Minimum amount of time a server must
+  be in a stable, healthy state before it can be added to the cluster.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/autopilot/configuration
+```
+
+### Sample Payload
+
+```json
+{
+  "cleanup_dead_servers": true,
+  "last_contact_threshold": "10s",
+  "dead_server_last_contact_threshold": "24h",
+  "max_trailing_logs": "1000",
+  "min_quorum": "3",
+  "server_stabilization_time": "10s"
+}
+```

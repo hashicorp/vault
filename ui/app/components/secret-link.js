@@ -31,7 +31,7 @@ export default Component.extend({
   ariaLabel: null,
 
   linkParams: computed('mode', 'secret', 'queryParams', function() {
-    let data = this.getProperties('mode', 'secret', 'queryParams');
+    let data = { mode: this.mode, secret: this.secret, queryParams: this.queryParams };
     return linkParams(data);
   }),
 });

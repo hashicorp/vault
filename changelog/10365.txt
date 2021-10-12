@@ -1,0 +1,3 @@
+```release-note:improvement
+core/metrics: Added "vault operator usage" command.
+```

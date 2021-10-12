@@ -40,7 +40,7 @@ func (r serializableRules) MarshalJSON() (b []byte, err error) {
 		}
 
 		ruleMap := map[string][]map[string]interface{}{
-			rule.Type(): []map[string]interface{}{
+			rule.Type(): {
 				ruleData,
 			},
 		}

@@ -12,6 +12,65 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func TestIdentityStore_Groups_AddByNameEntityUpdate(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	// Create an entity and get its ID
+	entityRegisterReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity",
+	}
+	resp, err := c.identityStore.HandleRequest(ctx, entityRegisterReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Create a group containing the entity
+	groupName := "group-name"
+	expectedMemberEntityIDs := []string{entityID}
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              groupName,
+			"member_entity_ids": expectedMemberEntityIDs,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Remove the entity from the group
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":              groupName,
+			"member_entity_ids": []string{},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Make sure the member no longer thinks it's in the group
+	entityIDReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "entity/id/" + entityID,
+	}
+	resp, err = c.identityStore.HandleRequest(ctx, entityIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v, err: %v", resp, err)
+	}
+	expectedGroupIDs := []string{}
+	actualGroupIDs := resp.Data["direct_group_ids"]
+	if !reflect.DeepEqual(expectedGroupIDs, actualGroupIDs) {
+		t.Fatalf("bad: direct_group_ids:\nexpected: %#v\nactual: %#v", expectedGroupIDs, actualGroupIDs)
+	}
+}
+
 func TestIdentityStore_FixOverwrittenMemberGroupIDs(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)

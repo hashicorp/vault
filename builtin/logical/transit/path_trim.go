@@ -12,11 +12,11 @@ func (b *backend) pathTrim() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/trim",
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
-			"min_available_version": &framework.FieldSchema{
+			"min_available_version": {
 				Type: framework.TypeInt,
 				Description: `
 The minimum available version for the key ring. All versions before this
@@ -40,7 +40,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
 		name := d.Get("name").(string)
 
-		p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 			Storage: req.Storage,
 			Name:    name,
 		}, b.GetRandomReader())

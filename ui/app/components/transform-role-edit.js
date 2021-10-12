@@ -5,12 +5,12 @@ export default TransformBase.extend({
 
   init() {
     this._super(...arguments);
-    this.set('initialTransformations', this.get('model.transformations'));
+    this.set('initialTransformations', this.model.transformations);
   },
 
   handleUpdateTransformations(updateTransformations, roleId, type = 'update') {
     if (!updateTransformations) return;
-    const backend = this.get('model.backend');
+    const backend = this.model.backend;
     const promises = updateTransformations.map(transform => {
       return this.store
         .queryRecord('transform', {
@@ -57,7 +57,7 @@ export default TransformBase.extend({
           message =
             'This role was edited to remove transformations, but this role was not removed from those transformations’ allowed_roles due to a lack of permissions.';
         }
-        this.get('flashMessages').stickyInfo(message);
+        this.flashMessages.stickyInfo(message);
       }
     });
   },
@@ -67,8 +67,8 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const roleId = this.get('model.id');
-        const newModelTransformations = this.get('model.transformations');
+        const roleId = this.model.id;
+        const newModelTransformations = this.model.transformations;
 
         if (!this.initialTransformations) {
           this.handleUpdateTransformations(

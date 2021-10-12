@@ -1,12 +1,14 @@
 package command
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
@@ -29,9 +31,9 @@ func OutputSecret(ui cli.Ui, secret *api.Secret) int {
 }
 
 func OutputList(ui cli.Ui, data interface{}) int {
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
-		secret := data.(*api.Secret)
+		secret := data
 		return outputWithFormat(ui, secret, secret.Data["keys"])
 	default:
 		return outputWithFormat(ui, nil, data)
@@ -63,16 +65,17 @@ type Formatter interface {
 }
 
 var Formatters = map[string]Formatter{
-	"json":  JsonFormatter{},
-	"table": TableFormatter{},
-	"yaml":  YamlFormatter{},
-	"yml":   YamlFormatter{},
+	"json":   JsonFormatter{},
+	"table":  TableFormatter{},
+	"yaml":   YamlFormatter{},
+	"yml":    YamlFormatter{},
+	"pretty": PrettyFormatter{},
 }
 
 func Format(ui cli.Ui) string {
-	switch ui.(type) {
+	switch ui := ui.(type) {
 	case *VaultUI:
-		return ui.(*VaultUI).format
+		return ui.format
 	}
 
 	format := os.Getenv(EnvVaultFormat)
@@ -114,6 +117,97 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 	return err
 }
 
+type PrettyFormatter struct{}
+
+func (p PrettyFormatter) Format(data interface{}) ([]byte, error) {
+	return nil, nil
+}
+
+func (p PrettyFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	switch data.(type) {
+	case *api.AutopilotState:
+		p.OutputAutopilotState(ui, data)
+	default:
+		return errors.New("cannot use the pretty formatter for this type")
+	}
+	return nil
+}
+
+func outputStringSlice(buffer *bytes.Buffer, indent string, values []string) {
+	for _, val := range values {
+		buffer.WriteString(fmt.Sprintf("%s%s\n", indent, val))
+	}
+}
+
+type mapOutput struct {
+	key   string
+	value string
+}
+
+func formatServer(srv *api.AutopilotServer) string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(fmt.Sprintf("   %s\n", srv.ID))
+	buffer.WriteString(fmt.Sprintf("      Name:            %s\n", srv.Name))
+	buffer.WriteString(fmt.Sprintf("      Address:         %s\n", srv.Address))
+	buffer.WriteString(fmt.Sprintf("      Status:          %s\n", srv.Status))
+	buffer.WriteString(fmt.Sprintf("      Node Status:     %s\n", srv.NodeStatus))
+	buffer.WriteString(fmt.Sprintf("      Healthy:         %t\n", srv.Healthy))
+	buffer.WriteString(fmt.Sprintf("      Last Contact:    %s\n", srv.LastContact))
+	buffer.WriteString(fmt.Sprintf("      Last Term:       %d\n", srv.LastTerm))
+	buffer.WriteString(fmt.Sprintf("      Last Index:      %d\n", srv.LastIndex))
+
+	if len(srv.Meta) > 0 {
+		buffer.WriteString("      Meta\n")
+		var outputs []mapOutput
+		for k, v := range srv.Meta {
+			outputs = append(outputs, mapOutput{key: k, value: fmt.Sprintf("         %q: %q\n", k, v)})
+		}
+
+		sort.Slice(outputs, func(i, j int) bool {
+			return outputs[i].key < outputs[j].key
+		})
+
+		for _, output := range outputs {
+			buffer.WriteString(output.value)
+		}
+	}
+
+	return buffer.String()
+}
+
+func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
+	state := data.(*api.AutopilotState)
+
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))
+	buffer.WriteString(fmt.Sprintf("Failure Tolerance:            %d\n", state.FailureTolerance))
+	buffer.WriteString(fmt.Sprintf("Leader:                       %s\n", state.Leader))
+	buffer.WriteString("Voters:\n")
+	outputStringSlice(&buffer, "   ", state.Voters)
+
+	if len(state.NonVoters) > 0 {
+		buffer.WriteString("Non Voters:\n")
+		outputStringSlice(&buffer, "   ", state.NonVoters)
+	}
+
+	buffer.WriteString("Servers:\n")
+	var outputs []mapOutput
+	for id, srv := range state.Servers {
+		outputs = append(outputs, mapOutput{key: id, value: formatServer(srv)})
+	}
+
+	sort.Slice(outputs, func(i, j int) bool {
+		return outputs[i].key < outputs[j].key
+	})
+
+	for _, output := range outputs {
+		buffer.WriteString(output.value)
+	}
+
+	ui.Output(buffer.String())
+}
+
 // An output formatter for table output of an object
 type TableFormatter struct{}
 
@@ -124,7 +218,7 @@ func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
 		return t.OutputSecret(ui, secret)
 	case []interface{}:
@@ -132,7 +226,7 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 	case []string:
 		return t.OutputList(ui, nil, data)
 	case map[string]interface{}:
-		return t.OutputMap(ui, data.(map[string]interface{}))
+		return t.OutputMap(ui, data)
 	case SealStatusOutput:
 		return t.OutputSealStatusStruct(ui, nil, data)
 	default:
@@ -191,6 +285,9 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 			}
 			out = append(out, fmt.Sprintf("HA Mode | %s", mode))
 
+			if status.IsSelf && !status.ActiveTime.IsZero() {
+				out = append(out, fmt.Sprintf("Active Since | %s", status.ActiveTime.Format(time.RFC3339Nano)))
+			}
 			// This is down here just to keep ordering consistent
 			if showLeaderAddr {
 				out = append(out, fmt.Sprintf("Active Node Address | %s", status.LeaderAddress))
@@ -222,10 +319,10 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
 
-	switch data.(type) {
+	switch data := data.(type) {
 	case []interface{}:
 	case []string:
-		ui.Output(tableOutput(data.([]string), nil))
+		ui.Output(tableOutput(data, nil))
 		return nil
 	default:
 		return errors.New("error: table formatter cannot output list for this data type")
@@ -405,6 +502,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	// copy leaderStatus fields into sealStatusOutput for display later
 	sealStatusOutput.HAEnabled = leaderStatus.HAEnabled
 	sealStatusOutput.IsSelf = leaderStatus.IsSelf
+	sealStatusOutput.ActiveTime = leaderStatus.ActiveTime
 	sealStatusOutput.LeaderAddress = leaderStatus.LeaderAddress
 	sealStatusOutput.LeaderClusterAddress = leaderStatus.LeaderClusterAddress
 	sealStatusOutput.PerfStandby = leaderStatus.PerfStandby
@@ -431,13 +529,14 @@ func looksLikeDuration(k string) bool {
 // Currently we are adding the fields from api.LeaderResponse
 type SealStatusOutput struct {
 	api.SealStatusResponse
-	HAEnabled                bool   `json:"ha_enabled"`
-	IsSelf                   bool   `json:"is_self,omitempty""`
-	LeaderAddress            string `json:"leader_address,omitempty"`
-	LeaderClusterAddress     string `json:"leader_cluster_address,omitempty"`
-	PerfStandby              bool   `json:"performance_standby,omitempty"`
-	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal,omitempty"`
-	LastWAL                  uint64 `json:"last_wal,omitempty"`
-	RaftCommittedIndex       uint64 `json:"raft_committed_index,omitempty"`
-	RaftAppliedIndex         uint64 `json:"raft_applied_index,omitempty"`
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self,omitempty"`
+	ActiveTime               time.Time `json:"active_time,omitempty"`
+	LeaderAddress            string    `json:"leader_address,omitempty"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address,omitempty"`
+	PerfStandby              bool      `json:"performance_standby,omitempty"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal,omitempty"`
+	LastWAL                  uint64    `json:"last_wal,omitempty"`
+	RaftCommittedIndex       uint64    `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex         uint64    `json:"raft_applied_index,omitempty"`
 }

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Obscure secret values on input and displayOnly fields like certificates.
+```

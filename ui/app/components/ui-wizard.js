@@ -1,7 +1,6 @@
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
-import { computed } from '@ember/object';
 import { matchesState } from 'xstate';
 
 export default Component.extend({
@@ -9,9 +8,7 @@ export default Component.extend({
   wizard: service(),
   auth: service(),
 
-  shouldRender: computed('wizard.showWhenUnauthenticated', 'auth.currentToken', function() {
-    return this.get('auth.currentToken') || this.get('wizard.showWhenUnauthenticated');
-  }),
+  shouldRender: or('auth.currentToken', 'wizard.showWhenUnauthenticated'),
   currentState: alias('wizard.currentState'),
   featureState: alias('wizard.featureState'),
   featureComponent: alias('wizard.featureComponent'),
@@ -22,41 +19,33 @@ export default Component.extend({
 
   actions: {
     dismissWizard() {
-      this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'DISMISS');
+      this.wizard.transitionTutorialMachine(this.currentState, 'DISMISS');
     },
 
     advanceWizard() {
-      let inInit = matchesState('init', this.get('wizard.currentState'));
-      let event = inInit ? this.get('wizard.initEvent') || 'CONTINUE' : 'CONTINUE';
-      this.get('wizard').transitionTutorialMachine(this.get('currentState'), event);
+      let inInit = matchesState('init', this.wizard.currentState);
+      let event = inInit ? this.wizard.initEvent || 'CONTINUE' : 'CONTINUE';
+      this.wizard.transitionTutorialMachine(this.currentState, event);
     },
 
     advanceFeature() {
-      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'CONTINUE');
+      this.wizard.transitionFeatureMachine(this.featureState, 'CONTINUE');
     },
 
     finishFeature() {
-      this.get('wizard').transitionFeatureMachine(this.get('featureState'), 'DONE');
+      this.wizard.transitionFeatureMachine(this.featureState, 'DONE');
     },
 
     repeatStep() {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('featureState'),
-        'REPEAT',
-        this.get('componentState')
-      );
+      this.wizard.transitionFeatureMachine(this.featureState, 'REPEAT', this.componentState);
     },
 
     resetFeature() {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('featureState'),
-        'RESET',
-        this.get('componentState')
-      );
+      this.wizard.transitionFeatureMachine(this.featureState, 'RESET', this.componentState);
     },
 
     pauseWizard() {
-      this.get('wizard').transitionTutorialMachine(this.get('currentState'), 'PAUSE');
+      this.wizard.transitionTutorialMachine(this.currentState, 'PAUSE');
     },
   },
 });

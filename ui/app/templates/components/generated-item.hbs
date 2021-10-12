@@ -6,12 +6,9 @@
           <span class="sep">
             /
           </span>
-          {{#link-to
-            "vault.cluster.access.method.item.list"
-            itemType
-          }}
+          <LinkTo @route="vault.cluster.access.method.item.list" @model={{itemType}}>
             {{pluralize itemType}}
-          {{/link-to}}
+          </LinkTo>
         </li>
       </ul>
     </nav>
@@ -55,22 +52,22 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode="save" @noun={{itemType}} />
       <MessageError @model={{model}} />
-      <FormFieldGroups @model={{model}} @mode={{mode}} />
+      <FormFieldGroups @model={{model}} @mode={{mode}} @onKeyUp={{action "onKeyUp"}} @validationMessages={{validationMessages}}/>
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
         <button type="submit" data-test-save-config="true"
-          class="button is-primary {{if saveModel.isRunning "loading"}}" disabled={{saveModel.isRunning}}>
+          class="button is-primary {{if saveModel.isRunning "loading"}}" disabled={{or saveModel.isRunning isFormInvalid}}>
           Save
         </button>
         {{#if (eq mode "create")}}
-          {{#link-to 'vault.cluster.access.method.item.list' class="button" data-test-cancel-link=true}}
+          <LinkTo @route="vault.cluster.access.method.item.list" class="button" data-test-cancel-link={{true}}>
             Cancel
-          {{/link-to}}
+          </LinkTo>
         {{else}}
-          {{#link-to 'vault.cluster.access.method.item.show' model.id class="button" data-test-cancel-link=true}}
+          <LinkTo @route="vault.cluster.access.method.item.show" @model={{model.id}} class="button" data-test-cancel-link={{true}}>
             Cancel
-          {{/link-to}}
+          </LinkTo>
         {{/if}}
       </div>
     </div>

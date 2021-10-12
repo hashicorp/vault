@@ -254,12 +254,24 @@ the key_type.`,
 		},
 	}
 
+	fields["signature_bits"] = &framework.FieldSchema{
+		Type: framework.TypeInt,
+		Default: 256,
+		Description: `The number of bits to use in the signature
+algorithm. Defaults to 256 for SHA256.
+Set to 384 for SHA384 and 512 for SHA512.
+`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 256,
+		},
+	}
+
 	fields["key_type"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
-and "ec" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec"},
+"ec" and "ed25519" are the only valid values.`,
+		AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},

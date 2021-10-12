@@ -48,24 +48,20 @@ export default Service.extend({
   },
 
   getVersion: task(function*() {
-    if (this.get('version')) {
+    if (this.version) {
       return;
     }
-    let response = yield this.get('store')
-      .adapterFor('cluster')
-      .health();
+    let response = yield this.store.adapterFor('cluster').health();
     this.setVersion(response);
     return;
   }),
 
   getFeatures: task(function*() {
-    if (this.get('features.length') || this.get('isOSS')) {
+    if (this.features?.length || this.isOSS) {
       return;
     }
     try {
-      let response = yield this.get('store')
-        .adapterFor('cluster')
-        .features();
+      let response = yield this.store.adapterFor('cluster').features();
       this.setFeatures(response);
       return;
     } catch (err) {
@@ -74,9 +70,9 @@ export default Service.extend({
   }).keepLatest(),
 
   fetchVersion: function() {
-    return this.get('getVersion').perform();
+    return this.getVersion.perform();
   },
   fetchFeatures: function() {
-    return this.get('getFeatures').perform();
+    return this.getFeatures.perform();
   },
 });

@@ -1,12 +1,6 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=model
-      path="vault.cluster.secrets.backend.list"
-      mode=mode
-      root=root
-      showCurrent=true
-    }}
+    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
@@ -33,14 +27,15 @@
             @verticalPosition="above"
             @horizontalPosition="center"
             as |T|>
-            <T.trigger @tabindex=false>
-              <a
+            <T.trigger @tabindex="-1">
+              <button
               class="toolbar-link"
               aria-disabled="true"
+              type="button"
               disabled
               >
                 Delete transformation
-              </a>
+              </button>
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">
@@ -49,23 +44,25 @@
             </T.content>
           </ToolTip>
         {{else}}
-        <a
+        <button
           class="toolbar-link"
           onclick={{action (mut isDeleteModalActive) true}}
+          type="button"
         >
           Delete transformation
-        </a>
+        </button>
         {{/if}}
       {{/if}}
       {{#if capabilities.canUpdate }}
         {{#if (gt model.allowed_roles.length 0)}}
-          <a
+          <button
             class="toolbar-link"
             onclick={{action (mut isEditModalActive) true}}
+            type="button"
             data-test-edit-link
           >
             Edit transformation
-          </a>
+          </button>
         {{else}}
           <ToolbarSecretLink
             @secret={{model.id}}
@@ -118,15 +115,11 @@
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    {{#link-to
-      "vault.cluster.secrets.backend.edit" model.id
-      tagName="button"
-      class="button is-primary"
-      data-test-edit-confirm-button=true
-    }}
+    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{model.id}} @tagName="button" class="button is-primary" data-test-edit-confirm-button={{true}}>
       Confirm
-    {{/link-to}}
+    </LinkTo>
     <button
+      type="button"
       class="button is-secondary"
       onclick={{action (mut isEditModalActive) false}}
     >

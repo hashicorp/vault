@@ -17,9 +17,9 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -42,7 +42,8 @@ type Entropy struct {
 
 // KMS contains KMS configuration for the server
 type KMS struct {
-	Type string
+	UnusedKeys []string `hcl:",unusedKeys"`
+	Type       string
 	// Purpose can be used to allow a string-based specification of what this
 	// KMS is designated for, in situations where we want to allow more than
 	// one KMS to be specified
@@ -145,13 +146,13 @@ func ParseKMSes(d string) ([]*KMS, error) {
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
 		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'kms': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'kms': %w", err)
 		}
 	}
 

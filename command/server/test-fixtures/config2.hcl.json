@@ -53,6 +53,9 @@
     "circonus_broker_select_tag": "dc:sfo",
     "prometheus_retention_time": "30s"
   },
+  "sentinel": {
+    "additional_enabled_modules": ["http"]
+  },
   "entropy": {
     "seal": {
       "mode": "augmentation"

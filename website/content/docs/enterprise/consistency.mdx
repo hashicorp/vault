@@ -1,0 +1,212 @@
+---
+layout: docs
+page_title: Vault Enterprise Eventual Consistency
+description: Vault Enterprise Consistency Model
+---
+
+# Vault Eventual Consistency
+
+When running in a cluster, Vault has an eventual consistency model.
+Only one node (the leader) can write to Vault's storage.
+Users generally expect read-after-write consistency: in other
+words, after writing foo=1, a subsequent read of foo should return 1. Depending
+on the Vault configuration this isn't always the case. When using performance
+standbys with Integrated Storage, or when using performance replication,
+there are some sequences of operations that don't always yield read-after-write
+consistency.
+
+## Performance Standby Nodes
+
+When using the Integrated Storage backend without performance standbys, only
+a single Vault node (the active node) handles requests. Requests sent to
+regular standbys are handled by forwarding them to the active node. This Vault configuration
+gives Vault the same behavior as the default Consul consistency model.
+
+When using the Integrated Storage backend with performance standbys, both the
+active node and performance standbys can handle requests. If a performance standby
+handles a login request, or a request that generates a dynamic secret, the
+performance standby will issue a remote procedure call (RPC) to the active node to store the token
+and/or lease. If the performance standby handles any other request that
+results in a storage write, it will forward that request to the active node
+in the same way a regular standby forwards all requests.
+
+With Integrated Storage, all writes occur on the active node, which then issues
+RPCs to update the local storage on every other node. Between when the active
+node writes the data to its local disk, and when those RPCs are handled on the
+other nodes to write the data to their local disks, those nodes present a stale
+view of the data.
+
+As a result, even if you're always talking to the same performance standby,
+you may not get read-after-write semantics. The write gets sent to the active
+node, and if the subsequent read request occurs before the new data gets sent
+to the node handling the read request, the read request won't be able to take
+the write into account because the new data isn't present on that node yet.
+
+## Performance replication
+
+A similar phenomenon occurs when using performance replication. One example
+of how this manifests is when using shared mounts. If a KV secrets engine
+is mounted on the primary with `local=false`, it will exist on the secondary
+cluster as well. The secondary cluster can handle requests to that mount,
+though as with performance standbys, write requests must be forwarded - in
+this case to the primary active node. Once data is written to the primary cluster,
+it won't be visible on the secondary cluster until the data has been replicated
+from the primary. Therefore, on the secondary cluster, it initially appears as if
+the data write hasn't happened.
+
+If the secondary cluster is using Integrated Storage, and the read request is
+being handled on one of its performance standbys, the problem is exacerbated because it
+has to be sent first from the primary active node to the secondary active node,
+and then from there to the secondary performance standby, each of which can
+introduce their own form of lag.
+
+Even without shared secret engines, stale reads can still happen with performance
+replication. The Identity subsystem aims to provide a view on entities and
+groups which span across clusters. As such, when logging in to a secondary cluster
+using a shared mount, Vault tries to generate an entity and alias if they don't
+already exist, and these must be stored on the primary using an RPC. Something
+similar happens with groups.
+
+## Mitigations
+
+There has long been a partial mitigation for the above problems. When writing
+data via RPC, e.g. when a performance standby registers tokens and leases on the
+active node after a login or generating a dynamic secret, part of the response
+includes a number known as the "WAL index", aka Write-Ahead Log index.
+
+A full explanation of this is outside the scope of this document, but the short
+version is that both performance replication and performance standbys use log
+shipping to stay in sync with the upstream source of writes. The mitigation
+historically used by nodes doing writes via RPC is to look at the WAL index in
+the response and wait up to 2 seconds to see if that WAL index appear in the
+logs being shipped from upstream. Once the WAL index is seen, the Vault node
+handling the request that resulted in RPCs can return its own response to the
+client: it knows that any subsequent reads will be able to see the value that
+was just written. If the WAL index isn't seen within those 2 seconds, the Vault
+node completes the request anyway, returning a warning in the response.
+
+This mitigation option still exists in Vault 1.7, though now there is a
+configuration option to adjust the wait time:
+[best_effort_wal_wait_duration](/docs/configuration/replication).
+
+## Vault 1.7 Mitigations
+
+There are now a variety of other mitigations available:
+
+- per-request option to always forward the request to the active node
+- per-request option to conditionally forward the request to the active node
+  if it would otherwise result in a stale read
+- per-request option to fail requests if they might result in a stale read
+- Vault Agent configuration to do the above for proxied requests
+
+The remainder of this document describes the tradeoffs of these mitigations and
+how to use them.
+
+Note that any headers requesting forwarding are disabled by default, and must
+be enabled using [allow_forwarding_via_header](/docs/configuration/replication).
+
+### Unconditional Forwarding (Performance standbys only)
+
+The simplest solution to never experience stale reads from a performance standby
+is to provide the following HTTP header in the request:
+
+```
+X-Vault-Forward: active-node
+```
+
+The drawback here is that if all your requests are forwarded to the active node,
+you might as well not be using performance standbys. So this mitigation only
+makes sense to use selectively.
+
+This mitigation will not help with stale reads relating to performance replication.
+
+### Conditional Forwarding (Performance standbys only)
+
+As of Vault Enterprise 1.7, all requests that modify storage now return a new
+HTTP response header:
+
+```
+X-Vault-Index: <base64 value>
+```
+
+To ensure that the state resulting from that write request is visible to a
+subsequent request, add these headers to that second request:
+
+```
+X-Vault-Index: <base64 value taken from previous response>
+X-Vault-Inconsistent: forward-active-node
+```
+
+The effect will be that the node handling the request will look at the state
+it has locally, and if it doesn't contain the state described by the X-Vault-Index
+header, the node will forward the request to the active node.
+
+The drawback here is that when requests are forwarded to the active node,
+performance standbys provide less value. If this happens often enough
+the active node can become a bottleneck, limiting the horizontal read scalability
+performance standbys are intended to provide.
+
+### Retry stale requests
+
+As of Vault Enterprise 1.7, all requests that modify storage now return a new
+HTTP response header:
+
+```
+X-Vault-Index: <base64 value>
+```
+
+To ensure that the state resulting from that write request is visible to a
+subsequent request, add this headers to that second request:
+
+```
+X-Vault-Index: <base64 value taken from previous response>
+```
+
+When the desired state isn't present, Vault will return a failure response with
+HTTP status code 412. This tells the client that it should retry the request.
+The advantage over the Conditional Forwarding solution above is twofold:
+first, there's no additional load on the active node. Second, this solution
+is applicable to performance replication as well as performance standbys.
+
+The Vault Go API will now automatically retry 412s, and provides convenience
+methods for propagating the X-Vault-Index response header into the request
+header of subsequent requests. Those not using the Vault Go API will want
+to build equivalent functionality into their client library.
+
+### Vault Agent and consistency headers
+
+Vault Agent Caching will proxy incoming requests to Vault. There is
+new Agent configuration available in the `cache` stanza that allows making use
+of some of the above mitigations without modifying clients.
+
+By setting `enforce_consistency="always"`, Agent will always provide
+the `X-Vault-Index` consistency header. The value it uses for the header
+will be based on the responses that have passed through the Agent previously.
+
+The option `when_inconsistent` controls how stale reads are prevented:
+
+- `"fail"` means that when a `412` response is seen, it is returned to the client
+- `"retry"` means that `412` responses will be retried automatically by Agent,
+  so the client doesn't have to deal with them
+- `"forward"` makes Agent provide the
+  `X-Vault-Inconsistent: forward-active-node` header as described above under
+  Conditional Forwarding
+
+## Client API helpers
+
+There are some new helpers in the `api` package to work with the new headers.
+`WithRequestCallbacks` and `WithResponseCallbacks` create a shallow clone of
+the client and populate it with the given callbacks. `RecordState` and
+`RequireState` are used to store the response header from one request and
+provide it in a subsequent request. For example:
+
+```go
+client := api.NewClient(api.DefaultConfig)
+var state string
+_, err := client.WithResponseCallbacks(api.RecordState(&state)).Write(path, data)
+secret, err := client.WithRequestCallbacks(api.RequireState(state)).Read(path)
+```
+
+This will retry the `Read` until the data stored by the `Write` is present.
+There are also callbacks to use forwarding: `ForwardInconsistent` and
+`ForwardAlways`.

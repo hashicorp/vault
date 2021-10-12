@@ -1,0 +1,63 @@
+---
+layout: docs
+page_title: 1.5.0
+description: |-
+  This page contains release notes for Vault 1.5.0.
+---
+
+# Vault 1.5.0
+
+## Vault 1.5 Release Highlights
+
+**Resource Quotas:** A new set of functionality called Resource Quotas that allows operators to define API quotas which impose usage limits at the system, endpoint, and namespace level (Enterprise Only) in order to ensure applications and users do not overuse Vault’s resources. The following quota options will be supported:
+
+- **Lease Count Quotas (Enterprise Only):** Allows operators to specify lease count quotas. If the number of leases in the cluster hits the configured quota limits, additional lease creations will be forbidden for all clients until a lease has been revoked or has expired.
+- **Rate Limit Quotas (All versions):** Allows operators to specify request-per-second quotas. Rate limit quotas are applicable to every node in the Vault cluster, meaning each node will maintain separate counters to enforce rate limits. If the rate limit quota limit is hit on any of the nodes in the Vault cluster, additional requests will be canceled for all clients.
+
+**Splunk App for Monitoring Vault (Enterprise Only):** A new [Splunk App](https://splunkbase.splunk.com/app/5093/) providing information on how Vault is doing from an operational and security perspective. The app includes sample dashboards spanning operational metrics, usage metrics and some interpretive data from Vault’s audit logs:
+
+- Example **Operational Metrics (telemetry)** include Disk I/O, memory and CPU usage. Storage backend metrics are also included (if using Consul or Integrated Storage).
+- Example **Usage Metrics (telemetry)** include number of identity entities, number of service tokens, token TTL distribution, and secret KV count. The usage metrics are new to Vault telemetry (and are supported by all versions of Vault).
+- Example **Audit Log Interpretation** data includes requests by path, KV operations by path, distinct tokens by auth method, and leases created by path.
+
+**Replication UI Redesign (Enterprise Only):** Redesign of the replication UI for performance and DR primary and secondary clusters, to help understand the health of replication Vault better. Includes the following:
+
+- A new DR secondary replication dashboard, and an updated performance secondary replication dashboard
+- Updated DR and performance primary dashboards that include a list of known secondaries and their corresponding UI URLs (for easier context-switching between the UIs)
+- Redesigned management workflows
+
+**Integrated Storage for HA Coordination:** Vault now has the option to specify Integrated Storage as the HA coordination option for Vault, when any durable data storage backend (that may or may not support HA coordination) is used.
+
+**Vault Monitor Command:** A new command, “vault monitor”, which allows users to stream logs of a running Vault server. The log level selected can be different from the log level used by the server logs.
+
+**Password Policies:** Vault generates passwords as part of the dynamic secrets workflows. These passwords are created with high complexity for security reasons. However, certain organizations have internal policies that are less stringent and restricted to usage of certain character sets. The new Password Policies feature in Vault 1.5 allows an operator to configure secret engines to generate passwords that comply with character set requirements of those systems.
+
+**Namespace Support for SSH Helper:** Vault now has an option to allow users to specify the namespace of the SSH mount when using the SSH helper.
+
+**Static Credential Rotation Support for MS SQL Server:** Vault now allows static credential rotation for MS SQL.
+
+**Support for AWS IAM Roles for Kubernetes Service Accounts:** Vault now provides support for AWS IAM Roles for K8s Service Accounts (IRSA)
+
+**Support for Distributed Groups Claims on Azure:** Vault now supports group claims for Azure Active Directory users that are part of over 200 groups.
+
+**Performance Improvements for Transit:** Vault now features infrastructure improvements to how transit handles encryption/decryption calls with batch tokens.
+
+## What’s Changed
+
+`storage/gcs:` The `credentials_file` config option has been removed. The `GOOGLE_APPLICATION_CREDENTIALS` environment variable or default credentials may be used instead
+
+`storage/raft:` The storage configuration now accepts a new max_entry_size config (similar to the max kv entry size parameter) that will limit the total size in bytes of any entry committed via raft. It defaults to `"1048576"` (1MiB).
+
+`token:` Token creation with custom token ID via id will no longer allow periods (`.`) as part of the input string. The final generated token value may contain periods, such as the `s.` prefix for service token indication.
+
+`token:` Token renewals will now return token policies within the `token_policies`, identity policies within `identity_policies`, and the full policy set within `policies`.
+
+`cubbyhole:` Reject reads and writes to an empty (`""`) path.
+
+`core:` Remove the addition of newlines to parsed configuration when using integer/boolean values
+
+`audit:` Token TTL and issue time are now provided in the auth portion of audit logs
+
+`audit:` Added `mount_type` field to requests and responses
+
+**For more detailed information, please refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md)**

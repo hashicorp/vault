@@ -1,0 +1,52 @@
+---
+layout: docs
+page_title: Vault Enterprise Lease Count Quotas
+description: |-
+  Vault Enterprise features a mechanism to create lease count quotas.
+---
+
+# Lease Count Quotas
+
+Vault features an extension to resource quotas that allows operators to enforce
+limits on how many leases are created. For a given lease count quota, if the
+number of leases in the cluster hits the configured limit, `max_leases`, additional
+lease creations will be forbidden for all clients until a lease has been revoked
+or has expired.
+
+It is important to note that lease count quotas do not apply to the root tokens.
+If the number of leases in the cluster hits the configured limit, `max_leases`,
+an operator could still create a root token and access the cluster to try to recover.
+
+All the nodes in the Vault cluster will share the lease quota rules, meaning that
+the lease counters will be shared, regardless of which node in the Vault cluster
+receives lease generation requests. Lease quotas can be imposed across Vault's API,
+or scoped down to API pertaining to specific namespaces or specific mounts.
+
+Lease count quotas defined in a namespace will be inherited by all the child
+namespaces. By extension, this means that a quota that is defined in the `root`
+namespace is inherited by all namespaces and mounts, essentially to the entire
+Vault API.
+
+Lease count quotas defined on a namespace will take precedence over the inherited
+quotas. Lease count quotas defined for a mount will take precedence over inherited
+and namespace quotas. The limits on the namespace and mount quotas can either be
+increased or decreased. If the inherited quota is very restrictive and if it is
+desired to relax the limits in one namespace, or on a specific mount, it can be
+done using this precedence model. On the other hand, if the inherited quota is
+very liberal and if it is desired to further restrict usages in a specific
+namespace or mount, that can be done using the precedence model too.
+
+Vault also allows the inspection into the state of lease count quotas in a Vault
+cluster through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics)
+exposed and through enabling optional audit logging.
+
+## Learn
+
+Refer to [Protecting Vault with Resource
+Quotas](https://learn.hashicorp.com/vault/security/resource-quotas) for a
+step-by-step tutorial.
+
+## API
+
+Lease count quotas can be managed over the HTTP API. Please see
+[Lease Count Quotas API](/api/system/lease-count-quotas) for more details.

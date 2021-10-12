@@ -59,8 +59,8 @@ export default Component.extend({
       // err will display via model state
       return;
     }
-    this.get('flashMessages').success(message);
-    yield this.get('onSave')({ saveType: 'save', model });
+    this.flashMessages.success(message);
+    yield this.onSave({ saveType: 'save', model });
   })
     .drop()
     .withTestWaiter(),
@@ -76,10 +76,10 @@ export default Component.extend({
   actions: {
     deleteItem(model) {
       let message = this.getMessage(model, true);
-      let flash = this.get('flashMessages');
+      let flash = this.flashMessages;
       model.destroyRecord().then(() => {
         flash.success(message);
-        return this.get('onSave')({ saveType: 'delete', model });
+        return this.onSave({ saveType: 'delete', model });
       });
     },
   },

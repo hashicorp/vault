@@ -11,7 +11,7 @@
     <span>{{helperText}}</span>
     {{#if description}}
       <ToolTip @verticalPosition="below" as |T|>
-        <T.trigger data-test-tooltip-trigger tabindex=false>
+        <T.trigger data-test-tooltip-trigger tabindex="-1">
           <Icon @glyph="info-circle-outline" aria-label="description" />
         </T.trigger>
         <T.content @class="tool-tip">

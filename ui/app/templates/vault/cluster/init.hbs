@@ -80,22 +80,18 @@
               data-test-advance-button
               class="control"
             >
-              {{#link-to 'vault.cluster.unseal' model.name class="button is-primary"}}
+              <LinkTo @route="vault.cluster.unseal" @model={{model.name}} class="button is-primary">
                 Continue to Unseal
-              {{/link-to}}
+              </LinkTo>
             </div>
           {{else}}
             <div
               data-test-advance-button
               class="control"
             >
-              {{#link-to 'vault.cluster.auth'
-                model.name
-                class=(concat (if model.sealed 'is-loading ' '') 'button is-primary')
-                disabled=model.sealed
-              }}
+              <LinkTo @route="vault.cluster.auth" @model={{model.name}} class={{concat (if model.sealed "is-loading " "") "button is-primary"}} @disabled={{model.sealed}}>
                 Continue to Authenticate
-              {{/link-to}}
+              </LinkTo>
             </div>
           {{/if}}
           <DownloadButton
@@ -141,18 +137,7 @@
               Key shares
             </label>
             <div class="control">
-              {{input
-                data-test-key-shares="true"
-                class="input"
-                autocomplete="off"
-                spellcheck="false"
-                name="key-shares"
-                type="number"
-                step="1"
-                min="1"
-                pattern="[0-9]*"
-                value=secret_shares
-              }}
+              <Input data-test-key-shares="true" class="input" @autocomplete="off" @spellcheck="false" @name="key-shares" @type="number" @step="1" @min="1" @pattern="[0-9]*" @value={{secret_shares}} />
             </div>
             <p class="help has-text-grey">
               The number of key shares to split the master key into
@@ -166,18 +151,7 @@
               Key threshold
             </label>
             <div class="control">
-              {{input
-                data-test-key-threshold="true"
-                class="input"
-                autocomplete="off"
-                spellcheck="false"
-                name="key-threshold"
-                type="number"
-                step="1"
-                min="1"
-                pattern="[0-9]*"
-                value=secret_threshold
-              }}
+              <Input data-test-key-threshold="true" class="input" @autocomplete="off" @spellcheck="false" @name="key-threshold" @type="number" @step="1" @min="1" @pattern="[0-9]*" @value={{secret_threshold}} />
             </div>
             <p class="help has-text-grey">
               The number of key shares required to reconstruct the master key
