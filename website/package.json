@@ -39,15 +39,9 @@
     "@hashicorp/platform-types": "^0.1.1",
     "@types/react": "^17.0.27",
     "dart-linkcheck": "^2.0.15",
-    "husky": "^4.3.8",
     "inquirer": "^8.1.1",
     "prettier": "^2.4.1",
     "typescript": "^4.4.3"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "next-hashicorp precommit"
-    }
   },
   "scripts": {
     "build": "next build",
