@@ -1,4 +1,4 @@
-FROM alpine:3.14
+FROM alpine:3.14 as default
 
 # NAME and VERSION are the name of the software in releases.hashicorp.com
 # and the version to download. Example: NAME=consul VERSION=1.2.3.
