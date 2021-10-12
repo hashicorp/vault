@@ -1,3 +1,3 @@
 ```release-note:improvement
-identity: Prevent clients to the identity token system from reading/caching keys that aren’t eligible to sign tokens (aren’t associated with any role).
+identity/token: Only return keys from the `.well-known/keys` endpoint that are being used by roles to sign/verify tokens.
 ```
