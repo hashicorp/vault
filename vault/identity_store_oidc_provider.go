@@ -1654,9 +1654,11 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
 	if client == nil {
+		i.Logger().Debug("client failed to authenticate: client not found", "client_id", clientID)
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
 	if subtle.ConstantTimeCompare([]byte(client.ClientSecret), []byte(clientSecret)) == 0 {
+		i.Logger().Debug("client failed to authenticate: invalid client secret", "client_id", clientID)
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
 
