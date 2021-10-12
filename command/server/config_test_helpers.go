@@ -486,7 +486,7 @@ func testUnknownFieldValidation(t *testing.T) {
 	for _, er1 := range errors {
 		found := false
 		if strings.Contains(er1.String(), "sentinel") {
-			//This happens on OSS, and is fine
+			// This happens on OSS, and is fine
 			continue
 		}
 		for _, ex := range expected {
@@ -841,7 +841,7 @@ EOF
 {{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:8201
 EOF
 	tls_disable = true
-}`)
+}`, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -859,7 +859,7 @@ EOF
 			},
 		},
 	}
-	config.Listeners[0].RawConfig = nil
+	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
