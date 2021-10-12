@@ -90,6 +90,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canUpdateSecretData: alias('checkSecretCapabilities.canUpdate'),
+  canReadSecretData: alias('checkSecretCapabilities.canRead'),
 
   checkMetadataCapabilities: maybeQueryRecord(
     'capabilities',
