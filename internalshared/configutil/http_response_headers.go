@@ -73,14 +73,9 @@ func ParseCustomResponseHeaders(responseHeaders interface{}) (map[string]map[str
 	return h, nil
 }
 
-// IsValidStatusCodeCollection checks if the given status code is as expected
-func IsValidStatusCodeCollection(sc string) bool {
-	return strutil.StrListContains(ValidCustomStatusCodeCollection, sc)
-}
-
 // IsValidStatusCode checking for status codes outside the boundary
 func IsValidStatusCode(sc string) bool {
-	if IsValidStatusCodeCollection(sc) {
+	if strutil.StrListContains(ValidCustomStatusCodeCollection, sc) {
 		return true
 	}
 

@@ -2675,8 +2675,8 @@ func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCus
 	return nil
 }
 
-// ExistCustomResponseHeader support checking for custom headers per listener address
-// If the address is an empty string, it checks all listeners for the header.
+// ExistCustomResponseHeader checks if a custom header is configured in any
+// listener's stanza
 func (c *Core) ExistCustomResponseHeader(header string) bool {
 	customHeaders := c.customListenerHeader.Load()
 	if customHeaders == nil {
@@ -2707,7 +2707,6 @@ func (c *Core) ReloadCustomResponseHeaders() error {
 	if lns == nil {
 		return fmt.Errorf("no listener configured")
 	}
-	//c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 
 	uiHeaders, err := c.UIHeaders()
 	if err != nil {
