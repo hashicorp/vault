@@ -33,8 +33,6 @@ jobs:
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-    env:
-      DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
       - uses: actions/checkout@v2
@@ -107,9 +105,6 @@ jobs:
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
       - uses: actions/checkout@v2
@@ -184,9 +179,6 @@ jobs:
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
 
-    env:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-
     steps:
       - uses: actions/checkout@v2
 
@@ -257,9 +249,6 @@ jobs:
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    env:
-      DOCKER_CLI_EXPERIMENTAL: enabled
 
     steps:
       - uses: actions/checkout@v2
@@ -367,43 +356,32 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
   build-docker:
+    name: Docker ${{ matrix.arch }} build
     needs:
       - get-product-version
-      - build-arm64
+      - build-arm
       - build-386
       - build-amd64
-      - build-arm
+      - build-arm64
     runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: ["arm", "arm64", "386", "amd64"]
-    name: Docker ${{ matrix.arch }} build
+    env:
+      repo: ${{github.event.repository.name}}
+      version: ${{needs.get-product-version.outputs.product-version}}
 
     steps:
       - uses: actions/checkout@v2
-
-      # download arm/arm64/386/amd64 binaries from build jobs
-      - uses: actions/download-artifact@v2
+      - name: Docker Build (Action)
+        uses: hashicorp/actions-docker-build@v1
         with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-
-      # build docker image
-      - name: Docker build
-        working-directory: ./.release/docker
-        run: |
-          docker version
-          unzip -j ${GITHUB_WORKSPACE}/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-          # arm32 bit docker images are set with --platform=linux/arm/v6
-          if [ "${{ matrix.arch }}" = "arm" ]; then
-            make docker ARCH=${{ matrix.arch }} GOARM_DOCKER="/v6"
-          else
-            make docker ARCH=${{ matrix.arch }}
-          fi
-      # upload image tarball
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
-          path: .release/docker/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_docker_linux_${{ matrix.arch }}.tar
+          version: ${{env.version}}
+          target: default
+          arch: ${{matrix.arch}}
+          tags: |
+            docker.io/hashicorp/${{env.repo}}:${{env.version}}
+            ecr.public.aws/hashicorp/${{env.repo}}:${{env.version}}
 
   generate_metadata:
     needs: get-product-version
