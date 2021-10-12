@@ -17,7 +17,6 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/pointerstructure"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,6 +45,7 @@ const (
 // validation requirements of the OIDC spec.
 func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 	cluster := setupOIDCTestCluster(t, 2)
+	defer cluster.Cleanup()
 	active := cluster.Cores[0].Client
 	standby := cluster.Cores[1].Client
 
@@ -182,18 +182,14 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 	require.NoError(t, err)
 	defer p.Done()
 
-	type expectedClaim struct {
-		key   string
-		value interface{}
-	}
 	type args struct {
 		useStandby bool
 		options    []oidc.Option
-		expected   []expectedClaim
 	}
 	tests := []struct {
-		name string
-		args args
+		name     string
+		args     args
+		expected string
 	}{
 		{
 			name: "active: authorization code flow",
@@ -201,21 +197,18 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 				options: []oidc.Option{
 					oidc.WithScopes("openid user"),
 				},
-				expected: []expectedClaim{
-					{
-						key:   "username",
-						value: "end-user",
-					},
-					{
-						key:   "/contact/email",
-						value: "test@hashicorp.com",
-					},
-					{
-						key:   "/contact/phone_number",
-						value: "123-456-7890",
-					},
-				},
 			},
+			expected: fmt.Sprintf(`{
+					"iss": "%s",
+					"aud": "%s",
+					"sub": "%s",
+					"namespace": "root",
+					"username": "end-user",
+					"contact": {
+						"email": "test@hashicorp.com",
+						"phone_number": "123-456-7890"
+					}
+				}`, discovery.Issuer, clientID, entityID),
 		},
 		{
 			name: "active: authorization code flow with additional scopes",
@@ -223,25 +216,19 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 				options: []oidc.Option{
 					oidc.WithScopes("openid user groups"),
 				},
-				expected: []expectedClaim{
-					{
-						key:   "username",
-						value: "end-user",
-					},
-					{
-						key:   "/contact/email",
-						value: "test@hashicorp.com",
-					},
-					{
-						key:   "/contact/phone_number",
-						value: "123-456-7890",
-					},
-					{
-						key:   "groups",
-						value: []interface{}{"engineering"},
-					},
-				},
 			},
+			expected: fmt.Sprintf(`{
+				"iss": "%s",
+				"aud": "%s",
+				"sub": "%s",
+				"namespace": "root",
+				"username": "end-user",
+				"contact": {
+					"email": "test@hashicorp.com",
+					"phone_number": "123-456-7890"
+				},
+				"groups": ["engineering"]
+			}`, discovery.Issuer, clientID, entityID),
 		},
 		{
 			name: "active: authorization code flow with max_age parameter",
@@ -250,13 +237,14 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 					oidc.WithScopes("openid"),
 					oidc.WithMaxAge(60),
 				},
-				expected: []expectedClaim{
-					{
-						key:   "auth_time",
-						value: expectedAuthTime,
-					},
-				},
 			},
+			expected: fmt.Sprintf(`{
+				"iss": "%s",
+				"aud": "%s",
+				"sub": "%s",
+				"namespace": "root",
+				"auth_time": %d
+			}`, discovery.Issuer, clientID, entityID, expectedAuthTime),
 		},
 		{
 			name: "standby: authorization code flow with additional scopes",
@@ -265,25 +253,19 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 				options: []oidc.Option{
 					oidc.WithScopes("openid user groups"),
 				},
-				expected: []expectedClaim{
-					{
-						key:   "username",
-						value: "end-user",
-					},
-					{
-						key:   "/contact/email",
-						value: "test@hashicorp.com",
-					},
-					{
-						key:   "/contact/phone_number",
-						value: "123-456-7890",
-					},
-					{
-						key:   "groups",
-						value: []interface{}{"engineering"},
-					},
-				},
 			},
+			expected: fmt.Sprintf(`{
+				"iss": "%s",
+				"aud": "%s",
+				"sub": "%s",
+				"namespace": "root",
+				"username": "end-user",
+				"contact": {
+					"email": "test@hashicorp.com",
+					"phone_number": "123-456-7890"
+				},
+				"groups": ["engineering"]
+			}`, discovery.Issuer, clientID, entityID),
 		},
 	}
 
@@ -342,19 +324,20 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 			err = p.UserInfo(context.Background(), accessToken, subject, &allClaims)
 			require.NoError(t, err)
 
-			// Assert that all required claims are present as top-level keys
-			requiredClaims := []string{
-				"iat", "aud", "exp", "iss", "sub",
-				"namespace", "nonce", "at_hash", "c_hash",
-			}
-			for _, required := range requiredClaims {
-				require.NotEmpty(t, getClaim(t, allClaims, required))
+			// Assert that claims computed during the flow (i.e., not known
+			// ahead of time in this test) are present as top-level keys
+			for _, claim := range []string{"iat", "exp", "nonce", "at_hash", "c_hash"} {
+				_, ok := allClaims[claim]
+				require.True(t, ok)
 			}
 
-			// Assert that claims given by the scope templates are populated
-			for _, expected := range tt.args.expected {
-				actualValue := getClaim(t, allClaims, expected.key)
-				require.EqualValues(t, expected.value, actualValue)
+			// Assert that all other expected claims are populated
+			expectedClaims := make(map[string]interface{})
+			require.NoError(t, json.Unmarshal([]byte(tt.expected), &expectedClaims))
+			for k, expectedVal := range expectedClaims {
+				actualVal, ok := allClaims[k]
+				require.True(t, ok)
+				require.EqualValues(t, expectedVal, actualVal)
 			}
 		})
 	}
@@ -395,19 +378,4 @@ func decodeRawRequest(t *testing.T, client *api.Client, method, path string, par
 
 	// Decode the body into v
 	require.NoError(t, json.NewDecoder(r.Body).Decode(v))
-}
-
-// getClaim returns a claim value from claims given a provided claim string.
-// If this string is a valid JSON Pointer, it will be interpreted as such to
-// locate the claim. Otherwise, the claim string will be used directly.
-func getClaim(t *testing.T, claims map[string]interface{}, claim string) interface{} {
-	t.Helper()
-
-	if !strings.HasPrefix(claim, "/") {
-		return claims[claim]
-	}
-
-	val, err := pointerstructure.Get(claims, claim)
-	require.NoError(t, err)
-	return val
 }
