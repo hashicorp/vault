@@ -56,9 +56,9 @@ flags](/docs/commands) included on all commands.
 
 - `-max-lease-ttl` `(duration: "")` - The maximum lease TTL for this auth
   method. If unspecified, this defaults to the Vault server's globally
-  configured maximum lease TTL, or a previously configured value for the auth
-  method. This value is allowed to override the server's global max TTL; 
-  it can be longer or shorter.
+  configured [maximum lease TTL](/docs/configuration#max_lease_ttl), or a
+  previously configured value for the auth method. This value is allowed to
+  override the server's global max TTL; it can be longer or shorter.
 
 - `-passthrough-request-headers` `(string: "")` - request header values that will
   be sent to the auth method. Note that multiple keys may be
