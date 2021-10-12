@@ -1968,7 +1968,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
-	enterpriseSetupAPILock(c)
+	if err := enterpriseSetupAPILock(c, ctx); err != nil {
+		return err
+	}
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
@@ -2211,7 +2213,7 @@ func stopReplicationImpl(c *Core) error {
 	return nil
 }
 
-func setupAPILockImpl(c *Core) {}
+func setupAPILockImpl(_ *Core, _ context.Context) error { return nil }
 
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
