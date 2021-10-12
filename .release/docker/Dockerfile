@@ -1,25 +1,26 @@
 FROM alpine:3.14
 
-ARG BIN_NAME
+ARG BIN_NAME=vault
 # Export BIN_NAME for the CMD below, it can't see ARGs directly.
 ENV BIN_NAME=$BIN_NAME
-
 # This is the release of Vault to pull in.
-ARG VAULT_VERSION=1.8.4
+ARG VAULT_VERSION=1.7.5
 ARG VAULT_REVISION
 ARG PRODUCT_NAME=$BIN_NAME
-
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
 ARG TARGETOS TARGETARCH
 
-LABEL maintainer="Team RelEng <team-rel-eng@hashicorp.com>"
+
+LABEL maintainer="Vault team <vault@hashicorp.com>"
 LABEL version=$VAULT_VERSION
 LABEL revision=$VAULT_REVISION
 
 # Create a vault user and group first so the IDs get set the same way,
 # even as the rest of this may change over time.
-RUN addgroup vault && \
-    adduser -S -G vault vault
+RUN addgroup ${PRODUCT_NAME} && \
+    adduser -S -G ${PRODUCT_NAME} ${PRODUCT_NAME}
+
+COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 
 # Set up certificates, our base tools, and Vault.
 RUN set -eux; \
@@ -95,5 +96,3 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.
 CMD ["server", "-dev"]
-
-
