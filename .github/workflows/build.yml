@@ -379,6 +379,7 @@ jobs:
           version: ${{env.version}}
           target: default
           arch: ${{matrix.arch}}
+          workdir: .release/docker
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             ecr.public.aws/hashicorp/${{env.repo}}:${{env.version}}
