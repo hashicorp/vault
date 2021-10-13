@@ -1,9 +1,12 @@
 FROM alpine:3.14 as default
 
+ARG BIN_NAME
 # NAME and VERSION are the name of the software in releases.hashicorp.com
 # and the version to download. Example: NAME=consul VERSION=1.2.3.
 ARG NAME=vault
 ARG VERSION
+# TARGETARCH and TARGETOS are set automatically when --platform is provided.
+ARG TARGETOS TARGETARCH
 
 LABEL maintainer="Vault Team <vault@hashicorp.com>"
 LABEL version=$VERSION
@@ -15,7 +18,7 @@ ENV VERSION=$VERSION
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-COPY vault /bin/vault
+COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file
@@ -45,7 +48,6 @@ EXPOSE 8200
 # For production derivatives of this container, you shoud add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-WORKDIR /.release/docker
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 
