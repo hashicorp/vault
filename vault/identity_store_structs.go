@@ -65,6 +65,10 @@ type IdentityStore struct {
 	// will invalidate the cache.
 	oidcCache *oidcCache
 
+	// oidcAuthCodeCache stores OIDC authorization codes to be exchanged
+	// for an ID token during an authorization code flow.
+	oidcAuthCodeCache *oidcCache
+
 	// logger is the server logger copied over from core
 	logger log.Logger
 
@@ -87,6 +91,7 @@ type IdentityStore struct {
 	metrics       metricsutil.Metrics
 	totpPersister TOTPPersister
 	groupUpdater  GroupUpdater
+	tokenStorer   TokenStorer
 }
 
 type groupDiff struct {
@@ -124,3 +129,9 @@ type GroupUpdater interface {
 }
 
 var _ GroupUpdater = &Core{}
+
+type TokenStorer interface {
+	LookupToken(ctx context.Context, token string) (*logical.TokenEntry, error)
+}
+
+var _ TokenStorer = &Core{}

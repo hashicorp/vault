@@ -32,6 +32,17 @@ var testImagePull sync.Once
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
 	c, _, _ := TestCoreUnsealed(t)
+
+	// Wait until the expiration manager is out of restore mode.
+	// This was added to prevent sporadic failures of TestExpiration_unrecoverableErrorMakesIrrevocable.
+	timeout := time.Now().Add(time.Second * 10)
+ 	for c.expiration.inRestoreMode() {
+		if time.Now().After(timeout) {
+			t.Fatal("ExpirationManager is still in restore mode after 10 seconds")
+		}
+		time.Sleep(50*time.Millisecond)
+	}
+
 	return c.expiration
 }
 
@@ -1280,13 +1291,23 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	limit := time.Now().Add(3 * time.Second)
+	for time.Now().Before(limit) {
+		time.Sleep(50 * time.Millisecond)
+
+		noop.Lock()
+		currentRequests := len(noop.Requests)
+		noop.Unlock()
+
+		if currentRequests == 3 {
+			break
+		}
+	}
 
 	noop.Lock()
 	defer noop.Unlock()
-
 	if len(noop.Requests) != 3 {
-		t.Fatalf("Bad: %#v", noop.Requests)
+		t.Errorf("Noop revocation requests less than expected, expected 3, found %d", len(noop.Requests))
 	}
 	for _, req := range noop.Requests {
 		if req.Operation != logical.RevokeOperation {
@@ -2070,22 +2091,29 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	limit := time.Now().Add(10 * time.Second)
+	for time.Now().Before(limit) {
+		indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
+		if err != nil {
+			t.Fatalf("token index lookup error: %v", err)
+		}
+		if indexEntry == nil {
+			break
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if indexEntry != nil {
+		t.Fatalf("should not have found a secondary index entry after revocation")
+	}
 
 	out, err := exp.tokenStore.Lookup(namespace.RootContext(nil), le.ClientToken)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatalf("error looking up client token after revocation: %v", err)
 	}
 	if out != nil {
-		t.Fatalf("bad: %v", out)
-	}
-
-	indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if indexEntry != nil {
-		t.Fatalf("err: should not have found a secondary index entry")
+		t.Fatalf("should not have found revoked token in tokenstore: %v", out)
 	}
 }
 
@@ -3060,20 +3088,22 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc.job.OnFailure(tc.err)
+		t.Run(tc.err.Error(), func(t *testing.T) {
+			tc.job.OnFailure(tc.err)
 
-		le, err := exp.loadEntry(ctx, tc.job.leaseID)
-		if err != nil {
-			t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
-		}
-		if le == nil {
-			t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
-		}
+			le, err := exp.loadEntry(ctx, tc.job.leaseID)
+			if err != nil {
+				t.Fatalf("could not load leaseID %q: %v", tc.job.leaseID, err)
+			}
+			if le == nil {
+				t.Fatalf("nil lease for leaseID: %q", tc.job.leaseID)
+			}
 
-		isIrrevocable := le.isIrrevocable()
-		if isIrrevocable != tc.shouldBeIrrevocable {
-			t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
-		}
+			isIrrevocable := le.isIrrevocable()
+			if isIrrevocable != tc.shouldBeIrrevocable {
+				t.Errorf("expected irrevocable: %t, got irrevocable: %t", tc.shouldBeIrrevocable, isIrrevocable)
+			}
+		})
 	}
 }
 

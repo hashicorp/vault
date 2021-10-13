@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -211,6 +212,8 @@ func TestBackend_Roles(t *testing.T) {
 		{"RSACSR", &rsaCAKey, &rsaCACert, true},
 		{"EC", &ecCAKey, &ecCACert, false},
 		{"ECCSR", &ecCAKey, &ecCACert, true},
+		{"ED", &edCAKey, &edCACert, false},
+		{"EDCSR", &edCAKey, &edCACert, true},
 	}
 
 	for _, tc := range cases {
@@ -309,6 +312,13 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 			if err != nil {
 				return nil, fmt.Errorf("error parsing EC key: %s", err)
 			}
+		case "ed25519":
+			parsedCertBundle.PrivateKeyType = certutil.Ed25519PrivateKey
+			parsedCertBundle.PrivateKey = key
+			parsedCertBundle.PrivateKeyBytes, err = x509.MarshalPKCS8PrivateKey(key.(ed25519.PrivateKey))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing Ed25519 key: %s", err)
+			}
 		}
 	}
 
@@ -324,6 +334,8 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	}
 
 	switch {
+	case parsedCertBundle.PrivateKeyType == certutil.Ed25519PrivateKey && keyType != "ed25519":
+		fallthrough
 	case parsedCertBundle.PrivateKeyType == certutil.RSAPrivateKey && keyType != "rsa":
 		fallthrough
 	case parsedCertBundle.PrivateKeyType == certutil.ECPrivateKey && keyType != "ec":
@@ -683,6 +695,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		KeyType:   "rsa",
 		KeyBits:   2048,
 		RequireCN: true,
+		SignatureBits: 256,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -706,7 +719,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	generatedRSAKeys := map[int]crypto.Signer{}
 	generatedECKeys := map[int]crypto.Signer{}
-
+	generatedEdKeys := map[int]crypto.Signer{}
 	/*
 		// For the number of tests being run, a seed of 1 has been tested
 		// to hit all of the various values below. However, for normal
@@ -1014,6 +1027,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			if !ok {
 				privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
 				generatedECKeys[keyBits] = privKey
+			}
+
+		case "ed25519":
+			privKey, ok = generatedEdKeys[keyBits]
+			if !ok {
+				_, privKey, _ = ed25519.GenerateKey(rand.Reader)
+				generatedEdKeys[keyBits] = privKey
 			}
 
 		default:
@@ -2102,22 +2122,6 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	getSelfSigned := func(subject, issuer *x509.Certificate) (string, *x509.Certificate) {
-		selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cert, err := x509.ParseCertificate(selfSigned)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: selfSigned,
-		})))
-		return pemSS, cert
-	}
-
 	template := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
@@ -2127,7 +2131,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		BasicConstraintsValid: true,
 	}
 
-	ss, _ := getSelfSigned(template, template)
+	ss, _ := getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2157,7 +2161,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
-	ss, ssCert := getSelfSigned(template, issuer)
+	ss, ssCert := getSelfSigned(t, template, issuer, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2176,7 +2180,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
 	}
 
-	ss, ssCert = getSelfSigned(template, template)
+	ss, ssCert = getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2221,6 +2225,185 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if newCert.Subject.CommonName != "foo.bar.com" {
 		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
 	}
+}
+
+// TestBackend_SignSelfIssued_DifferentTypes is a copy of
+// TestBackend_SignSelfIssued, but uses a different key type for the internal
+// root (EC instead of RSA). This verifies that we can cross-sign CAs that are
+// different key types, at the cost of verifying the algorithm used
+func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"ttl":         "172800",
+		"key_type":    "ec",
+		"key_bits":    "521",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	template := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "foo.bar.com",
+		},
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
+		BasicConstraintsValid: true,
+	}
+
+	ss, _ := getSelfSigned(t, template, template, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to non-CA; got: %#v", *resp)
+	}
+
+	// Set CA to true, but leave issuer alone
+	template.IsCA = true
+
+	issuer := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "bar.foo.com",
+		},
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+
+	ss, ssCert := getSelfSigned(t, template, issuer, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
+	}
+
+	ss, ssCert = getSelfSigned(t, template, template, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate": ss,
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error due to different signature algo but not opted-in")
+	}
+
+	ss, ssCert = getSelfSigned(t, template, template, key)
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-self-issued",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"certificate":                         ss,
+			"allow_different_signature_algorithm": "true",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("error in response: %s", resp.Error().Error())
+	}
+
+	newCertString := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(newCertString))
+	newCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
+		t.Fatal("expected different subject/issuer")
+	}
+	if !reflect.DeepEqual(newCert.Issuer, signingBundle.Certificate.Subject) {
+		t.Fatalf("expected matching issuer/CA subject\n\nIssuer:\n%#v\nSubject:\n%#v\n", newCert.Issuer, signingBundle.Certificate.Subject)
+	}
+	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
+		t.Fatal("expected different authority/subject")
+	}
+	if !bytes.Equal(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
+		t.Fatal("expected authority on new cert to be same as signing subject")
+	}
+	if newCert.Subject.CommonName != "foo.bar.com" {
+		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
+	}
+}
+
+func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.PrivateKey) (string, *x509.Certificate) {
+	t.Helper()
+	selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, err := x509.ParseCertificate(selfSigned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: selfSigned,
+	})))
+	return pemSS, cert
 }
 
 // This is a really tricky test because the Go stdlib asn1 package is incapable
@@ -2931,6 +3114,36 @@ func setCerts() {
 		Bytes: caBytes,
 	}
 	rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+
+	_, edk, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	marshaledKey, err = x509.MarshalPKCS8PrivateKey(edk)
+	if err != nil {
+		panic(err)
+	}
+	keyPEMBlock = &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: marshaledKey,
+	}
+	edCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+	if err != nil {
+		panic(err)
+	}
+	subjKeyID, err = certutil.GetSubjKeyID(edk)
+	if err != nil {
+		panic(err)
+	}
+	caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, edk.Public(), edk)
+	if err != nil {
+		panic(err)
+	}
+	caCertPEMBlock = &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	}
+	edCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 }
 
 func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
@@ -3117,4 +3330,6 @@ var (
 	rsaCACert string
 	ecCAKey   string
 	ecCACert  string
+	edCAKey   string
+	edCACert  string
 )

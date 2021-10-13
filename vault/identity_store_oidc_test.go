@@ -1,9 +1,12 @@
 package vault
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -525,6 +528,29 @@ func TestOIDC_Path_OIDCKey_InvalidTokenTTL(t *testing.T) {
 		Storage: storage,
 	})
 	expectError(t, resp, err)
+
+	// Create a client that depends on test key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key":          "test-key",
+			"id_token_ttl": "4m",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+
+	// Update test key "test-key" -- should fail since id_token_ttl is greater than 2m
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"verification_ttl": "2m",
+		},
+		Storage: storage,
+	})
+	expectError(t, resp, err)
 }
 
 // TestOIDC_Path_OIDCKey tests the List operation for keys
@@ -612,6 +638,43 @@ func TestOIDC_Path_OIDCKey_DeleteWithExistingClient(t *testing.T) {
 	expectError(t, resp, err)
 }
 
+// TestOIDC_PublicKeys_NoRole tests that public keys are not returned by the
+// oidc/.well-known/keys endpoint when they are not associated with a role
+func TestOIDC_PublicKeys_NoRole(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	s := &logical.InmemStorage{}
+
+	// Create a test key "test-key"
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/key/test-key",
+		Operation: logical.CreateOperation,
+		Storage:   s,
+	})
+	expectSuccess(t, resp, err)
+
+	// .well-known/keys should contain 0 public keys
+	assertPublicKeyCount(t, ctx, s, c, 0)
+}
+
+func assertPublicKeyCount(t *testing.T, ctx context.Context, s logical.Storage, c *Core, keyCount int) {
+	t.Helper()
+
+	// .well-known/keys should contain keyCount public keys
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/.well-known/keys",
+		Operation: logical.ReadOperation,
+		Storage:   s,
+	})
+	expectSuccess(t, resp, err)
+	// parse response
+	responseJWKS := &jose.JSONWebKeySet{}
+	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
+	if len(responseJWKS.Keys) != keyCount {
+		t.Fatalf("expected %d public keys but instead got %d", keyCount, len(responseJWKS.Keys))
+	}
+}
+
 // TestOIDC_PublicKeys tests that public keys are updated by
 // key creation, rotation, and deletion
 func TestOIDC_PublicKeys(t *testing.T) {
@@ -626,23 +689,22 @@ func TestOIDC_PublicKeys(t *testing.T) {
 		Storage:   storage,
 	})
 
-	// .well-known/keys should contain 1 public key
-	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/.well-known/keys",
-		Operation: logical.ReadOperation,
-		Storage:   storage,
+	// Create a test role "test-role"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key",
+		},
+		Storage: storage,
 	})
-	expectSuccess(t, resp, err)
-	// parse response
-	responseJWKS := &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public key but instead got %d", len(responseJWKS.Keys))
-	}
+
+	// .well-known/keys should contain 2 public keys
+	assertPublicKeyCount(t, ctx, storage, c, 2)
 
 	// rotate test-key a few times, each rotate should increase the length of public keys returned
 	// by the .well-known endpoint
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key/rotate",
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
@@ -655,46 +717,48 @@ func TestOIDC_PublicKeys(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// .well-known/keys should contain 3 public keys
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/.well-known/keys",
-		Operation: logical.ReadOperation,
-		Storage:   storage,
-	})
-	expectSuccess(t, resp, err)
-	// parse response
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 3 {
-		t.Fatalf("expected 3 public keys but instead got %d", len(responseJWKS.Keys))
-	}
+	// .well-known/keys should contain 4 public keys
+	assertPublicKeyCount(t, ctx, storage, c, 4)
 
-	// create another named key
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	// create another named key "test-key2"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key2",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
+	expectSuccess(t, resp, err)
 
+	// Create a test role "test-role2"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role2",
+		Operation: logical.CreateOperation,
+		Data: map[string]interface{}{
+			"key": "test-key2",
+		},
+		Storage: storage,
+	})
+	expectSuccess(t, resp, err)
+	// .well-known/keys should contain 6 public keys
+	assertPublicKeyCount(t, ctx, storage, c, 6)
+
+	// delete test role that references "test-key"
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/role/test-role",
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+	})
+	expectSuccess(t, resp, err)
 	// delete test key
-	c.identityStore.HandleRequest(ctx, &logical.Request{
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/key/test-key",
 		Operation: logical.DeleteOperation,
 		Storage:   storage,
 	})
-
-	// .well-known/keys should contain 1 public key, all of the public keys
-	// from named key "test-key" should have been deleted
-	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/.well-known/keys",
-		Operation: logical.ReadOperation,
-		Storage:   storage,
-	})
 	expectSuccess(t, resp, err)
-	// parse response
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 1 {
-		t.Fatalf("expected 1 public keys but instead got %d", len(responseJWKS.Keys))
-	}
+
+	// .well-known/keys should contain 2 public keys, all of the public keys
+	// from named key "test-key" should have been deleted
+	assertPublicKeyCount(t, ctx, storage, c, 2)
 }
 
 // TestOIDC_SignIDToken tests acquiring a signed token and verifying the public portion
@@ -814,10 +878,18 @@ func TestOIDC_SignIDToken(t *testing.T) {
 	responseJWKS := &jose.JSONWebKeySet{}
 	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
 
-	// Validate the signature
-	claims := &jwt.Claims{}
-	if err := parsedToken.Claims(responseJWKS.Keys[0], claims); err != nil {
-		t.Fatalf("unable to validate signed token, err:\n%#v", err)
+	keyCount := len(responseJWKS.Keys)
+	errorCount := 0
+	for _, key := range responseJWKS.Keys {
+		// Validate the signature
+		claims := &jwt.Claims{}
+		if err := parsedToken.Claims(key, claims); err != nil {
+			t.Logf("unable to validate signed token, err:\n%#v", err)
+			errorCount += 1
+		}
+	}
+	if errorCount == keyCount {
+		t.Fatalf("unable to validate signed token with any of the .well-known keys")
 	}
 }
 
@@ -856,6 +928,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				RotationPeriod:  1 * cyclePeriod,
 				KeyRing:         nil,
 				SigningKey:      jwk,
+				NextSigningKey:  jwk,
 				NextRotation:    time.Now(),
 			},
 			[]struct {
@@ -865,8 +938,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			}{
 				{1, 1, 1},
 				{2, 2, 2},
-				{3, 2, 2},
-				{4, 2, 2},
+				{3, 3, 3},
+				{4, 3, 3},
+				{5, 3, 3},
+				{6, 3, 3},
+				{7, 3, 3},
 			},
 		},
 	}
@@ -1293,7 +1369,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 }
 
 func TestOIDC_Flush(t *testing.T) {
-	c := newOIDCCache()
+	c := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 	ns := []*namespace.Namespace{
 		noNamespace, // ns[0] is nilNamespace
 		{ID: "ns1"},
@@ -1353,7 +1429,7 @@ func TestOIDC_Flush(t *testing.T) {
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
-	cache := newOIDCCache()
+	cache := newOIDCCache(gocache.NoExpiration, gocache.NoExpiration)
 
 	if _, _, err := cache.Get(nil, "foo"); err == nil {
 		t.Fatal("expected error, got nil")
@@ -1365,6 +1441,64 @@ func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
 
 	if err := cache.Flush(nil); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestOIDC_GetKeysCacheControlHeader(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// get default value
+	header, err := c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedHeader := ""
+	if header != expectedHeader {
+		t.Fatalf("expected %s, got %s", expectedHeader, header)
+	}
+
+	// set nextRun
+	nextRun := time.Now().Add(24 * time.Hour)
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "nextRun", nextRun); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	expectedNextRun := "max-age=86400"
+	if header != expectedNextRun {
+		t.Fatalf("expected %s, got %s", expectedNextRun, header)
+	}
+
+	// set jwksCacheControlMaxAge
+	durationSeconds := 60
+	jwksCacheControlMaxAge := time.Duration(durationSeconds) * time.Second
+	if err = c.identityStore.oidcCache.SetDefault(noNamespace, "jwksCacheControlMaxAge", jwksCacheControlMaxAge); err != nil {
+		t.Fatal(err)
+	}
+
+	header, err = c.identityStore.getKeysCacheControlHeader()
+	if err != nil {
+		t.Fatalf("expected success, got error:\n%v", err)
+	}
+
+	if header == "" {
+		t.Fatalf("expected header to be set, got %s", header)
+	}
+
+	maxAgeValue := strings.Split(header, "=")[1]
+	headerVal, err := strconv.Atoi(maxAgeValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// headerVal will be a random value between 0 and jwksCacheControlMaxAge (in seconds)
+	if headerVal > durationSeconds {
+		t.Logf("jwksCacheControlMaxAge: %d", int(jwksCacheControlMaxAge))
+		t.Fatalf("unexpected header value, got %d expected less than %d", headerVal, durationSeconds)
 	}
 }
 

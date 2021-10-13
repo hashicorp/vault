@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -237,7 +238,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 				},
 				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
-					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
+					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
 				},
 			},
@@ -1297,7 +1298,11 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 		return nil, err
 	}
 	if accessorEntry == nil {
-		return nil, fmt.Errorf("failed to find accessor entry for secret_id_accessor: %q", secretIDAccessor)
+		return logical.RespondWithStatusCode(
+			logical.ErrorResponse("failed to find accessor entry for secret_id_accessor: %q", secretIDAccessor),
+			req,
+			http.StatusNotFound,
+		)
 	}
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)

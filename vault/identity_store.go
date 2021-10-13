@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
@@ -56,6 +57,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		metrics:       core.MetricSink(),
 		totpPersister: core,
 		groupUpdater:  core,
+		tokenStorer:   core,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -87,6 +89,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
+				"oidc/provider/+/.well-known/*",
+				"oidc/provider/+/token",
 			},
 		},
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
@@ -96,7 +100,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		},
 	}
 
-	iStore.oidcCache = newOIDCCache()
+	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
+	iStore.oidcAuthCodeCache = newOIDCCache(5*time.Minute, 5*time.Minute)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -179,6 +184,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 		if err := i.loadGroups(ctx); err != nil {
 			i.logger.Error("failed to load groups during invalidation", "error", err)
+			return
+		}
+		if err := i.loadOIDCClients(ctx); err != nil {
+			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
 			return
 		}
 	// Check if the key is a storage entry key for an entity bucket
@@ -333,6 +342,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// the shared namespace as well.
 		if err := i.oidcCache.Flush(ns); err != nil {
 			i.logger.Error("error flushing oidc cache", "error", err)
+		}
+	case strings.HasPrefix(key, clientPath):
+		name := strings.TrimPrefix(key, clientPath)
+
+		// Invalidate the cached client in memdb
+		if err := i.memDBDeleteClientByName(ctx, name); err != nil {
+			i.logger.Error("error invalidating client", "error", err, "key", key)
+			return
 		}
 	}
 }

@@ -90,6 +90,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canUpdateSecretData: alias('checkSecretCapabilities.canUpdate'),
+  canReadSecretData: alias('checkSecretCapabilities.canRead'),
 
   checkMetadataCapabilities: maybeQueryRecord(
     'capabilities',
@@ -109,7 +110,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     'mode'
   ),
   canDeleteSecretMetadata: alias('checkMetadataCapabilities.canDelete'),
-  canCreateSecretMetadata: alias('checkMetadataCapabilities.canCreate'),
+  canUpdateSecretMetadata: alias('checkMetadataCapabilities.canUpdate'),
+  canReadSecretMetadata: alias('checkMetadataCapabilities.canRead'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 

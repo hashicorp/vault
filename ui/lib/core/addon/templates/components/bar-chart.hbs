@@ -1,4 +1,4 @@
-<div class="bar-chart-wrapper">
+<div data-test-bar-chart class="bar-chart-wrapper">
     <div class="chart-header">
       <div class="header-left">
         <h2 class="chart-title">{{@title}}</h2>
@@ -7,18 +7,21 @@
         {{/if}}
       </div> 
       <div class="header-right">
-      {{#if this.dataset}}
+      {{#if @dataset}}
         {{yield}}
       {{/if}}
       </div>
     </div>
-  {{#unless this.dataset}}
+  {{#unless @dataset}}
   <div class="toolbar"></div>
     <EmptyState @title="No namespace data" @message="There is no data to display for namespaces."/>
   {{else}}
     <div class="is-border"></div>
     <div class="bar-chart-container">
-      <svg {{did-insert this.renderBarChart}} class="bar-chart"></svg>
+      <svg 
+        {{did-insert this.renderBarChart @dataset}} 
+        {{did-update this.renderBarChart @dataset}} 
+        class="bar-chart"></svg>
     </div>
     <div class="is-border"></div>
     <div class="legend-container">
