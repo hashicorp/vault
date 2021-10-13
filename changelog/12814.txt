@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add support for preventing stale reads by automatically requiring known cluster replication states in each request.
+```

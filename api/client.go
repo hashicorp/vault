@@ -139,8 +139,11 @@ type Config struct {
 	CloneHeaders bool
 
 	// PreventStaleReads enables the Client to require discovered cluster replication states
-	// in every request.
+	// for each request.
 	// The shared state is automatically propagated to all Client clones.
+	//
+	// Note: Careful consideration should be made prior to enabling this setting since there will
+	// be a performance penalty paid upon each request. This feature requires Enterprise server-side.
 	PreventStaleReads bool
 }
 
