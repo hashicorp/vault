@@ -135,15 +135,17 @@ type Config struct {
 	// SRVLookup enables the client to lookup the host through DNS SRV lookup
 	SRVLookup bool
 
-	// CloneHeaders ensures that the source client's headers are copied to its clone.
+	// CloneHeaders ensures that the source client's headers are copied to
+	// its clone.
 	CloneHeaders bool
 
-	// PreventStaleReads enables the Client to require discovered cluster replication states
-	// for each request.
+	// PreventStaleReads enables the Client to require discovered cluster
+	// replication states for each request.
 	// The shared state is automatically propagated to all Client clones.
 	//
-	// Note: Careful consideration should be made prior to enabling this setting since there will
-	// be a performance penalty paid upon each request. This feature requires Enterprise server-side.
+	// Note: Careful consideration should be made prior to enabling this setting
+	// since there will be a performance penalty paid upon each request.
+	// This feature requires Enterprise server-side.
 	PreventStaleReads bool
 }
 
