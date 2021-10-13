@@ -51,6 +51,7 @@ import (
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -679,8 +680,8 @@ func (c *AgentCommand) Run(args []string) int {
 			var tlsConf *tls.Config
 
 			if lnConfig.Type == "bufconn" {
-				inProcListener := listenerutil.NewBufConnListenerDialer()
-				config.Cache.InProcDialer = inProcListener
+				inProcListener := bufconn.Listen(1024 * 1024)
+				config.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(inProcListener)
 				ln = inProcListener
 			} else {
 				ln, tlsConf, err = cache.StartListener(lnConfig)

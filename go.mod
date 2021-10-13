@@ -8,7 +8,7 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
-replace github.com/hashicorp/consul-template => github.com/tvoran/consul-template v0.27.2-0.20211012192322-e61ddbd05d86
+replace github.com/hashicorp/consul-template => github.com/tvoran/consul-template v0.27.2-0.20211013180249-9860065fbe7f
 
 require (
 	cloud.google.com/go v0.56.0

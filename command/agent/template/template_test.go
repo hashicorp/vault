@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
@@ -144,9 +145,9 @@ func TestCacheConfig(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			agentConfig := newAgentConfig(listeners, tc.cacheEnabled, tc.persistentCacheEnabled)
 			if tc.setDialer && tc.cacheEnabled {
-				bListener := listenerutil.NewBufConnListenerDialer()
+				bListener := bufconn.Listen(1024 * 1024)
 				defer bListener.Close()
-				agentConfig.Cache.InProcDialer = bListener
+				agentConfig.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(bListener)
 			}
 			serverConfig := ServerConfig{AgentConfig: agentConfig}
 
@@ -173,9 +174,9 @@ func TestCacheConfigNoListener(t *testing.T) {
 	listeners := []*configutil.Listener{}
 
 	agentConfig := newAgentConfig(listeners, true, true)
-	bListener := listenerutil.NewBufConnListenerDialer()
+	bListener := bufconn.Listen(1024 * 1024)
 	defer bListener.Close()
-	agentConfig.Cache.InProcDialer = bListener
+	agentConfig.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(bListener)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
