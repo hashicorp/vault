@@ -267,8 +267,8 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 		}
 	}
 
-	for _, alias := range entity.Aliases {
-		if alias.MountAccessor == mountAccessor {
+	for _, currentAlias := range entity.Aliases {
+		if currentAlias.MountAccessor == mountAccessor {
 			return logical.ErrorResponse("Alias already exists for requested entity and mount accessor"), nil
 		}
 	}
@@ -329,7 +329,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	}
 
 	if currentEntity.NamespaceID != alias.NamespaceID {
-		return logical.ErrorResponse("alias associated with an entity in a different namespace"), logical.ErrPermissionDenied
+		return logical.ErrorResponse("alias and entity do not belong to the same namespace"), logical.ErrPermissionDenied
 	}
 
 	// If the accessor is being changed but the entity is not, check if the entity
@@ -337,7 +337,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 	if mountAccessor != alias.MountAccessor && (canonicalID == "" || canonicalID == alias.CanonicalID) {
 		for _, currentAlias := range currentEntity.Aliases {
 			if currentAlias.MountAccessor == mountAccessor {
-				return logical.ErrorResponse("Alias cannot be updated as the current entity already has an alias for the given 'mount_accessor' "), nil
+				return logical.ErrorResponse("Alias cannot be updated as the entity already has an alias for the given 'mount_accessor' "), nil
 			}
 		}
 	}
@@ -389,7 +389,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		// Check if the entity the alias is being updated to, already has an alias for the mount
 		for _, alias := range newEntity.Aliases {
 			if alias.MountAccessor == mountAccessor {
-				return logical.ErrorResponse("Alias cannot be updated as the given 'canonical_id' already has an alias for this mount "), nil
+				return logical.ErrorResponse("Alias cannot be updated as the given entity already has an alias for this mount "), nil
 			}
 		}
 

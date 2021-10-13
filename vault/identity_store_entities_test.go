@@ -988,7 +988,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	var resp *logical.Response
 
 	ctx := namespace.RootContext(nil)
-	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, githubAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
 
 	registerData := map[string]interface{}{
 		"name":     "testentityname2",
@@ -1009,6 +1009,12 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	aliasRegisterData2 := map[string]interface{}{
 		"name":           "testaliasname2",
 		"mount_accessor": githubAccessor,
+		"metadata":       []string{"organization=hashicorp", "team=vault"},
+	}
+
+	aliasRegisterData3 := map[string]interface{}{
+		"name":           "testaliasname3",
+		"mount_accessor": upAccessor,
 		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
 
@@ -1088,6 +1094,15 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	aliasRegisterData3["entity_id"] = entityID2
+
+	aliasReq.Data = aliasRegisterData3
+
+	// Register the alias
+	resp, err = is.HandleRequest(ctx, aliasReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
 	entity2, err := is.MemDBEntityByID(entityID2, false)
 	if err != nil {
 		t.Fatal(err)
@@ -1096,8 +1111,8 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("failed to create entity: %v", err)
 	}
 
-	if len(entity2.Aliases) != 1 {
-		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity2.Aliases))
+	if len(entity2.Aliases) != 2 {
+		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity2.Aliases))
 	}
 
 	entity2GroupReq := &logical.Request{
@@ -1151,6 +1166,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1Aliases))
 	}
 
+	githubAliases := 0
 	for _, aliasRaw := range entity1Aliases {
 		alias := aliasRaw.(map[string]interface{})
 		aliasLookedUp, err := is.MemDBAliasByID(alias["id"].(string), false, false)
@@ -1160,6 +1176,15 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		if aliasLookedUp == nil {
 			t.Fatalf("index for alias id %q is not updated", alias["id"].(string))
 		}
+		if aliasLookedUp.MountAccessor == githubAccessor {
+			githubAliases += 1
+		}
+	}
+
+	// Test that only 1 alias for the githubAccessor is present in the merged entity,
+	// as the github alias on entity2 should've been skipped in the merge
+	if githubAliases != 1 {
+		t.Fatalf("Unexcepted number of github aliases in merged entity; expected: 1, actual: %d", githubAliases)
 	}
 
 	entity1Groups := resp.Data["direct_group_ids"].([]string)

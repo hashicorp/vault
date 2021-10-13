@@ -407,7 +407,7 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 
 // Test to check that the alias cannot be updated with a new entity
 // which already has an alias for the mount on the alias to be updated
-func TestIdentityStore_AliasUpdate_InvalidEntity(t *testing.T) {
+func TestIdentityStore_AliasMove_DuplicateAccessor(t *testing.T) {
 	var err error
 	var resp *logical.Response
 	ctx := namespace.RootContext(nil)
@@ -492,7 +492,7 @@ func TestIdentityStore_AliasUpdate_InvalidEntity(t *testing.T) {
 
 // Test that the alias cannot be changed to a mount for which
 // the entity already has an alias
-func TestIdentityStore_AliasUpdate__DuplicateAccessor(t *testing.T) {
+func TestIdentityStore_AliasUpdate_DuplicateAccessor(t *testing.T) {
 	var err error
 	var resp *logical.Response
 	ctx := namespace.RootContext(nil)
