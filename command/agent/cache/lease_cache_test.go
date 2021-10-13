@@ -899,6 +899,105 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	}
 }
 
+func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
+	tempDir, boltStorage := setupBoltStorage(t)
+	defer os.RemoveAll(tempDir)
+	defer boltStorage.Close()
+
+	var requests []*SendRequest
+	var responses []*SendResponse
+
+	// helper func to generate new auth leases with a child secret lease attached
+	authAndSecretLease := func(id int, parentToken, newToken string) {
+		t.Helper()
+		requests = append(requests, &SendRequest{
+			Token: parentToken,
+			Request: httptest.NewRequest(
+				"PUT",
+				fmt.Sprintf("http://example.com/v1/auth/approle-%d/login", id),
+				strings.NewReader(""),
+			),
+		})
+		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"auth": {"client_token": "%s", "renewable": true, "lease_duration": 600}}`, newToken)))
+
+		// Fetch a leased secret using the new token
+		requests = append(requests, &SendRequest{
+			Token: newToken,
+			Request: httptest.NewRequest(
+				"GET",
+				fmt.Sprintf("http://example.com/v1/kv/%d", id),
+				strings.NewReader(""),
+			),
+		})
+		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"lease_id": "secret-%d-lease", "renewable": true, "data": {"number": %d}, "lease_duration": 600}`, id, id)))
+	}
+
+	// Pathological case: a long chain of child tokens
+	authAndSecretLease(-1, "autoauthtoken", "many-ancestors-token;0")
+	for i := 0; i < 50; i++ {
+		// Create a new generation of child token
+		authAndSecretLease(i, fmt.Sprintf("many-ancestors-token;%d", i), fmt.Sprintf("many-ancestors-token;%d", i+1))
+	}
+	// Lots of sibling tokens with auto auth token as their parent
+	for i := 50; i < 100; i++ {
+		authAndSecretLease(i, "autoauthtoken", fmt.Sprintf("many-siblings-token;%d", i))
+	}
+
+	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
+
+	// Register an auto-auth token so that the token and lease requests are cached
+	err := lc.RegisterAutoAuthToken("autoauthtoken")
+	require.NoError(t, err)
+
+	for _, req := range requests {
+		// Send once to cache
+		resp, err := lc.Send(context.Background(), req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.Response.StatusCode, "expected success")
+		assert.Nil(t, resp.CacheMeta)
+	}
+
+	restoredCache := testNewLeaseCache(t, responses[2:4])
+
+	err = restoredCache.Restore(context.Background(), boltStorage)
+	require.NoError(t, err)
+
+	// Now compare before and after
+	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, beforeDB, 203)
+	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, afterDB, 203)
+	for _, cachedItem := range beforeDB {
+		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
+		require.NoError(t, err)
+
+		assert.NoError(t, err)
+		assert.Equal(t, cachedItem.ID, restoredItem.ID)
+		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
+		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
+		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
+		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
+		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
+		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
+		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
+		assert.Equal(t, cachedItem.Response, restoredItem.Response)
+		assert.Equal(t, cachedItem.Token, restoredItem.Token)
+		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
+		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
+
+		// check what we can in the renewal context
+		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
+		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
+		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
+		assert.Equal(t,
+			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+		)
+	}
+}
+
 func TestEvictPersistent(t *testing.T) {
 	ctx := context.Background()
 

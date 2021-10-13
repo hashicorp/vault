@@ -973,23 +973,32 @@ type indexAndChannel struct {
 	ch    chan struct{}
 }
 
+type leaseMaps struct {
+	// Maps of index ID -> index and channel
+	authLeases   map[string]indexAndChannel
+	secretLeases map[string]indexAndChannel
+}
+
 // Restore loads the cachememdb from the persistent storage passed in. Loads
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
 func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStorage) error {
-	var errors *multierror.Error
+	var errs *multierror.Error
 
 	// Process tokens first
 	tokens, err := storage.GetByType(ctx, cacheboltdb.TokenType)
 	if err != nil {
-		errors = multierror.Append(errors, err)
+		errs = multierror.Append(errs, err)
 	} else {
 		if err := c.restoreTokens(tokens); err != nil {
-			errors = multierror.Append(errors, err)
+			errs = multierror.Append(errs, err)
 		}
 	}
 
-	leasesMap := make(map[string]indexAndChannel)
+	leaseMaps := &leaseMaps{
+		authLeases:   make(map[string]indexAndChannel),
+		secretLeases: make(map[string]indexAndChannel),
+	}
 
 	// Fetch all the auth and secret leases we'll process upfront.
 	// Doing so allows us to process dependencies between the leases if there are any.
@@ -997,27 +1006,28 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 	// being processed itself.
 	// This algorithm requires that each index ID is globally unique across buckets,
 	// and that the graph of dependencies is acyclic.
-	for _, leaseType := range []string{cacheboltdb.AuthLeaseType, cacheboltdb.SecretLeaseType} {
-		leases, err := storage.GetByType(ctx, leaseType)
+	for _, leaseType := range []struct {
+		name string
+		m    map[string]indexAndChannel
+	}{
+		{cacheboltdb.AuthLeaseType, leaseMaps.authLeases},
+		{cacheboltdb.SecretLeaseType, leaseMaps.secretLeases},
+	} {
+		leases, err := storage.GetByType(ctx, leaseType.name)
 		if err != nil {
-			errors = multierror.Append(errors, err)
-		} else {
-			for _, lease := range leases {
-				newIndex, err := cachememdb.Deserialize(lease)
-				if err != nil {
-					errors = multierror.Append(errors, err)
-					continue
-				}
-				if _, exists := leasesMap[newIndex.ID]; exists {
-					// This will only happen if we get a SHA256 hash collision,
-					// but handle it gracefully by reporting the failure.
-					errors = multierror.Append(errors, fmt.Errorf("failed to restore lease with id=%s, path=%s due to hash collision", newIndex.ID, newIndex.RequestPath))
-					continue
-				}
-				leasesMap[newIndex.ID] = indexAndChannel{
-					index: newIndex,
-					ch:    make(chan struct{}),
-				}
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		for _, lease := range leases {
+			index, err := cachememdb.Deserialize(lease)
+			if err != nil {
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			leaseType.m[index.ID] = indexAndChannel{
+				index: index,
+				ch:    make(chan struct{}),
 			}
 		}
 	}
@@ -1025,41 +1035,43 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 	// Now restore the auth and secret leases.
 	wg := sync.WaitGroup{}
 	mtx := sync.Mutex{}
-	for id, lease := range leasesMap {
-		wg.Add(1)
-		go func(id string, lease indexAndChannel) {
-			defer wg.Done()
-			defer close(lease.ch)
+	for _, leases := range []map[string]indexAndChannel{leaseMaps.authLeases, leaseMaps.secretLeases} {
+		for id, lease := range leases {
+			wg.Add(1)
+			go func(id string, lease indexAndChannel) {
+				defer wg.Done()
+				defer close(lease.ch)
 
-			c.logger.Trace("processing lease", "id", id)
-			// Check if this lease has already expired
-			expired, err := c.hasExpired(time.Now().UTC(), lease.index)
-			if err != nil {
-				c.logger.Warn("failed to check if lease is expired", "id", id, "error", err)
-			}
-			if expired {
-				return
-			}
+				c.logger.Trace("processing lease", "id", id)
+				// Check if this lease has already expired
+				expired, err := c.hasExpired(time.Now().UTC(), lease.index)
+				if err != nil {
+					c.logger.Warn("failed to check if lease is expired", "id", id, "error", err)
+				}
+				if expired {
+					return
+				}
 
-			if err := c.restoreLeaseRenewCtx(lease.index, leasesMap); err != nil {
-				mtx.Lock()
-				errors = multierror.Append(errors, err)
-				mtx.Unlock()
-				return
-			}
-			if err := c.db.Set(lease.index); err != nil {
-				mtx.Lock()
-				errors = multierror.Append(errors, err)
-				mtx.Unlock()
-				return
-			}
-			c.logger.Trace("restored lease", "id", id, "path", lease.index.RequestPath)
-		}(id, lease)
+				if err := c.restoreLeaseRenewCtx(lease.index, leaseMaps.authLeases); err != nil {
+					mtx.Lock()
+					errs = multierror.Append(errs, err)
+					mtx.Unlock()
+					return
+				}
+				if err := c.db.Set(lease.index); err != nil {
+					mtx.Lock()
+					errs = multierror.Append(errs, err)
+					mtx.Unlock()
+					return
+				}
+				c.logger.Trace("restored lease", "id", id, "path", lease.index.RequestPath)
+			}(id, lease)
+		}
 	}
 
 	wg.Wait()
 
-	return errors.ErrorOrNil()
+	return errs.ErrorOrNil()
 }
 
 func (c *LeaseCache) restoreTokens(tokens [][]byte) error {
@@ -1085,7 +1097,7 @@ func (c *LeaseCache) restoreTokens(tokens [][]byte) error {
 
 // restoreLeaseRenewCtx re-creates a RenewCtx for an index object and starts
 // the watcher go routine
-func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index, channels map[string]indexAndChannel) error {
+func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index, authLeases map[string]indexAndChannel) error {
 	if index.Response == nil {
 		return fmt.Errorf("cached response was nil for %s", index.ID)
 	}
@@ -1106,7 +1118,7 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index, channels map[
 	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
 	case secret.LeaseID != "":
-		if parent, ok := channels[index.RequestTokenIndexID]; ok {
+		if parent, ok := authLeases[index.RequestTokenIndexID]; ok {
 			c.logger.Trace("waiting for parent token to restore", "id", index.RequestTokenIndexID)
 			select {
 			case <-parent.ch:
@@ -1128,7 +1140,7 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index, channels map[
 	case secret.Auth != nil:
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
-			if parent, ok := channels[index.RequestTokenIndexID]; ok {
+			if parent, ok := authLeases[index.RequestTokenIndexID]; ok {
 				c.logger.Trace("waiting for parent token to restore", "id", index.RequestTokenIndexID)
 				select {
 				case <-parent.ch:
