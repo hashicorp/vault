@@ -17,6 +17,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
@@ -969,56 +970,69 @@ func (c *LeaseCache) Flush() error {
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
 func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStorage) error {
+	var errors *multierror.Error
+
 	// Process tokens first
 	tokens, err := storage.GetByType(ctx, cacheboltdb.TokenType)
 	if err != nil {
-		return err
-	}
-	if err := c.restoreTokens(tokens); err != nil {
-		return err
+		errors = multierror.Append(errors, err)
+	} else {
+		if err := c.restoreTokens(tokens); err != nil {
+			errors = multierror.Append(errors, err)
+		}
 	}
 
 	// Then process auth leases
 	authLeases, err := storage.GetByType(ctx, cacheboltdb.AuthLeaseType)
 	if err != nil {
-		return err
-	}
-	if err := c.restoreLeases(authLeases); err != nil {
-		return err
+		errors = multierror.Append(errors, err)
+	} else {
+		if err := c.restoreLeases(authLeases); err != nil {
+			errors = multierror.Append(errors, err)
+		}
 	}
 
 	// Then process secret leases
 	secretLeases, err := storage.GetByType(ctx, cacheboltdb.SecretLeaseType)
 	if err != nil {
-		return err
-	}
-	if err := c.restoreLeases(secretLeases); err != nil {
-		return err
+		errors = multierror.Append(errors, err)
+	} else {
+		if err := c.restoreLeases(secretLeases); err != nil {
+			errors = multierror.Append(errors, err)
+		}
 	}
 
-	return nil
+	return errors.ErrorOrNil()
 }
 
 func (c *LeaseCache) restoreTokens(tokens [][]byte) error {
+	var errors *multierror.Error
+
 	for _, token := range tokens {
 		newIndex, err := cachememdb.Deserialize(token)
 		if err != nil {
-			return err
+			errors = multierror.Append(errors, err)
+			continue
 		}
 		newIndex.RenewCtxInfo = c.createCtxInfo(nil)
 		if err := c.db.Set(newIndex); err != nil {
-			return err
+			errors = multierror.Append(errors, err)
+			continue
 		}
 		c.logger.Trace("restored token", "id", newIndex.ID)
 	}
-	return nil
+
+	return errors.ErrorOrNil()
 }
 
 func (c *LeaseCache) restoreLeases(leases [][]byte) error {
+	var errors *multierror.Error
+
 	for _, lease := range leases {
 		newIndex, err := cachememdb.Deserialize(lease)
 		if err != nil {
-			return err
+			errors = multierror.Append(errors, err)
+			continue
 		}
 
 		// Check if this lease has already expired
@@ -1031,14 +1045,17 @@ func (c *LeaseCache) restoreLeases(leases [][]byte) error {
 		}
 
 		if err := c.restoreLeaseRenewCtx(newIndex); err != nil {
-			return err
+			errors = multierror.Append(errors, err)
+			continue
 		}
 		if err := c.db.Set(newIndex); err != nil {
-			return err
+			errors = multierror.Append(errors, err)
+			continue
 		}
 		c.logger.Trace("restored lease", "id", newIndex.ID, "path", newIndex.RequestPath)
 	}
-	return nil
+
+	return errors.ErrorOrNil()
 }
 
 // restoreLeaseRenewCtx re-creates a RenewCtx for an index object and starts

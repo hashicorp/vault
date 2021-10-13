@@ -60,6 +60,8 @@ check out our [Getting Started guides](https://learn.hashicorp.com/collections/v
 on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault)
 to continue your learning.
 
+For examples of how to interact with Vault from inside your application in different programming languages, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo.
+
 Show off your Vault knowledge by passing a certification exam. Visit the
 [certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
 for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)

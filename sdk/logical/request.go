@@ -350,6 +350,7 @@ const (
 	CreateOperation         Operation = "create"
 	ReadOperation                     = "read"
 	UpdateOperation                   = "update"
+	PatchOperation                    = "patch"
 	DeleteOperation                   = "delete"
 	ListOperation                     = "list"
 	HelpOperation                     = "help"
