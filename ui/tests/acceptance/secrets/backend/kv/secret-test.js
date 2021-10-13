@@ -42,7 +42,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('it creates a secret and redirects', async function(assert) {
-    const path = `kv-path-${new Date().getTime()}`;
+    const secretName = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
@@ -52,7 +52,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.toggleMetadata();
     await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
-    await editPage.createSecret(path, 'foo', 'bar');
+    await editPage.createSecret(secretName, 'foo', 'bar');
     await settled();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -61,24 +61,24 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('it can create a secret when check-and-set is required', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
-    let secretPath = 'foo/bar';
+    let secretName = 'foo/bar';
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await consoleComponent.runCommands(`write ${enginePath}/config cas_required=true`);
-    await writeSecret(enginePath, secretPath, 'foo', 'bar');
+    await writeSecret(enginePath, secretName, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
   test('it can create a secret with a non default max version and add metadata', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
-    let secretPath = 'maxVersions';
+    let secretName = 'maxVersions';
     let maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
     await editPage.startCreateSecret();
-    await editPage.path(secretPath);
+    await editPage.path(secretName);
     await editPage.toggleMetadata();
     await settled();
     await editPage.maxVersion(maxVersions);
@@ -133,7 +133,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       );
   });
 
-  test('it can create a secret with config metadata', async function(assert) {
+  test('it can mount a KV 2 secret engine with config metadata', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let maxVersion = 101;
     await mountSecrets.visit();
@@ -196,6 +196,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('it disables save when validation errors occur', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'not-duplicate';
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
@@ -218,21 +219,25 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-secret-save="true"]').isDisabled('Save button is disabled');
     await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
-    await editPage.path('meep');
+    await editPage.path(secretPath);
     await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
     await click('[data-test-secret-save="true"]');
-    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/meep`, 'navigates to show secret');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/show/${secretPath}`, 'navigates to show secret');
   });
 
   test('it navigates to version history and to a specific version', async function(assert) {
-    const path = `kv-path-${new Date().getTime()}`;
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = `specific-version`;
     let today = new Date();
     let month = today.toString().split(' ')[1];
-    await listPage.visitRoot({ backend: 'secret' });
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await settled();
+    await listPage.visitRoot({ backend: enginePath });
     await settled();
     await listPage.create();
     await settled();
-    await editPage.createSecret(path, 'foo', 'bar');
+    await editPage.createSecret(secretPath, 'foo', 'bar');
     await click('[data-test-popup-menu-trigger="version"]');
     await settled();
     assert.dom('[ data-test-created-time]').includesText(month, 'created time shows todays month');
@@ -250,7 +255,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
-      `/vault/secrets/secret/show/${path}?version=1`,
+      `/vault/secrets/${enginePath}/show/${secretPath}?version=1`,
       'redirects to the show page with queryParam version=1'
     );
   });
@@ -271,7 +276,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.createSecret(secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
-    //check for metadata tab should not exist on KV version 1
+    // check for metadata tab should not exist on KV version 1
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
@@ -366,10 +371,10 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('it redirects to the path ending in / for list pages', async function(assert) {
-    const path = `foo/bar/kv-path-${new Date().getTime()}`;
+    const secretPath = `foo/bar/kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
-    await editPage.createSecret(path, 'foo', 'bar');
+    await editPage.createSecret(secretPath, 'foo', 'bar');
     await settled();
     // use visit helper here because ids with / in them get encoded
     await visit('/vault/secrets/secret/list/foo/bar');
@@ -379,10 +384,10 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('it can edit via the JSON input', async function(assert) {
     let content = JSON.stringify({ foo: 'fa', bar: 'boo' });
-    const path = `kv-path-${new Date().getTime()}`;
+    const secretPath = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
-    await editPage.path(path).toggleJSON();
+    await editPage.path(secretPath).toggleJSON();
     await editPage.editor.fillIn(this, content);
     await editPage.save();
 
@@ -500,22 +505,23 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
   });
 
-  // All policy test below this line
+  // All policy tests below this line
   test('version 2 with restricted policy still allows creation and does not show metadata tab', async function(assert) {
-    let backend = 'kv-v2';
+    let enginePath = 'dont-show-metadata-tab';
+    let secretPath = 'dont-show-metadata-tab-secret-path';
     const V2_POLICY = `
-      path "kv-v2/metadata/*" {
+      path "${enginePath}/metadata/*" {
         capabilities = ["list"]
       }
-      path "kv-v2/data/secret" {
+      path "${enginePath}/data/${secretPath}" {
         capabilities = ["create", "read", "update"]
       }
     `;
     await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
-      'delete kv-v2/metadata/secret',
+      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
@@ -523,54 +529,84 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await logout.visit();
     await authPage.login(userToken);
 
-    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     //check for metadata tab which should not show because you don't have read capabilities
     assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
   });
 
+  test('version 2 with no access to data but access to metadata shows metadata tab', async function(assert) {
+    let enginePath = 'kv-metadata-access-only';
+    let secretPath = 'kv-metadata-access-only-secret-name';
+    const V2_POLICY = `
+      path "${enginePath}/metadata/*" {
+        capabilities = ["read", "update", "list"]
+      }
+    `;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
+      // delete any kv previously written here so that tests can be re-run
+      `delete ${enginePath}/metadata/${secretPath}`,
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+    await settled();
+    await click(`[data-test-auth-backend-link=${enginePath}]`);
+    await settled();
+    await click(`[data-test-secret-link=${secretPath}]`);
+    await settled();
+    assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
+    await editPage.metadataTab();
+    await settled();
+    assert.dom('[data-test-empty-state-title]').hasText('No custom metadata');
+    assert.dom('[data-test-add-custom-metadata]').exists('it shows link to edit metadata');
+  });
+
   test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function(assert) {
-    let backend = 'no-metadata-read';
+    let enginePath = 'no-metadata-read';
+    let secretPath = 'no-metadata-read-secret-name';
     let V2_POLICY_NO_LIST = `
-      path "${backend}/metadata/*" {
+      path "${enginePath}/metadata/*" {
         capabilities = ["update","delete"]
       }
-      path "${backend}/data/*" {
+      path "${enginePath}/data/*" {
         capabilities = ["create", "read", "update", "delete"]
       }
     `;
     await consoleComponent.runCommands([
       // delete any kv previously written here so that tests can be re-run
-      `delete ${backend}/metadata/secret-path`,
+      `delete ${enginePath}/metadata/${secretPath}`,
       // delete any previous mount with same name
-      `delete sys/mounts/${backend}`,
-      `write sys/mounts/${backend} type=kv options=version=2`,
-      `write sys/policies/acl/metadata-no-list policy=${btoa(V2_POLICY_NO_LIST)}`,
-      'write -field=client_token auth/token/create policies=metadata-no-list',
+      `delete sys/mounts/${enginePath}`,
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
+      `write sys/policies/acl/metadata-no-read policy=${btoa(V2_POLICY_NO_LIST)}`,
+      'write -field=client_token auth/token/create policies=metadata-no-read',
     ]);
+
     await settled();
     let userToken2 = consoleComponent.lastLogOutput;
     await settled();
-    await listPage.visitRoot({ backend });
+    await listPage.visitRoot({ backend: enginePath });
     await settled();
     await listPage.create();
     await settled();
-    await editPage.createSecretWithMetadata('secret-path', 'secret-key', 'secret-value', 101);
+    await editPage.createSecretWithMetadata(secretPath, 'secret-key', 'secret-value', 101);
     await settled();
     await logout.visit();
     await settled();
     await authPage.login(userToken2);
     await settled();
     // test if metadata tab there and error and no edit. and you can’t see metadata that was setup.
-    await click(`[data-test-auth-backend-link=${backend}]`);
+    await click(`[data-test-auth-backend-link=${enginePath}]`);
     await settled();
     // this fails in IE11 on browserstack so going directly to URL
-    // let card = document.querySelector('[data-test-search-roles]').childNodes[1];
-    // await typeIn(card.querySelector('input'), 'secret-path');
-    // await settled();
-    await visit('/vault/secrets/no-metadata-read/show/secret-path');
-    // await click('[data-test-get-credentials]');
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     await settled();
     await assert
       .dom('[data-test-value-div="secret-key"]')
@@ -605,31 +641,32 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-modal-delete]');
     await settled();
-    assert.equal(currentURL(), '/vault/secrets/no-metadata-read/list', 'brings you back to the list page');
-    await visit('/vault/secrets/no-metadata-read/show/secret-path');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/list`, 'brings you back to the list page');
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     await settled();
     assert.dom('[data-test-secret-not-found]').exists('secret no longer found');
   });
 
   // KV delete operations testing
   test('version 2 with policy with destroy capabilities shows modal', async function(assert) {
-    let backend = 'kv-v2';
+    let enginePath = 'kv-v2-destroy-capabilities';
+    let secretPath = 'kv-v2-destroy-capabilities-secret-path';
     const V2_POLICY = `
-      path "kv-v2/destroy/*" {
+      path "${enginePath}/destroy/*" {
         capabilities = ["update"]
       }
-      path "kv-v2/metadata/*" {
+      path "${enginePath}/metadata/*" {
         capabilities = ["list", "update", "delete"]
       }
-      path "kv-v2/data/secret" {
+      path "${enginePath}/data/${secretPath}" {
         capabilities = ["create", "read", "update"]
       }
     `;
     await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
-      'delete kv-v2/metadata/secret',
+      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
@@ -637,7 +674,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await logout.visit();
     await authPage.login(userToken);
 
-    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
     await click('[data-test-delete-open-modal]');
     await settled();
     assert.dom('[data-test-delete-modal="destroy-version"]').exists('destroy this version option shows');
@@ -646,97 +683,101 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function(assert) {
-    let backend = 'kv-v2';
+    let enginePath = 'kv-v2-only-delete';
+    let secretPath = 'kv-v2-only-delete-secret-path';
     const V2_POLICY = `
-      path "kv-v2/delete/*" {
+      path "${enginePath}/delete/*" {
         capabilities = ["update"]
       }
-      path "kv-v2/undelete/*" {
+      path "${enginePath}/undelete/*" {
         capabilities = ["update"]
       }
-      path "kv-v2/metadata/*" {
+      path "${enginePath}/metadata/*" {
         capabilities = ["list","read","create","update"]
       }
-      path "kv-v2/data/secret" {
+      path "${enginePath}/data/${secretPath}" {
         capabilities = ["create", "read"]
       }
     `;
     await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
-      'delete kv-v2/metadata/secret',
+      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
-    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.dom('[data-test-delete-open-modal]').doesNotExist('delete version does not show');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
     await showPage.deleteSecretV2();
     // unable to reload page in test scenario so going to list and back to secret to confirm deletion
-    let url = `/vault/secrets/${backend}/list`;
+    let url = `/vault/secrets/${enginePath}/list`;
     await visit(url);
-    await click('[data-test-secret-link="secret"]');
+    await settled();
+    await click(`[data-test-secret-link=${secretPath}]`);
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
   });
 
   test('version 2 with path forward slash will show delete button', async function(assert) {
-    let backend = 'kv-v2';
+    let enginePath = 'kv-v2-forward-slash';
+    let secretPath = 'forward/slash';
     const V2_POLICY = `
-      path "kv-v2/delete/forward/slash" {
+      path "${enginePath}/delete/${secretPath}" {
         capabilities = ["update"]
       }
-      path "kv-v2/metadata/*" {
+      path "${enginePath}/metadata/*" {
         capabilities = ["list","read","create","update"]
       }
-      path "kv-v2/data/forward/slash" {
+      path "${enginePath}/data/${secretPath}" {
         capabilities = ["create", "read"]
       }
     `;
     await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
-      'delete kv-v2/metadata/forward/slash',
+      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
-    await writeSecret(backend, 'forward/slash', 'foo', 'bar');
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
   });
 
   test('version 2 with engine with forward slash will show delete button', async function(assert) {
-    let backend = 'forward/slash';
+    let enginePath = 'forward/slash';
+    let secretPath = 'secret-name';
     const V2_POLICY = `
-      path "forward/slash/delete/secret" {
+      path "${enginePath}/delete/${secretPath}" {
         capabilities = ["update"]
       }
-      path "forward/slash/metadata/*" {
+      path "${enginePath}/metadata/*" {
         capabilities = ["list","read","create","update"]
       }
-      path "forward/slash/data/*" {
+      path "${enginePath}/data/*" {
         capabilities = ["create", "read"]
       }
     `;
     await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       // delete any kv previously written here so that tests can be re-run
-      'delete forward/slash/metadata/secret',
+      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
-    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.dom('[data-test-secret-v2-delete="true"]').exists('drop down delete shows');
   });
   // end of KV delete operation testing
