@@ -1004,8 +1004,7 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 	// Doing so allows us to process dependencies between the leases if there are any.
 	// Any lease that depends on another can wait for its parent to be restored before
 	// being processed itself.
-	// This algorithm requires that each index ID is globally unique across buckets,
-	// and that the graph of dependencies is acyclic.
+	// This algorithm requires that the graph of dependencies is acyclic.
 	for _, leaseType := range []struct {
 		name string
 		m    map[string]indexAndChannel
