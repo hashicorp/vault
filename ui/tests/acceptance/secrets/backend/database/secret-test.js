@@ -309,7 +309,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
         { label: 'Connection URL', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
         { label: 'Username', name: 'username', value: 'user', hideOnShow: true },
         { label: 'Password', name: 'password', password: 'so-secure', hideOnShow: true },
-        { label: 'Write concern', name: 'write_concern', hideOnShow: true },
+        { label: 'Write concern', name: 'write_concern' },
       ],
     };
     assert.equal(
