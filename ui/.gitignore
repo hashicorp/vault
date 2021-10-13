@@ -18,6 +18,7 @@
 /testem.log
 /yarn-error.log
 /.storybook/preview-head.html
+package-lock.json
 
 # ember-try
 /.node_modules.ember-try/
