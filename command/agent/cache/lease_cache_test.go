@@ -1020,7 +1020,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 
 	assert.Equal(t, 111, approleTokensFound)
 	assert.Equal(t, 111, secretsFound)
-	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 1-50")
+	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 0-50")
 
 	// Now compare before and after
 	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
