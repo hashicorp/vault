@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	_ "github.com/SAP/go-hdb/driver"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const (
@@ -101,7 +101,6 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 		credsutil.Separator("_"),
 		credsutil.ToUpper(),
 	)
-
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}

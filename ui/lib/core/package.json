@@ -6,7 +6,7 @@
   "dependencies": {
     "autosize": "*",
     "date-fns": "*",
-    "Duration.js": "*",
+    "@icholy/duration": "*",
     "base64-js": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
@@ -14,7 +14,6 @@
     "ember-cli-babel": "*",
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
-    "ember-cli-htmlbars-inline-precompile": "*",
     "ember-cli-string-helpers": "*",
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",

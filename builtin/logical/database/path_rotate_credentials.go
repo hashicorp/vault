@@ -13,10 +13,10 @@ import (
 
 func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of this database connection",
 				},
@@ -33,10 +33,10 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
 			HelpDescription: pathCredsCreateReadHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the static role",
 				},
@@ -78,6 +78,14 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		// Take out the backend lock since we are swapping out the connection
+		b.Lock()
+		defer b.Unlock()
+
+		// Take the write lock on the instance
+		dbi.Lock()
+		defer dbi.Unlock()
+
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
@@ -87,14 +95,6 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			// Even on error, still remove the connection
 			delete(b.connections, name)
 		}()
-
-		// Take out the backend lock since we are swapping out the connection
-		b.Lock()
-		defer b.Unlock()
-
-		// Take the write lock on the instance
-		dbi.Lock()
-		defer dbi.Unlock()
 
 		// Generate new credentials
 		oldPassword := config.ConnectionDetails["password"].(string)
@@ -169,10 +169,14 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		}
 
-		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+		input := &setStaticAccountInput{
 			RoleName: name,
 			Role:     role,
-		})
+		}
+		if walID, ok := item.Value.(string); ok {
+			input.WALID = walID
+		}
+		resp, err := b.setStaticAccount(ctx, req.Storage, input)
 		// if err is not nil, we need to attempt to update the priority and place
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
@@ -188,6 +192,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		} else {
 			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+			item.Value = ""
 		}
 
 		// Add their rotation to the queue
@@ -195,8 +201,13 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, fmt.Errorf("unable to finish rotating credentials; retries will "+
+				"continue in the background but it is also safe to retry manually: %w", err)
+		}
+
 		// return any err from the setStaticAccount call
-		return nil, err
+		return nil, nil
 	}
 }
 
@@ -211,6 +222,7 @@ This path attempts to rotate the root credentials for the given database.
 const pathRotateRoleCredentialsUpdateHelpSyn = `
 Request to rotate the credentials for a static user account.
 `
+
 const pathRotateRoleCredentialsUpdateHelpDesc = `
 This path attempts to rotate the credentials for the given static user account.
 `

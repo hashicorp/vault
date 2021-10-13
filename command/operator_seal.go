@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorSealCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorSealCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorSealCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorSealCommand)(nil)
+)
 
 type OperatorSealCommand struct {
 	*BaseCommand

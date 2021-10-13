@@ -9,7 +9,25 @@
   </h2>
   {{#if (or model.certificate model.csr)}}
     {{#each model.attrs as |attr|}}
-      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{#if attr.options.masked}}
+        <InfoTableRow data-test-table-row
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+          />
+        </InfoTableRow>
+      {{else if (and (get model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
+        <InfoTableRow data-test-table-row={{value}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
+      {{else}}
+        <InfoTableRow data-test-table-row={{value}} 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}/>
+      {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
@@ -33,7 +51,10 @@
           data-test-warning
         />
       {{/if}}
-      {{partial "partials/form-field-groups-loop"}}
+      <FormFieldGroupsLoop
+        @model={{model}}
+        @mode={{mode}}
+      />
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
         <div class="field is-grouped">
           <div class="control">
@@ -52,7 +73,7 @@
             <ConfirmAction
               @buttonClasses="button"
               @confirmTitle="Delete this CA key?"
-              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key are generated or uploaded."
+              @confirmMessage="This CA certificate will still be available for reading until a new certificate/key is generated or uploaded."
               @onConfirmAction={{action "deleteCA"}}
             >
               Delete
@@ -70,7 +91,26 @@
       data-test-warning
     />
     {{#each model.attrs as |attr|}}
-      {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
+      {{#if attr.options.masked}}
+        <InfoTableRow 
+          data-test-table-row={{value}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+          />
+        </InfoTableRow>
+     {{else if (and (get model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
+        <InfoTableRow data-test-table-row={{value}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}}/>
+      {{else}}
+        <InfoTableRow data-test-table-row={{value}} 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}/>
+      {{/if}}
     {{/each}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
@@ -89,7 +129,10 @@
     <NamespaceReminder @mode="save" @noun="PKI change" />
     <MessageError @model={{model}} />
     <form {{action "saveCA" on="submit"}} data-test-sign-intermediate-form="true">
-      {{partial "partials/form-field-groups-loop"}}
+      <FormFieldGroupsLoop
+        @model={{model}}
+        @mode={{mode}}
+      />
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <button data-test-submit type="submit" class="button is-primary {{if loading 'is-loading'}}" disabled={{loading}}>

@@ -10,12 +10,13 @@ import (
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
 
-func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, certName string) {
+func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, certName string, expectedVersion uint16) {
 	serverCh := make(chan net.Conn, 1)
 	go func() {
 		server, err := ln.Accept()
 		if err != nil {
-			t.Fatalf("err: %s", err)
+			t.Errorf("err: %s", err)
+			return
 		}
 		if certName != "" {
 			tlsConn := server.(*tls.Conn)
@@ -31,6 +32,9 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 
 	if certName != "" {
 		tlsConn := client.(*tls.Conn)
+		if expectedVersion != 0 && tlsConn.ConnectionState().Version != expectedVersion {
+			t.Fatalf("expected version %d, got %d", expectedVersion, tlsConn.ConnectionState().Version)
+		}
 		if len(tlsConn.ConnectionState().PeerCertificates) != 1 {
 			t.Fatalf("err: number of certs too long")
 		}

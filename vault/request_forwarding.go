@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
@@ -329,12 +329,17 @@ func (c *Core) clearForwardingClients() {
 // ForwardRequest forwards a given request to the active node and returns the
 // response.
 func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, error) {
+	// checking if the node is perfStandby here to avoid a deadlock between
+	// Core.stateLock and Core.requestForwardingConnectionLock
+	isPerfStandby := c.PerfStandby()
 	c.requestForwardingConnectionLock.RLock()
 	defer c.requestForwardingConnectionLock.RUnlock()
 
 	if c.rpcForwardingClient == nil {
 		return 0, nil, nil, ErrCannotForward
 	}
+
+	defer metrics.MeasureSince([]string{"ha", "rpc", "client", "forward"}, time.Now())
 
 	origPath := req.URL.Path
 	defer func() {
@@ -352,8 +357,9 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		c.logger.Error("got nil forwarding RPC request")
 		return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 	}
-	resp, err := c.rpcForwardingClient.ForwardRequest(c.rpcClientConnContext, freq)
+	resp, err := c.rpcForwardingClient.ForwardRequest(req.Context(), freq)
 	if err != nil {
+		metrics.IncrCounter([]string{"ha", "rpc", "client", "forward", "errors"}, 1)
 		c.logger.Error("error during forwarded RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
 	}
@@ -369,7 +375,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// If we are a perf standby and the request was forwarded to the active node
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
-	if c.PerfStandby() && resp.LastRemoteWal > 0 {
+	if isPerfStandby && resp.LastRemoteWal > 0 {
 		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
 	}
 

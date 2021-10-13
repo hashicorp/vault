@@ -13,12 +13,33 @@
   <MessageError @model={{model}} />
   {{#each model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{stringify (get model attr.name)}} />
+      <InfoTableRow data-test-table-row 
+        @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+        @value={{stringify (get model attr.name)}} />
     {{else}}
-      <InfoTableRow @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} @value={{get model attr.name}} />
+      {{#if attr.options.masked}}
+        <InfoTableRow data-test-table-row 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}}>
+          <MaskedInput
+            @value={{get model attr.name}}
+            @displayOnly={{true}}
+            @allowCopy={{true}}
+          />
+        </InfoTableRow>
+      {{else if (and (get model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
+       <InfoTableRow data-test-table-row 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}} />
+      {{else}}
+        <InfoTableRow data-test-table-row 
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
+          @value={{get model attr.name}} />
+      {{/if}}
     {{/if}}
   {{/each}}
 </div>
+
 <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
   <div class="field is-grouped">
     <div class="control">

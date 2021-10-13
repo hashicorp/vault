@@ -184,7 +184,7 @@ func TestFairshare_startWorker(t *testing.T) {
 	timeout := time.After(5 * time.Second)
 
 	wg.Add(1)
-	d.dispatch(&job)
+	d.dispatch(&job, nil, nil)
 	go func() {
 		wg.Wait()
 		doneCh <- struct{}{}
@@ -222,7 +222,7 @@ func TestFairshare_start(t *testing.T) {
 
 	for i := 0; i < numJobs; i++ {
 		job := newTestJob(t, fmt.Sprintf("job-%d", i), ex, onFail)
-		d.dispatch(&job)
+		d.dispatch(&job, nil, nil)
 	}
 
 	select {
@@ -243,6 +243,7 @@ func TestFairshare_stop(t *testing.T) {
 
 	go func() {
 		d.stop()
+		d.wg.Wait()
 		doneCh <- struct{}{}
 	}()
 
@@ -264,6 +265,7 @@ func TestFairshare_stopMultiple(t *testing.T) {
 
 	go func() {
 		d.stop()
+		d.wg.Wait()
 		doneCh <- struct{}{}
 	}()
 
@@ -285,6 +287,7 @@ func TestFairshare_stopMultiple(t *testing.T) {
 		}()
 
 		d.stop()
+		d.wg.Wait()
 	}()
 
 	select {
@@ -315,7 +318,7 @@ func TestFairshare_dispatch(t *testing.T) {
 	go func() {
 		for _, id := range expectedIDs {
 			job := newTestJob(t, id, ex, onFail)
-			d.dispatch(&job)
+			d.dispatch(&job, nil, nil)
 		}
 	}()
 
@@ -373,7 +376,7 @@ func TestFairshare_jobFailure(t *testing.T) {
 
 	for i := 0; i < numJobs; i++ {
 		job := newTestJob(t, fmt.Sprintf("job-%d", i), ex, onFail)
-		d.dispatch(&job)
+		d.dispatch(&job, nil, nil)
 	}
 
 	select {

@@ -1,0 +1,149 @@
+---
+layout: docs
+page_title: Vault CSI Provider
+description: >-
+  The Vault CSI Provider allows pods to consume Vault secrets using CSI volumes.
+---
+
+# Vault CSI Provider
+
+The Vault CSI Provider allows pods to consume Vault secrets using
+[CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes.
+
+~> The Vault CSI Provider requires the [CSI Secret Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver)
+Driver to be installed.
+
+## Overview
+
+At a high level, the CSI Secrets Store driver allows users to create `SecretProviderClass` objects.
+This object defines which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes
+are created, the CSI Secrets Store driver will send the request to the Vault CSI Provider if the provider
+is `vault`. The Vault CSI Provider will then use Secret Provider Class specified and the pod's service account to retrieve
+the secrets from Vault, and <span class="x x-first x-last">mount</span> them <span class="x x-first x-last">into</span> the pod<span class="x x-first x-last">'s CSI</span> volume.
+
+The secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase.
+This means that pods will be blocked from starting until the secrets have been read from Vault and written to the volume.
+
+### Features
+
+The following features are supported by the Vault CSI Provider:
+
+- All Vault secret engines supported.
+- Authentication using the requesting pod's service account.
+- TLS/mTLS communications with Vault.
+- Rendering Vault secrets to files.
+- Syncing secrets to Kubernetes secrets to be used as environment variables.
+- Installation via [Vault Helm](/docs/platform/k8s/helm)
+
+## Authenticating with Vault
+
+The primary method of authentication with Vault when using the Vault CSI Provider
+is the service account attached to the pod. At this time no other authentication methods
+are supported.
+
+For [Kubernetes authentication](/docs/auth/kubernetes), the service account must be bound to a Vault role and a
+policy granting access to the secrets desired.
+
+A service account must be present to use the Vault CSI Provider with the Kubernetes
+authentication method. It is _not_ recommended to bind Vault roles to the default service
+account provided to pods if no service account is defined.
+
+### Setting `issuer` for Kubernetes authentication
+
+You will likely need to set [`issuer`](/api-docs/auth/kubernetes#issuer) when
+configuring Kubernetes authentication for the Vault CSI Provider.
+Vault CSI Provider does not use the default token associated with service accounts.
+Instead, it creates a token with a short TTL whose lifetime is also bound to the
+lifetime of the requesting pod. A key difference between default tokens and
+ephemeral tokens is the JWT issuer. Default tokens use `kubernetes/serviceaccount`,
+which is the default value that Kubernetes auth will try to validate. However,
+ephemeral tokens use the value of `kube-apiserver`'s `--service-account-issuer`
+flag as the issuer, which is normally a URL instead. See the [Kubernetes auth
+docs](/docs/auth/kubernetes#discovering-the-service-account-issuer) for
+ways to check the issuer using the Kubernetes API.
+
+Importantly, this means most common configurations of Vault Agent Injector and
+Vault CSI Provider **cannot share the same Kubernetes auth mount**. Vault
+Agent sidecars will most commonly be configured to authenticate using a
+long-lived default service account token, with an issuer different to the tokens
+Vault CSI Provider will create. But one Kubernetes auth mount can only be
+configured to validate a single issuer value.
+
+## Secret Provider Class Example
+
+The following is an example of a Secret Provider Class using the `vault` provider:
+
+```yaml
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1alpha1
+kind: SecretProviderClass
+metadata:
+  name: vault-db-creds
+spec:
+  # Vault CSI Provider
+  provider: vault
+  parameters:
+    # Vault role name to use during login
+    roleName: 'app'
+    # Vault's hostname
+    vaultAddress: 'https://vault:8200'
+    # TLS CA certification for validation
+    vaultCACertPath: '/vault/tls/ca.crt'
+    objects: |
+      - objectName: "dbUsername"
+        secretPath: "database/creds/db-app"
+        secretKey: "username"
+      - objectName: "dbPassword"
+        secretPath: "database/creds/db-app"
+        secretKey: "password"
+    # "objectName" is an alias used within the SecretProviderClass to reference
+    # that specific secret. This will also be the filename containing the secret.
+    # "secretPath" is the path in Vault where the secret should be retrieved.
+    # "secretKey" is the key within the Vault secret response to extract a value from.
+```
+
+~> Secret Provider Class is a namespaced object in Kubernetes.
+
+## Using Secret Provider Classes
+
+An application pod uses the example Secret Provider Class above by mounting it as a CSI volume:
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app: demo
+spec:
+  selector:
+    matchLabels:
+      app: demo
+  replicas: 1
+  template:
+    spec:
+      serviceAccountName: app
+      containers:
+        - name: app
+          image: my-app:1.0.0
+          volumeMounts:
+            - name: 'vault-db-creds'
+              mountPath: '/mnt/secrets-store'
+              readOnly: true
+      volumes:
+        - name: vault-db-creds
+          csi:
+            driver: 'secrets-store.csi.k8s.io'
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: 'vault-db-creds'
+```
+
+In this example `volumes.csi` is created on the application deployment and references
+the Secret Provider Class named `vault-db-creds`.
+
+## Learn
+
+Refer to the [Vault CSI Provider](https://learn.hashicorp.com/tutorials/vault/kubernetes-secret-store-driver?in=vault/kubernetes)
+guide for a step-by-step tutorial.

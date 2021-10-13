@@ -89,6 +89,9 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 		nomadAuthConfig.Address = nomad.Address()
 		nomadAuthConfig.SecretID = nomadToken
 		nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
+		if err != nil {
+			return nil, err
+		}
 		_, err = nomadAuth.ACLPolicies().Upsert(policy, nil)
 		if err != nil {
 			return nil, err
@@ -103,7 +106,6 @@ func prepareTestContainer(t *testing.T) (func(), *Config) {
 			Token:      nomadToken,
 		}, nil
 	})
-
 	if err != nil {
 		t.Fatalf("Could not start docker Nomad: %s", err)
 	}
@@ -255,6 +257,9 @@ func TestBackend_renew_revoke(t *testing.T) {
 	nomadmgmtConfig.Address = connData["address"].(string)
 	nomadmgmtConfig.SecretID = connData["token"].(string)
 	mgmtclient, err := nomadapi.NewClient(nomadmgmtConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	q := &nomadapi.QueryOptions{
 		Namespace: "default",

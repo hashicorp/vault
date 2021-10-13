@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVPatchCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVPatchCommand)(nil)
+var (
+	_ cli.Command             = (*KVPatchCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVPatchCommand)(nil)
+)
 
 type KVPatchCommand struct {
 	*BaseCommand
@@ -109,7 +111,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	if !v2 {
-		c.UI.Error(fmt.Sprintf("K/V engine mount must be version 2 for patch support"))
+		c.UI.Error("K/V engine mount must be version 2 for patch support")
 		return 2
 	}
 

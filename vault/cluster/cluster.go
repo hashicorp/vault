@@ -6,13 +6,15 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"net"
 	"net/url"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
@@ -61,11 +63,12 @@ type Listener struct {
 	shutdownWg *sync.WaitGroup
 	server     *http2.Server
 
-	networkLayer NetworkLayer
-	cipherSuites []uint16
-	advertise    net.Addr
-	logger       log.Logger
-	l            sync.RWMutex
+	networkLayer              NetworkLayer
+	cipherSuites              []uint16
+	advertise                 net.Addr
+	logger                    log.Logger
+	l                         sync.RWMutex
+	tlsConnectionLoggingLevel log.Level
 }
 
 func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
@@ -86,16 +89,17 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		shutdownWg: &sync.WaitGroup{},
 		server:     h2Server,
 
-		networkLayer: networkLayer,
-		cipherSuites: cipherSuites,
-		logger:       logger,
+		networkLayer:              networkLayer,
+		cipherSuites:              cipherSuites,
+		logger:                    logger,
+		tlsConnectionLoggingLevel: log.LevelFromString(os.Getenv("VAULT_CLUSTER_TLS_SESSION_LOG_LEVEL")),
 	}
 }
 
 func (cl *Listener) SetAdvertiseAddr(addr string) error {
 	u, err := url.ParseRequestURI(addr)
 	if err != nil {
-		return errwrap.Wrapf("failed to parse advertise address: {{err}}", err)
+		return fmt.Errorf("failed to parse advertise address: %w", err)
 	}
 	cl.advertise = &NetAddr{
 		Host: u.Host,
@@ -280,6 +284,15 @@ func (cl *Listener) Run(ctx context.Context) error {
 				close(closeCh)
 			}()
 
+			// baseDelay is the initial delay after an Accept() error before attempting again
+			const baseDelay = 5 * time.Millisecond
+
+			// maxDelay is the maximum delay after an Accept() error before attempting again.
+			// In the case that this function is error-looping, it will delay the shutdown check.
+			// Therefore, changes to maxDelay may have an effect on the latency of shutdown.
+			const maxDelay = 1 * time.Second
+
+			var loopDelay time.Duration
 			for {
 				if atomic.LoadUint32(cl.shutdown) > 0 {
 					return
@@ -293,14 +306,34 @@ func (cl *Listener) Run(ctx context.Context) error {
 				// Accept the connection
 				conn, err := tlsLn.Accept()
 				if err != nil {
-					if err, ok := err.(net.Error); ok && !err.Timeout() {
+					err, ok := err.(net.Error)
+					if ok && !err.Timeout() {
 						cl.logger.Debug("non-timeout error accepting on cluster port", "error", err)
 					}
 					if conn != nil {
 						conn.Close()
 					}
+					if ok && err.Timeout() {
+						loopDelay = 0
+						continue
+					}
+
+					if loopDelay == 0 {
+						loopDelay = baseDelay
+					} else {
+						loopDelay *= 2
+					}
+
+					if loopDelay > maxDelay {
+						loopDelay = maxDelay
+					}
+
+					time.Sleep(loopDelay)
 					continue
 				}
+				// No error, reset loop delay
+				loopDelay = 0
+
 				if conn == nil {
 					continue
 				}
@@ -330,6 +363,8 @@ func (cl *Listener) Run(ctx context.Context) error {
 					tlsConn.Close()
 					continue
 				}
+
+				cl.logTLSSessionStart(tlsConn.RemoteAddr().String(), tlsConn.ConnectionState())
 
 				// Now, set it back to unlimited
 				err = tlsConn.SetDeadline(time.Time{})
@@ -408,9 +443,27 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		}
 
 		tlsConfig.NextProtos = []string{alpn}
-		cl.logger.Debug("creating rpc dialer", "alpn", alpn, "host", tlsConfig.ServerName)
+		cl.logger.Debug("creating rpc dialer", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
-		return cl.networkLayer.Dial(addr, timeout, tlsConfig)
+		conn, err := cl.networkLayer.Dial(addr, timeout, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		cl.logTLSSessionStart(conn.RemoteAddr().String(), conn.ConnectionState())
+		return conn, nil
+	}
+}
+
+func (cl *Listener) logTLSSessionStart(peerAddress string, state tls.ConnectionState) {
+	if cl.tlsConnectionLoggingLevel != log.NoLevel {
+		cipherName, _ := tlsutil.GetCipherName(state.CipherSuite)
+		cl.logger.Log(cl.tlsConnectionLoggingLevel, "TLS connection established", "peer", peerAddress, "negotiated_protocol", state.NegotiatedProtocol, "cipher_suite", cipherName)
+		for _, chain := range state.VerifiedChains {
+			for _, cert := range chain {
+				cl.logger.Log(cl.tlsConnectionLoggingLevel, "Peer certificate", "is_ca", cert.IsCA, "serial_number", cert.SerialNumber.String(), "subject", cert.Subject.String(),
+					"signature_algorithm", cert.SignatureAlgorithm.String(), "public_key_algorithm", cert.PublicKeyAlgorithm.String(), "public_key_size", certutil.GetPublicKeySize(cert.PublicKey))
+			}
+		}
 	}
 }
 

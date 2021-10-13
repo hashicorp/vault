@@ -34,12 +34,12 @@ func pathCerts(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the certificate",
 			},
 
-			"certificate": &framework.FieldSchema{
+			"certificate": {
 				Type: framework.TypeString,
 				Description: `The public certificate that should be trusted.
 Must be x509 PEM encoded.`,
@@ -48,7 +48,7 @@ Must be x509 PEM encoded.`,
 				},
 			},
 
-			"allowed_names": &framework.FieldSchema{
+			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in either the Common Name or SANs. Supports globbing.  
@@ -59,7 +59,7 @@ allowed_email_sans, allowed_uri_sans.`,
 				},
 			},
 
-			"allowed_common_names": &framework.FieldSchema{
+			"allowed_common_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in the Common Name. Supports globbing.`,
@@ -68,7 +68,7 @@ At least one must exist in the Common Name. Supports globbing.`,
 				},
 			},
 
-			"allowed_dns_sans": &framework.FieldSchema{
+			"allowed_dns_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
@@ -78,7 +78,7 @@ At least one must exist in the SANs. Supports globbing.`,
 				},
 			},
 
-			"allowed_email_sans": &framework.FieldSchema{
+			"allowed_email_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
@@ -88,7 +88,7 @@ At least one must exist in the SANs. Supports globbing.`,
 				},
 			},
 
-			"allowed_uri_sans": &framework.FieldSchema{
+			"allowed_uri_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
@@ -98,7 +98,7 @@ At least one must exist in the SANs. Supports globbing.`,
 				},
 			},
 
-			"allowed_organizational_units": &framework.FieldSchema{
+			"allowed_organizational_units": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Organizational Units names.
 At least one must exist in the OU field.`,
@@ -107,50 +107,50 @@ At least one must exist in the OU field.`,
 				},
 			},
 
-			"required_extensions": &framework.FieldSchema{
+			"required_extensions": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or array of extensions
 formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
 All values much match. Supports globbing on "value".`,
 			},
 
-			"display_name": &framework.FieldSchema{
+			"display_name": {
 				Type: framework.TypeString,
 				Description: `The display name to use for clients using this
 certificate.`,
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenutil.DeprecationText("token_policies"),
 				Deprecated:  true,
 			},
 
-			"lease": &framework.FieldSchema{
+			"lease": {
 				Type:        framework.TypeInt,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
 
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
 
-			"period": &framework.FieldSchema{
+			"period": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_period"),
 				Deprecated:  true,
 			},
 
-			"bound_cidrs": &framework.FieldSchema{
+			"bound_cidrs": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenutil.DeprecationText("token_bound_cidrs"),
 				Deprecated:  true,

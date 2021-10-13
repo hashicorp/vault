@@ -26,7 +26,7 @@ func retryKVCommand(t *testing.T, client *api.Client, args []string) (code int, 
 
 	// Loop until return message does not indicate upgrade, or timeout.
 	timeout := time.After(20 * time.Second)
-	for true {
+	for {
 		ui, cmd := testKVPutCommand(t)
 		cmd.client = client
 		code = cmd.Run(args)
@@ -174,7 +174,6 @@ func TestKVPutCommand(t *testing.T) {
 		if !strings.Contains(combined, "check-and-set parameter did not match the current version") {
 			t.Errorf("expected %q to contain %q", combined, "check-and-set parameter did not match the current version")
 		}
-
 	})
 
 	t.Run("v1_data", func(t *testing.T) {

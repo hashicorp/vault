@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceCreateCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceCreateCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceCreateCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceCreateCommand)(nil)
+)
 
 type NamespaceCreateCommand struct {
 	*BaseCommand

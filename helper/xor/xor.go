@@ -3,8 +3,6 @@ package xor
 import (
 	"encoding/base64"
 	"fmt"
-
-	"github.com/hashicorp/errwrap"
 )
 
 // XORBytes takes two byte slices and XORs them together, returning the final
@@ -17,7 +15,7 @@ func XORBytes(a, b []byte) ([]byte, error) {
 
 	buf := make([]byte, len(a))
 
-	for i, _ := range a {
+	for i := range a {
 		buf[i] = a[i] ^ b[i]
 	}
 
@@ -30,7 +28,7 @@ func XORBytes(a, b []byte) ([]byte, error) {
 func XORBase64(a, b string) ([]byte, error) {
 	aBytes, err := base64.StdEncoding.DecodeString(a)
 	if err != nil {
-		return nil, errwrap.Wrapf("error decoding first base64 value: {{err}}", err)
+		return nil, fmt.Errorf("error decoding first base64 value: %w", err)
 	}
 	if aBytes == nil || len(aBytes) == 0 {
 		return nil, fmt.Errorf("decoded first base64 value is nil or empty")
@@ -38,7 +36,7 @@ func XORBase64(a, b string) ([]byte, error) {
 
 	bBytes, err := base64.StdEncoding.DecodeString(b)
 	if err != nil {
-		return nil, errwrap.Wrapf("error decoding second base64 value: {{err}}", err)
+		return nil, fmt.Errorf("error decoding second base64 value: %w", err)
 	}
 	if bBytes == nil || len(bBytes) == 0 {
 		return nil, fmt.Errorf("decoded second base64 value is nil or empty")

@@ -14,13 +14,8 @@ type testJob struct {
 	onFail func(error)
 }
 
-// TODO maybe define these function types
-func (t *testJob) GetID() string {
-	return t.id
-}
-
 func (t *testJob) Execute() error {
-	return t.ex(t.GetID())
+	return t.ex(t.id)
 }
 
 func (t *testJob) OnFailure(err error) {

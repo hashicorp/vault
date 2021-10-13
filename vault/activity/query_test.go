@@ -67,6 +67,9 @@ func TestQueryStore_Inventory(t *testing.T) {
 	}
 
 	storedEndTimes, err := qs.listEndTimes(ctx, startTimes[1])
+	if err != nil {
+		t.Fatal(err)
+	}
 	expected := endTimes[1:]
 	if len(storedEndTimes) != len(expected) {
 		t.Fatalf("bad length, expected %v got %v", len(expected), storedEndTimes)
@@ -77,7 +80,6 @@ func TestQueryStore_Inventory(t *testing.T) {
 	if !reflect.DeepEqual(storedEndTimes, expected) {
 		t.Fatalf("end time mismatch, expected %v got %v", expected, storedEndTimes)
 	}
-
 }
 
 func TestQueryStore_MarshalDemarshal(t *testing.T) {
@@ -88,12 +90,12 @@ func TestQueryStore_MarshalDemarshal(t *testing.T) {
 		StartTime: tsStart,
 		EndTime:   tsEnd,
 		Namespaces: []*NamespaceRecord{
-			&NamespaceRecord{
+			{
 				NamespaceID:     "root",
 				Entities:        20,
 				NonEntityTokens: 42,
 			},
-			&NamespaceRecord{
+			{
 				NamespaceID:     "yzABC",
 				Entities:        15,
 				NonEntityTokens: 31,
@@ -158,7 +160,7 @@ func TestQueryStore_TimeRanges(t *testing.T) {
 				StartTime: period.Begin,
 				EndTime:   e,
 				Namespaces: []*NamespaceRecord{
-					&NamespaceRecord{
+					{
 						NamespaceID:     "root",
 						Entities:        17,
 						NonEntityTokens: 31,

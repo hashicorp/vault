@@ -52,7 +52,6 @@ func PrepareTestContainer(t *testing.T, legacy bool, pw string) (func(), string)
 		}
 		return &Config{ServiceHostPort: *hostIP, ConnString: connString}, nil
 	})
-
 	if err != nil {
 		t.Fatalf("could not start docker mysql: %s", err)
 	}

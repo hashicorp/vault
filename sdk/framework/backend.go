@@ -17,11 +17,11 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -61,9 +61,9 @@ type Backend struct {
 	// periodic timer of RollbackManager ticks. This can be used by
 	// backends to do anything it wishes to do periodically.
 	//
-	// PeriodicFunc can be invoked to, say to periodically delete stale
+	// PeriodicFunc can be invoked to, say periodically delete stale
 	// entries in backend's storage, while the backend is still being used.
-	// (Note the different of this action from what `Clean` does, which is
+	// (Note the difference between this action and `Clean`, which is
 	// invoked just before the backend is unmounted).
 	PeriodicFunc periodicFunc
 
@@ -80,7 +80,7 @@ type Backend struct {
 	// to the backend, if required.
 	Clean CleanupFunc
 
-	// Invalidate is called when a keys is modified if required
+	// Invalidate is called when a key is modified, if required.
 	Invalidate InvalidateFunc
 
 	// AuthRenew is the callback to call when a RenewRequest for an
@@ -88,7 +88,7 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
-	// Type is the logical.BackendType for the backend implementation
+	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
 	logger  log.Logger
@@ -164,7 +164,8 @@ func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	err = fd.Validate()
 	if err != nil {
@@ -260,12 +261,13 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	fd := FieldData{
 		Raw:    raw,
-		Schema: path.Fields}
+		Schema: path.Fields,
+	}
 
 	if req.Operation != logical.HelpOperation {
 		err := fd.Validate()
 		if err != nil {
-			return nil, err
+			return logical.ErrorResponse(fmt.Sprintf("Field validation failed: %s", err.Error())), nil
 		}
 	}
 

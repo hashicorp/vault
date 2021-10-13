@@ -133,8 +133,10 @@ func prepareTestContainer(t *testing.T) (func(), *DockerVaultConfig) {
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo: "vault",
 		ImageTag:  "latest",
-		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
-			"-dev-listen-address=0.0.0.0:8200"},
+		Cmd: []string{
+			"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", rootToken),
+			"-dev-listen-address=0.0.0.0:8200",
+		},
 		Ports: []string{"8200/tcp"},
 	})
 	if err != nil {

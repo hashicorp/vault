@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -17,12 +16,12 @@ func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password",
 			},
@@ -132,7 +131,6 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-
 		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 			continue
@@ -141,10 +139,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return nil, errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
+		return nil, fmt.Errorf("could not generate sql statements for all rows: %w", rows.Err())
 	}
 	if lastStmtError != nil {
-		return nil, errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
+		return nil, fmt.Errorf("could not perform all sql statements: %w", lastStmtError)
 	}
 
 	// Drop this login

@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/init - HTTP API
-sidebar_title: <code>/sys/init</code>
 description: The `/sys/init` endpoint is used to initialize a new Vault.
 ---
 
@@ -36,7 +35,7 @@ $ curl \
 
 This endpoint initializes a new Vault. The Vault must not have been previously
 initialized. The recovery options, as well as the stored shares option, are only
-available when using Vault HSM.
+available when using Auto Unseal.
 
 | Method | Path        |
 | :----- | :---------- |
@@ -61,7 +60,7 @@ available when using Vault HSM.
   `secret_shares`. If using Vault HSM with auto-unsealing, this value must be
   the same as `secret_shares`.
 
-Additionally, the following options are only supported on Vault Pro/Enterprise:
+Additionally, the following options are only supported using Auto Unseal:
 
 - `stored_shares` `(int: <required>)` – Specifies the number of shares that
   should be encrypted by the HSM and stored for auto-unsealing. Currently must

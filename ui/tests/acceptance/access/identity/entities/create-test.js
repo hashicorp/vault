@@ -1,5 +1,5 @@
 import { currentRouteName } from '@ember/test-helpers';
-import { module, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/create';
 import { testCRUD, testDeleteFromForm } from '../_shared-tests';
@@ -12,7 +12,7 @@ module('Acceptance | /access/identity/entities/create', function(hooks) {
     return authPage.login();
   });
 
-  skip('it visits the correct page', async function(assert) {
+  test('it visits the correct page', async function(assert) {
     await page.visit({ item_type: 'entities' });
     assert.equal(
       currentRouteName(),
@@ -21,12 +21,12 @@ module('Acceptance | /access/identity/entities/create', function(hooks) {
     );
   });
 
-  skip('it allows create, list, delete of an entity', async function(assert) {
+  test('it allows create, list, delete of an entity', async function(assert) {
     let name = `entity-${Date.now()}`;
     await testCRUD(name, 'entities', assert);
   });
 
-  skip('it can be deleted from the edit form', async function(assert) {
+  test('it can be deleted from the edit form', async function(assert) {
     let name = `entity-${Date.now()}`;
     await testDeleteFromForm(name, 'entities', assert);
   });

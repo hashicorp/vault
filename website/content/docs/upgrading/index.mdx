@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Upgrading Vault - Guides
-sidebar_title: Upgrade Guides
 description: |-
   These are general upgrade instructions for Vault for both non-HA and HA
   setups. Please ensure that you also read the version-specific upgrade notes.
@@ -11,7 +10,7 @@ description: |-
 
 These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
-found in the sidebar._
+found in the sidebar._ 
 
 !> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
@@ -20,6 +19,11 @@ downgrade Vault, as upgrades may perform changes to the underlying data
 structure that make the data incompatible with a downgrade. If you need to roll
 back to a previous version of Vault, you should roll back your data store as
 well.
+
+## Learn
+
+Refer to the [Vault Upgrade Standard Procedure](https://learn.hashicorp.com/tutorials/vault/sop-upgrade)
+guide for step-by-step examples of upgrading Vault Enterprise.
 
 ## Testing the Upgrade
 
@@ -66,23 +70,30 @@ backend).
 Perform these steps on each standby:
 
 1. Properly shut down Vault on the standby node via `SIGINT` or `SIGTERM`
-2. Replace the Vault binary with the new version
+2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
 3. Start the standby node
 4. Unseal the standby node
+5. Verify `vault status` shows correct Version and HA Mode is `standby`
+6. Review the node's logs to ensure successful startup and unseal
 
 At this point all standby nodes will be upgraded and ready to take over. The
 upgrade will not be complete until one of the upgraded standby nodes takes over
 active duty. To do this:
 
-1. Properly shut down the remaining (active) node. Note: it is _**very
-   important**_ that you shut the node down properly. This causes the HA lock to
-   be released, allowing a standby node to take over with a very short delay.
+1. Properly shut down the remaining (active) node 
+
+   ~> **Note:** It is important that you shut the node down properly. 
+   This will perform a step-down and release the HA lock, allowing a standby
+   node to take over with a very short delay.
    If you kill Vault without letting it release the lock, a standby node will
    not be able to take over until the lock's timeout period has expired. This
    is backend-specific but could be ten seconds or more.
+   
 2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
-3. Start the node
-4. Unseal the node (it will now be a standby)
+4. Start the node
+5. Unseal the node
+5. Verify `vault status` shows correct Version and HA Mode is `standby`
+7. Review the node's logs to ensure successful startup and unseal
 
 Internal upgrade tasks will happen after one of the upgraded standby nodes
 takes over active duty.
@@ -103,3 +114,20 @@ Upgrading installations of Vault which participate in [Enterprise Replication](/
 - Verify functionality of each secondary instance after upgrading
 - When satisfied with functionality of upgraded secondary instances, upgrade
   the primary instance
+
+Upgrades of multiple replicated clusters can be complicated. Here is an
+example.
+
+![Upgrading multiple replicated clusters](/img/vault-replication-upgrade.png)
+
+In the above scenario, the ideal upgrade procedure would be as follows,
+verifying functionality after each cluster upgrade.
+
+1. Upgrade Clusters B and D, using the HA upgrade process above. These clusters
+   have no downstream clusters, so they should be upgraded first, but the
+   ordering of B vs D does not matter.
+2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
+   Because Cluster C is a cluster, it should also use the HA upgrade process.
+3. Finally, upgrade Cluster A. All clusters downstream of A will already be
+   upgraded. It should be upgraded last, as it is a Performance Primary and a DR
+   Primary.

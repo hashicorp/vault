@@ -18,18 +18,18 @@ func (b *backend) pathRandom() *framework.Path {
 	return &framework.Path{
 		Pattern: "random" + framework.OptionalParamRegex("urlbytes"),
 		Fields: map[string]*framework.FieldSchema{
-			"urlbytes": &framework.FieldSchema{
+			"urlbytes": {
 				Type:        framework.TypeString,
 				Description: "The number of bytes to generate (POST URL parameter)",
 			},
 
-			"bytes": &framework.FieldSchema{
+			"bytes": {
 				Type:        framework.TypeInt,
 				Default:     32,
 				Description: "The number of bytes to generate (POST body parameter). Defaults to 32 (256 bits).",
 			},
 
-			"format": &framework.FieldSchema{
+			"format": {
 				Type:        framework.TypeString,
 				Default:     "base64",
 				Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,

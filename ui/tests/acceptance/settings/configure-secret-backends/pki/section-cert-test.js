@@ -1,5 +1,5 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
-import { module, skip } from 'qunit';
+import { currentRouteName, settled, click } from '@ember/test-helpers';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
 import authPage from 'vault/tests/pages/auth';
@@ -69,28 +69,32 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     return path;
   };
 
-  skip('cert config: generate', async function(assert) {
+  test('cert config: generate', async function(assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
     await page.form.generateCA();
     await settled();
-    assert.ok(page.form.rows.length > 0, 'shows all of the rows');
-    // TODO come back and figure out why not working after upgrade.  I see it, it's a timing issue.
-    // assert.ok(page.form.certificateIsPresent, 'the certificate is included');
+
+    assert.ok(page.form.commonNameIsPresent, 'the common name displays');
+    assert.ok(page.form.issueDateIsPresent, 'the issue date displays');
+    assert.ok(page.form.expiryDateIsPresent, 'the expiration date displays');
+    assert
+      .dom('[data-test-value-div="Certificate"] [data-test-masked-input]')
+      .exists('certificate is present');
 
     await page.form.back();
-    await settled();
     await page.form.generateCA();
     await settled();
+
     assert.ok(
       page.flash.latestMessage.includes('You tried to generate a new root CA'),
       'shows warning message'
     );
   });
 
-  skip('cert config: upload', async function(assert) {
+  test('cert config: upload', async function(assert) {
     await mountAndNav(assert);
     await settled();
     assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
@@ -103,8 +107,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     );
   });
 
-  skip('cert config: sign intermediate and set signed intermediate', async function(assert) {
-    // TODO confirmed worked, issue with timing.
+  test('cert config: sign intermediate and set signed intermediate', async function(assert) {
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
@@ -113,7 +116,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.form.generateCA('Intermediate CA', 'intermediate');
     await settled();
     // cache csr
-    csrVal = page.form.csr;
+    await click('.masked-input-toggle');
+    csrVal = document.querySelector('.masked-value').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: rootPath });
@@ -122,7 +126,8 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
-    intermediateCert = page.form.certificate;
+    await click('.masked-input-toggle');
+    intermediateCert = document.querySelector('[data-test-masked-input]').innerText;
     await page.form.back();
     await settled();
     await page.visit({ backend: intermediatePath });
@@ -131,6 +136,6 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.submit();
     await settled();
-    assert.equal(page.form.downloadLinks.length, 3, 'includes the caChain download link');
+    assert.dom('[data-test-go-replace-ca]').exists();
   });
 });

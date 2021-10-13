@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: RADIUS - Auth Methods
-sidebar_title: RADIUS
 description: |-
   The "radius" auth method allows users to authenticate with Vault using an
   existing RADIUS server.
@@ -20,7 +19,7 @@ path, specify `-path=/my-path` in the CLI.
 ### Via the CLI
 
 ```shell-session
-$ vault login -path=radius username=sethvargo
+$ vault login -method=radius username=sethvargo
 ```
 
 ### Via the API

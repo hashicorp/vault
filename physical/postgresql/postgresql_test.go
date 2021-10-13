@@ -43,7 +43,6 @@ func TestPostgreSQLBackend(t *testing.T) {
 		"table":          table,
 		"ha_enabled":     hae,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -53,7 +52,6 @@ func TestPostgreSQLBackend(t *testing.T) {
 		"table":          table,
 		"ha_enabled":     hae,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -119,7 +117,7 @@ func TestConnectionURL(t *testing.T) {
 		conf  map[string]string
 	}
 
-	var cases = map[string]struct {
+	cases := map[string]struct {
 		want  string
 		input input
 	}{
@@ -232,7 +230,7 @@ func attemptLockTTLTest(t *testing.T, ha physical.HABackend, tries int) bool {
 		}
 		if !held {
 			if tries < maxTries && time.Since(lockTime) > (time.Second*time.Duration(lockTTL)) {
-				//Our test environment is slow enough that we failed this, retry
+				// Our test environment is slow enough that we failed this, retry
 				return false
 			}
 			t.Fatalf("should be held")
@@ -278,7 +276,7 @@ func attemptLockTTLTest(t *testing.T, ha physical.HABackend, tries int) bool {
 		}
 		if !held {
 			if tries < maxTries && time.Since(lockTime) > (time.Second*time.Duration(lockTTL)) {
-				//Our test environment is slow enough that we failed this, retry
+				// Our test environment is slow enough that we failed this, retry
 				return false
 			}
 			t.Fatalf("should be held")

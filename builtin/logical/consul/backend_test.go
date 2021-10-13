@@ -198,7 +198,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-
 }
 
 func testBackendRenewRevoke14(t *testing.T, version string) {
@@ -299,7 +298,9 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 	consulmgmtConfig.Address = connData["address"].(string)
 	consulmgmtConfig.Token = connData["token"].(string)
 	mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
-
+	if err != nil {
+		t.Fatal(err)
+	}
 	q := &consulapi.QueryOptions{
 		Datacenter: "DC1",
 	}

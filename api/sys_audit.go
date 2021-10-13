@@ -52,7 +52,6 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
-
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +93,6 @@ func (c *Sys) EnableAuditWithOptions(path string, options *EnableAuditOptions) e
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, r)
-
 	if err != nil {
 		return err
 	}

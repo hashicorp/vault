@@ -1,8 +1,9 @@
 package http
 
 import (
-	"github.com/hashicorp/vault/vault"
 	"net/http"
+
+	"github.com/hashicorp/vault/vault"
 )
 
 // This endpoint is needed to answer queries before Vault unseals

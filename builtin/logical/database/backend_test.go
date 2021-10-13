@@ -45,7 +45,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	sys := vault.TestDynamicSystemView(cores[0].Core)
+	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
 	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlas", []string{}, "")
@@ -93,7 +93,6 @@ func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
-
 	storage := &logical.InmemStorage{}
 	backend := &databaseBackend{}
 
@@ -143,7 +142,6 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	if !reflect.DeepEqual(role, roleExpected) {
 		t.Fatalf("bad role %#v, %#v", role, roleExpected)
 	}
-
 }
 
 func TestBackend_config_connection(t *testing.T) {
@@ -347,7 +345,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, _ := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, _ := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	respCheck := func(req *logical.Request) {
@@ -396,7 +394,7 @@ func TestBackend_basic(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -603,7 +601,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -791,7 +789,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -1025,6 +1023,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal("Expected response to be nil")
 	}
 }
+
 func TestBackend_allowedRoles(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
@@ -1039,7 +1038,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	// Configure a connection
@@ -1236,7 +1235,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
@@ -1334,7 +1333,6 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
 	conn, err := pq.ParseURL(connURL)
-
 	if err != nil {
 		t.Fatal(err)
 	}

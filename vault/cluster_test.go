@@ -18,9 +18,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
-var (
-	clusterTestPausePeriod = 2 * time.Second
-)
+var clusterTestPausePeriod = 2 * time.Second
 
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

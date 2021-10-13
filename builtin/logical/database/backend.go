@@ -8,15 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -62,7 +61,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	ictx, cancel := context.WithCancel(initCtx)
 	b.cancelQueue = cancel
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(ictx, conf)
+	go b.initQueue(ictx, conf, conf.System.ReplicationState())
 	return b, nil
 }
 
@@ -135,7 +134,7 @@ type databaseBackend struct {
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
 	entry, err := s.Get(ctx, fmt.Sprintf("config/%s", name))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read connection configuration: {{err}}", err)
+		return nil, fmt.Errorf("failed to read connection configuration: %w", err)
 	}
 	if entry == nil {
 		return nil, fmt.Errorf("failed to find entry for connection with name: %q", name)
@@ -316,7 +315,7 @@ func (b *databaseBackend) clearConnection(name string) error {
 func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
-	case rpc.ErrShutdown, v4.ErrPluginShutdown:
+	case rpc.ErrShutdown, v4.ErrPluginShutdown, v5.ErrPluginShutdown:
 		// Put this in a goroutine so that requests can run with the read or write lock
 		// and simply defer the unlock.  Since we are attaching the instance and matching
 		// the id in the connection map, we can safely do this.

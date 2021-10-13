@@ -16,7 +16,7 @@ import (
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -92,7 +92,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -116,7 +117,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -140,7 +142,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -165,7 +168,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -863,7 +867,7 @@ func TestUsernameGeneration(t *testing.T) {
 }
 
 func TestNewUser_CustomUsername(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	type testCase struct {
@@ -936,7 +940,8 @@ func TestNewUser_CustomUsername(t *testing.T) {
 			newUserReq := dbplugin.NewUserRequest{
 				UsernameConfig: test.newUserData,
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'

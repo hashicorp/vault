@@ -8,8 +8,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/vault"
 )
 

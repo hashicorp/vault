@@ -1,6 +1,7 @@
 package quotas
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"math"
@@ -264,7 +265,7 @@ func (rlq *RateLimitQuota) QuotaName() string {
 // returned if the request ID or address is empty. If the path is exempt, the
 // quota will not be evaluated. Otherwise, the client rate limiter is retrieved
 // by address and the rate limit quota is checked against that limiter.
-func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
+func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, error) {
 	resp := Response{
 		Headers: make(map[string]string),
 	}
@@ -300,7 +301,11 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 		}
 	}
 
-	limit, remaining, reset, allow := rlq.store.Take(req.ClientAddress)
+	limit, remaining, reset, allow, err := rlq.store.Take(ctx, req.ClientAddress)
+	if err != nil {
+		return resp, err
+	}
+
 	resp.Allowed = allow
 	resp.Headers[httplimit.HeaderRateLimitLimit] = strconv.FormatUint(limit, 10)
 	resp.Headers[httplimit.HeaderRateLimitRemaining] = strconv.FormatUint(remaining, 10)
@@ -319,13 +324,14 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 }
 
 // close stops the current running client purge loop.
-func (rlq *RateLimitQuota) close() error {
+// It should be called with the write lock held.
+func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	if rlq.purgeBlocked {
 		close(rlq.closePurgeBlockedCh)
 	}
 
 	if rlq.store != nil {
-		return rlq.store.Close()
+		return rlq.store.Close(ctx)
 	}
 
 	return nil

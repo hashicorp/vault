@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: Replication - Vault Enterprise
-sidebar_title: Replication
 description: >-
   Vault Enterprise has support for Replication, allowing critical data to be
   replicated across clusters to support horizontally scaling and disaster
@@ -13,8 +12,8 @@ description: >-
 ## Overview
 
 -> **Note**: All versions of [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-have support for Disaster Recovery replication. Performance Replication requires the
-Multi-Datacenter & Scale module.
+have support for Disaster Recovery replication. Performance Replication requires 
+Vault Enterprise Premium.
 
 Many organizations have infrastructure that spans multiple datacenters. Vault
 provides the critical services of identity management, secrets storage, and
@@ -96,16 +95,18 @@ details.
 Also note that enabling replication will modify the secondary seal.
 If the secondary uses an auto seal, its recovery configuration and keys
 will be replaced; if it uses shamir, its seal configuration and unseal
-keys will be replaced.  Here seal/recovery configuration means the number of
+keys will be replaced. Here seal/recovery configuration means the number of
 seal/recovery key fragments and the required threshold of those
 fragments.
 
-| Primary seal | Secondary seal | Impact on secondary of enabling replication |
-| ------------ | -------------- | ------------------------------------------- |
-| Shamir       | Shamir         | Seal config and unseal keys replaced with primary's |
-| Shamir       | Auto           | Seal recovery config and recovery keys replaced with primary's seal config and unseal keys |
-| Auto         | Auto           | Seal recovery config and recovery keys replaced with primary's |
-| Auto         | Shamir         | Seal config and unseal keys replaced with primary's recovery seal config and recovery keys |
+| Primary Seal | Secondary Seal (before) | Secondary Seal (after)                 | Secondary Recovery Key (after) | Impact on Secondary of Enabling Replication                                 |
+|--------------|-------------------------|----------------------------------------|--------------------------------|-----------------------------------------------------------------------------|
+| Shamir       | Shamir                  | Primary's shamir config & unseal keys  | N/A                            | Seal config and unseal keys replaced with primary's                         |
+| Shamir       | Auto                    | Unchanged                              | Receives primary seal          | Seal recovery config and keys replaced with primary's seal config and keys  |
+| Auto         | Auto                    | Unchanged                              | Receives primary recovery      | Seal recovery config and recovery keys replaced with primary's              |
+| Auto         | Shamir                  | Receives primary recovery              | N/A                            | Seal config and keys replaced with primary's recovery seal config and keys  |
+
+Note: Clusters with Shamir seal config do not have separate recovery keys. Auto includes HSM, Cloud KMS, and Transit auto-unseal.
 
 ### Vault versions
 
@@ -178,7 +179,7 @@ Refer to the following tutorials replication setup and best practices:
 
 - [Setting up Performance Replication](https://learn.hashicorp.com/vault/operations/ops-replication)
 - [Disaster Recovery Replication Setup](https://learn.hashicorp.com/vault/operations/ops-disaster-recovery)
-- [Performance Replication with Mount Filters](https://learn.hashicorp.com/vault/operations/mount-filter)
+- [Performance Replication with Paths Filters](https://learn.hashicorp.com/tutorials/vault/paths-filter)
 - [Monitoring Vault Replication](https://learn.hashicorp.com/vault/operations/monitor-replication)
 
 ## API

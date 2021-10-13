@@ -1,5 +1,10 @@
 module.exports = [
   {
+    source: '/trial',
+    destination: 'https://www.hashicorp.com/products/vault/trial',
+    permanent: true,
+  },
+  {
     source: '/intro',
     destination: '/intro/getting-started',
     permanent: false,
@@ -35,6 +40,11 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/auth/jwt_oidc_providers',
+    destination: '/docs/auth/jwt/oidc_providers',
+    permanent: true,
+  },
+  {
     source: '/docs/commands/environment',
     destination: '/docs/commands/#environment-variables',
     permanent: true,
@@ -67,6 +77,11 @@ module.exports = [
   {
     source: '/docs/enterprise/auto-unseal',
     destination: '/docs/concepts/seal.html',
+    permanent: true,
+  },
+  {
+    source: '/docs/enterprise/license/faqs',
+    destination: '/docs/enterprise/license/faq',
     permanent: true,
   },
   {

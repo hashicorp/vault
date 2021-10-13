@@ -42,7 +42,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // use user's root namespace to redirect to properly param'd url
     if (!namespace && currentTokenName && !Ember.testing) {
       const storage = getStorage().getItem(currentTokenName);
-      namespace = storage.userRootNamespace;
+      namespace = storage?.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });
@@ -75,6 +75,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
       yield timeout(POLL_INTERVAL_MS);
       try {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         yield this.controller.model.reload();
         yield this.transitionToTargetRoute();
       } catch (e) {
@@ -108,6 +109,18 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         this.refresh();
       }
       return true;
+    },
+    loading(transition) {
+      if (transition.queryParamsOnly || Ember.testing) {
+        return;
+      }
+      // eslint-disable-next-line ember/no-controller-access-in-routes
+      let controller = this.controllerFor('vault.cluster');
+      controller.set('currentlyLoading', true);
+
+      transition.finally(function() {
+        controller.set('currentlyLoading', false);
+      });
     },
   },
 });

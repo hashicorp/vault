@@ -8,9 +8,14 @@ import (
 	"net/http"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+)
+
+const (
+	initialBackoff    = 1 * time.Second
+	defaultMaxBackoff = 5 * time.Minute
 )
 
 // AuthMethod is the interface that auto-auth methods implement for the agent
@@ -48,6 +53,7 @@ type AuthHandler struct {
 	client                       *api.Client
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
+	maxBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
 }
@@ -56,6 +62,7 @@ type AuthHandlerConfig struct {
 	Logger                       hclog.Logger
 	Client                       *api.Client
 	WrapTTL                      time.Duration
+	MaxBackoff                   time.Duration
 	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
@@ -72,6 +79,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
+		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
 	}
@@ -79,17 +87,23 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	return ah
 }
 
-func backoffOrQuit(ctx context.Context, backoff time.Duration) {
+func backoffOrQuit(ctx context.Context, backoff *agentBackoff) {
 	select {
-	case <-time.After(backoff):
+	case <-time.After(backoff.current):
 	case <-ctx.Done():
 	}
+
+	// Increase exponential backoff for the next time if we don't
+	// successfully auth/renew/etc.
+	backoff.next()
 }
 
 func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 	if am == nil {
 		return errors.New("auth handler: nil auth method")
 	}
+
+	backoff := newAgentBackoff(ah.maxBackoff)
 
 	ah.logger.Info("starting auth handler")
 	defer func() {
@@ -130,9 +144,6 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		default:
 		}
 
-		// Create a fresh backoff value
-		backoff := 2*time.Second + time.Duration(ah.random.Int63()%int64(time.Second*2)-int64(time.Second))
-
 		var clientToUse *api.Client
 		var err error
 		var path string
@@ -143,7 +154,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		case AuthMethodWithClient:
 			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
 			if err != nil {
-				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff.Seconds())
+				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -161,7 +172,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
 			if err != nil {
-				ah.logger.Error("could not look up token", "err", err, "backoff", backoff.Seconds())
+				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -177,7 +188,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			path, header, data, err = am.Authenticate(ctx, ah.client)
 			if err != nil {
-				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff.Seconds())
+				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -186,7 +197,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		if ah.wrapTTL > 0 {
 			wrapClient, err := clientToUse.Clone()
 			if err != nil {
-				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff.Seconds())
+				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -207,7 +218,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			secret, err = clientToUse.Logical().Write(path, data)
 			// Check errors/sanity
 			if err != nil {
-				ah.logger.Error("error authenticating", "error", err, "backoff", backoff.Seconds())
+				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -216,18 +227,18 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		switch {
 		case ah.wrapTTL > 0:
 			if secret.WrapInfo == nil {
-				ah.logger.Error("authentication returned nil wrap info", "backoff", backoff.Seconds())
+				ah.logger.Error("authentication returned nil wrap info", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
 			if secret.WrapInfo.Token == "" {
-				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoff.Seconds())
+				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
 			wrappedResp, err := jsonutil.EncodeJSON(secret.WrapInfo)
 			if err != nil {
-				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoff.Seconds())
+				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -238,6 +249,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
+			backoff.reset()
 
 			select {
 			case <-ctx.Done():
@@ -251,12 +263,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 		default:
 			if secret == nil || secret.Auth == nil {
-				ah.logger.Error("authentication returned nil auth info", "backoff", backoff.Seconds())
+				ah.logger.Error("authentication returned nil auth info", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
 			if secret.Auth.ClientToken == "" {
-				ah.logger.Error("authentication returned empty client token", "backoff", backoff.Seconds())
+				ah.logger.Error("authentication returned empty client token", "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
 				continue
 			}
@@ -267,6 +279,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
+			backoff.reset()
 		}
 
 		if watcher != nil {
@@ -277,7 +290,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			Secret: secret,
 		})
 		if err != nil {
-			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff.Seconds())
+			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff)
 			backoffOrQuit(ctx, backoff)
 			continue
 		}
@@ -310,4 +323,43 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 		}
 	}
+}
+
+// agentBackoff tracks exponential backoff state.
+type agentBackoff struct {
+	max     time.Duration
+	current time.Duration
+}
+
+func newAgentBackoff(max time.Duration) *agentBackoff {
+	if max <= 0 {
+		max = defaultMaxBackoff
+	}
+
+	return &agentBackoff{
+		max:     max,
+		current: initialBackoff,
+	}
+}
+
+// next determines the next backoff duration that is roughly twice
+// the current value, capped to a max value, with a measure of randomness.
+func (b *agentBackoff) next() {
+	maxBackoff := 2 * b.current
+
+	if maxBackoff > b.max {
+		maxBackoff = b.max
+	}
+
+	// Trim a random amount (0-25%) off the doubled duration
+	trim := rand.Int63n(int64(maxBackoff) / 4)
+	b.current = maxBackoff - time.Duration(trim)
+}
+
+func (b *agentBackoff) reset() {
+	b.current = initialBackoff
+}
+
+func (b agentBackoff) String() string {
+	return b.current.Truncate(10 * time.Millisecond).String()
 }
