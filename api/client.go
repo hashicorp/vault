@@ -939,7 +939,7 @@ func (c *Client) Clone() (*Client, error) {
 		client.SetHeaders(c.Headers().Clone())
 	}
 
-	client.SetPreventStaleReads(config.PreventStaleReads)
+	client.replicationStateStore = c.replicationStateStore
 
 	return client, nil
 }
