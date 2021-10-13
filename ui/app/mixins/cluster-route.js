@@ -21,7 +21,7 @@ export default Mixin.create({
 
   transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
-    if (OIDC_PROVIDER === this.router.currentRouteName) {
+    if (OIDC_PROVIDER === this.router.currentRouteName || OIDC_PROVIDER === transition?.to?.name) {
       return RSVP.resolve();
     }
     if (
