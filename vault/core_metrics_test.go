@@ -2,6 +2,7 @@ package vault
 
 import (
 	"errors"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -322,6 +323,15 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 	if glv[1].Value != 1.0 {
 		t.Errorf("Alias count %v, expected %v", glv[0].Value, 1.0)
 	}
+
+	// Sort both metrics.Label slices by Name, causing the Label
+	// with Name auth_method to be first in both arrays
+	sort.Slice(glv[0].Labels, func(i, j int) bool { return glv[0].Labels[i].Name < glv[0].Labels[j].Name })
+	sort.Slice(glv[1].Labels, func(i, j int) bool { return glv[1].Labels[i].Name < glv[1].Labels[j].Name })
+
+	// Sort the GaugeLabelValues slice by the Value of the first metric,
+	// in this case auth_method, in each metrics.Label slice
+	sort.Slice(glv, func(i, j int) bool { return glv[i].Labels[0].Value < glv[j].Labels[0].Value })
 
 	metricLabelsMatch(t, glv[0].Labels,
 		map[string]string{
