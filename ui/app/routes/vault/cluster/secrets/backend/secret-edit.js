@@ -169,7 +169,7 @@ export default Route.extend(UnloadModelRoute, {
         versionModel = await version.reload();
       }
     } catch (error) {
-      // cannot read the data endpoint but still allow them to see the page to access metadata if they have permissions
+      // cannot read the data endpoint but still allow them to see show page to access metadata if they have permissions
       if (error.httpStatus === 403) {
         // versionModel is then a partial model from the metadata (if we have read there), or
         // we need to create one on the client

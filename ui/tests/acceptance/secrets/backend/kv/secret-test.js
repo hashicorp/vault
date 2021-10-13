@@ -42,7 +42,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('it creates a secret and redirects', async function(assert) {
-    const secretName = `kv-path-${new Date().getTime()}`;
+    const secretPath = `kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
@@ -52,7 +52,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.toggleMetadata();
     await settled();
     assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
-    await editPage.createSecret(secretName, 'foo', 'bar');
+    await editPage.createSecret(secretPath, 'foo', 'bar');
     await settled();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -61,24 +61,24 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
   test('it can create a secret when check-and-set is required', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
-    let secretName = 'foo/bar';
+    let secretPath = 'foo/bar';
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await consoleComponent.runCommands(`write ${enginePath}/config cas_required=true`);
-    await writeSecret(enginePath, secretName, 'foo', 'bar');
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
   test('it can create a secret with a non default max version and add metadata', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
-    let secretName = 'maxVersions';
+    let secretPath = 'maxVersions';
     let maxVersions = 101;
     await mountSecrets.visit();
     await mountSecrets.enable('kv', enginePath);
     await settled();
     await editPage.startCreateSecret();
-    await editPage.path(secretName);
+    await editPage.path(secretPath);
     await editPage.toggleMetadata();
     await settled();
     await editPage.maxVersion(maxVersions);
@@ -425,8 +425,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       '_',
     ].map(char => `${char}some`);
     assert.expect(paths.length * 2);
-    let secretName = '2';
-    let commands = paths.map(path => `write '${backend}/${path}/${secretName}' 3=4`);
+    let secretPath = '2';
+    let commands = paths.map(path => `write '${backend}/${path}/${secretPath}' 3=4`);
     await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
     for (let path of paths) {
       await listPage.visit({ backend, id: path });
