@@ -43,9 +43,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Path = "oidc/provider/non-existent-provider/token"
 					return req
 				}(),
@@ -58,9 +58,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Headers = nil
 					return req
 				}(),
@@ -73,8 +73,8 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
-				tokenReq:      validTokenReq(s, "", "non-existent-client-id", clientSecret),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq:      testTokenReq(s, "", "non-existent-client-id", clientSecret),
 			},
 			wantErr: ErrTokenInvalidClient,
 		},
@@ -84,8 +84,8 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
-				tokenReq:      validTokenReq(s, "", clientID, "wrong-client-secret"),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq:      testTokenReq(s, "", clientID, "wrong-client-secret"),
 			},
 			wantErr: ErrTokenInvalidClient,
 		},
@@ -99,8 +99,8 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 					return req
 				}(),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
-				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq:      testTokenReq(s, "", clientID, clientSecret),
 			},
 			wantErr: ErrTokenInvalidClient,
 		},
@@ -110,9 +110,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Data["grant_type"] = ""
 					return req
 				}(),
@@ -125,9 +125,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Data["grant_type"] = "not-supported-grant-type"
 					return req
 				}(),
@@ -140,9 +140,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Data["code"] = "invalid-code"
 					return req
 				}(),
@@ -155,9 +155,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Data["redirect_uri"] = ""
 					return req
 				}(),
@@ -170,8 +170,8 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, "not-entity-id", ""),
-				authorizeReq:  validAuthorizeReq(s, clientID),
-				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq:      testTokenReq(s, "", clientID, clientSecret),
 			},
 			wantErr: ErrTokenInvalidRequest,
 		},
@@ -181,9 +181,9 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 				tokenReq: func() *logical.Request {
-					req := validTokenReq(s, "", clientID, clientSecret)
+					req := testTokenReq(s, "", clientID, clientSecret)
 					req.Data["redirect_uri"] = "https://not.original.redirect.uri:8251/callback"
 					return req
 				}(),
@@ -196,8 +196,23 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, "", "not-group-id"),
-				authorizeReq:  validAuthorizeReq(s, clientID),
-				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq:      testTokenReq(s, "", clientID, clientSecret),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with scopes claim conflict",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["scope"] = "openid test-scope conflict"
+					return req
+				}(),
+				tokenReq: testTokenReq(s, "", clientID, clientSecret),
 			},
 			wantErr: ErrTokenInvalidRequest,
 		},
@@ -208,11 +223,11 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["max_age"] = "30"
 					return req
 				}(),
-				tokenReq: validTokenReq(s, "", clientID, clientSecret),
+				tokenReq: testTokenReq(s, "", clientID, clientSecret),
 				vaultTokenCreationTime: func() time.Time {
 					return time.Now()
 				},
@@ -224,8 +239,8 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
-				tokenReq:      validTokenReq(s, "", clientID, clientSecret),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq:      testTokenReq(s, "", clientID, clientSecret),
 			},
 		},
 	}
@@ -370,7 +385,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Path = "oidc/provider/non-existent-provider/authorize"
 					return req
 				}(),
@@ -385,7 +400,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["scope"] = ""
 					return req
 				}(),
@@ -400,7 +415,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["scope"] = "groups email profile"
 					return req
 				}(),
@@ -415,7 +430,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["response_type"] = ""
 					return req
 				}(),
@@ -430,7 +445,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["response_type"] = "id_token"
 					return req
 				}(),
@@ -445,7 +460,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					return validAuthorizeReq(s, "non-existent-client-id")
+					return testAuthorizeReq(s, "non-existent-client-id")
 				}(),
 			},
 			wantErr: ErrAuthInvalidClientID,
@@ -461,7 +476,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 					return req
 				}(),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 			wantErr: ErrAuthUnauthorizedClient,
 		},
@@ -473,7 +488,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["redirect_uri"] = ""
 					return req
 				}(),
@@ -491,7 +506,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				}(),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 			wantErr: ErrAuthInvalidRedirectURI,
 		},
@@ -503,7 +518,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["state"] = ""
 					return req
 				}(),
@@ -518,7 +533,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["nonce"] = ""
 					return req
 				}(),
@@ -533,7 +548,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["request"] = "header.payload.signature"
 					return req
 				}(),
@@ -548,7 +563,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["request_uri"] = "https://client.example.org/request.jwt"
 					return req
 				}(),
@@ -562,7 +577,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 			wantErr: ErrAuthAccessDenied,
 		},
@@ -573,7 +588,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, "not-entity-id", ""),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 			wantErr: ErrAuthAccessDenied,
 		},
@@ -584,7 +599,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, "", "not-group-id"),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 			wantErr: ErrAuthAccessDenied,
 		},
@@ -596,7 +611,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["max_age"] = "-1"
 					return req
 				}(),
@@ -611,7 +626,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["max_age"] = "30"
 					return req
 				}(),
@@ -629,7 +644,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Data["max_age"] = "30"
 					return req
 				}(),
@@ -645,7 +660,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 		},
 		{
@@ -656,7 +671,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, groupID),
 				authorizeReq: func() *logical.Request {
-					req := validAuthorizeReq(s, clientID)
+					req := testAuthorizeReq(s, clientID)
 					req.Operation = logical.ReadOperation
 					return req
 				}(),
@@ -669,7 +684,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, entityID, ""),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 		},
 		{
@@ -679,7 +694,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				clientReq:     testClientReq(s),
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, "", groupID),
-				authorizeReq:  validAuthorizeReq(s, clientID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 		},
 	}
@@ -812,7 +827,18 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 		},
 		"groups": {{identity.entity.groups.names}}
 	}`
-	resp, err = c.identityStore.HandleRequest(ctx, testScopeReq(s, template))
+	resp, err = c.identityStore.HandleRequest(ctx, testScopeReq(s, "test-scope", template))
+	expectSuccess(t, resp, err)
+
+	// Create a custom scope that has a conflicting claim
+	template = `{
+		"username": {{identity.entity.name}},
+		"contact": {
+			"user_email": {{identity.entity.metadata.email}},
+			"phone_number": {{identity.entity.metadata.phone_number}}
+		}
+	}`
+	resp, err = c.identityStore.HandleRequest(ctx, testScopeReq(s, "conflict", template))
 	expectSuccess(t, resp, err)
 
 	// Create a provider
@@ -845,7 +871,7 @@ func resetCommonOIDCConfig(t *testing.T, s logical.Storage, c *Core, entityID, g
 	expectSuccess(t, resp, err)
 }
 
-func validTokenReq(s logical.Storage, code, clientID, clientSecret string) *logical.Request {
+func testTokenReq(s logical.Storage, code, clientID, clientSecret string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
 		Path:      "oidc/provider/test-provider/token",
@@ -862,7 +888,7 @@ func validTokenReq(s logical.Storage, code, clientID, clientSecret string) *logi
 	}
 }
 
-func validAuthorizeReq(s logical.Storage, clientID string) *logical.Request {
+func testAuthorizeReq(s logical.Storage, clientID string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
 		Path:      "oidc/provider/test-provider/authorize",
@@ -912,7 +938,7 @@ func testProviderReq(s logical.Storage, clientID string) *logical.Request {
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"allowed_client_ids": []string{clientID},
-			"scopes":             []string{"test-scope"},
+			"scopes":             []string{"test-scope", "conflict"},
 		},
 	}
 }
@@ -956,10 +982,10 @@ func testGroupReq(s logical.Storage, name string, entityIDs []string) *logical.R
 	}
 }
 
-func testScopeReq(s logical.Storage, template string) *logical.Request {
+func testScopeReq(s logical.Storage, name, template string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
-		Path:      "oidc/scope/test-scope",
+		Path:      fmt.Sprintf("oidc/scope/%s", name),
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"template": template,

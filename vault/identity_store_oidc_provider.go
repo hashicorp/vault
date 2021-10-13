@@ -1807,21 +1807,17 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		idToken.AuthTime = authCodeEntry.authTime.Unix()
 	}
 
-	// Gather the templates for each scope
-	templates, err := i.getScopeTemplates(ctx, req.Storage, authCodeEntry.scopes...)
-	if err != nil {
+	// Populate each of the requested scope templates
+	templates, conflict, err := i.populateScopeTemplates(ctx, req.Storage, ns, entity, authCodeEntry.scopes...)
+	if !conflict && err != nil {
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
-
-	// Get the groups for the entity
-	groups, inheritedGroups, err := i.groupsByEntityID(entity.ID)
-	if err != nil {
-		return tokenResponse(nil, ErrTokenServerError, err.Error())
+	if conflict && err != nil {
+		return tokenResponse(nil, ErrTokenInvalidRequest, err.Error())
 	}
-	groups = append(groups, inheritedGroups...)
 
 	// Generate the ID token payload
-	payload, err := idToken.generatePayload(i.Logger(), ns, entity, groups, templates...)
+	payload, err := idToken.generatePayload(i.Logger(), templates...)
 	if err != nil {
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
@@ -1967,22 +1963,19 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	if !ok || len(scopes) == 0 {
 		return userInfoResponse(claims, "", "")
 	}
+	parsedScopes := strutil.ParseStringSlice(scopes, scopesDelimiter)
 
-	// Gather the templates for each scope
-	templates, err := i.getScopeTemplates(ctx, req.Storage, strutil.ParseStringSlice(scopes, scopesDelimiter)...)
-	if err != nil {
+	// Populate each of the token's scope templates
+	templates, conflict, err := i.populateScopeTemplates(ctx, req.Storage, ns, entity, parsedScopes...)
+	if !conflict && err != nil {
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
-
-	// Get the groups for the entity
-	groups, inheritedGroups, err := i.groupsByEntityID(entity.ID)
-	if err != nil {
-		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
+	if conflict && err != nil {
+		return userInfoResponse(nil, ErrUserInfoInvalidRequest, err.Error())
 	}
-	groups = append(groups, inheritedGroups...)
 
-	// Populate the claims from each scope template
-	if err := populateTemplates(claims, i.Logger(), ns, entity, groups, templates...); err != nil {
+	// Merge all of the populated JSON scope templates into claims
+	if err := mergeJSONTemplates(i.Logger(), claims, templates...); err != nil {
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
 
@@ -2038,9 +2031,10 @@ func userInfoResponse(response map[string]interface{}, errorCode, errorDescripti
 	}, nil
 }
 
-// getScopeTemplates returns the templates for each named scope.
-func (i *IdentityStore) getScopeTemplates(ctx context.Context, s logical.Storage, scopes ...string) ([]string, error) {
-	templates := make([]string, 0, len(scopes))
+// getScopeTemplates returns a mapping from scope names to
+// their templates for each of the given scopes.
+func (i *IdentityStore) getScopeTemplates(ctx context.Context, s logical.Storage, scopes ...string) (map[string]string, error) {
+	templates := make(map[string]string)
 	for _, name := range scopes {
 		if name == openIDScope {
 			// No template for the openid scope
@@ -2057,10 +2051,66 @@ func (i *IdentityStore) getScopeTemplates(ctx context.Context, s logical.Storage
 			// https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
 			continue
 		}
-		templates = append(templates, scope.Template)
+		templates[name] = scope.Template
 	}
 
 	return templates, nil
+}
+
+// populateScopeTemplates populates the templates for each of the passed scopes.
+// Returns a slice of the populated JSON template strings and a bool to indicate
+// if a conflict in scope template claims occurred.
+func (i *IdentityStore) populateScopeTemplates(ctx context.Context, s logical.Storage, ns *namespace.Namespace, entity *identity.Entity, scopes ...string) ([]string, bool, error) {
+	// Gather the templates for each scope
+	templates, err := i.getScopeTemplates(ctx, s, scopes...)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Get the groups for the entity
+	groups, inheritedGroups, err := i.groupsByEntityID(entity.ID)
+	if err != nil {
+		return nil, false, err
+	}
+	groups = append(groups, inheritedGroups...)
+
+	claimsToScopes := make(map[string]string)
+	populatedTemplates := make([]string, 0)
+	for scope, template := range templates {
+		// Parse and integrate the populated template. Structural errors with the template
+		// should be caught during configuration. Errors found during runtime will be logged.
+		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+			Mode:        identitytpl.JSONTemplating,
+			String:      template,
+			Entity:      identity.ToSDKEntity(entity),
+			Groups:      identity.ToSDKGroups(groups),
+			NamespaceID: ns.ID,
+		})
+		if err != nil {
+			i.Logger().Warn("error populating OIDC token template", "scope", scope,
+				"template", template, "error", err)
+		}
+
+		if populatedTemplate != "" {
+			claimsMap := make(map[string]interface{})
+			if err := json.Unmarshal([]byte(populatedTemplate), &claimsMap); err != nil {
+				i.Logger().Warn("error parsing OIDC template", "template", template, "err", err)
+			}
+
+			// Check top-level claim keys for conflicts with other scopes
+			for claimKey := range claimsMap {
+				if conflictScope, ok := claimsToScopes[claimKey]; ok {
+					return nil, true, fmt.Errorf("found scopes with conflicting top-level claim: claim %q in scopes %q, %q",
+						claimKey, scope, conflictScope)
+				}
+				claimsToScopes[claimKey] = scope
+			}
+
+			populatedTemplates = append(populatedTemplates, populatedTemplate)
+		}
+	}
+
+	return populatedTemplates, false, nil
 }
 
 // computeHashClaim computes the hash value to be used for the at_hash

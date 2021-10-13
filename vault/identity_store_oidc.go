@@ -869,7 +869,21 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 
 	groups = append(groups, inheritedGroups...)
 
-	payload, err := idToken.generatePayload(i.Logger(), ns, e, groups, role.Template)
+	// Parse and integrate the populated template. Structural errors with the template _should_
+	// be caught during configuration. Error found during runtime will be logged, but they will
+	// not block generation of the basic ID token. They should not be returned to the requester.
+	_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
+		Mode:        identitytpl.JSONTemplating,
+		String:      role.Template,
+		Entity:      identity.ToSDKEntity(e),
+		Groups:      identity.ToSDKGroups(groups),
+		NamespaceID: ns.ID,
+	})
+	if err != nil {
+		i.Logger().Warn("error populating OIDC token template", "template", role.Template, "error", err)
+	}
+
+	payload, err := idToken.generatePayload(i.Logger(), populatedTemplate)
 	if err != nil {
 		i.Logger().Warn("error populating OIDC token template", "error", err)
 	}
@@ -923,7 +937,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	return &key, nil
 }
 
-func (tok *idToken) generatePayload(logger hclog.Logger, ns *namespace.Namespace, entity *identity.Entity, groups []*identity.Group, templates ...string) ([]byte, error) {
+func (tok *idToken) generatePayload(logger hclog.Logger, templates ...string) ([]byte, error) {
 	output := map[string]interface{}{
 		"iss":       tok.Issuer,
 		"namespace": tok.Namespace,
@@ -946,7 +960,8 @@ func (tok *idToken) generatePayload(logger hclog.Logger, ns *namespace.Namespace
 		output["c_hash"] = tok.CodeHash
 	}
 
-	err := populateTemplates(output, logger, ns, entity, groups, templates...)
+	// Merge each of the populated JSON templates into output
+	err := mergeJSONTemplates(logger, output, templates...)
 	if err != nil {
 		logger.Error("failed to populate templates for ID token generation", "error", err)
 		return nil, err
@@ -960,38 +975,21 @@ func (tok *idToken) generatePayload(logger hclog.Logger, ns *namespace.Namespace
 	return payload, nil
 }
 
-func populateTemplates(claims map[string]interface{}, logger hclog.Logger, ns *namespace.Namespace, entity *identity.Entity, groups []*identity.Group, templates ...string) error {
+// mergeJSONTemplates will merge each of the given JSON templates into the given
+// output map. It will simply merge the top-level keys of the unmarshalled JSON
+// templates into output, which means that any conflicting keys will be overwritten.
+func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, templates ...string) error {
 	for _, template := range templates {
-		// Parse and integrate the populated template. Structural errors with the template _should_
-		// be caught during configuration. Error found during runtime will be logged, but they will
-		// not block generation of the basic ID token. They should not be returned to the requester.
-		_, populatedTemplate, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
-			Mode:        identitytpl.JSONTemplating,
-			String:      template,
-			Entity:      identity.ToSDKEntity(entity),
-			Groups:      identity.ToSDKGroups(groups),
-			NamespaceID: ns.ID,
-		})
-		if err != nil {
-			logger.Warn("error populating OIDC token template", "template", template, "error", err)
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(template), &parsed); err != nil {
+			logger.Warn("error parsing OIDC template", "template", template, "err", err)
 		}
 
-		if populatedTemplate != "" {
-			var parsed map[string]interface{}
-			if err := json.Unmarshal([]byte(populatedTemplate), &parsed); err != nil {
-				logger.Warn("error parsing OIDC template", "template", template, "err", err)
-			}
-
-			for k, v := range parsed {
-				if _, conflict := claims[k]; conflict {
-					return fmt.Errorf("found conflicting top level OIDC claim key: %s", k)
-				}
-
-				if !strutil.StrListContains(requiredClaims, k) {
-					claims[k] = v
-				} else {
-					logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
-				}
+		for k, v := range parsed {
+			if !strutil.StrListContains(requiredClaims, k) {
+				output[k] = v
+			} else {
+				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
 			}
 		}
 	}
