@@ -31,6 +31,6 @@ func (bcl *BufConnListenerDialer) Dial(network, addr string) (net.Conn, error) {
 // DialContext connects to the listening end of the bufconn (satisfies
 // consul-template's TransportDialer interface). This is essentially the client
 // side of the bufconn connection.
-func (bcl *BufConnListenerDialer) DialContext(_ context.Context, network, addr string) (net.Conn, error) {
-	return bcl.Dial(network, addr)
+func (bcl *BufConnListenerDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	return bcl.listener.DialContext(ctx)
 }
