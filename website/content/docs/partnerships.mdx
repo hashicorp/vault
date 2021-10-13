@@ -113,7 +113,7 @@ The process to spin up a testing instance of HCP Vault is very [straightforward]
 
 There are a couple of items to consider when determining if the integration will work with HCP Vault.  
 - Since HCP Vault is running Vault Enterprise, the integration will need to be aware of [Namespaces](https://learn.hashicorp.com/tutorials/vault/namespaces). This is important as the main namespace in HCP Vault is called 'admin' which is different from the standard ‘root’ namespace in a self managed Vault instance. If the integration currently doesn't support namespaces, then an additional benefit of adding Namespace support iis that this will also enable it to work with all self managed Vault Enterprise installations.
-- HCP Vault is currently only deployed on AWS and so the partner’s application should be able to be deployed or run in AWS.  This is vital so that HCP Vault will be able to communicate with the application using a [private peered](https://learn.hashicorp.com/tutorials/cloud/amazon-peering-hcp) connection via a [HashiCorp Virtual Network](https://cloud.hashicorp.com/docs/hcp/network).
+- HCP Vault is currently only deployed on AWS and so the partner’s application should be able to be deployed or run in AWS.  This is vital so that HCP Vault is able to communicate with the application using a [private peered](https://learn.hashicorp.com/tutorials/cloud/amazon-peering-hcp) connection via a [HashiCorp Virtual Network](https://cloud.hashicorp.com/docs/hcp/network).
 
 Additional resources:
 - [HCP Sign up](https://cloud.hashicorp.com/docs/hcp/network)
