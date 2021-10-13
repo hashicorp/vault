@@ -1047,7 +1047,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	}
 
 	if c.config.PreventStaleReads {
-		c.replicationStateStore.requireStates(r)
+		c.replicationStateStore.requireState(r)
 	}
 
 	if limiter != nil {
@@ -1162,7 +1162,7 @@ START:
 		}
 
 		if c.config.PreventStaleReads {
-			c.replicationStateStore.recordStates(result)
+			c.replicationStateStore.recordState(result)
 		}
 	}
 	if err := result.Error(); err != nil {
@@ -1361,8 +1361,9 @@ type replicationStateStore struct {
 	store []string
 }
 
-// recordStates updates the store's replication states with the merger of all states.
-func (w *replicationStateStore) recordStates(resp *Response) {
+// recordState updates the store's replication states with the merger of all
+// states.
+func (w *replicationStateStore) recordState(resp *Response) {
 	w.m.Lock()
 	defer w.m.Unlock()
 	newState := resp.Header.Get(HeaderIndex)
@@ -1371,8 +1372,8 @@ func (w *replicationStateStore) recordStates(resp *Response) {
 	}
 }
 
-// requireStates updates the Request with the store's current replication states.
-func (w *replicationStateStore) requireStates(req *Request) {
+// requireState updates the Request with the store's current replication states.
+func (w *replicationStateStore) requireState(req *Request) {
 	w.m.RLock()
 	defer w.m.RUnlock()
 	for _, s := range w.store {
@@ -1382,8 +1383,8 @@ func (w *replicationStateStore) requireStates(req *Request) {
 
 // states currently stored.
 func (w *replicationStateStore) states() []string {
-	w.m.Lock()
-	defer w.m.Unlock()
+	w.m.RLock()
+	defer w.m.RUnlock()
 	c := make([]string, len(w.store))
 	copy(c, w.store)
 	return c

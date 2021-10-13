@@ -435,6 +435,12 @@ func TestClone(t *testing.T) {
 				"X-baz": []string{"qux"},
 			},
 		},
+		{
+			name: "preventStaleReads",
+			config: &Config{
+				PreventStaleReads: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -513,6 +519,12 @@ func TestClone(t *testing.T) {
 						t.Fatalf("expected headers %v, actual %v", *tt.headers, client2.Headers())
 					}
 				}
+			}
+			if tt.config.PreventStaleReads && client1.replicationStateStore == nil {
+				t.Fatalf("replicationStateStore is nil")
+			}
+			if !reflect.DeepEqual(client1.replicationStateStore, client2.replicationStateStore) {
+				t.Fatalf("expected replicationStateStore %v, actual %v", client1.replicationStateStore, client2.replicationStateStore)
 			}
 		})
 	}
@@ -751,19 +763,19 @@ func TestReplicationStateStore_recordState(t *testing.T) {
 				wg.Add(1)
 				go func(r *Response) {
 					defer wg.Done()
-					w.recordStates(r)
+					w.recordState(r)
 				}(r)
 			}
 			wg.Wait()
 
 			if !reflect.DeepEqual(tt.expected, w.store) {
-				t.Errorf("recordStates(): expected states %v, actual %v", tt.expected, w.store)
+				t.Errorf("recordState(): expected states %v, actual %v", tt.expected, w.store)
 			}
 		})
 	}
 }
 
-func TestReplicationStateStore_requireStates(t *testing.T) {
+func TestReplicationStateStore_requireState(t *testing.T) {
 	tests := []struct {
 		name     string
 		states   []string
@@ -797,28 +809,23 @@ func TestReplicationStateStore_requireStates(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := &replicationStateStore{
 				store: tt.states,
 			}
 
-			start := make(chan interface{})
-			done := make(chan interface{})
-
+			var wg sync.WaitGroup
 			for _, r := range tt.req {
+				wg.Add(1)
 				go func(r *Request) {
-					<-start
-					store.requireStates(r)
-					done <- true
+					defer wg.Done()
+					store.requireState(r)
 				}(r)
 			}
 
-			close(start)
-
-			for i := 0; i < len(tt.req); i++ {
-				<-done
-			}
+			wg.Wait()
 
 			var actual []string
 			for _, r := range tt.req {
@@ -828,7 +835,7 @@ func TestReplicationStateStore_requireStates(t *testing.T) {
 			}
 			sort.Strings(actual)
 			if !reflect.DeepEqual(tt.expected, actual) {
-				t.Errorf("requireStates(): expected states %v, actual %v", tt.expected, actual)
+				t.Errorf("requireState(): expected states %v, actual %v", tt.expected, actual)
 			}
 		})
 	}
@@ -949,10 +956,7 @@ func TestClient_PreventDirtyReads(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			start := make(chan interface{})
-			done := make(chan interface{})
-
-			var n int
+			var wg sync.WaitGroup
 			for i := 0; i < len(tt.values); i++ {
 				var c *Client
 				if tt.clone {
@@ -965,19 +969,15 @@ func TestClient_PreventDirtyReads(t *testing.T) {
 				}
 
 				for _, val := range tt.values[i] {
-					n += 1
+					wg.Add(1)
 					go func(val string) {
-						<-start
+						defer wg.Done()
 						testRequest(c, val)
-						done <- true
 					}(val)
 				}
 			}
 
-			close(start)
-			for i := 0; i < n; i++ {
-				<-done
-			}
+			wg.Wait()
 
 			if !reflect.DeepEqual(tt.wantStates, parent.replicationStateStore.states()) {
 				t.Errorf("expected states %v, actual %v", tt.wantStates, parent.replicationStateStore.states())
