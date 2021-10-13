@@ -1,13 +1,12 @@
 import './style.css'
 import '@hashicorp/platform-util/nprogress/style.css'
 
-import { useEffect } from 'react'
-import * as Fathom from 'fathom-client'
-import Router, { useRouter } from 'next/router'
+import Router from 'next/router'
 import Head from 'next/head'
 import { ErrorBoundary } from '@hashicorp/platform-runtime-error-monitoring'
 import createConsentManager from '@hashicorp/react-consent-manager/loader'
 import NProgress from '@hashicorp/platform-util/nprogress'
+import useFathomAnalytics from '@hashicorp/platform-analytics'
 import useAnchorLinkAnalytics from '@hashicorp/platform-util/anchor-link-analytics'
 import HashiHead from '@hashicorp/react-head'
 import ProductSubnav from 'components/subnav'
@@ -23,27 +22,7 @@ const { ConsentManager, openConsentManager } = createConsentManager({
 })
 
 export default function App({ Component, pageProps }) {
-  const router = useRouter()
-
-  useEffect(() => {
-    // Load Fathom analytics
-    Fathom.load('HASWVQNE', {
-      includedDomains: ['vaultproject.io', 'www.vaultproject.io'],
-    })
-
-    function onRouteChangeComplete() {
-      Fathom.trackPageview()
-    }
-
-    // Record a pageview when route changes
-    router.events.on('routeChangeComplete', onRouteChangeComplete)
-
-    // Unassign event listener
-    return () => {
-      router.events.off('routeChangeComplete', onRouteChangeComplete)
-    }
-  }, [])
-
+  useFathomAnalytics()
   useAnchorLinkAnalytics()
 
   return (
@@ -56,26 +35,22 @@ export default function App({ Component, pageProps }) {
         image="https://www.vaultproject.io/img/og-image.png"
         icon={[
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=16&w=16',
             type: 'image/png',
             sizes: '16x16',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=32&w=32',
             type: 'image/png',
             sizes: '32x32',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=96&w=96',
             type: 'image/png',
             sizes: '96x96',
           },
           {
-            href:
-              'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
+            href: 'https://www.datocms-assets.com/2885/1597163356-vault-favicon.png?h=192&w=192',
             type: 'image/png',
             sizes: '192x192',
           },
