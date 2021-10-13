@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/api
 
-go 1.16
+go 1.13
 
 replace github.com/hashicorp/vault/sdk => ../sdk
 

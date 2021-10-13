@@ -649,7 +649,7 @@ func TestMergeReplicationStates(t *testing.T) {
 	}
 }
 
-func TestSharedReplicationStateStore_HandleResponse(t *testing.T) {
+func TestReplicationStateStore_recordState(t *testing.T) {
 	b64enc := func(s string) string {
 		return base64.StdEncoding.EncodeToString([]byte(s))
 	}
@@ -744,26 +744,26 @@ func TestSharedReplicationStateStore_HandleResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := &SharedReplicationStateStore{}
+			w := &replicationStateStore{}
 
 			var wg sync.WaitGroup
 			for _, r := range tt.resp {
 				wg.Add(1)
 				go func(r *Response) {
 					defer wg.Done()
-					w.HandleResponse(r)
+					w.recordStates(r)
 				}(r)
 			}
 			wg.Wait()
 
-			if !reflect.DeepEqual(tt.expected, w.states) {
-				t.Errorf("HandleResponse(): expected states %v, actual %v", tt.expected, w.states)
+			if !reflect.DeepEqual(tt.expected, w.store) {
+				t.Errorf("recordStates(): expected states %v, actual %v", tt.expected, w.store)
 			}
 		})
 	}
 }
 
-func TestSharedReplicationStateStore_HandleRequest(t *testing.T) {
+func TestReplicationStateStore_requireStates(t *testing.T) {
 	tests := []struct {
 		name     string
 		states   []string
@@ -799,8 +799,8 @@ func TestSharedReplicationStateStore_HandleRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := &SharedReplicationStateStore{
-				states: tt.states,
+			store := &replicationStateStore{
+				store: tt.states,
 			}
 
 			start := make(chan interface{})
@@ -809,7 +809,7 @@ func TestSharedReplicationStateStore_HandleRequest(t *testing.T) {
 			for _, r := range tt.req {
 				go func(r *Request) {
 					<-start
-					store.HandleRequest(r)
+					store.requireStates(r)
 					done <- true
 				}(r)
 			}
@@ -828,13 +828,13 @@ func TestSharedReplicationStateStore_HandleRequest(t *testing.T) {
 			}
 			sort.Strings(actual)
 			if !reflect.DeepEqual(tt.expected, actual) {
-				t.Errorf("HandleRequest(): expected states %v, actual %v", tt.expected, actual)
+				t.Errorf("requireStates(): expected states %v, actual %v", tt.expected, actual)
 			}
 		})
 	}
 }
 
-func TestClient_RegisterReplicationStateStore(t *testing.T) {
+func TestClient_PreventDirtyReads(t *testing.T) {
 	b64enc := func(s string) string {
 		return base64.StdEncoding.EncodeToString([]byte(s))
 	}
@@ -920,24 +920,6 @@ func TestClient_RegisterReplicationStateStore(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:    "multiple_duplicates",
-			clone:   false,
-			handler: handler,
-			wantStates: []string{
-				b64enc("v1:cid:0:4:"),
-			},
-			values: [][]string{
-				{
-					b64enc("v1:cid:0:4:"),
-					b64enc("v1:cid:0:2:"),
-				},
-				{
-					b64enc("v1:cid:0:4:"),
-					b64enc("v1:cid:0:2:"),
-				},
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -960,14 +942,10 @@ func TestClient_RegisterReplicationStateStore(t *testing.T) {
 			config, ln := testHTTPServer(t, handler)
 			defer ln.Close()
 
+			config.PreventStaleReads = true
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
 			parent, err := NewClient(config)
 			if err != nil {
-				t.Fatal(err)
-			}
-
-			parent.SetCloneReplicationStateStore(true)
-			if err := parent.RegisterReplicationStateStore(&SharedReplicationStateStore{}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1001,8 +979,8 @@ func TestClient_RegisterReplicationStateStore(t *testing.T) {
 				<-done
 			}
 
-			if !reflect.DeepEqual(tt.wantStates, parent.replicationStateStore.States()) {
-				t.Errorf("expected states %v, actual %v", tt.wantStates, parent.replicationStateStore.States())
+			if !reflect.DeepEqual(tt.wantStates, parent.replicationStateStore.states()) {
+				t.Errorf("expected states %v, actual %v", tt.wantStates, parent.replicationStateStore.states())
 			}
 		})
 	}

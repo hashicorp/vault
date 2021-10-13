@@ -138,9 +138,10 @@ type Config struct {
 	// CloneHeaders ensures that the source client's headers are copied to its clone.
 	CloneHeaders bool
 
-	// CloneReplicationStateStore ensures that the source client's ReplicationStateStore
-	// is registered in the clone.
-	CloneReplicationStateStore bool
+	// PreventStaleReads enables the Client to require discovered cluster replication states
+	// in every request.
+	// The shared state is automatically propagated to all Client clones.
+	PreventStaleReads bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -431,7 +432,7 @@ type Client struct {
 	policyOverride        bool
 	requestCallbacks      []RequestCallback
 	responseCallbacks     []ResponseCallback
-	replicationStateStore ReplicationStateStore
+	replicationStateStore *replicationStateStore
 }
 
 // NewClient returns a new client for the given configuration.
@@ -505,6 +506,10 @@ func NewClient(c *Config) (*Client, error) {
 		headers: make(http.Header),
 	}
 
+	if c.PreventStaleReads {
+		client.replicationStateStore = &replicationStateStore{}
+	}
+
 	// Add the VaultRequest SSRF protection header
 	client.headers[consts.RequestHeaderName] = []string{"true"}
 
@@ -517,31 +522,6 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	return client, nil
-}
-
-// RegisterReplicationStateStore for tracking replication states across all requests and responses.
-// The ReplicationStateStore will be registered in both the request and response callback registries.
-func (c *Client) RegisterReplicationStateStore(store ReplicationStateStore) error {
-	if c.replicationStateStore != nil {
-		return fmt.Errorf("replication state store already registered")
-	}
-
-	c.modifyLock.Lock()
-	defer c.modifyLock.Unlock()
-
-	c.replicationStateStore = store
-
-	if len(c.requestCallbacks) == 0 {
-		c.requestCallbacks = []RequestCallback{}
-	}
-	c.requestCallbacks = append(c.requestCallbacks, c.replicationStateStore.HandleRequest)
-
-	if len(c.responseCallbacks) == 0 {
-		c.responseCallbacks = []ResponseCallback{}
-	}
-	c.responseCallbacks = append(c.responseCallbacks, c.replicationStateStore.HandleResponse)
-
-	return nil
 }
 
 func (c *Client) CloneConfig() *Config {
@@ -562,7 +542,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
-	newConfig.CloneReplicationStateStore = c.config.CloneReplicationStateStore
+	newConfig.PreventStaleReads = c.config.PreventStaleReads
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -888,24 +868,30 @@ func (c *Client) CloneHeaders() bool {
 	return c.config.CloneHeaders
 }
 
-// SetCloneReplicationStateStore to clone the client's ReplicationStateStore
-func (c *Client) SetCloneReplicationStateStore(val bool) {
+// SetPreventStaleReads to prevent reading stale cluster replication state.
+func (c *Client) SetPreventStaleReads(preventStaleReads bool) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
 
-	c.config.CloneReplicationStateStore = val
+	if preventStaleReads && c.replicationStateStore == nil {
+		c.replicationStateStore = &replicationStateStore{}
+	} else {
+		c.replicationStateStore = nil
+	}
+
+	c.config.PreventStaleReads = preventStaleReads
 }
 
-// CloneReplicationStateStore gets the configured value.
-func (c *Client) CloneReplicationStateStore() bool {
+// PreventStaleReads gets the configured value of PreventStaleReads
+func (c *Client) PreventStaleReads() bool {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
 
-	return c.config.CloneReplicationStateStore
+	return c.config.PreventStaleReads
 }
 
 // Clone creates a new client with the same configuration. Note that the same
@@ -925,21 +911,21 @@ func (c *Client) Clone() (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:                    config.Address,
-		HttpClient:                 config.HttpClient,
-		MinRetryWait:               config.MinRetryWait,
-		MaxRetryWait:               config.MaxRetryWait,
-		MaxRetries:                 config.MaxRetries,
-		Timeout:                    config.Timeout,
-		Backoff:                    config.Backoff,
-		CheckRetry:                 config.CheckRetry,
-		Logger:                     config.Logger,
-		Limiter:                    config.Limiter,
-		OutputCurlString:           config.OutputCurlString,
-		AgentAddress:               config.AgentAddress,
-		SRVLookup:                  config.SRVLookup,
-		CloneHeaders:               config.CloneHeaders,
-		CloneReplicationStateStore: config.CloneReplicationStateStore,
+		Address:           config.Address,
+		HttpClient:        config.HttpClient,
+		MinRetryWait:      config.MinRetryWait,
+		MaxRetryWait:      config.MaxRetryWait,
+		MaxRetries:        config.MaxRetries,
+		Timeout:           config.Timeout,
+		Backoff:           config.Backoff,
+		CheckRetry:        config.CheckRetry,
+		Logger:            config.Logger,
+		Limiter:           config.Limiter,
+		OutputCurlString:  config.OutputCurlString,
+		AgentAddress:      config.AgentAddress,
+		SRVLookup:         config.SRVLookup,
+		CloneHeaders:      config.CloneHeaders,
+		PreventStaleReads: config.PreventStaleReads,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
@@ -950,15 +936,7 @@ func (c *Client) Clone() (*Client, error) {
 		client.SetHeaders(c.Headers().Clone())
 	}
 
-	if config.CloneReplicationStateStore {
-		if c.replicationStateStore != nil {
-			if err := client.RegisterReplicationStateStore(c.replicationStateStore); err != nil {
-				return nil, err
-			}
-		} else {
-			c.config.Logger.Warn("Parent has no ReplicationStateStore and CloneReplicationStateStore is specified")
-		}
-	}
+	client.SetPreventStaleReads(config.PreventStaleReads)
 
 	return client, nil
 }
@@ -1063,6 +1041,10 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	for _, cb := range c.requestCallbacks {
 		cb(r)
+	}
+
+	if c.config.PreventStaleReads {
+		c.replicationStateStore.requireStates(r)
 	}
 
 	if limiter != nil {
@@ -1174,6 +1156,10 @@ START:
 	if result != nil {
 		for _, cb := range c.responseCallbacks {
 			cb(result)
+		}
+
+		if c.config.PreventStaleReads {
+			c.replicationStateStore.recordStates(result)
 		}
 	}
 	if err := result.Error(); err != nil {
@@ -1365,45 +1351,37 @@ func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bo
 	return false, nil
 }
 
-type ReplicationStateStore interface {
-	HandleResponse(resp *Response)
-	HandleRequest(resp *Request)
-	States() []string
+// replicationStateStore is used to track cluster replication states
+// in order to prevent stale reads.
+type replicationStateStore struct {
+	m     sync.RWMutex
+	store []string
 }
 
-// SharedReplicationStateStore stores replication states by providing
-// ResponseCallback and RequestCallback methods.
-// It can be used when Client Controlled Consistency (VLT-146) is required.
-// These methods should be registered in the Client's corresponding callback chains.
-type SharedReplicationStateStore struct {
-	m      sync.RWMutex
-	states []string
-}
-
-// HandleResponse updates the store's replication states with the merger of all states.
-// It should be registered in a Client's requestCallback chain.
-func (w *SharedReplicationStateStore) HandleResponse(resp *Response) {
+// recordStates updates the store's replication states with the merger of all states.
+func (w *replicationStateStore) recordStates(resp *Response) {
 	w.m.Lock()
 	defer w.m.Unlock()
 	newState := resp.Header.Get(HeaderIndex)
 	if newState != "" {
-		w.states = MergeReplicationStates(w.states, newState)
+		w.store = MergeReplicationStates(w.store, newState)
 	}
 }
 
-// HandleRequest updates the request with the store's replication states.
-// It should be registered in a Client's responseCallback chain.
-func (w *SharedReplicationStateStore) HandleRequest(req *Request) {
+// requireStates updates the Request with the store's current replication states.
+func (w *replicationStateStore) requireStates(req *Request) {
 	w.m.RLock()
 	defer w.m.RUnlock()
-	for _, s := range w.states {
+	for _, s := range w.store {
 		req.Headers.Add(HeaderIndex, s)
 	}
 }
 
-// States currently known to the store.
-func (w *SharedReplicationStateStore) States() []string {
+// states currently stored.
+func (w *replicationStateStore) states() []string {
 	w.m.Lock()
 	defer w.m.Unlock()
-	return w.states
+	c := make([]string, len(w.store))
+	copy(c, w.store)
+	return c
 }
