@@ -1225,6 +1225,7 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":     "testentityname2",
 			"metadata": []string{"someusefulkey=someusefulvalue"},
+			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
 		},
 	}
 
@@ -1261,6 +1262,7 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 			"mount_accessor": githubAccessor,
 			"metadata":       []string{"organization=hashicorp", "team=vault"},
 			"entity_id":      entityID2,
+			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
 		},
 	}
 
@@ -1323,5 +1325,9 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 
 	if len(entity1Lookup.Aliases) != 1 {
 		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1Lookup.Aliases))
+	}
+
+	if len(entity1Lookup.Policies) != 2 {
+		t.Fatalf("invalid number of entity policies; expected: 2, actualL: %d", len(entity1Lookup.Policies))
 	}
 }
