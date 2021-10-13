@@ -310,14 +310,14 @@
     {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
-          @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
         />
       {{else if (eq attr.type "array")}}
         <InfoTableRow
-          @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{get @model attr.name}}
@@ -327,7 +327,7 @@
         />
       {{else}}
         <InfoTableRow
-          @alwaysRender={{not (is-empty-value (get @model attr.name))}}
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{get @model attr.name}}
