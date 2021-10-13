@@ -1541,6 +1541,12 @@ func (c *ServerCommand) Run(args []string) int {
 
 			core.SetConfig(config)
 
+			// reloading custom response headers to make sure we have
+			// the most up to date headers after reloading the config file
+			if err = core.ReloadCustomResponseHeaders(); err != nil {
+				c.logger.Error(err.Error())
+			}
+
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {

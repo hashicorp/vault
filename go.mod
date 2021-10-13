@@ -114,13 +114,13 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20210924190759-58a034528e35
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20210811133805-e060c2307b24
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211013154503-eec8a1c892fb
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1-0.20210921171411-e86105e4986d
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20210715043003-e02ca8f6408e
 	github.com/hashicorp/vault-testing-stepwise v0.1.1
 	github.com/hashicorp/vault/api v1.1.1
-	github.com/hashicorp/vault/sdk v0.2.1
+	github.com/hashicorp/vault/sdk v0.2.2-0.20211004171540-a8c7e135dd6a
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -170,7 +170,6 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
@@ -201,6 +200,7 @@ require (
 	google.golang.org/grpc v1.41.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.27.1
+	gopkg.in/evanphx/json-patch.v4 v4.11.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.5.1

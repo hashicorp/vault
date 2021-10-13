@@ -12,6 +12,7 @@ export default class MetadataShow extends Route {
 
   model(params) {
     let { secret } = params;
+    this.id = secret;
     return this.store
       .queryRecord('secret-v2', {
         backend: this.backend,
@@ -28,6 +29,7 @@ export default class MetadataShow extends Route {
 
   setupController(controller, model) {
     controller.set('backend', this.backend); // for backendCrumb
+    controller.set('id', this.id); // for navigation on tabs
     controller.set('model', model);
     controller.set('noReadAccess', this.noReadAccess);
   }

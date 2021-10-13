@@ -621,6 +621,27 @@ func (i *IdentityStore) pathOIDCReadKey(ctx context.Context, req *logical.Reques
 	}, nil
 }
 
+// keyIDsByName will return a slice of key IDs for the given key name
+func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, name string) ([]string, error) {
+	var keyIDs []string
+	entry, err := s.Get(ctx, namedKeyConfigPath+name)
+	if err != nil {
+		return keyIDs, err
+	}
+	if entry == nil {
+		return keyIDs, nil
+	}
+
+	var key namedKey
+	if err := entry.DecodeJSON(&key); err != nil {
+		return keyIDs, err
+	}
+	for _, k := range key.KeyRing {
+		keyIDs = append(keyIDs, k.KeyID)
+	}
+	return keyIDs, nil
+}
+
 // rolesReferencingTargetKeyName returns a map of role names to roles
 // referencing targetKeyName.
 //
@@ -1594,21 +1615,37 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	keyIDs, err := listOIDCPublicKeys(ctx, s)
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0),
+	}
+
+	// only return keys that are associated with a role
+	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
 
-	jwks := &jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
-	}
-
-	for _, keyID := range keyIDs {
-		key, err := loadOIDCPublicKey(ctx, s, keyID)
+	for _, roleName := range roleNames {
+		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
 			return nil, err
 		}
-		jwks.Keys = append(jwks.Keys, *key)
+		if role == nil {
+			continue
+		}
+
+		keyIDs, err := i.keyIDsByName(ctx, s, role.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, keyID := range keyIDs {
+			key, err := loadOIDCPublicKey(ctx, s, keyID)
+			if err != nil {
+				return nil, err
+			}
+			jwks.Keys = append(jwks.Keys, *key)
+		}
 	}
 
 	if err := i.oidcCache.SetDefault(ns, "jwks", jwks); err != nil {

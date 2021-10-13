@@ -16,6 +16,10 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -818,5 +822,200 @@ func TestHandler_Parse_Form(t *testing.T) {
 	}
 	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestHandler_Patch_BadContentTypeHeader(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Mount a KVv2 backend
+	err := c.Sys().Mount("kv", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kvData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	if err != nil {
+		t.Fatalf("write failed - err :%#v, resp: %#v\n", err, resp)
+	}
+
+	resp, err = c.Logical().Read("kv/data/foo")
+	if err != nil {
+		t.Fatalf("read failed - err :%#v, resp: %#v\n", err, resp)
+	}
+
+	req := c.NewRequest("PATCH", "/v1/kv/data/foo")
+	req.Headers = http.Header{
+		"Content-Type": []string{"application/json"},
+	}
+
+	if err := req.SetJSONBody(kvData); err != nil {
+		t.Fatal(err)
+	}
+
+	apiResp, err := c.RawRequestWithContext(context.Background(), req)
+	if err == nil || apiResp.StatusCode != http.StatusUnsupportedMediaType {
+		t.Fatalf("expected PATCH request to fail with %d status code - err :%#v, resp: %#v\n", http.StatusUnsupportedMediaType, err, apiResp)
+	}
+}
+
+func TestHandler_Patch_NotFound(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Mount a KVv2 backend
+	err := c.Sys().Mount("kv", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	kvData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
+	if err == nil {
+		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
+	}
+
+	responseError := err.(*api.ResponseError)
+	if responseError.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected PATCH request to fail with %d status code - err: %#v, resp: %#v\n", http.StatusNotFound, responseError, resp)
+	}
+}
+
+func TestHandler_Patch_Audit(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	if err := c.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	auditLogFile, err := ioutil.TempFile("", "httppatch")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+
+	writeData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().Write("kv/data/foo", writeData)
+	if err != nil {
+		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+	}
+
+	patchData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"baz": "b",
+		},
+	}
+
+	resp, err = c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", patchData)
+	if err != nil {
+		t.Fatalf("patch request failed, err: %#v, resp: %#v\n", err, resp)
+	}
+
+	patchRequestLogCount := 0
+	patchResponseLogCount := 0
+	decoder := json.NewDecoder(auditLogFile)
+
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		}
+
+		if auditRequest["operation"] == "patch" && auditRecord["type"] == "request" {
+			patchRequestLogCount += 1
+		} else if auditRequest["operation"] == "patch" && auditRecord["type"] == "response" {
+			patchResponseLogCount += 1
+		}
+	}
+
+	if patchRequestLogCount != 1 {
+		t.Fatalf("expected 1 patch request audit log record, saw %d\n", patchRequestLogCount)
+	}
+
+	if patchResponseLogCount != 1 {
+		t.Fatalf("expected 1 patch response audit log record, saw %d\n", patchResponseLogCount)
 	}
 }
