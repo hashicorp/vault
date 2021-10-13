@@ -14,7 +14,7 @@ message EntityRecord {
 	// using the Timestamp type would cost us an extra
 	// 4 bytes per record to store nanoseconds.
 	int64 timestamp = 3;
-	// hasNoEntity records whether the given EntityRecord is
+	// non_entity records whether the given EntityRecord is
  	// for a TWE or an entity-bound token.
  	bool non_entity = 4;
 }

@@ -34,7 +34,7 @@ type EntityRecord struct {
 	// using the Timestamp type would cost us an extra
 	// 4 bytes per record to store nanoseconds.
 	Timestamp int64 `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// hasNoEntity records whether the given EntityRecord is
+	// non_entity records whether the given EntityRecord is
 	// for a TWE or an entity-bound token.
 	NonEntity bool `protobuf:"varint,4,opt,name=non_entity,json=nonEntity,proto3" json:"non_entity,omitempty"`
 }
