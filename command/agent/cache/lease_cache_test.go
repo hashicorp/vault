@@ -1,14 +1,18 @@
 package cache
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -32,6 +36,12 @@ import (
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	t.Helper()
 
+	return testNewLeaseCacheWithLogWriter(t, responses, hclog.DefaultOutput)
+}
+
+func testNewLeaseCacheWithLogWriter(t *testing.T, responses []*SendResponse, w io.Writer) *LeaseCache {
+	t.Helper()
+
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +51,7 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Logger:      logging.NewVaultLoggerWithWriter(w, hclog.Trace).Named("cache.leasecache"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -933,14 +943,20 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	}
 
 	// Pathological case: a long chain of child tokens
-	authAndSecretLease(-1, "autoauthtoken", "many-ancestors-token;0")
-	for i := 0; i < 50; i++ {
+	authAndSecretLease(0, "autoauthtoken", "many-ancestors-token;0")
+	for i := 1; i <= 50; i++ {
 		// Create a new generation of child token
-		authAndSecretLease(i, fmt.Sprintf("many-ancestors-token;%d", i), fmt.Sprintf("many-ancestors-token;%d", i+1))
+		authAndSecretLease(i, fmt.Sprintf("many-ancestors-token;%d", i-1), fmt.Sprintf("many-ancestors-token;%d", i))
 	}
+
 	// Lots of sibling tokens with auto auth token as their parent
-	for i := 50; i < 100; i++ {
+	for i := 51; i <= 100; i++ {
 		authAndSecretLease(i, "autoauthtoken", fmt.Sprintf("many-siblings-token;%d", i))
+	}
+
+	// Also create some extra siblings for an auth token further down the chain
+	for i := 101; i <= 110; i++ {
+		authAndSecretLease(i, "many-ancestors-token;25", fmt.Sprintf("many-siblings-for-ancestor-token;%d", i))
 	}
 
 	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
@@ -957,18 +973,62 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 		assert.Nil(t, resp.CacheMeta)
 	}
 
-	restoredCache := testNewLeaseCache(t, responses[2:4])
+	logBuffer := &bytes.Buffer{}
+	restoredCache := testNewLeaseCacheWithLogWriter(t, nil, logBuffer)
 
 	err = restoredCache.Restore(context.Background(), boltStorage)
 	require.NoError(t, err)
 
+	// Ensure leases were restored in the correct order
+	maxAppRoleAncestor := -1
+	restoredTokens := make(map[int]struct{})
+	var approleTokensFound, secretsFound int
+	approleRegex := regexp.MustCompile("restored lease.*path=/v1/auth/approle-(\\d+)/login")
+	kvRegex := regexp.MustCompile("restored lease.*path=/v1/kv/(\\d+)")
+	for {
+		line, err := logBuffer.ReadBytes(byte('\n'))
+		if err == io.EOF {
+			break
+		}
+		t.Log(string(line[:len(line)-1]))
+		if matches := approleRegex.FindSubmatch(line); len(matches) >= 2 {
+			id, err := strconv.Atoi(string(matches[1]))
+			require.NoError(t, err)
+			approleTokensFound++
+			restoredTokens[id] = struct{}{}
+
+			// These tokens are all children of each other, and should be restored in
+			// strictly ascending order.
+			if id <= 50 {
+				require.Equal(t, maxAppRoleAncestor+1, id)
+				maxAppRoleAncestor = id
+			}
+			// These tokens should not start getting restored until their parent(25) is restored.
+			if id >= 101 {
+				require.GreaterOrEqual(t, maxAppRoleAncestor, 25)
+			}
+		} else if matches := kvRegex.FindSubmatch(line); len(matches) >= 2 {
+			id, err := strconv.Atoi(string(matches[1]))
+			require.NoError(t, err)
+			secretsFound++
+
+			// Every secret lease should be restored after its own parent (the same number)
+			_, restored := restoredTokens[id]
+			require.True(t, restored, "kv lease restored before its parent token", id)
+		}
+	}
+
+	assert.Equal(t, 111, approleTokensFound)
+	assert.Equal(t, 111, secretsFound)
+	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 1-50")
+
 	// Now compare before and after
 	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
 	require.NoError(t, err)
-	assert.Len(t, beforeDB, 203)
+	assert.Len(t, beforeDB, 223)
 	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
 	require.NoError(t, err)
-	assert.Len(t, afterDB, 203)
+	assert.Len(t, afterDB, 223)
 	for _, cachedItem := range beforeDB {
 		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
 		require.NoError(t, err)
