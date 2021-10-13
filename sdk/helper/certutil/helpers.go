@@ -130,6 +130,9 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	for len(pemBytes) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
+			if string(pemBytes) == "\n" {
+				break
+			}
 			return nil, errutil.UserError{Err: "no data found in PEM block"}
 		}
 

@@ -272,12 +272,12 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 
 	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {
 		block.Bytes = p.CertificateBytes
-		result.Certificate = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.Certificate = string(pem.EncodeToMemory(&block))
 	}
 
 	for _, caCert := range p.CAChain {
-		block.Bytes = caCert.Bytes
-		certificate := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		block.Bytes = caCert.Bytes		
+		certificate := string(pem.EncodeToMemory(&block))
 
 		result.CAChain = append(result.CAChain, certificate)
 	}
@@ -299,7 +299,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 			}
 		}
 
-		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
 
 	return result, nil
@@ -508,7 +508,7 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 		default:
 			return nil, errutil.InternalError{Err: "Could not determine private key type when creating block"}
 		}
-		result.PrivateKey = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		result.PrivateKey = string(pem.EncodeToMemory(&block))
 	}
 
 	return result, nil
