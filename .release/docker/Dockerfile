@@ -17,11 +17,6 @@ RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
 COPY vault /bin/vault
 
-### Added for CTS
-RUN mkdir -p /vault/config \
-	&& chown -R ${NAME}:${NAME} /vault
-VOLUME /vault/config
-
 # /vault/logs is made available to use as a location to store audit logs, if
 # desired; /vault/file is made available to use as a location with the file
 # storage backend, if desired; the server will be started with /vault/config as
@@ -30,7 +25,7 @@ VOLUME /vault/config
 RUN mkdir -p /vault/logs && \
     mkdir -p /vault/file && \
     mkdir -p /vault/config && \
-    chown -R vault:vault /vault
+    chown -R ${NAME}:${NAME} /vault
 
 # Expose the logs directory as a volume since there's potentially long-running
 # state in there
@@ -50,7 +45,7 @@ EXPOSE 8200
 # For production derivatives of this container, you shoud add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-WORKDIR /vault
+WORKDIR /.release/docker
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 
