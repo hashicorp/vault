@@ -34,7 +34,7 @@
     {{!-- alwaysRender is still true --}}
     {{else if (and (not value) defaultShown)}}
       <span data-test-row-value="{{label}}">{{defaultShown}}</span>
-    {{else if (eq value "")}} 
+    {{else if valueIsEmpty}} 
       <Icon @size="s" @glyph="minus-plain"/>
     {{else}}
       {{#if (eq type 'array')}}
