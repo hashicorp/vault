@@ -809,7 +809,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			}
 
 			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
-				i.logger.Warn("skipping from_entity alias which has an accessor on which to_entity has an alias", "from_entity", fromEntityID, "skipped_alias", alias.ID)
+				i.logger.Warn("skipping from_entity alias during entity merge as to_entity has an alias with its accessor", "from_entity", fromEntityID, "skipped_alias", alias.ID)
 				continue
 			}
 			// Add the alias to the desired entity
