@@ -17,7 +17,7 @@ import (
 func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	if err == nil && (resp == nil || !resp.IsError()) {
 		switch {
-		case req.Operation == ReadOperation:
+		case req.Operation == ReadOperation, req.Operation == PatchOperation:
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}
@@ -120,6 +120,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusPreconditionFailed
 		case errwrap.Contains(err, ErrPathFunctionalityRemoved.Error()):
 			statusCode = http.StatusNotFound
+		case errwrap.Contains(err, ErrLocked.Error()):
+			statusCode = http.StatusLocked
 		}
 	}
 
