@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/armon/go-metrics v0.3.9
 	github.com/armon/go-radix v1.0.0
-	github.com/evanphx/json-patch v0.5.2
+	github.com/evanphx/json-patch/v5 v5.5.0
 	github.com/fatih/structs v1.1.0
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/go-ldap/ldap/v3 v3.1.10
@@ -35,6 +35,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/pierrec/lz4 v2.5.2+incompatible
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/atomic v1.9.0
