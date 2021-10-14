@@ -44,4 +44,21 @@ export default Component.extend({
   valueIsBoolean: computed('value', function() {
     return typeOf(this.value) === 'boolean';
   }),
+
+  valueIsEmpty: computed('value', function() {
+    let { value } = this;
+    if (typeOf(value) === 'array' && value.length === 0) {
+      return true;
+    }
+    switch (value) {
+      case undefined:
+        return true;
+      case null:
+        return true;
+      case '':
+        return true;
+      default:
+        return false;
+    }
+  }),
 });

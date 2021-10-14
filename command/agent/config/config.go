@@ -35,6 +35,7 @@ func (c *Config) Prune() {
 		l.RawConfig = nil
 		l.Profiling.UnusedKeys = nil
 		l.Telemetry.UnusedKeys = nil
+		l.CustomResponseHeaders = nil
 	}
 	c.FoundKeys = nil
 	c.UnusedKeys = nil
@@ -172,6 +173,12 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Pruning custom headers for Agent for now
+	for _, ln := range sharedConfig.Listeners {
+		ln.CustomResponseHeaders = nil
+	}
+
 	result.SharedConfig = sharedConfig
 
 	list, ok := obj.Node.(*ast.ObjectList)

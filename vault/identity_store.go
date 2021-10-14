@@ -89,6 +89,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
+				"oidc/provider/+/.well-known/*",
+				"oidc/provider/+/token",
 			},
 		},
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {

@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy"
@@ -41,10 +43,8 @@ type Backend struct {
 	// paths, including adding or removing, is not allowed once the
 	// backend is in use).
 	//
-	// PathsSpecial is the list of path patterns that denote the
-	// paths above that require special privileges. These can't be
-	// regular expressions, it is either exact match or prefix match.
-	// For prefix match, append '*' as a suffix.
+	// PathsSpecial is the list of path patterns that denote the paths above
+	// that require special privileges.
 	Paths        []*Path
 	PathsSpecial *logical.Paths
 
@@ -119,6 +119,10 @@ type InvalidateFunc func(context.Context, string)
 // InitializeFunc is the callback, which if set, will be invoked via
 // Initialize() just after a plugin has been mounted.
 type InitializeFunc func(context.Context, *logical.InitializationRequest) error
+
+// PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
+// the input as defined by request handler prior to JSON marshaling
+type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -272,6 +276,57 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	}
 
 	return callback(ctx, req, &fd)
+}
+
+// HandlePatchOperation acts as an abstraction for performing JSON merge patch
+// operations (see https://datatracker.ietf.org/doc/html/rfc7396) for HTTP
+// PATCH requests. It is responsible for properly processing and marshalling
+// the input and existing resource prior to performing the JSON merge operation
+// using the MergePatch function from the json-patch library. The preprocessor
+// is an arbitrary func that can be provided to further process the input. The
+// MergePatch function accepts and returns byte arrays.
+func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
+	var err error
+
+	if resource == nil {
+		return nil, fmt.Errorf("resource does not exist")
+	}
+
+	inputMap := map[string]interface{}{}
+
+	// Parse all fields to ensure data types are handled properly according to the FieldSchema
+	for key := range input.Raw {
+		val, ok := input.GetOk(key)
+
+		// Only accept fields in the schema
+		if ok {
+			inputMap[key] = val
+		}
+	}
+
+	if preprocessor != nil {
+		inputMap, err = preprocessor(inputMap)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	marshaledResource, err := json.Marshal(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledInput, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil, err
+	}
+
+	modified, err := jsonpatch.MergePatch(marshaledResource, marshaledInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return modified, nil
 }
 
 // SpecialPaths is the logical.Backend implementation.
