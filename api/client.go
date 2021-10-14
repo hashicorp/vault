@@ -139,14 +139,14 @@ type Config struct {
 	// its clone.
 	CloneHeaders bool
 
-	// PreventStaleReads enables the Client to require discovered cluster
-	// replication states for each request.
+	// ReadYourWrites ensures isolated read-after-write semantics by
+	// providing discovered cluster replication states in each request.
 	// The shared state is automatically propagated to all Client clones.
 	//
 	// Note: Careful consideration should be made prior to enabling this setting
 	// since there will be a performance penalty paid upon each request.
 	// This feature requires Enterprise server-side.
-	PreventStaleReads bool
+	ReadYourWrites bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -511,7 +511,7 @@ func NewClient(c *Config) (*Client, error) {
 		headers: make(http.Header),
 	}
 
-	if c.PreventStaleReads {
+	if c.ReadYourWrites {
 		client.replicationStateStore = &replicationStateStore{}
 	}
 
@@ -547,7 +547,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
-	newConfig.PreventStaleReads = c.config.PreventStaleReads
+	newConfig.ReadYourWrites = c.config.ReadYourWrites
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -873,8 +873,8 @@ func (c *Client) CloneHeaders() bool {
 	return c.config.CloneHeaders
 }
 
-// SetPreventStaleReads to prevent reading stale cluster replication state.
-func (c *Client) SetPreventStaleReads(preventStaleReads bool) {
+// SetReadYourWrites to prevent reading stale cluster replication state.
+func (c *Client) SetReadYourWrites(preventStaleReads bool) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 	c.config.modifyLock.Lock()
@@ -886,17 +886,17 @@ func (c *Client) SetPreventStaleReads(preventStaleReads bool) {
 		c.replicationStateStore = nil
 	}
 
-	c.config.PreventStaleReads = preventStaleReads
+	c.config.ReadYourWrites = preventStaleReads
 }
 
-// PreventStaleReads gets the configured value of PreventStaleReads
-func (c *Client) PreventStaleReads() bool {
+// ReadYourWrites gets the configured value of ReadYourWrites
+func (c *Client) ReadYourWrites() bool {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
 
-	return c.config.PreventStaleReads
+	return c.config.ReadYourWrites
 }
 
 // Clone creates a new client with the same configuration. Note that the same
@@ -916,21 +916,21 @@ func (c *Client) Clone() (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:           config.Address,
-		HttpClient:        config.HttpClient,
-		MinRetryWait:      config.MinRetryWait,
-		MaxRetryWait:      config.MaxRetryWait,
-		MaxRetries:        config.MaxRetries,
-		Timeout:           config.Timeout,
-		Backoff:           config.Backoff,
-		CheckRetry:        config.CheckRetry,
-		Logger:            config.Logger,
-		Limiter:           config.Limiter,
-		OutputCurlString:  config.OutputCurlString,
-		AgentAddress:      config.AgentAddress,
-		SRVLookup:         config.SRVLookup,
-		CloneHeaders:      config.CloneHeaders,
-		PreventStaleReads: config.PreventStaleReads,
+		Address:          config.Address,
+		HttpClient:       config.HttpClient,
+		MinRetryWait:     config.MinRetryWait,
+		MaxRetryWait:     config.MaxRetryWait,
+		MaxRetries:       config.MaxRetries,
+		Timeout:          config.Timeout,
+		Backoff:          config.Backoff,
+		CheckRetry:       config.CheckRetry,
+		Logger:           config.Logger,
+		Limiter:          config.Limiter,
+		OutputCurlString: config.OutputCurlString,
+		AgentAddress:     config.AgentAddress,
+		SRVLookup:        config.SRVLookup,
+		CloneHeaders:     config.CloneHeaders,
+		ReadYourWrites:   config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
@@ -1048,7 +1048,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 		cb(r)
 	}
 
-	if c.config.PreventStaleReads {
+	if c.config.ReadYourWrites {
 		c.replicationStateStore.requireState(r)
 	}
 
@@ -1163,7 +1163,7 @@ START:
 			cb(result)
 		}
 
-		if c.config.PreventStaleReads {
+		if c.config.ReadYourWrites {
 			c.replicationStateStore.recordState(result)
 		}
 	}
@@ -1357,7 +1357,7 @@ func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bo
 }
 
 // replicationStateStore is used to track cluster replication states
-// in order to prevent stale reads.
+// in order to ensure proper read-after-write semantics for a Client.
 type replicationStateStore struct {
 	m     sync.RWMutex
 	store []string

@@ -438,7 +438,7 @@ func TestClone(t *testing.T) {
 		{
 			name: "preventStaleReads",
 			config: &Config{
-				PreventStaleReads: true,
+				ReadYourWrites: true,
 			},
 		},
 	}
@@ -520,11 +520,12 @@ func TestClone(t *testing.T) {
 					}
 				}
 			}
-			if tt.config.PreventStaleReads && client1.replicationStateStore == nil {
+			if tt.config.ReadYourWrites && client1.replicationStateStore == nil {
 				t.Fatalf("replicationStateStore is nil")
 			}
 			if !reflect.DeepEqual(client1.replicationStateStore, client2.replicationStateStore) {
-				t.Fatalf("expected replicationStateStore %v, actual %v", client1.replicationStateStore, client2.replicationStateStore)
+				t.Fatalf("expected replicationStateStore %v, actual %v", client1.replicationStateStore,
+					client2.replicationStateStore)
 			}
 		})
 	}
@@ -841,7 +842,7 @@ func TestReplicationStateStore_requireState(t *testing.T) {
 	}
 }
 
-func TestClient_PreventDirtyReads(t *testing.T) {
+func TestClient_ReadYourWrites(t *testing.T) {
 	b64enc := func(s string) string {
 		return base64.StdEncoding.EncodeToString([]byte(s))
 	}
@@ -949,7 +950,7 @@ func TestClient_PreventDirtyReads(t *testing.T) {
 			config, ln := testHTTPServer(t, handler)
 			defer ln.Close()
 
-			config.PreventStaleReads = true
+			config.ReadYourWrites = true
 			config.Address = fmt.Sprintf("http://%s", ln.Addr())
 			parent, err := NewClient(config)
 			if err != nil {
