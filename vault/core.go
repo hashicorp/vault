@@ -44,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
@@ -568,6 +569,10 @@ type Core struct {
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
+
+	// VersionTimestamps is a map of vault versions to timestamps when the version
+	// was first run
+	VersionTimestamps map[string]time.Time
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1032,7 +1037,31 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	if c.VersionTimestamps == nil {
+		c.logger.Info("Initializing VersionTimestamps for core")
+		c.VersionTimestamps = make(map[string]time.Time)
+	}
+
 	return c, nil
+}
+
+// HandleVersionTimeStamps stores the current version at the current time to
+// storage, and then loads all versions and upgrade timestamps out from storage.
+func (c *Core) HandleVersionTimeStamps(ctx context.Context) error {
+	currentTime := time.Now()
+	isUpdated, err := c.StoreVersionTimestamp(ctx, version.Version, currentTime)
+	if err != nil {
+		return err
+	}
+	if isUpdated {
+		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
+	}
+	// Finally, load the versions into core fields
+	err = c.HandleLoadVersionTimestamps(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // HostnameHeaderEnabled determines whether to add the X-Vault-Hostname header
@@ -2133,6 +2162,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := c.postSealMigration(ctx); err != nil {
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
 		}
+	}
+	err := c.HandleVersionTimeStamps(c.activeContext)
+	if err != nil {
+		c.logger.Warn("post-unseal version timestamp setup failed", "error", err)
+
 	}
 
 	c.logger.Info("post-unseal setup complete")

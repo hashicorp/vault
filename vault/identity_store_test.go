@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -187,7 +188,8 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 
 func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	ctx := namespace.RootContext(nil)
-	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, ghAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
 	alias := &logical.Alias{
 		MountType:     "github",
 		MountAccessor: ghAccessor,
@@ -239,7 +241,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":           "githubuser2",
 			"canonical_id":   entity.ID,
-			"mount_accessor": ghAccessor,
+			"mount_accessor": upAccessor,
 		},
 	}
 
@@ -610,6 +612,48 @@ func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*Id
 	}
 
 	return c.identityStore, meGH.Accessor, c, root
+}
+
+func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, string, *Core) {
+	// Setup 2 auth backends, github and userpass
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, _, _ := TestCoreUnsealed(t)
+
+	githubMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err = c.enableCredential(ctx, githubMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+
+	err = c.enableCredential(ctx, userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return c.identityStore, githubMe.Accessor, userpassMe.Accessor, c
+
 }
 
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {

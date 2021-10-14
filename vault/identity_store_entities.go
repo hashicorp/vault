@@ -770,6 +770,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
 		i.localNode.HAState() == consts.PerfStandby
 	var fromEntityGroups []*identity.Group
+
+	toEntityAccessors := make(map[string]struct{})
+
+	for _, alias := range toEntity.Aliases {
+		if _, ok := toEntityAccessors[alias.MountAccessor]; !ok {
+			toEntityAccessors[alias.MountAccessor] = struct{}{}
+		}
+	}
+
 	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -799,6 +808,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
+			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
+				i.logger.Warn("skipping from_entity alias during entity merge as to_entity has an alias with its accessor", "from_entity", fromEntityID, "skipped_alias", alias.ID)
+				continue
+			}
 			// Add the alias to the desired entity
 			toEntity.Aliases = append(toEntity.Aliases, alias)
 		}

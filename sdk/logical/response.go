@@ -34,9 +34,17 @@ const (
 	// ignore errors.
 	HTTPRawBodyAlreadyJSONDecoded = "http_raw_body_already_json_decoded"
 
-	// If set, HTTPRawCacheControl will replace the default Cache-Control=no-store header
+	// If set, HTTPCacheControlHeader will replace the default Cache-Control=no-store header
 	// set by the generic wrapping handler. The value must be a string.
-	HTTPRawCacheControl = "http_raw_cache_control"
+	HTTPCacheControlHeader = "http_raw_cache_control"
+
+	// If set, HTTPPragmaHeader will set the Pragma response header.
+	// The value must be a string.
+	HTTPPragmaHeader = "http_raw_pragma"
+
+	// If set, HTTPWWWAuthenticateHeader will set the WWW-Authenticate response header.
+	// The value must be a string.
+	HTTPWWWAuthenticateHeader = "http_www_authenticate"
 )
 
 // Response is a struct that stores the response of a request.

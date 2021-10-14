@@ -37,6 +37,10 @@ var (
 	DefaultMaxRequestDuration = 90 * time.Second
 
 	egpDebugLogging bool
+
+	// if this returns an error, the request should be blocked and the error
+	// should be returned to the client
+	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -392,10 +396,11 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return auth, te, retErr
 	}
 
-	// If it is an authenticated ( i.e with vault token ) request
-	// associated with an entity, increment client count
-	if !unauth && c.activityLog != nil && te.EntityID != "" {
-		c.activityLog.HandleTokenCreation(te)
+	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	if !unauth && c.activityLog != nil {
+		clientID, _ := c.activityLog.CreateClientID(req.TokenEntry())
+		req.ClientID = clientID
+		c.activityLog.HandleTokenUsage(te)
 	}
 	return auth, te, nil
 }
@@ -876,6 +881,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
+	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		return nil, nil, multierror.Append(retErr, err)
+	}
+
 	leaseGenerated := false
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
@@ -1261,16 +1270,22 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return nil, nil, ErrInternalError
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		c.logger.Error("failed to get namespace from context", "error", err)
+		retErr = multierror.Append(retErr, ErrInternalError)
+		return
+	}
 	// If the response generated an authentication, then generate the token
 	if resp != nil && resp.Auth != nil {
-		ns, err := namespace.FromContext(ctx)
-		if err != nil {
-			c.logger.Error("failed to get namespace from context", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
+		leaseGenerated := false
+
+		// by placing this after the authorization check, we don't leak
+		// information about locked namespaces to unauthenticated clients.
+		if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+			retErr = multierror.Append(retErr, err)
 			return
 		}
-
-		leaseGenerated := false
 
 		// The request successfully authenticated itself. Run the quota checks
 		// before creating lease.
@@ -1441,8 +1456,27 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		)
 	}
 
+	// if we were already going to return some error from this login, do that.
+	// if not, we will then check if the API is locked for the requesting
+	// namespace, to avoid leaking locked namespaces to unauthenticated clients.
+	if resp != nil && resp.Data != nil {
+		if _, ok := resp.Data["error"]; ok {
+			return resp, auth, routeErr
+		}
+	}
+	if routeErr != nil {
+		return resp, auth, routeErr
+	}
+
+	// this check handles the bad login credential case
+	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		return nil, nil, multierror.Append(retErr, err)
+	}
+
 	return resp, auth, routeErr
 }
+
+func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
