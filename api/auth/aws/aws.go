@@ -17,7 +17,8 @@ import (
 
 type AWSAuth struct {
 	// If not provided with the WithRole login option, the Vault server will look for a role
-	// with the friendly name of the IAM principal if using the IAM auth type, or the name of the EC2 instance's AMI ID if using the EC2 auth type.
+	// with the friendly name of the IAM principal if using the IAM auth type,
+	// or the name of the EC2 instance's AMI ID if using the EC2 auth type.
 	// If no matching role is found, login will fail.
 	roleName  string
 	mountPath string
@@ -31,24 +32,25 @@ type AWSAuth struct {
 	nonce                  string
 }
 
-type LoginOption func(a *AWSAuth)
+type LoginOption func(a *AWSAuth) error
 
 const (
-	iamType      = "iam"
-	ec2Type      = "ec2"
-	pkcs7Type    = "pkcs7"
-	identityType = "identity"
+	iamType              = "iam"
+	ec2Type              = "ec2"
+	pkcs7Type            = "pkcs7"
+	identityType         = "identity"
+	defaultMountPath     = "aws"
+	defaultAuthType      = "iam"
+	defaultRegion        = "us-east-1"
+	defaultSignatureType = "pkcs7"
 )
 
-// Supported options: WithRole, WithMountPath, WithAuthType, WithSignatureType, WithIAMServerIDHeader, WithNonce, WithRegion
+// NewAWSAuth initializes a new AWS auth method interface to be
+// passed as a parameter to the client.Auth().Login method.
+//
+// Supported options: WithRole, WithMountPath, WithAuthType, WithSignatureType,
+// WithIAMServerIDHeader, WithNonce, WithRegion
 func NewAWSAuth(opts ...LoginOption) (api.AuthMethod, error) {
-	const (
-		defaultMountPath     = "aws"
-		defaultAuthType      = "iam"
-		defaultRegion        = "us-east-1"
-		defaultSignatureType = "pkcs7"
-	)
-
 	a := &AWSAuth{
 		mountPath:     defaultMountPath,
 		authType:      defaultAuthType,
@@ -60,17 +62,24 @@ func NewAWSAuth(opts ...LoginOption) (api.AuthMethod, error) {
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *AWSAuth as the argument
-		opt(a)
+		err := opt(a)
+		if err != nil {
+			return nil, fmt.Errorf("error with login option: %w", err)
+		}
 	}
 
 	// return the modified auth struct instance
 	return a, nil
 }
 
-// Login sets up the required request body for the AWS auth method's /login endpoint, and performs a write to it. This method defaults to the "iam" auth type unless NewAWSAuth is called with WithAuthType("ec2").
+// Login sets up the required request body for the AWS auth method's /login
+// endpoint, and performs a write to it. This method defaults to the "iam"
+// auth type unless NewAWSAuth is called with WithAuthType("ec2").
 //
-// The Vault client will set its credentials to the values of the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION environment variables.
-// To specify a path to a credentials file on disk instead, set the environment variable AWS_SHARED_CREDENTIALS_FILE.
+// The Vault client will set its credentials to the values of the
+// AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION environment
+// variables. To specify a path to a credentials file on disk instead, set
+// the environment variable AWS_SHARED_CREDENTIALS_FILE.
 func (a *AWSAuth) Login(client *api.Client) (*api.Secret, error) {
 	loginData := make(map[string]interface{})
 	switch a.authType {
@@ -126,7 +135,8 @@ func (a *AWSAuth) Login(client *api.Client) (*api.Secret, error) {
 				Logger:       logger,
 			}
 
-			// the env vars above will take precedence if they are set, as they will be added to the ChainProvider stack first
+			// the env vars above will take precedence if they are set, as
+			// they will be added to the ChainProvider stack first
 			var hasCredsFile bool
 			credsFilePath := os.Getenv("AWS_SHARED_CREDENTIALS_FILE")
 			if credsFilePath != "" {
@@ -157,7 +167,9 @@ func (a *AWSAuth) Login(client *api.Client) (*api.Secret, error) {
 		loginData = data
 	}
 
-	// Add role if we have one. If not, Vault will infer the role name based on the IAM friendly name (iam auth type) or EC2 instance's AMI ID (ec2 auth type).
+	// Add role if we have one. If not, Vault will infer the role name based
+	// on the IAM friendly name (iam auth type) or EC2 instance's
+	// AMI ID (ec2 auth type).
 	if a.roleName != "" {
 		loginData["role"] = a.roleName
 	}
@@ -176,47 +188,58 @@ func (a *AWSAuth) Login(client *api.Client) (*api.Secret, error) {
 }
 
 func WithRole(roleName string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.roleName = roleName
+		return nil
 	}
 }
 
 func WithMountPath(mountPath string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.mountPath = mountPath
+		return nil
 	}
 }
 
 func WithAuthType(authType string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.authType = authType
+		return nil
 	}
 }
 
-// Determines which type of cryptographic signature to use to verify EC2 auth logins.
-// Only used by EC2 auth type. Valid values are "pkcs7" or "identity". Defaults to "pkcs7".
-// This should be set to whichever type of public AWS cert Vault has been configured with to verify EC2 instance identity. https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+// Determines which type of cryptographic signature to use to verify EC2 auth
+// logins. Only used by EC2 auth type. Valid values are "pkcs7" or "identity".
+// Defaults to "pkcs7". This should be set to whichever type of public
+// AWS cert Vault has been configured with to verify EC2 instance identity.
+// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
 func WithSignatureType(signatureType string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.signatureType = signatureType
+		return nil
 	}
 }
 
 func WithIAMServerIDHeader(headerValue string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.iamServerIDHeaderValue = headerValue
+		return nil
 	}
 }
 
-// WithNonce can be used to specify a named nonce for the ec2 auth login method. If not provided, an automatically-generated uuid will be used instead.
+// WithNonce can be used to specify a named nonce for the ec2 auth login
+// method. If not provided, an automatically-generated uuid will be used
+// instead.
 func WithNonce(nonce string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.nonce = nonce
+		return nil
 	}
 }
 
 func WithRegion(region string) LoginOption {
-	return func(a *AWSAuth) {
+	return func(a *AWSAuth) error {
 		a.region = region
+		return nil
 	}
 }

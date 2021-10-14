@@ -2,7 +2,8 @@ package approle
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -15,12 +16,21 @@ type AppRoleAuth struct {
 	unwrap         bool
 }
 
-type LoginOption func(a *AppRoleAuth)
+type LoginOption func(a *AppRoleAuth) error
 
-// NewAppRoleAuth initializes a new AppRole auth method interface to be passed as a parameter to the client.Auth().Login method.
+const (
+	defaultMountPath = "approle"
+)
+
+// NewAppRoleAuth initializes a new AppRole auth method interface to be
+// passed as a parameter to the client.Auth().Login method.
 //
-// For a secret ID, the recommended secure pattern is to unwrap a one-time-use response-wrapping token that was placed here by a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices)
-// To indicate that the filepath points to this wrapping token and not just a plaintext secret ID, initialize NewAppRoleAuth with the WithWrappingToken LoginOption.
+// For a secret ID, the recommended secure pattern is to unwrap a one-time-use
+// response-wrapping token that was placed here by a trusted orchestrator
+// (https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices)
+// To indicate that the filepath points to this wrapping token and not just
+// a plaintext secret ID, initialize NewAppRoleAuth with the
+// WithWrappingToken LoginOption.
 //
 // Supported options: WithMountPath, WithWrappingToken
 func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.AuthMethod, error) {
@@ -32,10 +42,6 @@ func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.Aut
 		return nil, fmt.Errorf("no path to secret ID provided for login")
 	}
 
-	const (
-		defaultMountPath = "approle"
-	)
-
 	a := &AppRoleAuth{
 		mountPath:      defaultMountPath,
 		roleID:         roleID,
@@ -46,7 +52,10 @@ func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.Aut
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *AppRoleAuth as the argument
-		opt(a)
+		err := opt(a)
+		if err != nil {
+			return nil, fmt.Errorf("error with login option: %w", err)
+		}
 	}
 
 	// return the modified auth struct instance
@@ -58,15 +67,18 @@ func (a *AppRoleAuth) Login(client *api.Client) (*api.Secret, error) {
 		"role_id": a.roleID,
 	}
 
-	secretIDBytes, err := ioutil.ReadFile(a.pathToSecretID)
+	secretID, err := readSecretID(a.pathToSecretID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read file containing secret ID: %w", err)
+		return nil, fmt.Errorf("unable to read secret ID: %w", err)
 	}
-	secretID := string(secretIDBytes)
+	if secretID == "" {
+		return nil, fmt.Errorf("secret ID was empty")
+	}
 
-	// if it was indicated that the value in the file was actually a wrapping token, unwrap it first
+	// if it was indicated that the value in the file was actually a wrapping
+	// token, unwrap it first
 	if a.unwrap {
-		unwrappedToken, err := client.Logical().Unwrap(strings.TrimSuffix(secretID, "\n"))
+		unwrappedToken, err := client.Logical().Unwrap(secretID)
 		if err != nil {
 			return nil, fmt.Errorf("unable to unwrap token: %w. If the AppRoleAuth struct was initialized with the WithWrappingToken LoginOption, then the filepath used should be a path to a response-wrapping token", err)
 		}
@@ -85,13 +97,33 @@ func (a *AppRoleAuth) Login(client *api.Client) (*api.Secret, error) {
 }
 
 func WithMountPath(mountPath string) LoginOption {
-	return func(a *AppRoleAuth) {
+	return func(a *AppRoleAuth) error {
 		a.mountPath = mountPath
+		return nil
 	}
 }
 
 func WithWrappingToken() LoginOption {
-	return func(a *AppRoleAuth) {
+	return func(a *AppRoleAuth) error {
 		a.unwrap = true
+		return nil
 	}
+}
+
+func readSecretID(pathToSecretID string) (string, error) {
+	secretIDFile, err := os.Open(pathToSecretID)
+	if err != nil {
+		return "", fmt.Errorf("unable to open file containing secret ID: %w", err)
+	}
+	defer secretIDFile.Close()
+
+	limitedReader := io.LimitReader(secretIDFile, 1000)
+	secretIDBytes, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return "", fmt.Errorf("unable to read secret ID: %w", err)
+	}
+
+	secretID := strings.TrimSuffix(string(secretIDBytes), "\n")
+
+	return secretID, nil
 }

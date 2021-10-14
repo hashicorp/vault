@@ -12,8 +12,15 @@ type UserpassAuth struct {
 	password  string
 }
 
-type LoginOption func(a *UserpassAuth)
+type LoginOption func(a *UserpassAuth) error
 
+const (
+	defaultMountPath = "userpass"
+)
+
+// NewUserpassAuth initializes a new Userpass auth method interface to be
+// passed as a parameter to the client.Auth().Login method.
+//
 // Supported options: WithMountPath
 func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMethod, error) {
 	if username == "" {
@@ -23,10 +30,6 @@ func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMe
 	if password == "" {
 		return nil, fmt.Errorf("no password provided for login")
 	}
-
-	const (
-		defaultMountPath = "userpass"
-	)
 
 	a := &UserpassAuth{
 		mountPath: defaultMountPath,
@@ -38,7 +41,10 @@ func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMe
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *UserpassAuth as the argument
-		opt(a)
+		err := opt(a)
+		if err != nil {
+			return nil, fmt.Errorf("error with login option: %w", err)
+		}
 	}
 
 	// return the modified auth struct instance
@@ -60,7 +66,8 @@ func (a *UserpassAuth) Login(client *api.Client) (*api.Secret, error) {
 }
 
 func WithMountPath(mountPath string) LoginOption {
-	return func(a *UserpassAuth) {
+	return func(a *UserpassAuth) error {
 		a.mountPath = mountPath
+		return nil
 	}
 }
