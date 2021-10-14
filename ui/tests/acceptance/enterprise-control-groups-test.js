@@ -119,7 +119,7 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await editPage.createSecret(path, key, val);
   };
 
-  test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path meep', async function(assert) {
+  test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function(assert) {
     await consoleComponent.runCommands([
       'write sys/mounts/kv-v2-mount type=kv-v2',
       'delete kv-v2-mount/metadata/foo',
