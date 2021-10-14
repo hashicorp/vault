@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/ptypes"
@@ -16,6 +18,59 @@ import (
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	alias := &identity.Alias{
+		ID:            "testAliasID1",
+		CanonicalID:   "testEntityID",
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor",
+		Name:          "testAliasName",
+	}
+	alias2 := &identity.Alias{
+		ID:            "testAliasID2",
+		CanonicalID:   "testEntityID",
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor",
+		Name:          "testAliasName2",
+	}
+	entity := &identity.Entity{
+		ID:       "testEntityID",
+		Name:     "testEntityName",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			alias,
+			alias2,
+		},
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("testEntityID"),
+	}
+
+	err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false)
+	require.NoError(t, err)
+
+	err = c.identityStore.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias, alias2})
+	require.NoError(t, err)
+
+	txn.Commit()
+
+	alias, err = c.identityStore.MemDBAliasByID("testAliasID1", false, false)
+	require.NoError(t, err)
+	require.Nil(t, alias)
+
+	alias, err = c.identityStore.MemDBAliasByID("testAliasID2", false, false)
+	require.NoError(t, err)
+	require.Nil(t, alias)
+
+	entity, err = c.identityStore.MemDBEntityByID("testEntityID", false)
+	require.NoError(t, err)
+
+	require.Len(t, entity.Aliases, 0)
+}
 
 func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	err := AddTestCredentialBackend("github", credGithub.Factory)
