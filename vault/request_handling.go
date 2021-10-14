@@ -396,10 +396,11 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return auth, te, retErr
 	}
 
-	// If it is an authenticated ( i.e with vault token ) request
-	// associated with an entity, increment client count
-	if !unauth && c.activityLog != nil && te.EntityID != "" {
-		c.activityLog.HandleTokenCreation(te)
+	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	if !unauth && c.activityLog != nil {
+		clientID, _ := c.activityLog.CreateClientID(req.TokenEntry())
+		req.ClientID = clientID
+		c.activityLog.HandleTokenUsage(te)
 	}
 	return auth, te, nil
 }
