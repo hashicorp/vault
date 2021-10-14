@@ -42,6 +42,15 @@ func TestInitialize(t *testing.T) {
 				VerifyConnection: true,
 			},
 		},
+		"contained_db set": {
+			dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"contained_db":   "true",
+				},
+				VerifyConnection: true,
+			},
+		},
 	}
 
 	for name, test := range tests {
