@@ -1516,6 +1516,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             identityUUID,
 		Accessor:         identityAccessor,
 		BackendAwareUUID: identityBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
+		},
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

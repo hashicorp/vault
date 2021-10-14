@@ -481,6 +481,15 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	return c.tokenStore.Lookup(ctx, token)
 }
 
+// CreateToken creates the given token in the core's token store.
+func (c *Core) CreateToken(ctx context.Context, entry *logical.TokenEntry) error {
+	if c.tokenStore == nil {
+		return errors.New("unable to create token with nil token store")
+	}
+
+	return c.tokenStore.create(ctx, entry)
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.

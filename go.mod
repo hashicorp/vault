@@ -59,6 +59,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/gorilla/mux v1.7.3 // indirect
+	github.com/hashicorp/cap v0.1.0
 	github.com/hashicorp/consul-template v0.27.1
 	github.com/hashicorp/consul/api v1.11.0
 	github.com/hashicorp/errwrap v1.1.0
