@@ -1,3 +1,0 @@
-```release-note:feature
-**Namespaces (Enterprise)**: Adds support for locking Vault API for particular namespaces.
-```
