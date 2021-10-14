@@ -185,6 +185,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	}
 	i.logger.Debug("entities collected", "num_existing", len(existing))
 
+	duplicatedAccessors := make(map[string]struct{})
 	// Make the channels used for the worker pool
 	broker := make(chan string)
 	quit := make(chan bool)
@@ -304,6 +305,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					}
 				}
 
+				mountAccessors := getAccessorsOnDuplicateAliases(entity.Aliases)
+
+				for _, accessor := range mountAccessors {
+					if _, ok := duplicatedAccessors[accessor]; !ok {
+						duplicatedAccessors[accessor] = struct{}{}
+					}
+				}
 				// Only update MemDB and don't hit the storage again
 				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
@@ -316,11 +324,42 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Let all go routines finish
 	wg.Wait()
 
+	// Flatten the map into a list of keys, in order to log them
+	duplicatedAccessorsList := make([]string, len(duplicatedAccessors))
+	accessorCounter := 0
+	for accessor := range duplicatedAccessors {
+		duplicatedAccessorsList[accessorCounter] = accessor
+		accessorCounter++
+	}
+
+	if len(duplicatedAccessorsList) > 0 {
+		i.logger.Warn("One or more entities have multiple aliases on the same mount(s), remove duplicates to avoid ACL templating issues", "mount_accessors", duplicatedAccessorsList)
+	}
+
 	if i.logger.IsInfo() {
 		i.logger.Info("entities restored")
 	}
 
 	return nil
+}
+
+// getAccessorsOnDuplicateAliases returns a list of accessors by checking aliases in
+// the passed in list which belong to the same accessor(s)
+func getAccessorsOnDuplicateAliases(aliases []*identity.Alias) []string {
+	accessorCounts := make(map[string]int)
+	var mountAccessors []string
+
+	for _, alias := range aliases {
+		accessorCounts[alias.MountAccessor] += 1
+	}
+
+	for accessor, accessorCount := range accessorCounts {
+		if accessorCount > 1 {
+			mountAccessors = append(mountAccessors, accessor)
+		}
+	}
+
+	return mountAccessors
 }
 
 // upsertEntityInTxn either creates or updates an existing entity. The
