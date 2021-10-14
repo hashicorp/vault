@@ -19,7 +19,7 @@
     "start": "export VAULT_ADDR=http://localhost:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
     "test": "yarn lint:js && node scripts/start-vault.js",
-    "test:oss": "yarn run test -f='enterprise'",
+    "test:oss": "yarn lint:js && node scripts/start-vault.js",
     "test:browserstack": "export CI=true; node scripts/start-vault.js --browserstack",
     "test:quick": "node scripts/start-vault.js",
     "test:quick-oss": "yarn test:quick -f='enterprise'",
