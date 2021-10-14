@@ -979,6 +979,45 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	err = restoredCache.Restore(context.Background(), boltStorage)
 	require.NoError(t, err)
 
+	// Now compare before and after
+	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, beforeDB, 223)
+	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, afterDB, 223)
+	for _, cachedItem := range beforeDB {
+		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
+		require.NoError(t, err)
+
+		assert.NoError(t, err)
+		assert.Equal(t, cachedItem.ID, restoredItem.ID)
+		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
+		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
+		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
+		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
+		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
+		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
+		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
+		assert.Equal(t, cachedItem.Response, restoredItem.Response)
+		assert.Equal(t, cachedItem.Token, restoredItem.Token)
+		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
+		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
+
+		// check what we can in the renewal context
+		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
+		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
+		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
+		assert.Equal(t,
+			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+		)
+	}
+
+	// Clear the cache so that there's no further logging in the background and
+	// we can safely read from the log buffer.
+	require.NoError(t, restoredCache.handleCacheClear(context.Background(), &cacheClearInput{Type: "all"}))
+
 	// Ensure leases were restored in the correct order
 	maxAppRoleAncestor := -1
 	restoredTokens := make(map[int]struct{})
@@ -1021,41 +1060,6 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	assert.Equal(t, 111, approleTokensFound)
 	assert.Equal(t, 111, secretsFound)
 	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 0-50")
-
-	// Now compare before and after
-	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, beforeDB, 223)
-	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, afterDB, 223)
-	for _, cachedItem := range beforeDB {
-		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, cachedItem.ID, restoredItem.ID)
-		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
-		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
-		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
-		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
-		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
-		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
-		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
-		assert.Equal(t, cachedItem.Response, restoredItem.Response)
-		assert.Equal(t, cachedItem.Token, restoredItem.Token)
-		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
-		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
-
-		// check what we can in the renewal context
-		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
-		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
-		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
-		assert.Equal(t,
-			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-		)
-	}
 }
 
 func TestEvictPersistent(t *testing.T) {
