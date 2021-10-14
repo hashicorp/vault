@@ -32,14 +32,16 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
         qp.prompt = null;
       }
       let { cluster_name } = this.paramsFor('vault.cluster');
-      let url = this.router.urlFor(transition.to.name, transition.to.params, { queryParams: qp });
+      let url = this.router.urlFor(transition.to.name, cluster_name, transition.to.params, {
+        queryParams: qp,
+      });
       return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: url } });
     }
   }
 
   _redirectToAuth(oidcName, queryParams, logout = false) {
     let { cluster_name } = this.paramsFor('vault.cluster');
-    let currentRoute = this.router.urlFor(PROVIDER, oidcName, { queryParams });
+    let currentRoute = this.router.urlFor(PROVIDER, cluster_name, oidcName, { queryParams });
     if (logout) {
       this.auth.deleteCurrentToken();
     }
