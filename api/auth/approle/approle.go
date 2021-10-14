@@ -33,7 +33,9 @@ const (
 // WithWrappingToken LoginOption.
 //
 // Supported options: WithMountPath, WithWrappingToken
-func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (api.AuthMethod, error) {
+func NewAppRoleAuth(roleID, pathToSecretID string, opts ...LoginOption) (*AppRoleAuth, error) {
+	var _ api.AuthMethod = (*AppRoleAuth)(nil)
+
 	if roleID == "" {
 		return nil, fmt.Errorf("no role ID provided for login")
 	}

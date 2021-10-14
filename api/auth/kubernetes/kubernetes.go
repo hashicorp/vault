@@ -26,7 +26,9 @@ const (
 // this app's Kubernetes service account bound to it.
 //
 // Supported options: WithMountPath, WithServiceAccountTokenPath
-func NewKubernetesAuth(roleName string, opts ...LoginOption) (api.AuthMethod, error) {
+func NewKubernetesAuth(roleName string, opts ...LoginOption) (*KubernetesAuth, error) {
+	var _ api.AuthMethod = (*KubernetesAuth)(nil)
+
 	if roleName == "" {
 		return nil, fmt.Errorf("no role name was provided")
 	}

@@ -22,7 +22,9 @@ const (
 // passed as a parameter to the client.Auth().Login method.
 //
 // Supported options: WithMountPath
-func NewUserpassAuth(username, password string, opts ...LoginOption) (api.AuthMethod, error) {
+func NewUserpassAuth(username, password string, opts ...LoginOption) (*UserpassAuth, error) {
+	var _ api.AuthMethod = (*UserpassAuth)(nil)
+
 	if username == "" {
 		return nil, fmt.Errorf("no user name provided for login")
 	}

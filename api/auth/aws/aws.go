@@ -50,7 +50,9 @@ const (
 //
 // Supported options: WithRole, WithMountPath, WithAuthType, WithSignatureType,
 // WithIAMServerIDHeader, WithNonce, WithRegion
-func NewAWSAuth(opts ...LoginOption) (api.AuthMethod, error) {
+func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
+	var _ api.AuthMethod = (*AWSAuth)(nil)
+
 	a := &AWSAuth{
 		mountPath:     defaultMountPath,
 		authType:      defaultAuthType,

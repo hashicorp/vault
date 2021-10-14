@@ -92,7 +92,7 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error logging in: %v", err)
 	}
-	if authInfo == nil {
+	if authInfo == nil || authInfo.Auth.ClientToken == "" {
 		t.Fatalf("no authentication info returned by login")
 	}
 }
