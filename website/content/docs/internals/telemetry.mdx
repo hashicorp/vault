@@ -387,7 +387,7 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.zookeeper.delete`    | Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                      | ms   | summary |
 | `vault.zookeeper.list`      | Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                        | ms   | summary |
 
-## Integrated Raft Storage Health
+## Integrated Storage (Raft)
 
 These metrics relate to raft based [integrated storage][integrated-storage].
 
@@ -458,7 +458,16 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | `vault.raft_storage.bolt.write.count`                                  | Number of writes performed.                                                                                                                                                                                       | writes                            | gauge  |
 | `vault.raft_storage.bolt.write.time`                                   | Time taken writing to disk.                                                                                                                                                                                       | ms                                | summary  |
 
-## Integrated Raft Storage Leadership Changes
+## Integrated Storage (Raft) Autopilot
+| Metric                              | Description                                                                                           | Unit      | Type    |
+| :---------------------------------- | :-----------------------------------------------------------------------------------------------------| :-------- | :------ |
+| `vault.autopilot.node.healthy`      | Set to 1 if the node_id is deemed healthy by Autopilot, 0 if not                                      | bool      | gauge   |
+| `vault.autopilot.healthy`           | Set to 1 if Autopilot considers all nodes healthy                                                     | bool      | gauge   |
+| `vault.autopilot.failure_tolerance` | How many nodes can be lost while maintaining quorum, i.e. number of healthy nodes in excess of quorum | nodes     | gauge   |
+
+Since Autopilot runs only the on the active node, these metrics are only emitted by the active node.
+
+## Integrated Storage (Raft) Leadership Changes
 
 | Metric                          | Description                                                                                                   | Unit      | Type    |
 | :------------------------------ | :------------------------------------------------------------------------------------------------------------ | :-------- | :------ |
@@ -475,7 +484,7 @@ themselves are unable to keep up with the load.
 lower than 200ms, leader > 0 and candidate == 0. Deviations from this might
 indicate flapping leadership.
 
-## Integrated Raft Storage Automated Snapshots
+## Integrated Storage (Raft) Automated Snapshots
 
 These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-raft-snapshots).
 
@@ -502,7 +511,8 @@ These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs
 | `policy`               | A single named policy                                                                                                                                                                                                                                 | `default`               |
 | `secret_engine`        | The [secret engine][secrets-engine] type.                                                                                                                                                                                                             | `aws`                   |
 | `token_type`           | Identifies whether the token is a batch token or a service token.                                                                                                                                                                                     | `service`               |
-| `peer_id`              | Unique identifier of a peer.                                                                                                                                                                                                                          | `node-1`                |
+| `peer_id`              | Unique identifier of a raft peer.                                                                                                                                                                                                                     | `node-1`                |
+| `node_id`              | Unique identifier of a raft peer, same as peer_id.                                                                                                                                                                                                    | `node-1`                |
 | `snapshot_config_name` | For automated snapshots, the name of the configuration                                                                                                                                                                                                | `config1`               |
 
 [secrets-engines]: /docs/secrets
