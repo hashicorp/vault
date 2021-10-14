@@ -88,10 +88,6 @@
         "path": "concepts/lease"
       },
       {
-        "title": "Identity",
-        "path": "concepts/identity"
-      },
-      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
@@ -100,8 +96,9 @@
         "path": "concepts/tokens"
       },
       {
-        "title": "identity",
+        "title": "Identity",
         "path": "concepts/identity"
+        },
       {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"
