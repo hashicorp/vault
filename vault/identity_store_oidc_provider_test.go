@@ -17,6 +17,12 @@ import (
 	"gopkg.in/square/go-jose.v2"
 )
 
+/*
+ Tests for the Vault OIDC provider configuration and OIDC-related
+ endpoints. Additional tests for the Vault OIDC provider exist
+ in: vault/external_tests/identity/oidc_provider_test.go
+*/
+
 func TestOIDC_Path_OIDC_Token(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
