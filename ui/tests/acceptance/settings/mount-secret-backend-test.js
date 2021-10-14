@@ -106,9 +106,9 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function(assert) {
-    let backend = `kv-noUpdate-${new Date().getTime()}`;
+    let enginePath = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
-      path "${backend}/*" {
+      path "${enginePath}/*" {
         capabilities = ["list","create","read","sudo","delete"]
       }
       path "sys/mounts/*"
@@ -123,6 +123,8 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
       }
     `;
     await consoleComponent.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/${enginePath}`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
@@ -135,7 +137,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     await mountSecrets.selectType('kv');
     await mountSecrets
       .next()
-      .path(backend)
+      .path(enginePath)
       .setMaxVersion(101)
       .submit();
     await settled();
@@ -143,7 +145,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
       find('[data-test-flash-message]').textContent.trim(),
       `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`
     );
-    await configPage.visit({ backend: backend });
+    await configPage.visit({ backend: enginePath });
     await settled();
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
