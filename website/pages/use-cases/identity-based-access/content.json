@@ -85,7 +85,7 @@
         "content": "Create and manage policies that authorize access control throughout your infrastructure and organization."
       },
       "codeBlock": {
-        "options": { "showWindowBar": true },
+        "options": { "showChrome": true },
         "language": "hcl",
         "code": "# User template (user-tmpl.hcl)\n# Grant permissions on user specific path\npath \"user-kv/data/{{identity.entity.name}}/*\" {\n  capabilities = [ \"create\", \"update\", \"read\", \"delete\", \"list\" ]\n}\n\n# For Web UI usage\npath \"user-kv/metadata\" {\n  capabilities = [\"list\"]\n}\n\n# Group template (group-tmpl.hcl)\n# Grant permissions on the group specific path\n# The region is specified in the group metadata\npath \"group-kv/data/education/{{identity.groups.names.education.metadata.region}}/*\" {\n  capabilities = [ \"create\", \"update\", \"read\", \"delete\", \"list\" ]\n}\n\n# Group member can update the group information\npath \"identity/group/id/{{identity.groups.names.education.id}}\" {\n  capabilities = [ \"update\", \"read\" ]\n}\n\n# For Web UI usage\npath \"group-kv/metadata\" {\n  capabilities = [\"list\"]\n}\n\npath \"identity/group/id\" {\n  capabilities = [ \"list\" ]\n}\n"
       }
@@ -107,7 +107,7 @@
         "content": "Enforce MFA workflows when accessing a secret or a secret path."
       },
       "codeBlock": {
-        "options": { "showWindowBar": true },
+        "options": { "showChrome": true },
         "language": "shell-session",
         "code": "$ curl --header \"X-Vault-Token: ...\" \\\n--header \"X-Vault-MFA:my_totp:695452\" \\\nhttp://127.0.0.1:8200/v1/secret/foo"
       }

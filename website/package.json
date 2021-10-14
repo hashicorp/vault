@@ -4,57 +4,53 @@
   "version": "1.0.0",
   "author": "HashiCorp",
   "dependencies": {
-    "@hashicorp/mktg-global-styles": "^3.1.0",
+    "@hashicorp/mktg-global-styles": "^4.0.0",
     "@hashicorp/mktg-logos": "^1.2.0",
-    "@hashicorp/platform-code-highlighting": "^0.1.1",
+    "@hashicorp/platform-code-highlighting": "^0.1.2",
     "@hashicorp/platform-markdown-utils": "^0.1.3",
     "@hashicorp/platform-runtime-error-monitoring": "^0.1.0",
     "@hashicorp/platform-util": "^0.1.0",
-    "@hashicorp/react-alert-banner": "^6.1.2",
-    "@hashicorp/react-button": "^5.2.1",
-    "@hashicorp/react-case-study-slider": "^6.1.2",
-    "@hashicorp/react-code-block": "^4.1.4",
-    "@hashicorp/react-consent-manager": "6.0.0",
-    "@hashicorp/react-content": "^7.0.2",
-    "@hashicorp/react-docs-page": "^13.5.1",
-    "@hashicorp/react-featured-slider": "^4.1.2",
-    "@hashicorp/react-hashi-stack-menu": "^2.0.6",
-    "@hashicorp/react-head": "^3.1.1",
-    "@hashicorp/react-hero": "^7.3.2",
-    "@hashicorp/react-image": "^4.0.2",
-    "@hashicorp/react-inline-svg": "^6.0.2",
-    "@hashicorp/react-logo-grid": "^4.1.2",
-    "@hashicorp/react-markdown-page": "^1.3.1",
-    "@hashicorp/react-product-downloads-page": "^2.3.1",
-    "@hashicorp/react-section-header": "^5.0.3",
-    "@hashicorp/react-subnav": "^8.4.0",
-    "@hashicorp/react-tabs": "^6.0.1",
-    "@hashicorp/react-text-split": "^3.2.2",
-    "@hashicorp/react-text-splits": "^3.2.5",
-    "@hashicorp/react-use-cases": "^4.0.1",
-    "@hashicorp/react-vertical-text-block-list": "^6.0.3",
-    "next": "10.2.2",
-    "next-mdx-remote": "3.0.2",
+    "@hashicorp/react-alert-banner": "^7.0.1",
+    "@hashicorp/react-button": "^6.0.1",
+    "@hashicorp/react-consent-manager": "^7.0.1",
+    "@hashicorp/react-docs-page": "^14.4.2",
+    "@hashicorp/react-featured-slider": "^5.0.1",
+    "@hashicorp/react-hashi-stack-menu": "^2.0.7",
+    "@hashicorp/react-head": "^3.1.2",
+    "@hashicorp/react-hero": "^8.0.2",
+    "@hashicorp/react-image": "^4.0.3",
+    "@hashicorp/react-inline-svg": "^6.0.3",
+    "@hashicorp/react-markdown-page": "^1.4.3",
+    "@hashicorp/react-product-downloads-page": "^2.5.2",
+    "@hashicorp/react-section-header": "^5.0.4",
+    "@hashicorp/react-subnav": "^9.1.1",
+    "@hashicorp/react-text-splits": "^3.2.7",
+    "@hashicorp/react-use-cases": "^5.0.0",
+    "@hashicorp/react-vertical-text-block-list": "^7.0.0",
+    "next": "^11.1.2",
+    "next-mdx-remote": "3.0.6",
     "next-remote-watch": "1.0.0",
-    "react": "16.14.0",
-    "react-dom": "16.14.0",
-    "tippy.js": "4.0.0"
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@hashicorp/platform-cli": "^0.2.0",
-    "@hashicorp/platform-nextjs-plugin": "^0.1.0",
-    "@hashicorp/platform-types": "^0.1.0",
-    "@types/react": "^17.0.11",
+    "@hashicorp/platform-cli": "^1.2.0",
+    "@hashicorp/platform-nextjs-plugin": "^1.0.1",
+    "@hashicorp/platform-types": "^0.1.1",
+    "@types/react": "^17.0.27",
     "dart-linkcheck": "^2.0.15",
-    "husky": "^4.3.8",
-    "inquirer": "^8.1.1",
-    "prettier": "^2.3.1",
-    "typescript": "^4.3.5"
+    "prettier": "^2.4.1",
+    "simple-git-hooks": "^2.6.1",
+    "typescript": "^4.4.3"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "next-hashicorp precommit"
-    }
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=12.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hashicorp/vault",
+    "directory": "website"
   },
   "scripts": {
     "build": "next build",
@@ -65,7 +61,11 @@
     "generate:readme": "next-hashicorp markdown-blocks README.md",
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
+    "postinstall": "simple-git-hooks",
     "start": "next-remote-watch './content/**/*.mdx'",
     "static": "npm run build && npm run export && cp _redirects out/."
+  },
+  "simple-git-hooks": {
+    "pre-commit": "cd website && ./node_modules/.bin/next-hashicorp precommit"
   }
 }
