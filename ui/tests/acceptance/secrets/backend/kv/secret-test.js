@@ -602,7 +602,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await authPage.login(userToken2);
     await settled();
-    // test if metadata tab there and error and no edit. and you can’t see metadata that was setup.
+    // test if metadata tab there with no read access message and no ability to edit.
     await click(`[data-test-auth-backend-link=${enginePath}]`);
     await settled();
     // this fails in IE11 on browserstack so going directly to URL
