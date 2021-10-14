@@ -83,7 +83,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("error initializing Vault client: %v", err)
 	}
 
-	appRoleAuth, err := NewAppRoleAuth("my-role-id", tmpfile.Name())
+	appRoleAuth, err := NewAppRoleAuth("my-role-id", &SecretID{FromFile: tmpfile.Name()})
 	if err != nil {
 		t.Fatalf("error initializing AppRoleAuth: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error logging in: %v", err)
 	}
-	if authInfo == nil || authInfo.Auth.ClientToken == "" {
+	if authInfo.Auth == nil || authInfo.Auth.ClientToken == "" {
 		t.Fatalf("no authentication info returned by login")
 	}
 }

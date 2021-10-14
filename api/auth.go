@@ -33,6 +33,9 @@ func (a *Auth) Login(authMethod AuthMethod) (*Secret, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in to auth method: %w", err)
 	}
+	if authSecret == nil || authSecret.Auth == nil || authSecret.Auth.ClientToken == "" {
+		return nil, fmt.Errorf("login response from auth method did not return client token")
+	}
 
 	a.c.SetToken(authSecret.Auth.ClientToken)
 
