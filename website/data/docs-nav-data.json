@@ -88,6 +88,10 @@
         "path": "concepts/lease"
       },
       {
+        "title": "Identity",
+        "path": "concepts/identity"
+      },
+      {
         "title": "Authentication",
         "path": "concepts/auth"
       },
