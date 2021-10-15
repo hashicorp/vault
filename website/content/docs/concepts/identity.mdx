@@ -7,7 +7,12 @@ description: >-
 
 # Identity
 
-Needs Description.
+A secrets engine controls identity management in Vault. Because there are many ways to authenticate to Vault, it’s advantageous to tie authentications from various auth methods to a single representation. This representation of a consolidated identity is called an `Entity`. An entity can have multiple `Aliases`. For example, a single user with accounts in both GitHub and LDAP can be mapped to a single entity in Vault with two aliases, one of type GitHub and one of type LDAP.
+
+When a client authenticates via any credential backend (except the Token backend), Vault creates a new entity. It attaches a new alias to it if a corresponding entity does not already exist..The entity identifier will be tied to the authenticated token. When such tokens are used, their entity identifiers are audit logged, marking a trail of actions performed by specific users.
+
+Identity store allows operators to manage the entities in Vault. Entities can be created and aliases can be tied to entities via the ACL API. There can be policies set on the entities which add capabilities to the tokens linked to entity identifiers. The capabilities granted to tokens via the entities are an addition to the existing capabilities of the token and not a replacement. The capabilities of the token that are inherited from entities are computed dynamically at request time. This provides flexibility in controlling the access of tokens that are already issued.
+
 
 ## Entities and Aliases
 
@@ -147,10 +152,3 @@ from the group in LDAP, that change gets reflected in Vault only upon the
 subsequent login or renewal operation.
 
 For information about Identity Secrets Engine, refer to [Identity Secrets Engine](/docs/secrets/identity).
-
-
-## Learn
-
-Refer to the [Identity: Entities and
-Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial for a
-step-by-step tutorial.
