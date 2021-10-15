@@ -673,13 +673,13 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// If there are templates, add an in-process listener
 		if len(config.Templates) > 0 {
-			config.Listeners = append(config.Listeners, &configutil.Listener{Type: "bufconn"})
+			config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
 		}
 		for i, lnConfig := range config.Listeners {
 			var ln net.Listener
 			var tlsConf *tls.Config
 
-			if lnConfig.Type == "bufconn" {
+			if lnConfig.Type == listenerutil.BufConnType {
 				inProcListener := bufconn.Listen(1024 * 1024)
 				config.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(inProcListener)
 				ln = inProcListener

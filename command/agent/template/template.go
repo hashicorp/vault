@@ -288,8 +288,9 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		}
 		conf.Vault.Transport.CustomDialer = sc.AgentConfig.Cache.InProcDialer
 		// The in-process dialer ignores the address passed in, but we're still
-		// setting it here to satisfy the http client
-		conf.Vault.Address = pointerutil.StringPtr("http://localhost")
+		// setting it here to override the setting at the top of this function,
+		// and to prevent the vault/http client from defaulting to https.
+		conf.Vault.Address = pointerutil.StringPtr("http://127.0.0.1:8200")
 
 	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
 		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify

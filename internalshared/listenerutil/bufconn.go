@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
+const BufConnType = "bufconn"
+
 // BufConnListenerDialer implements consul-template's TransportDialer using a
 // bufconn listener, to provide a way to Dial the in-memory listener
 type BufConnListenerDialer struct {
@@ -24,13 +26,13 @@ func NewBufConnListenerDialer(bcl *bufconn.Listener) *BufConnListenerDialer {
 // Dial connects to the listening end of the bufconn (satisfies
 // consul-template's TransportDialer interface). This is essentially the client
 // side of the bufconn connection.
-func (bcl *BufConnListenerDialer) Dial(network, addr string) (net.Conn, error) {
+func (bcl *BufConnListenerDialer) Dial(_, _ string) (net.Conn, error) {
 	return bcl.listener.Dial()
 }
 
 // DialContext connects to the listening end of the bufconn (satisfies
 // consul-template's TransportDialer interface). This is essentially the client
 // side of the bufconn connection.
-func (bcl *BufConnListenerDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+func (bcl *BufConnListenerDialer) DialContext(ctx context.Context, _, _ string) (net.Conn, error) {
 	return bcl.listener.DialContext(ctx)
 }
