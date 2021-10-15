@@ -48,8 +48,8 @@ const (
 // NewAWSAuth initializes a new AWS auth method interface to be
 // passed as a parameter to the client.Auth().Login method.
 //
-// Supported options: WithRole, WithMountPath, WithAuthType, WithSignatureType,
-// WithIAMServerIDHeader, WithNonce, WithRegion
+// Supported options: WithRole, WithMountPath, WithIAMAuth, WithEC2Auth,
+// WithPKCS7Signature, WithIdentitySignature, WithIAMServerIDHeader, WithNonce, WithRegion
 func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 	var _ api.AuthMethod = (*AWSAuth)(nil)
 
@@ -203,21 +203,42 @@ func WithMountPath(mountPath string) LoginOption {
 	}
 }
 
-func WithAuthType(authType string) LoginOption {
+func WithEC2Auth() LoginOption {
 	return func(a *AWSAuth) error {
-		a.authType = authType
+		a.authType = ec2Type
 		return nil
 	}
 }
 
-// Determines which type of cryptographic signature to use to verify EC2 auth
-// logins. Only used by EC2 auth type. Valid values are "pkcs7" or "identity".
-// Defaults to "pkcs7". This should be set to whichever type of public
-// AWS cert Vault has been configured with to verify EC2 instance identity.
-// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
-func WithSignatureType(signatureType string) LoginOption {
+func WithIAMAuth() LoginOption {
 	return func(a *AWSAuth) error {
-		a.signatureType = signatureType
+		a.authType = iamType
+		return nil
+	}
+}
+
+// WithIdentitySignature will have the client send the cryptographic identity
+// document signature to verify EC2 auth logins. Only used by EC2 auth type.
+// If this option is not provided, will default to using the PKCS #7 signature.
+// The signature type used should match the type of the public AWS cert Vault
+// has been configured with to verify EC2 instance identity.
+// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+func WithIdentitySignature() LoginOption {
+	return func(a *AWSAuth) error {
+		a.signatureType = identityType
+		return nil
+	}
+}
+
+// WithPKCS7Signature will explicitly tell the client to send the PKCS #7
+// signature to verify EC2 auth logins. Only used by EC2 auth type.
+// PKCS #7 is the default, but this method is provided for additional clarity.
+// The signature type used should match the type of the public AWS cert Vault
+// has been configured with to verify EC2 instance identity.
+// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+func WithPKCS7Signature() LoginOption {
+	return func(a *AWSAuth) error {
+		a.signatureType = pkcs7Type
 		return nil
 	}
 }
