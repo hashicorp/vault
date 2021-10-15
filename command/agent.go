@@ -681,7 +681,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 			if lnConfig.Type == listenerutil.BufConnType {
 				inProcListener := bufconn.Listen(1024 * 1024)
-				config.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(inProcListener)
+				config.Cache.InProcDialer = listenerutil.NewBufConnWrapper(inProcListener)
 				ln = inProcListener
 			} else {
 				ln, tlsConf, err = cache.StartListener(lnConfig)

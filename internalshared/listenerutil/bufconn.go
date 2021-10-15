@@ -9,16 +9,16 @@ import (
 
 const BufConnType = "bufconn"
 
-// BufConnListenerDialer implements consul-template's TransportDialer using a
+// BufConnWrapper implements consul-template's TransportDialer using a
 // bufconn listener, to provide a way to Dial the in-memory listener
-type BufConnListenerDialer struct {
+type BufConnWrapper struct {
 	listener *bufconn.Listener
 }
 
-// NewBufConnListenerDialer returns a new BufConnListenerDialer using an
+// NewBufConnWrapper returns a new BufConnWrapper using an
 // existing bufconn.Listener
-func NewBufConnListenerDialer(bcl *bufconn.Listener) *BufConnListenerDialer {
-	return &BufConnListenerDialer{
+func NewBufConnWrapper(bcl *bufconn.Listener) *BufConnWrapper {
+	return &BufConnWrapper{
 		listener: bcl,
 	}
 }
@@ -26,13 +26,13 @@ func NewBufConnListenerDialer(bcl *bufconn.Listener) *BufConnListenerDialer {
 // Dial connects to the listening end of the bufconn (satisfies
 // consul-template's TransportDialer interface). This is essentially the client
 // side of the bufconn connection.
-func (bcl *BufConnListenerDialer) Dial(_, _ string) (net.Conn, error) {
+func (bcl *BufConnWrapper) Dial(_, _ string) (net.Conn, error) {
 	return bcl.listener.Dial()
 }
 
 // DialContext connects to the listening end of the bufconn (satisfies
 // consul-template's TransportDialer interface). This is essentially the client
 // side of the bufconn connection.
-func (bcl *BufConnListenerDialer) DialContext(ctx context.Context, _, _ string) (net.Conn, error) {
+func (bcl *BufConnWrapper) DialContext(ctx context.Context, _, _ string) (net.Conn, error) {
 	return bcl.listener.DialContext(ctx)
 }

@@ -147,7 +147,7 @@ func TestCacheConfig(t *testing.T) {
 			if tc.setDialer && tc.cacheEnabled {
 				bListener := bufconn.Listen(1024 * 1024)
 				defer bListener.Close()
-				agentConfig.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(bListener)
+				agentConfig.Cache.InProcDialer = listenerutil.NewBufConnWrapper(bListener)
 			}
 			serverConfig := ServerConfig{AgentConfig: agentConfig}
 
@@ -162,7 +162,7 @@ func TestCacheConfig(t *testing.T) {
 			assert.Equal(t, tc.expectCustomDialer, ctConfig.Vault.Transport.CustomDialer != nil)
 
 			if tc.expectCustomDialer {
-				assert.Equal(t, "http://localhost", *ctConfig.Vault.Address)
+				assert.Equal(t, "http://127.0.0.1:8200", *ctConfig.Vault.Address)
 			} else {
 				assert.Equal(t, "http://127.0.0.1:1111", *ctConfig.Vault.Address)
 			}
@@ -176,7 +176,7 @@ func TestCacheConfigNoListener(t *testing.T) {
 	agentConfig := newAgentConfig(listeners, true, true)
 	bListener := bufconn.Listen(1024 * 1024)
 	defer bListener.Close()
-	agentConfig.Cache.InProcDialer = listenerutil.NewBufConnListenerDialer(bListener)
+	agentConfig.Cache.InProcDialer = listenerutil.NewBufConnWrapper(bListener)
 	serverConfig := ServerConfig{AgentConfig: agentConfig}
 
 	ctConfig, err := newRunnerConfig(&serverConfig, ctconfig.TemplateConfigs{})
@@ -184,7 +184,7 @@ func TestCacheConfigNoListener(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	assert.Equal(t, "http://localhost", *ctConfig.Vault.Address)
+	assert.Equal(t, "http://127.0.0.1:8200", *ctConfig.Vault.Address)
 	assert.NotNil(t, ctConfig.Vault.Transport.CustomDialer)
 }
 
