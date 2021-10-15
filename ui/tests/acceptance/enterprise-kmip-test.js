@@ -74,7 +74,8 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
-    return await authPage.login();
+    await authPage.login();
+    return;
   });
 
   test('it enables KMIP secrets engine', async function(assert) {
@@ -275,7 +276,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.equal(credentialsPage.listItemLinks.length, 1, 'renders a single credential');
   });
 
-  test('it can revoke a credential from the list meep', async function(assert) {
+  test('it can revoke a credential from the list', async function(assert) {
     let { path, scope, role } = await generateCreds();
     await credentialsPage.visit({ backend: path, scope, role });
     // revoke the credentials
