@@ -169,8 +169,8 @@ export default Route.extend(UnloadModelRoute, {
         versionModel = await version.reload();
       }
     } catch (error) {
-      // cannot read the version data, but can write according to capabilities-self endpoint
-      if (error.httpStatus === 403 && capabilities.get('canUpdate')) {
+      // cannot read the data endpoint but still allow them to see show page to access metadata if they have permissions
+      if (error.httpStatus === 403) {
         // versionModel is then a partial model from the metadata (if we have read there), or
         // we need to create one on the client
         if (version) {
@@ -251,7 +251,20 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType === 'secret-v2') {
       // after the the base model fetch, kv-v2 has a second associated
       // version model that contains the secret data
-      secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+
+      // if no read access to metadata, return current Version from secret data.
+      if (!secretModel.currentVersion) {
+        let adapter = this.store.adapterFor('secret-v2-version');
+        try {
+          secretModel.currentVersion = await adapter.getSecretDataVersion(backend, secret);
+        } catch {
+          // will get error if you have deleted the secret
+          // if this is the case do nothing
+        }
+        secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+      } else {
+        secretModel = await this.fetchV2Models(capabilities, secretModel, params);
+      }
     }
     return {
       secret: secretModel,
@@ -308,6 +321,14 @@ export default Route.extend(UnloadModelRoute, {
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();
       let changedKeys = Object.keys(changed);
+
+      // when you don't have read access on metadata we add currentVersion to the model
+      // this makes it look like you have unsaved changes and prompts a browser warning
+      // here we are specifically ignoring it.
+      if (mode === 'edit' && (changedKeys.length && changedKeys[0] === 'currentVersion')) {
+        version && version.rollbackAttributes();
+        return true;
+      }
       // until we have time to move `backend` on a v1 model to a relationship,
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here

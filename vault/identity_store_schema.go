@@ -70,6 +70,12 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "NamespaceID",
 				},
 			},
+			"local_bucket_key": {
+				Name: "local_bucket_key",
+				Indexer: &memdb.StringFieldIndex{
+					Field: "LocalBucketKey",
+				},
+			},
 		},
 	}
 }

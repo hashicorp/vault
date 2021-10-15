@@ -481,6 +481,15 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	return c.tokenStore.Lookup(ctx, token)
 }
 
+// CreateToken creates the given token in the core's token store.
+func (c *Core) CreateToken(ctx context.Context, entry *logical.TokenEntry) error {
+	if c.tokenStore == nil {
+		return errors.New("unable to create token with nil token store")
+	}
+
+	return c.tokenStore.create(ctx, entry)
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
@@ -499,8 +508,7 @@ type TokenStore struct {
 	parentBarrierView   *BarrierView
 	rolesBarrierView    *BarrierView
 
-	expiration  *ExpirationManager
-	activityLog *ActivityLog
+	expiration *ExpirationManager
 
 	cubbyholeBackend *CubbyholeBackend
 
@@ -675,12 +683,6 @@ type accessorEntry struct {
 // of tokens and to tidy entries when removed from the token store.
 func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
-}
-
-// SetActivityLog injects the activity log to which all new
-// token creation events are reported.
-func (ts *TokenStore) SetActivityLog(a *ActivityLog) {
-	ts.activityLog = a
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
@@ -901,11 +903,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 
-		// Update the activity log in case the token has no entity
-		if ts.activityLog != nil && entry.EntityID == "" {
-			ts.activityLog.HandleTokenCreation(entry)
-		}
-
 		return ts.storeCommon(ctx, entry, true)
 
 	case logical.TokenTypeBatch:
@@ -950,11 +947,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
-		}
-
-		// Update the activity log in case the token has no entity
-		if ts.activityLog != nil && entry.EntityID == "" {
-			ts.activityLog.HandleTokenCreation(entry)
 		}
 
 		return nil

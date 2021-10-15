@@ -67,119 +67,123 @@
         @retentionMonths={{@model.config.retentionMonths}}
       />
     {{/if}}
-    {{#unless this.hasClientData}}
-      {{#if (eq @tab 'current')}}
-        {{#if (eq @model.config.enabled 'On')}}
+    {{#if @isLoading}}
+        <LayoutLoading />
+    {{else}}
+      {{#unless this.hasClientData}}
+        {{#if (eq @tab 'current')}}
+          {{#if (eq @model.config.enabled 'On')}}
+            <EmptyState
+              @title="No data received"
+              @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+            />
+          {{/if}}
+        {{else}}
           <EmptyState
             @title="No data received"
-            @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
+            @message="No data exists for that query period. Try searching again."
           />
         {{/if}}
       {{else}}
-        <EmptyState
-          @title="No data received"
-          @message="No data exists for that query period. Try searching again."
-        />
-      {{/if}}
-    {{else}}
-      <div class="card has-bottom-margin-m">
-        <div class="card-content">
-          <div class="is-flex is-flex-center">
-            <div class="is-flex-1">
-              <h2 class="title is-5 is-marginless">
-                Total usage
-              </h2>
-              <p class="sub-text">
-                These totals are within this namespace and all its children.
-              </p>
+        <div class="card has-bottom-margin-m">
+          <div class="card-content">
+            <div class="is-flex is-flex-center">
+              <div class="is-flex-1">
+                <h2 class="title is-5 is-marginless">
+                  Total usage
+                </h2>
+                <p class="sub-text">
+                  These totals are within this namespace and all its children.
+                </p>
+              </div>
+              <LearnLink @path="/tutorials/vault/usage-metrics">
+                Learn more
+              </LearnLink>
             </div>
-            <LearnLink @path="/tutorials/vault/usage-metrics">
-              Learn more
-            </LearnLink>
-          </div>
-          <hr />
-          <div class="columns">
-            <div class="column" data-test-client-count-stats>
-              <StatText
-                @label="Total active clients"
-                @value={{or @model.activity.clients @model.activity.total.clients}}
-                @size="l"
-                @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
-              />
-            </div>
-            <div class="column">
-              <StatText
-                class="column"
-                @label="Unique entities"
-                @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities}}
-                @size="l"
-                @subText="Representation of a particular user, client or application that created a token via login."
-              />
-            </div>
-            <div class="column">
-              <StatText
-                class="column"
-                @label="Non-entity tokens"
-                @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens}}
-                @size="l"
-                @subText="Tokens created via a method that is not associated with an entity."
-              />
+            <hr />
+            <div class="columns">
+              <div class="column" data-test-client-count-stats>
+                <StatText
+                  @label="Total active clients"
+                  @value={{or @model.activity.clients @model.activity.total.clients}}
+                  @size="l"
+                  @subText="The sum of unique entities and non-entity tokens; Vault's primary billing metric."
+                />
+              </div>
+              <div class="column">
+                <StatText
+                  class="column"
+                  @label="Unique entities"
+                  @value={{or @model.activity.distinct_entities @model.activity.total.distinct_entities}}
+                  @size="l"
+                  @subText="Representation of a particular user, client or application that created a token via login."
+                />
+              </div>
+              <div class="column">
+                <StatText
+                  class="column"
+                  @label="Non-entity tokens"
+                  @value={{or @model.activity.non_entity_tokens @model.activity.total.non_entity_tokens}}
+                  @size="l"
+                  @subText="Tokens created via a method that is not associated with an entity."
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      {{#if this.showGraphs}}
-        <div class="columns has-bottom-margin-m">
-          <div class="column is-two-thirds" data-test-client-count-graph>
-            <BarChart
-              @title="Top 10 Namespaces"
-              @description="Each namespace's client count includes clients in child namespaces."
-              @dataset={{this.barChartDataset}}
-              @onClick={{action this.selectNamespace}}
-              @mapLegend={{array
-                (hash key='non_entity_tokens' label='Non-entity tokens')
-                (hash key='distinct_entities' label='Unique entities')
-              }}
-            >
-            <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{'client-count-by-namespaces.csv'}} />
-            </BarChart>
-          </div>
-          <div class="column">
-            <div class="card">
-                <div class="card-content">
-                  <SearchSelect
-                      @id="namespaces"
-                      @labelClass="title is-5"
-                      @disallowNewItems={{true}}
-                      @onChange={{action this.selectNamespace}}
-                      @label="Single namespace"
-                      @options={{or this.searchDataset []}}
-                      @searchField="namespace_path"
-                      @selectLimit={{1}}
-                      />
-                      {{#if this.selectedNamespace}}
-                        <div class="columns">
-                            <div class="column">
-                                <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
-                            </div>
-                        </div>
-                        <div class="columns">
-                            <div class="column">
-                                <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
-                            </div>
-                            <div class="column">
-                                <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
-                            </div>
-                        </div>
-                      {{else}}
-                        <EmptyState @title="No namespace selected" 
-                            @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
-                      {{/if}}
-                </div>
+        {{#if this.showGraphs}}
+          <div class="columns has-bottom-margin-m">
+            <div class="column is-two-thirds" data-test-client-count-graph>
+              <BarChart
+                @title="Top 10 Namespaces"
+                @description="Each namespace's client count includes clients in child namespaces."
+                @dataset={{this.barChartDataset}}
+                @onClick={{action this.selectNamespace}}
+                @mapLegend={{array
+                  (hash key='non_entity_tokens' label='Non-entity tokens')
+                  (hash key='distinct_entities' label='Unique entities')
+                }}
+              >
+              <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{'client-count-by-namespaces.csv'}} />
+              </BarChart>
+            </div>
+            <div class="column">
+              <div class="card">
+                  <div class="card-content">
+                    <SearchSelect
+                        @id="namespaces"
+                        @labelClass="title is-5"
+                        @disallowNewItems={{true}}
+                        @onChange={{action this.selectNamespace}}
+                        @label="Single namespace"
+                        @options={{or this.searchDataset []}}
+                        @searchField="namespace_path"
+                        @selectLimit={{1}}
+                        />
+                        {{#if this.selectedNamespace}}
+                          <div class="columns">
+                              <div class="column">
+                                  <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
+                              </div>
+                          </div>
+                          <div class="columns">
+                              <div class="column">
+                                  <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
+                              </div>
+                              <div class="column">
+                                  <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
+                              </div>
+                          </div>
+                        {{else}}
+                          <EmptyState @title="No namespace selected" 
+                              @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
+                        {{/if}}
+                  </div>
+              </div>
             </div>
           </div>
-        </div>
-      {{/if}}
-    {{/unless}}
+        {{/if}}
+      {{/unless}}
+    {{/if}}
   </div>
 {{/if}}

@@ -14,7 +14,7 @@
  */
 
 import Component from '@glimmer/component';
-import { getStatementFields, getRoleFields } from '../utils/database-role-fields';
+import { getStatementFields, getRoleFields } from '../utils/database-helpers';
 
 export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {

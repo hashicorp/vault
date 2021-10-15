@@ -11,7 +11,7 @@ description: >-
 # Vault Agent Templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files
-using [Consul Template markup](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md).
+using [Consul Template markup](https://github.com/hashicorp/consul-template/blob/v0.27.1/docs/templating-language.md).
 
 For globally applicable templating engine configuration, refer to the parameters
 within the [`template_config`](/docs/agent/template-config) stanza.
@@ -27,6 +27,13 @@ Vault token using the configured auto-auth Method. On failure, it will back off
 for a short while (including some randomness to help prevent thundering herd
 scenarios) and retry. On success, secrets defined in the templates will be
 retrieved from Vault and rendered locally.
+
+## Templating Language Resources
+
+The following links contain additional resources for the templating language used by Vault Agent templating.
+
+- [Consul Templating Documentation](https://github.com/hashicorp/consul-template/blob/v0.27.1/docs/templating-language.md)
+- [Go Templating Language Documentation](https://pkg.go.dev/text/template#pkg-overview)
 
 ## Configuration
 

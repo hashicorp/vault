@@ -185,6 +185,27 @@ const connectionTests = [
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
+  {
+    name: 'oracle-connection',
+    plugin: 'oracle-database-plugin',
+    url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+    },
+  },
 ];
 
 module('Acceptance | secrets/database/*', function(hooks) {
@@ -234,6 +255,11 @@ module('Acceptance | secrets/database/*', function(hooks) {
         await connectionPage.password(testCase.elasticPassword);
       } else {
         await connectionPage.connectionUrl(testCase.url);
+      }
+      // skip adding oracle db connection since plugin doesn't exists
+      if (testCase.plugin === 'oracle-database-plugin') {
+        testCase.requiredFields(assert, testCase.name);
+        continue;
       }
       testCase.requiredFields(assert, testCase.name);
       await connectionPage.toggleVerify();

@@ -536,7 +536,6 @@ func TestLoadConfigFile_AgentCache_PersistMissingType(t *testing.T) {
 }
 
 func TestLoadConfigFile_TemplateConfig(t *testing.T) {
-
 	testCases := map[string]struct {
 		fixturePath            string
 		expectedTemplateConfig TemplateConfig
@@ -586,7 +585,6 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // TestLoadConfigFile_Template tests template definitions in Vault Agent
