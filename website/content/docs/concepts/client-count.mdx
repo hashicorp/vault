@@ -55,7 +55,7 @@ Using the identity system allows for Vault to make sure that entities aren’t c
 
 ### Non-entity Tokens
 
-If you chose to use the [Token Auth Method](https://www.vaultproject.io/docs/auth/token) without an identity, a non-entity token, to avoid driving up client count, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](https://www.vaultproject.io/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](https://www.vaultproject.io/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. Without this each token will be counted as a client instead. See more on entity alias below.
+If you choose to use the [Token Auth Method](https://www.vaultproject.io/docs/auth/token) without an identity, this will create a non-entity token. To avoid driving up client count, assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](https://www.vaultproject.io/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](https://www.vaultproject.io/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. Without this each token will be counted as a client instead. See more on entity alias below.
 
 ## Authentication Methods and how they’re counted in Vault
 
