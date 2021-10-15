@@ -1425,7 +1425,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	}
 	userpassAccessor := auths["userpass/"].Accessor
 
-	// Write SSH role to test with any extension. We also provide a templated default extension,
+	// Write SSH role to test with no allowed extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
 	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
 		"key_type":                    "ca",
@@ -1442,7 +1442,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
+	// Issue SSH certificate with default extensions templating disabled, and user-provided extensions
 	client.SetToken(userpassToken)
 	userProvidedAnyExtensionPermissions := map[string]string{
 		"login@foobar.com": "not_userpassname",
