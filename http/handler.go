@@ -16,6 +16,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -105,6 +106,8 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
+
+	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
 func init() {
@@ -1224,6 +1227,15 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 		return false
 	}
 
+	// If ErrPermissionDenied occurs for OIDC protected resources (e.g., userinfo),
+	// then respond with a JSON error format that complies with the specification.
+	// This prevents the JSON error format from changing to a Vault-y format (i.e.,
+	// the format that results from respondError) after an OIDC access token expires.
+	if oidcPermissionDenied(req.Path, err) {
+		respondOIDCPermissionDenied(w)
+		return true
+	}
+
 	respondError(w, statusCode, newErr)
 	return true
 }
@@ -1238,4 +1250,38 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
+}
+
+// oidcPermissionDenied returns true if the given path matches the
+// UserInfo Endpoint published by Vault OIDC providers and the given
+// error is a logical.ErrPermissionDenied.
+func oidcPermissionDenied(path string, err error) bool {
+	return errwrap.Contains(err, logical.ErrPermissionDenied.Error()) &&
+		oidcProtectedPathRegex.MatchString(path)
+}
+
+// respondOIDCPermissionDenied writes a response to the given w for
+// permission denied errors (expired token) on resources protected
+// by OIDC access tokens. Currently, the UserInfo Endpoint is the only
+// protected resource. See the following specifications for details:
+//  - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
+//  - https://datatracker.ietf.org/doc/html/rfc6750#section-3.1
+func respondOIDCPermissionDenied(w http.ResponseWriter) {
+	errorCode := "invalid_token"
+	errorDescription := logical.ErrPermissionDenied.Error()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Bearer error=%q,error_description=%q",
+		errorCode, errorDescription))
+	w.WriteHeader(http.StatusUnauthorized)
+
+	var oidcResponse struct {
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	oidcResponse.Error = errorCode
+	oidcResponse.ErrorDescription = errorDescription
+
+	enc := json.NewEncoder(w)
+	enc.Encode(oidcResponse)
 }
