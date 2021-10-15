@@ -1,0 +1,3 @@
+```release-note:bug
+http: removed unpublished true from logical_system path, making openapi spec consistent with documentation
+```
