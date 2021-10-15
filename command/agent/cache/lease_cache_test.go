@@ -1,14 +1,18 @@
 package cache
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -32,21 +36,25 @@ import (
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	t.Helper()
 
+	return testNewLeaseCacheWithLogWriter(t, responses, hclog.DefaultOutput)
+}
+
+func testNewLeaseCacheWithLogWriter(t *testing.T, responses []*SendResponse, w io.Writer) *LeaseCache {
+	t.Helper()
+
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
 		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Logger:      logging.NewVaultLoggerWithWriter(w, hclog.Trace).Named("cache.leasecache"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	return lc
 }
 
@@ -717,6 +725,45 @@ func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cachebolt
 	return tempCacheDir, boltStorage
 }
 
+func compareBeforeAndAfter(t *testing.T, before, after *LeaseCache, beforeLen, afterLen int) {
+	beforeDB, err := before.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, beforeDB, beforeLen)
+	afterDB, err := after.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, afterDB, afterLen)
+	for _, cachedItem := range beforeDB {
+		if strings.Contains(cachedItem.RequestPath, "expect-missing") {
+			continue
+		}
+		restoredItem, err := after.db.Get(cachememdb.IndexNameID, cachedItem.ID)
+		require.NoError(t, err)
+
+		assert.NoError(t, err)
+		assert.Equal(t, cachedItem.ID, restoredItem.ID)
+		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
+		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
+		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
+		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
+		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
+		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
+		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
+		assert.Equal(t, cachedItem.Response, restoredItem.Response)
+		assert.Equal(t, cachedItem.Token, restoredItem.Token)
+		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
+		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
+
+		// check what we can in the renewal context
+		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
+		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
+		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
+		assert.Equal(t,
+			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+		)
+	}
+}
+
 func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// Emulate responses from the api proxy. The first two use the auto-auth
 	// token, and the others use another token.
@@ -848,43 +895,8 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	assert.Len(t, errors.Errors, 1)
 	assert.Contains(t, errors.Error(), "could not find parent Token testtoken2")
 
-	// Now compare before and after
-	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, beforeDB, 7)
-	for _, cachedItem := range beforeDB {
-		if strings.Contains(cachedItem.RequestPath, "expect-missing") {
-			continue
-		}
-		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, cachedItem.ID, restoredItem.ID)
-		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
-		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
-		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
-		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
-		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
-		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
-		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
-		assert.Equal(t, cachedItem.Response, restoredItem.Response)
-		assert.Equal(t, cachedItem.Token, restoredItem.Token)
-		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
-		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
-
-		// check what we can in the renewal context
-		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
-		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
-		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
-		assert.Equal(t,
-			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-		)
-	}
-	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, afterDB, 5)
+	// Now compare the cache contents before and after
+	compareBeforeAndAfter(t, lc, restoredCache, 7, 5)
 
 	// And finally send the cache requests once to make sure they're all being
 	// served from the restoredCache unless they were intended to be missing after restore.
@@ -903,6 +915,127 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 			assert.True(t, respCached.CacheMeta.Hit)
 		}
 	}
+}
+
+func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
+	tempDir, boltStorage := setupBoltStorage(t)
+	defer os.RemoveAll(tempDir)
+	defer boltStorage.Close()
+
+	var requests []*SendRequest
+	var responses []*SendResponse
+
+	// helper func to generate new auth leases with a child secret lease attached
+	authAndSecretLease := func(id int, parentToken, newToken string) {
+		t.Helper()
+		requests = append(requests, &SendRequest{
+			Token: parentToken,
+			Request: httptest.NewRequest(
+				"PUT",
+				fmt.Sprintf("http://example.com/v1/auth/approle-%d/login", id),
+				strings.NewReader(""),
+			),
+		})
+		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"auth": {"client_token": "%s", "renewable": true, "lease_duration": 600}}`, newToken)))
+
+		// Fetch a leased secret using the new token
+		requests = append(requests, &SendRequest{
+			Token: newToken,
+			Request: httptest.NewRequest(
+				"GET",
+				fmt.Sprintf("http://example.com/v1/kv/%d", id),
+				strings.NewReader(""),
+			),
+		})
+		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"lease_id": "secret-%d-lease", "renewable": true, "data": {"number": %d}, "lease_duration": 600}`, id, id)))
+	}
+
+	// Pathological case: a long chain of child tokens
+	authAndSecretLease(0, "autoauthtoken", "many-ancestors-token;0")
+	for i := 1; i <= 50; i++ {
+		// Create a new generation of child token
+		authAndSecretLease(i, fmt.Sprintf("many-ancestors-token;%d", i-1), fmt.Sprintf("many-ancestors-token;%d", i))
+	}
+
+	// Lots of sibling tokens with auto auth token as their parent
+	for i := 51; i <= 100; i++ {
+		authAndSecretLease(i, "autoauthtoken", fmt.Sprintf("many-siblings-token;%d", i))
+	}
+
+	// Also create some extra siblings for an auth token further down the chain
+	for i := 101; i <= 110; i++ {
+		authAndSecretLease(i, "many-ancestors-token;25", fmt.Sprintf("many-siblings-for-ancestor-token;%d", i))
+	}
+
+	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
+
+	// Register an auto-auth token so that the token and lease requests are cached
+	err := lc.RegisterAutoAuthToken("autoauthtoken")
+	require.NoError(t, err)
+
+	for _, req := range requests {
+		// Send once to cache
+		resp, err := lc.Send(context.Background(), req)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.Response.StatusCode, "expected success")
+		assert.Nil(t, resp.CacheMeta)
+	}
+
+	logBuffer := &bytes.Buffer{}
+	restoredCache := testNewLeaseCacheWithLogWriter(t, nil, logBuffer)
+
+	err = restoredCache.Restore(context.Background(), boltStorage)
+	require.NoError(t, err)
+
+	// Now compare the cache contents before and after
+	compareBeforeAndAfter(t, lc, restoredCache, 223, 223)
+
+	// Clear the cache so that there's no further logging in the background and
+	// we can safely read from the log buffer.
+	require.NoError(t, restoredCache.handleCacheClear(context.Background(), &cacheClearInput{Type: "all"}))
+
+	// Ensure leases were restored in the correct order
+	maxAppRoleAncestor := -1
+	restoredTokens := make(map[int]struct{})
+	var approleTokensFound, secretsFound int
+	approleRegex := regexp.MustCompile("restored lease.*path=/v1/auth/approle-(\\d+)/login")
+	kvRegex := regexp.MustCompile("restored lease.*path=/v1/kv/(\\d+)")
+	for {
+		line, err := logBuffer.ReadBytes(byte('\n'))
+		if err == io.EOF {
+			break
+		}
+		t.Log(string(line[:len(line)-1]))
+		if matches := approleRegex.FindSubmatch(line); len(matches) >= 2 {
+			id, err := strconv.Atoi(string(matches[1]))
+			require.NoError(t, err)
+			approleTokensFound++
+			restoredTokens[id] = struct{}{}
+
+			// These tokens are all children of each other, and should be restored in
+			// strictly ascending order.
+			if id <= 50 {
+				require.Equal(t, maxAppRoleAncestor+1, id)
+				maxAppRoleAncestor = id
+			}
+			// These tokens should not start getting restored until their parent(25) is restored.
+			if id >= 101 {
+				require.GreaterOrEqual(t, maxAppRoleAncestor, 25)
+			}
+		} else if matches := kvRegex.FindSubmatch(line); len(matches) >= 2 {
+			id, err := strconv.Atoi(string(matches[1]))
+			require.NoError(t, err)
+			secretsFound++
+
+			// Every secret lease should be restored after its own parent (the same number)
+			_, restored := restoredTokens[id]
+			require.True(t, restored, "kv lease restored before its parent token", id)
+		}
+	}
+
+	assert.Equal(t, 111, approleTokensFound)
+	assert.Equal(t, 111, secretsFound)
+	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 0-50")
 }
 
 func TestEvictPersistent(t *testing.T) {
