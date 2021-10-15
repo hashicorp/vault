@@ -217,7 +217,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	if result.Cache != nil {
 		if len(result.Listeners) < 1 && len(result.Templates) < 1 {
-			return nil, fmt.Errorf("the cache is enabled but not usable because no listeners or templates are defined")
+			return nil, fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
 		if result.Cache.UseAutoAuthToken {
