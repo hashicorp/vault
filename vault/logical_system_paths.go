@@ -928,6 +928,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    pathInternalUINamespacesRead(b),
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -938,6 +939,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalUIResultantACL,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -948,6 +950,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersRequests,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -958,6 +961,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersTokens,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -968,6 +972,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersEntities,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
