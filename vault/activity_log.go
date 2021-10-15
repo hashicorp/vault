@@ -1600,8 +1600,7 @@ func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) {
 		return
 	}
 
-	// Do not count root tokens in client count. This includes generated root tokens
-	// as well.
+	// Do not count root tokens in client count.
 	if entry.IsRoot() {
 		return
 	}
