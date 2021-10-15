@@ -53,3 +53,9 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, error) {
 	return entity, inErr
 }
+
+var errCreateEntityUnimplemented = "create entity unimplemented in the server"
+
+func possiblyForwardEntityCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, error) {
+	return entity, inErr
+}
