@@ -240,6 +240,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 			"testkey1": "testmetadatavalue1",
 			"testkey2": "testmetadatavalue2",
 		},
+		LocalBucketKey: is.localAliasPacker.BucketKey(entity.ID),
 	}
 
 	txn = is.db.Txn(true)
@@ -278,6 +279,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 			"testkey1": "testmetadatavalue1",
 			"testkey3": "testmetadatavalue3",
 		},
+		LocalBucketKey: is.localAliasPacker.BucketKey(entity.ID),
 	}
 
 	txn = is.db.Txn(true)

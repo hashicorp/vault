@@ -39,11 +39,12 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ID:            "alias1",
-		CanonicalID:   "entity1",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias1",
+		CanonicalID:    "entity1",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity1"),
 	}
 	entity := &identity.Entity{
 		ID:       "entity1",
@@ -53,8 +54,8 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 			alias,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity1"),
 	}
-	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
@@ -62,11 +63,12 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	alias2 := &identity.Alias{
-		ID:            "alias2",
-		CanonicalID:   "entity2",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "GITHUBUSER",
+		ID:             "alias2",
+		CanonicalID:    "entity2",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "GITHUBUSER",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
 		ID:       "entity2",
@@ -76,8 +78,8 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 			alias2,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity2"),
 	}
-	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
@@ -494,11 +496,12 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ID:            "alias1",
-		CanonicalID:   "entity1",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias1",
+		CanonicalID:    "entity1",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity1"),
 	}
 	entity := &identity.Entity{
 		ID:       "entity1",
@@ -508,19 +511,20 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity1"),
 	}
-	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	alias2 := &identity.Alias{
-		ID:            "alias2",
-		CanonicalID:   "entity2",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias2",
+		CanonicalID:    "entity2",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
 		ID:       "entity2",
@@ -530,9 +534,8 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias2,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity2"),
 	}
-
-	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity2, nil, true)
 	if err != nil {

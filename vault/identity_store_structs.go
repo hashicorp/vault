@@ -76,6 +76,12 @@ type IdentityStore struct {
 	// buckets
 	entityPacker *storagepacker.StoragePacker
 
+	// localAliasPacker is used to pack multiple local alias entries into lesser
+	// storage entries. This is also used to cache entities in the secondary
+	// clusters, those entities which were created by the primary but hasn't
+	// reached secondary via invalidations.
+	localAliasPacker *storagepacker.StoragePacker
+
 	// groupPacker is used to pack multiple group storage entries into 256
 	// buckets
 	groupPacker *storagepacker.StoragePacker
@@ -92,6 +98,7 @@ type IdentityStore struct {
 	totpPersister TOTPPersister
 	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
+	entityCreator EntityCreator
 }
 
 type groupDiff struct {
@@ -136,3 +143,9 @@ type TokenStorer interface {
 }
 
 var _ TokenStorer = &Core{}
+
+type EntityCreator interface {
+	CreateEntity(ctx context.Context) (*identity.Entity, error)
+}
+
+var _ EntityCreator = &Core{}
