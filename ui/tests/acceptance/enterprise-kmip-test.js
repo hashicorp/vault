@@ -38,6 +38,7 @@ const createScope = async () => {
   let path = await mount();
   let scope = `scope-${Date.now()}`;
   await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
+  await settled();
   let res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error creating scope: ${res}`);
@@ -49,6 +50,7 @@ const createRole = async () => {
   let { path, scope } = await createScope();
   let role = `role-${Date.now()}`;
   await uiConsole.runCommands([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
+  await settled();
   let res = uiConsole.lastLogOutput;
   if (res.includes('Error')) {
     throw new Error(`Error creating role: ${res}`);
@@ -58,6 +60,7 @@ const createRole = async () => {
 
 const generateCreds = async () => {
   let { path, scope, role } = await createRole();
+  await settled();
   await uiConsole.runCommands([
     `write ${path}/scope/${scope}/role/${role}/credential/generate format=pem -field=serial_number`,
   ]);
@@ -70,8 +73,8 @@ const generateCreds = async () => {
 module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    return await authPage.login();
   });
 
   test('it enables KMIP secrets engine', async function(assert) {
