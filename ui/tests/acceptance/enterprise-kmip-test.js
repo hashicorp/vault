@@ -22,6 +22,7 @@ const mount = async (shouldConfig = true) => {
   const now = Date.now();
   let path = `kmip-${now}`;
   let addr = `127.0.0.1:${getRandomPort()}`; // use random port
+  await settled();
   let commands = shouldConfig
     ? [`write sys/mounts/${path} type=kmip`, `write ${path}/config listen_addrs=${addr}`]
     : [`write sys/mounts/${path} type=kmip`];
@@ -36,7 +37,9 @@ const mount = async (shouldConfig = true) => {
 
 const createScope = async () => {
   let path = await mount();
+  await settled();
   let scope = `scope-${Date.now()}`;
+  await settled();
   await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
   await settled();
   let res = uiConsole.lastLogOutput;
@@ -48,6 +51,7 @@ const createScope = async () => {
 
 const createRole = async () => {
   let { path, scope } = await createScope();
+  await settled();
   let role = `role-${Date.now()}`;
   await uiConsole.runCommands([`write ${path}/scope/${scope}/role/${role} operation_all=true`]);
   await settled();
@@ -181,8 +185,18 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
   });
 
   test('it can create a role', async function(assert) {
-    let { path, scope } = await createScope();
-    let role = `role-${Date.now()}`;
+    // moving create scope here to help with flaky test
+    let path = await mount();
+    await settled();
+    let scope = `scope-for-can-create-role`;
+    await settled();
+    await uiConsole.runCommands([`write ${path}/scope/${scope} -force`]);
+    await settled();
+    let res = uiConsole.lastLogOutput;
+    if (res.includes('Error')) {
+      throw new Error(`Error creating scope: ${res}`);
+    }
+    let role = `role-new-role`;
     await rolesPage.visit({ backend: path, scope });
     await settled();
     assert.ok(rolesPage.isEmpty, 'renders the empty role page');
