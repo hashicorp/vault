@@ -1652,7 +1652,7 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 		saltedID, saltedNSID := namespace.SplitIDFromString(id)
 		if saltedNSID != "" {
 			saltedNS, err = NamespaceByID(ctx, saltedNSID, ts.core)
-			if err != nil {
+			if err != nil || saltedNS == nil {
 				return fmt.Errorf("failed to find namespace for token revocation: %w", err)
 			}
 
