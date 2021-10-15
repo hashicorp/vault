@@ -16,12 +16,15 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -103,6 +106,8 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
+
+	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
 func init() {
@@ -210,6 +215,90 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	return printablePathCheckHandler
 }
 
+type WrappingResponseWriter interface {
+	http.ResponseWriter
+	Wrapped() http.ResponseWriter
+}
+
+type statusHeaderResponseWriter struct {
+	wrapped     http.ResponseWriter
+	logger      log.Logger
+	wroteHeader bool
+	statusCode  int
+	headers     map[string][]*vault.CustomHeader
+}
+
+func (w *statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
+	return w.wrapped
+}
+
+func (w *statusHeaderResponseWriter) Header() http.Header {
+	return w.wrapped.Header()
+}
+
+func (w *statusHeaderResponseWriter) Write(buf []byte) (int, error) {
+	// It is allowed to only call ResponseWriter.Write and skip
+	// ResponseWriter.WriteHeader. An example of such a situation is
+	// "handleUIStub". The Write function will internally set the status code
+	// 200 for the response for which that call might invoke other
+	// implementations of the WriteHeader function. So, we still need to set
+	// the custom headers. In cases where both WriteHeader and Write of
+	// statusHeaderResponseWriter struct are called the internal call to the
+	// WriterHeader invoked from inside Write method won't change the headers.
+	if !w.wroteHeader {
+		w.setCustomResponseHeaders(w.statusCode)
+	}
+
+	return w.wrapped.Write(buf)
+}
+
+func (w *statusHeaderResponseWriter) WriteHeader(statusCode int) {
+	w.setCustomResponseHeaders(statusCode)
+	w.wrapped.WriteHeader(statusCode)
+	w.statusCode = statusCode
+	// in cases where Write is called after WriteHeader, let's prevent setting
+	// ResponseWriter headers twice
+	w.wroteHeader = true
+}
+
+func (w *statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
+	sch := w.headers
+	if sch == nil {
+		w.logger.Warn("status code header map not configured")
+		return
+	}
+
+	// Checking the validity of the status code
+	if status >= 600 || status < 100 {
+		return
+	}
+
+	// setter function to set the headers
+	setter := func(hvl []*vault.CustomHeader) {
+		for _, hv := range hvl {
+			w.Header().Set(hv.Name, hv.Value)
+		}
+	}
+
+	// Setting the default headers first
+	setter(sch["default"])
+
+	// setting the Xyy pattern first
+	d := fmt.Sprintf("%vxx", status/100)
+	if val, ok := sch[d]; ok {
+		setter(val)
+	}
+
+	// Setting the specific headers
+	if val, ok := sch[strconv.Itoa(status)]; ok {
+		setter(val)
+	}
+
+	return
+}
+
+var _ WrappingResponseWriter = &statusHeaderResponseWriter{}
+
 type copyResponseWriter struct {
 	wrapped    http.ResponseWriter
 	statusCode int
@@ -300,6 +389,22 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// This block needs to be here so that upon sending SIGHUP, custom response
+		// headers are also reloaded into the handlers.
+		if props.ListenerConfig != nil {
+			la := props.ListenerConfig.Address
+			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
+			if listenerCustomHeaders != nil {
+				w = &statusHeaderResponseWriter{
+					wrapped:     w,
+					logger:      core.Logger(),
+					wroteHeader: false,
+					statusCode:  200,
+					headers:     listenerCustomHeaders.StatusCodeHeaderMap,
+				}
+			}
+		}
+
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
@@ -632,7 +737,15 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
-			reader = http.MaxBytesReader(w, r.Body, max)
+			// MaxBytesReader won't do all the internal stuff it must unless it's
+			// given a ResponseWriter that implements the internal http interface
+			// requestTooLarger.  So we let it have access to the underlying
+			// ResponseWriter.
+			inw := w
+			if myw, ok := inw.(WrappingResponseWriter); ok {
+				inw = myw.Wrapped()
+			}
+			reader = http.MaxBytesReader(inw, r.Body, max)
 		}
 	}
 	var origBody io.ReadWriter
@@ -1114,6 +1227,15 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 		return false
 	}
 
+	// If ErrPermissionDenied occurs for OIDC protected resources (e.g., userinfo),
+	// then respond with a JSON error format that complies with the specification.
+	// This prevents the JSON error format from changing to a Vault-y format (i.e.,
+	// the format that results from respondError) after an OIDC access token expires.
+	if oidcPermissionDenied(req.Path, err) {
+		respondOIDCPermissionDenied(w)
+		return true
+	}
+
 	respondError(w, statusCode, newErr)
 	return true
 }
@@ -1128,4 +1250,38 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
+}
+
+// oidcPermissionDenied returns true if the given path matches the
+// UserInfo Endpoint published by Vault OIDC providers and the given
+// error is a logical.ErrPermissionDenied.
+func oidcPermissionDenied(path string, err error) bool {
+	return errwrap.Contains(err, logical.ErrPermissionDenied.Error()) &&
+		oidcProtectedPathRegex.MatchString(path)
+}
+
+// respondOIDCPermissionDenied writes a response to the given w for
+// permission denied errors (expired token) on resources protected
+// by OIDC access tokens. Currently, the UserInfo Endpoint is the only
+// protected resource. See the following specifications for details:
+//  - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
+//  - https://datatracker.ietf.org/doc/html/rfc6750#section-3.1
+func respondOIDCPermissionDenied(w http.ResponseWriter) {
+	errorCode := "invalid_token"
+	errorDescription := logical.ErrPermissionDenied.Error()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Bearer error=%q,error_description=%q",
+		errorCode, errorDescription))
+	w.WriteHeader(http.StatusUnauthorized)
+
+	var oidcResponse struct {
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	oidcResponse.Error = errorCode
+	oidcResponse.ErrorDescription = errorDescription
+
+	enc := json.NewEncoder(w)
+	enc.Encode(oidcResponse)
 }

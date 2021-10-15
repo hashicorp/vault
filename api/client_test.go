@@ -11,12 +11,15 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
@@ -412,8 +415,7 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	type fields struct {
-	}
+	type fields struct{}
 	tests := []struct {
 		name    string
 		config  *Config
@@ -431,6 +433,12 @@ func TestClone(t *testing.T) {
 			headers: &http.Header{
 				"X-foo": []string{"bar"},
 				"X-baz": []string{"qux"},
+			},
+		},
+		{
+			name: "preventStaleReads",
+			config: &Config{
+				ReadYourWrites: true,
 			},
 		},
 	}
@@ -511,6 +519,13 @@ func TestClone(t *testing.T) {
 						t.Fatalf("expected headers %v, actual %v", *tt.headers, client2.Headers())
 					}
 				}
+			}
+			if tt.config.ReadYourWrites && client1.replicationStateStore == nil {
+				t.Fatalf("replicationStateStore is nil")
+			}
+			if !reflect.DeepEqual(client1.replicationStateStore, client2.replicationStateStore) {
+				t.Fatalf("expected replicationStateStore %v, actual %v", client1.replicationStateStore,
+					client2.replicationStateStore)
 			}
 		})
 	}
@@ -642,6 +657,331 @@ func TestMergeReplicationStates(t *testing.T) {
 			out := b64dec(MergeReplicationStates(b64enc(tc.old), base64.StdEncoding.EncodeToString([]byte(tc.new))))
 			if diff := deep.Equal(out, tc.expected); len(diff) != 0 {
 				t.Errorf("got=%v, expected=%v, diff=%v", out, tc.expected, diff)
+			}
+		})
+	}
+}
+
+func TestReplicationStateStore_recordState(t *testing.T) {
+	b64enc := func(s string) string {
+		return base64.StdEncoding.EncodeToString([]byte(s))
+	}
+
+	tests := []struct {
+		name     string
+		expected []string
+		resp     []*Response
+	}{
+		{
+			name: "single",
+			resp: []*Response{
+				{
+					Response: &http.Response{
+						Header: map[string][]string{
+							HeaderIndex: {
+								b64enc("v1:cid:1:0:"),
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				b64enc("v1:cid:1:0:"),
+			},
+		},
+		{
+			name: "empty",
+			resp: []*Response{
+				{
+					Response: &http.Response{
+						Header: map[string][]string{},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "multiple",
+			resp: []*Response{
+				{
+					Response: &http.Response{
+						Header: map[string][]string{
+							HeaderIndex: {
+								b64enc("v1:cid:0:1:"),
+							},
+						},
+					},
+				},
+				{
+					Response: &http.Response{
+						Header: map[string][]string{
+							HeaderIndex: {
+								b64enc("v1:cid:1:0:"),
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				b64enc("v1:cid:0:1:"),
+				b64enc("v1:cid:1:0:"),
+			},
+		},
+		{
+			name: "duplicates",
+			resp: []*Response{
+				{
+					Response: &http.Response{
+						Header: map[string][]string{
+							HeaderIndex: {
+								b64enc("v1:cid:1:0:"),
+							},
+						},
+					},
+				},
+				{
+					Response: &http.Response{
+						Header: map[string][]string{
+							HeaderIndex: {
+								b64enc("v1:cid:1:0:"),
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				b64enc("v1:cid:1:0:"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &replicationStateStore{}
+
+			var wg sync.WaitGroup
+			for _, r := range tt.resp {
+				wg.Add(1)
+				go func(r *Response) {
+					defer wg.Done()
+					w.recordState(r)
+				}(r)
+			}
+			wg.Wait()
+
+			if !reflect.DeepEqual(tt.expected, w.store) {
+				t.Errorf("recordState(): expected states %v, actual %v", tt.expected, w.store)
+			}
+		})
+	}
+}
+
+func TestReplicationStateStore_requireState(t *testing.T) {
+	tests := []struct {
+		name     string
+		states   []string
+		req      []*Request
+		expected []string
+	}{
+		{
+			name:   "empty",
+			states: []string{},
+			req: []*Request{
+				{
+					Headers: make(http.Header),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "basic",
+			states: []string{
+				"v1:cid:0:1:",
+				"v1:cid:1:0:",
+			},
+			req: []*Request{
+				{
+					Headers: make(http.Header),
+				},
+			},
+			expected: []string{
+				"v1:cid:0:1:",
+				"v1:cid:1:0:",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := &replicationStateStore{
+				store: tt.states,
+			}
+
+			var wg sync.WaitGroup
+			for _, r := range tt.req {
+				wg.Add(1)
+				go func(r *Request) {
+					defer wg.Done()
+					store.requireState(r)
+				}(r)
+			}
+
+			wg.Wait()
+
+			var actual []string
+			for _, r := range tt.req {
+				if values := r.Headers.Values(HeaderIndex); len(values) > 0 {
+					actual = append(actual, values...)
+				}
+			}
+			sort.Strings(actual)
+			if !reflect.DeepEqual(tt.expected, actual) {
+				t.Errorf("requireState(): expected states %v, actual %v", tt.expected, actual)
+			}
+		})
+	}
+}
+
+func TestClient_ReadYourWrites(t *testing.T) {
+	b64enc := func(s string) string {
+		return base64.StdEncoding.EncodeToString([]byte(s))
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set(HeaderIndex, strings.TrimLeft(req.URL.Path, "/"))
+	})
+
+	tests := []struct {
+		name       string
+		handler    http.Handler
+		wantStates []string
+		values     [][]string
+		clone      bool
+	}{
+		{
+			name:    "multiple_duplicates",
+			clone:   false,
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:4:"),
+			},
+			values: [][]string{
+				{
+					b64enc("v1:cid:0:4:"),
+					b64enc("v1:cid:0:2:"),
+				},
+				{
+					b64enc("v1:cid:0:4:"),
+					b64enc("v1:cid:0:2:"),
+				},
+			},
+		},
+		{
+			name:    "basic_clone",
+			clone:   true,
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:4:"),
+			},
+			values: [][]string{
+				{
+					b64enc("v1:cid:0:4:"),
+				},
+				{
+					b64enc("v1:cid:0:3:"),
+				},
+			},
+		},
+		{
+			name:    "multiple_clone",
+			clone:   true,
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:4:"),
+			},
+			values: [][]string{
+				{
+					b64enc("v1:cid:0:4:"),
+					b64enc("v1:cid:0:2:"),
+				},
+				{
+					b64enc("v1:cid:0:3:"),
+					b64enc("v1:cid:0:1:"),
+				},
+			},
+		},
+		{
+			name:    "multiple_duplicates_clone",
+			clone:   true,
+			handler: handler,
+			wantStates: []string{
+				b64enc("v1:cid:0:4:"),
+			},
+			values: [][]string{
+				{
+					b64enc("v1:cid:0:4:"),
+					b64enc("v1:cid:0:2:"),
+				},
+				{
+					b64enc("v1:cid:0:4:"),
+					b64enc("v1:cid:0:2:"),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testRequest := func(client *Client, val string) {
+				req := client.NewRequest("GET", "/"+val)
+				req.Headers.Set(HeaderIndex, val)
+				resp, err := client.RawRequestWithContext(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// validate that the server provided a valid header value in its response
+				actual := resp.Header.Get(HeaderIndex)
+				if actual != val {
+					t.Errorf("expected header value %v, actual %v", val, actual)
+				}
+			}
+
+			config, ln := testHTTPServer(t, handler)
+			defer ln.Close()
+
+			config.ReadYourWrites = true
+			config.Address = fmt.Sprintf("http://%s", ln.Addr())
+			parent, err := NewClient(config)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var wg sync.WaitGroup
+			for i := 0; i < len(tt.values); i++ {
+				var c *Client
+				if tt.clone {
+					c, err = parent.Clone()
+					if err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					c = parent
+				}
+
+				for _, val := range tt.values[i] {
+					wg.Add(1)
+					go func(val string) {
+						defer wg.Done()
+						testRequest(c, val)
+					}(val)
+				}
+			}
+
+			wg.Wait()
+
+			if !reflect.DeepEqual(tt.wantStates, parent.replicationStateStore.states()) {
+				t.Errorf("expected states %v, actual %v", tt.wantStates, parent.replicationStateStore.states())
 			}
 		})
 	}

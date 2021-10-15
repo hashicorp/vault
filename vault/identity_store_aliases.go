@@ -188,7 +188,6 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 					name = alias.Name
 					mountAccessor = alias.MountAccessor
 					customMetadata = alias.CustomMetadata
-
 				case mountAccessor == "":
 					// No change to mount accessor
 					mountAccessor = alias.MountAccessor
@@ -198,11 +197,10 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				case len(customMetadata) == 0:
 					// No change to custom metadata
 					customMetadata = alias.CustomMetadata
-
 				default:
 					// mountAccessor, name and customMetadata  provided
 				}
-				return i.handleAliasUpdate(ctx, req, canonicalID, name, mountAccessor, alias, customMetadata)
+				return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, alias, customMetadata)
 			}
 		}
 
@@ -216,9 +214,6 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		if mountEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
 		}
-		if mountEntry.Local {
-			return logical.ErrorResponse(fmt.Sprintf("mount accessor %q is of a local mount", mountAccessor)), nil
-		}
 		if mountEntry.NamespaceID != ns.ID {
 			return logical.ErrorResponse("matching mount is in a different namespace than request"), logical.ErrPermissionDenied
 		}
@@ -230,30 +225,20 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			if alias.NamespaceID != ns.ID {
 				return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
 			}
-
-			return i.handleAliasUpdate(ctx, req, alias.CanonicalID, name, mountAccessor, alias, customMetadata)
+			return i.handleAliasUpdate(ctx, canonicalID, name, mountAccessor, alias, customMetadata)
 		}
 		// At this point we know it's a new creation request
-		return i.handleAliasCreate(ctx, req, canonicalID, name, mountAccessor, customMetadata)
+		return i.handleAliasCreate(ctx, canonicalID, name, mountAccessor, mountEntry.Local, customMetadata)
 	}
 }
 
-func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, customMetadata map[string]string) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name, mountAccessor string, local bool, customMetadata map[string]string) (*logical.Response, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	alias := &identity.Alias{
-		MountAccessor:  mountAccessor,
-		Name:           name,
-		CustomMetadata: customMetadata,
-	}
-
-	entity := &identity.Entity{}
-
-	// If a canonical ID is provided pull up the entity and make sure we're in
-	// the right NS
+	var entity *identity.Entity
 	if canonicalID != "" {
 		entity, err = i.MemDBEntityByID(canonicalID, true)
 		if err != nil {
@@ -267,29 +252,62 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 		}
 	}
 
-	entity.Aliases = append(entity.Aliases, alias)
-
-	// ID creation and other validations; This is more useful for new entities
-	// and may not perform anything for the existing entities. Placing the
-	// check here to make the flow common for both new and existing entities.
-	err = i.sanitizeEntity(ctx, entity)
-	if err != nil {
-		return nil, err
+	if entity == nil && local {
+		// Check to see if the entity creation should be forwarded.
+		entity, err = i.entityCreator.CreateEntity(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Set the canonical ID in the alias index. This should be done after
-	// sanitizing entity in case it's a new entity that didn't have an ID.
-	alias.CanonicalID = entity.ID
+	persist := false
+	// If the request was not forwarded, then this is the active node of the
+	// primary. Create the entity here itself.
+	if entity == nil {
+		persist = true
+		entity = new(identity.Entity)
+		err = i.sanitizeEntity(ctx, entity)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	// ID creation and other validations
-	err = i.sanitizeAlias(ctx, alias)
-	if err != nil {
-		return nil, err
+	for _, currentAlias := range entity.Aliases {
+		if currentAlias.MountAccessor == mountAccessor {
+			return logical.ErrorResponse("Alias already exists for requested entity and mount accessor"), nil
+		}
+	}
+
+	var alias *identity.Alias
+	switch local {
+	case true:
+		alias, err = i.processLocalAlias(ctx, &logical.Alias{
+			MountAccessor:  mountAccessor,
+			Name:           name,
+			Local:          local,
+			CustomMetadata: customMetadata,
+		}, entity, false)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		alias = &identity.Alias{
+			MountAccessor:  mountAccessor,
+			Name:           name,
+			CustomMetadata: customMetadata,
+			CanonicalID:    entity.ID,
+		}
+		err = i.sanitizeAlias(ctx, alias)
+		if err != nil {
+			return nil, err
+		}
+		entity.UpsertAlias(alias)
+		persist = true
 	}
 
 	// Index entity and its aliases in MemDB and persist entity along with
 	// aliases in storage.
-	if err := i.upsertEntity(ctx, entity, nil, true); err != nil {
+	if err := i.upsertEntity(ctx, entity, nil, persist); err != nil {
 		return nil, err
 	}
 
@@ -302,7 +320,7 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, req *logical.Requ
 	}, nil
 }
 
-func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Request, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
+func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name, mountAccessor string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
 		(canonicalID == alias.CanonicalID || canonicalID == "") && (strutil.EqualStringMaps(customMetadata, alias.CustomMetadata)) {
@@ -312,6 +330,29 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 
 	alias.LastUpdateTime = ptypes.TimestampNow()
 
+	// Get our current entity, which may be the same as the new one if the
+	// canonical ID hasn't changed
+	currentEntity, err := i.MemDBEntityByAliasID(alias.ID, true)
+	if err != nil {
+		return nil, err
+	}
+	if currentEntity == nil {
+		return logical.ErrorResponse("given alias is not associated with an entity"), nil
+	}
+
+	if currentEntity.NamespaceID != alias.NamespaceID {
+		return logical.ErrorResponse("alias and entity do not belong to the same namespace"), logical.ErrPermissionDenied
+	}
+
+	// If the accessor is being changed but the entity is not, check if the entity
+	// already has an alias corresponding to the new accessor
+	if mountAccessor != alias.MountAccessor && (canonicalID == "" || canonicalID == alias.CanonicalID) {
+		for _, currentAlias := range currentEntity.Aliases {
+			if currentAlias.MountAccessor == mountAccessor {
+				return logical.ErrorResponse("Alias cannot be updated as the entity already has an alias for the given 'mount_accessor' "), nil
+			}
+		}
+	}
 	// If we're changing one or the other or both of these, make sure that
 	// there isn't a matching alias already, and make sure it's in the same
 	// namespace.
@@ -320,9 +361,6 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
 		if mountEntry == nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
-		}
-		if mountEntry.Local {
-			return logical.ErrorResponse(fmt.Sprintf("mount_accessor %q is of a local mount", mountAccessor)), nil
 		}
 		if mountEntry.NamespaceID != alias.NamespaceID {
 			return logical.ErrorResponse("given mount accessor is not in the same namespace as the existing alias"), logical.ErrPermissionDenied
@@ -343,21 +381,19 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		alias.MountAccessor = mountAccessor
 		alias.CustomMetadata = customMetadata
 	}
-	// Get our current entity, which may be the same as the new one if the
-	// canonical ID hasn't changed
-	currentEntity, err := i.MemDBEntityByAliasID(alias.ID, true)
-	if err != nil {
-		return nil, err
-	}
-	if currentEntity == nil {
-		return logical.ErrorResponse("given alias is not associated with an entity"), nil
-	}
-	if currentEntity.NamespaceID != alias.NamespaceID {
-		return logical.ErrorResponse("alias associated with an entity in a different namespace"), logical.ErrPermissionDenied
+
+	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
+	if mountValidationResp == nil {
+		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
 
 	newEntity := currentEntity
 	if canonicalID != "" && canonicalID != alias.CanonicalID {
+		// Don't allow moving local aliases between entities.
+		if mountValidationResp.MountLocal {
+			return logical.ErrorResponse("local aliases can't be moved between entities"), nil
+		}
+
 		newEntity, err = i.MemDBEntityByID(canonicalID, true)
 		if err != nil {
 			return nil, err
@@ -367,6 +403,13 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		}
 		if newEntity.NamespaceID != alias.NamespaceID {
 			return logical.ErrorResponse("given 'canonical_id' associated with entity in a different namespace from the alias"), logical.ErrPermissionDenied
+		}
+
+		// Check if the entity the alias is being updated to, already has an alias for the mount
+		for _, alias := range newEntity.Aliases {
+			if alias.MountAccessor == mountAccessor {
+				return logical.ErrorResponse("Alias cannot be updated as the given entity already has an alias for this mount "), nil
+			}
 		}
 
 		// Update the canonical ID value and move it from the current entity to the new one
@@ -391,6 +434,25 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, req *logical.Requ
 		// so the upsertCall gets nil for the previous entity as we're only
 		// changing one.
 		currentEntity = nil
+	}
+
+	if mountValidationResp.MountLocal {
+		alias, err = i.processLocalAlias(ctx, &logical.Alias{
+			MountAccessor:  mountAccessor,
+			Name:           name,
+			Local:          mountValidationResp.MountLocal,
+			CustomMetadata: customMetadata,
+		}, newEntity, true)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"id":           alias.ID,
+				"canonical_id": newEntity.ID,
+			},
+		}, nil
 	}
 
 	// Index entity and its aliases in MemDB and persist entity along with
@@ -499,6 +561,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["name"] = alias.Name
 	respData["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 	respData["namespace_id"] = alias.NamespaceID
+	respData["local"] = alias.Local
 
 	if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 		respData["mount_path"] = mountValidationResp.MountPath
@@ -575,19 +638,39 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 			return nil, err
 		}
 
-		// Persist the entity object
-		entityAsAny, err := ptypes.MarshalAny(entity)
-		if err != nil {
-			return nil, err
-		}
-		item := &storagepacker.Item{
-			ID:      entity.ID,
-			Message: entityAsAny,
-		}
+		switch alias.Local {
+		case true:
+			localAliases, err := i.parseLocalAliases(entity.ID)
+			if err != nil {
+				return nil, err
+			}
 
-		err = i.entityPacker.PutItem(ctx, item)
-		if err != nil {
-			return nil, err
+			if localAliases == nil {
+				return nil, nil
+			}
+
+			for i, item := range localAliases.Aliases {
+				if item.ID == alias.ID {
+					localAliases.Aliases = append(localAliases.Aliases[:i], localAliases.Aliases[i+1:]...)
+					break
+				}
+			}
+
+			marshaledAliases, err := ptypes.MarshalAny(localAliases)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := i.localAliasPacker.PutItem(ctx, &storagepacker.Item{
+				ID:      entity.ID,
+				Message: marshaledAliases,
+			}); err != nil {
+				return nil, err
+			}
+		default:
+			if err := i.persistEntity(ctx, entity); err != nil {
+				return nil, err
+			}
 		}
 
 		// Committing the transaction *after* successfully updating entity in

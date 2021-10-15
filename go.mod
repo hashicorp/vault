@@ -59,6 +59,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/gorilla/mux v1.7.3 // indirect
+	github.com/hashicorp/cap v0.1.0
 	github.com/hashicorp/consul-template v0.27.2-0.20211014231529-4ff55381f1c4
 	github.com/hashicorp/consul/api v1.11.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -66,7 +67,6 @@ require (
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.7.0
 	github.com/hashicorp/go-hclog v1.0.0
-	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-kms-wrapping v0.6.7
 	github.com/hashicorp/go-memdb v1.3.2
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
@@ -113,13 +113,13 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.6.3-0.20210924190759-58a034528e35
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20210811133805-e060c2307b24
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.7-0.20211013154503-eec8a1c892fb
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1-0.20210921171411-e86105e4986d
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.1.1-0.20210715043003-e02ca8f6408e
 	github.com/hashicorp/vault-testing-stepwise v0.1.1
 	github.com/hashicorp/vault/api v1.1.1
-	github.com/hashicorp/vault/sdk v0.2.1
+	github.com/hashicorp/vault/sdk v0.2.2-0.20211004171540-a8c7e135dd6a
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -169,18 +169,16 @@ require (
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/client/v2 v2.305.0
 	go.etcd.io/etcd/client/v3 v3.5.0
-	go.mongodb.org/mongo-driver v1.4.6
+	go.mongodb.org/mongo-driver v1.7.3
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/sdk v0.20.0
 	go.opentelemetry.io/otel/trace v0.20.0

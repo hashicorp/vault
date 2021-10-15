@@ -97,7 +97,7 @@ export default Service.extend({
       } else if (response.status >= 200 && response.status < 300) {
         return resolve(response.json());
       } else {
-        return reject();
+        return reject(response);
       }
     });
   },
