@@ -1602,7 +1602,7 @@ func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) {
 
 	// Do not count root tokens in client count. This includes generated root tokens
 	// as well.
-	if len(entry.Policies) == 1 && entry.Policies[0] == "root" {
+	if entry.IsRoot() {
 		return
 	}
 
