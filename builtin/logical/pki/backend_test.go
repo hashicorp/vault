@@ -33,6 +33,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -691,10 +692,10 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL:    12 * time.Hour,
-		KeyType:   "rsa",
-		KeyBits:   2048,
-		RequireCN: true,
+		MaxTTL:        12 * time.Hour,
+		KeyType:       "rsa",
+		KeyBits:       2048,
+		RequireCN:     true,
 		SignatureBits: 256,
 	}
 	issueVals := certutil.IssueData{}
@@ -2955,14 +2956,11 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Login userpass for test role and keep client token.
-	secret, err := client.Logical().Write("auth/userpass/login/userpassname", map[string]interface{}{
-		"password": "test",
-	})
-	if err != nil || secret == nil {
+	// Login userpass for test role and set client token
+	userpassAuth, err := auth.NewUserpassAuth("userpassname", &auth.Password{FromString: "test"})
+	if err != nil {
 		t.Fatal(err)
 	}
-	userpassToken := secret.Auth.ClientToken
 
 	// Get auth accessor for identity template.
 	auths, err := client.Sys().ListAuth()
@@ -3006,7 +3004,13 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Issue certificate with userpassToken.
-	client.SetToken(userpassToken)
+	secret, err := client.Auth().Login(userpassAuth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
 	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "userpassname"})
 	if err != nil {
 		t.Fatal(err)
