@@ -6,7 +6,7 @@
   "dependencies": {
     "@hashicorp/mktg-global-styles": "^4.0.0",
     "@hashicorp/mktg-logos": "^1.2.0",
-    "@hashicorp/platform-analytics": "^0.1.0",
+    "@hashicorp/platform-analytics": "^0.2.0",
     "@hashicorp/platform-code-highlighting": "^0.1.2",
     "@hashicorp/platform-markdown-utils": "^0.1.3",
     "@hashicorp/platform-runtime-error-monitoring": "^0.1.0",
