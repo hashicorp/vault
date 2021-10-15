@@ -106,6 +106,8 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
+
+	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
 func init() {
@@ -1254,16 +1256,8 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 // UserInfo Endpoint published by Vault OIDC providers and the given
 // error is a logical.ErrPermissionDenied.
 func oidcPermissionDenied(path string, err error) bool {
-	if !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-		return false
-	}
-
-	pattern := "^identity/oidc/provider/\\w(([\\w-.]+)?\\w)?/userinfo$"
-	match, err := regexp.MatchString(pattern, path)
-	if err != nil {
-		return false
-	}
-	return match
+	return errwrap.Contains(err, logical.ErrPermissionDenied.Error()) &&
+		oidcProtectedPathRegex.MatchString(path)
 }
 
 // respondOIDCPermissionDenied writes a response to the given w for
