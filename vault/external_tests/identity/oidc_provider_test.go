@@ -141,7 +141,7 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 	// Create the OIDC provider
 	_, err = active.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
 		"allowed_client_ids": []string{clientID},
-		"scopes":             []string{"user", "groups"},
+		"scopes_supported":   []string{"user", "groups"},
 	})
 	require.NoError(t, err)
 
