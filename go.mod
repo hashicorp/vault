@@ -8,8 +8,6 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
-replace github.com/hashicorp/consul-template => github.com/tvoran/consul-template v0.27.2-0.20211013221426-03d3cade0c6b
-
 require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
@@ -61,7 +59,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/gorilla/mux v1.7.3 // indirect
-	github.com/hashicorp/consul-template v0.27.1
+	github.com/hashicorp/consul-template v0.27.2-0.20211014231529-4ff55381f1c4
 	github.com/hashicorp/consul/api v1.11.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
