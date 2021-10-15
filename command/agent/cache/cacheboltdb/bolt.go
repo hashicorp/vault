@@ -2,6 +2,7 @@ package cacheboltdb
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ import (
 const (
 	// Keep track of schema version for future migrations
 	storageVersionKey = "version"
-	storageVersion    = "1"
+	storageVersion    = "2" // v2 merges auth-lease and secret-lease buckets into one ordered bucket
 
 	// DatabaseFileName - filename for the persistent cache file
 	DatabaseFileName = "vault-agent-cache.db"
@@ -26,14 +27,28 @@ const (
 	// bootstrapping keys
 	metaBucketName = "meta"
 
-	// SecretLeaseType - Bucket/type for leases with secret info
+	// DEPRECATED: SecretLeaseType - v1 Bucket/type for leases with secret info
 	SecretLeaseType = "secret-lease"
 
-	// AuthLeaseType - Bucket/type for leases with auth info
+	// DEPRECATED: AuthLeaseType - v1 Bucket/type for leases with auth info
 	AuthLeaseType = "auth-lease"
 
 	// TokenType - Bucket/type for auto-auth tokens
 	TokenType = "token"
+
+	// LeaseType - v2 Bucket/type for auth AND secret leases.
+	//
+	// This bucket stores keys in the same order they were created using
+	// auto-incrementing keys and the fact that BoltDB stores keys in byte
+	// slice order. This means when we iterate through this bucket during
+	// restore, we will always restore parent tokens before their children,
+	// allowing us to correctly attach child contexts to their parent's context.
+	LeaseType = "lease"
+
+	// LookupType - v2 Bucket/type to map from a memcachedb index ID to an
+	// auto-incrementing BoltDB key. Facilitates deletes from the lease
+	// bucket using an ID instead of the auto-incrementing BoltDB key.
+	lookupType = "lookup"
 
 	// AutoAuthToken - key for the latest auto-auth token
 	AutoAuthToken = "auto-auth-token"
@@ -99,25 +114,88 @@ func createBoltSchema(tx *bolt.Tx) error {
 		if err != nil {
 			return fmt.Errorf("failed to set storage version: %w", err)
 		}
-	case string(version) != storageVersion:
+
+		return createV2BoltSchema(tx)
+
+	case string(version) == storageVersion:
+		return createV2BoltSchema(tx)
+
+	case string(version) == "1":
+		return migrateFromV1ToV2Schema(tx)
+
+	default:
 		return fmt.Errorf("storage migration from %s to %s not implemented", string(version), storageVersion)
 	}
+}
 
+func createV2BoltSchema(tx *bolt.Tx) error {
 	// create the buckets for tokens and leases
-	_, err = tx.CreateBucketIfNotExists([]byte(TokenType))
-	if err != nil {
-		return fmt.Errorf("failed to create token bucket: %w", err)
-	}
-	_, err = tx.CreateBucketIfNotExists([]byte(AuthLeaseType))
-	if err != nil {
-		return fmt.Errorf("failed to create auth lease bucket: %w", err)
-	}
-	_, err = tx.CreateBucketIfNotExists([]byte(SecretLeaseType))
-	if err != nil {
-		return fmt.Errorf("failed to create secret lease bucket: %w", err)
+	for _, bucket := range []string{TokenType, LeaseType, lookupType} {
+		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
+			return fmt.Errorf("failed to create token bucket: %w", err)
+		}
 	}
 
 	return nil
+}
+
+func migrateFromV1ToV2Schema(tx *bolt.Tx) error {
+	if err := createV2BoltSchema(tx); err != nil {
+		return err
+	}
+
+	for _, leaseType := range []string{AuthLeaseType, SecretLeaseType} {
+		if bucket := tx.Bucket([]byte(leaseType)); bucket != nil {
+			bucket.ForEach(func(key, value []byte) error {
+				autoIncKey, err := autoIncrementedLeaseKey(tx, string(key))
+				if err != nil {
+					return fmt.Errorf("error migrating %s %q key to auto incremented key: %w", leaseType, string(key), err)
+				}
+				if err := tx.Bucket([]byte(LeaseType)).Put(autoIncKey, value); err != nil {
+					return fmt.Errorf("error migrating %s %q from v1 to v2 schema: %w", leaseType, string(key), err)
+				}
+				return nil
+			})
+
+			if err := tx.DeleteBucket([]byte(leaseType)); err != nil {
+				return fmt.Errorf("failed to clean up %s bucket during v1 to v2 schema migration: %w", leaseType, err)
+			}
+		}
+	}
+
+	if err := tx.Bucket([]byte(metaBucketName)).Put([]byte(storageVersionKey), []byte(storageVersion)); err != nil {
+		return fmt.Errorf("failed to update schema from v1 to v2: %w", err)
+	}
+
+	return nil
+}
+
+func autoIncrementedLeaseKey(tx *bolt.Tx, id string) ([]byte, error) {
+	leaseBucket := tx.Bucket([]byte(LeaseType))
+	keyValue, err := leaseBucket.NextSequence()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate lookup key for id %q: %w", id, err)
+	}
+
+	key := make([]byte, 8)
+	// MUST be big endian, because keys are ordered by byte slice comparison
+	// which progressively compares each byte in the slice starting at index 0.
+	// BigEndian in the range [255-257] looks like this:
+	// [0 0 0 0 0 0 0 255]
+	// [0 0 0 0 0 0 1 0]
+	// [0 0 0 0 0 0 1 1]
+	// LittleEndian in the same range looks like this:
+	// [255 0 0 0 0 0 0 0]
+	// [0 1 0 0 0 0 0 0]
+	// [1 1 0 0 0 0 0 0]
+	binary.BigEndian.PutUint64(key, keyValue)
+
+	err = tx.Bucket([]byte(lookupType)).Put([]byte(id), key)
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }
 
 // Set an index (token or lease) in bolt storage
@@ -133,44 +211,56 @@ func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, inde
 	}
 
 	return b.db.Update(func(tx *bolt.Tx) error {
-		s := tx.Bucket([]byte(indexType))
-		if s == nil {
-			return fmt.Errorf("bucket %q not found", indexType)
-		}
-		// If this is an auto-auth token, also stash it in the meta bucket for
-		// easy retrieval upon restore
-		if indexType == TokenType {
+		var key []byte
+		switch indexType {
+		case LeaseType:
+			// If this is a lease type, generate an auto-incrementing key and
+			// store an ID -> key lookup entry
+			key, err = autoIncrementedLeaseKey(tx, id)
+			if err != nil {
+				return err
+			}
+		case TokenType:
+			// If this is an auto-auth token, also stash it in the meta bucket for
+			// easy retrieval upon restore
+			key = []byte(id)
 			meta := tx.Bucket([]byte(metaBucketName))
 			if err := meta.Put([]byte(AutoAuthToken), protoBlob); err != nil {
 				return fmt.Errorf("failed to set latest auto-auth token: %w", err)
 			}
+		default:
+			return fmt.Errorf("called Set for unsupported type %q", indexType)
 		}
-		return s.Put([]byte(id), protoBlob)
+		s := tx.Bucket([]byte(indexType))
+		if s == nil {
+			return fmt.Errorf("bucket %q not found", indexType)
+		}
+		return s.Put(key, protoBlob)
 	})
 }
 
-func getBucketIDs(b *bolt.Bucket) ([][]byte, error) {
-	ids := [][]byte{}
-	err := b.ForEach(func(k, v []byte) error {
-		ids = append(ids, k)
-		return nil
-	})
-	return ids, err
-}
-
-// Delete an index (token or lease) by id from bolt storage
-func (b *BoltStorage) Delete(id string) error {
+// Delete an index (token or lease) by key from bolt storage
+func (b *BoltStorage) Delete(id string, indexType string) error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		// Since Delete returns a nil error if the key doesn't exist, just call
-		// delete in all three index buckets without checking existence first
-		if err := tx.Bucket([]byte(TokenType)).Delete([]byte(id)); err != nil {
-			return fmt.Errorf("failed to delete %q from token bucket: %w", id, err)
+		key := []byte(id)
+		if indexType == LeaseType {
+			key = tx.Bucket([]byte(lookupType)).Get(key)
+			if key == nil {
+				return fmt.Errorf("failed to lookup bolt DB key for id %q", id)
+			}
+
+			err := tx.Bucket([]byte(lookupType)).Delete([]byte(id))
+			if err != nil {
+				return fmt.Errorf("failed to delete %q from lookup bucket: %w", id, err)
+			}
 		}
-		if err := tx.Bucket([]byte(AuthLeaseType)).Delete([]byte(id)); err != nil {
-			return fmt.Errorf("failed to delete %q from auth lease bucket: %w", id, err)
+
+		bucket := tx.Bucket([]byte(indexType))
+		if bucket == nil {
+			return fmt.Errorf("bucket %q not found during delete", indexType)
 		}
-		if err := tx.Bucket([]byte(SecretLeaseType)).Delete([]byte(id)); err != nil {
-			return fmt.Errorf("failed to delete %q from secret lease bucket: %w", id, err)
+		if err := bucket.Delete(key); err != nil {
+			return fmt.Errorf("failed to delete %q from %q bucket: %w", id, indexType, err)
 		}
 		b.logger.Trace("deleted index from bolt db", "id", id)
 		return nil
@@ -193,10 +283,14 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 	err := b.db.View(func(tx *bolt.Tx) error {
 		var errors *multierror.Error
 
-		tx.Bucket([]byte(indexType)).ForEach(func(id, ciphertext []byte) error {
+		bucket := tx.Bucket([]byte(indexType))
+		if bucket == nil {
+			return fmt.Errorf("bucket %q not found", indexType)
+		}
+		bucket.ForEach(func(key, ciphertext []byte) error {
 			plaintext, err := b.decrypt(ctx, ciphertext)
 			if err != nil {
-				errors = multierror.Append(errors, fmt.Errorf("error decrypting index id %s: %w", id, err))
+				errors = multierror.Append(errors, fmt.Errorf("error decrypting entry %s: %w", string(key), err))
 				return nil
 			}
 
@@ -247,11 +341,11 @@ func (b *BoltStorage) GetRetrievalToken() ([]byte, error) {
 	var token []byte
 
 	err := b.db.View(func(tx *bolt.Tx) error {
-		keyBucket := tx.Bucket([]byte(metaBucketName))
-		if keyBucket == nil {
+		metaBucket := tx.Bucket([]byte(metaBucketName))
+		if metaBucket == nil {
 			return fmt.Errorf("bucket %q not found", metaBucketName)
 		}
-		value := keyBucket.Get([]byte(RetrievalTokenMaterial))
+		value := metaBucket.Get([]byte(RetrievalTokenMaterial))
 		if value != nil {
 			token = make([]byte, len(value))
 			copy(token, value)
@@ -286,7 +380,7 @@ func (b *BoltStorage) Close() error {
 // the schema/layout
 func (b *BoltStorage) Clear() error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		for _, name := range []string{AuthLeaseType, SecretLeaseType, TokenType} {
+		for _, name := range []string{TokenType, LeaseType, lookupType} {
 			b.logger.Trace("deleting bolt bucket", "name", name)
 			if err := tx.DeleteBucket([]byte(name)); err != nil {
 				return err
