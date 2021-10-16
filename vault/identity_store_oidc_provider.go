@@ -1968,14 +1968,22 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Get the scopes for the access token
-	scopes, ok := te.InternalMeta[accessTokenScopesMeta]
-	if !ok || len(scopes) == 0 {
+	tokenScopes, ok := te.InternalMeta[accessTokenScopesMeta]
+	if !ok || len(tokenScopes) == 0 {
 		return userInfoResponse(claims, "", "")
 	}
-	parsedScopes := strutil.ParseStringSlice(scopes, scopesDelimiter)
+	parsedScopes := strutil.ParseStringSlice(tokenScopes, scopesDelimiter)
+
+	// Scope values that are not supported by the provider should be ignored
+	scopes := make([]string, 0)
+	for _, scope := range parsedScopes {
+		if strutil.StrListContains(provider.ScopesSupported, scope) {
+			scopes = append(scopes, scope)
+		}
+	}
 
 	// Populate each of the token's scope templates
-	templates, conflict, err := i.populateScopeTemplates(ctx, req.Storage, ns, entity, parsedScopes...)
+	templates, conflict, err := i.populateScopeTemplates(ctx, req.Storage, ns, entity, scopes...)
 	if !conflict && err != nil {
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
