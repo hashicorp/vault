@@ -1516,12 +1516,15 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 
 	// Validate that there is an identity entity associated with the request
+	if req.EntityID == "" {
+		return authResponse("", state, ErrAuthAccessDenied, "identity entity must be associated with the request")
+	}
 	entity, err := i.MemDBEntityByID(req.EntityID, false)
 	if err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 	if entity == nil {
-		return authResponse("", state, ErrAuthAccessDenied, "identity entity must be associated with the request")
+		return authResponse("", state, ErrAuthAccessDenied, "identity entity associated with the request not found")
 	}
 
 	// Validate that the entity is a member of the client's assignments
@@ -1736,7 +1739,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
 	if entity == nil {
-		return tokenResponse(nil, ErrTokenInvalidRequest, "identity entity associated with request not found")
+		return tokenResponse(nil, ErrTokenInvalidRequest, "identity entity associated with the request not found")
 	}
 
 	// Validate that the entity is a member of the client's assignments
@@ -1938,13 +1941,16 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client not found")
 	}
 
-	// Get the entity associated with the request
+	// Validate that there is an identity entity associated with the request
+	if req.EntityID == "" {
+		return userInfoResponse(nil, ErrUserInfoAccessDenied, "identity entity must be associated with the request")
+	}
 	entity, err := i.MemDBEntityByID(req.EntityID, false)
 	if err != nil {
 		return userInfoResponse(nil, ErrUserInfoServerError, err.Error())
 	}
 	if entity == nil {
-		return userInfoResponse(nil, ErrUserInfoAccessDenied, "identity entity must be associated with the request")
+		return userInfoResponse(nil, ErrUserInfoAccessDenied, "identity entity associated with the request not found")
 	}
 
 	// Validate that the entity is a member of the client's assignments

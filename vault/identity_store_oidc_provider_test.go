@@ -577,6 +577,17 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthRequestURINotSupported,
 		},
 		{
+			name: "invalid authorize request with identity entity not associated with the request",
+			args: args{
+				entityID:      "",
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+			},
+			wantErr: ErrAuthAccessDenied,
+		},
+		{
 			name: "invalid authorize request with identity entity ID not found",
 			args: args{
 				entityID:      "non-existent-entity",
