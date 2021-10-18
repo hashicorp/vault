@@ -9,7 +9,7 @@
     "test": "tests"
   },
   "scripts": {
-    "build": "ember build --environment=production",
+    "build": "ember build --environment=production && cp metadata.json dist/metadata.json",
     "build:dev": "ember build",
     "lint:hbs": "ember-template-lint app/**/* lib/**/*",
     "lint:js": "eslint .",
