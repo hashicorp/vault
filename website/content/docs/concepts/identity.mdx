@@ -7,7 +7,9 @@ description: >-
 
 # Identity
 
-A secrets engine controls identity management in Vault. Because there are many ways to authenticate to Vault, it’s advantageous to tie authentications from various auth methods to a single representation. This representation of a consolidated identity is called an `Entity`. An entity can have multiple `Aliases`. For example, a single user with accounts in both GitHub and LDAP can be mapped to a single entity in Vault with two aliases, one of type GitHub and one of type LDAP.
+This document contains conceptual information about **Identity** along with an overview of the various terminologies and their concepts. The idea of Identity is to maintain the clients who are recognized by Vault. As such, Vault provides an identity management solution through the **Identity secrets engine**. For more information about the Identify secrets engine and how it is used, refer to the [Identify Secrets Engine](/docs/secrets/identity) documentation.
+
+Because there are many ways to authenticate to Vault, it’s advantageous to tie authentications from various auth methods to a single representation. This representation of a consolidated identity is called an `Entity`. An entity can have multiple `Aliases`. For example, a single user with accounts in both GitHub and LDAP can be mapped to a single entity in Vault with two aliases, one of type GitHub and one of type LDAP.
 
 When a client authenticates via any credential backend (except the Token backend), Vault creates a new entity. It attaches a new alias to it if a corresponding entity does not already exist. The entity identifier will be tied to the authenticated token. When such tokens are used, their entity identifiers are audit logged, marking a trail of actions performed by specific users.
 
