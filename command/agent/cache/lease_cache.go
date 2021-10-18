@@ -972,6 +972,10 @@ func (c *LeaseCache) Flush() error {
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
 func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStorage) error {
+	return c.restoreWithChannel(ctx, storage, nil)
+}
+
+func (c *LeaseCache) restoreWithChannel(ctx context.Context, storage *cacheboltdb.BoltStorage, ch chan *cachememdb.Index) error {
 	var errs *multierror.Error
 
 	// Process tokens first
@@ -1015,8 +1019,15 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 				errs = multierror.Append(errs, err)
 				continue
 			}
+			if ch != nil {
+				ch <- newIndex
+			}
 			c.logger.Trace("restored lease", "id", newIndex.ID, "path", newIndex.RequestPath)
 		}
+	}
+
+	if ch != nil {
+		close(ch)
 	}
 
 	return errs.ErrorOrNil()

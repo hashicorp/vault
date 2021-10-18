@@ -984,29 +984,38 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	logBuffer := &bytes.Buffer{}
 	restoredCache := testNewLeaseCacheWithLogWriter(t, nil, logBuffer)
 
-	err = restoredCache.Restore(context.Background(), boltStorage)
+	ch := make(chan *cachememdb.Index)
+	var restoredLeases []*cachememdb.Index
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case index, ok := <-ch:
+				if !ok {
+					return
+				}
+				restoredLeases = append(restoredLeases, index)
+			}
+		}
+	}()
+	err = restoredCache.restoreWithChannel(context.Background(), boltStorage, ch)
 	require.NoError(t, err)
+	wg.Wait()
 
 	// Now compare the cache contents before and after
 	compareBeforeAndAfter(t, lc, restoredCache, 223, 223)
 
-	// Clear the cache so that there's no further logging in the background and
-	// we can safely read from the log buffer.
-	require.NoError(t, restoredCache.handleCacheClear(context.Background(), &cacheClearInput{Type: "all"}))
-
 	// Ensure leases were restored in the correct order
+	approleRegex := regexp.MustCompile("/v1/auth/approle-(\\d+)/login")
+	kvRegex := regexp.MustCompile("/v1/kv/(\\d+)")
 	maxAppRoleAncestor := -1
 	restoredTokens := make(map[int]struct{})
 	var approleTokensFound, secretsFound int
-	approleRegex := regexp.MustCompile("restored lease.*path=/v1/auth/approle-(\\d+)/login")
-	kvRegex := regexp.MustCompile("restored lease.*path=/v1/kv/(\\d+)")
-	for {
-		line, err := logBuffer.ReadBytes(byte('\n'))
-		if err == io.EOF {
-			break
-		}
-		t.Log(string(line[:len(line)-1]))
-		if matches := approleRegex.FindSubmatch(line); len(matches) >= 2 {
+	for _, lease := range restoredLeases {
+		t.Log(lease.RequestPath)
+		if matches := approleRegex.FindStringSubmatch(lease.RequestPath); len(matches) >= 2 {
 			id, err := strconv.Atoi(string(matches[1]))
 			require.NoError(t, err)
 			approleTokensFound++
@@ -1022,7 +1031,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 			if id >= 101 {
 				require.GreaterOrEqual(t, maxAppRoleAncestor, 25)
 			}
-		} else if matches := kvRegex.FindSubmatch(line); len(matches) >= 2 {
+		} else if matches := kvRegex.FindStringSubmatch(lease.RequestPath); len(matches) >= 2 {
 			id, err := strconv.Atoi(string(matches[1]))
 			require.NoError(t, err)
 			secretsFound++
