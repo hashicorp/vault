@@ -228,6 +228,11 @@ this value.`,
 more than one, specify alternative names in
 the alt_names map using OID 2.5.4.5.`,
 	}
+	fields["not_after"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Set the not after field of the certificate with specified date value.
+                      The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
 
 	return fields
 }
@@ -255,7 +260,7 @@ the key_type.`,
 	}
 
 	fields["signature_bits"] = &framework.FieldSchema{
-		Type: framework.TypeInt,
+		Type:    framework.TypeInt,
 		Default: 256,
 		Description: `The number of bits to use in the signature
 algorithm. Defaults to 256 for SHA256.

@@ -282,6 +282,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		AllowedURISANs:        []string{"*"},
 		AllowedSerialNumbers:  []string{"*"},
 		AllowExpirationPastCA: true,
+		NotAfter:              data.Get("not_after").(string),
 	}
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {

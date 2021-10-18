@@ -146,6 +146,135 @@ func TestPKI_RequireCN(t *testing.T) {
 	}
 }
 
+func TestPKI_DeviceCert(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+		"not_after":   "9999-12-31T23:59:59Z",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+	var certBundle certutil.CertBundle
+	err = mapstructure.Decode(resp.Data, &certBundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsedCertBundle, err := certBundle.ToParsedCertBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert := parsedCertBundle.Certificate
+	notAfter := cert.NotAfter.Format(time.RFC3339)
+	if notAfter != "9999-12-31T23:59:59Z" {
+		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
+	}
+
+	// Create a role which does require CN (default)
+	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"not_after":          "9999-12-31T23:59:59Z",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue a cert with require_cn set to true and with common name supplied.
+	// It should succeed.
+	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
+		"common_name": "foobar.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mapstructure.Decode(resp.Data, &certBundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsedCertBundle, err = certBundle.ToParsedCertBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert = parsedCertBundle.Certificate
+	notAfter = cert.NotAfter.Format(time.RFC3339)
+	if notAfter != "9999-12-31T23:59:59Z" {
+		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
+	}
+
+}
+
+func TestBackend_InvalidParameter(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	var err error
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "32h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+		"not_after":   "9999-12-31T23:59:59Z",
+		"ttl":         "25h",
+	})
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+		"not_after":   "9999-12-31T23:59:59",
+	})
+	if err == nil {
+		t.Fatal(err)
+	}
+}
 func TestBackend_CSRValues(t *testing.T) {
 	initTest.Do(setCerts)
 	defaultLeaseTTLVal := time.Hour * 24
@@ -691,10 +820,10 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 // Generates steps to test out various role permutations
 func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	roleVals := roleEntry{
-		MaxTTL:    12 * time.Hour,
-		KeyType:   "rsa",
-		KeyBits:   2048,
-		RequireCN: true,
+		MaxTTL:        12 * time.Hour,
+		KeyType:       "rsa",
+		KeyBits:       2048,
+		RequireCN:     true,
 		SignatureBits: 256,
 	}
 	issueVals := certutil.IssueData{}
