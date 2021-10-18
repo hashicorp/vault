@@ -24,7 +24,7 @@
     "test:quick": "node scripts/start-vault.js",
     "test:quick-oss": "yarn test:quick -f='!enterprise'",
     "build:storybook": "build-storybook -s ../http/web_ui",
-    "storybook": "start-storybook -p 6006 -s ../http/web_ui && sb extract",
+    "storybook": "start-storybook -p 6006 -s ../http/web_ui && sb extract && cp storybook-static/stories.json ../http/web_ui/stories.json",
     "deploy:storybook": "yarn build && yarn build:storybook",
     "gen-story-md": "node scripts/gen-story-md.js",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
