@@ -55,20 +55,20 @@
     </ToolbarActions>
   </Toolbar>
   {{#each @model.showFields as |attr|}}
-    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+    {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
         />
       {{else}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{or (get @model attr.name) defaultDisplay}}
+          @value={{get @model attr.name}}
           @isLink={{eq attr.name 'database'}}
         />
       {{/if}}

@@ -234,3 +234,12 @@ func (te *TokenEntry) SentinelKeys() []string {
 		"type",
 	}
 }
+
+// IsRoot returns false if the token is not root (or doesn't exist)
+func (te *TokenEntry) IsRoot() bool {
+	if te == nil {
+		return false
+	}
+
+	return len(te.Policies) == 1 && te.Policies[0] == "root"
+}

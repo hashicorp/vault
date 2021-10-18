@@ -139,6 +139,10 @@ Router.map(function() {
       }
 
       this.route('not-found', { path: '/*path' });
+
+      this.route('identity', function() {
+        this.route('oidc-provider', { path: '/oidc/provider/:oidc_name/authorize' });
+      });
     });
     this.route('not-found', { path: '/*path' });
   });
