@@ -124,7 +124,6 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 
 	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
-
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
@@ -1414,6 +1413,53 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 }
 
+func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Write SSH role to test with no allowed extension. We also provide a templated default extension,
+	// to verify that it's not actually being evaluated
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+		"key_type":                    "ca",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"allowed_extensions":          "",
+		"default_extensions_template": false,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating disabled, and user-provided extensions
+	client.SetToken(userpassToken)
+	userProvidedAnyExtensionPermissions := map[string]string{
+		"login@foobar.com": "not_userpassname",
+	}
+	_, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedAnyExtensionPermissions,
+	})
+	if err == nil {
+		t.Fatal("Expected failure we should not have allowed specifying custom extensions")
+	}
+
+	if !strings.Contains(err.Error(), "are not on allowed list") {
+		t.Fatalf("Expected failure to contain 'are not on allowed list' but was %s", err)
+	}
+}
+
 func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
@@ -1433,6 +1479,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
 		"default_user":                "tuber",
+		"allowed_extensions":          "*",
 		"default_extensions_template": false,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
@@ -1444,7 +1491,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 
 	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
 
-// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
+	// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
 	client.SetToken(userpassToken)
 	defaultExtensionPermissions := map[string]string{
 		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",

@@ -362,19 +362,21 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 
 	if len(unparsedExtensions) > 0 {
 		extensions := convertMapToStringValue(unparsedExtensions)
-		if role.AllowedExtensions != "" {
-			notAllowed := []string{}
-			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		if role.AllowedExtensions == "*" {
+			// Allowed extensions was configured to allow all
+			return extensions, nil
+		}
 
-			for extensionKey, _ := range extensions {
-				if !strutil.StrListContains(allowedExtensions, extensionKey) {
-					notAllowed = append(notAllowed, extensionKey)
-				}
+		notAllowed := []string{}
+		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		for extensionKey, _ := range extensions {
+			if !strutil.StrListContains(allowedExtensions, extensionKey) {
+				notAllowed = append(notAllowed, extensionKey)
 			}
+		}
 
-			if len(notAllowed) != 0 {
-				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
-			}
+		if len(notAllowed) != 0 {
+			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 		}
 		return extensions, nil
 	}
