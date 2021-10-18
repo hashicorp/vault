@@ -9,6 +9,7 @@ on:
 
 env:
   PKG_NAME: "vault"
+  GO_TAGS: "ui"
 
 jobs:
   get-product-version:
@@ -43,13 +44,13 @@ jobs:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
 
-  build-386:
+  build-other:
     needs: get-product-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, freebsd, windows, netbsd, openbsd ]
-        goarch: [ "386" ]
+        goos: [ freebsd, windows, netbsd, openbsd ]
+        goarch: [ "386", "amd64" ]
         go: [ "1.16" ]
       fail-fast: true
 
@@ -81,120 +82,20 @@ jobs:
         run: |
           go mod vendor
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} GO_TAGS="${{ env.GO_TAGS }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/actions-packaging-linux@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/vault"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_i386.deb
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.i386.rpm
-
-  build-amd64:
-    needs: get-product-version
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux, freebsd, solaris, windows, netbsd, openbsd]
-        goarch: ["amd64"]
-        go: ["1.16"]
-      fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Setup go tools
-        run: |
-          go get golang.org/x/tools/cmd/goimports
-          go get github.com/hashicorp/go-bindata
-          go get github.com/hashicorp/go-bindata/go-bindata
-          go get github.com/elazarl/go-bindata-assetfs
-          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-      - name: Setup node and yarn
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          cache: 'yarn'
-          cache-dependency-path: 'ui/yarn.lock'
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          go mod vendor
-          mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/actions-packaging-linux@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/vault"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.x86_64.rpm
-
-  build-arm:
+  build-linux:
     needs: get-product-version
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux]
-        goarch: [arm]
+        goarch: ["arm", "arm64", "386", "amd64"]
         go: ["1.16"]
       fail-fast: true
 
@@ -227,7 +128,7 @@ jobs:
         run: |
           go mod vendor
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} GO_TAGS="${{ env.GO_TAGS }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -235,7 +136,6 @@ jobs:
           path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
 
       - name: Package
-        if: ${{ matrix.goos == 'linux' }}
         uses: hashicorp/actions-packaging-linux@v1
         with:
           name: ${{ github.event.repository.name }}
@@ -250,87 +150,14 @@ jobs:
           rpm_depends: "openssl"
 
       - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_armhf.deb
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-
-  build-arm64:
-    needs: get-product-version
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [arm64]
-        go: ["1.16"]
-      fail-fast: true
-
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ matrix.go }}
-      - name: Setup go tools
-        run: |
-          go get golang.org/x/tools/cmd/goimports
-          go get github.com/hashicorp/go-bindata
-          go get github.com/hashicorp/go-bindata/go-bindata
-          go get github.com/elazarl/go-bindata-assetfs
-          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-      - name: Setup node and yarn
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          cache: 'yarn'
-          cache-dependency-path: 'ui/yarn.lock'
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          go mod vendor
-          mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-
-      - name: Package
-        if: ${{ matrix.goos == 'linux' }}
-        uses: hashicorp/actions-packaging-linux@v1
-        with:
-          name: ${{ github.event.repository.name }}
-          description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
-          arch: ${{ matrix.goarch }}
-          version: ${{ needs.get-product-version.outputs.product-version }}
-          maintainer: "HashiCorp"
-          homepage: "https://github.com/hashicorp/vault"
-          license: "MPL-2.0"
-          binary: "dist/${{ env.PKG_NAME }}"
-          deb_depends: "openssl"
-          rpm_depends: "openssl"
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
         with:
           name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_arm*.deb
+          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_*.deb #TODO: update action to upload
 
       - uses: actions/upload-artifact@v2
-        if: ${{ matrix.goos == 'linux' }}
         with:
           name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm
+          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm #TODO: update action to upload
 
   build-darwin:
     needs: get-product-version
@@ -369,7 +196,7 @@ jobs:
         run: |
           go mod vendor
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} make build
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} GO_TAGS="${{ env.GO_TAGS }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -380,10 +207,7 @@ jobs:
     name: Docker ${{ matrix.arch }} build
     needs:
       - get-product-version
-      - build-arm
-      - build-386
-      - build-amd64
-      - build-arm64
+      - build-linux
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -391,7 +215,6 @@ jobs:
     env:
       repo: ${{github.event.repository.name}}
       version: ${{needs.get-product-version.outputs.product-version}}
-
     steps:
       - uses: actions/checkout@v2
       - name: Docker Build (Action)
@@ -400,6 +223,7 @@ jobs:
           version: ${{env.version}}
           target: default
           arch: ${{matrix.arch}}
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             ecr.public.aws/hashicorp/${{env.repo}}:${{env.version}}
