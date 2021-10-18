@@ -76,7 +76,7 @@ func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 
 // Login sets up the required request body for the AWS auth method's /login
 // endpoint, and performs a write to it. This method defaults to the "iam"
-// auth type unless NewAWSAuth is called with WithAuthType("ec2").
+// auth type unless NewAWSAuth is called with WithEC2Auth().
 //
 // The Vault client will set its credentials to the values of the
 // AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION environment
