@@ -995,10 +995,6 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	// Now compare before and after
 	compareBeforeAndAfter(t, lc, restoredCache, 223, 223)
 
-	// Clear the cache so that there's no further logging in the background and
-	// we can safely read from the log buffer.
-	require.NoError(t, restoredCache.handleCacheClear(context.Background(), &cacheClearInput{Type: "all"}))
-
 	// Ensure leases were restored in the correct order
 	approleRegex := regexp.MustCompile("/v1/auth/approle-(\\d+)/login")
 	kvRegex := regexp.MustCompile("/v1/kv/(\\d+)")
