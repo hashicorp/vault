@@ -10,7 +10,7 @@ Router.map(function() {
   this.route('vault', { path: '/' }, function() {
     this.route('cluster', { path: '/:cluster_name' }, function() {
       this.route('identity', function() {
-        this.route('oidc-provider', { path: '/oidc/provider/:provider/authorize' });
+        this.route('oidc-provider', { path: '/oidc/provider/:provider_name/authorize' });
       });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
