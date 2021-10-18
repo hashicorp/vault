@@ -1,10 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -36,12 +34,6 @@ import (
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	t.Helper()
 
-	return testNewLeaseCacheWithLogWriter(t, responses, hclog.DefaultOutput)
-}
-
-func testNewLeaseCacheWithLogWriter(t *testing.T, responses []*SendResponse, w io.Writer) *LeaseCache {
-	t.Helper()
-
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +43,7 @@ func testNewLeaseCacheWithLogWriter(t *testing.T, responses []*SendResponse, w i
 		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
-		Logger:      logging.NewVaultLoggerWithWriter(w, hclog.Trace).Named("cache.leasecache"),
+		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -721,6 +713,45 @@ func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cachebolt
 	return tempCacheDir, boltStorage
 }
 
+func compareBeforeAndAfter(t *testing.T, before, after *LeaseCache, beforeLen, afterLen int) {
+	beforeDB, err := before.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, beforeDB, beforeLen)
+	afterDB, err := after.db.GetByPrefix(cachememdb.IndexNameID)
+	require.NoError(t, err)
+	assert.Len(t, afterDB, afterLen)
+	for _, cachedItem := range beforeDB {
+		if strings.Contains(cachedItem.RequestPath, "expect-missing") {
+			continue
+		}
+		restoredItem, err := after.db.Get(cachememdb.IndexNameID, cachedItem.ID)
+		require.NoError(t, err)
+
+		assert.NoError(t, err)
+		assert.Equal(t, cachedItem.ID, restoredItem.ID)
+		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
+		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
+		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
+		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
+		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
+		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
+		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
+		assert.Equal(t, cachedItem.Response, restoredItem.Response)
+		assert.Equal(t, cachedItem.Token, restoredItem.Token)
+		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
+		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
+
+		// check what we can in the renewal context
+		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
+		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
+		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
+		assert.Equal(t,
+			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
+		)
+	}
+}
+
 func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// Emulate responses from the api proxy. The first two use the auto-auth
 	// token, and the others use another token.
@@ -853,42 +884,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	assert.Contains(t, errors.Error(), "could not find parent Token testtoken2")
 
 	// Now compare before and after
-	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, beforeDB, 7)
-	for _, cachedItem := range beforeDB {
-		if strings.Contains(cachedItem.RequestPath, "expect-missing") {
-			continue
-		}
-		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, cachedItem.ID, restoredItem.ID)
-		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
-		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
-		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
-		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
-		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
-		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
-		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
-		assert.Equal(t, cachedItem.Response, restoredItem.Response)
-		assert.Equal(t, cachedItem.Token, restoredItem.Token)
-		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
-		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
-
-		// check what we can in the renewal context
-		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
-		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
-		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
-		assert.Equal(t,
-			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-		)
-	}
-	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, afterDB, 5)
+	compareBeforeAndAfter(t, lc, restoredCache, 7, 5)
 
 	// And finally send the cache requests once to make sure they're all being
 	// served from the restoredCache unless they were intended to be missing after restore.
@@ -973,64 +969,45 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 		assert.Nil(t, resp.CacheMeta)
 	}
 
-	logBuffer := &bytes.Buffer{}
-	restoredCache := testNewLeaseCacheWithLogWriter(t, nil, logBuffer)
+	restoredCache := testNewLeaseCache(t, nil)
 
-	err = restoredCache.Restore(context.Background(), boltStorage)
+	ch := make(chan *cachememdb.Index)
+	var restoredLeases []*cachememdb.Index
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case index, ok := <-ch:
+				if !ok {
+					return
+				}
+				restoredLeases = append(restoredLeases, index)
+			}
+		}
+	}()
+
+	err = restoredCache.restoreWithChannel(context.Background(), boltStorage, ch)
 	require.NoError(t, err)
+	wg.Wait()
 
 	// Now compare before and after
-	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, beforeDB, 223)
-	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)
-	require.NoError(t, err)
-	assert.Len(t, afterDB, 223)
-	for _, cachedItem := range beforeDB {
-		restoredItem, err := restoredCache.db.Get(cachememdb.IndexNameID, cachedItem.ID)
-		require.NoError(t, err)
-
-		assert.NoError(t, err)
-		assert.Equal(t, cachedItem.ID, restoredItem.ID)
-		assert.Equal(t, cachedItem.Lease, restoredItem.Lease)
-		assert.Equal(t, cachedItem.LeaseToken, restoredItem.LeaseToken)
-		assert.Equal(t, cachedItem.Namespace, restoredItem.Namespace)
-		assert.Equal(t, cachedItem.RequestHeader, restoredItem.RequestHeader)
-		assert.Equal(t, cachedItem.RequestMethod, restoredItem.RequestMethod)
-		assert.Equal(t, cachedItem.RequestPath, restoredItem.RequestPath)
-		assert.Equal(t, cachedItem.RequestToken, restoredItem.RequestToken)
-		assert.Equal(t, cachedItem.Response, restoredItem.Response)
-		assert.Equal(t, cachedItem.Token, restoredItem.Token)
-		assert.Equal(t, cachedItem.TokenAccessor, restoredItem.TokenAccessor)
-		assert.Equal(t, cachedItem.TokenParent, restoredItem.TokenParent)
-
-		// check what we can in the renewal context
-		assert.NotEmpty(t, restoredItem.RenewCtxInfo.CancelFunc)
-		assert.NotZero(t, restoredItem.RenewCtxInfo.DoneCh)
-		require.NotEmpty(t, restoredItem.RenewCtxInfo.Ctx)
-		assert.Equal(t,
-			cachedItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-			restoredItem.RenewCtxInfo.Ctx.Value(contextIndexID),
-		)
-	}
+	compareBeforeAndAfter(t, lc, restoredCache, 223, 223)
 
 	// Clear the cache so that there's no further logging in the background and
 	// we can safely read from the log buffer.
 	require.NoError(t, restoredCache.handleCacheClear(context.Background(), &cacheClearInput{Type: "all"}))
 
 	// Ensure leases were restored in the correct order
+	approleRegex := regexp.MustCompile("/v1/auth/approle-(\\d+)/login")
+	kvRegex := regexp.MustCompile("/v1/kv/(\\d+)")
 	maxAppRoleAncestor := -1
 	restoredTokens := make(map[int]struct{})
 	var approleTokensFound, secretsFound int
-	approleRegex := regexp.MustCompile("restored lease.*path=/v1/auth/approle-(\\d+)/login")
-	kvRegex := regexp.MustCompile("restored lease.*path=/v1/kv/(\\d+)")
-	for {
-		line, err := logBuffer.ReadBytes(byte('\n'))
-		if err == io.EOF {
-			break
-		}
-		t.Log(string(line[:len(line)-1]))
-		if matches := approleRegex.FindSubmatch(line); len(matches) >= 2 {
+	for _, lease := range restoredLeases {
+		t.Log(lease.RequestPath)
+		if matches := approleRegex.FindStringSubmatch(lease.RequestPath); len(matches) >= 2 {
 			id, err := strconv.Atoi(string(matches[1]))
 			require.NoError(t, err)
 			approleTokensFound++
@@ -1046,7 +1023,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 			if id >= 101 {
 				require.GreaterOrEqual(t, maxAppRoleAncestor, 25)
 			}
-		} else if matches := kvRegex.FindSubmatch(line); len(matches) >= 2 {
+		} else if matches := kvRegex.FindStringSubmatch(lease.RequestPath); len(matches) >= 2 {
 			id, err := strconv.Atoi(string(matches[1]))
 			require.NoError(t, err)
 			secretsFound++

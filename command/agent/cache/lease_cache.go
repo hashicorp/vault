@@ -558,7 +558,9 @@ func computeIndexID(req *SendRequest) (string, error) {
 
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed
 	// requests sets the token directly into SendRequest.Token
-	b.Write([]byte(req.Token))
+	if _, err := b.Write([]byte(req.Token)); err != nil {
+		return "", fmt.Errorf("error writing token to hash input: %w", err)
+	}
 
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
@@ -983,6 +985,10 @@ type leaseMaps struct {
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
 func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStorage) error {
+	return c.restoreWithChannel(ctx, storage, nil)
+}
+
+func (c *LeaseCache) restoreWithChannel(ctx context.Context, storage *cacheboltdb.BoltStorage, ch chan *cachememdb.Index) error {
 	var errs *multierror.Error
 
 	// Process tokens first
@@ -1063,12 +1069,18 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 					mtx.Unlock()
 					return
 				}
+				if ch != nil {
+					ch <- lease.index
+				}
 				c.logger.Trace("restored lease", "id", id, "path", lease.index.RequestPath)
 			}(id, lease)
 		}
 	}
 
 	wg.Wait()
+	if ch != nil {
+		close(ch)
+	}
 
 	return errs.ErrorOrNil()
 }
