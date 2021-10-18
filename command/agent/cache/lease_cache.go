@@ -996,6 +996,8 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 				continue
 			}
 
+			c.logger.Trace("restoring lease", "id", newIndex.ID, "path", newIndex.RequestPath)
+
 			// Check if this lease has already expired
 			expired, err := c.hasExpired(time.Now().UTC(), newIndex)
 			if err != nil {
