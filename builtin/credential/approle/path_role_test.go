@@ -595,7 +595,7 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
-	if resp != nil || resp.IsError() {
+	if resp != nil {
 		t.Fatalf("resp:%#v", resp)
 	}
 	if err == nil {

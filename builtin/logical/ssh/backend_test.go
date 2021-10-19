@@ -201,7 +201,7 @@ func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 	if err != nil {
 		return fmt.Errorf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
 	}
-	return err
+	return nil
 }
 
 func TestBackend_allowed_users(t *testing.T) {
@@ -1348,7 +1348,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+	sshKeyID := "vault-userpass-" + testUserName + "-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
 
 	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
 	client.SetToken(userpassToken)
@@ -1489,7 +1489,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+	sshKeyID := "vault-userpass-" + testUserName + "-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
 
 	// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
 	client.SetToken(userpassToken)
