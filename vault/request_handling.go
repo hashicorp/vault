@@ -396,10 +396,11 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return auth, te, retErr
 	}
 
-	// If it is an authenticated ( i.e with vault token ) request
-	// associated with an entity, increment client count
-	if !unauth && c.activityLog != nil && te.EntityID != "" {
-		c.activityLog.HandleTokenCreation(te)
+	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	if !unauth && c.activityLog != nil {
+		clientID, _ := c.activityLog.CreateClientID(req.TokenEntry())
+		req.ClientID = clientID
+		c.activityLog.HandleTokenUsage(te)
 	}
 	return auth, te, nil
 }
@@ -1325,24 +1326,32 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		if auth.Alias != nil &&
 			mEntry != nil &&
-			!mEntry.Local &&
 			c.identityStore != nil {
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
 			auth.Alias.MountAccessor = req.MountAccessor
+			auth.Alias.Local = mEntry.Local
 
 			if auth.Alias.Name == "" {
 				return nil, nil, fmt.Errorf("missing name in alias")
 			}
 
 			var err error
-
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
 			entity, err = c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
-				entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+				switch auth.Alias.Local {
+				case true:
+					entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, entity)
+					if err != nil && strings.Contains(err.Error(), errCreateEntityUnimplemented) {
+						resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
+						goto CREATE_TOKEN
+					}
+				default:
+					entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+				}
 			}
 			if err != nil {
 				return nil, nil, err
@@ -1363,6 +1372,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			auth.GroupAliases = validAliases
 		}
 
+	CREATE_TOKEN:
 		// Determine the source of the login
 		source := c.router.MatchingMount(ctx, req.Path)
 		source = strings.TrimPrefix(source, credentialRoutePrefix)

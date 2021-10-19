@@ -214,6 +214,7 @@ IMPROVEMENTS:
 * core: Send notifications to systemd on start, stop, and configuration reload. [[GH-11517](https://github.com/hashicorp/vault/pull/11517)]
 * core: add irrevocable lease list and count apis [[GH-11607](https://github.com/hashicorp/vault/pull/11607)]
 * core: allow arbitrary length stack traces upon receiving SIGUSR2 (was 32MB) [[GH-11364](https://github.com/hashicorp/vault/pull/11364)]
+* core: Improve renew/revoke performance using per-lease locks [[GH-11122](https://github.com/hashicorp/vault/pull/11122)]
 * db/cassandra: Added tls_server_name to specify server name for TLS validation [[GH-11820](https://github.com/hashicorp/vault/pull/11820)]
 * go: Update to Go 1.16.5 [[GH-11802](https://github.com/hashicorp/vault/pull/11802)]
 * replication: Delay evaluation of X-Vault-Index headers until merkle sync completes.

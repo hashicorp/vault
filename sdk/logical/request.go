@@ -214,6 +214,12 @@ type Request struct {
 	// in response headers; it's attached to the request rather than the response
 	// because not all requests yields non-nil responses.
 	responseState *WALState
+
+	// ClientID is the identity of the caller. If the token is associated with an
+	// entity, it will be the same as the EntityID . If the token has no entity,
+	// this will be the sha256(sorted policies + namespace) associated with the
+	// client token.
+	ClientID string
 }
 
 // Clone returns a deep copy of the request by using copystructure

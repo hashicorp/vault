@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/cache: Use an in-process listener between consul-template and vault-agent when caching is enabled and either templates or a listener is defined
+```

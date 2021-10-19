@@ -1,9 +1,11 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -64,14 +66,25 @@ type Vault struct {
 	Retry            *Retry      `hcl:"retry"`
 }
 
+// transportDialer is an interface that allows passing a custom dialer function
+// to an HTTP client's transport config
+type transportDialer interface {
+	// Dial is intended to match https://pkg.go.dev/net#Dialer.Dial
+	Dial(network, address string) (net.Conn, error)
+
+	// DialContext is intended to match https://pkg.go.dev/net#Dialer.DialContext
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool        `hcl:"-"`
-	ForceAutoAuthToken  bool        `hcl:"-"`
-	EnforceConsistency  string      `hcl:"enforce_consistency"`
-	WhenInconsistent    string      `hcl:"when_inconsistent"`
-	Persist             *Persist    `hcl:"persist"`
+	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool            `hcl:"-"`
+	ForceAutoAuthToken  bool            `hcl:"-"`
+	EnforceConsistency  string          `hcl:"enforce_consistency"`
+	WhenInconsistent    string          `hcl:"when_inconsistent"`
+	Persist             *Persist        `hcl:"persist"`
+	InProcDialer        transportDialer `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -203,8 +216,8 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if result.Cache != nil {
-		if len(result.Listeners) < 1 {
-			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		if len(result.Listeners) < 1 && len(result.Templates) < 1 {
+			return nil, fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
 		if result.Cache.UseAutoAuthToken {

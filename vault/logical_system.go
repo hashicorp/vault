@@ -2818,6 +2818,10 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	if unwrapNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
 	unwrapCtx := namespace.ContextWithNamespace(ctx, unwrapNS)
 
 	var response string

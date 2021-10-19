@@ -245,7 +245,8 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				A comma-separated list of extensions that certificates can have when signed.
-				To allow any extensions, set this to an empty string.
+				An empty list means that no extension overrides are allowed by an end-user; explicitly
+				specify '*' to allow any extensions to be set.
 				`,
 			},
 			"default_critical_options": {

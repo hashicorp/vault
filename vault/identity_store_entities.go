@@ -373,6 +373,8 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 		aliasMap["creation_time"] = ptypes.TimestampString(alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(alias.LastUpdateTime)
+		aliasMap["local"] = alias.Local
+		aliasMap["custom_metadata"] = alias.CustomMetadata
 
 		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
@@ -770,6 +772,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
 		i.localNode.HAState() == consts.PerfStandby
 	var fromEntityGroups []*identity.Group
+
+	toEntityAccessors := make(map[string]struct{})
+
+	for _, alias := range toEntity.Aliases {
+		if _, ok := toEntityAccessors[alias.MountAccessor]; !ok {
+			toEntityAccessors[alias.MountAccessor] = struct{}{}
+		}
+	}
+
 	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -799,6 +810,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
+			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
+				i.logger.Warn("skipping from_entity alias during entity merge as to_entity has an alias with its accessor", "from_entity", fromEntityID, "skipped_alias", alias.ID)
+				continue
+			}
 			// Add the alias to the desired entity
 			toEntity.Aliases = append(toEntity.Aliases, alias)
 		}

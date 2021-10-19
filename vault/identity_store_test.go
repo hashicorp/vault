@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -93,11 +94,12 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ID:            "alias1",
-		CanonicalID:   "entity1",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias1",
+		CanonicalID:    "entity1",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity1"),
 	}
 	entity := &identity.Entity{
 		ID:       "entity1",
@@ -107,8 +109,8 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 			alias,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity1"),
 	}
-	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
@@ -116,11 +118,12 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	alias2 := &identity.Alias{
-		ID:            "alias2",
-		CanonicalID:   "entity2",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "GITHUBUSER",
+		ID:             "alias2",
+		CanonicalID:    "entity2",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "GITHUBUSER",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
 		ID:       "entity2",
@@ -130,8 +133,8 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 			alias2,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity2"),
 	}
-	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
@@ -242,7 +245,8 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 
 func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	ctx := namespace.RootContext(nil)
-	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, ghAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
 	alias := &logical.Alias{
 		MountType:     "github",
 		MountAccessor: ghAccessor,
@@ -294,7 +298,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":           "githubuser2",
 			"canonical_id":   entity.ID,
-			"mount_accessor": ghAccessor,
+			"mount_accessor": upAccessor,
 		},
 	}
 
@@ -547,11 +551,12 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ID:            "alias1",
-		CanonicalID:   "entity1",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias1",
+		CanonicalID:    "entity1",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity1"),
 	}
 	entity := &identity.Entity{
 		ID:       "entity1",
@@ -561,19 +566,20 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity1"),
 	}
-	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	alias2 := &identity.Alias{
-		ID:            "alias2",
-		CanonicalID:   "entity2",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias2",
+		CanonicalID:    "entity2",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
 		ID:       "entity2",
@@ -583,9 +589,8 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias2,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity2"),
 	}
-
-	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity2, nil, true)
 	if err != nil {
@@ -665,6 +670,48 @@ func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*Id
 	}
 
 	return c.identityStore, meGH.Accessor, c, root
+}
+
+func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, string, *Core) {
+	// Setup 2 auth backends, github and userpass
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, _, _ := TestCoreUnsealed(t)
+
+	githubMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err = c.enableCredential(ctx, githubMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+
+	err = c.enableCredential(ctx, userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return c.identityStore, githubMe.Accessor, userpassMe.Accessor, c
+
 }
 
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {
