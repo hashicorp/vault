@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"database/sql/driver"
 	"fmt"
 )
 
@@ -17,6 +18,9 @@ type Error struct {
 	ServerName string
 	ProcName   string
 	LineNo     int32
+	// All lists all errors that were received from first to last.
+	// This includes the last one, which is described in the other members.
+	All []Error
 }
 
 func (e Error) Error() string {
@@ -65,9 +69,53 @@ func streamErrorf(format string, v ...interface{}) StreamError {
 }
 
 func badStreamPanic(err error) {
-	panic(err)
+	panic(streamErrorf("%v", err))
 }
 
 func badStreamPanicf(format string, v ...interface{}) {
 	panic(streamErrorf(format, v...))
+}
+
+// ServerError is returned when the server got a fatal error
+// that aborts the process and severs the connection.
+//
+// To get the errors returned before the process was aborted,
+// unwrap this error or call errors.As with a pointer to an
+// mssql.Error variable.
+type ServerError struct {
+	sqlError Error
+}
+
+func (e ServerError) Error() string {
+	return "SQL Server had internal error"
+}
+
+func (e ServerError) Unwrap() error {
+	return e.sqlError
+}
+
+// RetryableError is returned when an error was caused by a bad
+// connection at the start of a query and can be safely retried
+// using database/sql's automatic retry logic.
+//
+// In many cases database/sql's retry logic will transparently
+// handle this error, the retried call will return successfully,
+// and you won't even see this error. However, you may see this
+// error if the retry logic cannot successfully handle the error.
+// In that case you can get the underlying error by calling this
+// error's UnWrap function.
+type RetryableError struct {
+	err error
+}
+
+func (r RetryableError) Error() string {
+	return r.err.Error()
+}
+
+func (r RetryableError) Unwrap() error {
+	return r.err
+}
+
+func (r RetryableError) Is(err error) bool {
+	return err == driver.ErrBadConn
 }
