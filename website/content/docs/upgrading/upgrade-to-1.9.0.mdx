@@ -25,3 +25,16 @@ All calls to [create or update a role](https://www.vaultproject.io/api/secret/id
 must be checked to ensure that roles are not being created or updated with
 non-existent keys.
 
+### SSH Role Parameter `allowed_extensions` Behavior Change
+
+Prior versions of Vault allowed clients to specify any extension when requesting
+SSH certificate [signing requests](https://www.vaultproject.io/api/secret/ssh#sign-ssh-key)
+if their role had an `allowed_extensions` set to `""` or was missing.
+
+Now, Vault will reject a client request that specifies extensions if the role
+parameter `allowed_extensions` is empty or missing from the role they are
+associated with.
+
+To re-enable the old behavior, update the roles with a value
+of `"*"` to the `allowed_extensions` parameter allowing any/all extensions to be
+specified by clients.
