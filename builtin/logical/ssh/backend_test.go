@@ -205,7 +205,7 @@ func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 	return err
 }
 
-func TestBackend_allowed_users(t *testing.T) {
+func TestBackend_AllowedUsers(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -319,7 +319,7 @@ func TestBackend_allowed_users(t *testing.T) {
 	}
 }
 
-func TestBackend_allowed_users_template(t *testing.T) {
+func TestBackend_AllowedUsersTemplate(t *testing.T) {
 	testAllowedUsersTemplate(t,
 		"{{ identity.entity.metadata.ssh_username }}",
 		testUserName, map[string]string{
@@ -328,7 +328,7 @@ func TestBackend_allowed_users_template(t *testing.T) {
 	)
 }
 
-func TestBackend_allowed_users_template_with_static_prefix(t *testing.T) {
+func TestBackend_AllowedUsersTemplate_WithStaticPrefix(t *testing.T) {
 	testAllowedUsersTemplate(t,
 		"ssh-{{ identity.entity.metadata.ssh_username }}",
 		"ssh-"+testUserName, map[string]string{
