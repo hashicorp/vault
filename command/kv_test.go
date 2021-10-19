@@ -30,23 +30,23 @@ func retryKVCommand(t *testing.T, cmdFunc func() (int, string)) (int, string) {
 
 	// Loop until return message does not indicate upgrade, or timeout.
 	timeout := time.After(20 * time.Second)
-	for {
-		code, combined = cmdFunc()
+	ticker := time.Tick(time.Second)
 
-		// This is an error if a v1 mount, but test case case doesn't
-		// currently contain the information to know the difference.
-		if strings.Contains(combined, "Upgrading from non-versioned to versioned") {
-			select {
-			case <-timeout:
-				t.Errorf("timeout expired waiting for upgrade: %q", combined)
+	for {
+		select {
+		case <-timeout:
+			t.Errorf("timeout expired waiting for upgrade: %q", combined)
+			return code, combined
+		case <-ticker:
+			code, combined = cmdFunc()
+
+			// This is an error if a v1 mount, but test case doesn't
+			// currently contain the information to know the difference.
+			if !strings.Contains(combined, "Upgrading from non-versioned to versioned") {
 				return code, combined
-			default:
 			}
-			continue
 		}
-		break
 	}
-	return code, combined
 }
 
 func kvPutWithRetry(t *testing.T, client *api.Client, args []string) (int, string) {

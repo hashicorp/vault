@@ -891,24 +891,27 @@ func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Sec
 	var err error
 	var resp *api.Secret
 
-	maxAttempts := 10
-	for i := 0; i < maxAttempts; i++ {
-		resp, err = req()
+	// Loop until return message does not indicate upgrade, or timeout.
+	timeout := time.After(20 * time.Second)
+	ticker := time.Tick(time.Second)
 
-		if err == nil {
-			break
+	for {
+		select {
+		case <-timeout:
+			t.Error("timeout expired waiting for upgrade")
+		case <-ticker:
+			resp, err = req()
+
+			if err == nil {
+				return resp, err
+			}
+
+			responseError := err.(*api.ResponseError)
+			if !strings.Contains(responseError.Error(), "Upgrading from non-versioned to versioned data") {
+				return resp, err
+			}
 		}
-
-		responseError := err.(*api.ResponseError)
-		if !strings.Contains(responseError.Error(), "Upgrading from non-versioned to versioned data") {
-			break
-		}
-
-		t.Logf("KV request attempt %d of %d failed due to upgrade", i + 1, maxAttempts)
-		time.Sleep(time.Second)
 	}
-
-	return resp, err
 }
 
 func TestHandler_Patch_NotFound(t *testing.T) {
