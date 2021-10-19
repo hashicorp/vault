@@ -536,12 +536,8 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 // Validates that the combination of keyType, keyBits, and hashBits are
 // valid together; replaces individual calls to ValidateSignatureLength and
 // ValidateKeyTypeLength.
-func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits int) error {
+func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) error {
 	if err := ValidateKeyTypeLength(keyType, keyBits); err != nil {
-		return err
-	}
-
-	if err := ValidateSignatureLength(hashBits); err != nil {
 		return err
 	}
 
@@ -552,12 +548,33 @@ func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits int) e
 		// the "ec" key type.
 		expectedHashBits, present := expectedNISTPCurveHashBits[keyBits]
 		if !present {
+			// Because this is indexed over the NIST P-curve key length
+			// (224, 256, 384, 521) and it was validated above by the
+			// ValidKeyTypeLength(...) call, we panic here as this map
+			// is constructed at compile time to match.
 			panic(fmt.Sprintf("Unexpected NIST P-curve key length approved by ValidateKeyTypeLength: %d", keyBits))
 		}
 
-		if expectedHashBits != hashBits {
-			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", hashBits, keyBits)
+		if expectedHashBits != *hashBits && *hashBits != -1 {
+			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, keyBits)
+		} else if *hashBits == -1 {
+			*hashBits = expectedHashBits
 		}
+	} else if keyType == "rsa" && *hashBits == -1 {
+		// To match previous behavior (and ignoring recommendations of hash
+		// size to match RSA key sizes), default to SHA-2-256.
+		*hashBits = 256
+	} /* else if keyType == "ed25519" {
+		// No-op; ed25519 and ed448 internally specify their own hash and
+		// we do not need to select one. Double hashing isn't supported in
+		// certificate signing.
+	} */
+
+	// Note that this check must come after we've selected a value for
+	// hashBits above, in the event it was left as the default, but we
+	// were allowed to update it.
+	if err := ValidateSignatureLength(*hashBits); err != nil || *hashBits == -1 {
+		return err
 	}
 
 	return nil

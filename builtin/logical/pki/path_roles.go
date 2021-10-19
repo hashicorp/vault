@@ -625,7 +625,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		), nil
 	}
 
-	if err := certutil.ValidateKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, entry.SignatureBits); err != nil {
+	if err := certutil.ValidateKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, &entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
