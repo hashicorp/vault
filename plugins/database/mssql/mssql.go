@@ -342,7 +342,7 @@ func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) 
 
 func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	stmts := changePass.Statements.Commands
-	if len(stmts) == 0 {
+	if len(stmts) == 0 && !m.containedDB {
 		stmts = []string{alterLoginSQL}
 	}
 
