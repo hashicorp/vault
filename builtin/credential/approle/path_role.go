@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/parseip"
+
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
@@ -816,6 +818,10 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 	if role.SecretIDPrefix == "" {
 		role.SecretIDPrefix = secretIDPrefix
 		needsUpgrade = true
+	}
+
+	for i, cidr := range role.SecretIDBoundCIDRs {
+		role.SecretIDBoundCIDRs[i] = parseip.TrimLeadingZeroes(cidr)
 	}
 
 	if role.TokenPeriod == 0 && role.Period > 0 {

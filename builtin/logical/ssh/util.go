@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/parseip"
+
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -142,11 +144,11 @@ func cidrListContainsIP(ip, cidrList string) (bool, error) {
 		return false, fmt.Errorf("IP does not belong to role")
 	}
 	for _, item := range strings.Split(cidrList, ",") {
-		_, cidrIPNet, err := net.ParseCIDR(item)
+		_, cidrIPNet, err := parseip.ParseCIDR(item)
 		if err != nil {
 			return false, fmt.Errorf("invalid CIDR entry %q", item)
 		}
-		if cidrIPNet.Contains(net.ParseIP(ip)) {
+		if cidrIPNet.Contains(parseip.ParseIP(ip)) {
 			return true, nil
 		}
 	}

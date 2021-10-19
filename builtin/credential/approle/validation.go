@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/parseip"
+
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -110,6 +112,25 @@ func (b *backend) secretIDAccessorLock(secretIDAccessor string) *locksutil.LockE
 	return locksutil.LockForKey(b.secretIDAccessorLocks, secretIDAccessor)
 }
 
+func decodeSecretIDStorageEntry(entry *logical.StorageEntry) (*secretIDStorageEntry, error) {
+	result := secretIDStorageEntry{}
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	cleanup := func(in []string) []string {
+		var out []string
+		for _, s := range in {
+			out = append(out, parseip.TrimLeadingZeroes(s))
+		}
+		return out
+	}
+
+	result.CIDRList = cleanup(result.CIDRList)
+	result.TokenBoundCIDRs = cleanup(result.TokenBoundCIDRs)
+	return &result, nil
+}
+
 // nonLockedSecretIDStorageEntry fetches the secret ID properties from physical
 // storage. The entry will be indexed based on the given HMACs of both role
 // name and the secret ID. This method will not acquire secret ID lock to fetch
@@ -134,8 +155,8 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 		return nil, nil
 	}
 
-	result := secretIDStorageEntry{}
-	if err := entry.DecodeJSON(&result); err != nil {
+	result, err := decodeSecretIDStorageEntry(entry)
+	if err != nil {
 		return nil, err
 	}
 
@@ -154,12 +175,12 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 	}
 
 	if persistNeeded {
-		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC, &result); err != nil {
+		if err := b.nonLockedSetSecretIDStorageEntry(ctx, s, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC, result); err != nil {
 			return nil, fmt.Errorf("failed to upgrade role storage entry %w", err)
 		}
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 // nonLockedSetSecretIDStorageEntry creates or updates a secret ID entry at the
