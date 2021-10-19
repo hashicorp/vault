@@ -1,3 +1,0 @@
-```release-note:enhancement
-cli/jwt: Allow users to opt-out `skip_browser=true` of automatic browser launching during `vault login`
-```
