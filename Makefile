@@ -244,12 +244,6 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-# Tell packagespec where to write its CircleCI config.
-PACKAGESPEC_CIRCLECI_CONFIG := .circleci/config/@build-release.yml
-
-# Tell packagespec to re-run 'make ci-config' whenever updating its own CI config.
-PACKAGESPEC_HOOK_POST_CI_CONFIG := $(MAKE) ci-config
-
 .PHONY: ci-config
 ci-config:
 	@$(MAKE) -C .circleci ci-config
@@ -261,4 +255,16 @@ ci-verify:
 
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
--include packagespec.mk
+.PHONY: build
+build: static-dist
+	@echo "--> Building go"
+	@go build -v -tags "${GO_TAGS}" -ldflags " -X $VERSION_PKG_PATH.Version=${VAULT_VERSION}" -o dist/vault
+
+version:
+ifneq (,$(wildcard sdk/version/version_base.go))
+	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+else
+	@$(CURDIR)/scripts/version.sh version/version.go
+endif
+
+.PHONY: version
