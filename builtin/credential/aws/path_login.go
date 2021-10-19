@@ -20,11 +20,11 @@ import (
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/awsutil"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -348,8 +348,8 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 
 	// Verify extracts the authenticated attributes in the PKCS#7 signature, and verifies
 	// the authenticity of the content using 'dsa.PublicKey' embedded in the public certificate.
-	if pkcs7Data.Verify() != nil {
-		return nil, fmt.Errorf("failed to verify the signature")
+	if err := pkcs7Data.Verify(); err != nil {
+		return nil, fmt.Errorf("failed to verify the signature: %w", err)
 	}
 
 	// Check if the signature has content inside of it

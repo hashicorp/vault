@@ -10,7 +10,7 @@ require (
 	cloud.google.com/go v0.56.0
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.6.0
-	github.com/Azure/azure-storage-blob-go v0.11.0
+	github.com/Azure/azure-storage-blob-go v0.13.0
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.11
 	github.com/Microsoft/hcsshim v0.8.14 // indirect
@@ -43,9 +43,8 @@ require (
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 	github.com/dustin/go-humanize v1.0.0
 	github.com/elazarl/go-bindata-assetfs v1.0.1-0.20200509193318-234c15e7648f
-	github.com/fatih/color v1.11.0
+	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
-	github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.2.4
@@ -64,14 +63,15 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20201029210230-738cb3105cd0
 	github.com/hashicorp/go-gcp-common v0.7.0
-	github.com/hashicorp/go-hclog v0.16.1
-	github.com/hashicorp/go-kms-wrapping v0.5.16
+	github.com/hashicorp/go-hclog v0.16.2
+	github.com/hashicorp/go-kms-wrapping v0.6.7
 	github.com/hashicorp/go-memdb v1.0.2
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.6.7
 	github.com/hashicorp/go-rootcerts v1.0.2
+	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.2
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.2
@@ -88,26 +88,26 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.9.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.9.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.10.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.10.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.10.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.4.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.4.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.4.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.2.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.2.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.10.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.1
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.10.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.2.0
 	github.com/hashicorp/vault/api v1.1.2-0.20210713235431-1fc8af4c041f
-	github.com/hashicorp/vault/sdk v0.2.2-0.20210713235431-1fc8af4c041f
+	github.com/hashicorp/vault/sdk v0.2.2-0.20211005222123-93e045565e4a
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.0.0
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -116,8 +116,8 @@ require (
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/pretty v0.2.1
 	github.com/kr/text v0.2.0
-	github.com/lib/pq v1.8.0
-	github.com/mattn/go-colorable v0.1.8
+	github.com/lib/pq v1.10.3
+	github.com/mattn/go-colorable v0.1.11
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/miekg/dns v1.1.40 // indirect
@@ -136,7 +136,7 @@ require (
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oklog/run v1.0.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
-	github.com/oracle/oci-go-sdk v12.5.0+incompatible
+	github.com/oracle/oci-go-sdk v13.1.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/ory/dockertest/v3 v3.6.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -172,7 +172,7 @@ require (
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	golang.org/x/tools v0.0.0-20210101214203-2dba1e4ea05c
 	google.golang.org/api v0.29.0

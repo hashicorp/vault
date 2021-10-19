@@ -434,12 +434,19 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
 			MaxLeaseTTL:     2 * 24 * time.Hour,
 		},
+		NamespaceID: namespace.RootNamespace.ID,
+		namespace:   namespace.RootNamespace,
+	}
+
+	if ns != nil {
+		me.NamespaceID = ns.ID
+		me.namespace = ns
 	}
 
 	return &dynamicSystemView{c, me}

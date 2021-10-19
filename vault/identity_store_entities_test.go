@@ -987,7 +987,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	var resp *logical.Response
 
 	ctx := namespace.RootContext(nil)
-	is, githubAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, githubAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
 
 	registerData := map[string]interface{}{
 		"name":     "testentityname2",
@@ -1013,13 +1013,7 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	aliasRegisterData3 := map[string]interface{}{
 		"name":           "testaliasname3",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
-	}
-
-	aliasRegisterData4 := map[string]interface{}{
-		"name":           "testaliasname4",
-		"mount_accessor": githubAccessor,
+		"mount_accessor": upAccessor,
 		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
 
@@ -1039,7 +1033,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	// Set entity ID in alias registration data and register alias
 	aliasRegisterData1["entity_id"] = entityID1
-	aliasRegisterData2["entity_id"] = entityID1
 
 	aliasReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1053,13 +1046,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	// Register the alias
-	aliasReq.Data = aliasRegisterData2
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
 	entity1, err := is.MemDBEntityByID(entityID1, false)
 	if err != nil {
 		t.Fatal(err)
@@ -1067,8 +1053,8 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	if entity1 == nil {
 		t.Fatalf("failed to create entity: %v", err)
 	}
-	if len(entity1.Aliases) != 2 {
-		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1.Aliases))
+	if len(entity1.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1.Aliases))
 	}
 
 	registerReq.Data = registerData2
@@ -1080,13 +1066,12 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	entityID2 := resp.Data["id"].(string)
 	// Set entity ID in alias registration data and register alias
-	aliasRegisterData3["entity_id"] = entityID2
-	aliasRegisterData4["entity_id"] = entityID2
+	aliasRegisterData2["entity_id"] = entityID2
 
 	aliasReq = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "alias",
-		Data:      aliasRegisterData3,
+		Data:      aliasRegisterData2,
 	}
 
 	// Register the alias
@@ -1095,13 +1080,15 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	aliasRegisterData3["entity_id"] = entityID2
+
+	aliasReq.Data = aliasRegisterData3
+
 	// Register the alias
-	aliasReq.Data = aliasRegisterData4
 	resp, err = is.HandleRequest(ctx, aliasReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-
 	entity2, err := is.MemDBEntityByID(entityID2, false)
 	if err != nil {
 		t.Fatal(err)
@@ -1147,12 +1134,13 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity2Aliases := resp.Data["aliases"].([]interface{})
-	if len(entity2Aliases) != 4 {
-		t.Fatalf("bad: number of aliases in entity; expected: 4, actual: %d", len(entity2Aliases))
+	entity1Aliases := resp.Data["aliases"].([]interface{})
+	if len(entity1Aliases) != 2 {
+		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity1Aliases))
 	}
 
-	for _, aliasRaw := range entity2Aliases {
+	githubAliases := 0
+	for _, aliasRaw := range entity1Aliases {
 		alias := aliasRaw.(map[string]interface{})
 		aliasLookedUp, err := is.MemDBAliasByID(alias["id"].(string), false, false)
 		if err != nil {
@@ -1161,5 +1149,14 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		if aliasLookedUp == nil {
 			t.Fatalf("index for alias id %q is not updated", alias["id"].(string))
 		}
+		if aliasLookedUp.MountAccessor == githubAccessor {
+			githubAliases += 1
+		}
+	}
+
+	// Test that only 1 alias for the githubAccessor is present in the merged entity,
+	// as the github alias on entity2 should've been skipped in the merge
+	if githubAliases != 1 {
+		t.Fatalf("Unexcepted number of github aliases in merged entity; expected: 1, actual: %d", githubAliases)
 	}
 }
