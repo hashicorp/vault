@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/helper/parseip"
-
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	k8snet "k8s.io/utils/net"
 )
 
 // secretIDStorageEntry represents the information stored in storage
@@ -118,16 +117,30 @@ func decodeSecretIDStorageEntry(entry *logical.StorageEntry) (*secretIDStorageEn
 		return nil, err
 	}
 
-	cleanup := func(in []string) []string {
+	cleanup := func(in []string) ([]string, error) {
 		var out []string
 		for _, s := range in {
-			out = append(out, parseip.TrimLeadingZeroes(s))
+			_, ipn, err := k8snet.ParseCIDRSloppy(s)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, ipn.String())
 		}
-		return out
+		return out, nil
 	}
 
-	result.CIDRList = cleanup(result.CIDRList)
-	result.TokenBoundCIDRs = cleanup(result.TokenBoundCIDRs)
+	cidrList, err := cleanup(result.CIDRList)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding CIDRList field of secretid storage entry: %w", err)
+	}
+	result.CIDRList = cidrList
+
+	tokenCidrList, err := cleanup(result.TokenBoundCIDRs)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding TokenBoundCIDRs field of secretid storage entry: %w", err)
+	}
+	result.TokenBoundCIDRs = tokenCidrList
+
 	return &result, nil
 }
 

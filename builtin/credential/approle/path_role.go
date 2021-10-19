@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/parseip"
-
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
@@ -20,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	k8snet "k8s.io/utils/net"
 )
 
 // roleStorageEntry stores all the options that are set on an role
@@ -821,7 +820,11 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 	}
 
 	for i, cidr := range role.SecretIDBoundCIDRs {
-		role.SecretIDBoundCIDRs[i] = parseip.TrimLeadingZeroes(cidr)
+		_, ipn, err := k8snet.ParseCIDRSloppy(cidr)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding SecretIDBoundCIDRs field of role storage entry: %w", err)
+		}
+		role.SecretIDBoundCIDRs[i] = ipn.String()
 	}
 
 	if role.TokenPeriod == 0 && role.Period > 0 {
