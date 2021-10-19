@@ -26,18 +26,20 @@ func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
 	defer txn.Abort()
 
 	alias := &identity.Alias{
-		ID:            "testAliasID1",
-		CanonicalID:   "testEntityID",
-		MountType:     "testMountType",
-		MountAccessor: "testMountAccessor",
-		Name:          "testAliasName",
+		ID:             "testAliasID1",
+		CanonicalID:    "testEntityID",
+		MountType:      "testMountType",
+		MountAccessor:  "testMountAccessor",
+		Name:           "testAliasName",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("testEntityID"),
 	}
 	alias2 := &identity.Alias{
-		ID:            "testAliasID2",
-		CanonicalID:   "testEntityID",
-		MountType:     "testMountType",
-		MountAccessor: "testMountAccessor",
-		Name:          "testAliasName2",
+		ID:             "testAliasID2",
+		CanonicalID:    "testEntityID",
+		MountType:      "testMountType",
+		MountAccessor:  "testMountAccessor2",
+		Name:           "testAliasName2",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("testEntityID"),
 	}
 	entity := &identity.Entity{
 		ID:       "testEntityID",
