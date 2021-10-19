@@ -256,12 +256,13 @@ github.com/couchbase/gocbcore/v9/memd
 github.com/couchbase/gocbcore/v9/scram
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
+# github.com/denisenkom/go-mssqldb v0.11.0
 ## explicit
 github.com/denisenkom/go-mssqldb
 github.com/denisenkom/go-mssqldb/internal/cp
 github.com/denisenkom/go-mssqldb/internal/decimal
 github.com/denisenkom/go-mssqldb/internal/querytext
+github.com/denisenkom/go-mssqldb/msdsn
 # github.com/denverdino/aliyungo v0.0.0-20170926055100-d3308649c661
 github.com/denverdino/aliyungo/common
 github.com/denverdino/aliyungo/ecs
