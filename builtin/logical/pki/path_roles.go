@@ -207,10 +207,11 @@ the key_type.`,
 
 			"signature_bits": &framework.FieldSchema{
 				Type:    framework.TypeInt,
-				Default: 256,
+				Default: -1,
 				Description: `The number of bits to use in the signature
-algorithm. Defaults to 256 for SHA256.
-Set to 384 for SHA384 and 512 for SHA512.`,
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to -1 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 			},
 
 			"key_usage": &framework.FieldSchema{
