@@ -33,6 +33,14 @@ import (
 	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
 
+// Mapping of NIST P-Curve's key length to expected signature bits.
+var expectedNISTPCurveHashBits = map[int]int{
+	224: 256,
+	256: 256,
+	384: 384,
+	521: 512,
+}
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -525,13 +533,45 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 	return asn1.ObjectIdentifier(ret), nil
 }
 
-func ValidateSignatureLength(keyBits int) error {
-	switch keyBits {
+// Validates that the combination of keyType, keyBits, and hashBits are
+// valid together; replaces individual calls to ValidateSignatureLength and
+// ValidateKeyTypeLength.
+func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits int) error {
+	if err := ValidateKeyTypeLength(keyType, keyBits); err != nil {
+		return err
+	}
+
+	if err := ValidateSignatureLength(hashBits); err != nil {
+		return err
+	}
+
+	if keyType == "ec" {
+		// To comply with BSI recommendations Section 4.2 and Mozilla root
+		// store policy section 5.1.2, enforce that NIST P-curves use a hash
+		// length corresponding to curve length. Note that ed25519 does not
+		// the "ec" key type.
+		expectedHashBits, present := expectedNISTPCurveHashBits[keyBits]
+		if !present {
+			panic(fmt.Sprintf("Unexpected NIST P-curve key length approved by ValidateKeyTypeLength: %d", keyBits))
+		}
+
+		if expectedHashBits != hashBits {
+			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", hashBits, keyBits)
+		}
+	}
+
+	return nil
+}
+
+// Validates that the length of the hash (in bits) used in the signature
+// calculation is a known, approved value.
+func ValidateSignatureLength(hashBits int) error {
+	switch hashBits {
 	case 256:
 	case 384:
 	case 512:
 	default:
-		return fmt.Errorf("unsupported signature algorithm: %d", keyBits)
+		return fmt.Errorf("unsupported hash signature algorithm: %d", hashBits)
 	}
 	return nil
 }
