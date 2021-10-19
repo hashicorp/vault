@@ -839,7 +839,7 @@ jobs:
         - bin
         root: .
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.16122
     - GO_TAGS: ''
     - GO_VERSION: 1.16.7
     - GOTESTSUM_VERSION: 0.5.2
@@ -1131,7 +1131,7 @@ jobs:
     - store_artifacts:
         path: /tmp/testlogs
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.16122
     - GO_TAGS: ''
   freebsd_386_package:
     docker:
@@ -1396,7 +1396,7 @@ jobs:
     - store_artifacts:
         path: /tmp/testlogs
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.16122
     - GO_TAGS: ''
   freebsd_amd64_package:
     docker:
@@ -1918,7 +1918,7 @@ jobs:
     - store_artifacts:
         path: /tmp/testlogs
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.16122
     - GO_TAGS: ''
   netbsd_amd64_package:
     docker:
@@ -2391,7 +2391,7 @@ jobs:
         paths:
         - /go/pkg/mod
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.16122
     - GO_TAGS: ''
     - GO_VERSION: 1.16.7
     - GOTESTSUM_VERSION: 0.5.2
@@ -2590,7 +2590,7 @@ jobs:
     - store_artifacts:
         path: /tmp/testlogs
     environment:
-    - CIRCLECI_CLI_VERSION: 0.1.5546
+    - CIRCLECI_CLI_VERSION: 0.1.16122
     - GO_TAGS: ''
 workflows:
   build-ee2aaa4372d8f170:
