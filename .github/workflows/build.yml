@@ -64,6 +64,7 @@ jobs:
       - name: Setup go tools
         run: |
           go get golang.org/x/tools/cmd/goimports
+          go get https://github.com/mvdan/gofumpt
           go get github.com/hashicorp/go-bindata
           go get github.com/hashicorp/go-bindata/go-bindata
           go get github.com/elazarl/go-bindata-assetfs
