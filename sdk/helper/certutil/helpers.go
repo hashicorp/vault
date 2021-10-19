@@ -546,14 +546,7 @@ func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) 
 		// store policy section 5.1.2, enforce that NIST P-curves use a hash
 		// length corresponding to curve length. Note that ed25519 does not
 		// the "ec" key type.
-		expectedHashBits, present := expectedNISTPCurveHashBits[keyBits]
-		if !present {
-			// Because this is indexed over the NIST P-curve key length
-			// (224, 256, 384, 521) and it was validated above by the
-			// ValidKeyTypeLength(...) call, we panic here as this map
-			// is constructed at compile time to match.
-			panic(fmt.Sprintf("Unexpected NIST P-curve key length approved by ValidateKeyTypeLength: %d", keyBits))
-		}
+		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
 
 		if expectedHashBits != *hashBits && *hashBits != -1 {
 			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, keyBits)
@@ -605,12 +598,8 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 			return fmt.Errorf("unsupported bit length for RSA key: %d", keyBits)
 		}
 	case "ec":
-		switch keyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
+		_, present := expectedNISTPCurveHashBits[keyBits]
+		if !present {
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
 	case "any", "ed25519":
