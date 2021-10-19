@@ -29,4 +29,9 @@ non-existent keys.
 
 In Vault 1.9, the internal HTTP Request count
 [API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests)
-will be removed from the product.
+will be removed from the product. Calls to the endpoint will result in a 404
+error with a message stating that `functionality on this path has been removed`.
+
+Vault does not make backwards compatible guarantees on internal APIs (those
+prefaced with `sys/internal`). They are subject to change and may disappear
+without notice.
