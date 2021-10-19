@@ -827,7 +827,6 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		KeyType:       "rsa",
 		KeyBits:       2048,
 		RequireCN:     true,
-		SignatureBits: -1,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
