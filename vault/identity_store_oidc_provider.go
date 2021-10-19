@@ -1414,6 +1414,10 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 			return nil, err
 		}
 
+		if entry == nil {
+			continue
+		}
+
 		var key namedKey
 		if err := entry.DecodeJSON(&key); err != nil {
 			return nil, err
