@@ -132,7 +132,7 @@ func createV2BoltSchema(tx *bolt.Tx) error {
 	// create the buckets for tokens and leases
 	for _, bucket := range []string{TokenType, LeaseType, lookupType} {
 		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
-			return fmt.Errorf("failed to create token bucket: %w", err)
+			return fmt.Errorf("failed to create %s bucket: %w", bucket, err)
 		}
 	}
 
