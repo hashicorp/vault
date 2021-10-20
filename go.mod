@@ -132,7 +132,7 @@ require (
 	github.com/lib/pq v1.10.3
 	github.com/mattn/go-colorable v0.1.11
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
+	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
 	github.com/miekg/dns v1.1.40 // indirect
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.0.0
@@ -167,7 +167,6 @@ require (
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/smartystreets/goconvey v1.6.4 // indirect
-	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
