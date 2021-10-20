@@ -278,8 +278,10 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 		resp.Data["message"] = nil
 	} else {
-		resp.Data["state"] = "Finished with error"
+		resp.Data["state"] = "Error"
 		resp.Data["error"] = b.tidyStatus.err.Error()
+		// Don't clear the message so that it serves as a hint about when
+		// the error ocurred.
 	}
 
 	return resp, nil
@@ -370,9 +372,8 @@ operation, or the most recent if none is currently running.
 The result includes the following fields:
 * 'safety_buffer': the value of this parameter when initiating the tidy operation
 * 'tidy_cert_store': the value of this parameter when initiating the tidy operation
-* 'tidy_revoked_certs': the value of this or the tidy_revocation_list parameter
-  when initiating the tidy operation
-* 'state': one of "Inactive", "Running", "Finished", "Finished with error"
+* 'tidy_revoked_certs': the value of this parameter when initiating the tidy operation
+* 'state': one of "Inactive", "Running", "Finished", "Error"
 * 'error': the error message, if the operation ran into an error
 * 'time_started': the time the operation started
 * 'time_finished': the time the operation finished
