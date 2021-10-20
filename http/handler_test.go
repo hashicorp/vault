@@ -903,7 +903,7 @@ func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Sec
 			resp, err = req()
 
 			if err == nil {
-				return resp, err
+				return resp, nil
 			}
 
 			responseError := err.(*api.ResponseError)

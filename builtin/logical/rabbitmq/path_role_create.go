@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
-	rabbithole "github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
 const (
@@ -93,7 +93,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// Register the generated credentials in the backend, with the RabbitMQ server
 	resp, err := client.PutUser(username, rabbithole.UserSettings{
 		Password: password,
-		Tags:     role.Tags,
+		Tags:     []string{role.Tags},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new user with the generated credentials")
