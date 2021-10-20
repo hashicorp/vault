@@ -31,6 +31,7 @@ const (
 	testIP              = "127.0.0.1"
 	testUserName        = "vaultssh"
 	testAdminUser       = "vaultssh"
+	testCaKeyType       = "ca"
 	testOTPKeyType      = "otp"
 	testDynamicKeyType  = "dynamic"
 	testCIDRList        = "127.0.0.1/32"
@@ -204,7 +205,7 @@ func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 	return nil
 }
 
-func TestBackend_allowed_users(t *testing.T) {
+func TestBackend_AllowedUsers(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -316,6 +317,24 @@ func TestBackend_allowed_users(t *testing.T) {
 		resp.Data["username"] != "test" {
 		t.Fatalf("failed to create credential: resp:%#v", resp)
 	}
+}
+
+func TestBackend_AllowedUsersTemplate(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName, map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_AllowedUsersTemplate_WithStaticPrefix(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"ssh-{{ identity.entity.metadata.ssh_username }}",
+		"ssh-"+testUserName, map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
 }
 
 func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -1612,6 +1631,63 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	return cluster, userpassToken
+}
+
+func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": testEntityMetadata,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"allowed_users":           testAllowedUsersTemplate,
+		"allowed_users_template":  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key":       testCAPublicKey,
+		"valid_principals": expectedValidPrincipal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if actualPrincipals[0] != expectedValidPrincipal {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{expectedValidPrincipal}),
+		)
+	}
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {

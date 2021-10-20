@@ -37,7 +37,7 @@ require (
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-	github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
+	github.com/denisenkom/go-mssqldb v0.11.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200309214505-aa6a9891b09c+incompatible
 	github.com/docker/go-connections v0.4.0
@@ -99,9 +99,9 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.9.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.9.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.10.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.11.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1-0.20210929181055-821e911b1751
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.3.1-0.20210902192635-c3ee7c5bc378
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
@@ -132,7 +132,7 @@ require (
 	github.com/lib/pq v1.10.3
 	github.com/mattn/go-colorable v0.1.11
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
+	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
 	github.com/miekg/dns v1.1.40 // indirect
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.0.0
@@ -167,7 +167,6 @@ require (
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/smartystreets/goconvey v1.6.4 // indirect
-	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
