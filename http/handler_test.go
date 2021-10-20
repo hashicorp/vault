@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
@@ -884,6 +885,35 @@ func TestHandler_Patch_BadContentTypeHeader(t *testing.T) {
 	}
 }
 
+func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Secret, error) {
+	t.Helper()
+
+	var err error
+	var resp *api.Secret
+
+	// Loop until return message does not indicate upgrade, or timeout.
+	timeout := time.After(20 * time.Second)
+	ticker := time.Tick(time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			t.Error("timeout expired waiting for upgrade")
+		case <-ticker:
+			resp, err = req()
+
+			if err == nil {
+				return resp, err
+			}
+
+			responseError := err.(*api.ResponseError)
+			if !strings.Contains(responseError.Error(), "Upgrading from non-versioned to versioned data") {
+				return resp, err
+			}
+		}
+	}
+}
+
 func TestHandler_Patch_NotFound(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -918,7 +948,10 @@ func TestHandler_Patch_NotFound(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
+	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
+		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
+	})
+
 	if err == nil {
 		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
 	}
@@ -976,7 +1009,10 @@ func TestHandler_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", writeData)
+	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
+		return c.Logical().Write("kv/data/foo", writeData)
+	})
+
 	if err != nil {
 		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
 	}
@@ -987,7 +1023,10 @@ func TestHandler_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err = c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", patchData)
+	resp, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", patchData)
+	})
+
 	if err != nil {
 		t.Fatalf("patch request failed, err: %#v, resp: %#v\n", err, resp)
 	}
