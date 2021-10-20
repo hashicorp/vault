@@ -17,8 +17,8 @@ func Test_TrimLeadingZeroes(t *testing.T) {
 		{"2001:db8:122:344::192.0.2.033", "2001:db8:122:344::192.0.2.33"},
 	}
 	for _, tt := range tests {
-		if got := TrimLeadingZeroes(tt.in); got != tt.want {
-			t.Errorf("TrimLeadingZeroes() = %v, want %v", got, tt.want)
+		if got := TrimLeadingZeroesIP(tt.in); got != tt.want {
+			t.Errorf("TrimLeadingZeroesIP() = %v, want %v", got, tt.want)
 		}
 	}
 
