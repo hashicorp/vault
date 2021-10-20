@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
-	k8snet "k8s.io/utils/net"
 )
 
 // Creates a new RSA key pair with the given key length. The private key will be
@@ -142,11 +141,11 @@ func cidrListContainsIP(ip, cidrList string) (bool, error) {
 		return false, fmt.Errorf("IP does not belong to role")
 	}
 	for _, item := range strings.Split(cidrList, ",") {
-		_, cidrIPNet, err := k8snet.ParseCIDRSloppy(item)
+		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
 			return false, fmt.Errorf("invalid CIDR entry %q", item)
 		}
-		if cidrIPNet.Contains(k8snet.ParseIPSloppy(ip)) {
+		if cidrIPNet.Contains(net.ParseIP(ip)) {
 			return true, nil
 		}
 	}
