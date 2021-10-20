@@ -1,4 +1,5 @@
-{{#basic-dropdown-hover renderInPlace=renderInPlace
+{{#basic-dropdown-hover
+  renderInPlace=renderInPlace
   verticalPosition=verticalPosition
   horizontalPosition=horizontalPosition
   matchTriggerWidth=matchTriggerWidth
@@ -8,14 +9,17 @@
   onOpen=onOpen
   onClose=onClose
   onFocus=onFocus
-  calculateInPlacePosition=calculateInPlacePosition as |dd|}}
+  calculateInPlacePosition=calculateInPlacePosition
+  as |dd|
+}}
   {{yield (assign
     dd
     (hash
       trigger=(component dd.trigger
         onMouseDown=(action "prevent")
         onMouseEnter=(action "open")
-        onMouseLeave=(action "close"))
+        onMouseLeave=(action "close")
+      )
       content=(component dd.content
         onMouseEnter=(action "open")
         onMouseLeave=(action "close")
