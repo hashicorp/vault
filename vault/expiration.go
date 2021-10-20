@@ -295,62 +295,6 @@ func revokeExponentialBackoff(attempt uint8) time.Duration {
 	return time.Duration(backoffTime)
 }
 
-// revokeIDFunc is invoked when a given ID is expired
-func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
-	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
-		releasePermit := func() {}
-		if m.revokePermitPool != nil {
-			m.logger.Trace("expiring lease; waiting for permit pool")
-			m.revokePermitPool.Acquire()
-			releasePermit = m.revokePermitPool.Release
-			m.logger.Trace("expiring lease; got permit pool")
-		}
-
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", ns.ID}})
-
-		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
-		revokeCtx = namespace.ContextWithNamespace(revokeCtx, ns)
-
-		go func() {
-			select {
-			case <-ctx.Done():
-			case <-m.quitCh:
-				cancel()
-			case <-revokeCtx.Done():
-			}
-		}()
-
-		select {
-		case <-m.quitCh:
-			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
-			releasePermit()
-			cancel()
-			return
-		case <-m.quitContext.Done():
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
-			releasePermit()
-			cancel()
-			return
-		default:
-		}
-
-		m.coreStateLock.RLock()
-		err := m.Revoke(revokeCtx, leaseID)
-		m.coreStateLock.RUnlock()
-		releasePermit()
-		cancel()
-		if err == nil {
-			return
-		}
-
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", ns.ID}})
-
-		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
-		time.Sleep((1 << attempt) * revokeRetryBase)
-	}
-	m.logger.Error("maximum revoke attempts reached", "lease_id", leaseID)
-}
-
 func getNumExpirationWorkers(c *Core, l log.Logger) int {
 	numWorkers := c.numExpirationWorkers
 
