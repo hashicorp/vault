@@ -148,16 +148,19 @@ jobs:
           binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
+      - name: Add Package names to env
+        run: |
+          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> $GITHUB_ENV
+          echo "DEB_PACKAGE=$(basename out/*.deb)" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.RPM_PACKAGE }}
+          path: out/${{ env.RPM_PACKAGE }}
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goarch }}.deb
-          path: out/${{ github.event.repository.name }}_${{ needs.get-product-version.outputs.product-version }}_*.deb #TODO: update action to upload
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: ${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.${{ matrix.goarch }}.rpm
-          path: out/${{ github.event.repository.name }}-${{ needs.get-product-version.outputs.product-version }}.*.rpm #TODO: update action to upload
+          name: ${{ env.DEB_PACKAGE }}
+          path: out/${{ env.DEB_PACKAGE }}
 
   build-darwin:
     needs: get-product-version
