@@ -87,7 +87,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
-	b.tidyStatus = &tidyStatus{state: tidyStatusNotRun}
+	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 
 	return &b
@@ -108,7 +108,7 @@ type backend struct {
 type tidyStatusState int
 
 const (
-	tidyStatusNotRun tidyStatusState = iota
+	tidyStatusInactive tidyStatusState = iota
 	tidyStatusStarted
 	tidyStatusFinished
 )
@@ -125,8 +125,8 @@ type tidyStatus struct {
 	timeStarted      time.Time
 	timeFinished     time.Time
 	message          string
-	certStoreCount   int
-	revokedCertCount int
+	certStoreCount   uint
+	revokedCertCount uint
 }
 
 const backendHelp = `

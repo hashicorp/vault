@@ -242,21 +242,21 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"safety_buffer":      "",
-			"tidy_cert_store":    "",
-			"tidy_revoked_certs": "",
+			"safety_buffer":      nil,
+			"tidy_cert_store":    nil,
+			"tidy_revoked_certs": nil,
 
-			"state":              "Not run",
-			"error":              "",
-			"time_started":       "",
-			"time_finished":      "",
-			"message":            "",
-			"cert_store_count":   "",
-			"revoked_cert_count": "",
+			"state":              "Inactive",
+			"error":              nil,
+			"time_started":       nil,
+			"time_finished":      nil,
+			"message":            nil,
+			"cert_store_count":   nil,
+			"revoked_cert_count": nil,
 		},
 	}
 
-	if b.tidyStatus.state == tidyStatusNotRun {
+	if b.tidyStatus.state == tidyStatusInactive {
 		return resp, nil
 	}
 
@@ -276,10 +276,10 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 	if b.tidyStatus.err == nil {
 		resp.Data["state"] = "Finished"
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
+		resp.Data["message"] = nil
 	} else {
 		resp.Data["state"] = "Finished with error"
 		resp.Data["error"] = b.tidyStatus.err.Error()
-		resp.Data["message"] = ""
 	}
 
 	return resp, nil
@@ -363,7 +363,21 @@ const pathTidyStatusHelpSyn = `
 Returns the status of the tidy operation.
 `
 
-// FIXME(victorr): Add a proper description.
 const pathTidyStatusHelpDesc = `
-This endpoint returns the status of the tidy operation.
+This is a read only endpoint that returns information about the current tidy
+operation, or the most recent if none is currently running.
+
+The result includes the following fields:
+* 'safety_buffer': the value of this parameter when initiating the tidy operation
+* 'tidy_cert_store': the value of this parameter when initiating the tidy operation
+* 'tidy_revoked_certs': the value of this or the tidy_revocation_list parameter
+  when initiating the tidy operation
+* 'state': one of "Inactive", "Running", "Finished", "Finished with error"
+* 'error': the error message, if the operation ran into an error
+* 'time_started': the time the operation started
+* 'time_finished': the time the operation finished
+* 'message': One of "Tidying certificate store: checking entry N of TOTAL" or
+  "Tidying revoked certificates: checking certificate N of TOTAL"
+* 'cert_store_count': The number of certificate storage entries deleted
+* 'revoked_cert_count': The number of revoked certificate entries deleted
 `
