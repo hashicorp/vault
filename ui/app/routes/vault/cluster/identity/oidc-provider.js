@@ -13,6 +13,7 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
   }
 
   _redirect(url, params) {
+    if (!url) return;
     let redir = this._buildUrl(url, params);
     this.win.location.replace(redir);
   }
@@ -27,23 +28,27 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
         error: 'login_required',
       });
     } else if (!currentToken || 'login' === qp.prompt?.toLowerCase()) {
+      let shouldLogout = !!currentToken;
       if ('login' === qp.prompt?.toLowerCase()) {
-        this.auth.deleteCurrentToken();
+        // need to remove before redirect to avoid infinite loop
         qp.prompt = null;
       }
-      let { cluster_name } = this.paramsFor('vault.cluster');
-      let url = this.router.urlFor(transition.to.name, transition.to.params, { queryParams: qp });
-      return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: url } });
+      return this._redirectToAuth(transition.to.params?.provider_name, qp, shouldLogout);
     }
   }
 
-  _redirectToAuth(oidcName, queryParams, logout = false) {
+  _redirectToAuth(provider_name, queryParams, logout = false) {
     let { cluster_name } = this.paramsFor('vault.cluster');
-    let currentRoute = this.router.urlFor(PROVIDER, oidcName, { queryParams });
+    let url = this.router.urlFor(PROVIDER, cluster_name, provider_name, { queryParams });
+    // This is terrible, I'm sorry
+    // Need to do this because transitionTo (as used in auth-form) expects url without
+    // rootURL /ui/ at the beginning, but urlFor builds it in. We can't use currentRoute
+    // because it hasn't transitioned yet
+    url = url.replace(/^(\/?ui)/, '');
     if (logout) {
       this.auth.deleteCurrentToken();
     }
-    return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: currentRoute } });
+    return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: url } });
   }
 
   _buildUrl(urlString, params) {
@@ -72,11 +77,14 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
   }
 
   async model(params) {
-    let { oidc_name, ...qp } = params;
+    let { provider_name, ...qp } = params;
     let decodedRedirect = decodeURI(qp.redirect_uri);
-    let url = this._buildUrl(`${this.win.origin}/v1/identity/oidc/provider/${oidc_name}/authorize`, qp);
+    let endpoint = this._buildUrl(
+      `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`,
+      qp
+    );
     try {
-      const response = await this.auth.ajax(url, 'GET', {});
+      const response = await this.auth.ajax(endpoint, 'GET', {});
       if ('consent' === qp.prompt?.toLowerCase()) {
         return {
           consent: {
@@ -90,8 +98,8 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
     } catch (errorRes) {
       let resp = await errorRes.json();
       let code = resp.error;
-      if (code === 'max_age_violation') {
-        this._redirectToAuth(oidc_name, qp, true);
+      if (code === 'max_age_violation' || resp?.errors?.includes('permission denied')) {
+        this._redirectToAuth(provider_name, qp, true);
       } else if (code === 'invalid_redirect_uri') {
         return {
           error: {
