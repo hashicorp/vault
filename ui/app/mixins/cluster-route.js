@@ -21,9 +21,6 @@ export default Mixin.create({
 
   transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
-    if (OIDC_PROVIDER === this.router.currentRouteName || OIDC_PROVIDER === transition?.to?.name) {
-      return RSVP.resolve();
-    }
     if (
       targetRoute &&
       targetRoute !== this.routeName &&
@@ -82,6 +79,9 @@ export default Mixin.create({
       }
 
       return DR_REPLICATION_SECONDARY;
+    }
+    if ((transition && transition.targetName === OIDC_PROVIDER) || this.routeName === OIDC_PROVIDER) {
+      return OIDC_PROVIDER;
     }
     if (!isAuthed) {
       if ((transition && transition.targetName === OIDC_CALLBACK) || this.routeName === OIDC_CALLBACK) {
