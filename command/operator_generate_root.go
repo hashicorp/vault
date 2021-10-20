@@ -130,7 +130,8 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    "",
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage:      "The value to decode; setting this triggers a decode operation.",
+		Usage: "The value to decode; setting this triggers a decode operation. " +
+			" If the value is \"-\" then read the encoded token from stdin.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -326,6 +327,22 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 	if otp == "" {
 		c.UI.Error("Missing otp: use -otp to supply it")
 		return 1
+	}
+
+	if encoded == "-" {
+		// Pull our fake stdin if needed
+		stdin := (io.Reader)(os.Stdin)
+		if c.testStdin != nil {
+			stdin = c.testStdin
+		}
+
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, stdin); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to read from stdin: %s", err))
+			return 1
+		}
+
+		encoded = buf.String()
 	}
 
 	f := client.Sys().GenerateRootStatus
