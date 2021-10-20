@@ -21,11 +21,7 @@ export default class AuthInfoComponent extends Component {
   @service router;
 
   @tracked
-  fakeRenew = false;
-
-  get isRenewing() {
-    return this.fakeRenew || this.auth.isRenewing;
-  }
+  isRenewing = false;
 
   transitionToRoute() {
     this.router.transitionTo(...arguments);
@@ -38,10 +34,12 @@ export default class AuthInfoComponent extends Component {
 
   @action
   renewToken() {
-    this.fakeRenew = true;
+    this.isRenewing = true;
+    console.log('1');
     run.later(() => {
-      this.fakeRenew = false;
       this.auth.renew();
+      this.isRenewing = false;
+      console.log('2');
     }, 200);
   }
 
