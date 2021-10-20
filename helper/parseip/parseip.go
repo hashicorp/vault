@@ -22,9 +22,9 @@ func trimLeadingZeroes(s string) string {
 	return ""
 }
 
-// TrimLeadingZeroesIPv4 takes an IPv4 string and returns the input
+// trimLeadingZeroesIPv4 takes an IPv4 string and returns the input
 // trimmed of any excess leading zeroes in each octet.
-func TrimLeadingZeroesIPv4(s string) string {
+func trimLeadingZeroesIPv4(s string) string {
 	if len(s) == 0 {
 		return s
 	}
@@ -45,16 +45,16 @@ func TrimLeadingZeroesIPv4(s string) string {
 	return sb.String()
 }
 
-// TrimLeadingZeroes does the same work as TrimLeadingZeroesIPv4 but also accepts
+// TrimLeadingZeroes does the same work as trimLeadingZeroesIPv4 but also accepts
 // an IPv6 address that may contain an IPv4 address representation. Only decimal
 // IPv4 addresses get zero-stripped.
 func TrimLeadingZeroes(s string) string {
 	for i := len(s) - 1; i >= 0; i-- {
 		if s[i] == ':' && net.ParseIPSloppy(s[i+1:]) != nil {
-			return s[:i+1] + TrimLeadingZeroesIPv4(s[i+1:])
+			return s[:i+1] + trimLeadingZeroesIPv4(s[i+1:])
 		}
 	}
-	return TrimLeadingZeroesIPv4(s)
+	return trimLeadingZeroesIPv4(s)
 }
 
 // TrimLeadingZeroesCIDR does the same thing as TrimLeadingZeroes but expects
