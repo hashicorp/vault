@@ -1301,14 +1301,17 @@ func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *ident
 
 	var remainList []*identity.Alias
 	var removeList []*identity.Alias
-
-	for _, item := range aliases {
-		for _, alias := range entity.Aliases {
+	for _, item := range entity.Aliases {
+		remove := false
+		for _, alias := range aliases {
 			if alias.ID == item.ID {
-				removeList = append(removeList, alias)
-			} else {
-				remainList = append(remainList, alias)
+				remove = true
 			}
+		}
+		if remove {
+			removeList = append(removeList, item)
+		} else {
+			remainList = append(remainList, item)
 		}
 	}
 
