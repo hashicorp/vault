@@ -529,7 +529,7 @@ github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.7.0
 ## explicit
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.16.1
+# github.com/hashicorp/go-hclog v0.16.2
 ## explicit
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
@@ -569,6 +569,9 @@ github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/go-rootcerts v1.0.2
 ## explicit
 github.com/hashicorp/go-rootcerts
+# github.com/hashicorp/go-secure-stdlib/awsutil v0.1.2
+## explicit
+github.com/hashicorp/go-secure-stdlib/awsutil
 # github.com/hashicorp/go-slug v0.4.1
 github.com/hashicorp/go-slug
 # github.com/hashicorp/go-sockaddr v1.0.2
