@@ -343,6 +343,11 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 		}
 
 		encoded = buf.String()
+
+		if encoded == "" {
+			c.UI.Error("Missing encoded value. When using -decode=\"-\" value must be passed via stdin.")
+			return 1
+		}
 	}
 
 	f := client.Sys().GenerateRootStatus

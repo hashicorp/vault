@@ -1,3 +1,4 @@
+//go:build !race
 // +build !race
 
 package command
@@ -200,6 +201,51 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if combined != expected {
 			t.Errorf("expected %q to be %q", combined, expected)
+		}
+	})
+
+	t.Run("decode_from_stdin_empty", func(t *testing.T) {
+		t.Parallel()
+
+		encoded := ""
+		otp := "3JhHkONiyiaNYj14nnD9xZQS"
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte(encoded))
+			stdinW.Close()
+		}()
+
+		ui, cmd := testOperatorGenerateRootCommand(t)
+		cmd.client = client
+		cmd.testStdin = stdinR
+
+		// Simulate piped output to print raw output
+		old := os.Stdout
+		_, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.Stdout = w
+
+		code := cmd.Run([]string{
+			"-decode", "-", // read from stdin
+			"-otp", otp,
+		})
+		if exp := 1; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		w.Close()
+		os.Stdout = old
+
+		expected := "Missing encoded value"
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 	})
 
