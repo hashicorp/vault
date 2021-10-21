@@ -2,7 +2,7 @@ FROM alpine:3.14 as default
 
 ARG BIN_NAME
 # NAME and VERSION are the name of the software in releases.hashicorp.com
-# and the version to download. Example: NAME=consul VERSION=1.2.3.
+# and the version to download. Example: NAME=vault VERSION=1.2.3.
 ARG NAME=vault
 ARG VERSION
 # TARGETARCH and TARGETOS are set automatically when --platform is provided.
