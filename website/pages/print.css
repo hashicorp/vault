@@ -2,9 +2,7 @@
 @media print {
   iframe,
   #__next > header,
-  .g-product-subnav,
   .g-footer,
-  .g-consent-manager,
   [aria-hidden='true'],
   [id='sidebar'],
   [id='edit-this-page'],
