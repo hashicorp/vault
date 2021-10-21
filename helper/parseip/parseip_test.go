@@ -17,12 +17,16 @@ func Test_TrimLeadingZeroes(t *testing.T) {
 		{"2001:db8:122:344::192.0.2.033", "2001:db8:122:344::192.0.2.33"},
 	}
 	for _, tt := range tests {
-		if got := TrimLeadingZeroesIP(tt.in); got != tt.want {
-			t.Errorf("TrimLeadingZeroesIP() = %v, want %v", got, tt.want)
+		if got := trimLeadingZeroesIP(tt.in); got != tt.want {
+			t.Errorf("trimLeadingZeroesIP() = %v, want %v", got, tt.want)
 		}
 	}
 
 	for _, tt := range tests {
+		// Non-CIDR addresses are ignored.
+		if got := TrimLeadingZeroesCIDR(tt.in); got != tt.in {
+			t.Errorf("TrimLeadingZeroesCIDR() = %v, want %v", got, tt.in)
+		}
 		want := tt.want + "/32"
 		if got := TrimLeadingZeroesCIDR(tt.in + "/32"); got != want {
 			t.Errorf("TrimLeadingZeroesCIDR() = %v, want %v", got, want)

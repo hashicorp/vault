@@ -11,6 +11,9 @@ import (
 // in an error.  This package contains helpers that strip leading zeroes so as
 // to avoid those errors.
 
+// You should probably not be using anything here unless you've found a new place
+// where IPs/CIDRs are read from storage and re-parsed.
+
 // trimLeadingZeroes returns its input trimmed of any leading zeroes.
 func trimLeadingZeroes(s string) string {
 	for i, r := range s {
@@ -45,10 +48,10 @@ func trimLeadingZeroesIPv4(s string) string {
 	return sb.String()
 }
 
-// TrimLeadingZeroesIP does the same work as trimLeadingZeroesIPv4 but also accepts
+// trimLeadingZeroesIP does the same work as trimLeadingZeroesIPv4 but also accepts
 // an IPv6 address that may contain an IPv4 address representation. Only decimal
 // IPv4 addresses get zero-stripped.
-func TrimLeadingZeroesIP(s string) string {
+func trimLeadingZeroesIP(s string) string {
 	for i := len(s) - 1; i >= 0; i-- {
 		if s[i] == ':' && net.ParseIPSloppy(s[i+1:]) != nil {
 			return s[:i+1] + trimLeadingZeroesIPv4(s[i+1:])
@@ -57,13 +60,14 @@ func TrimLeadingZeroesIP(s string) string {
 	return trimLeadingZeroesIPv4(s)
 }
 
-// TrimLeadingZeroesCIDR does the same thing as TrimLeadingZeroesIP but expects
-// a CIDR address as input.
+// TrimLeadingZeroesCIDR does the same thing as trimLeadingZeroesIP but expects
+// a CIDR address as input.  If the input isn't a valid CIDR address, it is returned
+// unchanged.
 func TrimLeadingZeroesCIDR(s string) string {
 	pieces := strings.Split(s, "/")
 	if len(pieces) != 2 {
 		return s
 	}
-	pieces[0] = TrimLeadingZeroesIP(pieces[0])
+	pieces[0] = trimLeadingZeroesIP(pieces[0])
 	return strings.Join(pieces, "/")
 }
