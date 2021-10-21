@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
@@ -15,6 +16,9 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
   _redirect(url, params) {
     if (!url) return;
     let redir = this._buildUrl(url, params);
+    if (Ember.testing) {
+      return redir;
+    }
     this.win.location.replace(redir);
   }
 
@@ -69,10 +73,16 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
   _handleSuccess(response, baseUrl, state) {
     const { code } = response;
     let redirectUrl = this._buildUrl(baseUrl, { code, state });
+    if (Ember.testing) {
+      return redirectUrl;
+    }
     this.win.location.replace(redirectUrl);
   }
   _handleError(errorResp, baseUrl) {
     let redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
+    if (Ember.testing) {
+      return redirectUrl;
+    }
     this.win.location.replace(redirectUrl);
   }
 
