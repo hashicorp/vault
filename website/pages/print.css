@@ -227,12 +227,3 @@
     }
   }
 }
-
-/* @todo: move print styles to @hashicorp/react-global-styles/code-highlighting.css */
-@media print {
-  .hljs {
-    & * {
-      color: inherit;
-    }
-  }
-}
