@@ -18,6 +18,15 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+        >
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator" />
+      {{/if}}
       {{#if (eq model.keyType "otp")}}
         <ToolbarSecretLink
           @secret={{model.id}}
@@ -36,17 +45,6 @@
         >
           Sign Keys
         </ToolbarSecretLink>
-      {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
-        <div class="toolbar-separator" />
-      {{/if}}
-      {{#if model.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-        >
-          Delete role
-        </ConfirmAction>
       {{/if}}
       {{#if (or model.canUpdate model.canDelete)}}
         <ToolbarSecretLink
