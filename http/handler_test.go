@@ -885,7 +885,7 @@ func TestHandler_Patch_BadContentTypeHeader(t *testing.T) {
 	}
 }
 
-func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Secret, error){
+func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Secret, error) {
 	t.Helper()
 
 	var err error
