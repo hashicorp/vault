@@ -11,10 +11,11 @@ import (
 )
 
 type AppRoleAuth struct {
-	mountPath string
-	roleID    string
-	secretID  string
-	unwrap    bool
+	mountPath      string
+	roleID         string
+	secretID       string
+	secretIDSource string
+	unwrap         bool
 }
 
 // SecretID is a struct that allows you to specify where your application is
@@ -61,19 +62,31 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 		return nil, fmt.Errorf("no secret ID provided for login")
 	}
 
-	if secretID.FromFile == "" && secretID.FromEnv == "" && secretID.FromString == "" {
-		return nil, fmt.Errorf("secret ID for AppRole must be provided with a source file, environment variable, or plaintext string")
-	}
-
-	secretIDValue, err := readSecretID(secretID)
+	err := secretID.validate()
 	if err != nil {
-		return nil, fmt.Errorf("error reading secret ID: %w", err)
+		return nil, fmt.Errorf("invalid secret ID: %w", err)
 	}
 
 	a := &AppRoleAuth{
 		mountPath: defaultMountPath,
 		roleID:    roleID,
-		secretID:  secretIDValue,
+	}
+
+	// set secret ID source to a filepath for reading at login time if FromFile, otherwise just set secret ID to the specified value
+	if secretID.FromFile != "" {
+		a.secretIDSource = secretID.FromFile
+	}
+
+	if secretID.FromEnv != "" {
+		fromEnv := os.Getenv(secretID.FromEnv)
+		if fromEnv == "" {
+			return nil, fmt.Errorf("secret ID was specified with an environment variable with an empty value")
+		}
+		a.secretID = fromEnv
+	}
+
+	if secretID.FromString != "" {
+		a.secretID = secretID.FromString
 	}
 
 	// Loop through each option
@@ -95,14 +108,25 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		"role_id": a.roleID,
 	}
 
-	// if it was indicated that the value in the file was actually a wrapping
-	// token, unwrap it first
-	if a.unwrap {
-		unwrappedToken, err := client.Logical().Unwrap(a.secretID)
+	if a.secretIDSource != "" {
+		secretIDValue, err := a.readSecretIDFromFile()
 		if err != nil {
-			return nil, fmt.Errorf("unable to unwrap token: %w. If the AppRoleAuth struct was initialized with the WithWrappingToken LoginOption, then the secret ID's filepath should be a path to a response-wrapping token", err)
+			return nil, fmt.Errorf("error reading secret ID: %w", err)
 		}
-		loginData["secret_id"] = unwrappedToken.Data["secret_id"]
+
+		secretIDValue = strings.TrimSuffix(secretIDValue, "\n")
+
+		// if it was indicated that the value in the file was actually a wrapping
+		// token, unwrap it first
+		if a.unwrap {
+			unwrappedToken, err := client.Logical().Unwrap(secretIDValue)
+			if err != nil {
+				return nil, fmt.Errorf("unable to unwrap token: %w. If the AppRoleAuth struct was initialized with the WithWrappingToken LoginOption, then the secret ID's filepath should be a path to a response-wrapping token", err)
+			}
+			loginData["secret_id"] = unwrappedToken.Data["secret_id"]
+		} else {
+			loginData["secret_id"] = secretIDValue
+		}
 	} else {
 		loginData["secret_id"] = a.secretID
 	}
@@ -130,44 +154,42 @@ func WithWrappingToken() LoginOption {
 	}
 }
 
-func readSecretID(secretID *SecretID) (string, error) {
-	var parsedSecretID string
+func (a *AppRoleAuth) readSecretIDFromFile() (string, error) {
+	secretIDFile, err := os.Open(a.secretIDSource)
+	if err != nil {
+		return "", fmt.Errorf("unable to open file containing secret ID: %w", err)
+	}
+	defer secretIDFile.Close()
+
+	limitedReader := io.LimitReader(secretIDFile, 1000)
+	secretIDBytes, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return "", fmt.Errorf("unable to read secret ID: %w", err)
+	}
+	return string(secretIDBytes), nil
+}
+
+func (secretID *SecretID) validate() error {
+	if secretID.FromFile == "" && secretID.FromEnv == "" && secretID.FromString == "" {
+		return fmt.Errorf("secret ID for AppRole must be provided with a source file, environment variable, or plaintext string")
+	}
+
 	if secretID.FromFile != "" {
 		if secretID.FromEnv != "" || secretID.FromString != "" {
-			return "", fmt.Errorf("only one location for the secret ID should be specified")
+			return fmt.Errorf("only one source for the secret ID should be specified")
 		}
-		secretIDFile, err := os.Open(secretID.FromFile)
-		if err != nil {
-			return "", fmt.Errorf("unable to open file containing secret ID: %w", err)
-		}
-		defer secretIDFile.Close()
-
-		limitedReader := io.LimitReader(secretIDFile, 1000)
-		secretIDBytes, err := io.ReadAll(limitedReader)
-		if err != nil {
-			return "", fmt.Errorf("unable to read secret ID: %w", err)
-		}
-		parsedSecretID = string(secretIDBytes)
 	}
 
 	if secretID.FromEnv != "" {
 		if secretID.FromFile != "" || secretID.FromString != "" {
-			return "", fmt.Errorf("only one location for the secret ID should be specified")
-		}
-		parsedSecretID = os.Getenv(secretID.FromEnv)
-		if parsedSecretID == "" {
-			return "", fmt.Errorf("secret ID was specified with an environment variable with an empty value")
+			return fmt.Errorf("only one source for the secret ID should be specified")
 		}
 	}
 
 	if secretID.FromString != "" {
 		if secretID.FromFile != "" || secretID.FromEnv != "" {
-			return "", fmt.Errorf("only one location for the secret ID should be specified")
+			return fmt.Errorf("only one source for the secret ID should be specified")
 		}
-		parsedSecretID = secretID.FromString
 	}
-
-	secretIDValue := strings.TrimSuffix(parsedSecretID, "\n")
-
-	return secretIDValue, nil
+	return nil
 }
