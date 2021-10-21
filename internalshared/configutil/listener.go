@@ -378,21 +378,21 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 	return nil
 }
 
-// parseSingleIPTemplate is used as a helper function to parse out a single IP
+// ParseSingleIPTemplate is used as a helper function to parse out a single IP
 // address from a config parameter.
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
 	out, err := template.Parse(ipTmpl)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse address template %q: %v", ipTmpl, err)
+		return "", fmt.Errorf("unable to parse address template %q: %v", ipTmpl, err)
 	}
 
 	ips := strings.Split(out, " ")
 	switch len(ips) {
 	case 0:
-		return "", errors.New("No addresses found, please configure one.")
+		return "", errors.New("no addresses found, please configure one")
 	case 1:
 		return strings.TrimSpace(ips[0]), nil
 	default:
-		return "", fmt.Errorf("Multiple addresses found (%q), please configure one.", out)
+		return "", fmt.Errorf("multiple addresses found (%q), please configure one", out)
 	}
 }
