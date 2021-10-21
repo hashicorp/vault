@@ -1,7 +1,7 @@
 /* Print Styles - Hide Elements */
 @media print {
   iframe,
-  #__next > header,
+  [class*='hashi-stack-menu'],
   .g-footer,
   [aria-hidden='true'],
   [id='sidebar'],
