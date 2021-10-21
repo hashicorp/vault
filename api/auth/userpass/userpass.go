@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -17,14 +18,12 @@ type UserpassAuth struct {
 
 type Password struct {
 	// Path on the file system where the password corresponding to this
-	// application's Vault role can be found. Other auth backends provide
-	// more secure options for authentication.
+	// application's Vault role can be found.
 	FromFile string
 	// The name of the environment variable containing the password
-	// that corresponds to this application's Vault role. Can be insecure
-	// if the environment variable is logged.
+	// that corresponds to this application's Vault role.
 	FromEnv string
-	// The password as a plaintext string value. Insecure.
+	// The password as a plaintext string value.
 	FromString string
 }
 
@@ -78,7 +77,7 @@ func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (
 	return a, nil
 }
 
-func (a *UserpassAuth) Login(client *api.Client) (*api.Secret, error) {
+func (a *UserpassAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	loginData := map[string]interface{}{
 		"password": a.password,
 	}

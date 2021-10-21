@@ -1,6 +1,7 @@
 package approle
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -88,7 +89,7 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("error initializing AppRoleAuth: %v", err)
 	}
 
-	authInfo, err := client.Auth().Login(appRoleAuth)
+	authInfo, err := client.Auth().Login(context.TODO(), appRoleAuth)
 	if err != nil {
 		t.Fatalf("error logging in: %v", err)
 	}

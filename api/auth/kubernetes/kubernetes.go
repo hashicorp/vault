@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -66,7 +67,7 @@ func NewKubernetesAuth(roleName string, opts ...LoginOption) (*KubernetesAuth, e
 	return a, nil
 }
 
-func (a *KubernetesAuth) Login(client *api.Client) (*api.Secret, error) {
+func (a *KubernetesAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	loginData := map[string]interface{}{
 		"jwt":  a.serviceAccountToken,
 		"role": a.roleName,

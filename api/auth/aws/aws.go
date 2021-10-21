@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -82,7 +83,7 @@ func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 // AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION environment
 // variables. To specify a path to a credentials file on disk instead, set
 // the environment variable AWS_SHARED_CREDENTIALS_FILE.
-func (a *AWSAuth) Login(client *api.Client) (*api.Secret, error) {
+func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	loginData := make(map[string]interface{})
 	switch a.authType {
 	case ec2Type:

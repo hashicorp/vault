@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // Auth is used to perform credential backend related operations.
 type Auth struct {
@@ -8,7 +11,7 @@ type Auth struct {
 }
 
 type AuthMethod interface {
-	Login(client *Client) (*Secret, error)
+	Login(ctx context.Context, client *Client) (*Secret, error)
 }
 
 // Auth is used to return the client for credential-backend API calls.
@@ -24,12 +27,12 @@ func (c *Client) Auth() *Auth {
 // The Secret returned is the authentication secret, which if desired can be
 // passed as input to the NewLifetimeWatcher method in order to start
 // automatically renewing the token.
-func (a *Auth) Login(authMethod AuthMethod) (*Secret, error) {
+func (a *Auth) Login(ctx context.Context, authMethod AuthMethod) (*Secret, error) {
 	if authMethod == nil {
 		return nil, fmt.Errorf("no auth method provided for login")
 	}
 
-	authSecret, err := authMethod.Login(a.c)
+	authSecret, err := authMethod.Login(ctx, a.c)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in to auth method: %w", err)
 	}

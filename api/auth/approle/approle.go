@@ -1,6 +1,7 @@
 package approle
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -26,9 +27,9 @@ type SecretID struct {
 	// https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
 	FromFile string
 	// The name of the environment variable containing the application's
-	// secret ID. Can be insecure if the environment variable is logged.
+	// secret ID.
 	FromEnv string
-	// The secret ID as a plaintext string value. Insecure.
+	// The secret ID as a plaintext string value.
 	FromString string
 }
 
@@ -89,7 +90,7 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 	return a, nil
 }
 
-func (a *AppRoleAuth) Login(client *api.Client) (*api.Secret, error) {
+func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	loginData := map[string]interface{}{
 		"role_id": a.roleID,
 	}
