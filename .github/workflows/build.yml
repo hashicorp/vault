@@ -9,7 +9,7 @@ on:
 
 env:
   PKG_NAME: "vault"
-  VAULT_COMMIT=${{ env.GITHUB_SHA }} GO_TAGS: "ui"
+  GO_TAGS: "ui"
 
 jobs:
   get-product-version:
