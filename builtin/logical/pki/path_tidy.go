@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -287,7 +288,7 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 	return resp, nil
 }
 
-func (b *backend) tidyStatusStart(safetyBuffer int, tidyCertStore, tidyRevokedCerts bool) bool {
+func (b *backend) tidyStatusStart(safetyBuffer int, tidyCertStore, tidyRevokedCerts bool) {
 	b.tidyStatusLock.Lock()
 	defer b.tidyStatusLock.Unlock()
 
@@ -299,7 +300,7 @@ func (b *backend) tidyStatusStart(safetyBuffer int, tidyCertStore, tidyRevokedCe
 		timeStarted:      time.Now(),
 	}
 
-	return true
+	metrics.SetGauge(metricTidying, float32(b.tidyStatus.timeStarted.Unix()))
 }
 
 func (b *backend) tidyStatusStop(err error) {
@@ -309,6 +310,15 @@ func (b *backend) tidyStatusStop(err error) {
 	b.tidyStatus.state = tidyStatusFinished
 	b.tidyStatus.timeFinished = time.Now()
 	b.tidyStatus.err = err
+
+	if err != nil {
+		metrics.IncrCounter(metricTidyFailure, 1)
+	} else {
+		metrics.IncrCounter(metricTidySuccess, 1)
+	}
+
+	metrics.SetGauge(metricTidying, 0)
+	metrics.MeasureSince(metricTidyDuration, b.tidyStatus.timeStarted)
 }
 
 func (b *backend) tidyStatusMessage(msg string) {
