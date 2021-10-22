@@ -95,10 +95,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	go func() {
-		b.tidyStatusStart(safetyBuffer, tidyCertStore, tidyRevokedCerts || tidyRevocationList)
-		defer b.tidyStatusStop(nil)
-
 		defer atomic.StoreUint32(b.tidyCASGuard, 0)
+
+		b.tidyStatusStart(safetyBuffer, tidyCertStore, tidyRevokedCerts || tidyRevocationList)
 
 		// Don't cancel when the original client request goes away
 		ctx = context.Background()
@@ -227,7 +226,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		if err := doTidy(); err != nil {
 			logger.Error("error running tidy", "error", err)
 			b.tidyStatusStop(err)
-			return
+		} else {
+			b.tidyStatusStop(nil)
 		}
 	}()
 
@@ -308,9 +308,7 @@ func (b *backend) tidyStatusStop(err error) {
 
 	b.tidyStatus.state = tidyStatusFinished
 	b.tidyStatus.timeFinished = time.Now()
-	if err != nil {
-		b.tidyStatus.err = err
-	}
+	b.tidyStatus.err = err
 }
 
 func (b *backend) tidyStatusMessage(msg string) {
