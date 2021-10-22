@@ -3,11 +3,11 @@ package pki
 import (
 	"context"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 // Factory creates a new backend implementing the logical.Backend interface
@@ -47,7 +47,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			},
 
 			SealWrapStorage: []string{
-				"config/ca_bundle",
+				"connfig/ca_bundle",
 			},
 		},
 
@@ -98,10 +98,10 @@ type backend struct {
 
 	storage           logical.Storage
 	crlLifetime       time.Duration
-	revokeStorageLock sync.RWMutex
+	revokeStorageLock vault.DeadlockRWMutex
 	tidyCASGuard      *uint32
 
-	tidyStatusLock sync.RWMutex
+	tidyStatusLock vault.DeadlockRWMutex
 	tidyStatus     *tidyStatus
 }
 
