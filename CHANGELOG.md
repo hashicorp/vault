@@ -40,7 +40,6 @@ outstanding dirty pages that were not flushed. [[GH-2093](https://github.com/has
 * ui: Add creation time to KV 2 version history and version view [[GH-12663](https://github.com/hashicorp/vault/pull/12663)]
 * ui: namespace search in client count views [[GH-12577](https://github.com/hashicorp/vault/pull/12577)]
 * ui: updated client tracking config view [[GH-12422](https://github.com/hashicorp/vault/pull/12422)]
-* ui: Added resize for JSON editor [[GH-12906](https://github.com/hashicorp/vault/pull/12906)]
 
 BUG FIXES:
 
