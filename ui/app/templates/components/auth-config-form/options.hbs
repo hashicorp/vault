@@ -2,6 +2,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{model}} @errorMessage={{model.errorMessage}}/>
     <NamespaceReminder @mode="save" @noun="Auth Method" />
+    {{log model}}
     {{#each model.tuneAttrs as |attr|}}
       <FormField data-test-field @attr={{attr}} @model={{model}} />
     {{/each}}

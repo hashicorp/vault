@@ -49,11 +49,21 @@ let ModelExport = Model.extend(Validations, {
     return this.local ? 'local' : 'replicated';
   }),
 
-  tuneAttrs: computed(function() {
-    return expandAttributeMeta(this, [
-      'description',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-    ]);
+  tuneAttrs: computed('path', function() {
+    let { path } = this;
+    let tuneAttrs;
+    if (path === 'token/') {
+      tuneAttrs = [
+        'description',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ];
+    } else {
+      tuneAttrs = [
+        'description',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ];
+    }
+    return expandAttributeMeta(this, tuneAttrs);
   }),
 
   //sys/mounts/auth/[auth-path]/tune.
