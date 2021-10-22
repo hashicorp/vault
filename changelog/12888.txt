@@ -1,4 +1,5 @@
 ```release-note:deprecation
-expiration: VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY environment variable is
-no longer available.
+expiration: VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY environment variable has
+been removed.
+expiration: VAULT_16_REVOKE_PERMITPOOL environment variable has been removed.
 ```
