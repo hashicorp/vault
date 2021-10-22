@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -144,8 +143,6 @@ type ExpirationManager struct {
 
 	logLeaseExpirations bool
 	expireFunc          ExpireLeaseStrategy
-
-	revokePermitPool *physical.PermitPool
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -316,18 +313,6 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	var permitPool *physical.PermitPool
-	if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" {
-		permitPoolSize := 50
-		permitPoolSizeRaw, err := strconv.Atoi(os.Getenv("VAULT_16_REVOKE_PERMITPOOL"))
-		if err == nil && permitPoolSizeRaw > 0 {
-			permitPoolSize = permitPoolSizeRaw
-		}
-
-		permitPool = physical.NewPermitPool(permitPoolSize)
-
-	}
-
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
 	jobManager.Start()
 
@@ -360,7 +345,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
-		revokePermitPool:    permitPool,
 
 		jobManager: jobManager,
 	}
