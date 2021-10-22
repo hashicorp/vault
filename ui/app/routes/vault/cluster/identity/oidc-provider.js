@@ -52,7 +52,8 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
     if (logout) {
       this.auth.deleteCurrentToken();
     }
-    return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: url } });
+    // o param can be anything, as long as it's present the auth page will change
+    return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: url, o: provider_name } });
   }
 
   _buildUrl(urlString, params) {

@@ -12,6 +12,7 @@ export default Controller.extend({
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
+  oidcProvider: '',
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
 
