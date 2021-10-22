@@ -79,6 +79,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          VAULT_COMMIT: ${{ env.GITHUB_SHA }}
         run: |
           go mod vendor
           mkdir dist out
@@ -125,6 +126,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          VAULT_COMMIT: ${{ env.GITHUB_SHA }}
         run: |
           go mod vendor
           mkdir dist out
@@ -196,6 +198,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          VAULT_COMMIT: ${{ env.GITHUB_SHA }}
         run: |
           go mod vendor
           mkdir dist out
