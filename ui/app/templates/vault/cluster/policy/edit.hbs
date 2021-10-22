@@ -23,13 +23,6 @@
 {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink
-        @params={{array 'vault.cluster.policy.show' model.id}}
-        @data-test-policy-edit-toggle=true
-      >
-        Back to policy
-      </ToolbarLink>
-      <div class="toolbar-separator" />
       {{#if (and (not-eq model.id "default") capabilities.canDelete)}}
         <ConfirmAction
           @buttonClasses="toolbar-link"
@@ -39,7 +32,14 @@
         >
           Delete
         </ConfirmAction>
+        <div class="toolbar-separator" />
       {{/if}}
+      <ToolbarLink
+        @params={{array 'vault.cluster.policy.show' model.id}}
+        @data-test-policy-edit-toggle=true
+      >
+        Back to policy
+      </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}

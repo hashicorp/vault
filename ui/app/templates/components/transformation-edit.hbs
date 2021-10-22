@@ -18,9 +18,6 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
-        <div class="toolbar-separator" />
-      {{/if}}
       {{#if capabilities.canDelete}}
         {{#if (gt model.allowed_roles.length 0)}}
           <ToolTip
@@ -52,6 +49,7 @@
           Delete transformation
         </button>
         {{/if}}
+        <div class="toolbar-separator" />
       {{/if}}
       {{#if capabilities.canUpdate }}
         {{#if (gt model.allowed_roles.length 0)}}
