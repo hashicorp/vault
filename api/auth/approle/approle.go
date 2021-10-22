@@ -114,8 +114,6 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 			return nil, fmt.Errorf("error reading secret ID: %w", err)
 		}
 
-		secretIDValue = strings.TrimSuffix(secretIDValue, "\n")
-
 		// if it was indicated that the value in the file was actually a wrapping
 		// token, unwrap it first
 		if a.unwrap {
@@ -166,7 +164,10 @@ func (a *AppRoleAuth) readSecretIDFromFile() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to read secret ID: %w", err)
 	}
-	return string(secretIDBytes), nil
+
+	secretIDValue := strings.TrimSuffix(string(secretIDBytes), "\n")
+
+	return secretIDValue, nil
 }
 
 func (secretID *SecretID) validate() error {
