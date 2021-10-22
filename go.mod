@@ -25,7 +25,7 @@ require (
 	github.com/armon/go-metrics v0.3.9
 	github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a
 	github.com/armon/go-radix v1.0.0
-	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
+	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/aws/aws-sdk-go v1.37.19
 	github.com/cenkalti/backoff/v3 v3.0.0
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
@@ -45,7 +45,7 @@ require (
 	github.com/go-errors/errors v1.0.1
 	github.com/go-ldap/ldap/v3 v3.2.4
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/go-test/deep v1.0.7
+	github.com/go-test/deep v1.0.8
 	github.com/gocql/gocql v0.0.0-20210401103645-80ab1e13e309
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
@@ -92,7 +92,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.10.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.11.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.4.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.1
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.11.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.8.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.3.1-0.20210902192635-c3ee7c5bc378
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.8.0
@@ -245,6 +245,7 @@ require (
 	github.com/gammazero/workerpool v0.0.0-20190406235159-88d534f22b56 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.1 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
+	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
@@ -258,10 +259,10 @@ require (
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
-	github.com/googleapis/gnostic v0.2.0 // indirect
+	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/mux v1.7.3 // indirect
-	github.com/gorilla/websocket v1.4.1 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
@@ -362,9 +363,10 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	k8s.io/api v0.18.2 // indirect
-	k8s.io/apimachinery v0.18.2 // indirect
+	k8s.io/apimachinery v0.22.2 // indirect
 	k8s.io/client-go v0.18.2 // indirect
 	k8s.io/klog v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
+	k8s.io/klog/v2 v2.9.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
