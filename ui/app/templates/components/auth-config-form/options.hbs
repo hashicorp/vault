@@ -3,7 +3,7 @@
     <MessageError @model={{model}} @errorMessage={{model.errorMessage}}/>
     <NamespaceReminder @mode="save" @noun="Auth Method" />
     {{#each model.tuneAttrs as |attr|}}
-      {{form-field data-test-field attr=attr model=model}}
+      <FormField data-test-field @attr={{attr}} @model={{model}} />
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
