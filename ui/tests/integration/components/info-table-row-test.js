@@ -47,8 +47,7 @@ module('Integration | Component | InfoTableRow', function(hooks) {
       />`);
 
     assert.dom('[data-test-component="info-table-row"]').exists();
-    let string = document.querySelector('code').textContent;
-    assert.equal(string, VALUE, 'renders value as passed through');
+    assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value as passed through');
 
     this.set('value', '');
     assert
@@ -101,8 +100,7 @@ module('Integration | Component | InfoTableRow', function(hooks) {
         @label={{label}}
         @isLink={{true}}
       />`);
-    let string = document.querySelector('code').textContent;
-    assert.equal(string, VALUE, 'renders value in code element and not in a tag');
+    assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value in code element and not in a tag');
   });
 
   test('it renders links if isLink is true and type is array', async function(assert) {
