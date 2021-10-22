@@ -112,8 +112,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 					return fmt.Errorf("error fetching list of certs: %w", err)
 				}
 
+				serialCount := len(serials)
+				metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_total_entries"}, float32(serialCount))
 				for i, serial := range serials {
-					b.tidyStatusMessage(fmt.Sprintf("Tidying certificate store: checking entry %d of %d", i, len(serials)))
+					b.tidyStatusMessage(fmt.Sprintf("Tidying certificate store: checking entry %d of %d", i, serialCount))
+					metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_current_entry"}, float32(i))
+
 					certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 					if err != nil {
 						return fmt.Errorf("error fetching certificate %q: %w", serial, err)
@@ -162,9 +166,14 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 					return fmt.Errorf("error fetching list of revoked certs: %w", err)
 				}
 
+				revokedSerialsCount := len(revokedSerials)
+				metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries"}, float32(revokedSerialsCount))
+
 				var revInfo revocationInfo
 				for i, serial := range revokedSerials {
 					b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
+					metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))
+
 					revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 					if err != nil {
 						return fmt.Errorf("unable to fetch revoked cert with serial %q: %w", serial, err)
@@ -243,17 +252,16 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"safety_buffer":      nil,
-			"tidy_cert_store":    nil,
-			"tidy_revoked_certs": nil,
-
-			"state":              "Inactive",
-			"error":              nil,
-			"time_started":       nil,
-			"time_finished":      nil,
-			"message":            nil,
-			"cert_store_count":   nil,
-			"revoked_cert_count": nil,
+			"safety_buffer":              nil,
+			"tidy_cert_store":            nil,
+			"tidy_revoked_certs":         nil,
+			"state":                      "Inactive",
+			"error":                      nil,
+			"time_started":               nil,
+			"time_finished":              nil,
+			"message":                    nil,
+			"cert_store_deleted_count":   nil,
+			"revoked_cert_deleted_count": nil,
 		},
 	}
 
@@ -266,8 +274,8 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
-	resp.Data["cert_store_count"] = b.tidyStatus.certStoreCount
-	resp.Data["revoked_cert_count"] = b.tidyStatus.revokedCertCount
+	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
+	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 
 	if b.tidyStatus.state == tidyStatusStarted {
 		resp.Data["state"] = "Running"
@@ -300,7 +308,7 @@ func (b *backend) tidyStatusStart(safetyBuffer int, tidyCertStore, tidyRevokedCe
 		timeStarted:      time.Now(),
 	}
 
-	metrics.SetGauge(metricTidying, float32(b.tidyStatus.timeStarted.Unix()))
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, float32(b.tidyStatus.timeStarted.Unix()))
 }
 
 func (b *backend) tidyStatusStop(err error) {
@@ -311,14 +319,16 @@ func (b *backend) tidyStatusStop(err error) {
 	b.tidyStatus.timeFinished = time.Now()
 	b.tidyStatus.err = err
 
-	if err != nil {
-		metrics.IncrCounter(metricTidyFailure, 1)
-	} else {
-		metrics.IncrCounter(metricTidySuccess, 1)
-	}
+	metrics.MeasureSince([]string{"secrets", "pki", "tidy", "duration"}, b.tidyStatus.timeStarted)
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, 0)
+	metrics.IncrCounter([]string{"secrets", "pki", "tidy", "cert_store_deleted_count"}, float32(b.tidyStatus.certStoreDeletedCount))
+	metrics.IncrCounter([]string{"secrets", "pki", "tidy", "revoked_cert_deleted_count"}, float32(b.tidyStatus.revokedCertDeletedCount))
 
-	metrics.SetGauge(metricTidying, 0)
-	metrics.MeasureSince(metricTidyDuration, b.tidyStatus.timeStarted)
+	if err != nil {
+		metrics.IncrCounter([]string{"secrets", "pki", "tidy", "failure"}, 1)
+	} else {
+		metrics.IncrCounter([]string{"secrets", "pki", "tidy", "success"}, 1)
+	}
 }
 
 func (b *backend) tidyStatusMessage(msg string) {
@@ -332,14 +342,14 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 	b.tidyStatusLock.Lock()
 	defer b.tidyStatusLock.Unlock()
 
-	b.tidyStatus.certStoreCount++
+	b.tidyStatus.certStoreDeletedCount++
 }
 
 func (b *backend) tidyStatusIncRevokedCertCount() {
 	b.tidyStatusLock.Lock()
 	defer b.tidyStatusLock.Unlock()
 
-	b.tidyStatus.revokedCertCount++
+	b.tidyStatus.revokedCertDeletedCount++
 }
 
 const pathTidyHelpSyn = `
@@ -387,6 +397,6 @@ The result includes the following fields:
 * 'time_finished': the time the operation finished
 * 'message': One of "Tidying certificate store: checking entry N of TOTAL" or
   "Tidying revoked certificates: checking certificate N of TOTAL"
-* 'cert_store_count': The number of certificate storage entries deleted
-* 'revoked_cert_count': The number of revoked certificate entries deleted
+* 'cert_store_deleted_count': The number of certificate storage entries deleted
+* 'revoked_cert_deleted_count': The number of revoked certificate entries deleted
 `

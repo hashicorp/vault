@@ -47,7 +47,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			},
 
 			SealWrapStorage: []string{
-				"connfig/ca_bundle",
+				"config/ca_bundle",
 			},
 		},
 
@@ -120,13 +120,13 @@ type tidyStatus struct {
 	tidyRevokedCerts bool
 
 	// Status
-	state            tidyStatusState
-	err              error
-	timeStarted      time.Time
-	timeFinished     time.Time
-	message          string
-	certStoreCount   uint
-	revokedCertCount uint
+	state                   tidyStatusState
+	err                     error
+	timeStarted             time.Time
+	timeFinished            time.Time
+	message                 string
+	certStoreDeletedCount   uint
+	revokedCertDeletedCount uint
 }
 
 const backendHelp = `
