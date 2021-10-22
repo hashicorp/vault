@@ -124,8 +124,8 @@ func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 		if len(partialMountPath) <= 1 || partialMountPath[1] == ""{
 			break
 		}
-		mountPath = partialMountPath[1]
-		tp = strings.TrimPrefix(p, mountPath)
+		mountPath = strings.TrimSuffix(partialMountPath[1], "/")
+		tp = strings.TrimPrefix(tp, mountPath)
 	}
 
 	return path.Join(mountPath, apiPrefix, tp)
