@@ -48,7 +48,7 @@ the following environment variables:
 
 | Environment variable | Description |
 | -------------------- | ----------- |
-| `AGENT_INJECT_TLS_MIN_VERSION` | Minimum supported version of TLS. Defaults to **tls12**. Accepted values are [tls10, tls11, tls12, tls13][tls-versions]. |
+| `AGENT_INJECT_TLS_MIN_VERSION` | Minimum supported version of TLS. Defaults to **tls12**. Accepted values are `tls10`, `tls11`, `tls12`, or `tls13`. |
 | `AGENT_INJECT_TLS_CIPHER_SUITES` | Comma-separated list of enabled [cipher suites][tls-suites] for TLS 1.0-1.2. (Cipher suites are not configurable for TLS 1.3.) |
 
 ~> **Warning**: TLS 1.1 and lower are generally considered insecure.
@@ -117,5 +117,4 @@ to namespaces.
 
 For more information on configuring namespace selection, see the [Vault Helm namespaceSelector value](/docs/platform/k8s/helm/configuration#namespaceselector).
 
-[tls-versions]: https://github.com/hashicorp/go-secure-stdlib/blob/tlsutil/v0.1.1/tlsutil/tlsutil.go#L18-L24
-[tls-suites]: https://github.com/hashicorp/go-secure-stdlib/blob/tlsutil/v0.1.1/tlsutil/tlsutil.go#L26-L53
+[tls-suites]: https://golang.org/src/crypto/tls/cipher_suites.go
