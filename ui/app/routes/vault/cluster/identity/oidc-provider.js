@@ -90,10 +90,10 @@ export default class VaultClusterIdentityOidcProviderRoute extends Route {
   async model(params) {
     let { provider_name, ...qp } = params;
     let decodedRedirect = decodeURI(qp.redirect_uri);
-    let endpoint = this._buildUrl(
-      `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`,
-      qp
-    );
+    let baseUrl = this.namespace.path
+      ? `${this.win.origin}/v1/${this.namespace.path}/identity/oidc/provider/${provider_name}/authorize`
+      : `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`;
+    let endpoint = this._buildUrl(baseUrl, qp);
     try {
       const response = await this.auth.ajax(endpoint, 'GET', {});
       if ('consent' === qp.prompt?.toLowerCase()) {
