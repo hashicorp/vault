@@ -34,7 +34,7 @@
     {{!-- alwaysRender is still true --}}
     {{else if (and (not value) defaultShown)}}
       <span data-test-row-value="{{label}}">{{defaultShown}}</span>
-    {{else if (eq value "")}} 
+    {{else if valueIsEmpty}} 
       <Icon @size="s" @glyph="minus-plain"/>
     {{else}}
       {{#if (eq type 'array')}}
@@ -58,9 +58,18 @@
               <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>  
             </T.trigger>
             <T.content @class="tool-tip">
-              <div class="box">
-                {{tooltipText}}
-              </div>
+              <CopyButton
+                @clipboardText={{tooltipText}}
+                @success={{action (set-flash-message 'Data copied!')}}
+                @tagName="div"
+                @disabled={{not this.isTooltipCopyable}}
+                class={{if this.isTooltipCopyable "has-pointer"}}
+                data-test-tooltip-copy
+              >
+                <div class="box">
+                  {{tooltipText}}
+                </div>
+              </CopyButton>
             </T.content>
           </ToolTip>
         {{else}}

@@ -59,4 +59,15 @@ export default Route.extend(ClusterRoute, {
       config,
     });
   },
+
+  actions: {
+    loading(transition) {
+      // eslint-disable-next-line ember/no-controller-access-in-routes
+      let controller = this.controllerFor('vault.cluster.clients.index');
+      controller.set('currentlyLoading', true);
+      transition.promise.finally(function() {
+        controller.set('currentlyLoading', false);
+      });
+    },
+  },
 });

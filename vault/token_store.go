@@ -481,6 +481,15 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	return c.tokenStore.Lookup(ctx, token)
 }
 
+// CreateToken creates the given token in the core's token store.
+func (c *Core) CreateToken(ctx context.Context, entry *logical.TokenEntry) error {
+	if c.tokenStore == nil {
+		return errors.New("unable to create token with nil token store")
+	}
+
+	return c.tokenStore.create(ctx, entry)
+}
+
 // TokenStore is used to manage client tokens. Tokens are used for
 // clients to authenticate, and each token is mapped to an applicable
 // set of policy which is used for authorization.
@@ -499,8 +508,7 @@ type TokenStore struct {
 	parentBarrierView   *BarrierView
 	rolesBarrierView    *BarrierView
 
-	expiration  *ExpirationManager
-	activityLog *ActivityLog
+	expiration *ExpirationManager
 
 	cubbyholeBackend *CubbyholeBackend
 
@@ -677,12 +685,6 @@ func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
 
-// SetActivityLog injects the activity log to which all new
-// token creation events are reported.
-func (ts *TokenStore) SetActivityLog(a *ActivityLog) {
-	ts.activityLog = a
-}
-
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
 func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 	ns, err := namespace.FromContext(ctx)
@@ -831,6 +833,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
+	// Validate the inline policy if it's set
+	if entry.InlinePolicy != "" {
+		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy); err != nil {
+			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
+		}
+	}
+
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
 		// In case it was default, force to service
@@ -894,11 +903,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 
-		// Update the activity log in case the token has no entity
-		if ts.activityLog != nil && entry.EntityID == "" {
-			ts.activityLog.HandleTokenCreation(entry)
-		}
-
 		return ts.storeCommon(ctx, entry, true)
 
 	case logical.TokenTypeBatch:
@@ -906,17 +910,20 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		// encrypt, skip persistence
 		entry.ID = ""
 		pEntry := &pb.TokenEntry{
-			Parent:       entry.Parent,
-			Policies:     entry.Policies,
-			Path:         entry.Path,
-			Meta:         entry.Meta,
-			DisplayName:  entry.DisplayName,
-			CreationTime: entry.CreationTime,
-			TTL:          int64(entry.TTL),
-			Role:         entry.Role,
-			EntityID:     entry.EntityID,
-			NamespaceID:  entry.NamespaceID,
-			Type:         uint32(entry.Type),
+			Parent:             entry.Parent,
+			Policies:           entry.Policies,
+			Path:               entry.Path,
+			Meta:               entry.Meta,
+			DisplayName:        entry.DisplayName,
+			CreationTime:       entry.CreationTime,
+			TTL:                int64(entry.TTL),
+			Role:               entry.Role,
+			EntityID:           entry.EntityID,
+			NamespaceID:        entry.NamespaceID,
+			Type:               uint32(entry.Type),
+			InternalMeta:       entry.InternalMeta,
+			InlinePolicy:       entry.InlinePolicy,
+			NoIdentityPolicies: entry.NoIdentityPolicies,
 		}
 
 		boundCIDRs := make([]string, len(entry.BoundCIDRs))
@@ -940,11 +947,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
-		}
-
-		// Update the activity log in case the token has no entity
-		if ts.activityLog != nil && entry.EntityID == "" {
-			ts.activityLog.HandleTokenCreation(entry)
 		}
 
 		return nil
@@ -1652,6 +1654,9 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 			saltedNS, err = NamespaceByID(ctx, saltedNSID, ts.core)
 			if err != nil {
 				return fmt.Errorf("failed to find namespace for token revocation: %w", err)
+			}
+			if saltedNS == nil {
+				return errors.New("failed to find namespace for token revocation")
 			}
 
 			saltedCtx = namespace.ContextWithNamespace(ctx, saltedNS)
@@ -3042,7 +3047,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	if out.EntityID != "" {
-		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID)
+		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID, out.NoIdentityPolicies)
 		if err != nil {
 			return nil, err
 		}

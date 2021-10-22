@@ -96,6 +96,10 @@
         "path": "concepts/tokens"
       },
       {
+        "title": "Identity",
+        "path": "concepts/identity"
+        },
+      {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"
       },

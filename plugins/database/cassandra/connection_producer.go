@@ -189,6 +189,7 @@ func (c *cassandraConnectionProducer) createSession(ctx context.Context) (*gocql
 	}
 
 	clusterConfig.Timeout = c.connectTimeout
+	clusterConfig.ConnectTimeout = c.connectTimeout
 	clusterConfig.SocketKeepalive = c.socketKeepAlive
 	clusterConfig.SslOpts = c.sslOpts
 

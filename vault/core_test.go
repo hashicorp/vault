@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -50,6 +51,23 @@ func TestSealConfig_Invalid(t *testing.T) {
 	err := s.Validate()
 	if err == nil {
 		t.Fatalf("expected err")
+	}
+}
+
+// TestCore_HasVaultVersion checks that VersionTimestamps are correct and initialized
+// after a core has been unsealed.
+func TestCore_HasVaultVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	if c.VersionTimestamps == nil {
+		t.Fatalf("Version timestamps for core were not initialized for a new core")
+	}
+	upgradeTime, ok := c.VersionTimestamps["1.9.0"]
+	if !ok {
+		t.Fatalf("1.9.0 upgrade time not found")
+	}
+	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
+		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
+			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
 	}
 }
 

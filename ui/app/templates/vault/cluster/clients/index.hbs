@@ -40,7 +40,7 @@
       {{/if}}
     </ToolbarActions>
   </Toolbar>
-  <Clients::Config @model={{model.config}} />
+  <Clients::Config @model={{model.config}} @isLoading={{this.currentlyLoading}} />
 {{else}}
-  <Clients::History @tab={{tab}} @model={{model}} />
+  <Clients::History @tab={{tab}} @model={{model}} @isLoading={{this.currentlyLoading}} />
 {{/if}}

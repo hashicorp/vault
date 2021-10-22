@@ -3,14 +3,10 @@ package vault
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -49,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
@@ -108,6 +104,7 @@ var (
 	enterprisePreSeal            = enterprisePreSealImpl
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
 	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
+	enterpriseSetupAPILock       = setupAPILockImpl
 	startReplication             = startReplicationImpl
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
@@ -514,6 +511,9 @@ type Core struct {
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
+	// customListenerHeader holds custom response headers for a listener
+	customListenerHeader *atomic.Value
+
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
 
@@ -569,6 +569,10 @@ type Core struct {
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
+
+	// VersionTimestamps is a map of vault versions to timestamps when the version
+	// was first run
+	VersionTimestamps map[string]time.Time
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -773,23 +777,24 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		entCore:             entCore{},
-		devToken:            conf.DevToken,
-		physical:            conf.Physical,
-		serviceRegistration: conf.GetServiceRegistration(),
-		underlyingPhysical:  conf.Physical,
-		storageType:         conf.StorageType,
-		redirectAddr:        conf.RedirectAddr,
-		clusterAddr:         new(atomic.Value),
-		clusterListener:     new(atomic.Value),
-		seal:                conf.Seal,
-		router:              NewRouter(),
-		sealed:              new(uint32),
-		sealMigrationDone:   new(uint32),
-		standby:             true,
-		standbyStopCh:       new(atomic.Value),
-		baseLogger:          conf.Logger,
-		logger:              conf.Logger.Named("core"),
+		entCore:              entCore{},
+		devToken:             conf.DevToken,
+		physical:             conf.Physical,
+		serviceRegistration:  conf.GetServiceRegistration(),
+		underlyingPhysical:   conf.Physical,
+		storageType:          conf.StorageType,
+		redirectAddr:         conf.RedirectAddr,
+		clusterAddr:          new(atomic.Value),
+		clusterListener:      new(atomic.Value),
+		customListenerHeader: new(atomic.Value),
+		seal:                 conf.Seal,
+		router:               NewRouter(),
+		sealed:               new(uint32),
+		sealMigrationDone:    new(uint32),
+		standby:              true,
+		standbyStopCh:        new(atomic.Value),
+		baseLogger:           conf.Logger,
+		logger:               conf.Logger.Named("core"),
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -1009,6 +1014,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
+	// for listeners with custom response headers, configuring customListenerHeader
+	if conf.RawConfig.Listeners != nil {
+		uiHeaders, err := c.UIHeaders()
+		if err != nil {
+			return nil, err
+		}
+		c.customListenerHeader.Store(NewListenerCustomHeader(conf.RawConfig.Listeners, c.logger, uiHeaders))
+	} else {
+		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
+	}
+
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
 	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
@@ -1021,7 +1037,31 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
+	if c.VersionTimestamps == nil {
+		c.logger.Info("Initializing VersionTimestamps for core")
+		c.VersionTimestamps = make(map[string]time.Time)
+	}
+
 	return c, nil
+}
+
+// HandleVersionTimeStamps stores the current version at the current time to
+// storage, and then loads all versions and upgrade timestamps out from storage.
+func (c *Core) HandleVersionTimeStamps(ctx context.Context) error {
+	currentTime := time.Now()
+	isUpdated, err := c.StoreVersionTimestamp(ctx, version.Version, currentTime)
+	if err != nil {
+		return err
+	}
+	if isUpdated {
+		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
+	}
+	// Finally, load the versions into core fields
+	err = c.HandleLoadVersionTimestamps(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // HostnameHeaderEnabled determines whether to add the X-Vault-Hostname header
@@ -1972,6 +2012,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
+	if err := enterpriseSetupAPILock(c, ctx); err != nil {
+		return err
+	}
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
@@ -2120,6 +2163,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
 		}
 	}
+	err := c.HandleVersionTimeStamps(c.activeContext)
+	if err != nil {
+		c.logger.Warn("post-unseal version timestamp setup failed", "error", err)
+
+	}
 
 	c.logger.Info("post-unseal setup complete")
 	return nil
@@ -2213,6 +2261,8 @@ func startReplicationImpl(c *Core) error {
 func stopReplicationImpl(c *Core) error {
 	return nil
 }
+
+func setupAPILockImpl(_ *Core, _ context.Context) error { return nil }
 
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
@@ -2640,6 +2690,68 @@ func (c *Core) SetConfig(conf *server.Config) {
 	c.logger.Debug("set config", "sanitized config", string(bz))
 }
 
+func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
+
+	customHeaders := c.customListenerHeader.Load()
+	if customHeaders == nil {
+		return nil
+	}
+
+	customHeadersList, ok := customHeaders.([]*ListenerCustomHeaders)
+	if customHeadersList == nil || !ok {
+		return nil
+	}
+
+	for _, l := range customHeadersList {
+		if l.Address == listenerAdd {
+			return l
+		}
+	}
+	return nil
+}
+
+// ExistCustomResponseHeader checks if a custom header is configured in any
+// listener's stanza
+func (c *Core) ExistCustomResponseHeader(header string) bool {
+	customHeaders := c.customListenerHeader.Load()
+	if customHeaders == nil {
+		return false
+	}
+
+	customHeadersList, ok := customHeaders.([]*ListenerCustomHeaders)
+	if customHeadersList == nil || !ok {
+		return false
+	}
+
+	for _, l := range customHeadersList {
+		exist := l.ExistCustomResponseHeader(header)
+		if exist {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *Core) ReloadCustomResponseHeaders() error {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return fmt.Errorf("failed to load core raw config")
+	}
+	lns := conf.(*server.Config).Listeners
+	if lns == nil {
+		return fmt.Errorf("no listener configured")
+	}
+
+	uiHeaders, err := c.UIHeaders()
+	if err != nil {
+		return err
+	}
+	c.customListenerHeader.Store(NewListenerCustomHeader(lns, c.logger, uiHeaders))
+
+	return nil
+}
+
 // SanitizedConfig returns a sanitized version of the current config.
 // See server.Config.Sanitized for specific values omitted.
 func (c *Core) SanitizedConfig() map[string]interface{} {
@@ -2822,51 +2934,6 @@ func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 
 func (c *Core) isPrimary() bool {
 	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
-}
-
-func ParseRequiredState(raw string, hmacKey []byte) (*logical.WALState, error) {
-	cooked, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil {
-		return nil, err
-	}
-	s := string(cooked)
-
-	lastIndex := strings.LastIndexByte(s, ':')
-	if lastIndex == -1 {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
-	stateHMAC, err := hex.DecodeString(stateHMACRaw)
-	if err != nil {
-		return nil, fmt.Errorf("invalid state header HMAC: %v, %w", stateHMACRaw, err)
-	}
-
-	if len(hmacKey) != 0 {
-		hm := hmac.New(sha256.New, hmacKey)
-		hm.Write([]byte(state))
-		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
-			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
-		}
-	}
-
-	pieces := strings.Split(state, ":")
-	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-	replicatedIndex, err := strconv.ParseUint(pieces[3], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid state header format")
-	}
-
-	return &logical.WALState{
-		ClusterID:       pieces[1],
-		LocalIndex:      localIndex,
-		ReplicatedIndex: replicatedIndex,
-	}, nil
 }
 
 type LicenseState struct {

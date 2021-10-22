@@ -410,6 +410,14 @@
         "path": "system/internal-ui-mounts"
       },
       {
+        "title": "<code>/sys/internal/ui/namespaces</code>",
+        "path": "system/internal-ui-namespaces"
+      },
+      {
+        "title": "<code>/sys/internal/ui/resultant-acl</code>",
+        "path": "system/internal-ui-resultant-acl"
+      },
+      {
         "title": "<code>/sys/key-status</code>",
         "path": "system/key-status"
       },
