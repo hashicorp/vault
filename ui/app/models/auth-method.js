@@ -50,9 +50,10 @@ let ModelExport = Model.extend(Validations, {
   }),
 
   tuneAttrs: computed('path', function() {
-    let { path } = this;
+    let { methodType } = this;
     let tuneAttrs;
-    if (path === 'token/') {
+    // token_type should not be tuneable for the token auth method
+    if (methodType === 'token') {
       tuneAttrs = [
         'description',
         'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
