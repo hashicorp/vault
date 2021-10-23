@@ -213,8 +213,8 @@ class BarChartComponent extends Component {
         select('.chart-tooltip')
           .style('opacity', 1)
           .style('max-width', '200px')
-          .style('left', `${event.pageX - 400}px`)
-          .style('top', `${event.pageY - 150}px`)
+          .style('left', `${event.pageX - 325}px`)
+          .style('top', `${event.pageY - 140}px`)
           .text(
             `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
             ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
@@ -263,7 +263,7 @@ class BarChartComponent extends Component {
       .on('mousemove', function(chartData) {
         if (chartData.label.length >= CHAR_LIMIT) {
           select('.chart-tooltip')
-            .style('left', `${event.pageX - 400}px`)
+            .style('left', `${event.pageX - 300}px`)
             .style('top', `${event.pageY - 100}px`)
             .text(`${chartData.label}`)
             .style('max-width', 'fit-content');
