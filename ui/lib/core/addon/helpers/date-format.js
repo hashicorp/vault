@@ -3,7 +3,6 @@ import { format, parseISO } from 'date-fns';
 
 export function dateFormat([date, style], { isFormatted = false, offsetTimezone = false }) {
   // see format breaking in upgrade to date-fns 2.x https://github.com/date-fns/date-fns/blob/master/CHANGELOG.md#changed-5
-  debugger;
   if (isFormatted) {
     return format(new Date(date), style);
   }
