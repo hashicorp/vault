@@ -1,13 +1,13 @@
 import { helper } from '@ember/component/helper';
 import { format, parseISO } from 'date-fns';
 
-export function dateFormat([date, style], { isFormatted = false, offsetTimezone = false }) {
+export function dateFormat([date, style], { isFormatted = false, dateOnly = false }) {
   // see format breaking in upgrade to date-fns 2.x https://github.com/date-fns/date-fns/blob/master/CHANGELOG.md#changed-5
   if (isFormatted) {
     return format(new Date(date), style);
   }
   // remove hours so month displays correctly and not affected by timezone
-  if (offsetTimezone) {
+  if (dateOnly) {
     date = date.split('T')[0];
   }
   let number = typeof date === 'string' ? parseISO(date) : date;

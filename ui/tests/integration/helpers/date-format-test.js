@@ -59,7 +59,7 @@ module('Integration | Helper | date-format', function(hooks) {
     this.set('timestampDate', timestampDate);
 
     await render(
-      hbs`<p data-test-date-format>Date: {{date-format timestampDate 'MMM dd, yyyy' offsetTimezone=true}}</p>`
+      hbs`<p data-test-date-format>Date: {{date-format timestampDate 'MMM dd, yyyy' dateOnly=true}}</p>`
     );
     assert.dom('[data-test-date-format]').includesText(format(timestampDate, 'Sep 1, 2021'));
   });
