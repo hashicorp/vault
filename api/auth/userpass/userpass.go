@@ -11,10 +11,11 @@ import (
 )
 
 type UserpassAuth struct {
-	mountPath      string
-	username       string
-	password       string
-	passwordSource string
+	mountPath    string
+	username     string
+	password     string
+	passwordFile string
+	passwordEnv  string
 }
 
 type Password struct {
@@ -28,6 +29,8 @@ type Password struct {
 	FromString string
 }
 
+var _ api.AuthMethod = (*UserpassAuth)(nil)
+
 type LoginOption func(a *UserpassAuth) error
 
 const (
@@ -39,8 +42,6 @@ const (
 //
 // Supported options: WithMountPath
 func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (*UserpassAuth, error) {
-	var _ api.AuthMethod = (*UserpassAuth)(nil)
-
 	if username == "" {
 		return nil, fmt.Errorf("no user name provided for login")
 	}
@@ -59,17 +60,13 @@ func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (
 		username:  username,
 	}
 
-	// set password source to a filepath for reading at login time if FromFile, otherwise just set password to the specified value
+	// password will be read in at login time if it comes from a file or environment variable, in case the underlying value changes
 	if password.FromFile != "" {
-		a.passwordSource = password.FromFile
+		a.passwordFile = password.FromFile
 	}
 
 	if password.FromEnv != "" {
-		fromEnv := os.Getenv(password.FromEnv)
-		if fromEnv == "" {
-			return nil, fmt.Errorf("password was specified with an environment variable with an empty value")
-		}
-		a.password = fromEnv
+		a.passwordEnv = password.FromEnv
 	}
 
 	if password.FromString != "" {
@@ -93,10 +90,16 @@ func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (
 func (a *UserpassAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
 	loginData := make(map[string]interface{})
 
-	if a.passwordSource != "" {
+	if a.passwordFile != "" {
 		passwordValue, err := a.readPasswordFromFile()
 		if err != nil {
 			return nil, fmt.Errorf("error reading password: %w", err)
+		}
+		loginData["password"] = passwordValue
+	} else if a.passwordEnv != "" {
+		passwordValue := os.Getenv(a.passwordEnv)
+		if passwordValue == "" {
+			return nil, fmt.Errorf("password was specified with an environment variable with an empty value")
 		}
 		loginData["password"] = passwordValue
 	} else {
@@ -120,7 +123,7 @@ func WithMountPath(mountPath string) LoginOption {
 }
 
 func (a *UserpassAuth) readPasswordFromFile() (string, error) {
-	passwordFile, err := os.Open(a.passwordSource)
+	passwordFile, err := os.Open(a.passwordFile)
 	if err != nil {
 		return "", fmt.Errorf("unable to open file containing password: %w", err)
 	}
@@ -161,45 +164,3 @@ func (password *Password) validate() error {
 	}
 	return nil
 }
-
-// func readPassword(password *Password) (string, error) {
-// 	var parsedPassword string
-// 	if password.FromFile != "" {
-// 		if password.FromEnv != "" || password.FromString != "" {
-// 			return "", fmt.Errorf("only one location for the password should be specified")
-// 		}
-// 		passwordFile, err := os.Open(password.FromFile)
-// 		if err != nil {
-// 			return "", fmt.Errorf("unable to open file containing password: %w", err)
-// 		}
-// 		defer passwordFile.Close()
-
-// 		limitedReader := io.LimitReader(passwordFile, 1000)
-// 		passwordBytes, err := io.ReadAll(limitedReader)
-// 		if err != nil {
-// 			return "", fmt.Errorf("unable to read password: %w", err)
-// 		}
-// 		parsedPassword = string(passwordBytes)
-// 	}
-
-// 	if password.FromEnv != "" {
-// 		if password.FromFile != "" || password.FromString != "" {
-// 			return "", fmt.Errorf("only one location for the password should be specified")
-// 		}
-// 		parsedPassword = os.Getenv(password.FromEnv)
-// 		if parsedPassword == "" {
-// 			return "", fmt.Errorf("password was specified with an environment variable with an empty value")
-// 		}
-// 	}
-
-// 	if password.FromString != "" {
-// 		if password.FromFile != "" || password.FromEnv != "" {
-// 			return "", fmt.Errorf("only one location for the password should be specified")
-// 		}
-// 		parsedPassword = password.FromString
-// 	}
-
-// 	passwordValue := strings.TrimSuffix(parsedPassword, "\n")
-
-// 	return passwordValue, nil
-// }

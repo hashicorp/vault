@@ -11,12 +11,15 @@ import (
 )
 
 type AppRoleAuth struct {
-	mountPath      string
-	roleID         string
-	secretID       string
-	secretIDSource string
-	unwrap         bool
+	mountPath    string
+	roleID       string
+	secretID     string
+	secretIDFile string
+	secretIDEnv  string
+	unwrap       bool
 }
+
+var _ api.AuthMethod = (*AppRoleAuth)(nil)
 
 // SecretID is a struct that allows you to specify where your application is
 // storing the secret ID required for login to the AppRole auth method.
@@ -52,8 +55,6 @@ const (
 //
 // Supported options: WithMountPath, WithWrappingToken
 func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*AppRoleAuth, error) {
-	var _ api.AuthMethod = (*AppRoleAuth)(nil)
-
 	if roleID == "" {
 		return nil, fmt.Errorf("no role ID provided for login")
 	}
@@ -72,17 +73,13 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 		roleID:    roleID,
 	}
 
-	// set secret ID source to a filepath for reading at login time if FromFile, otherwise just set secret ID to the specified value
+	// secret ID will be read in at login time if it comes from a file or environment variable, in case the underlying value changes
 	if secretID.FromFile != "" {
-		a.secretIDSource = secretID.FromFile
+		a.secretIDFile = secretID.FromFile
 	}
 
 	if secretID.FromEnv != "" {
-		fromEnv := os.Getenv(secretID.FromEnv)
-		if fromEnv == "" {
-			return nil, fmt.Errorf("secret ID was specified with an environment variable with an empty value")
-		}
-		a.secretID = fromEnv
+		a.secretIDEnv = secretID.FromEnv
 	}
 
 	if secretID.FromString != "" {
@@ -108,7 +105,7 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		"role_id": a.roleID,
 	}
 
-	if a.secretIDSource != "" {
+	if a.secretIDFile != "" {
 		secretIDValue, err := a.readSecretIDFromFile()
 		if err != nil {
 			return nil, fmt.Errorf("error reading secret ID: %w", err)
@@ -125,6 +122,12 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		} else {
 			loginData["secret_id"] = secretIDValue
 		}
+	} else if a.secretIDEnv != "" {
+		secretIDValue := os.Getenv(a.secretIDEnv)
+		if secretIDValue == "" {
+			return nil, fmt.Errorf("secret ID was specified with an environment variable with an empty value")
+		}
+		loginData["secret_id"] = secretIDValue
 	} else {
 		loginData["secret_id"] = a.secretID
 	}
@@ -153,7 +156,7 @@ func WithWrappingToken() LoginOption {
 }
 
 func (a *AppRoleAuth) readSecretIDFromFile() (string, error) {
-	secretIDFile, err := os.Open(a.secretIDSource)
+	secretIDFile, err := os.Open(a.secretIDFile)
 	if err != nil {
 		return "", fmt.Errorf("unable to open file containing secret ID: %w", err)
 	}

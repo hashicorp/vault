@@ -33,6 +33,8 @@ type AWSAuth struct {
 	nonce                  string
 }
 
+var _ api.AuthMethod = (*AWSAuth)(nil)
+
 type LoginOption func(a *AWSAuth) error
 
 const (
@@ -41,9 +43,9 @@ const (
 	pkcs7Type            = "pkcs7"
 	identityType         = "identity"
 	defaultMountPath     = "aws"
-	defaultAuthType      = "iam"
+	defaultAuthType      = iamType
 	defaultRegion        = "us-east-1"
-	defaultSignatureType = "pkcs7"
+	defaultSignatureType = pkcs7Type
 )
 
 // NewAWSAuth initializes a new AWS auth method interface to be
@@ -52,8 +54,6 @@ const (
 // Supported options: WithRole, WithMountPath, WithIAMAuth, WithEC2Auth,
 // WithPKCS7Signature, WithIdentitySignature, WithIAMServerIDHeader, WithNonce, WithRegion
 func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
-	var _ api.AuthMethod = (*AWSAuth)(nil)
-
 	a := &AWSAuth{
 		mountPath:     defaultMountPath,
 		authType:      defaultAuthType,

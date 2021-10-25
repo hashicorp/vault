@@ -14,6 +14,8 @@ type KubernetesAuth struct {
 	serviceAccountToken string
 }
 
+var _ api.AuthMethod = (*KubernetesAuth)(nil)
+
 type LoginOption func(a *KubernetesAuth) error
 
 const (
@@ -34,8 +36,6 @@ const (
 //
 // Supported options: WithMountPath, WithServiceAccountTokenPath, WithServiceAccountTokenEnv, WithServiceAccountToken
 func NewKubernetesAuth(roleName string, opts ...LoginOption) (*KubernetesAuth, error) {
-	var _ api.AuthMethod = (*KubernetesAuth)(nil)
-
 	if roleName == "" {
 		return nil, fmt.Errorf("no role name was provided")
 	}
