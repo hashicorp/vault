@@ -22,31 +22,63 @@ func testKVPutCommand(tb testing.TB) (*cli.MockUi, *KVPutCommand) {
 	}
 }
 
-func retryKVCommand(t *testing.T, client *api.Client, args []string) (code int, combined string) {
+func retryKVCommand(t *testing.T, cmdFunc func() (int, string)) (int, string) {
 	t.Helper()
+
+	var code int
+	var combined string
 
 	// Loop until return message does not indicate upgrade, or timeout.
 	timeout := time.After(20 * time.Second)
+	ticker := time.Tick(time.Second)
+
 	for {
+		select {
+		case <-timeout:
+			t.Errorf("timeout expired waiting for upgrade: %q", combined)
+			return code, combined
+		case <-ticker:
+			code, combined = cmdFunc()
+
+			// This is an error if a v1 mount, but test case doesn't
+			// currently contain the information to know the difference.
+			if !strings.Contains(combined, "Upgrading from non-versioned to versioned") {
+				return code, combined
+			}
+		}
+	}
+}
+
+func kvPutWithRetry(t *testing.T, client *api.Client, args []string) (int, string) {
+	t.Helper()
+
+	return retryKVCommand(t, func() (int, string) {
 		ui, cmd := testKVPutCommand(t)
 		cmd.client = client
-		code = cmd.Run(args)
-		combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
 
-		// This is an error if a v1 mount, but test case case doesn't
-		// currently contain the information to know the difference.
-		if strings.Contains(combined, "Upgrading from non-versioned to versioned") {
-			select {
-			case <-timeout:
-				t.Errorf("timeout expired waiting for upgrade: %q", combined)
-				return code, combined
-			default:
-			}
-			continue
+		code := cmd.Run(args)
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+		return code, combined
+	})
+}
+
+func kvPatchWithRetry(t *testing.T, client *api.Client, args []string, stdin *io.PipeReader) (int, string) {
+	t.Helper()
+
+	return retryKVCommand(t, func() (int, string) {
+		ui, cmd := testKVPatchCommand(t)
+		cmd.client = client
+
+		if stdin != nil {
+			cmd.testStdin = stdin
 		}
-		break
-	}
-	return code, combined
+
+		code := cmd.Run(args)
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+		return code, combined
+	})
 }
 
 func TestKVPutCommand(t *testing.T) {
@@ -117,7 +149,7 @@ func TestKVPutCommand(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			code, combined := retryKVCommand(t, client, tc.args)
+			code, combined := kvPutWithRetry(t, client, tc.args)
 			if code != tc.code {
 				t.Errorf("expected %d to be %d", code, tc.code)
 			}
@@ -140,7 +172,7 @@ func TestKVPutCommand(t *testing.T) {
 		}
 
 		// Only have to potentially retry the first time.
-		code, combined := retryKVCommand(t, client, []string{
+		code, combined := kvPutWithRetry(t, client, []string{
 			"-cas", "0", "kv/write/cas", "bar=baz",
 		})
 		if code != 0 {
@@ -607,19 +639,14 @@ func TestKVPatchCommand_ArgValidation(t *testing.T) {
 				t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 			}
 
-			ui, cmd := testKVPatchCommand(t)
-			cmd.client = client
-
-			code := cmd.Run(tc.args)
+			code, combined := kvPatchWithRetry(t, client, tc.args, nil)
 
 			if code != tc.code {
-				t.Fatalf("expected code to be %d but was %d for cmd %#v with args %#v\n", tc.code, code, cmd, tc.args)
+				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v\n", tc.code, code, tc.args)
 			}
 
-			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-
 			if !strings.Contains(combined, tc.out) {
-				t.Fatalf("expected output to be %q but was %q for cmd %#v with args %#v\n", tc.out, combined, cmd, tc.args)
+				t.Fatalf("expected output to be %q but was %q for patch cmd with args %#v\n", tc.out, combined, tc.args)
 			}
 		})
 	}
@@ -649,15 +676,10 @@ func TestKvPatchCommand_StdinFull(t *testing.T) {
 		stdinW.Close()
 	}()
 
-	_, cmd := testKVPatchCommand(t)
-	cmd.client = client
-
-	cmd.testStdin = stdinR
-
 	args := []string{"kv/patch/foo", "-"}
-	code := cmd.Run(args)
+	code, _ := kvPatchWithRetry(t, client, args, stdinR)
 	if code != 0 {
-		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
+		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 	}
 
 	secret, err := client.Logical().Read("kv/data/patch/foo")
@@ -710,15 +732,10 @@ func TestKvPatchCommand_StdinValue(t *testing.T) {
 		stdinW.Close()
 	}()
 
-	_, cmd := testKVPatchCommand(t)
-	cmd.client = client
-
-	cmd.testStdin = stdinR
-
 	args := []string{"kv/patch/foo", "foo=-"}
-	code := cmd.Run(args)
+	code, _ := kvPatchWithRetry(t, client, args, stdinR)
 	if code != 0 {
-		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
+		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 	}
 
 	secret, err := client.Logical().Read("kv/data/patch/foo")
@@ -753,20 +770,16 @@ func TestKVPatchCommand_RWMethodNotExists(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	ui, cmd := testKVPatchCommand(t)
-	cmd.client = client
-
 	args := []string{"-method", "rw", "kv/patch/foo", "foo=a"}
-	code := cmd.Run(args)
-	if code != 2 {
-		t.Fatalf("expected code to be 2 but was %d for cmd %#v with args %#v\n", code, cmd, args)
-	}
+	code, combined := kvPatchWithRetry(t, client, args, nil)
 
-	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if code != 2 {
+		t.Fatalf("expected code to be 2 but was %d for patch cmd with args %#v\n", code, args)
+	}
 
 	expectedOutputSubstr := "No value found"
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
+		t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
 	}
 }
 
@@ -789,37 +802,29 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 		t.Fatalf("write failed, err: %#v\n", err)
 	}
 
-	ui, cmd := testKVPatchCommand(t)
-	cmd.client = client
-
 	// Test single value
 	args := []string{"-method", "rw", "kv/patch/foo", "foo=aa"}
-	code := cmd.Run(args)
-	if code != 0 {
-		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
-	}
+	code, combined := kvPatchWithRetry(t, client, args, nil)
 
-	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if code != 0 {
+		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
+	}
 
 	expectedOutputSubstr := "created_time"
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
+		t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
 	}
 
 	// Test multi value
-	ui, cmd = testKVPatchCommand(t)
-	cmd.client = client
-
 	args = []string{"-method", "rw", "kv/patch/foo", "foo=aaa", "bar=bbb"}
-	code = cmd.Run(args)
+	code, combined = kvPatchWithRetry(t, client, args, nil)
+
 	if code != 0 {
-		t.Fatalf("expected code to be 0 but was %d for cmd %#v with args %#v\n", code, cmd, args)
+		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 	}
 
-	combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
-
 	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, expectedOutputSubstr, cmd, args)
+		t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
 	}
 }
 
@@ -881,17 +886,13 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ui, cmd := testKVPatchCommand(t)
-			cmd.client = kvClient
-
-			code := cmd.Run(tc.args)
+			code, combined := kvPatchWithRetry(t, kvClient, tc.args, nil)
 
 			if code != tc.code {
 				t.Fatalf("expected code to be %d but was %d", tc.code, code)
 			}
 
 			if tc.out != "" {
-				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 				if !strings.Contains(combined, tc.out) {
 					t.Errorf("expected %q to contain %q", combined, tc.out)
 				}
@@ -961,10 +962,7 @@ func TestKVPatchCommand_Methods(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, cmd := testKVPatchCommand(t)
-			cmd.client = kvClient
-
-			code := cmd.Run(tc.args)
+			code, _ := kvPatchWithRetry(t, kvClient, tc.args, nil)
 
 			if code != tc.code {
 				t.Fatalf("expected code to be %d but was %d", tc.code, code)
@@ -1036,15 +1034,12 @@ func TestKVPatchCommand_403Fallback(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			ui, cmd := testKVPatchCommand(t)
-			cmd.client = kvClient
-			code := cmd.Run(tc.args)
+			code, combined := kvPatchWithRetry(t, kvClient, tc.args, nil)
 
 			if code != tc.code {
 				t.Fatalf("expected code to be %d but was %d", tc.code, code)
 			}
 
-			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 			if !strings.Contains(combined, tc.expected) {
 				t.Errorf("expected %q to contain %q", combined, tc.expected)
 			}
@@ -1138,19 +1133,14 @@ func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 				t.Fatalf("write failed, err: %#v\n", err)
 			}
 
-			ui, cmd := testKVPatchCommand(t)
-			cmd.client = client
-
-			code := cmd.Run(tc.args)
-
+			code, combined := kvPatchWithRetry(t, client, tc.args, nil)
 			if code != tc.code {
-				t.Fatalf("expected code to be %d but was %d for cmd %#v with args %#v\n", tc.code, code, cmd, tc.args)
+				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v\n", tc.code, code, tc.args)
 			}
 
 			if code != 0 {
-				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 				if !strings.Contains(combined, tc.expected) {
-					t.Fatalf("expected output %q to contain %q for cmd %#v with args %#v\n", combined, tc.expected, cmd, tc.args)
+					t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, tc.expected, tc.args)
 				}
 			}
 		})

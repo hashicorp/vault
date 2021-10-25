@@ -25,7 +25,7 @@ All calls to [create or update a role](https://www.vaultproject.io/api/secret/id
 must be checked to ensure that roles are not being created or updated with
 non-existent keys.
 
-### SSH Role Parameter `allowed_extensions` Behavior Change
+## SSH Role Parameter `allowed_extensions` Behavior Change
 
 Prior versions of Vault allowed clients to specify any extension when requesting
 SSH certificate [signing requests](https://www.vaultproject.io/api/secret/ssh#sign-ssh-key)
@@ -38,3 +38,14 @@ associated with.
 To re-enable the old behavior, update the roles with a value
 of `"*"` to the `allowed_extensions` parameter allowing any/all extensions to be
 specified by clients.
+
+## HTTP Request Counter Deprecation
+
+In Vault 1.9, the internal HTTP Request count
+[API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests)
+will be removed from the product. Calls to the endpoint will result in a 404
+error with a message stating that `functionality on this path has been removed`.
+
+Vault does not make backwards compatible guarantees on internal APIs (those
+prefaced with `sys/internal`). They are subject to change and may disappear
+without notice.
