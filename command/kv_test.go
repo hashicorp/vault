@@ -557,7 +557,7 @@ func TestKVMetadataGetCommand(t *testing.T) {
 		{
 			"versions_exist",
 			[]string{"kv/foo"},
-			append(append(expectedTopLevelFields, "Version 1"), expectedVersionFields[:]...),
+			append(expectedTopLevelFields,  expectedVersionFields[:]...),
 			0,
 		},
 	}
