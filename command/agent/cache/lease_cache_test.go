@@ -1,10 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -36,12 +34,6 @@ import (
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	t.Helper()
 
-	return testNewLeaseCacheWithLogWriter(t, responses, hclog.DefaultOutput)
-}
-
-func testNewLeaseCacheWithLogWriter(t *testing.T, responses []*SendResponse, w io.Writer) *LeaseCache {
-	t.Helper()
-
 	client, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +42,7 @@ func testNewLeaseCacheWithLogWriter(t *testing.T, responses []*SendResponse, w i
 		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
-		Logger:      logging.NewVaultLoggerWithWriter(w, hclog.Trace).Named("cache.leasecache"),
+		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -981,41 +973,19 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 		assert.Nil(t, resp.CacheMeta)
 	}
 
-	logBuffer := &bytes.Buffer{}
-	restoredCache := testNewLeaseCacheWithLogWriter(t, nil, logBuffer)
-
-	ch := make(chan *cachememdb.Index)
-	var restoredLeases []*cachememdb.Index
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case index, ok := <-ch:
-				if !ok {
-					return
-				}
-				restoredLeases = append(restoredLeases, index)
-			}
-		}
-	}()
-	err = restoredCache.restoreWithChannel(context.Background(), boltStorage, ch)
-	require.NoError(t, err)
-	wg.Wait()
-
-	// Now compare the cache contents before and after
-	compareBeforeAndAfter(t, lc, restoredCache, 223, 223)
-
-	// Ensure leases were restored in the correct order
+	// Ensure leases are retrieved in the correct order
 	approleRegex := regexp.MustCompile("/v1/auth/approle-(\\d+)/login")
 	kvRegex := regexp.MustCompile("/v1/kv/(\\d+)")
 	maxAppRoleAncestor := -1
 	restoredTokens := make(map[int]struct{})
 	var approleTokensFound, secretsFound int
-	for _, lease := range restoredLeases {
-		t.Log(lease.RequestPath)
-		if matches := approleRegex.FindStringSubmatch(lease.RequestPath); len(matches) >= 2 {
+
+	leases, err := boltStorage.GetByType(context.Background(), cacheboltdb.LeaseType)
+	for _, lease := range leases {
+		index, err := cachememdb.Deserialize(lease)
+		require.NoError(t, err)
+		t.Log(index.RequestPath)
+		if matches := approleRegex.FindStringSubmatch(index.RequestPath); len(matches) >= 2 {
 			id, err := strconv.Atoi(string(matches[1]))
 			require.NoError(t, err)
 			approleTokensFound++
@@ -1031,7 +1001,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 			if id >= 101 {
 				require.GreaterOrEqual(t, maxAppRoleAncestor, 25)
 			}
-		} else if matches := kvRegex.FindStringSubmatch(lease.RequestPath); len(matches) >= 2 {
+		} else if matches := kvRegex.FindStringSubmatch(index.RequestPath); len(matches) >= 2 {
 			id, err := strconv.Atoi(string(matches[1]))
 			require.NoError(t, err)
 			secretsFound++
@@ -1045,6 +1015,13 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	assert.Equal(t, 111, approleTokensFound)
 	assert.Equal(t, 111, secretsFound)
 	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 0-50")
+
+	restoredCache := testNewLeaseCache(t, nil)
+	err = restoredCache.Restore(context.Background(), boltStorage)
+	require.NoError(t, err)
+
+	// Now compare the cache contents before and after
+	compareBeforeAndAfter(t, lc, restoredCache, 223, 223)
 }
 
 func TestEvictPersistent(t *testing.T) {
