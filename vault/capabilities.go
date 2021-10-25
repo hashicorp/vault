@@ -40,7 +40,7 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	policyNames[tokenNS.ID] = te.Policies
 	policyCount += len(te.Policies)
 
-	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +58,17 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 		policyCount += len(nsPolicies)
 	}
 
+	// Add capabilities of the inline policy if it's set
+	policies := make([]*Policy, 0)
+	if te.InlinePolicy != "" {
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, inlinePolicy)
+		policyCount++
+	}
+
 	if policyCount == 0 {
 		return []string{DenyCapability}, nil
 	}
@@ -65,7 +76,7 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
 	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames)
+	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
 		return nil, err
 	}

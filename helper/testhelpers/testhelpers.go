@@ -698,3 +698,28 @@ type GaugeJSON struct {
 	Value  int                    `json:"Value"`
 	Labels map[string]interface{} `json:"Labels"`
 }
+
+// SetNonRootToken sets a token on :client: with a fairly generic policy.
+// This is useful if a test needs to examine differing behavior based on if a
+// root token is passed with the request.
+func SetNonRootToken(client *api.Client) error {
+	policy := `path "*" { capabilities = ["create", "update", "read"] }`
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return fmt.Errorf("error putting policy: %v", err)
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		return fmt.Errorf("error creating token secret: %v", err)
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return fmt.Errorf("missing token auth data")
+	}
+
+	client.SetToken(secret.Auth.ClientToken)
+	return nil
+}

@@ -2623,6 +2623,9 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
+		if b.Core.ExistCustomResponseHeader(header) {
+			return logical.ErrorResponse("This header already exists in the server configuration and cannot be set in the UI."), logical.ErrInvalidRequest
+		}
 		value.Add(header, v)
 	}
 	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
@@ -2815,6 +2818,10 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	if unwrapNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
 	unwrapCtx := namespace.ContextWithNamespace(ctx, unwrapNS)
 
 	var response string
@@ -3395,7 +3402,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
 			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
-			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&PatchCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -3680,6 +3688,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&UpdateCapabilityInt > 0 {
 			capabilities = append(capabilities, UpdateCapability)
+		}
+		if perms.CapabilitiesBitmap&PatchCapabilityInt > 0 {
+			capabilities = append(capabilities, PatchCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,

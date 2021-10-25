@@ -238,7 +238,7 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 		// Update the policies if supplied
 		entityPoliciesRaw, ok := d.GetOk("policies")
 		if ok {
-			entity.Policies = entityPoliciesRaw.([]string)
+			entity.Policies = strutil.RemoveDuplicates(entityPoliciesRaw.([]string), false)
 		}
 
 		if strutil.StrListContains(entity.Policies, "root") {
@@ -353,7 +353,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	respData["name"] = entity.Name
 	respData["metadata"] = entity.Metadata
 	respData["merged_entity_ids"] = entity.MergedEntityIDs
-	respData["policies"] = entity.Policies
+	respData["policies"] = strutil.RemoveDuplicates(entity.Policies, false)
 	respData["disabled"] = entity.Disabled
 	respData["namespace_id"] = entity.NamespaceID
 
@@ -373,6 +373,8 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 		aliasMap["creation_time"] = ptypes.TimestampString(alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(alias.LastUpdateTime)
+		aliasMap["local"] = alias.Local
+		aliasMap["custom_metadata"] = alias.CustomMetadata
 
 		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
@@ -733,8 +735,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return errors.New("entity id to merge into does not belong to the request's namespace"), nil
 	}
 
+	sanitizedFromEntityIDs := strutil.RemoveDuplicates(fromEntityIDs, false)
+
 	// Merge the MFA secrets
-	for _, fromEntityID := range fromEntityIDs {
+	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
@@ -768,7 +772,16 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
 		i.localNode.HAState() == consts.PerfStandby
 	var fromEntityGroups []*identity.Group
-	for _, fromEntityID := range fromEntityIDs {
+
+	toEntityAccessors := make(map[string]struct{})
+
+	for _, alias := range toEntity.Aliases {
+		if _, ok := toEntityAccessors[alias.MountAccessor]; !ok {
+			toEntityAccessors[alias.MountAccessor] = struct{}{}
+		}
+	}
+
+	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
@@ -797,13 +810,17 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
+			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
+				i.logger.Warn("skipping from_entity alias during entity merge as to_entity has an alias with its accessor", "from_entity", fromEntityID, "skipped_alias", alias.ID)
+				continue
+			}
 			// Add the alias to the desired entity
 			toEntity.Aliases = append(toEntity.Aliases, alias)
 		}
 
 		// If told to, merge policies
 		if mergePolicies {
-			toEntity.Policies = strutil.MergeSlices(toEntity.Policies, fromEntity.Policies)
+			toEntity.Policies = strutil.RemoveDuplicates(strutil.MergeSlices(toEntity.Policies, fromEntity.Policies), false)
 		}
 
 		// If the entity from which we are merging from was already a merged
