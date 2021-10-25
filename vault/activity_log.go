@@ -1649,7 +1649,7 @@ func (a *ActivityLog) CreateClientID(entry *logical.TokenEntry) (string, bool) {
 
 	// Step 5: Hash the sum
 	hashed := sha256.Sum256([]byte(clientIDInput))
-	return base64.URLEncoding.EncodeToString(hashed[:]), true
+	return base64.StdEncoding.EncodeToString(hashed[:]), true
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {
