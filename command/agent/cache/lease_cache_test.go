@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -916,28 +914,25 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 
 	var requests []*SendRequest
 	var responses []*SendResponse
+	var orderedRequestPaths []string
 
 	// helper func to generate new auth leases with a child secret lease attached
 	authAndSecretLease := func(id int, parentToken, newToken string) {
 		t.Helper()
+		path := fmt.Sprintf("/v1/auth/approle-%d/login", id)
+		orderedRequestPaths = append(orderedRequestPaths, path)
 		requests = append(requests, &SendRequest{
-			Token: parentToken,
-			Request: httptest.NewRequest(
-				"PUT",
-				fmt.Sprintf("http://example.com/v1/auth/approle-%d/login", id),
-				strings.NewReader(""),
-			),
+			Token:   parentToken,
+			Request: httptest.NewRequest("PUT", "http://example.com"+path, strings.NewReader("")),
 		})
 		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"auth": {"client_token": "%s", "renewable": true, "lease_duration": 600}}`, newToken)))
 
 		// Fetch a leased secret using the new token
+		path = fmt.Sprintf("/v1/kv/%d", id)
+		orderedRequestPaths = append(orderedRequestPaths, path)
 		requests = append(requests, &SendRequest{
-			Token: newToken,
-			Request: httptest.NewRequest(
-				"GET",
-				fmt.Sprintf("http://example.com/v1/kv/%d", id),
-				strings.NewReader(""),
-			),
+			Token:   newToken,
+			Request: httptest.NewRequest("GET", "http://example.com"+path, strings.NewReader("")),
 		})
 		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"lease_id": "secret-%d-lease", "renewable": true, "data": {"number": %d}, "lease_duration": 600}`, id, id)))
 	}
@@ -974,47 +969,17 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	}
 
 	// Ensure leases are retrieved in the correct order
-	approleRegex := regexp.MustCompile("/v1/auth/approle-(\\d+)/login")
-	kvRegex := regexp.MustCompile("/v1/kv/(\\d+)")
-	maxAppRoleAncestor := -1
-	restoredTokens := make(map[int]struct{})
-	var approleTokensFound, secretsFound int
+	var processed int
 
 	leases, err := boltStorage.GetByType(context.Background(), cacheboltdb.LeaseType)
 	for _, lease := range leases {
 		index, err := cachememdb.Deserialize(lease)
 		require.NoError(t, err)
-		t.Log(index.RequestPath)
-		if matches := approleRegex.FindStringSubmatch(index.RequestPath); len(matches) >= 2 {
-			id, err := strconv.Atoi(string(matches[1]))
-			require.NoError(t, err)
-			approleTokensFound++
-			restoredTokens[id] = struct{}{}
-
-			// These tokens are all children of each other, and should be restored in
-			// strictly ascending order.
-			if id <= 50 {
-				require.Equal(t, maxAppRoleAncestor+1, id)
-				maxAppRoleAncestor = id
-			}
-			// These tokens should not start getting restored until their parent(25) is restored.
-			if id >= 101 {
-				require.GreaterOrEqual(t, maxAppRoleAncestor, 25)
-			}
-		} else if matches := kvRegex.FindStringSubmatch(index.RequestPath); len(matches) >= 2 {
-			id, err := strconv.Atoi(string(matches[1]))
-			require.NoError(t, err)
-			secretsFound++
-
-			// Every secret lease should be restored after its own parent (the same number)
-			_, restored := restoredTokens[id]
-			require.True(t, restored, "kv lease restored before its parent token", id)
-		}
+		require.Equal(t, orderedRequestPaths[processed], index.RequestPath)
+		processed++
 	}
 
-	assert.Equal(t, 111, approleTokensFound)
-	assert.Equal(t, 111, secretsFound)
-	assert.Equal(t, 50, maxAppRoleAncestor, "expected to find all approle logins in the range 0-50")
+	assert.Equal(t, len(orderedRequestPaths), processed)
 
 	restoredCache := testNewLeaseCache(t, nil)
 	err = restoredCache.Restore(context.Background(), boltStorage)
