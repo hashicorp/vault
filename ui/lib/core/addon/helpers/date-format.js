@@ -6,7 +6,8 @@ export function dateFormat([date, style], { isFormatted = false, dateOnly = fals
   if (isFormatted) {
     return format(new Date(date), style);
   }
-  // remove hours so month displays correctly and not affected by timezone
+  // when date is in '2021-09-01T00:00:00Z' format
+  // remove hours so date displays unaffected by timezone
   if (dateOnly) {
     date = date.split('T')[0];
   }
