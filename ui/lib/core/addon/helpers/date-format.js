@@ -6,11 +6,9 @@ export function dateFormat([date, style], { isFormatted = false, offsetTimezone 
   if (isFormatted) {
     return format(new Date(date), style);
   }
-  // remove 'Z' so date range displays correct month (i.e. "Jul 1" instead of "Jun 30")
+  // remove hours so month displays correctly and not affected by timezone
   if (offsetTimezone) {
-    if (date[date.length - 1] === 'Z') {
-      date = date.slice(0, date.length - 1);
-    }
+    date = date.split('T')[0];
   }
   let number = typeof date === 'string' ? parseISO(date) : date;
   if (!number) {
