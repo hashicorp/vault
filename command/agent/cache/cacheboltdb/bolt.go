@@ -27,11 +27,11 @@ const (
 	// bootstrapping keys
 	metaBucketName = "meta"
 
-	// DEPRECATED: SecretLeaseType - v1 Bucket/type for leases with secret info
-	SecretLeaseType = "secret-lease"
+	// DEPRECATED: secretLeaseType - v1 Bucket/type for leases with secret info
+	secretLeaseType = "secret-lease"
 
-	// DEPRECATED: AuthLeaseType - v1 Bucket/type for leases with auth info
-	AuthLeaseType = "auth-lease"
+	// DEPRECATED: authLeaseType - v1 Bucket/type for leases with auth info
+	authLeaseType = "auth-lease"
 
 	// TokenType - Bucket/type for auto-auth tokens
 	TokenType = "token"
@@ -86,7 +86,7 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 		return nil, err
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		return createBoltSchema(tx)
+		return createBoltSchema(tx, storageVersion)
 	})
 	if err != nil {
 		return nil, err
@@ -100,36 +100,60 @@ func NewBoltStorage(config *BoltStorageConfig) (*BoltStorage, error) {
 	return bs, nil
 }
 
-func createBoltSchema(tx *bolt.Tx) error {
-	// create the meta bucket at the top level
+func createBoltSchema(tx *bolt.Tx, createVersion string) error {
+	switch {
+	case createVersion == "1":
+		if err := createV1BoltSchema(tx); err != nil {
+			return err
+		}
+	case createVersion == "2":
+		if err := createV2BoltSchema(tx); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("schema version %s not supported", createVersion)
+	}
+
 	meta, err := tx.CreateBucketIfNotExists([]byte(metaBucketName))
 	if err != nil {
 		return fmt.Errorf("failed to create bucket %s: %w", metaBucketName, err)
 	}
-	// check and set file version in the meta bucket
+
+	// Check and set file version in the meta bucket.
 	version := meta.Get([]byte(storageVersionKey))
 	switch {
 	case version == nil:
-		err = meta.Put([]byte(storageVersionKey), []byte(storageVersion))
+		err = meta.Put([]byte(storageVersionKey), []byte(createVersion))
 		if err != nil {
 			return fmt.Errorf("failed to set storage version: %w", err)
 		}
 
-		return createV2BoltSchema(tx)
+		return nil
 
-	case string(version) == storageVersion:
-		return createV2BoltSchema(tx)
+	case string(version) == createVersion:
+		return nil
 
-	case string(version) == "1":
+	case string(version) == "1" && createVersion == "2":
 		return migrateFromV1ToV2Schema(tx)
 
 	default:
-		return fmt.Errorf("storage migration from %s to %s not implemented", string(version), storageVersion)
+		return fmt.Errorf("storage migration from %s to %s not implemented", string(version), createVersion)
 	}
 }
 
+func createV1BoltSchema(tx *bolt.Tx) error {
+	// Create the buckets for tokens and leases.
+	for _, bucket := range []string{TokenType, authLeaseType, secretLeaseType} {
+		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
+			return fmt.Errorf("failed to create %s bucket: %w", bucket, err)
+		}
+	}
+
+	return nil
+}
+
 func createV2BoltSchema(tx *bolt.Tx) error {
-	// create the buckets for tokens and leases
+	// Create the buckets for tokens and leases.
 	for _, bucket := range []string{TokenType, LeaseType, lookupType} {
 		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 			return fmt.Errorf("failed to create %s bucket: %w", bucket, err)
@@ -144,21 +168,21 @@ func migrateFromV1ToV2Schema(tx *bolt.Tx) error {
 		return err
 	}
 
-	for _, leaseType := range []string{AuthLeaseType, SecretLeaseType} {
-		if bucket := tx.Bucket([]byte(leaseType)); bucket != nil {
+	for _, v1BucketType := range []string{authLeaseType, secretLeaseType} {
+		if bucket := tx.Bucket([]byte(v1BucketType)); bucket != nil {
 			bucket.ForEach(func(key, value []byte) error {
 				autoIncKey, err := autoIncrementedLeaseKey(tx, string(key))
 				if err != nil {
-					return fmt.Errorf("error migrating %s %q key to auto incremented key: %w", leaseType, string(key), err)
+					return fmt.Errorf("error migrating %s %q key to auto incremented key: %w", v1BucketType, string(key), err)
 				}
 				if err := tx.Bucket([]byte(LeaseType)).Put(autoIncKey, value); err != nil {
-					return fmt.Errorf("error migrating %s %q from v1 to v2 schema: %w", leaseType, string(key), err)
+					return fmt.Errorf("error migrating %s %q from v1 to v2 schema: %w", v1BucketType, string(key), err)
 				}
 				return nil
 			})
 
-			if err := tx.DeleteBucket([]byte(leaseType)); err != nil {
-				return fmt.Errorf("failed to clean up %s bucket during v1 to v2 schema migration: %w", leaseType, err)
+			if err := tx.DeleteBucket([]byte(v1BucketType)); err != nil {
+				return fmt.Errorf("failed to clean up %s bucket during v1 to v2 schema migration: %w", v1BucketType, err)
 			}
 		}
 	}
@@ -386,7 +410,7 @@ func (b *BoltStorage) Clear() error {
 				return err
 			}
 		}
-		return createBoltSchema(tx)
+		return createBoltSchema(tx, storageVersion)
 	})
 }
 

@@ -2,15 +2,21 @@ package cacheboltdb
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func getTestKeyManager(t *testing.T) keymanager.KeyManager {
@@ -256,4 +262,76 @@ func Test_SetGetRetrievalToken(t *testing.T) {
 			assert.Equal(t, tc.expectedToken, gotKey)
 		})
 	}
+}
+
+func TestBolt_MigtrateFromV1ToV2Schema(t *testing.T) {
+	ctx := context.Background()
+
+	path, err := ioutil.TempDir("", "bolt-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(path)
+
+	dbPath := filepath.Join(path, DatabaseFileName)
+	db, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	require.NoError(t, err)
+	err = db.Update(func(tx *bolt.Tx) error {
+		return createBoltSchema(tx, "1")
+	})
+	require.NoError(t, err)
+	b := &BoltStorage{
+		db:      db,
+		logger:  hclog.Default(),
+		wrapper: getTestKeyManager(t).Wrapper(),
+	}
+
+	// Manually insert some items into the v1 schema.
+	err = db.Update(func(tx *bolt.Tx) error {
+		blob, err := b.wrapper.Encrypt(ctx, []byte("ignored-contents"), []byte(""))
+		if err != nil {
+			return fmt.Errorf("error encrypting contents: %w", err)
+		}
+		protoBlob, err := proto.Marshal(blob)
+		if err != nil {
+			return err
+		}
+
+		if err := tx.Bucket([]byte(authLeaseType)).Put([]byte("test-auth-id-1"), protoBlob); err != nil {
+			return err
+		}
+		if err := tx.Bucket([]byte(authLeaseType)).Put([]byte("test-auth-id-2"), protoBlob); err != nil {
+			return err
+		}
+		if err := tx.Bucket([]byte(secretLeaseType)).Put([]byte("test-secret-id-1"), protoBlob); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	// Check we have the contents we would expect for the v1 schema.
+	leases, err := b.GetByType(ctx, authLeaseType)
+	require.NoError(t, err)
+	assert.Len(t, leases, 2)
+	leases, err = b.GetByType(ctx, secretLeaseType)
+	require.NoError(t, err)
+	assert.Len(t, leases, 1)
+	leases, err = b.GetByType(ctx, LeaseType)
+	require.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "not found"))
+
+	// Now migrate to the v2 schema.
+	err = db.Update(migrateFromV1ToV2Schema)
+	require.NoError(t, err)
+
+	// Check all the leases have been migrated into one bucket.
+	leases, err = b.GetByType(ctx, authLeaseType)
+	require.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "not found"))
+	leases, err = b.GetByType(ctx, secretLeaseType)
+	require.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "not found"))
+	leases, err = b.GetByType(ctx, LeaseType)
+	require.NoError(t, err)
+	assert.Len(t, leases, 3)
 }
