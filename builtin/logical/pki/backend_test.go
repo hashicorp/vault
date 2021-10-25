@@ -3004,7 +3004,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	}
 
 	// Issue certificate with userpassToken.
-	secret, err := client.Auth().Login(userpassAuth)
+	secret, err := client.Auth().Login(context.TODO(), userpassAuth)
 	if err != nil {
 		t.Fatal(err)
 	}
