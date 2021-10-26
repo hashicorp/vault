@@ -8,7 +8,7 @@ export function dateFormat([date, style], { isFormatted = false, dateOnly = fals
   }
   // when date is in '2021-09-01T00:00:00Z' format
   // remove hours so date displays unaffected by timezone
-  if (dateOnly) {
+  if (dateOnly && typeof date === 'string') {
     date = date.split('T')[0];
   }
   let number = typeof date === 'string' ? parseISO(date) : date;

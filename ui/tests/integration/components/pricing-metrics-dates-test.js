@@ -46,7 +46,7 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     this.set('resultEnd', new Date(2020, 9, 31));
     await render(hbs`
       <PricingMetricsDates
-        @queryStart="2-2020"
+        @queryStart="02-2020"
         @queryEnd="10-2020"
         @resultStart={{resultStart}}
         @resultEnd={{resultEnd}}

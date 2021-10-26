@@ -61,6 +61,6 @@ module('Integration | Helper | date-format', function(hooks) {
     await render(
       hbs`<p data-test-date-format>Date: {{date-format timestampDate 'MMM dd, yyyy' dateOnly=true}}</p>`
     );
-    assert.dom('[data-test-date-format]').includesText(format(timestampDate, 'Sep 1, 2021'));
+    assert.dom('[data-test-date-format]').includesText('Date: Sep 01, 2021');
   });
 });
