@@ -896,7 +896,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 	registerData := map[string]interface{}{
 		"name":     "testentityname",
 		"metadata": []string{"someusefulkey=someusefulvalue"},
-		"policies": []string{"testpolicy1", "testpolicy2"},
+		"policies": []string{"testpolicy1", "testpolicy1", "testpolicy2", "testpolicy2"},
 	}
 
 	registerReq := &logical.Request{
@@ -932,7 +932,7 @@ func TestIdentityStore_EntityCRUD(t *testing.T) {
 
 	if resp.Data["id"] != id ||
 		resp.Data["name"] != registerData["name"] ||
-		!reflect.DeepEqual(resp.Data["policies"], registerData["policies"]) {
+		!reflect.DeepEqual(resp.Data["policies"], strutil.RemoveDuplicates(registerData["policies"].([]string), false)) {
 		t.Fatalf("bad: entity response")
 	}
 
@@ -1222,6 +1222,7 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":     "testentityname2",
 			"metadata": []string{"someusefulkey=someusefulvalue"},
+			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
 		},
 	}
 
@@ -1258,6 +1259,7 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 			"mount_accessor": githubAccessor,
 			"metadata":       []string{"organization=hashicorp", "team=vault"},
 			"entity_id":      entityID2,
+			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
 		},
 	}
 
@@ -1320,5 +1322,9 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 
 	if len(entity1Lookup.Aliases) != 1 {
 		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity1Lookup.Aliases))
+	}
+
+	if len(entity1Lookup.Policies) != 2 {
+		t.Fatalf("invalid number of entity policies; expected: 2, actualL: %d", len(entity1Lookup.Policies))
 	}
 }

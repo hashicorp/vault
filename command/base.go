@@ -50,6 +50,7 @@ type BaseCommand struct {
 	flagTLSServerName  string
 	flagTLSSkipVerify  bool
 	flagWrapTTL        time.Duration
+	flagUnlockKey      string
 
 	flagFormat           string
 	flagField            string
@@ -354,6 +355,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default: false,
 				Usage: "Instead of executing the request, print an equivalent cURL " +
 					"command string and exit.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "unlock-key",
+				Target:     &c.flagUnlockKey,
+				Default:    notSetValue,
+				Completion: complete.PredictNothing,
+				Usage:      "Key to unlock a namespace API lock.",
 			})
 
 		}

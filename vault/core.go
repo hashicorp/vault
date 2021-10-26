@@ -14,7 +14,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -2037,13 +2036,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.startRollback(); err != nil {
 			return err
 		}
-		var expirationStrategy ExpireLeaseStrategy
-		if os.Getenv("VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY") != "" {
-			expirationStrategy = expireLeaseStrategyRevoke
-		} else {
-			expirationStrategy = expireLeaseStrategyFairsharing
-		}
-		if err := c.setupExpiration(expirationStrategy); err != nil {
+		if err := c.setupExpiration(expireLeaseStrategyFairsharing); err != nil {
 			return err
 		}
 		if err := c.loadAudits(ctx); err != nil {

@@ -47,8 +47,7 @@ module('Integration | Component | InfoTableRow', function(hooks) {
       />`);
 
     assert.dom('[data-test-component="info-table-row"]').exists();
-    let string = document.querySelector('code').textContent;
-    assert.equal(string, VALUE, 'renders value as passed through');
+    assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value as passed through');
 
     this.set('value', '');
     assert
@@ -71,6 +70,29 @@ module('Integration | Component | InfoTableRow', function(hooks) {
     assert.equal(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
+  test('it should copy tooltip', async function(assert) {
+    assert.expect(4);
+
+    this.set('isCopyable', false);
+
+    await render(hbs`
+      <InfoTableRow 
+        @label={{label}}
+        @value={{value}} 
+        @tooltipText="Foo bar"
+        @isTooltipCopyable={{isCopyable}}
+      />
+    `);
+
+    await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
+    await settled();
+    assert.dom('[data-test-tooltip-copy]').hasAttribute('disabled', '', 'Tooltip copy button is disabled');
+    assert.dom('[data-test-tooltip-copy]').doesNotHaveClass('has-pointer', 'Pointer class not applied when disabled');
+    this.set('isCopyable', true);
+    assert.dom('[data-test-tooltip-copy]').doesNotHaveAttribute('disabled', 'Tooltip copy button is enabled');
+    assert.dom('[data-test-tooltip-copy]').hasClass('has-pointer', 'Pointer class applied to copy button');
+  });
+
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function(assert) {
     // This could be changed in the component so that it adds a link for any item type, but right now it should only add a link if item type is an array.
     await render(hbs`<InfoTableRow
@@ -78,8 +100,7 @@ module('Integration | Component | InfoTableRow', function(hooks) {
         @label={{label}}
         @isLink={{true}}
       />`);
-    let string = document.querySelector('code').textContent;
-    assert.equal(string, VALUE, 'renders value in code element and not in a tag');
+    assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value in code element and not in a tag');
   });
 
   test('it renders links if isLink is true and type is array', async function(assert) {

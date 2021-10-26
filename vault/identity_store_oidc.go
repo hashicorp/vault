@@ -703,6 +703,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	roleNames, err := i.roleNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
@@ -715,6 +716,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	clientNames, err := i.clientNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
@@ -1578,6 +1580,9 @@ func loadOIDCPublicKey(ctx context.Context, s logical.Storage, keyID string) (*j
 	if err != nil {
 		return nil, err
 	}
+	if entry == nil {
+		return nil, fmt.Errorf("could not find key with ID %s", keyID)
+	}
 
 	var key jose.JSONWebKey
 	if err := entry.DecodeJSON(&key); err != nil {
@@ -1687,6 +1692,11 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 		entry, err := s.Get(ctx, namedKeyConfigPath+k)
 		if err != nil {
 			return now, err
+		}
+
+		if entry == nil {
+			i.Logger().Warn("could not find key to update", "key", k)
+			continue
 		}
 
 		var key namedKey

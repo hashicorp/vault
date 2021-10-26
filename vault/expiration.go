@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -144,8 +143,6 @@ type ExpirationManager struct {
 
 	logLeaseExpirations bool
 	expireFunc          ExpireLeaseStrategy
-
-	revokePermitPool *physical.PermitPool
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -295,62 +292,6 @@ func revokeExponentialBackoff(attempt uint8) time.Duration {
 	return time.Duration(backoffTime)
 }
 
-// revokeIDFunc is invoked when a given ID is expired
-func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
-	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
-		releasePermit := func() {}
-		if m.revokePermitPool != nil {
-			m.logger.Trace("expiring lease; waiting for permit pool")
-			m.revokePermitPool.Acquire()
-			releasePermit = m.revokePermitPool.Release
-			m.logger.Trace("expiring lease; got permit pool")
-		}
-
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", ns.ID}})
-
-		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
-		revokeCtx = namespace.ContextWithNamespace(revokeCtx, ns)
-
-		go func() {
-			select {
-			case <-ctx.Done():
-			case <-m.quitCh:
-				cancel()
-			case <-revokeCtx.Done():
-			}
-		}()
-
-		select {
-		case <-m.quitCh:
-			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
-			releasePermit()
-			cancel()
-			return
-		case <-m.quitContext.Done():
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
-			releasePermit()
-			cancel()
-			return
-		default:
-		}
-
-		m.coreStateLock.RLock()
-		err := m.Revoke(revokeCtx, leaseID)
-		m.coreStateLock.RUnlock()
-		releasePermit()
-		cancel()
-		if err == nil {
-			return
-		}
-
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", ns.ID}})
-
-		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
-		time.Sleep((1 << attempt) * revokeRetryBase)
-	}
-	m.logger.Error("maximum revoke attempts reached", "lease_id", leaseID)
-}
-
 func getNumExpirationWorkers(c *Core, l log.Logger) int {
 	numWorkers := c.numExpirationWorkers
 
@@ -372,18 +313,6 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	var permitPool *physical.PermitPool
-	if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" {
-		permitPoolSize := 50
-		permitPoolSizeRaw, err := strconv.Atoi(os.Getenv("VAULT_16_REVOKE_PERMITPOOL"))
-		if err == nil && permitPoolSizeRaw > 0 {
-			permitPoolSize = permitPoolSizeRaw
-		}
-
-		permitPool = physical.NewPermitPool(permitPoolSize)
-
-	}
-
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
 	jobManager.Start()
 
@@ -416,7 +345,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
-		revokePermitPool:    permitPool,
 
 		jobManager: jobManager,
 	}

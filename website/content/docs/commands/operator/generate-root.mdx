@@ -68,6 +68,7 @@ flags](/docs/commands) included on all commands.
 
 - `-decode` `(string: "")` - Decode and output the generated root token. This
   option requires the `-otp` flag be set to the OTP used during initialization.
+  If value is "-" then read the encoded token from stdin.
 
 - `-generate-otp` `(bool: false)` - Generate and print a high-entropy
   one-time-password (OTP) suitable for use with the "-init" flag.

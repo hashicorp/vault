@@ -36,11 +36,11 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	// Wait until the expiration manager is out of restore mode.
 	// This was added to prevent sporadic failures of TestExpiration_unrecoverableErrorMakesIrrevocable.
 	timeout := time.Now().Add(time.Second * 10)
- 	for c.expiration.inRestoreMode() {
+	for c.expiration.inRestoreMode() {
 		if time.Now().After(timeout) {
 			t.Fatal("ExpirationManager is still in restore mode after 10 seconds")
 		}
-		time.Sleep(50*time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	return c.expiration
@@ -2181,9 +2181,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	}
 }
 
-func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
-	t.Helper()
-
+func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	exp := core.expiration
 
@@ -2250,7 +2248,7 @@ func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
 		t.Fatal(err)
 	}
 
-	err = core.setupExpiration(e)
+	err = core.setupExpiration(expireLeaseStrategyFairsharing)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2273,14 +2271,6 @@ func revokeEntryRejectedCore(t *testing.T, e ExpireLeaseStrategy) {
 	if le != nil {
 		t.Fatal("lease entry not nil")
 	}
-}
-
-func TestExpiration_revokeEntry_rejected_revoke(t *testing.T) {
-	revokeEntryRejectedCore(t, expireLeaseStrategyRevoke)
-}
-
-func TestExpiration_revokeEntry_rejected_fairsharing(t *testing.T) {
-	revokeEntryRejectedCore(t, expireLeaseStrategyFairsharing)
 }
 
 func TestExpiration_renewAuthEntry(t *testing.T) {

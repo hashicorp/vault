@@ -577,6 +577,17 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthRequestURINotSupported,
 		},
 		{
+			name: "invalid authorize request with identity entity not associated with the request",
+			args: args{
+				entityID:      "",
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+			},
+			wantErr: ErrAuthAccessDenied,
+		},
+		{
 			name: "invalid authorize request with identity entity ID not found",
 			args: args{
 				entityID:      "non-existent-entity",
@@ -944,7 +955,7 @@ func testProviderReq(s logical.Storage, clientID string) *logical.Request {
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
 			"allowed_client_ids": []string{clientID},
-			"scopes":             []string{"test-scope", "conflict"},
+			"scopes_supported":   []string{"test-scope", "conflict"},
 		},
 	}
 }
@@ -2111,7 +2122,7 @@ func TestOIDC_Path_OIDC_ProviderScope_DeleteWithExistingProvider(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"scopes": []string{"test-scope"},
+			"scopes_supported": []string{"test-scope"},
 		},
 		Storage: storage,
 	})
@@ -2465,7 +2476,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"scopes": []string{"test-scope"},
+			"scopes_supported": []string{"test-scope"},
 		},
 		Storage: storage,
 	})
@@ -2494,7 +2505,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":             "",
 		"allowed_client_ids": []string{},
-		"scopes":             []string{},
+		"scopes_supported":   []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2518,7 +2529,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"allowed_client_ids": []string{"test-client-id"},
-			"scopes":             []string{"test-scope"},
+			"scopes_supported":   []string{"test-scope"},
 		},
 		Storage: storage,
 	})
@@ -2534,7 +2545,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	expected = map[string]interface{}{
 		"issuer":             "",
 		"allowed_client_ids": []string{"test-client-id"},
-		"scopes":             []string{"test-scope"},
+		"scopes_supported":   []string{"test-scope"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2577,7 +2588,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	expected = map[string]interface{}{
 		"issuer":             "https://example.com:8200",
 		"allowed_client_ids": []string{"test-client-id"},
-		"scopes":             []string{"test-scope"},
+		"scopes_supported":   []string{"test-scope"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2639,7 +2650,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"scopes": []string{"test-scope1", "test-scope2"},
+			"scopes_supported": []string{"test-scope1", "test-scope2"},
 		},
 		Storage: storage,
 	})
@@ -2664,7 +2675,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"scopes": []string{"test-scope1", "test-scope2"},
+			"scopes_supported": []string{"test-scope1", "test-scope2"},
 		},
 		Storage: storage,
 	})
@@ -2695,7 +2706,7 @@ func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"scopes":             []string{"test-scope1", "test-scope1"},
+			"scopes_supported":   []string{"test-scope1", "test-scope1"},
 			"allowed_client_ids": []string{"test-id1", "test-id2", "test-id1"},
 		},
 		Storage: storage,
@@ -2712,7 +2723,7 @@ func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":             "",
 		"allowed_client_ids": []string{"test-id1", "test-id2"},
-		"scopes":             []string{"test-scope1"},
+		"scopes_supported":   []string{"test-scope1"},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2747,7 +2758,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":             "https://example.com:8200",
 		"allowed_client_ids": []string{"test-client-id"},
-		"scopes":             []string{},
+		"scopes_supported":   []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2774,7 +2785,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	expected = map[string]interface{}{
 		"issuer":             "https://changedurl.com",
 		"allowed_client_ids": []string{"test-client-id"},
-		"scopes":             []string{},
+		"scopes_supported":   []string{},
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2856,7 +2867,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Path:      "oidc/provider/test-provider",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
-			"scopes": []string{"test-scope-1"},
+			"scopes_supported": []string{"test-scope-1"},
 		},
 		Storage: storage,
 	})
@@ -2910,8 +2921,8 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
 		Data: map[string]interface{}{
-			"issuer": testIssuer,
-			"scopes": []string{"test-scope-2"},
+			"issuer":           testIssuer,
+			"scopes_supported": []string{"test-scope-2"},
 		},
 	})
 	expectSuccess(t, resp, err)

@@ -47,14 +47,18 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 ## `tcp` Listener Parameters
 
 - `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
-  listening.
+  listening.  This can be dynamically defined with a
+  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
+  that is resolved at runtime.
 
 - `cluster_address` `(string: "127.0.0.1:8201")` – Specifies the address to bind
   to for cluster server-to-server requests. This defaults to one port higher
   than the value of `address`. This does not usually need to be set, but can be
   useful in case Vault servers are isolated from each other in such a way that
   they need to hop through a TCP load balancer or some other scheme in order to
-  talk.
+  talk. This can be dynamically defined with a
+  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
+  that is resolved at runtime.
 
 - `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
   wait for the next request when keep-alives are enabled. If `http_idle_timeout`
