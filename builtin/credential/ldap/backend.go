@@ -60,17 +60,17 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) (string, []string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
-		return nil, nil, nil, err
+		return "", nil, nil, nil, err
 	}
 	if cfg == nil {
-		return nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
+		return "", nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
-		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
+		return "", nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 
 	ldapClient := ldaputil.Client{
@@ -80,10 +80,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	c, err := ldapClient.DialLDAP(cfg.ConfigEntry)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if c == nil {
-		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil, nil
+		return "", nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil, nil
 	}
 
 	// Clean connection
@@ -94,7 +94,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("error getting user bind DN", "error", err)
 		}
-		return nil, logical.ErrorResponse(errUserBindFailed), nil, nil
+		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, nil
 	}
 
 	if b.Logger().IsDebug() {
@@ -111,7 +111,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("ldap bind failed", "error", err)
 		}
-		return nil, logical.ErrorResponse(errUserBindFailed), nil, nil
+		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, nil
 	}
 
 	// We re-bind to the BindDN if it's defined because we assume
@@ -121,7 +121,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
 			}
-			return nil, logical.ErrorResponse("ldap operation failed: failed to re-bind with the BindDN user"), nil, nil
+			return "", nil, logical.ErrorResponse("ldap operation failed: failed to re-bind with the BindDN user"), nil, nil
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("re-bound to original binddn")
@@ -130,20 +130,20 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
 	if cfg.AnonymousGroupSearch {
 		c, err = ldapClient.DialLDAP(cfg.ConfigEntry)
 		if err != nil {
-			return nil, logical.ErrorResponse("ldap operation failed: failed to connect to LDAP server"), nil, nil
+			return "", nil, logical.ErrorResponse("ldap operation failed: failed to connect to LDAP server"), nil, nil
 		}
 		defer c.Close() // Defer closing of this connection as the deferal above closes the other defined connection
 	}
 
 	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
@@ -199,7 +199,16 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies, true)
 
-	return policies, ldapResponse, allGroups, nil
+	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
+
+	if err != nil {
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
+	}
+	if entityAliasAttribute == "" {
+		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
+	}
+
+	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
 }
 
 const backendHelp = `
