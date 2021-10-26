@@ -128,7 +128,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
-
+    await settled();
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
