@@ -36,324 +36,189 @@ export default function() {
       data: {
         by_namespace: [
           {
-            namespace_id: 'rdOZR',
+            namespace_id: 'Z4Rzh',
             namespace_path: 'namespace1/',
             counts: {
-              distinct_entities: 971,
-              non_entity_tokens: 940,
-              clients: 1911,
+              distinct_entities: 867,
+              non_entity_tokens: 939,
+              clients: 1806,
             },
           },
           {
-            namespace_id: 'Y5daB',
-            namespace_path: 'namespace3/',
+            namespace_id: 'DcgzU',
+            namespace_path: 'namespace17/',
             counts: {
-              distinct_entities: 975,
-              non_entity_tokens: 606,
-              clients: 1581,
+              distinct_entities: 966,
+              non_entity_tokens: 550,
+              clients: 1516,
             },
           },
           {
-            namespace_id: '0PY4u',
-            namespace_path: 'namespace27/',
+            namespace_id: '5SWT8',
+            namespace_path: 'namespacelonglonglong4/',
             counts: {
-              distinct_entities: 839,
-              non_entity_tokens: 685,
-              clients: 1524,
+              distinct_entities: 996,
+              non_entity_tokens: 417,
+              clients: 1413,
             },
           },
           {
-            namespace_id: 'aqdXs',
-            namespace_path: 'namespace226/',
+            namespace_id: 'XGu7R',
+            namespace_path: 'namespace12/',
             counts: {
-              distinct_entities: 578,
-              non_entity_tokens: 838,
-              clients: 1416,
-            },
-          },
-          {
-            namespace_id: 'k6SUB',
-            namespace_path: 'namespace10/',
-            counts: {
-              distinct_entities: 427,
-              non_entity_tokens: 952,
-              clients: 1379,
-            },
-          },
-          {
-            namespace_id: 'AWujC',
-            namespace_path: 'namespace16/',
-            counts: {
-              distinct_entities: 835,
-              non_entity_tokens: 534,
+              distinct_entities: 829,
+              non_entity_tokens: 540,
               clients: 1369,
             },
           },
           {
-            namespace_id: 'Zt31d',
-            namespace_path: 'namespace17/',
+            namespace_id: 'yHcL9',
+            namespace_path: 'namespace11/',
             counts: {
-              distinct_entities: 696,
-              non_entity_tokens: 664,
-              clients: 1360,
+              distinct_entities: 563,
+              non_entity_tokens: 705,
+              clients: 1268,
             },
           },
           {
-            namespace_id: 's6tBw',
-            namespace_path: 'namespace212/',
+            namespace_id: 'F0xGm',
+            namespace_path: 'namespace10/',
             counts: {
-              distinct_entities: 557,
-              non_entity_tokens: 758,
-              clients: 1315,
+              distinct_entities: 925,
+              non_entity_tokens: 255,
+              clients: 1180,
             },
           },
           {
-            namespace_id: 'cj2Bi',
-            namespace_path: 'namespacelonglonglong7/',
+            namespace_id: 'aJuQG',
+            namespace_path: 'namespace9/',
             counts: {
-              distinct_entities: 429,
-              non_entity_tokens: 834,
-              clients: 1263,
+              distinct_entities: 935,
+              non_entity_tokens: 239,
+              clients: 1174,
             },
           },
           {
-            namespace_id: 'WV0oI',
+            namespace_id: 'bw5UO',
+            namespace_path: 'namespace6/',
+            counts: {
+              distinct_entities: 810,
+              non_entity_tokens: 363,
+              clients: 1173,
+            },
+          },
+          {
+            namespace_id: 'IeyJp',
+            namespace_path: 'namespace14/',
+            counts: {
+              distinct_entities: 774,
+              non_entity_tokens: 392,
+              clients: 1166,
+            },
+          },
+          {
+            namespace_id: 'Uc0o8',
+            namespace_path: 'namespace16/',
+            counts: {
+              distinct_entities: 408,
+              non_entity_tokens: 743,
+              clients: 1151,
+            },
+          },
+          {
+            namespace_id: 'R6L40',
             namespace_path: 'namespace2/',
             counts: {
-              distinct_entities: 417,
-              non_entity_tokens: 837,
-              clients: 1254,
+              distinct_entities: 292,
+              non_entity_tokens: 736,
+              clients: 1028,
             },
           },
           {
-            namespace_id: '6iD69',
+            namespace_id: 'Rqa3W',
+            namespace_path: 'namespace13/',
+            counts: {
+              distinct_entities: 160,
+              non_entity_tokens: 803,
+              clients: 963,
+            },
+          },
+          {
+            namespace_id: 'MSgZE',
+            namespace_path: 'namespace7/',
+            counts: {
+              distinct_entities: 201,
+              non_entity_tokens: 657,
+              clients: 858,
+            },
+          },
+          {
+            namespace_id: 'kxU4t',
+            namespace_path: 'namespacelonglonglong3/',
+            counts: {
+              distinct_entities: 742,
+              non_entity_tokens: 26,
+              clients: 768,
+            },
+          },
+          {
+            namespace_id: '5xKya',
+            namespace_path: 'namespace15/',
+            counts: {
+              distinct_entities: 663,
+              non_entity_tokens: 19,
+              clients: 682,
+            },
+          },
+          {
+            namespace_id: '5KxXA',
+            namespace_path: 'namespace18anotherlong/',
+            counts: {
+              distinct_entities: 470,
+              non_entity_tokens: 196,
+              clients: 666,
+            },
+          },
+          {
+            namespace_id: 'AAidI',
+            namespace_path: 'namespace20/',
+            counts: {
+              distinct_entities: 429,
+              non_entity_tokens: 60,
+              clients: 489,
+            },
+          },
+          {
+            namespace_id: 'BCl56',
+            namespace_path: 'namespace8/',
+            counts: {
+              distinct_entities: 61,
+              non_entity_tokens: 201,
+              clients: 262,
+            },
+          },
+          {
+            namespace_id: 'yYNw2',
             namespace_path: 'namespace19/',
             counts: {
-              distinct_entities: 610,
-              non_entity_tokens: 559,
-              clients: 1169,
-            },
-          },
-          {
-            namespace_id: 'dxh3E',
-            namespace_path: 'namespace22/',
-            counts: {
-              distinct_entities: 537,
-              non_entity_tokens: 601,
-              clients: 1138,
-            },
-          },
-          {
-            namespace_id: 'fDPrT',
-            namespace_path: 'namespace26/',
-            counts: {
-              distinct_entities: 605,
-              non_entity_tokens: 527,
-              clients: 1132,
-            },
-          },
-          {
-            namespace_id: 'QYquU',
-            namespace_path: 'namespace2-/',
-            counts: {
-              distinct_entities: 584,
-              non_entity_tokens: 490,
-              clients: 1074,
+              distinct_entities: 165,
+              non_entity_tokens: 85,
+              clients: 250,
             },
           },
           {
             namespace_id: 'root',
             namespace_path: '',
             counts: {
-              distinct_entities: 252,
-              non_entity_tokens: 821,
-              clients: 1073,
-            },
-          },
-          {
-            namespace_id: 'cNuVQ',
-            namespace_path: 'namespace11/',
-            counts: {
-              distinct_entities: 291,
-              non_entity_tokens: 762,
-              clients: 1053,
-            },
-          },
-          {
-            namespace_id: 'B3POb',
-            namespace_path: 'namespace225/',
-            counts: {
-              distinct_entities: 109,
-              non_entity_tokens: 932,
-              clients: 1041,
-            },
-          },
-          {
-            namespace_id: '1Lam4',
-            namespace_path: 'namespace15/',
-            counts: {
-              distinct_entities: 60,
-              non_entity_tokens: 943,
-              clients: 1003,
-            },
-          },
-          {
-            namespace_id: 'QvkqC',
-            namespace_path: 'namespace6/',
-            counts: {
-              distinct_entities: 896,
-              non_entity_tokens: 35,
-              clients: 931,
-            },
-          },
-          {
-            namespace_id: 'wGvyy',
-            namespace_path: 'namespace14/',
-            counts: {
-              distinct_entities: 108,
-              non_entity_tokens: 718,
-              clients: 826,
-            },
-          },
-          {
-            namespace_id: 'OoX8p',
-            namespace_path: 'namespace9/',
-            counts: {
-              distinct_entities: 290,
-              non_entity_tokens: 514,
-              clients: 804,
-            },
-          },
-          {
-            namespace_id: 'zDzCb',
-            namespace_path: 'namespacelonglonglong8/',
-            counts: {
-              distinct_entities: 774,
-              non_entity_tokens: 16,
-              clients: 790,
-            },
-          },
-          {
-            namespace_id: 'NbPw5',
-            namespace_path: 'namespace25/',
-            counts: {
-              distinct_entities: 433,
-              non_entity_tokens: 333,
-              clients: 766,
-            },
-          },
-          {
-            namespace_id: 'UxWkm',
-            namespace_path: 'namespace21/',
-            counts: {
-              distinct_entities: 614,
-              non_entity_tokens: 119,
-              clients: 733,
-            },
-          },
-          {
-            namespace_id: 't9XKF',
-            namespace_path: 'namespace13/',
-            counts: {
-              distinct_entities: 679,
-              non_entity_tokens: 28,
-              clients: 707,
-            },
-          },
-          {
-            namespace_id: 'AjB3O',
-            namespace_path: 'namespace23/',
-            counts: {
-              distinct_entities: 436,
-              non_entity_tokens: 239,
-              clients: 675,
-            },
-          },
-          {
-            namespace_id: 'zYHxi',
-            namespace_path: 'namespace24/',
-            counts: {
-              distinct_entities: 167,
-              non_entity_tokens: 428,
-              clients: 595,
-            },
-          },
-          {
-            namespace_id: 'XwMN3',
-            namespace_path: 'namespace28/',
-            counts: {
-              distinct_entities: 389,
-              non_entity_tokens: 197,
-              clients: 586,
-            },
-          },
-          {
-            namespace_id: 'fQbwO',
-            namespace_path: 'namespace5/',
-            counts: {
-              distinct_entities: 331,
-              non_entity_tokens: 254,
-              clients: 585,
-            },
-          },
-          {
-            namespace_id: '6e78R',
-            namespace_path: 'namespace29/',
-            counts: {
-              distinct_entities: 92,
-              non_entity_tokens: 458,
-              clients: 550,
-            },
-          },
-          {
-            namespace_id: 'eE0N5',
-            namespace_path: 'namespace4/',
-            counts: {
-              distinct_entities: 32,
-              non_entity_tokens: 391,
-              clients: 423,
-            },
-          },
-          {
-            namespace_id: 'HzfYV',
-            namespace_path: 'namespace220/',
-            counts: {
-              distinct_entities: 277,
-              non_entity_tokens: 135,
-              clients: 412,
-            },
-          },
-          {
-            namespace_id: '9Ykg6',
-            namespace_path: 'namespace12/',
-            counts: {
-              distinct_entities: 201,
-              non_entity_tokens: 57,
-              clients: 258,
-            },
-          },
-          {
-            namespace_id: 'hVPni',
-            namespace_path: 'namespace118/',
-            counts: {
-              distinct_entities: 222,
+              distinct_entities: 67,
               non_entity_tokens: 9,
-              clients: 231,
-            },
-          },
-          {
-            namespace_id: 'DkpBZ',
-            namespace_path: 'namespace30/',
-            counts: {
-              distinct_entities: 42,
-              non_entity_tokens: 181,
-              clients: 223,
+              clients: 76,
             },
           },
         ],
-        end_time: '2021-09-30T23:59:59Z',
-        start_time: '2021-09-01T00:00:00Z',
-        total: { distinct_entities: 15755, non_entity_tokens: 17395, clients: 33150 },
+        distinct_entities: 11323,
+        non_entity_tokens: 7935,
+        clients: 19258,
       },
     };
   });
