@@ -45,7 +45,7 @@ const (
 	// allowing us to correctly attach child contexts to their parent's context.
 	LeaseType = "lease"
 
-	// LookupType - v2 Bucket/type to map from a memcachedb index ID to an
+	// lookupType - v2 Bucket/type to map from a memcachedb index ID to an
 	// auto-incrementing BoltDB key. Facilitates deletes from the lease
 	// bucket using an ID instead of the auto-incrementing BoltDB key.
 	lookupType = "lookup"
