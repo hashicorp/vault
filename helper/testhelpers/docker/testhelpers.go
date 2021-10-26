@@ -235,7 +235,7 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 		_, _ = ioutil.ReadAll(resp)
 	}
 
-	container, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, cfg.Hostname)
+	container, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
 	if err != nil {
 		return nil, nil, fmt.Errorf("container create failed: %v", err)
 	}
