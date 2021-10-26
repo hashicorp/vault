@@ -120,8 +120,6 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusPreconditionFailed
 		case errwrap.Contains(err, ErrPathFunctionalityRemoved.Error()):
 			statusCode = http.StatusNotFound
-		case errwrap.Contains(err, ErrLocked.Error()):
-			statusCode = http.StatusLocked
 		}
 	}
 
@@ -145,6 +143,10 @@ func AdjustErrorStatusCode(status *int, err error) {
 
 	// Adjust status code when sealed
 	if errwrap.Contains(err, consts.ErrSealed.Error()) {
+		*status = http.StatusServiceUnavailable
+	}
+
+	if errwrap.Contains(err, consts.ErrAPILocked.Error()) {
 		*status = http.StatusServiceUnavailable
 	}
 
