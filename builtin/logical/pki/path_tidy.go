@@ -1,4 +1,4 @@
-package pki
+ package pki
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -46,8 +45,12 @@ Defaults to 72 hours.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathTidyWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                    b.pathTidyWrite,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 
 		HelpSynopsis:    pathTidyHelpSyn,
@@ -58,8 +61,12 @@ Defaults to 72 hours.`,
 func pathTidyStatus(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy-status$",
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathTidyStatusRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.pathTidyStatusRead,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 		HelpSynopsis:    pathTidyStatusHelpSyn,
 		HelpDescription: pathTidyStatusHelpDesc,
@@ -67,11 +74,6 @@ func pathTidyStatus(b *backend) *framework.Path {
 }
 
 func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// If we are a performance standby forward the request to the active node
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
-		return nil, logical.ErrReadOnly
-	}
-
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)

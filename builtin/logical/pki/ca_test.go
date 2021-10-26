@@ -558,6 +558,32 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		}
 	}
 
+	verifyTidyStatus := func(expectedCertStoreDeleteCount int, expectedRevokedCertDeletedCount int) {
+		tidyStatus, err := client.Logical().Read(rootName+"tidy-status")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if tidyStatus.Data["state"] != "Finished" {
+			t.Fatalf("Expected tidy operation to be finished, but tidy-status reports its state is %v", tidyStatus.Data)
+		}
+
+		var count int64
+		if count, err = tidyStatus.Data["cert_store_deleted_count"].(json.Number).Int64(); err != nil {
+			t.Fatal(err)
+		}
+		if int64(expectedCertStoreDeleteCount) != count {
+			t.Fatalf("Expected %d for cert_store_deleted_count, but got %d", expectedCertStoreDeleteCount, count)
+		}
+
+		if count, err = tidyStatus.Data["revoked_cert_deleted_count"].(json.Number).Int64(); err != nil {
+			t.Fatal(err)
+		}
+		if int64(expectedRevokedCertDeletedCount) != count {
+			t.Fatalf("Expected %d for revoked_cert_deleted_count, but got %d", expectedRevokedCertDeletedCount, count)
+		}
+	}
+
 	// Validate current state of revoked certificates
 	verifyRevocation(t, intSerialNumber, true)
 
@@ -585,6 +611,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, true)
+
+			verifyTidyStatus(0, 0)
 		}
 
 		// Run with both values set false, nothing should happen
@@ -606,6 +634,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, true)
+
+			verifyTidyStatus(0, 0)
 		}
 
 		// Run with a short safety buffer and both set to true, both should be cleared
@@ -627,6 +657,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, false)
+
+			verifyTidyStatus(1, 1)
 		}
 	}
 }
+
