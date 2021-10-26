@@ -19,6 +19,7 @@
  * @param {string} title - title of the chart
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend
  * @param {object} dataset - dataset for the chart
+ * @param {array} tooltipData - misc. information needed to display tooltip (i.e. total clients from query params)
  * @param {string} [description] - description of the chart
  * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis
  * @param {function} [onClick] - takes function from parent and passes it to click event on data bars
@@ -74,10 +75,10 @@ class BarChartComponent extends Component {
   }
 
   @action
-  renderBarChart(element, data) {
+  renderBarChart(element, args) {
     let elementId = guidFor(element);
-    let [dataset] = data;
-    let totalCount = dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
+    let dataset = args[0];
+    let totalCount = args[1];
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
     let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
