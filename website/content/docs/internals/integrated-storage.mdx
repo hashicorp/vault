@@ -48,7 +48,7 @@ There are a few key terms to know when discussing Raft:
   For Vault's purposes, all server nodes are in the peer set of the local cluster.
 
 - Quorum - A quorum is a majority of members from a peer set: for a set of size `n`,
-  quorum requires at least `(n+1)/2` members. For example, if there are 5 members
+  quorum requires at least `roundup((n+1)/2)` members. For example, if there are 5 members
   in the peer set, we would need 3 nodes to form a quorum. If a quorum of nodes is
   unavailable for any reason, the cluster becomes _unavailable_ and no new logs
   can be committed.
