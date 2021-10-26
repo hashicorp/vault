@@ -111,6 +111,7 @@ const (
 	tidyStatusInactive tidyStatusState = iota
 	tidyStatusStarted
 	tidyStatusFinished
+	tidyStatusError
 )
 
 type tidyStatus struct {

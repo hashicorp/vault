@@ -279,17 +279,16 @@ func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, 
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
 
-	if b.tidyStatus.state == tidyStatusStarted {
+	switch(b.tidyStatus.state) {
+	case tidyStatusStarted:
 		resp.Data["state"] = "Running"
-		return resp, nil
-	}
-
-	if b.tidyStatus.err == nil {
+	case tidyStatusFinished:
 		resp.Data["state"] = "Finished"
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 		resp.Data["message"] = nil
-	} else {
+	case tidyStatusError:
 		resp.Data["state"] = "Error"
+		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 		resp.Data["error"] = b.tidyStatus.err.Error()
 		// Don't clear the message so that it serves as a hint about when
 		// the error ocurred.
@@ -317,9 +316,13 @@ func (b *backend) tidyStatusStop(err error) {
 	b.tidyStatusLock.Lock()
 	defer b.tidyStatusLock.Unlock()
 
-	b.tidyStatus.state = tidyStatusFinished
 	b.tidyStatus.timeFinished = time.Now()
 	b.tidyStatus.err = err
+	if err == nil {
+		b.tidyStatus.state = tidyStatusFinished
+	} else {
+		b.tidyStatus.state = tidyStatusError
+	}
 
 	metrics.MeasureSince([]string{"secrets", "pki", "tidy", "duration"}, b.tidyStatus.timeStarted)
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, 0)
