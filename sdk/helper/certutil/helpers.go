@@ -222,6 +222,17 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 
 	switch keyType {
 	case "rsa":
+		// XXX: there is a false-positive CodeQL path here around keyBits;
+		// because of a default zero value in the TypeDurationSecond and
+		// TypeSignedDurationSecond cases of schema.DefaultOrZero(), it
+		// thinks it is possible to end up with < 2048 bit RSA Key here.
+		// While this is true for SSH keys, it isn't true for PKI keys
+		// due to ValidateKeyTypeLength(...) below. While we could close
+		// the report as a false-positive, enforcing a minimum keyBits size
+		// here of 2048 would ensure no other paths exist.
+		if keyBits < 2048 {
+			return errutil.InternalError{Err: fmt.Sprintf("insecure bit length for RSA private key: %d", keyBits)}
+		}
 		privateKeyType = RSAPrivateKey
 		privateKey, err = rsa.GenerateKey(randReader, keyBits)
 		if err != nil {

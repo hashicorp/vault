@@ -461,15 +461,14 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			return logical.ErrorResponse("missing admin username"), nil
 		}
 
-		// This defaults to 1024 and it can also be 2048 and 4096.
+		// This defaults to 2048, but it can also be 1024, 3072, 4096, or 8192.
+		// In the near future, we should disallow 1024-bit SSH keys.
 		keyBits := d.Get("key_bits").(int)
-		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 && keyBits != 4096 {
-			return logical.ErrorResponse("invalid key_bits field"), nil
-		}
-
-		// If user has not set this field, default it to 2048
 		if keyBits == 0 {
 			keyBits = 2048
+		}
+		if keyBits != 1024 && keyBits != 2048 && keyBits != 3072 && keyBits != 4096 && keyBits != 8192 {
+			return logical.ErrorResponse("invalid key_bits field"), nil
 		}
 
 		// Store all the fields required by dynamic key type
