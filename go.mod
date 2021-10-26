@@ -108,7 +108,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.4.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1-0.20210921171411-e86105e4986d
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
-	github.com/hashicorp/vault-testing-stepwise v0.1.2-0.20211026185439-87c62847628e
+	github.com/hashicorp/vault-testing-stepwise v0.1.2
 	github.com/hashicorp/vault/api v1.2.0
 	github.com/hashicorp/vault/sdk v0.2.2-0.20211004171540-a8c7e135dd6a
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
