@@ -219,7 +219,7 @@ type Request struct {
 	// entity, it will be the same as the EntityID . If the token has no entity,
 	// this will be the sha256(sorted policies + namespace) associated with the
 	// client token.
-	ClientID string
+	ClientID string `json:"client_id" structs:"client_id" mapstructure:"client_id" sentinel:""`
 }
 
 // Clone returns a deep copy of the request by using copystructure
