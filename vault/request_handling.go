@@ -398,10 +398,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
 	if !unauth && c.activityLog != nil {
-		clientID := c.activityLog.HandleTokenUsage(te)
-		if clientID != "" {
-			req.ClientID = clientID
-		}
+		req.ClientID = c.activityLog.HandleTokenUsage(te)
 	}
 	return auth, te, nil
 }
