@@ -142,6 +142,8 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 - `tls_prefer_server_cipher_suites` `(string: "false")` – Specifies to prefer the
   server's ciphersuite over the client ciphersuites.
 
+  ~> **Warning**: This parameter is deprecated. Setting it has no effect.
+
 - `tls_require_and_verify_client_cert` `(string: "false")` – Turns on client
   authentication for this listener; the listener will require a presented
   client cert that successfully validates against system CAs.
