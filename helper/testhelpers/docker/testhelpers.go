@@ -235,27 +235,27 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 		_, _ = ioutil.ReadAll(resp)
 	}
 
-	container, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, cfg.Hostname)
+	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
 	if err != nil {
 		return nil, nil, fmt.Errorf("container create failed: %v", err)
 	}
 
 	for from, to := range d.RunOptions.CopyFromTo {
-		if err := copyToContainer(ctx, d.DockerAPI, container.ID, from, to); err != nil {
-			_ = d.DockerAPI.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{})
+		if err := copyToContainer(ctx, d.DockerAPI, c.ID, from, to); err != nil {
+			_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 			return nil, nil, err
 		}
 	}
 
-	err = d.DockerAPI.ContainerStart(ctx, container.ID, types.ContainerStartOptions{})
+	err = d.DockerAPI.ContainerStart(ctx, c.ID, types.ContainerStartOptions{})
 	if err != nil {
-		_ = d.DockerAPI.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{})
+		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 		return nil, nil, fmt.Errorf("container start failed: %v", err)
 	}
 
-	inspect, err := d.DockerAPI.ContainerInspect(ctx, container.ID)
+	inspect, err := d.DockerAPI.ContainerInspect(ctx, c.ID)
 	if err != nil {
-		_ = d.DockerAPI.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{})
+		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
 		return nil, nil, err
 	}
 
