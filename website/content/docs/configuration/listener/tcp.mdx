@@ -133,6 +133,12 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
   ciphersuites as a comma-separated-list. The list of all available ciphersuites
   is available in the [Golang TLS documentation][golang-tls].
 
+  ~> **Note**: Go only consults this list for TLSv1.2 and earlier; the order of
+  ciphers is not important. For this parameter to be effective, the
+  `tls_max_version` property must be set to `tls12` to prevent negotiation of
+  TLSv1.3, which is not recommended. See the [Go blog post][go-tls-blog] for
+  more information.
+
 - `tls_prefer_server_cipher_suites` `(string: "false")` – Specifies to prefer the
   server's ciphersuite over the client ciphersuites.
 
@@ -331,3 +337,4 @@ cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
 [api-addr]: /docs/configuration#api_addr
 [cluster-addr]: /docs/configuration#cluster_addr
+[go-tls-blog]: https://go.dev/blog/tls-cipher-suites
