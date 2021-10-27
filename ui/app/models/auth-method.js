@@ -67,7 +67,7 @@ let ModelExport = Model.extend(Validations, {
     return expandAttributeMeta(this, tuneAttrs);
   }),
 
-  //sys/mounts/auth/[auth-path]/tune.
+  // sys/mounts/auth/[auth-path]/tune.
   tune: memberAction({
     path: 'tune',
     type: 'post',
