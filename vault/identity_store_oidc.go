@@ -703,6 +703,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	roleNames, err := i.roleNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 
@@ -715,6 +716,7 @@ func (i *IdentityStore) pathOIDCDeleteKey(ctx context.Context, req *logical.Requ
 
 	clientNames, err := i.clientNamesReferencingTargetKeyName(ctx, req, targetKeyName)
 	if err != nil {
+		i.oidcLock.Unlock()
 		return nil, err
 	}
 

@@ -84,52 +84,54 @@ func kvPatchWithRetry(t *testing.T, client *api.Client, args []string, stdin *io
 func TestKVPutCommand(t *testing.T) {
 	t.Parallel()
 
+	v2ExpectedFields := []string{"created_time", "custom_metadata", "deletion_time", "deletion_time", "version"}
+
 	cases := []struct {
-		name string
-		args []string
-		out  string
-		code int
+		name       string
+		args       []string
+		outStrings []string
+		code       int
 	}{
 		{
 			"not_enough_args",
 			[]string{},
-			"Not enough arguments",
+			[]string{"Not enough arguments"},
 			1,
 		},
 		{
 			"empty_kvs",
 			[]string{"secret/write/foo"},
-			"Must supply data",
+			[]string{"Must supply data"},
 			1,
 		},
 		{
 			"kvs_no_value",
 			[]string{"secret/write/foo", "foo"},
-			"Failed to parse K=V data",
+			[]string{"Failed to parse K=V data"},
 			1,
 		},
 		{
 			"single_value",
 			[]string{"secret/write/foo", "foo=bar"},
-			"Success!",
+			[]string{"Success!"},
 			0,
 		},
 		{
 			"multi_value",
 			[]string{"secret/write/foo", "foo=bar", "zip=zap"},
-			"Success!",
+			[]string{"Success!"},
 			0,
 		},
 		{
 			"v2_single_value",
 			[]string{"kv/write/foo", "foo=bar"},
-			"created_time",
+			v2ExpectedFields,
 			0,
 		},
 		{
 			"v2_multi_value",
 			[]string{"kv/write/foo", "foo=bar", "zip=zap"},
-			"created_time",
+			v2ExpectedFields,
 			0,
 		},
 	}
@@ -153,8 +155,11 @@ func TestKVPutCommand(t *testing.T) {
 			if code != tc.code {
 				t.Errorf("expected %d to be %d", code, tc.code)
 			}
-			if !strings.Contains(combined, tc.out) {
-				t.Errorf("expected %q to contain %q", combined, tc.out)
+
+			for _, str := range tc.outStrings {
+				if !strings.Contains(combined, str) {
+					t.Errorf("expected %q to contain %q", combined, str)
+				}
 			}
 		})
 	}
@@ -178,8 +183,11 @@ func TestKVPutCommand(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("expected 0 to be %d", code)
 		}
-		if !strings.Contains(combined, "created_time") {
-			t.Errorf("expected %q to contain %q", combined, "created_time")
+
+		for _, str := range v2ExpectedFields {
+			if !strings.Contains(combined, str) {
+				t.Errorf("expected %q to contain %q", combined, str)
+			}
 		}
 
 		ui, cmd := testKVPutCommand(t)
@@ -191,8 +199,11 @@ func TestKVPutCommand(t *testing.T) {
 			t.Fatalf("expected 0 to be %d", code)
 		}
 		combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
-		if !strings.Contains(combined, "created_time") {
-			t.Errorf("expected %q to contain %q", combined, "created_time")
+
+		for _, str := range v2ExpectedFields {
+			if !strings.Contains(combined, str) {
+				t.Errorf("expected %q to contain %q", combined, str)
+			}
 		}
 
 		ui, cmd = testKVPutCommand(t)
@@ -366,72 +377,68 @@ func testKVGetCommand(tb testing.TB) (*cli.MockUi, *KVGetCommand) {
 func TestKVGetCommand(t *testing.T) {
 	t.Parallel()
 
+	baseV2ExpectedFields := []string{"created_time", "custom_metadata", "deletion_time", "deletion_time", "version"}
+
 	cases := []struct {
-		name string
-		args []string
-		out  string
-		code int
+		name       string
+		args       []string
+		outStrings []string
+		code       int
 	}{
 		{
 			"not_enough_args",
 			[]string{},
-			"Not enough arguments",
+			[]string{"Not enough arguments"},
 			1,
 		},
 		{
 			"too_many_args",
 			[]string{"foo", "bar"},
-			"Too many arguments",
+			[]string{"Too many arguments"},
 			1,
 		},
 		{
 			"not_found",
 			[]string{"secret/nope/not/once/never"},
-			"",
+			[]string{"No value found at secret/nope/not/once/never"},
 			2,
 		},
 		{
 			"default",
 			[]string{"secret/read/foo"},
-			"foo",
+			[]string{"foo"},
 			0,
 		},
 		{
 			"v1_field",
 			[]string{"-field", "foo", "secret/read/foo"},
-			"bar",
+			[]string{"bar"},
 			0,
 		},
 		{
 			"v2_field",
 			[]string{"-field", "foo", "kv/read/foo"},
-			"bar",
+			[]string{"bar"},
 			0,
 		},
 
 		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
-			"",
+			[]string{"No value found at kv/data/nope/not/once/never"},
 			2,
 		},
 
 		{
 			"v2_read",
 			[]string{"kv/read/foo"},
-			"foo",
-			0,
-		},
-		{
-			"v2_read",
-			[]string{"kv/read/foo"},
-			"version",
+			append(baseV2ExpectedFields, "foo"),
 			0,
 		},
 		{
 			"v2_read_version",
 			[]string{"--version", "1", "kv/read/foo"},
-			"foo",
+			append(baseV2ExpectedFields, "foo"),
 			0,
 		},
 	}
@@ -479,8 +486,11 @@ func TestKVGetCommand(t *testing.T) {
 				}
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
+
+				for _, str := range tc.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
 				}
 			})
 		}
@@ -508,28 +518,46 @@ func testKVMetadataGetCommand(tb testing.TB) (*cli.MockUi, *KVMetadataGetCommand
 func TestKVMetadataGetCommand(t *testing.T) {
 	t.Parallel()
 
+	expectedTopLevelFields := []string{
+		"cas_required",
+		"created_time",
+		"current_version",
+		"custom_metadata",
+		"delete_version_after",
+		"max_versions",
+		"oldest_version",
+		"updated_time",
+	}
+
+	expectedVersionFields := []string{
+		"created_time", // field is redundant
+		"deletion_time",
+		"destroyed",
+	}
+
 	cases := []struct {
-		name string
-		args []string
-		out  string
-		code int
+		name       string
+		args       []string
+		outStrings []string
+		code       int
 	}{
 		{
 			"v1",
 			[]string{"secret/foo"},
-			"Metadata not supported on KV Version 1",
+			[]string{"Metadata not supported on KV Version 1"},
 			1,
 		},
 		{
 			"metadata_exists",
 			[]string{"kv/foo"},
-			"current_version",
+			expectedTopLevelFields,
 			0,
 		},
+		// ensure that all top-level and version-level fields are output along with version num
 		{
 			"versions_exist",
 			[]string{"kv/foo"},
-			"deletion_time",
+			append(expectedTopLevelFields,  expectedVersionFields[:]...),
 			0,
 		},
 	}
@@ -571,8 +599,10 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				}
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
+				for _, str := range tc.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
 				}
 			})
 		}
@@ -652,6 +682,19 @@ func TestKVPatchCommand_ArgValidation(t *testing.T) {
 	}
 }
 
+// expectedPatchFields produces a deterministic slice of
+// expected fields for patch command output since const
+// slices are not supported
+func expectedPatchFields() []string {
+	return []string{
+		"created_time",
+		"custom_metadata",
+		"deletion_time",
+		"destroyed",
+		"version",
+	}
+}
+
 func TestKvPatchCommand_StdinFull(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
@@ -677,7 +720,14 @@ func TestKvPatchCommand_StdinFull(t *testing.T) {
 	}()
 
 	args := []string{"kv/patch/foo", "-"}
-	code, _ := kvPatchWithRetry(t, client, args, stdinR)
+	code, combined := kvPatchWithRetry(t, client, args, stdinR)
+
+	for _, str := range expectedPatchFields() {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
+	}
+
 	if code != 0 {
 		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 	}
@@ -733,9 +783,15 @@ func TestKvPatchCommand_StdinValue(t *testing.T) {
 	}()
 
 	args := []string{"kv/patch/foo", "foo=-"}
-	code, _ := kvPatchWithRetry(t, client, args, stdinR)
+	code, combined := kvPatchWithRetry(t, client, args, stdinR)
 	if code != 0 {
 		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
+	}
+
+	for _, str := range expectedPatchFields() {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
 	}
 
 	secret, err := client.Logical().Read("kv/data/patch/foo")
@@ -810,9 +866,10 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 	}
 
-	expectedOutputSubstr := "created_time"
-	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
+	for _, str := range expectedPatchFields() {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
 	}
 
 	// Test multi value
@@ -823,31 +880,33 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 	}
 
-	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
+	for _, str := range expectedPatchFields() {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
 	}
 }
 
 func TestKVPatchCommand_CAS(t *testing.T) {
 	cases := []struct {
-		name     string
-		args     []string
-		expected string
-		out      string
-		code     int
+		name       string
+		args       []string
+		expected   string
+		outStrings []string
+		code       int
 	}{
 		{
 			"right version",
 			[]string{"-cas", "1", "kv/foo", "bar=quux"},
 			"quux",
-			"",
+			expectedPatchFields(),
 			0,
 		},
 		{
 			"wrong version",
 			[]string{"-cas", "2", "kv/foo", "bar=wibble"},
 			"baz",
-			"check-and-set parameter did not match the current version",
+			[]string{"check-and-set parameter did not match the current version"},
 			2,
 		},
 	}
@@ -892,9 +951,9 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 				t.Fatalf("expected code to be %d but was %d", tc.code, code)
 			}
 
-			if tc.out != "" {
-				if !strings.Contains(combined, tc.out) {
-					t.Errorf("expected %q to contain %q", combined, tc.out)
+			for _, str := range tc.outStrings {
+				if !strings.Contains(combined, str) {
+					t.Errorf("expected %q to contain %q", combined, str)
 				}
 			}
 

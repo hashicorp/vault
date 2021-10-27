@@ -55,7 +55,7 @@
             @horizontalPosition="left"
             as |T|>
             <T.trigger @tabindex=false>
-              <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>  
+              <span class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</span>  
             </T.trigger>
             <T.content @class="tool-tip">
               <CopyButton
@@ -73,7 +73,7 @@
             </T.content>
           </ToolTip>
         {{else}}
-          <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>
+          <span class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</span>
         {{/if}}
       {{/if}}
     {{/if}}
