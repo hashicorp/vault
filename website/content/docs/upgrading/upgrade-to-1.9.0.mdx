@@ -39,7 +39,9 @@ To re-enable the old behavior, update the roles with a value
 of `"*"` to the `allowed_extensions` parameter allowing any/all extensions to be
 specified by clients.
 
-## HTTP Request Counter Deprecation
+## Deprecations
+
+### HTTP Request Counter Deprecation
 
 In Vault 1.9, the internal HTTP Request count
 [API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests)
@@ -49,3 +51,14 @@ error with a message stating that `functionality on this path has been removed`.
 Vault does not make backwards compatible guarantees on internal APIs (those
 prefaced with `sys/internal`). They are subject to change and may disappear
 without notice.
+
+### Etcd v2
+
+Support for Etcd v2 will be removed from Vault in Vault 1.10 (not this Vault
+release, but the next one). The Etcd v2 API
+was deprecated with the release of [Etcd
+v3.5](https://etcd.io/blog/2021/announcing-etcd-3.5/), and will be
+decommissioned in the Etcd v3.6 release.
+
+Users upgrading to Vault 1.9 and planning to eventually upgrade to Vault 1.10
+should plan to upgrade to the Etcd v3 API.
