@@ -48,6 +48,7 @@ Vagrantfile
 # Configs
 *.hcl
 !.release/ci.hcl
+!.release/linux/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/*.hcl
 
