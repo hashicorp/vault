@@ -264,7 +264,7 @@ func Test_SetGetRetrievalToken(t *testing.T) {
 	}
 }
 
-func TestBolt_MigtrateFromV1ToV2Schema(t *testing.T) {
+func TestBolt_MigrateFromV1ToV2Schema(t *testing.T) {
 	ctx := context.Background()
 
 	path, err := ioutil.TempDir("", "bolt-test")
@@ -334,4 +334,45 @@ func TestBolt_MigtrateFromV1ToV2Schema(t *testing.T) {
 	leases, err = b.GetByType(ctx, LeaseType)
 	require.NoError(t, err)
 	assert.Len(t, leases, 3)
+}
+
+func TestBolt_MigrateFromInvalidToV2Schema(t *testing.T) {
+	ctx := context.Background()
+
+	path, err := ioutil.TempDir("", "bolt-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(path)
+
+	dbPath := filepath.Join(path, DatabaseFileName)
+	db, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	require.NoError(t, err)
+	b := &BoltStorage{
+		db:      db,
+		logger:  hclog.Default(),
+		wrapper: getTestKeyManager(t).Wrapper(),
+	}
+
+	// All GetByType calls should fail as there's no schema
+	for _, bucket := range []string{authLeaseType, secretLeaseType, LeaseType} {
+		_, err = b.GetByType(ctx, bucket)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), "not found"))
+	}
+
+	// Now migrate to the v2 schema.
+	err = db.Update(migrateFromV1ToV2Schema)
+	require.NoError(t, err)
+
+	// Deprecated auth and secret lease buckets still shouldn't exist
+	// All GetByType calls should fail as there's no schema
+	for _, bucket := range []string{authLeaseType, secretLeaseType} {
+		_, err = b.GetByType(ctx, bucket)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), "not found"))
+	}
+
+	// GetByType for LeaseType should now return an empty result
+	leases, err := b.GetByType(ctx, LeaseType)
+	require.NoError(t, err)
+	require.Len(t, leases, 0)
 }

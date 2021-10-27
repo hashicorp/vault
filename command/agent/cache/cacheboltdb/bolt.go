@@ -187,7 +187,11 @@ func migrateFromV1ToV2Schema(tx *bolt.Tx) error {
 		}
 	}
 
-	if err := tx.Bucket([]byte(metaBucketName)).Put([]byte(storageVersionKey), []byte(storageVersion)); err != nil {
+	meta, err := tx.CreateBucketIfNotExists([]byte(metaBucketName))
+	if err != nil {
+		return fmt.Errorf("failed to create meta bucket: %w", err)
+	}
+	if err := meta.Put([]byte(storageVersionKey), []byte(storageVersion)); err != nil {
 		return fmt.Errorf("failed to update schema from v1 to v2: %w", err)
 	}
 
@@ -314,7 +318,7 @@ func (b *BoltStorage) GetByType(ctx context.Context, indexType string) ([][]byte
 		bucket.ForEach(func(key, ciphertext []byte) error {
 			plaintext, err := b.decrypt(ctx, ciphertext)
 			if err != nil {
-				errors = multierror.Append(errors, fmt.Errorf("error decrypting entry %s: %w", string(key), err))
+				errors = multierror.Append(errors, fmt.Errorf("error decrypting entry %s: %w", key, err))
 				return nil
 			}
 
