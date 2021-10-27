@@ -12,6 +12,10 @@
     "divider": true
   },
   {
+    "title": "Feature Deprecation Notice and Plans",
+    "path": "feature-deprecation-notice"
+  },
+  {
     "title": "Browser Support",
     "path": "browser-support"
   },
