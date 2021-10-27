@@ -58,6 +58,8 @@ type BaseCommand struct {
 
 	flagMFA []string
 
+	flagHeader map[string]string
+
 	tokenHelper token.TokenHelper
 
 	client *api.Client
@@ -152,6 +154,23 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 	if c.flagPolicyOverride {
 		client.SetPolicyOverride(c.flagPolicyOverride)
+	}
+
+	if c.flagHeader != nil {
+
+		var forbiddenHeaders []string
+		for key, val := range c.flagHeader {
+
+			if strings.HasPrefix(key, "X-Vault-") {
+				forbiddenHeaders = append(forbiddenHeaders, key)
+				continue
+			}
+			client.AddHeader(key, val)
+		}
+
+		if len(forbiddenHeaders) > 0 {
+			return nil, fmt.Errorf("failed to setup Headers[%s]: Header starting by 'X-Vault-' are for internal usage only", strings.Join(forbiddenHeaders, ", "))
+		}
 	}
 
 	c.client = client
@@ -363,6 +382,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default:    notSetValue,
 				Completion: complete.PredictNothing,
 				Usage:      "Key to unlock a namespace API lock.",
+			})
+
+			f.StringMapVar(&StringMapVar{
+				Name:       "header",
+				Target:     &c.flagHeader,
+				Completion: complete.PredictAnything,
+				Usage: "Key-value pair provided as key=value to provide http header added to any request done by the CLI." +
+					"Trying to add headers starting with 'X-Vault-' is forbidden and will make the command fail " +
+					"This can be specified multiple times.",
 			})
 
 		}
