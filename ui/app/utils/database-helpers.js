@@ -76,8 +76,8 @@ export const AVAILABLE_PLUGIN_TYPES = [
     ],
   },
   {
-    value: 'mysql-database-plugin',
-    displayName: 'MySQL/MariaDB',
+    value: 'mysql-legacy-database-plugin',
+    displayName: 'MySQL (Legacy)',
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
@@ -96,8 +96,8 @@ export const AVAILABLE_PLUGIN_TYPES = [
     ],
   },
   {
-    value: 'mysql-legacy-database-plugin',
-    displayName: 'MySQL (Legacy)',
+    value: 'mysql-database-plugin',
+    displayName: 'MySQL/MariaDB',
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
