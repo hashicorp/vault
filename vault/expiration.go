@@ -668,8 +668,8 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	broker := make(chan *lease)
 	quit := make(chan bool)
 	// Buffer these channels to prevent deadlocks
-	errs := make(chan error, len(existing))
-	result := make(chan struct{}, len(existing))
+	errs := make(chan error, leaseCount)
+	result := make(chan struct{}, leaseCount)
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
