@@ -108,6 +108,7 @@ var (
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
 	LastPerformanceWAL           = lastPerformanceWALImpl
+	LastDRWAL                    = lastDRWALImpl
 	PerformanceMerkleRoot        = merkleRootImpl
 	DRMerkleRoot                 = merkleRootImpl
 	LastRemoteWAL                = lastRemoteWALImpl
@@ -2301,6 +2302,10 @@ func lastWALImpl(c *Core) uint64 {
 }
 
 func lastPerformanceWALImpl(c *Core) uint64 {
+	return 0
+}
+
+func lastDRWALImpl(c *Core) uint64 {
 	return 0
 }
 

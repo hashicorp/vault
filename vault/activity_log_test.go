@@ -1534,7 +1534,7 @@ func TestCreateClientID(t *testing.T) {
 		string(sortedPoliciesTWEDelimiter) + "foo" + string(clientIDTWEDelimiter) + "namespaceFoo"
 
 	hashed := sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID := base64.URLEncoding.EncodeToString(hashed[:])
+	expectedID := base64.StdEncoding.EncodeToString(hashed[:])
 	if expectedID != id {
 		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
 	}
@@ -1559,7 +1559,7 @@ func TestCreateClientID(t *testing.T) {
 		string(sortedPoliciesTWEDelimiter) + "foo" + string(clientIDTWEDelimiter)
 
 	hashed = sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID = base64.URLEncoding.EncodeToString(hashed[:])
+	expectedID = base64.StdEncoding.EncodeToString(hashed[:])
 	if expectedID != id {
 		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
 	}
@@ -1573,7 +1573,7 @@ func TestCreateClientID(t *testing.T) {
 	expectedIDPlaintext = "namespaceFoo"
 
 	hashed = sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID = base64.URLEncoding.EncodeToString(hashed[:])
+	expectedID = base64.StdEncoding.EncodeToString(hashed[:])
 	if expectedID != id {
 		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
 	}

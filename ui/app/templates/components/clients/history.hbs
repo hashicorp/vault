@@ -138,13 +138,14 @@
                 @title="Top 10 Namespaces"
                 @description="Each namespace's client count includes clients in child namespaces."
                 @dataset={{this.barChartDataset}}
+                @tooltipData={{or @model.activity.clients @model.activity.total.clients}}
                 @onClick={{action this.selectNamespace}}
                 @mapLegend={{array
                   (hash key='non_entity_tokens' label='Non-entity tokens')
                   (hash key='distinct_entities' label='Unique entities')
                 }}
               >
-              <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{'client-count-by-namespaces.csv'}} />
+                <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{'client-count-by-namespaces.csv'}} />
               </BarChart>
             </div>
             <div class="column">
