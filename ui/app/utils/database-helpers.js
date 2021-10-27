@@ -201,7 +201,12 @@ export const STATEMENT_FIELDS = {
     'mysql-legacy-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-rds-database-plugin': ['creation_statements', 'revocation_statements'],
     'oracle-database-plugin': ['creation_statements', 'revocation_statements'],
-    'postgresql-database-plugin': ['creation_statements', 'revocation_statements'],
+    'postgresql-database-plugin': [
+      'creation_statements',
+      'revocation_statements',
+      'rollback_statements',
+      'renew_statements',
+    ],
   },
 };
 
