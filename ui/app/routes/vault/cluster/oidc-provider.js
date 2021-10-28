@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 
 const AUTH = 'vault.cluster.auth';
 const PROVIDER = 'vault.cluster.oidc-provider';
+const NS_PROVIDER = 'vault.cluster.oidc-provider-ns';
 
 export default class VaultClusterOidcProviderRoute extends Route {
   @service auth;
@@ -24,8 +25,9 @@ export default class VaultClusterOidcProviderRoute extends Route {
 
   beforeModel(transition) {
     const currentToken = this.auth.get('currentTokenName');
-    let { redirect_to, ...qp } = transition.to.queryParams;
-    console.debug('DEBUG: removing redirect_to', redirect_to);
+    let qp = transition.to.queryParams;
+    // remove redirect_to if carried over from auth
+    qp.redirect_to = null;
     if (!currentToken && 'none' === qp.prompt?.toLowerCase()) {
       this._redirect(qp.redirect_uri, {
         state: qp.state,
@@ -37,13 +39,19 @@ export default class VaultClusterOidcProviderRoute extends Route {
         // need to remove before redirect to avoid infinite loop
         qp.prompt = null;
       }
-      return this._redirectToAuth(transition.to.params?.provider_name, qp, shouldLogout);
+      return this._redirectToAuth({
+        ...transition.to.params,
+        qp,
+        logout: shouldLogout,
+      });
     }
   }
 
-  _redirectToAuth(provider_name, queryParams, logout = false) {
+  _redirectToAuth({ provider_name, namespace = null, qp, logout = false }) {
     let { cluster_name } = this.paramsFor('vault.cluster');
-    let url = this.router.urlFor(PROVIDER, cluster_name, provider_name, { queryParams });
+    let url = namespace
+      ? this.router.urlFor(NS_PROVIDER, cluster_name, namespace, provider_name, { queryParams: qp })
+      : this.router.urlFor(PROVIDER, cluster_name, provider_name, { queryParams: qp });
     // This is terrible, I'm sorry
     // Need to do this because transitionTo (as used in auth-form) expects url without
     // rootURL /ui/ at the beginning, but urlFor builds it in. We can't use currentRoute
@@ -53,7 +61,15 @@ export default class VaultClusterOidcProviderRoute extends Route {
       this.auth.deleteCurrentToken();
     }
     // o param can be anything, as long as it's present the auth page will change
-    return this.transitionTo(AUTH, cluster_name, { queryParams: { redirect_to: url, o: provider_name } });
+    let queryParams = {
+      redirect_to: url,
+      o: provider_name,
+    };
+    if (namespace) {
+      queryParams.namespace = namespace;
+    }
+    console.log({ queryParams });
+    return this.transitionTo(AUTH, cluster_name, { queryParams });
   }
 
   _buildUrl(urlString, params) {
@@ -87,11 +103,37 @@ export default class VaultClusterOidcProviderRoute extends Route {
     this.win.location.replace(redirectUrl);
   }
 
-  async model(params) {
-    let { provider_name, ...qp } = params;
+  _requestUrl({ provider_name, qp, namespace = null }) {
+    let baseUrl = namespace
+      ? `${this.win.origin}/v1/${namespace}/identity/oidc/provider/${provider_name}/authorize`
+      : `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`;
+    return this._buildUrl(baseUrl, qp);
+  }
+
+  /**
+   * Method for getting the parameters from the route. Allows for namespace to be defined on extended route oidc-provider-ns
+   * @param {object} params object passed into the model method
+   * @returns object with provider_name (string), qp (object of query params), decodedRedirect (string, FQDN)
+   */
+  _getInfoFromParams(params) {
+    console.log('getting info from params for oss', params);
+    let { provider_name, namespace, ...qp } = params;
     let decodedRedirect = decodeURI(qp.redirect_uri);
-    let baseUrl = `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`;
-    let endpoint = this._buildUrl(baseUrl, qp);
+    return {
+      provider_name,
+      qp,
+      decodedRedirect,
+      namespace,
+    };
+  }
+
+  async model(params) {
+    let modelInfo = this._getInfoFromParams(params);
+    let { qp, decodedRedirect, ...routeParams } = modelInfo;
+    if (!qp.redirect_uri) {
+      throw new Error('Missing required query params');
+    }
+    let endpoint = this._requestUrl({ qp, ...routeParams });
     try {
       const response = await this.auth.ajax(endpoint, 'GET', {});
       if ('consent' === qp.prompt?.toLowerCase()) {
@@ -108,7 +150,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
       let resp = await errorRes.json();
       let code = resp.error;
       if (code === 'max_age_violation' || resp?.errors?.includes('permission denied')) {
-        this._redirectToAuth(provider_name, qp, true);
+        this._redirectToAuth({ ...routeParams, qp, shouldLogout: true });
       } else if (code === 'invalid_redirect_uri') {
         return {
           error: {
