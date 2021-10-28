@@ -73,10 +73,6 @@ jobs:
           GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
-          go get github.com/hashicorp/go-bindata
-          go get github.com/hashicorp/go-bindata/go-bindata
-          go get github.com/elazarl/go-bindata-assetfs
-          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -90,14 +86,7 @@ jobs:
           npm rebuild node-sass
           yarn --verbose run build
           cd ..
-      - name: Static assets
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./http/web_ui/...
-          mkdir -p http && mv bindata_assetfs.go http/
-          goimports -w http/bindata_assetfs.go
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
@@ -136,10 +125,6 @@ jobs:
           GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
-          go get github.com/hashicorp/go-bindata
-          go get github.com/hashicorp/go-bindata/go-bindata
-          go get github.com/elazarl/go-bindata-assetfs
-          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -153,14 +138,6 @@ jobs:
           npm rebuild node-sass
           yarn --verbose run build
           cd ..
-      - name: Static assets
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./http/web_ui/...
-          mkdir -p http && mv bindata_assetfs.go http/
-          goimports -w http/bindata_assetfs.go
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
@@ -224,10 +201,6 @@ jobs:
           GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
-          go get github.com/hashicorp/go-bindata
-          go get github.com/hashicorp/go-bindata/go-bindata
-          go get github.com/elazarl/go-bindata-assetfs
-          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -245,10 +218,6 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: |
-          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./http/web_ui/...
-          mkdir -p http && mv bindata_assetfs.go http/
-          goimports -w http/bindata_assetfs.go
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
