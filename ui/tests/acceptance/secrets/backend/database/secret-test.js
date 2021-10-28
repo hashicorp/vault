@@ -291,7 +291,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
       await connectionPage.save();
       await connectionPage.enable();
       assert
-        .dom('[data-test-modal-title]')
+        .dom('.modal.is-active .title')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       await connectionPage.enable();
       assert.ok(
@@ -361,7 +361,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     await connectionPage.toggleVerify();
     await connectionPage.save();
     assert
-      .dom('[data-test-modal-title]')
+      .dom('.modal.is-active .title')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
     assert.equal(
@@ -381,6 +381,9 @@ module('Acceptance | secrets/database/*', function(hooks) {
       }
     });
     await connectionPage.delete();
+    assert
+      .dom('.modal.is-active .title')
+      .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="delete"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
     await settled();
