@@ -130,6 +130,7 @@ type providerDiscovery struct {
 }
 
 type authCodeCacheEntry struct {
+	provider    string
 	clientID    string
 	entityID    string
 	redirectURI string
@@ -1557,6 +1558,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 
 	// Create the auth code cache entry
 	authCodeEntry := &authCodeCacheEntry{
+		provider:    name,
 		clientID:    clientID,
 		entityID:    entity.GetID(),
 		redirectURI: redirectURI,
@@ -1739,10 +1741,15 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 
 	// Ensure the authorization code was issued to the authenticated client
 	if authCodeEntry.clientID != clientID {
-		return tokenResponse(nil, ErrTokenInvalidGrant, "authorization grant is invalid or expired")
+		return tokenResponse(nil, ErrTokenInvalidGrant, "authorization code was not issued to the client")
 	}
 
-	// Ensure that the redirect_uri parameter value is identical to the redirect_uri
+	// Ensure the authorization code was issued by the provider
+	if authCodeEntry.provider != name {
+		return tokenResponse(nil, ErrTokenInvalidGrant, "authorization code was not issued by the provider")
+	}
+
+	// Ensure the redirect_uri parameter value is identical to the redirect_uri
 	// parameter value that was included in the initial authorization request.
 	redirectURI := d.Get("redirect_uri").(string)
 	if redirectURI == "" {
@@ -1979,6 +1986,12 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 	if !isMember {
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "identity entity not authorized by client assignment")
+	}
+
+	// Validate that the client is authorized to use the provider
+	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
+		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
 	}
 
 	claims := map[string]interface{}{
