@@ -48,9 +48,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ freebsd, windows, netbsd, openbsd ]
-        goarch: [ "386", "amd64" ]
+        goos: [ freebsd, windows, netbsd, openbsd, solaris ]
+        goarch: [ "386", "amd64", "arm" ]
         go: [ "1.16" ]
+        exclude:
+          - goos: solaris
+            goarch: 386
+          - goos: solaris
+            goarch: arm
+          - goos: windows
+            goarch: arm
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -81,9 +88,8 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           
         run: |
-          go mod vendor
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${{ env.GITHUB_SHA }} GO_TAGS="${{ env.GO_TAGS }}" make build
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -129,9 +135,8 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           
         run: |
-          go mod vendor
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${{ env.GITHUB_SHA }} GO_TAGS="${{ env.GO_TAGS }}" make build
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -202,9 +207,8 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           
         run: |
-          go mod vendor
           mkdir dist out
-          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${{ env.GITHUB_SHA }} GO_TAGS="${{ env.GO_TAGS }}" make build
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
