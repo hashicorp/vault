@@ -116,7 +116,7 @@ require (
 	github.com/hashicorp/vault/api v1.2.0
 	github.com/hashicorp/vault/api/auth/approle v0.0.0-00010101000000-000000000000
 	github.com/hashicorp/vault/api/auth/userpass v0.0.0-00010101000000-000000000000
-	github.com/hashicorp/vault/sdk v0.2.2-0.20211014165207-28bd5c3a0311
+	github.com/hashicorp/vault/sdk v0.3.0
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
