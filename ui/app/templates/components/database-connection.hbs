@@ -23,8 +23,7 @@
           <button
             type="button"
             class="toolbar-link"
-            {{on 'click' this.delete}}
-            data-test-database-connection-delete
+            onclick={{action (mut isDeleteModalActive) true}}
           >
             Delete connection
           </button>
@@ -367,3 +366,17 @@
     </button>
   </footer>
 </Modal>
+
+<ConfirmationModal
+  @title="Delete connection?"
+  @onClose={{action (mut isDeleteModalActive) false}}
+  @isActive={{isDeleteModalActive}}
+  @confirmText={{@model.name}}
+  @toConfirmMsg="deleting the connection"
+  @onConfirm={{action "delete"}}
+>
+  <p class="has-bottom-margin-m">
+    Deleting the connection means that any associated roles won't be able to generate credentials until the connection is reconfigured.
+  </p>
+  <MessageError @model={{model}} @errorMessage={{error}} />
+</ConfirmationModal>
