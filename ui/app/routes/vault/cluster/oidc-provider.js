@@ -6,6 +6,7 @@ const AUTH = 'vault.cluster.auth';
 const PROVIDER = 'vault.cluster.oidc-provider';
 const NS_PROVIDER = 'vault.cluster.oidc-provider-ns';
 
+let DEBUG = true; // TODO: remove before merging
 export default class VaultClusterOidcProviderRoute extends Route {
   @service auth;
   @service router;
@@ -24,6 +25,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   beforeModel(transition) {
+    console.log('*****BEFORE MODEL*****', transition);
     const currentToken = this.auth.get('currentTokenName');
     let qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
@@ -90,15 +92,15 @@ export default class VaultClusterOidcProviderRoute extends Route {
   _handleSuccess(response, baseUrl, state) {
     const { code } = response;
     let redirectUrl = this._buildUrl(baseUrl, { code, state });
-    if (Ember.testing) {
-      return redirectUrl;
+    if (Ember.testing || DEBUG) {
+      return { redirectUrl };
     }
     this.win.location.replace(redirectUrl);
   }
   _handleError(errorResp, baseUrl) {
     let redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
-    if (Ember.testing) {
-      return redirectUrl;
+    if (Ember.testing || DEBUG) {
+      return { redirectUrl };
     }
     this.win.location.replace(redirectUrl);
   }
@@ -107,6 +109,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
     let baseUrl = namespace
       ? `${this.win.origin}/v1/${namespace}/identity/oidc/provider/${provider_name}/authorize`
       : `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`;
+    console.log('BUILD REQUEST URL', this.win.origin, namespace, baseUrl);
     return this._buildUrl(baseUrl, qp);
   }
 
@@ -128,12 +131,15 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   async model(params) {
+    console.log('*****MODEL*****', params);
     let modelInfo = this._getInfoFromParams(params);
     let { qp, decodedRedirect, ...routeParams } = modelInfo;
+    let endpoint = this._requestUrl({ qp, ...routeParams });
+    console.log({ routeParams });
+    console.log({ endpoint });
     if (!qp.redirect_uri) {
       throw new Error('Missing required query params');
     }
-    let endpoint = this._requestUrl({ qp, ...routeParams });
     try {
       const response = await this.auth.ajax(endpoint, 'GET', {});
       if ('consent' === qp.prompt?.toLowerCase()) {
@@ -145,7 +151,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
           },
         };
       }
-      this._handleSuccess(response, decodedRedirect, qp.state);
+      return this._handleSuccess(response, decodedRedirect, qp.state);
     } catch (errorRes) {
       let resp = await errorRes.json();
       let code = resp.error;
@@ -167,7 +173,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
           },
         };
       } else {
-        this._handleError(resp, decodedRedirect);
+        return this._handleError(resp, decodedRedirect);
       }
     }
   }
