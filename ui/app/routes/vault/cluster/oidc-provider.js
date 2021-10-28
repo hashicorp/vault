@@ -102,13 +102,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
     this.win.location.replace(redirectUrl);
   }
 
-  _requestUrl({ provider_name, qp, namespace = null }) {
-    let baseUrl = namespace
-      ? `${this.win.origin}/v1/${namespace}/identity/oidc/provider/${provider_name}/authorize`
-      : `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`;
-    return this._buildUrl(baseUrl, qp);
-  }
-
   /**
    * Method for getting the parameters from the route. Allows for namespace to be defined on extended route oidc-provider-ns
    * @param {object} params object passed into the model method
@@ -128,13 +121,15 @@ export default class VaultClusterOidcProviderRoute extends Route {
   async model(params) {
     let modelInfo = this._getInfoFromParams(params);
     let { qp, decodedRedirect, ...routeParams } = modelInfo;
-    let endpoint = this._requestUrl({ qp, ...routeParams });
+    let endpoint = this._buildUrl(
+      `${this.win.origin}/v1/identity/oidc/provider/${routeParams.provider_name}/authorize`,
+      qp
+    );
     if (!qp.redirect_uri) {
       throw new Error('Missing required query params');
     }
     try {
-      // Null namespace overrides X-Vault-Namespace header since we already include in endpoint
-      const response = await this.auth.ajax(endpoint, 'GET', { namespace: null });
+      const response = await this.auth.ajax(endpoint, 'GET', { namespace: routeParams.namespace });
       if ('consent' === qp.prompt?.toLowerCase()) {
         return {
           consent: {
