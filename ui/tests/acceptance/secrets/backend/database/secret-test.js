@@ -289,7 +289,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
       testCase.requiredFields(assert, testCase.name);
       await connectionPage.toggleVerify();
       await connectionPage.save();
-      await connectionPage.enable();
+      await settled();
       assert
         .dom('.modal.is-active .title')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
@@ -360,6 +360,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
     await connectionPage.save();
+    await settled();
     assert
       .dom('.modal.is-active .title')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
