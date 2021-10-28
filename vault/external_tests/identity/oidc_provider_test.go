@@ -68,13 +68,22 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 	require.NoError(t, err)
 	groupID := resp.Data["id"].(string)
 
+	// Create a policy that allows updating the provider
+	err = active.Sys().PutPolicy("test-policy", `
+		path "identity/oidc/provider/test-provider" {
+			capabilities = ["update"]
+		}
+	`)
+	require.NoError(t, err)
+
 	// Enable userpass auth and create a user
 	err = active.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
 	})
 	require.NoError(t, err)
 	_, err = active.Logical().Write("auth/userpass/users/end-user", map[string]interface{}{
-		"password": testPassword,
+		"password":       testPassword,
+		"token_policies": "test-policy",
 	})
 	require.NoError(t, err)
 
@@ -277,6 +286,11 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 			}
 			client.SetToken(clientToken)
 
+			// Update allowed client IDs before the authentication flow
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+				"allowed_client_ids": []string{clientID},
+			})
+
 			// Create the client-side OIDC request state
 			oidcRequest, err := oidc.NewRequest(10*time.Minute, testRedirectURI, tt.args.options...)
 			require.NoError(t, err)
@@ -339,6 +353,17 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 				require.True(t, ok)
 				require.EqualValues(t, expectedVal, actualVal)
 			}
+
+			// Assert that the access token is no longer able to obtain user info
+			// after removing the client from the provider's allowed client ids
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
+				"allowed_client_ids": []string{},
+			})
+			require.NoError(t, err)
+			err = p.UserInfo(context.Background(), accessToken, subject, &allClaims)
+			require.Error(t, err)
+			require.Equal(t, `Provider.UserInfo: provider UserInfo request failed: 403 Forbidden: {"error":"access_denied","error_description":"client is not authorized to use the provider"}`,
+				err.Error())
 		})
 	}
 }
