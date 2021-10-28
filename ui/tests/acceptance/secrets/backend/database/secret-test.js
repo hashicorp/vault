@@ -186,27 +186,6 @@ const connectionTests = [
     },
   },
   {
-    name: 'oracle-connection',
-    plugin: 'oracle-database-plugin',
-    url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
-    requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
-      assert
-        .dom('[data-test-input="max_open_connections"]')
-        .exists(`Max open connections exists for ${name}`);
-      assert
-        .dom('[data-test-input="max_idle_connections"]')
-        .exists(`Max idle connections exists for ${name}`);
-      assert
-        .dom('[data-test-input="max_connection_lifetime"]')
-        .exists(`Max connection lifetime exists for ${name}`);
-      assert
-        .dom('[data-test-input="root_rotation_statements"]')
-        .exists(`Root rotation statements exists for ${name}`);
-    },
-  },
-  {
     name: 'postgresql-connection',
     plugin: 'postgresql-database-plugin',
     url: `postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable`,
@@ -228,6 +207,28 @@ const connectionTests = [
       assert
         .dom('[data-test-toggle-input="show-username_template"]')
         .exists(`Username template toggle exists for ${name}`);
+    },
+  },
+  // keep oracle as last DB because it is skipped in some tests (line 285) the UI doesn't return to empty state after
+  {
+    name: 'oracle-connection',
+    plugin: 'oracle-database-plugin',
+    url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
     },
   },
 ];
@@ -280,7 +281,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
       } else {
         await connectionPage.connectionUrl(testCase.url);
       }
-      // skip adding oracle db connection since plugin doesn't exists
+      // skip adding oracle db connection since plugin doesn't exist
       if (testCase.plugin === 'oracle-database-plugin') {
         testCase.requiredFields(assert, testCase.name);
         continue;
