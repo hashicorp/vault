@@ -26,12 +26,12 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190620160927-9418d7b0cd0f
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.3.9
+	github.com/armon/go-metrics v0.3.10
 	github.com/armon/go-proxyproto v0.0.0-20210323213023-7e956b284f0a
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/aws/aws-sdk-go v1.37.19
-	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
@@ -74,7 +74,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.1
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.1
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.1
@@ -113,7 +113,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.4.1-0.20210921171411-e86105e4986d
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
-	github.com/hashicorp/vault/api v1.2.0
+	github.com/hashicorp/vault/api v1.3.0
 	github.com/hashicorp/vault/api/auth/approle v0.0.0-00010101000000-000000000000
 	github.com/hashicorp/vault/api/auth/userpass v0.0.0-00010101000000-000000000000
 	github.com/hashicorp/vault/sdk v0.3.0
@@ -130,9 +130,9 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
 	github.com/mitchellh/cli v1.1.2
-	github.com/mitchellh/copystructure v1.0.0
+	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/go-testing-interface v1.14.0
+	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/mitchellh/gox v1.0.1
 	github.com/mitchellh/mapstructure v1.4.2
@@ -140,7 +140,7 @@ require (
 	github.com/mongodb/go-client-mongodb-atlas v0.1.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
-	github.com/oklog/run v1.0.0
+	github.com/oklog/run v1.1.0
 	github.com/okta/okta-sdk-golang/v2 v2.0.0
 	github.com/oracle/oci-go-sdk v13.1.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
@@ -169,7 +169,7 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20211020060615-d418f374d309
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359
@@ -181,7 +181,7 @@ require (
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	gopkg.in/square/go-jose.v2 v2.5.1
+	gopkg.in/square/go-jose.v2 v2.6.0
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
 	mvdan.cc/gofumpt v0.1.1
@@ -281,13 +281,13 @@ require (
 	github.com/hashicorp/go-plugin v1.4.3 // indirect
 	github.com/hashicorp/go-slug v0.7.0 // indirect
 	github.com/hashicorp/go-tfe v0.20.0 // indirect
-	github.com/hashicorp/go-version v1.2.1 // indirect
+	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.1 // indirect
 	github.com/hashicorp/serf v0.9.5 // indirect
 	github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 // indirect
-	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
+	github.com/hashicorp/yamux v0.0.0-20210826001029-26ff87cf9493 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect
@@ -326,7 +326,7 @@ require (
 	github.com/openlyinc/pointy v1.1.2 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
-	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
+	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20201205024021-ac21108117ac // indirect
@@ -369,7 +369,7 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
-	google.golang.org/genproto v0.0.0-20210928142010-c7af6a1a74c9 // indirect
+	google.golang.org/genproto v0.0.0-20211028162531-8db9c33dc351 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
