@@ -1981,6 +1981,12 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "identity entity not authorized by client assignment")
 	}
 
+	// Validate that the client is authorized to use the provider
+	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
+		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
+	}
+
 	claims := map[string]interface{}{
 		// The subject claim must always be in the response
 		"sub": entity.ID,
