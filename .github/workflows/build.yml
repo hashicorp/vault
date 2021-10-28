@@ -95,7 +95,6 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir dist out
           go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
           mkdir -p http && mv bindata_assetfs.go http/
           goimports -w http/bindata_assetfs.go
@@ -159,7 +158,6 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir dist out
           go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
           mkdir -p http && mv bindata_assetfs.go http/
           goimports -w http/bindata_assetfs.go
@@ -248,7 +246,6 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          mkdir dist out
           go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
           mkdir -p http && mv bindata_assetfs.go http/
           goimports -w http/bindata_assetfs.go
