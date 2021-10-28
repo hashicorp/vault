@@ -111,11 +111,7 @@ export default class SecretCreateOrUpdate extends Component {
   }
   pathHasWhiteSpace(value) {
     let validation = new RegExp('\\s', 'g'); // search for whitespace
-    if (validation.test(value)) {
-      this.pathWhiteSpaceWarning = true;
-    } else {
-      this.pathWhiteSpaceWarning = false;
-    }
+    this.pathWhiteSpaceWarning = validation.test(value);
   }
   // successCallback is called in the context of the component
   persistKey(successCallback) {

@@ -17,7 +17,6 @@ import layout from '../templates/components/alert-banner';
  * @param {Object} [progressBar=null] - An object containing a value and maximum for a progress bar. Will be displayed next to the message title.
  * @param {String} [message=null] - The message to display within the banner.
  * @param {String} [title=null] - A title to show above the message. If this is not provided, there are default values for each type of alert.
- * @param [marginTop=false]{Boolean} - Whether or not to add margin above component.
  *
  */
 
@@ -30,7 +29,7 @@ export default Component.extend({
   progressBar: null,
   yieldWithoutColumn: false,
   marginless: false,
-  classNameBindings: ['containerClass', 'marginTop:margin-top'],
+  classNameBindings: ['containerClass'],
 
   containerClass: computed('type', 'marginless', function() {
     const base = this.marginless ? 'message message-marginless ' : 'message ';
