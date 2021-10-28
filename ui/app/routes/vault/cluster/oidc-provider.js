@@ -6,7 +6,6 @@ const AUTH = 'vault.cluster.auth';
 const PROVIDER = 'vault.cluster.oidc-provider';
 const NS_PROVIDER = 'vault.cluster.oidc-provider-ns';
 
-let DEBUG = true; // TODO: remove before merging
 export default class VaultClusterOidcProviderRoute extends Route {
   @service auth;
   @service router;
@@ -25,7 +24,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   beforeModel(transition) {
-    console.log('*****BEFORE MODEL*****', transition);
     const currentToken = this.auth.get('currentTokenName');
     let qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
@@ -36,7 +34,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
         error: 'login_required',
       });
     } else if (!currentToken || 'login' === qp.prompt?.toLowerCase()) {
-      let shouldLogout = !!currentToken;
+      let logout = !!currentToken;
       if ('login' === qp.prompt?.toLowerCase()) {
         // need to remove before redirect to avoid infinite loop
         qp.prompt = null;
@@ -44,7 +42,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
       return this._redirectToAuth({
         ...transition.to.params,
         qp,
-        logout: shouldLogout,
+        logout,
       });
     }
   }
@@ -70,7 +68,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
     if (namespace) {
       queryParams.namespace = namespace;
     }
-    console.log({ queryParams });
     return this.transitionTo(AUTH, cluster_name, { queryParams });
   }
 
@@ -92,14 +89,14 @@ export default class VaultClusterOidcProviderRoute extends Route {
   _handleSuccess(response, baseUrl, state) {
     const { code } = response;
     let redirectUrl = this._buildUrl(baseUrl, { code, state });
-    if (Ember.testing || DEBUG) {
+    if (Ember.testing) {
       return { redirectUrl };
     }
     this.win.location.replace(redirectUrl);
   }
   _handleError(errorResp, baseUrl) {
     let redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
-    if (Ember.testing || DEBUG) {
+    if (Ember.testing) {
       return { redirectUrl };
     }
     this.win.location.replace(redirectUrl);
@@ -109,7 +106,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
     let baseUrl = namespace
       ? `${this.win.origin}/v1/${namespace}/identity/oidc/provider/${provider_name}/authorize`
       : `${this.win.origin}/v1/identity/oidc/provider/${provider_name}/authorize`;
-    console.log('BUILD REQUEST URL', this.win.origin, namespace, baseUrl);
     return this._buildUrl(baseUrl, qp);
   }
 
@@ -119,7 +115,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
    * @returns object with provider_name (string), qp (object of query params), decodedRedirect (string, FQDN)
    */
   _getInfoFromParams(params) {
-    console.log('getting info from params for oss', params);
     let { provider_name, namespace, ...qp } = params;
     let decodedRedirect = decodeURI(qp.redirect_uri);
     return {
@@ -131,17 +126,15 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   async model(params) {
-    console.log('*****MODEL*****', params);
     let modelInfo = this._getInfoFromParams(params);
     let { qp, decodedRedirect, ...routeParams } = modelInfo;
     let endpoint = this._requestUrl({ qp, ...routeParams });
-    console.log({ routeParams });
-    console.log({ endpoint });
     if (!qp.redirect_uri) {
       throw new Error('Missing required query params');
     }
     try {
-      const response = await this.auth.ajax(endpoint, 'GET', {});
+      // Null namespace overrides X-Vault-Namespace header since we already include in endpoint
+      const response = await this.auth.ajax(endpoint, 'GET', { namespace: null });
       if ('consent' === qp.prompt?.toLowerCase()) {
         return {
           consent: {
@@ -156,7 +149,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
       let resp = await errorRes.json();
       let code = resp.error;
       if (code === 'max_age_violation' || resp?.errors?.includes('permission denied')) {
-        this._redirectToAuth({ ...routeParams, qp, shouldLogout: true });
+        this._redirectToAuth({ ...routeParams, qp, logout: true });
       } else if (code === 'invalid_redirect_uri') {
         return {
           error: {
