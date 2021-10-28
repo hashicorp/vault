@@ -145,7 +145,7 @@
                   (hash key='distinct_entities' label='Unique entities')
                 }}
               >
-                <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{'client-count-by-namespaces.csv'}} />
+                <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />
               </BarChart>
             </div>
             <div class="column">
