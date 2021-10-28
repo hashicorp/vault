@@ -12,9 +12,18 @@
     "divider": true
   },
   {
-    "title": "Feature Deprecation Notice and Plans",
-    "path": "feature-deprecation-notice"
-  },
+        "title": "Feature Deprecation Notice and Plans",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "deprecation"
+          },
+                  {
+            "title": "FAQ",
+            "path": "deprecation/faq"
+          }
+        ]
+      },
   {
     "title": "Browser Support",
     "path": "browser-support"
