@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { format } from 'date-fns';
 
 export default class HistoryComponent extends Component {
   max_namespaces = 10;
@@ -75,6 +76,18 @@ export default class HistoryComponent extends Component {
       results += path + ',' + total + ',' + unique + ',' + non_entity + '\n';
     });
     return results;
+  }
+
+  get getCsvFileName() {
+    let defaultFileName = `clients-by-namespace`,
+      startDate =
+        this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
+      endDate =
+        this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
+    if (startDate && endDate) {
+      defaultFileName += `-${startDate}-${endDate}`;
+    }
+    return defaultFileName;
   }
 
   // Get the namespace by matching the path from the namespace list
