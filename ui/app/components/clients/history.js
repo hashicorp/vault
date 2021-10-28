@@ -78,6 +78,7 @@ export default class HistoryComponent extends Component {
     return results;
   }
 
+  // Return csv filename with start and end dates
   get getCsvFileName() {
     let defaultFileName = `clients-by-namespace`,
       startDate =
