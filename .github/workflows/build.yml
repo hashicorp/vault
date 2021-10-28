@@ -1,0 +1,289 @@
+name: build
+
+on:
+  push:
+    # Sequence of patterns matched against refs/heads
+    branches:    
+      # Push events on crt_onboarding_1.9.x branch
+      - crt_onboarding_1.9.x
+
+env:
+  PKG_NAME: "vault"
+  GO_TAGS: "ui"
+
+jobs:
+  get-product-version:
+    runs-on: ubuntu-latest
+    outputs:
+      product-version: ${{ steps.get-product-version.outputs.product-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: get product version
+        id: get-product-version
+        run: |
+          make version
+          echo "::set-output name=product-version::$(make version)"
+  generate-metadata-file:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    outputs:
+      filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
+    steps:
+      - name: 'Checkout directory'
+        uses: actions/checkout@v2
+      - name: Generate metadata file
+        id: generate-metadata-file
+        uses: hashicorp/actions-generate-metadata@main
+        with:
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          product: ${{ env.PKG_NAME }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: metadata.json
+          path: ${{ steps.generate-metadata-file.outputs.filepath }}
+
+  build-other:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ freebsd, windows, netbsd, openbsd, solaris ]
+        goarch: [ "386", "amd64", "arm" ]
+        go: [ "1.16" ]
+        exclude:
+          - goos: solaris
+            goarch: 386
+          - goos: solaris
+            goarch: arm
+          - goos: windows
+            goarch: arm
+      fail-fast: true
+
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Setup go tools
+        env:
+          GO111MODULE: off
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node and yarn
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'yarn'
+          cache-dependency-path: 'ui/yarn.lock'
+      - name: UI Build
+        run: |
+          cd ui
+          yarn install --ignore-optional
+          npm rebuild node-sass
+          yarn --verbose run build
+          cd ..
+      - name: Static assets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
+          mkdir -p http && mv bindata_assetfs.go http/
+          goimports -w http/bindata_assetfs.go
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir dist out
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+  build-linux:
+    needs: get-product-version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: ["arm", "arm64", "386", "amd64"]
+        go: ["1.16"]
+      fail-fast: true
+
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Setup go tools
+        env:
+          GO111MODULE: off
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node and yarn
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'yarn'
+          cache-dependency-path: 'ui/yarn.lock'
+      - name: UI Build
+        run: |
+          cd ui
+          yarn install --ignore-optional
+          npm rebuild node-sass
+          yarn --verbose run build
+          cd ..
+      - name: Static assets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
+          mkdir -p http && mv bindata_assetfs.go http/
+          goimports -w http/bindata_assetfs.go
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir dist out
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+      - name: Package
+        uses: hashicorp/actions-packaging-linux@v1
+        with:
+          name: ${{ github.event.repository.name }}
+          description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
+          arch: ${{ matrix.goarch }}
+          version: ${{ needs.get-product-version.outputs.product-version }}
+          maintainer: "HashiCorp"
+          homepage: "https://github.com/hashicorp/vault"
+          license: "MPL-2.0"
+          binary: "dist/${{ env.PKG_NAME }}"
+          deb_depends: "openssl"
+          rpm_depends: "openssl"
+      - name: Add Package names to env
+        run: |
+          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> $GITHUB_ENV
+          echo "DEB_PACKAGE=$(basename out/*.deb)" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.RPM_PACKAGE }}
+          path: out/${{ env.RPM_PACKAGE }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.DEB_PACKAGE }}
+          path: out/${{ env.DEB_PACKAGE }}
+
+  build-darwin:
+    needs: get-product-version
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        goos: [ darwin ]
+        goarch: [ "amd64", "arm64" ]
+        go: [ "1.16" ]
+      fail-fast: true
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Setup go tools
+        env:
+          GO111MODULE: off
+        run: |
+          go get golang.org/x/tools/cmd/goimports
+          go get github.com/hashicorp/go-bindata
+          go get github.com/hashicorp/go-bindata/go-bindata
+          go get github.com/elazarl/go-bindata-assetfs
+          go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+      - name: Setup node and yarn
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: 'yarn'
+          cache-dependency-path: 'ui/yarn.lock'
+      - name: UI Build
+        run: |
+          cd ui
+          yarn install --ignore-optional
+          npm rebuild node-sass
+          yarn --verbose run build
+          cd ..
+      - name: Static assets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
+          mkdir -p http && mv bindata_assetfs.go http/
+          goimports -w http/bindata_assetfs.go
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir dist out
+          VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+
+  build-docker:
+    name: Docker ${{ matrix.arch }} build
+    needs:
+      - get-product-version
+      - build-linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["arm", "arm64", "386", "amd64"]
+    env:
+      repo: ${{github.event.repository.name}}
+      version: ${{needs.get-product-version.outputs.product-version}}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Build (Action)
+        uses: hashicorp/actions-docker-build@v1
+        with:
+          version: ${{env.version}}
+          target: default
+          arch: ${{matrix.arch}}
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          tags: |
+            docker.io/hashicorp/${{env.repo}}:${{env.version}}
+            ecr.public.aws/hashicorp/${{env.repo}}:${{env.version}}
