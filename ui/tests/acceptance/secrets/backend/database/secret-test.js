@@ -380,6 +380,10 @@ module('Acceptance | secrets/database/*', function(hooks) {
       }
     });
     await connectionPage.delete();
+    await fillIn('[data-test-confirmation-modal-input="delete"]', connectionDetails.id);
+    await click('[data-test-confirm-button]');
+    await settled();
+
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
       .dom('[data-test-empty-state-title')
