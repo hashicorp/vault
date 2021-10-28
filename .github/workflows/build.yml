@@ -69,6 +69,8 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - name: Setup go tools
+        env:
+          GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
           go get mvdan.cc/gofumpt
@@ -116,6 +118,8 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - name: Setup go tools
+        env:
+          GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
           go get mvdan.cc/gofumpt
@@ -188,6 +192,8 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - name: Setup go tools
+        env:
+          GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
           go get mvdan.cc/gofumpt
