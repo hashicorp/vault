@@ -226,7 +226,6 @@ jobs:
           GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
-          go get mvdan.cc/gofumpt
           go get github.com/hashicorp/go-bindata
           go get github.com/hashicorp/go-bindata/go-bindata
           go get github.com/elazarl/go-bindata-assetfs
