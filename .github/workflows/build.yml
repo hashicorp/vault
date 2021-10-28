@@ -73,7 +73,6 @@ jobs:
           GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
-          go get mvdan.cc/gofumpt
           go get github.com/hashicorp/go-bindata
           go get github.com/hashicorp/go-bindata/go-bindata
           go get github.com/elazarl/go-bindata-assetfs
@@ -84,11 +83,27 @@ jobs:
           node-version: '14'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
+      - name: UI Build
+        run: |
+          cd ui
+          yarn install --ignore-optional
+          npm rebuild node-sass
+          yarn --verbose run build
+          cd ..
+      - name: Static assets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir dist out
+          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
+          mkdir -p http && mv bindata_assetfs.go http/
+          goimports -w http/bindata_assetfs.go
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          
+          CGO_ENABLED: 0
         run: |
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
@@ -122,7 +137,6 @@ jobs:
           GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
-          go get mvdan.cc/gofumpt
           go get github.com/hashicorp/go-bindata
           go get github.com/hashicorp/go-bindata/go-bindata
           go get github.com/elazarl/go-bindata-assetfs
@@ -133,11 +147,27 @@ jobs:
           node-version: '14'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
+      - name: UI Build
+        run: |
+          cd ui
+          yarn install --ignore-optional
+          npm rebuild node-sass
+          yarn --verbose run build
+          cd ..
+      - name: Static assets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir dist out
+          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
+          mkdir -p http && mv bindata_assetfs.go http/
+          goimports -w http/bindata_assetfs.go
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          
+          CGO_ENABLED: 0
         run: |
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build
@@ -193,7 +223,6 @@ jobs:
           go-version: ${{ matrix.go }}
       - name: Setup go tools
         env:
-          GO111MODULE: off
         run: |
           go get golang.org/x/tools/cmd/goimports
           go get mvdan.cc/gofumpt
@@ -207,11 +236,27 @@ jobs:
           node-version: '14'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
+      - name: UI Build
+        run: |
+          cd ui
+          yarn install --ignore-optional
+          npm rebuild node-sass
+          yarn --verbose run build
+          cd ..
+      - name: Static assets
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir dist out
+          go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
+          mkdir -p http && mv bindata_assetfs.go http/
+          goimports -w http/bindata_assetfs.go
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          
+          CGO_ENABLED: 0
         run: |
           mkdir dist out
           VAULT_VERSION=${{ needs.get-product-version.outputs.product-version }} VAULT_COMMIT=${GITHUB_SHA} GO_TAGS="${{ env.GO_TAGS }}" make build

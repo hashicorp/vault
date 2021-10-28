@@ -256,7 +256,7 @@ ci-verify:
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
 .PHONY: build
-build: static-dist
+build:
 	@echo "--> Building go"
 	@go build -v -tags "$(GO_TAGS)" -ldflags " -X $VERSION_PKG_PATH.Version=$(VAULT_VERSION) -X $VERSION_PKG_PATH.GitCommit=$(VAULT_COMMIT)" -o dist/
 
