@@ -187,6 +187,10 @@
           {
             "title": "Lookup",
             "path": "secret/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secret/identity/oidc-provider"
           }
         ]
       },
