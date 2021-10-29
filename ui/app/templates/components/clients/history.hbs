@@ -151,7 +151,22 @@
             <div class="column">
               <div class="card">
                   <div class="card-content">
-                    <SearchSelect
+                    {{#if (and this.barChartSelection this.selectedNamespace)}}
+                      <label class="title is-5 has-bottom-margin-m">Single namespace</label>
+                      <ul class="has-bottom-margin-l search-select-list">
+                        <li class="search-select-list-item">
+                          <div>
+                            {{or this.selectedNamespace.namespace_path 'root'}}
+                          </div>
+                          <div class="control">
+                            <button type="button" class="button is-ghost" {{action "resetData"}}>
+                            <Icon @glyph="trash" class="has-text-grey" />
+                          </button>
+                          </div>
+                        </li>
+                      </ul>
+                    {{else}}
+                      <SearchSelect
                         @id="namespaces"
                         @labelClass="title is-5"
                         @disallowNewItems={{true}}
@@ -160,26 +175,26 @@
                         @options={{or this.searchDataset []}}
                         @searchField="namespace_path"
                         @selectLimit={{1}}
-                        @inputValue={{ this.getSearchSelectDefault }}
                         />
-                        {{#if this.selectedNamespace}}
-                          <div class="columns">
-                              <div class="column">
-                                  <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
-                              </div>
+                    {{/if}}
+                    {{#if this.selectedNamespace}}
+                      <div class="columns">
+                          <div class="column">
+                              <StatText @label="Active clients" @value={{this.selectedNamespace.counts.clients}} @size="l" /> 
                           </div>
-                          <div class="columns">
-                              <div class="column">
-                                  <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
-                              </div>
-                              <div class="column">
-                                  <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
-                              </div>
+                      </div>
+                      <div class="columns">
+                          <div class="column">
+                              <StatText @label="Unique entities" @value={{this.selectedNamespace.counts.distinct_entities}} @size="m" />
                           </div>
-                        {{else}}
-                          <EmptyState @title="No namespace selected" 
-                              @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
-                        {{/if}}
+                          <div class="column">
+                              <StatText @label="Non-entity tokens" @value={{this.selectedNamespace.counts.non_entity_tokens}} @size="m" />
+                          </div>
+                      </div>
+                    {{else}}
+                      <EmptyState @title="No namespace selected" 
+                          @message="Click on a namespace in the Top 10 chart or type its name in the box to view it's individual client counts." />
+                    {{/if}}
                   </div>
               </div>
             </div>

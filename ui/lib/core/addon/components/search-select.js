@@ -52,14 +52,6 @@ export default Component.extend({
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
   },
-  didUpdateAttrs() {
-    this._super(...arguments);
-    let strInput = JSON.stringify(this.inputValue);
-    if (this._inputValue != strInput) {
-      this._inputValue = strInput;
-      this.set('selectedOptions', this.inputValue);
-    }
-  },
   didRender() {
     this._super(...arguments);
     let { oldOptions, options, selectedOptions } = this;
@@ -80,15 +72,13 @@ export default Component.extend({
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
     let formattedOptions = this.selectedOptions.map(option => {
-      let matchingOption = options.findBy('id', typeof option === 'object' ? option.id : option);
-      if (matchingOption) {
-        options.removeObject(matchingOption);
-        return {
-          id: matchingOption.id,
-          name: matchingOption.name,
-          searchText: matchingOption.searchText,
-        };
-      }
+      let matchingOption = options.findBy('id', option);
+      options.removeObject(matchingOption);
+      return {
+        id: option,
+        name: matchingOption ? matchingOption.name : option,
+        searchText: matchingOption ? matchingOption.searchText : option,
+      };
     });
     this.set('selectedOptions', formattedOptions);
     if (this.options) {

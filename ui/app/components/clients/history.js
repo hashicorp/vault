@@ -8,6 +8,8 @@ export default class HistoryComponent extends Component {
 
   @tracked selectedNamespace = null;
 
+  @tracked barChartSelection = false;
+
   // Determine if we have client count data based on the current tab,
   // since model is slightly different for current month vs history api
   get hasClientData() {
@@ -52,7 +54,6 @@ export default class HistoryComponent extends Component {
         non_entity_tokens: d['counts']['non_entity_tokens'],
         distinct_entities: d['counts']['distinct_entities'],
         total: d['counts']['clients'],
-        id: d['namespace_id'],
       };
     });
   }
@@ -91,18 +92,6 @@ export default class HistoryComponent extends Component {
     }
     return defaultFileName;
   }
-  get getSearchSelectDefault() {
-    if (this.selectedNamespace) {
-      return [
-        {
-          id: this.selectedNamespace.namespace_path || 'root',
-          name: this.selectedNamespace.namespace_id,
-          searchText: '',
-        },
-      ];
-    }
-    return [];
-  }
 
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
@@ -119,15 +108,17 @@ export default class HistoryComponent extends Component {
     // In case of search select component, value returned is an array
     if (Array.isArray(value)) {
       this.selectedNamespace = this.getNamespace(value[0]);
+      this.barChartSelection = false;
     } else if (typeof value === 'object') {
       // While D3 bar selection returns an object
       this.selectedNamespace = this.getNamespace(value.label);
-    } else {
-      this.selectedNamespace = null;
+      this.barChartSelection = true;
     }
   }
+
   @action
   resetData() {
+    this.barChartSelection = false;
     this.selectedNamespace = null;
   }
 }
