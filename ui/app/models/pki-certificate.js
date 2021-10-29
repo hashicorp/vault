@@ -78,6 +78,10 @@ export default Model.extend({
   }),
   privateKeyType: attr('string'),
   serialNumber: attr('string'),
+  useSubjectFromCsr: attr('boolean', {
+    label: 'Use Subject from CSR',
+    defaultValue: false,
+  }),
 
   fieldsToAttrs(fieldGroups) {
     return fieldToAttrs(this, fieldGroups);

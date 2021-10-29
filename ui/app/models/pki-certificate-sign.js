@@ -16,7 +16,7 @@ export default Certificate.extend({
   }),
 
   fieldGroups: computed('newFields', 'signVerbatim', function() {
-    const options = { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] };
+    const options = { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'useSubjectFromCsr', 'otherSans'] };
     let groups = [
       {
         default: ['csr', 'commonName', 'format', 'signVerbatim'],
