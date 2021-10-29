@@ -61,4 +61,7 @@ v3.5](https://etcd.io/blog/2021/announcing-etcd-3.5/), and will be
 decommissioned in the Etcd v3.6 release.
 
 Users upgrading to Vault 1.9 and planning to eventually upgrade to Vault 1.10
-should plan to upgrade to the Etcd v3 API.
+should prepare to [migrate](/docs/commands/operator/migrate) Vault storage to
+an Etcd v3 cluster prior to upgrading to Vault 1.10. All storage migrations
+should have [backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
+taken prior to migration.
