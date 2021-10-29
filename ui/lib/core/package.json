@@ -24,6 +24,7 @@
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
     "ember-wormhole": "^0.5.5",
-    "escape-string-regexp": "*"
+    "escape-string-regexp": "*",
+    "@hashicorp/flight-icons": "*"
   }
 }

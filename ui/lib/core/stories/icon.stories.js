@@ -26,7 +26,7 @@ storiesOf('Icon', module)
                 <h5>{{humanize type}}</h5>
               </td>
               <td>
-                <Icon @glyph={{type}} @size={{size}} />
+                <Icon @name={{type}} @sizeClass={{size}} />
               </td>
             </tr>
           {{/each}}

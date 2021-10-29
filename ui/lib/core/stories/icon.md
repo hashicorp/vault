@@ -13,7 +13,7 @@
 **Example**
   
 ```js
-<Icon @glyph="cancel-square-outline" />
+<Icon @name="cancel-square-outline" />
 ```
 
 **See**
