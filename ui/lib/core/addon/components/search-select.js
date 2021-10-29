@@ -71,7 +71,6 @@ export default Component.extend({
       return option.id;
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
-
     let formattedOptions = this.selectedOptions.map(option => {
       let matchingOption = options.findBy('id', option);
       options.removeObject(matchingOption);
