@@ -534,7 +534,7 @@ github.com/hashicorp/go-gcp-common/gcputil
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.16
+# github.com/hashicorp/go-kms-wrapping v0.6.8
 ## explicit
 github.com/hashicorp/go-kms-wrapping
 github.com/hashicorp/go-kms-wrapping/internal/xor
@@ -706,7 +706,7 @@ github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-terraform
-# github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
+# github.com/hashicorp/vault/api v1.1.1 => ./api
 ## explicit
 github.com/hashicorp/vault/api
 # github.com/hashicorp/vault/sdk v0.2.1-0.20210927220619-d41fb44977e1 => ./sdk
@@ -979,7 +979,7 @@ github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/openlyinc/pointy v1.1.2
 github.com/openlyinc/pointy
-# github.com/oracle/oci-go-sdk v12.5.0+incompatible
+# github.com/oracle/oci-go-sdk v13.1.0+incompatible
 ## explicit
 github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/common/auth
@@ -1141,6 +1141,7 @@ github.com/stretchr/testify/require
 # github.com/svanharmelen/jsonapi v0.0.0-20180618144545-0c0828c3f16d
 github.com/svanharmelen/jsonapi
 # github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible
+## explicit
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http

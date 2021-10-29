@@ -29,6 +29,9 @@ type ObjectSummary struct {
 
 	// The date and time the object was created, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.29.
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
+
+	// The current entity tag (ETag) for the object.
+	Etag *string `mandatory:"false" json:"etag"`
 }
 
 func (m ObjectSummary) String() string {

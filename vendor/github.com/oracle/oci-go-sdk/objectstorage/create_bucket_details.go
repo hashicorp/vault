@@ -41,8 +41,9 @@ type CreateBucketDetails struct {
 	// property is immutable after bucket is created.
 	StorageTier CreateBucketDetailsStorageTierEnum `mandatory:"false" json:"storageTier,omitempty"`
 
-	// A property that determines whether events will be generated for operations on objects in this bucket.
-	// This is false by default.
+	// Whether or not events are emitted for object state changes in this bucket. By default, `objectEventsEnabled` is
+	// set to `false`. Set `objectEventsEnabled` to `true` to emit events for object state changes. For more information
+	// about events, see Overview of Events (https://docs.cloud.oracle.com/Content/Events/Concepts/eventsoverview.htm).
 	ObjectEventsEnabled *bool `mandatory:"false" json:"objectEventsEnabled"`
 
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
@@ -55,7 +56,8 @@ type CreateBucketDetails struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// The OCID of a KMS key id used to call KMS to generate the data key or decrypt the encrypted data key.
+	// The OCID of a master encryption key used to call the Key Management service to generate a data
+	// encryption key or to encrypt or decrypt a data encryption key.
 	KmsKeyId *string `mandatory:"false" json:"kmsKeyId"`
 }
 
