@@ -71,6 +71,17 @@ comma-delimited list.`,
 		},
 	}
 
+	fields["use_subject_from_csr"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `If true, the Subject from the CSR will be
+used instead of using Common Name.
+Defaults to false (CN is sourced normally).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Use Subject From CSR",
+		},
+	}
+
 	return fields
 }
 

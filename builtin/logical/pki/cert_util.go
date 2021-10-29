@@ -332,8 +332,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				if data.role.AllowBareDomains &&
 					(strings.EqualFold(sanitizedName, currDomain) ||
 						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
-							// Handle the use case of AllowedDomain being an email address
-							(isEmail && strings.EqualFold(name, currDomain))) {
+						// Handle the use case of AllowedDomain being an email address
+						(isEmail && strings.EqualFold(name, currDomain))) {
 					valid = true
 					break
 				}
@@ -1015,19 +1015,24 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			}
 		}
 	}
-
-	// Most of these could also be RemoveDuplicateStable, or even
-	// leave duplicates in, but OU is the one most likely to be duplicated.
-	subject := pkix.Name{
-		CommonName:         cn,
-		SerialNumber:       ridSerialNumber,
-		Country:            strutil.RemoveDuplicatesStable(data.role.Country, false),
-		Organization:       strutil.RemoveDuplicatesStable(data.role.Organization, false),
-		OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
-		Locality:           strutil.RemoveDuplicatesStable(data.role.Locality, false),
-		Province:           strutil.RemoveDuplicatesStable(data.role.Province, false),
-		StreetAddress:      strutil.RemoveDuplicatesStable(data.role.StreetAddress, false),
-		PostalCode:         strutil.RemoveDuplicatesStable(data.role.PostalCode, false),
+	// determine if we use the CSR Subject or build from role
+	var subject pkix.Name
+	if csr != nil && data.apiData.Get("use_subject_from_csr").(bool) {
+		subject = csr.Subject
+	} else {
+		// Most of these could also be RemoveDuplicateStable, or even
+		// leave duplicates in, but OU is the one most likely to be duplicated.
+		subject = pkix.Name{
+			CommonName:         cn,
+			SerialNumber:       ridSerialNumber,
+			Country:            strutil.RemoveDuplicatesStable(data.role.Country, false),
+			Organization:       strutil.RemoveDuplicatesStable(data.role.Organization, false),
+			OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
+			Locality:           strutil.RemoveDuplicatesStable(data.role.Locality, false),
+			Province:           strutil.RemoveDuplicatesStable(data.role.Province, false),
+			StreetAddress:      strutil.RemoveDuplicatesStable(data.role.StreetAddress, false),
+			PostalCode:         strutil.RemoveDuplicatesStable(data.role.PostalCode, false),
+		}
 	}
 
 	// Get the TTL and verify it against the max allowed

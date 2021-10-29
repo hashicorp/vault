@@ -2,6 +2,8 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"reflect"
 	"strings"
@@ -261,5 +263,50 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				t.Fatalf("Expected email addresses %v, got %v", testCase.expectedEmails, actualEmails)
 			}
 		})
+	}
+}
+
+// Demonstrate that multiple OUs in the name are handled in an
+// order-preserving way.
+func TestPki_UseCSRSubject(t *testing.T) {
+	var b backend
+	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+
+	apiData := &framework.FieldData{
+		Schema: fields,
+		Raw: map[string]interface{}{
+			"use_subject_from_csr": true,
+			"ttl":                  3600,
+		},
+	}
+	input := &inputBundle{
+		apiData: apiData,
+		role: &roleEntry{
+			MaxTTL:           3600,
+			UseCSRCommonName: true,
+			EnforceHostnames: false,
+			AllowAnyName:     true,
+		},
+	}
+
+	cn := "example.com"
+	ou := []string{"Z", "E", "V"}
+	csr := x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:         cn,
+			OrganizationalUnit: ou,
+		},
+	}
+
+	cb, err := generateCreationBundle(&b, input, nil, &csr)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+
+	expectedSubject := csr.Subject
+	actualSubject := cb.Params.Subject
+
+	if !reflect.DeepEqual(expectedSubject, actualSubject) {
+		t.Fatalf("Expected %v, got %v", expectedSubject, actualSubject)
 	}
 }
