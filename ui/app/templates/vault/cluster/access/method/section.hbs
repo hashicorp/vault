@@ -20,7 +20,8 @@
 
 {{#if (not (contains model.type (supported-managed-auth-backends)))}}
   <div class="has-text-grey has-top-bottom-margin">
-    The Vault UI only supports configuration for this authentication method. For management, the API or CLI should be used.
+    The Vault UI only supports configuration for this authentication method. 
+    For management, the <DocLink @path="/api/auth">API or CLI</DocLink> should be used.
   </div>
 {{/if}}
 
