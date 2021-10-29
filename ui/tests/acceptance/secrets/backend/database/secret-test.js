@@ -186,6 +186,31 @@ const connectionTests = [
     },
   },
   {
+    name: 'postgresql-connection',
+    plugin: 'postgresql-database-plugin',
+    url: `postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+      assert
+        .dom('[data-test-toggle-input="show-username_template"]')
+        .exists(`Username template toggle exists for ${name}`);
+    },
+  },
+  // keep oracle as last DB because it is skipped in some tests (line 285) the UI doesn't return to empty state after
+  {
     name: 'oracle-connection',
     plugin: 'oracle-database-plugin',
     url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
@@ -256,7 +281,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
       } else {
         await connectionPage.connectionUrl(testCase.url);
       }
-      // skip adding oracle db connection since plugin doesn't exists
+      // skip adding oracle db connection since plugin doesn't exist
       if (testCase.plugin === 'oracle-database-plugin') {
         testCase.requiredFields(assert, testCase.name);
         continue;
@@ -264,9 +289,9 @@ module('Acceptance | secrets/database/*', function(hooks) {
       testCase.requiredFields(assert, testCase.name);
       await connectionPage.toggleVerify();
       await connectionPage.save();
-      await connectionPage.enable();
+      await settled();
       assert
-        .dom('[data-test-modal-title]')
+        .dom('.modal.is-active .title')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       await connectionPage.enable();
       assert.ok(
@@ -335,8 +360,9 @@ module('Acceptance | secrets/database/*', function(hooks) {
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
     await connectionPage.save();
+    await settled();
     assert
-      .dom('[data-test-modal-title]')
+      .dom('.modal.is-active .title')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
     assert.equal(
@@ -356,6 +382,13 @@ module('Acceptance | secrets/database/*', function(hooks) {
       }
     });
     await connectionPage.delete();
+    assert
+      .dom('.modal.is-active .title')
+      .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
+    await fillIn('[data-test-confirmation-modal-input="delete"]', connectionDetails.id);
+    await click('[data-test-confirm-button]');
+    await settled();
+
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
       .dom('[data-test-empty-state-title')
