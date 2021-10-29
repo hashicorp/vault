@@ -1,0 +1,36 @@
+.flight-icon {
+  &.flight-icon-display-inline {
+    vertical-align: middle;
+    margin: 2px 4px;
+  }
+  /**
+    * FlightIcon currently supports 16 or 24 px icon sizes
+    * the following hs-icon class overrides have been created to map the existing size classes
+  */
+  // use @size="16"
+  &.hs-icon-s {
+    width: 10px;
+    height: 10px;
+  }
+  &.hs-icon-m {
+    width: 13px;
+    height: 13px;
+  }
+  &.hs-icon-l {
+    width: 16px;
+    height: 16px;
+  }
+  // use @size="24" on component
+  &.hs-icon-xlm {
+    width: 21px;
+    height: 21px;
+  }
+  &.hs-icon-xl {
+    width: 24px;
+    height: 24px;
+  }
+  &.hs-icon-xxl {
+    width: 28px;
+    height: 28px;
+  }
+}
