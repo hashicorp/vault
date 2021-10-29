@@ -1,11 +1,13 @@
-import { click, fillIn, settled, visit, triggerKeyEvent } from '@ember/test-helpers';
+import { click, findAll, fillIn, settled, visit, triggerKeyEvent } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
+import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 
-module('Acceptance | userpass secret backend', function(hooks) {
+module('Acceptance | auth backend list', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function() {
@@ -16,7 +18,7 @@ module('Acceptance | userpass secret backend', function(hooks) {
     return logout.visit();
   });
 
-  test('userpass backend', async function(assert) {
+  test('userpass secret backend', async function(assert) {
     let n = Math.random();
     const path1 = `userpass-${++n}`;
     const path2 = `userpass-${++n}`;
@@ -72,5 +74,31 @@ module('Acceptance | userpass secret backend', function(hooks) {
     assert
       .dom('[data-test-list-item-content]')
       .hasText(user1, 'first user created shows in current auth list');
+  });
+
+  test('auth methods are linkable and link to correct view', async function(assert) {
+    await visit('/vault/access');
+    await settled();
+    let supportManaged = supportedManagedAuthBackends();
+    let backends = supportedAuthBackends();
+
+    for (let backend of backends) {
+      let { type } = backend;
+      if (type === 'token') {
+        continue;
+      }
+      await enablePage.enable(type, type);
+      await settled();
+      await visit('/vault/access');
+      await click(`[data-test-auth-backend-link="${type}"]`);
+
+      if (!supportManaged.includes(type)) {
+        assert.equal(findAll('[data-test-auth-section-tab]').length, 1, 'does not have management tabs');
+        assert.dom('[data-test-auth-section-tab]').hasText('Configuration', 'only shows configuration tab');
+        assert.dom('[data-test-doc-link] .doc-link').exists('includes doc link');
+      } else {
+        assert.notEqual(findAll('[data-test-auth-section-tab]').length, 1, 'does not have management tabs');
+      }
+    }
   });
 });
