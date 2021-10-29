@@ -35,7 +35,6 @@
         @change={{action "updateRow" row index}}
         @value={{row.value}}
         @wrap="off"
-        class="input"
         placeholder="value"
         @rows={{1}}
         onkeyup={{action
@@ -57,7 +56,7 @@
           aria-label="Delete row"
           data-test-kv-delete-row
         >
-        <Icon @glyph="trash" @size="l" />
+        <Icon @name="trash" @sizeClass="l" />
         </button>
       {{/if}}
     </div>

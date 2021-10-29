@@ -59,10 +59,11 @@
       }}
         <div class="transit-icon">
           <Icon
-            @glyph={{supportedAction.glyph}}
-            @size="l"
+            @name={{supportedAction.glyph}}
+            @sizeClass="l"
             class="has-text-grey auto-width"
-            aria-label={{concat @backend.path " options"}} />
+            aria-label={{concat @backend.path " options"}}
+          />
         </div>
         <div class="transit-description">
           <h2 class="title is-6" data-test-transit-action-title={{supportedAction.name}}>
@@ -91,7 +92,11 @@
         <div class="columns is-mobile">
           <div class="column is-3">
             <div class="level level-left">
-              <Icon @glyph="history" class="has-text-grey-light is-padded" @size="l" />
+              <Icon
+                @name="history"
+                @sizeClass="l"
+                class="has-text-grey-light is-padded"
+              />
               <strong class="has-padding is-size-5">Version {{version}}</strong>
             </div>
           </div>
@@ -106,7 +111,7 @@
             <div class="td is-borderless">
               {{#if (coerce-eq @key.minDecryptionVersion version)}}
                 <p class="help level level-left">
-                  <Icon @glyph="check-circle-fill" class="has-text-success" />
+                  <Icon @name="check-circle-fill" class="has-text-success" />
                   Current minimum decryption version
                 </p>
               {{/if}}
@@ -121,7 +126,11 @@
         <div class="columns is-mobile">
           <div class="column is-3">
             <div class="level level-left">
-              <Icon @glyph="history" class="has-text-grey-light is-padded" @size="l" />
+              <Icon
+                @name="history"
+                @sizeClass="l"
+                class="has-text-grey-light is-padded"
+              />
               <strong class="has-padding is-size-5">Version {{version}}</strong>
             </div>
           </div>
@@ -136,7 +145,7 @@
             <div class="td is-borderless">
               {{#if (coerce-eq @key.minDecryptionVersion version)}}
                 <p class="help level level-left">
-                  <Icon @glyph="check-circle-fill" class="has-text-success" />
+                  <Icon @name="check-circle-fill" class="has-text-success" />
                   Current minimum decryption version
                 </p>
               {{/if}}

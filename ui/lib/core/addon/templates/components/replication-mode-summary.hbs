@@ -34,10 +34,7 @@
       {{#if replicationEnabled}}
         {{#if (cluster-states modeState)}}
           <span class="{{if (get (cluster-states modeState) "isOk") "has-text-success" "has-text-danger"}}">
-            <Icon
-              aria-hidden="true"
-              @glyph={{get (cluster-states modeState) "glyph"}}
-            />
+            <Icon @name={{get (cluster-states modeState) "glyph"}} />
           </span>
         {{else if syncProgress}}
           <progress value="{{syncProgressPercent}}" max="100" class="progress is-small is-narrow is-info">
@@ -46,8 +43,8 @@
         {{/if}}
       {{else}}
         <Icon
+          @name="minus-circle"
           aria-label="Replication not enabled"
-          @glyph="minus-circle-outline"
           class="has-text-grey-light"
         />
       {{/if}}

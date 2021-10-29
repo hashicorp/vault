@@ -48,7 +48,7 @@
           <input class="file-input" type="file" onchange={{action "pickedFile"}} data-test-pgp-file-input=true>
           <span class="file-cta is-fullwidth">
             <span class="file-icon has-text-grey-dark">
-              <Icon @glyph="file-outline" />
+              <Icon @name="file" />
             </span>
             <span class="file-label has-text-grey-dark" data-test-pgp-file-input-label=true>
               {{#if key.fileName}}
@@ -59,10 +59,7 @@
             </span>
             {{#if key.fileName}}
               <button type="button" class="file-delete-button" {{action 'clearKey'}} data-test-pgp-clear=true>
-                <Icon
-                  @glyph="cancel-plain"
-                  @aria-label="Close"
-                />
+                <Icon @name="x" aria-label="Close" />
               </button>
             {{/if}}
           </span>

@@ -21,7 +21,11 @@
       {{/unless}}
       <h2 class="title is-3" data-test-summary-state>{{summaryState}}
         {{#if (get (cluster-states summaryState) "isOk")}}
-          <Icon @glyph={{get (cluster-states summaryState) "glyph"}} class="{{if (get (cluster-states summaryState) "isOk") "has-text-success" "has-text-danger"}}" data-test-icon />
+          <Icon
+            @name={{get (cluster-states summaryState) "glyph"}}
+            class="{{if (get (cluster-states summaryState) "isOk") "has-text-success" "has-text-danger"}}"
+            data-test-icon
+          />
         {{/if}}
       </h2>
     </div>

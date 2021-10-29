@@ -28,10 +28,6 @@ export default Component.extend({
   supportsDataTestProperties: true,
   type: null,
   glyph: computed('type', function() {
-    if (this.type == 'add') {
-      return 'plus-plain';
-    } else {
-      return 'chevron-right';
-    }
+    return this.type == 'add' ? 'plus' : 'chevron-right';
   }),
 });

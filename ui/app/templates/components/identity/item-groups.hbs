@@ -2,7 +2,7 @@
   {{#each @model.directGroupIds as |gid|}}
     <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="list-item-row">
       <Icon
-        @glyph="folder-outline"
+        @name="folder"
         class="has-text-grey-light"
       />{{gid}}
     </LinkTo>
@@ -14,7 +14,7 @@
     }}
       <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="has-text-black">
         <Icon
-          @glyph="folder-outline"
+          @name="folder"
           class="has-text-grey-light"
         />{{gid}}
       </LinkTo>

@@ -27,7 +27,7 @@
                     <LinkTo @route="vault.cluster.replication" @invokeAction={{@onLinkClick}}>
                       <div class="level is-mobile">
                         <span class="level-left">Enable</span>
-                        <Icon @glyph="plus-circle-outline" @class="has-text-grey-light level-right" />
+                        <Icon @name="plus-circle" class="has-text-grey-light level-right" />
                       </div>
                     </LinkTo>
                   </li>
@@ -66,14 +66,14 @@
                 <LinkTo @route="vault.cluster.settings.seal" @model={{@cluster.name}} @invokeAction={{@onLinkClick}}>
                   <div class="level is-mobile">
                     <span class="level-left">Unsealed</span>
-                    <Icon @glyph="check-circle-outline" class="has-text-success level-right" />
+                    <Icon @name="check-circle" class="has-text-success level-right" />
                   </div>
                 </LinkTo>
               {{else}}
                 <span class="menu-item">
                   <div class="level is-mobile">
                     <span class="level-left">Unsealed</span>
-                    <Icon @glyph="check-circle-outline" class="has-text-success level-right" />
+                    <Icon @name="check-circle" class="has-text-success level-right" />
                   </div>
                 </span>
               {{/if}}
@@ -81,7 +81,7 @@
               <span class="menu-item">
                 <div class="level is-mobile">
                   <span class="level-left has-text-danger">Sealed</span>
-                  <Icon @glyph="cancel-circle-outline" class="has-text-danger level-right" />
+                  <Icon @name="x-circle" class="has-text-danger level-right" />
                 </div>
               </span>
             {{/if}}

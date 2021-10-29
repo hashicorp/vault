@@ -4,7 +4,7 @@
   </h2>
   <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below.</p>
   <div class="access-information">
-    <Icon @glyph="info-circle-fill" class="has-text-info"/>
+    <Icon @name="info" class="has-text-info"/>
     <p>Vault only shows links to pages that you have access to based on your policies. Contact your administrator if you need access changes.</p>
   </div>
   {{#if (or (has-feature "Performance Replication") (has-feature "DR Replication")) }}
@@ -58,7 +58,9 @@
         Start
       </button>
       {{#if selectedFeatures}}
-        <span class="time-estimate"><Icon @glyph="stopwatch" class="has-text-grey" aria-hidden="true" />About {{estimatedTime}} minutes</span>
+        <span class="time-estimate">
+          <Icon @name="clock" class="has-text-grey" />About {{estimatedTime}} minutes
+        </span>
       {{/if}}
     </span>
   </form>

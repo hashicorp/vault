@@ -36,7 +36,7 @@
       {{#if initialReplicationMode}}
         {{#if (eq initialReplicationMode 'dr')}}
           <h3 class="title is-flex-center is-5 is-marginless">
-            <Icon @size="xl" aria-hidden="true" @glyph="replication" />
+            <Icon @sizeClass="xl" @name="replication-direct" />
             Disaster Recovery (DR) Replication
           </h3>
           <p class="help has-text-grey-dark">
@@ -44,7 +44,7 @@
           </p>
         {{else if (eq initialReplicationMode 'performance')}}
           <h3 class="title is-flex-center is-5 is-marginless">
-            <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+            <Icon @sizeClass="xl" @name="replication-perf" />
             Performance Replication
           </h3>
           {{#unless (has-feature "Performance Replication")}}
@@ -70,7 +70,7 @@
             <label for="dr" class="box-label is-column {{if (eq replicationMode 'dr') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
-                  <Icon @size="xl" aria-hidden="true" @glyph="replication" />
+                  <Icon @sizeClass="xl" @name="replication-direct" />
                   Disaster Recovery (DR)
                 </h3>
                 <p class="help has-text-grey-dark">
@@ -93,7 +93,7 @@
               class="box-label is-column {{if (eq replicationMode 'performance') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
-                  <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+                  <Icon @sizeClass="xl" @name="replication-perf" />
                   Performance
                 </h3>
                 {{#if (not (has-feature "Performance Replication"))}}
@@ -286,7 +286,7 @@
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
       <h3 class="title is-flex-center is-5 is-marginless">
-        <Icon @size="xl" aria-hidden="true" @glyph="replication" />
+        <Icon @sizeClass="xl" @name="replication-direct" />
         Disaster Recovery (DR)
       </h3>
       {{#if cluster.dr.replicationEnabled}}
@@ -316,7 +316,7 @@
       {{#unless (and submit.isRunning (eq cluster.dr.mode "bootstrapping"))}}
       <div class="box is-bottomless is-fullwidth is-marginless">
         <h3 class="title is-flex-center is-5 is-marginless">
-          <Icon @size="xl" aria-hidden="true" @glyph="perf-replication" />
+          <Icon @sizeClass="xl" @name="replication-perf" />
           Performance
         </h3>
           {{#link-to

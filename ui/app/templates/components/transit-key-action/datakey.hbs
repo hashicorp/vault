@@ -86,7 +86,7 @@
           <code class="level-left">{{@plaintext}}</code>
           <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
             @clipboardText={{@plaintext}} @buttonType="button" @success={{action (set-flash-message 'Plaintext copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
+            <Icon @name="clipboard-copy" aria-label="Copy" />
           </CopyButton>
         </div>
         <p class="help has-bottom-margin-m">Plaintext is base64 encoded</p>
@@ -95,7 +95,7 @@
           <code class="level-left">{{@ciphertext}}</code>
           <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
             @clipboardText={{@ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
+            <Icon @name="clipboard-copy" aria-label="Copy" />
           </CopyButton>
         </div>
         <CopyButton class="button is-primary" data-test-button="modal-copy-close" @clipboardText={{@plaintext}}
@@ -113,7 +113,7 @@
           <code class="level-left">{{@ciphertext}}</code>
           <CopyButton class="button is-compact is-transparent level-right" data-test-button="modal-copy"
             @clipboardText={{@ciphertext}} @buttonType="button" @success={{action (set-flash-message 'Ciphertext copied!')}}>
-            <Icon @glyph="copy-action" aria-label="Copy" />
+            <Icon @name="clipboard-copy" aria-label="Copy" />
           </CopyButton>
         </div>
         <CopyButton class="button is-primary copy-close" data-test-button="modal-copy-close" @clipboardText={{@ciphertext}}

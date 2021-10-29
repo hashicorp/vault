@@ -1,7 +1,7 @@
 <div class="wizard-section {{class}}">
   <h2 class="title is-6">
     {{#if headerIcon}}
-      <Icon @glyph={{headerIcon}} @size="l" aria-hidden="true" />
+      <Icon @name={{headerIcon}} @sizeClass="l" aria-hidden="true" />
     {{/if}}
     {{headerText}}
   </h2>
@@ -14,7 +14,7 @@
   {{/if}}
   {{#if docText}}
     <DocLink @path={{docPath}}>
-      <Icon @glyph="learn" aria-hidden="true" /> {{docText}}
+      <Icon @name="learn-link" /> {{docText}}
     </DocLink>
   {{/if}}
 </div>

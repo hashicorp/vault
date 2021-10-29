@@ -13,10 +13,9 @@
         @mode="show"
         @secret={{@itemPath}}
         @queryParams={{query-params type=@modelType}}
-        @class="has-text-black has-text-weight-semibold">
-        <Icon
-          @glyph='file-outline'
-          @class="has-text-grey-light"/>
+        @class="has-text-black has-text-weight-semibold"
+      >
+        <Icon @name="file" class="has-text-grey-light" />
         {{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}
       </SecretLink>
     </div>
@@ -56,9 +55,7 @@
   <div class="list-item-row" data-test-view-only-list-item>
     <div class="columns is-mobile">
       <div class="column is-12 has-text-grey has-text-weight-semibold">
-        <Icon
-          @glyph='file-outline'
-          @class="has-text-grey-light"/>
+        <Icon @name="file" class="has-text-grey-light" />
         {{#if this.isBuiltin}}
           <ToolTip
             @verticalPosition="above"

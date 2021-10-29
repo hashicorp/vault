@@ -2,7 +2,7 @@
   <MessageError @model={{model}} />
   <div class="control-group-header {{if isSuccess 'is-success'}}">
     <p>
-      <Icon @glyph={{if isSuccess "check-circle-fill" "lock-closed"}} />
+      <Icon @name={{if isSuccess "check-circle-fill" "lock-fill"}} />
       <strong data-test-banner-prefix>{{bannerPrefix}}</strong>
       <span data-test-banner-text>{{bannerText}}</span>
     </p>
@@ -42,7 +42,7 @@
       <div class="authorizations" data-test-authorizations>
         {{#if (gt model.authorizations.length 0)}}
         <span class="has-text-success">
-          <Icon @glyph="check-circle-outline" />
+          <Icon @name="check-circle" />
         </span>
           Already approved by
           {{#each model.authorizations as |authorization index|}}
@@ -54,7 +54,7 @@
           {{/each}}
         {{else}}
           <span class="has-text-grey">
-            <Icon @glyph="check-circle-outline" />
+            <Icon @name="check-circle" />
           </span>
           Awaiting authorization.
         {{/if}}

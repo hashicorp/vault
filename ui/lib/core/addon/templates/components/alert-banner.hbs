@@ -2,11 +2,11 @@
   <div class="columns is-mobile is-variable is-1">
     <div class="column is-narrow message-icon">
       <Icon
-        @size="l"
-        class="{{alertType.glyphClass}}"
+        @sizeClass="l"
+        class={{alertType.glyphClass}}
         aria-hidden="true"
-        @glyph={{alertType.glyph}}
-        />
+        @name={{alertType.glyph}}
+      />
     </div>
     {{#if @yieldWithoutColumn}}
       {{yield}}
@@ -16,10 +16,10 @@
           {{or @title this.alertType.text}}
           {{#if @secondIconType}}
             <Icon
-              @size="l"
+              @sizeClass="l"
               class="{{secondAlertType.glyphClass}}"
               aria-hidden="true"
-              @glyph={{secondAlertType.glyph}}
+              @name={{secondAlertType.glyph}}
             />
           {{/if}}
           {{#if @progressBar}}

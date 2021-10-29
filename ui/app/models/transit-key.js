@@ -8,12 +8,12 @@ const ACTION_VALUES = {
   encrypt: {
     isSupported: 'supportsEncryption',
     description: 'Looks up wrapping properties for the given token',
-    glyph: 'lock-closed',
+    glyph: 'lock-fill',
   },
   decrypt: {
     isSupported: 'supportsDecryption',
     description: 'Decrypts the provided ciphertext using this key',
-    glyph: 'envelope-unsealed--outline',
+    glyph: 'mail-open',
   },
   datakey: {
     isSupported: 'supportsEncryption',
@@ -23,20 +23,28 @@ const ACTION_VALUES = {
   rewrap: {
     isSupported: 'supportsEncryption',
     description: 'Rewraps the ciphertext using the latest version of the named key',
-    glyph: 'refresh-default',
+    glyph: 'reload',
   },
   sign: {
     isSupported: 'supportsSigning',
     description: 'Get the cryptographic signature of the given data',
-    glyph: 'edit',
+    glyph: 'penicil-tool',
   },
-  hmac: { isSupported: true, description: 'Generate a data digest using a hash algorithm', glyph: 'remix' },
+  hmac: {
+    isSupported: true,
+    description: 'Generate a data digest using a hash algorithm',
+    glyph: 'shuffle',
+  },
   verify: {
     isSupported: true,
     description: 'Validate the provided signature for the given data',
-    glyph: 'check-circle-outline',
+    glyph: 'check-circle',
   },
-  export: { isSupported: 'exportable', description: 'Get the named key', glyph: 'exit' },
+  export: {
+    isSupported: 'exportable',
+    description: 'Get the named key',
+    glyph: 'external-link',
+  },
 };
 
 export default Model.extend({

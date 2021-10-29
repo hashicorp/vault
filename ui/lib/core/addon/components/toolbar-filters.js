@@ -9,7 +9,7 @@
  *   <ToolbarFilters>
  *     <div class="control has-icons-left">
  *       <input class="filter input" placeholder="Filter keys" type="text">
- *       <Icon @glyph="search" @size="l" class="search-icon has-text-grey-light" />
+ *       <Icon @name="search" @sizeClass="l" class="search-icon has-text-grey-light" />
  *     </div>
  *   </ToolbarFilters>
  * </Toolbar>

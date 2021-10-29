@@ -4,8 +4,9 @@
   </div>
 
   {{#unless navDrawerOpen}}
-  <button type="button" class="navbar-drawer-toggle is-hidden-tablet" {{action "toggleNavDrawer"}}>
-      <Icon @glyph="more-vertical" /> Menu
+    <button type="button" class="navbar-drawer-toggle is-hidden-tablet" {{action "toggleNavDrawer"}}>
+      <Icon @name="more-vertical" />
+      Menu
     </button>
   {{/unless}}
 
@@ -30,7 +31,7 @@
 
       {{#if navDrawerOpen}}
         <button class=" navbar-drawer-toggle is-hidden-tablet" type="button" {{action "toggleNavDrawer" false}}>
-          <Icon @glyph="cancel-plain" />
+          <Icon @name="x" />
         </button>
       {{/if}}
     </div>

@@ -53,7 +53,7 @@
       {{#if inSyncState}}
         <ToolTip @verticalPosition="above" as |T|>
           <T.trigger>
-            <Icon @glyph={{'check-circle-outline'}} @size="m" class={{'has-text-success'}} data-test-glyph />
+            <Icon @name="check-circle" class="has-text-success" data-test-glyph />
           </T.trigger>
           <T.content @class="tool-tip">
             <div class="box">
@@ -87,7 +87,7 @@
         <div class="grid-item-top-right">
           <a href={{concat primaryUiUrl '/ui/'}} class="toolbar-link" data-test-primary-link>
             View primary cluster
-            <Icon @glyph='chevron-right' />
+            <Icon @name="chevron-right" />
           </a>
         </div>
       {{/if}}

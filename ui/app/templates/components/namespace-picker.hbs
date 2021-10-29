@@ -40,7 +40,7 @@
               <div class="level is-mobile namespace-link">
                 <span class="level-left" data-test-current-namespace>{{if namespacePath (concat namespacePath "/") "root"}}</span>
                 <span class="level-right">
-                  <Icon @glyph="check-circle-outline" class="has-text-success" />
+                  <Icon @name="check-circle" class="has-text-success" />
                 </span>
               </div>
             </header>
@@ -85,7 +85,7 @@
                     <span class="level-left">Manage namespaces</span>
                     <span class="level-right">
                       <button type="button" class="button is-ghost icon" onclick={{action "refreshNamespaceList"}}>
-                        <Icon @glyph="refresh-default" class="has-text-grey" />
+                        <Icon @name="reload" class="has-text-grey" />
                       </button>
                     </span>
                   </div>

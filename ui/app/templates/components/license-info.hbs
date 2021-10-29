@@ -16,7 +16,10 @@
           Autoloaded
         {{else}}
           Stored
-          <Icon @glyph="alert-triangle" class="has-text-highlight" /> <span class="is-size-8">Stored licenses will be deprecated in a future version of Vault. We recommend autoloading your license. Read more <a href="https://www.vaultproject.io/docs/enterprise/license" rel="noreferrer noopener" target="_blank" >here</a>.</span>
+          <Icon @name="alert-triangle-fill" class="has-text-highlight" />
+          <span class="is-size-8">
+            Stored licenses will be deprecated in a future version of Vault. We recommend autoloading your license. Read more <a href="https://www.vaultproject.io/docs/enterprise/license" rel="noreferrer noopener" target="_blank" >here</a>.
+          </span>
         {{/if}}
         </InfoTableRow>
     </div>
@@ -28,20 +31,13 @@
     {{#each this.featuresInfo as |info|}}
       <InfoTableRow @label={{info.name}} @value={{if info.active "Active" "Not Active"}} @data-test-feature-row="data-test-feature-row">
         {{#if info.active}}
-        <Icon
-          @glyph="check-circle-outline"
-          @size="l"
-          class="icon-true"
-          aria-hidden="true"
-        /><span data-test-feature-status>Active {{#if info.count}}&mdash;
-         {{info.count}} standby nodes allotted{{/if}}</span>
+          <Icon @name="check-circle" @sizeClass="l" class="icon-true" />
+          <span data-test-feature-status>
+            Active {{#if info.count}}&mdash; {{info.count}} standby nodes allotted{{/if}}
+          </span>
         {{else}}
-          <Icon
-            @glyph="cancel-circle-outline"
-            @size="l"
-            class="icon-false"
-            aria-hidden="true"
-          /><span data-test-feature-status>Not Active</span>
+          <Icon @name="x-circle" @sizeClass="l" class="icon-false" />
+          <span data-test-feature-status>Not Active</span>
         {{/if}}
       </InfoTableRow>
     {{/each}}

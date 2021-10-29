@@ -3,7 +3,7 @@
     as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
-        <Icon @glyph="vault-logo" @size="l" />
+        <Icon @name="vault-logo" @sizeClass="l" />
       </HomeLink>
     </Nav.home>
     <Nav.main>
@@ -89,7 +89,7 @@
       <div class="navbar-item">
         <button type="button" class="button is-transparent nav-console-button{{if consoleOpen " popup-open"}}"
           {{action (queue (action 'toggleConsole') (action Nav.closeDrawer))}} data-test-console-toggle>
-          <Icon @glyph="console" @size="l" />
+          <Icon @name="terminal-screen" @sizeClass="l" />
           <div class="status-menu-label">
             Console
           </div>

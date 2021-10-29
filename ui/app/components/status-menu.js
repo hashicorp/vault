@@ -11,10 +11,9 @@ export default Component.extend({
   type: 'cluster',
   itemTag: null,
   glyphName: computed('type', function() {
-    const glyphs = {
-      cluster: 'status-indicator',
-      user: 'user-square-outline',
-    };
-    return glyphs[this.type];
+    return {
+      cluster: 'circle-dot',
+      user: 'user',
+    }[this.type];
   }),
 });

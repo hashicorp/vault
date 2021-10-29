@@ -4,8 +4,8 @@
       {{#if showEnable}}
         {{#with (find-by "type" mountModel.type mountTypes) as |typeInfo|}}
           <Icon
-            @glyph={{or typeInfo.glyph typeInfo.type}}
-            @size="l"
+            @name={{or typeInfo.glyph typeInfo.type}}
+            @sizeClass="l"
             class="has-text-grey-light"
            />
 

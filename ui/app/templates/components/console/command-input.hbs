@@ -7,7 +7,11 @@
   <input onkeyup={{action 'handleKeyUp'}} value={{value}} autocomplete="off" spellcheck="false" />
   <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if isFullscreen "above" "below"}} as |d|>
     <d.trigger @tagName="button" @type="button" @class={{concat "button is-compact" (if isFullscreen " active")}} @click={{action "fullscreen"}} @data-test-tool-tip-trigger={{true}}>
-    <Icon @size="l" @glyph={{if isFullscreen "expand-less" "expand-more"}} aria-label={{if isFullscreen "Minimize" "Maximize"}} />
+    <Icon
+      @name={{if isFullscreen "minimize" "maximize"}}
+      @sizeClass="l"
+      aria-label={{if isFullscreen "Minimize" "Maximize"}}
+    />
     </d.trigger>
     <d.content @class="tool-tip">
       <div class="box">

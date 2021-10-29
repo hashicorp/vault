@@ -62,7 +62,7 @@
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "credentials" this.scope list.item.id}} as |Item|>
       <Item.content>
-        <Icon @glyph="user-plain" class="has-text-grey-light" @size="l" />{{list.item.id}}
+        <Icon @name="user" @sizeClass="l" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu as |m|>
         <li class="action">

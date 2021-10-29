@@ -24,7 +24,7 @@
         <code>vault write {{model.backend}}/encode/{{cliCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyEncodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
-          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+          <Icon @name="clipboard-copy" @sizeClass="l" aria-label="Copy" />
         </CopyButton>
       {{/let}}
     </div>
@@ -41,7 +41,7 @@
         <code>vault write {{model.backend}}/decode/{{cliCommand}}</code>
         <CopyButton class="button is-transparent level-right" @clipboardText={{copyDecodeCommand}}
           @buttonType="button" @success={{action (set-flash-message 'Command copied!')}}>
-          <Icon @size='l' @glyph="copy-action" aria-label="Copy" />
+          <Icon @name="clipboard-copy" @sizeClass="l" aria-label="Copy" />
         </CopyButton>
       {{/let}}
     </div>

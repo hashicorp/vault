@@ -26,12 +26,7 @@
 {{#if errorMessage}}
   <div class="columns is-mobile is-variable is-1 ttl-value-error">
     <div class="is-narrow message-icon">
-      <Icon
-        @size="s"
-        class="has-text-danger"
-        aria-hidden=true
-        @glyph="cancel-square-fill"
-      />
+      <Icon @name="x-square-fill" @sizeClass="s" class="has-text-danger" />
     </div>
     <div class="has-text-danger">
       {{errorMessage}}

@@ -7,10 +7,10 @@
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
-        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array item.id "details"}} class="has-text-black has-text-weight-semibold"><Icon
-              @glyph="user-square-outline"
-              class="has-text-grey-light"
-            /><span class="has-text-weight-semibold">{{item.name}}</span></LinkTo>
+        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array item.id "details"}} class="has-text-black has-text-weight-semibold">
+          <Icon @name="user" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold">{{item.name}}</span>
+        </LinkTo>
         <div class="has-text-grey">
           {{item.id}}
         </div>
