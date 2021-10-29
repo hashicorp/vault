@@ -11,7 +11,7 @@ export default Component.extend({
   consoleFullscreen: false,
   hideLinks: computed('router.currentRouteName', function() {
     let currentRoute = this.router.currentRouteName;
-    if ('vault.cluster.identity.oidc-provider' === currentRoute) {
+    if ('vault.cluster.oidc-provider' === currentRoute) {
       return true;
     }
     return false;

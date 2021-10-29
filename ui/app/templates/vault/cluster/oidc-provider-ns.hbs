@@ -17,6 +17,8 @@
           @redirect={{model.consent.redirect}}
           @onSuccess={{this._handleSuccess}}
         />
+      {{else if model.redirectUrl}}
+        <div data-test-oidc-redirect>{{model.redirectUrl}}</div>
       {{else}}
         <VaultLogoSpinner />
       {{/if}}
