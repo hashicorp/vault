@@ -84,10 +84,10 @@ module('Acceptance | auth backend list', function(hooks) {
 
     for (let backend of backends) {
       let { type } = backend;
-      if (type === 'token') {
-        continue;
+
+      if (type !== 'token') {
+        await enablePage.enable(type, type);
       }
-      await enablePage.enable(type, type);
       await settled();
       await visit('/vault/access');
 
@@ -95,11 +95,7 @@ module('Acceptance | auth backend list', function(hooks) {
       await click(`[data-test-auth-backend-link="${type}"]`);
 
       if (!supportManaged.includes(type)) {
-        assert.equal(
-          findAll('[data-test-auth-section-tab]').length,
-          1,
-          `does not have multiple tabs for ${type} auth method`
-        );
+        assert.equal(findAll('[data-test-auth-section-tab]').length, 1);
         assert
           .dom('[data-test-auth-section-tab]')
           .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
