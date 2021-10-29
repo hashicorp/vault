@@ -90,14 +90,27 @@ module('Acceptance | auth backend list', function(hooks) {
       await enablePage.enable(type, type);
       await settled();
       await visit('/vault/access');
+
+      // all auth methods should be linkable
       await click(`[data-test-auth-backend-link="${type}"]`);
 
       if (!supportManaged.includes(type)) {
-        assert.equal(findAll('[data-test-auth-section-tab]').length, 1, 'does not have management tabs');
-        assert.dom('[data-test-auth-section-tab]').hasText('Configuration', 'only shows configuration tab');
-        assert.dom('[data-test-doc-link] .doc-link').exists('includes doc link');
+        assert.equal(
+          findAll('[data-test-auth-section-tab]').length,
+          1,
+          `does not have multiple tabs for ${type} auth method`
+        );
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
+        assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
       } else {
-        assert.notEqual(findAll('[data-test-auth-section-tab]').length, 1, 'does not have management tabs');
+        // managed auth methods should have more than 1 tab
+        assert.notEqual(
+          findAll('[data-test-auth-section-tab]').length,
+          1,
+          `has management tabs for ${type} auth method`
+        );
       }
     }
   });
