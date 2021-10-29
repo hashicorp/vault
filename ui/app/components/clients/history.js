@@ -7,6 +7,8 @@ export default class HistoryComponent extends Component {
 
   @tracked selectedNamespace = null;
 
+  @tracked barChartSelection = false;
+
   // Determine if we have client count data based on the current tab,
   // since model is slightly different for current month vs history api
   get hasClientData() {
@@ -92,11 +94,17 @@ export default class HistoryComponent extends Component {
     // In case of search select component, value returned is an array
     if (Array.isArray(value)) {
       this.selectedNamespace = this.getNamespace(value[0]);
+      this.barChartSelection = false;
     } else if (typeof value === 'object') {
       // While D3 bar selection returns an object
       this.selectedNamespace = this.getNamespace(value.label);
-    } else {
-      this.selectedNamespace = null;
+      this.barChartSelection = true;
     }
+  }
+
+  @action
+  resetData() {
+    this.barChartSelection = false;
+    this.selectedNamespace = null;
   }
 }
