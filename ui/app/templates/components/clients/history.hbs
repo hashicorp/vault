@@ -132,7 +132,7 @@
           </div>
         </div>
         {{#if this.showGraphs}}
-          <div class="columns has-bottom-margin-m">
+          <div class="columns has-bottom-margin-m" {{did-update this.resetData}} {{did-insert this.resetData}}>
             <div class="column is-two-thirds" data-test-client-count-graph>
               <BarChart
                 @title="Top 10 Namespaces"
@@ -160,6 +160,7 @@
                         @options={{or this.searchDataset []}}
                         @searchField="namespace_path"
                         @selectLimit={{1}}
+                        @inputValue={{ this.getSearchSelectDefault }}
                         />
                         {{#if this.selectedNamespace}}
                           <div class="columns">

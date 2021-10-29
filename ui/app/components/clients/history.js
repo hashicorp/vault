@@ -52,6 +52,7 @@ export default class HistoryComponent extends Component {
         non_entity_tokens: d['counts']['non_entity_tokens'],
         distinct_entities: d['counts']['distinct_entities'],
         total: d['counts']['clients'],
+        id: d['namespace_id'],
       };
     });
   }
@@ -90,6 +91,18 @@ export default class HistoryComponent extends Component {
     }
     return defaultFileName;
   }
+  get getSearchSelectDefault() {
+    if (this.selectedNamespace) {
+      return [
+        {
+          id: this.selectedNamespace.namespace_path || 'root',
+          name: this.selectedNamespace.namespace_id,
+          searchText: '',
+        },
+      ];
+    }
+    return [];
+  }
 
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
@@ -112,5 +125,9 @@ export default class HistoryComponent extends Component {
     } else {
       this.selectedNamespace = null;
     }
+  }
+  @action
+  resetData() {
+    this.selectedNamespace = null;
   }
 }
