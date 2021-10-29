@@ -32,7 +32,7 @@ module.exports = function(defaults) {
       keyMaps: ['sublime'],
     },
     babel: {
-      plugins: ['@babel/plugin-proposal-object-rest-spread'],
+      plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
     },
     'ember-cli-babel': {
       includePolyfill: isTest || isProd || isCI,
