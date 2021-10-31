@@ -72,7 +72,6 @@ management tool.
 
     ```text
     $ vault write auth/kubernetes/config \
-        token_reviewer_jwt="<your reviewer service account JWT>" \
         kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
         kubernetes_ca_cert=@ca.crt
     ```
@@ -134,7 +133,6 @@ This value is then used when configuring Kubernetes auth, e.g.:
 
 ```bash
 vault write auth/kubernetes/config \
-  token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
   kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
   issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
