@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/physical: Fix to only populate cache with non-nil values
+```
