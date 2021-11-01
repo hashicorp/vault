@@ -5,7 +5,8 @@ import { inject as service } from '@ember/service';
 
 export default class diff extends Route {
   @service store;
-  noReadAccess = false;
+  noReadAccess = false; // ARG TODO keep or remove but put in controller
+  secretMetadata;
 
   beforeModel() {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -32,6 +33,10 @@ export default class diff extends Route {
     controller.set('backend', this.backend); // for backendCrumb
     controller.set('id', this.id); // for navigation on tabs
     controller.set('model', model);
+    // set the initial version to compare to as one minus the current version
+    // model.currentVersion === 1
+    //   ? controller.set('compareVersion', 0)
+    //   : controller.set('compareVersion', model.currentVersion - 1);
     controller.set('noReadAccess', this.noReadAccess);
   }
 }
