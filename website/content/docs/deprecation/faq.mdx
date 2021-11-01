@@ -8,7 +8,7 @@ description: |-
 
 # Frequently Asked Questions(FAQ)
 
-This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/docs/enterprise/license/faq) page.
+This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/docs/enterprise/license/faq) page. For up-to-date information on our feature deprecations and notice, please refer to the [Feature Deprecation Notice and Plans](/docs/deprecation) document.
 
 - [Q: What is the impact to anyone using the legacy MFA feature?](#q-what-is-the-impact-to-anyone-using-the-legacy-mfa-feature)
 - [Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?](#q-i-m-currently-using-the-etcd-storage-backend-feature-how-does-the-deprecation-impact-me)
@@ -22,7 +22,7 @@ If you are an OSS user and are using the legacy MFA, this will impact you since 
 
 ### Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?
 
-If you are using Etcd v2 API, you must plan to upgrade to Etcd v3 API when they upgrade to Vault 1.10. The Etcd v2 API will not be supported in the Vault 1.10 release.
+The Etcd v2 has been deprecated with the release of Etcd v3.5, and will be decomissioned by Etcd v3.6. Etcd v2 API will be removed in Vaut 1.10. Users of Etcd storage backend should prepare to migrate Vault storage to an Etcd V3 cluster prior to upgrading to Vault 1.10. All storage migrations should be backed up prior to migration.
 
 If you are an Enterprise user, we recommend that you consider migrating to HashiCorp supported storage backends: Integrated Storage, or Consul (if your use case requires you to use this). Your HashiCorp sales or support representative can assist you with this decision.
 
