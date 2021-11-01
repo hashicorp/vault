@@ -11,20 +11,18 @@
 // Standardize on the same monospace font used elsewhere
 .jsondiffpatch-delta,
 .jsondiffpatch-delta pre {
-  font: 1rem/1.4 $family-monospace !important;
+  // font: 1rem/1.4 $family-monospace !important;
 }
 
 // this comes from the node_modules/jsondiffpatch/public/formatters-styles/html.css
 // ARG TODO figure out how to import
 .jsondiffpatch-delta {
-  font-family: 'Bitstream Vera Sans Mono', 'DejaVu Sans Mono', Monaco, Courier, monospace;
   font-size: 12px;
   margin: 0;
   padding: 0 0 0 12px;
   display: inline-block;
 }
 .jsondiffpatch-delta pre {
-  font-family: 'Bitstream Vera Sans Mono', 'DejaVu Sans Mono', Monaco, Courier, monospace;
   font-size: 12px;
   margin: 0;
   padding: 0;

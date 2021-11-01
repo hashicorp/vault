@@ -104,6 +104,7 @@ Router.map(function() {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
+          this.route('diff', { path: '/diff/*id' });
           this.route('metadata', { path: '/metadata/*secret' });
           this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
