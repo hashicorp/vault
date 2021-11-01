@@ -167,7 +167,16 @@
       },
       {
         "title": "Client Count",
-        "path": "concepts/client-count"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/client-count"
+          },
+          {
+            "title": "FAQ",
+            "path": "concepts/client-count/faq"
+          }
+        ]
       },
       {
         "title": "Transform",
