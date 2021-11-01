@@ -1,6 +1,6 @@
 import Controller from '@ember/controller';
 
-export default class VaultClusterIdentityOidcProviderController extends Controller {
+export default class VaultClusterOidcProviderController extends Controller {
   queryParams = [
     'scope', // *
     'response_type', // *
