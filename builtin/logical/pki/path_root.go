@@ -456,7 +456,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 		if !ok || !b.(bool) {
 			cert.SignatureAlgorithm = signingAlgorithm
 		} else {
-			return nil, fmt.Errorf("signing certificate's public key algorithm (%s) does not match submitted certificate's (%s), and require_matching_certificate_algorithms-- is true",
+			return nil, fmt.Errorf("signing certificate's public key algorithm (%s) does not match submitted certificate's (%s), and require_matching_certificate_algorithms is true",
 				signingPubType.String(), certPubType.String())
 		}
 	}
