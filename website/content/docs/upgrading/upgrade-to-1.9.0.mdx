@@ -49,3 +49,13 @@ error with a message stating that `functionality on this path has been removed`.
 Vault does not make backwards compatible guarantees on internal APIs (those
 prefaced with `sys/internal`). They are subject to change and may disappear
 without notice.
+
+## TLS Cipher Suites Changes
+
+In Vault 1.9, due to changes in Go 1.17, the `tls_prefer_server_cipher_suites`
+TCP configuration parameter has been deprecated and its value will be ignored.
+
+Additionally, Go has begun doing automated cipher suite ordering and no longer
+respects the order of suites given in `tls_cipher_suites`.
+
+See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information.
