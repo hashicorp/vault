@@ -592,6 +592,9 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	if err != nil {
 		return err
 	}
+	if data == nil {
+		return nil
+	}
 
 	out := &activity.EntityActivityLog{}
 	err = proto.Unmarshal(data.Value, out)
@@ -622,6 +625,9 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
+	}
+	if data == nil {
+		return nil
 	}
 
 	out := &activity.EntityActivityLog{}
@@ -683,6 +689,9 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
+	}
+	if data == nil {
+		return nil
 	}
 
 	out := &activity.TokenCount{}
