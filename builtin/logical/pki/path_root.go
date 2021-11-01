@@ -112,7 +112,7 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 			"require_matching_certificate_algorithms": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `If true, allow the public key algorithm of the signer to differ from the self issued certificate.`,
+				Description: `If true, require the public key algorithm of the signer to match that of the self issued certificate.`,
 			},
 		},
 
