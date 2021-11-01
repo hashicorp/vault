@@ -87,7 +87,9 @@ module('Integration | Component | InfoTableRow', function(hooks) {
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
     await settled();
     assert.dom('[data-test-tooltip-copy]').hasAttribute('disabled', '', 'Tooltip copy button is disabled');
-    assert.dom('[data-test-tooltip-copy]').doesNotHaveClass('has-pointer', 'Pointer class not applied when disabled');
+    assert
+      .dom('[data-test-tooltip-copy]')
+      .doesNotHaveClass('has-pointer', 'Pointer class not applied when disabled');
     this.set('isCopyable', true);
     assert.dom('[data-test-tooltip-copy]').doesNotHaveAttribute('disabled', 'Tooltip copy button is enabled');
     assert.dom('[data-test-tooltip-copy]').hasClass('has-pointer', 'Pointer class applied to copy button');
@@ -127,17 +129,23 @@ module('Integration | Component | InfoTableRow', function(hooks) {
       @defaultShown={{default}}
     />`);
 
-    assert.dom('div.column span').hasClass('hs-icon-s', 'Renders a dash (-) for the label');
+    assert
+      .dom('div.column.is-one-quarter .flight-icon')
+      .hasClass('hs-icon-s', 'Renders a dash (-) for the label');
 
     this.set('value', '');
     this.set('label', LABEL);
-    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for empty string value');
+    assert
+      .dom('div.column.is-flex .flight-icon')
+      .hasClass('hs-icon-s', 'Renders a dash (-) for empty string value');
 
     this.set('value', null);
-    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for null value');
+    assert.dom('div.column.is-flex .flight-icon').hasClass('hs-icon-s', 'Renders a dash (-) for null value');
 
     this.set('value', undefined);
-    assert.dom('div.column.is-flex span').hasClass('hs-icon-s', 'Renders a dash (-) for undefined value');
+    assert
+      .dom('div.column.is-flex .flight-icon')
+      .hasClass('hs-icon-s', 'Renders a dash (-) for undefined value');
 
     this.set('default', DEFAULT);
     assert.dom('[data-test-value-div]').hasText(DEFAULT, 'Renders default text if value is empty');

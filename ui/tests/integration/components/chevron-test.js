@@ -12,13 +12,13 @@ module('Integration | Component | chevron', function(hooks) {
     // Handle any actions with this.set('myAction', function(val) { ... });
 
     await render(hbs`<Chevron />`);
-    assert.dom('.hs-icon').exists('renders');
+    assert.dom('.flight-icon').exists('renders');
 
     await render(hbs`<Chevron @isButton={{true}} />`);
-    assert.dom('.hs-icon').hasClass('hs-icon-button-right', 'renders');
+    assert.dom('.flight-icon').hasClass('hs-icon-button-right', 'renders');
 
     await render(hbs`<Chevron @direction='left' @isButton={{true}} />`);
-    assert.dom('.hs-icon').doesNotHaveClass('hs-icon-button-right', 'renders');
+    assert.dom('.flight-icon').doesNotHaveClass('hs-icon-button-right', 'renders');
 
     let promise = waitForError();
     render(hbs`<Chevron @direction='lol' />`);

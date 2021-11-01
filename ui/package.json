@@ -190,7 +190,8 @@
     "yargs-parser": "^13.1.2",
     "underscore": "^1.12.1",
     "trim": "^0.0.3",
-    "xmlhttprequest-ssl": "^1.6.2"
+    "xmlhttprequest-ssl": "^1.6.2",
+    "@hashicorp/ember-flight-icons": "^1.1.0"
   },
   "engines": {
     "node": "14.*"
