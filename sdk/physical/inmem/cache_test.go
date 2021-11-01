@@ -329,3 +329,45 @@ func TestCache_Refresh(t *testing.T) {
 	}
 
 }
+
+// TestCache_UpdateFromStorage fetches a nil value from cache, updates
+// the underlying storage and checks the cache value on a subsequent lookup
+func TestCache_UpdateFromStorage(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	inm, err := NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache := physical.NewCache(inm, 0, logger, &metrics.BlackholeSink{})
+	cache.SetEnabled(true)
+
+	ent := &physical.Entry{
+		Key:   "foo",
+		Value: []byte("bar"),
+	}
+
+	// Read should return nil
+	out, err := cache.Get(context.Background(), "foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("should not have key")
+	}
+
+	// Add data to the underlying backend
+	inm.Put(context.Background(), ent)
+
+	// Read should return data
+	out, err = cache.Get(context.Background(), "foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if out == nil {
+		t.Fatalf("should have key")
+	}
+	if string(out.Value) != "bar" {
+		t.Fatalf("expected value bar, got %s", string(out.Value))
+	}
+}
