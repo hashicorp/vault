@@ -109,8 +109,9 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
 			},
-			"allow_different_signature_algorithm": &framework.FieldSchema{
+			"require_matching_key_type": &framework.FieldSchema{
 				Type:        framework.TypeBool,
+				Default:     false,
 				Description: `If true, allow the public key type of the signer to differ from the self issued certificate.`,
 			},
 		},
@@ -451,9 +452,12 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 	}
 
 	if signingPubType != certPubType {
-		b, ok := data.GetOk("allow_different_signature_algorithm")
-		if ok && b.(bool) {
+		b, ok := data.GetOk("require_matching_key_type")
+		if !ok || !b.(bool) {
 			cert.SignatureAlgorithm = signingAlgorithm
+		} else {
+			return nil, fmt.Errorf("signing certificate's key type (%s) does not match submitted certificate's (%s), and require_matching_key_type is true",
+				signingPubType.String(), certPubType.String())
 		}
 	}
 
