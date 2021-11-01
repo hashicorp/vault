@@ -211,11 +211,18 @@ page.
 - `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
    or `"forward"`.
 
+-> **Note:** When the `cache` block is defined, either a
+[template][agent-template] or a [listener][agent-listener] must also be defined
+in the config, otherwise there is no way to utilize the cache.
+
+[agent-template]: /docs/agent/template
+[agent-listener]: /docs/agent/caching#configuration-listener
+
 ### Configuration (Persist)
 
 These are common configuration values that live within the `persist` block:
 
-- `type` `(string: required)` - The type of the persistent cahce to use,
+- `type` `(string: required)` - The type of the persistent cache to use,
   e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
   the block, e.g. `persist "kubernetes" {...}`.
 
@@ -226,7 +233,7 @@ These are common configuration values that live within the `persist` block:
   is not deleted. Defaults to `false`.
 
 - `exit_on_err` `(bool: optional)` - When set to true, if any errors occur during
-  a persitent cache restore, Vault Agent will exit with an error. Defaults to `true`.
+  a persistent cache restore, Vault Agent will exit with an error. Defaults to `true`.
 
 ## Configuration (`listener`)
 
