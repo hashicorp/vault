@@ -132,6 +132,7 @@
     "filesize": "^4.2.1",
     "flat": "^4.1.0",
     "ivy-codemirror": "IvyApp/ivy-codemirror#fb09333c5144da47e14a9e6260f80577d5408374",
+    "jsondiffpatch": "0.2.5",
     "jsonlint": "^1.6.3",
     "loader.js": "^4.7.0",
     "node-forge": "^0.10.0",

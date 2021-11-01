@@ -18,13 +18,18 @@
         </Toolbar>
     </div>
 {{/if}}
-{{ivy-codemirror
-    data-test-component="json-editor" 
-    value=value 
-    options=options
-    valueUpdated=(action "updateValue") 
-    onFocusOut=(action "onFocus")    
-}}
+
+{{#if diffView}}
+    <pre>{{{visualDiff}}}</pre>
+{{else}}
+    {{ivy-codemirror
+        data-test-component="json-editor" 
+        value=value
+        options=options
+        valueUpdated=(action "updateValue") 
+        onFocusOut=(action "onFocus")    
+    }}
+{{/if}}
 {{#if helpText }}
     <div class="box is-shadowless is-fullwidth has-short-padding">
         <p class="sub-text">{{ helpText }}</p>

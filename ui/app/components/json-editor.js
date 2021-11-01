@@ -1,5 +1,8 @@
+/* eslint-disable no-undef */
 import Component from '@ember/component';
+import { computed } from '@ember/object';
 
+// ARG TODO glimmerize this component and add documentation
 const JSON_EDITOR_DEFAULTS = {
   // IMPORTANT: `gutters` must come before `lint` since the presence of
   // `gutters` is cached internally when `lint` is toggled
@@ -23,6 +26,7 @@ export default Component.extend({
   valueUpdated: null,
   onFocusOut: null,
   readOnly: false,
+  diffView: false,
 
   init() {
     this._super(...arguments);
@@ -37,7 +41,22 @@ export default Component.extend({
       delete this.options.gutters;
     }
   },
+  // Computed diff
+  visualDiff: computed('current', 'previous', function() {
+    let diffpatcher = jsondiffpatch.create({
+      arrays: {
+        detectMove: false,
+      },
+    });
+    let delta = diffpatcher.diff('previous', 'current');
+    if (delta == undefined) {
+      return 'No changes, previous state matches.';
+    }
+    // beautiful html diff
+    jsondiffpatch.formatters.html.hideUnchanged();
 
+    return jsondiffpatch.formatters.html.format(delta, 'current');
+  }),
   actions: {
     updateValue(...args) {
       if (this.valueUpdated) {
