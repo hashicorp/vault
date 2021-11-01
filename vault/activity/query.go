@@ -194,6 +194,10 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 	if err != nil {
 		return nil, err
 	}
+	if entry == nil {
+		s.logger.Warn("no end time entry found", "start time", actualStartTime, "end time", actualEndTime)
+		return nil, nil
+	}
 
 	p := &PrecomputedQuery{}
 	err = json.Unmarshal(entry.Value, p)

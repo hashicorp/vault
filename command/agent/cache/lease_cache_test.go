@@ -972,6 +972,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 	var processed int
 
 	leases, err := boltStorage.GetByType(context.Background(), cacheboltdb.LeaseType)
+	require.NoError(t, err)
 	for _, lease := range leases {
 		index, err := cachememdb.Deserialize(lease)
 		require.NoError(t, err)

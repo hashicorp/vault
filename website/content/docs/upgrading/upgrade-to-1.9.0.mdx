@@ -65,3 +65,13 @@ should prepare to [migrate](/docs/commands/operator/migrate) Vault storage to
 an Etcd v3 cluster prior to upgrading to Vault 1.10. All storage migrations
 should have [backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
 taken prior to migration.
+
+## TLS Cipher Suites Changes
+
+In Vault 1.9, due to changes in Go 1.17, the `tls_prefer_server_cipher_suites`
+TCP configuration parameter has been deprecated and its value will be ignored.
+
+Additionally, Go has begun doing automated cipher suite ordering and no longer
+respects the order of suites given in `tls_cipher_suites`.
+
+See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information.
