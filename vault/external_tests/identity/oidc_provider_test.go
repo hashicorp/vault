@@ -290,6 +290,7 @@ func TestOIDC_Auth_Code_Flow_CAP_Client(t *testing.T) {
 			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
 				"allowed_client_ids": []string{clientID},
 			})
+			require.NoError(t, err)
 
 			// Create the client-side OIDC request state
 			oidcRequest, err := oidc.NewRequest(10*time.Minute, testRedirectURI, tt.args.options...)
