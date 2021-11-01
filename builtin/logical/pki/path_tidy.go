@@ -1,4 +1,4 @@
- package pki
+package pki
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -49,7 +50,6 @@ Defaults to 72 hours.`,
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathTidyWrite,
 				ForwardPerformanceStandby:   true,
-				ForwardPerformanceSecondary: true,
 			},
 		},
 
@@ -65,7 +65,6 @@ func pathTidyStatus(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:                    b.pathTidyStatusRead,
 				ForwardPerformanceStandby:   true,
-				ForwardPerformanceSecondary: true,
 			},
 		},
 		HelpSynopsis:    pathTidyStatusHelpSyn,
@@ -249,6 +248,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
+	// but only if the PKI backend is not a local mount.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
+		return nil, logical.ErrReadOnly
+	}
+
 	b.tidyStatusLock.RLock()
 	defer b.tidyStatusLock.RUnlock()
 
