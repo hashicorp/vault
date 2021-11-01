@@ -1,0 +1,68 @@
+---
+layout: 'docs'
+page_title: 'HA Cluster with TLS'
+sidebar_current: 'docs-platform-k8s-examples-ha-tls'
+description: |-
+  Describes how to set up a Raft HA Vault cluster with TLS certificate
+---
+
+# Raft HA Server with TLS 
+
+Follow the steps from the example [HA Vault Cluster with Integrated Storage](/docs/platform/k8s/helm/examples/ha-with-raft) to build the cluster.
+
+Follow the examples and instructions in [Standalone Server with TLS](/docs/platform/k8s/helm/examples/standalone-tls) to create a TLS certificate.
+
+Before cluster initialization and without proper configuration, the following warning is to be expected:
+```shell
+core: join attempt failed: error="error during raft bootstrap init call: Put "https://vault-${N}.${SERVICE}:8200/v1/sys/storage/raft/bootstrap/challenge": x509: certificate is valid for ${SERVICE}, ${SERVICE}.${NAMESPACE}, ${SERVICE}.${NAMESPACE}.svc, ${SERVICE}.${NAMESPACE}.svc.cluster.local, not vault-${N}.${SERVICE}"
+```
+
+The concepts for [Integrated Storage and TLS](/docs/concepts/integrated-storage#integrated-storage-and-tls) elaborate three possible solutions to mitigate this TLS verification warning and bootstrap the Raft cluster, two of which are discussed in further detail here.
+
+The warning disappears when the the [expected TLS servername](/docs/concepts/integrated-storage#autojoin-with-tls-servername) is correctly configured using [`leader_tls_servername`](/docs/configuration/storage/raft#leader_tls_servername) in the Raft stanza (`${CN}` in the example below):
+
+```hcl
+storage "raft" {
+  path = "/vault/data"
+
+  retry_join {
+    leader_api_addr = "https://vault-0.${SERVICE}:8200"
+    leader_tls_servername = "${CN}"
+    leader_client_cert_file = "/vault/tls/vault.crt"
+    leader_client_key_file = "/vault/tls/vault.key"
+    leader_ca_cert_file = "/vault/tls/vault.ca"
+  }
+
+  retry_join {
+    leader_api_addr = "https://vault-1.${SERVICE}:8200"
+    leader_tls_servername = "${CN}"
+    leader_client_cert_file = "/vault/tls/vault.crt"
+    leader_client_key_file = "/vault/tls/vault.key"
+    leader_ca_cert_file = "/vault/tls/vault.ca"
+  }
+
+  retry_join {
+    leader_api_addr = "https://vault-2.${SERVICE}:8200"
+    leader_tls_servername = "${CN}"
+    leader_client_cert_file = "/vault/tls/vault.crt"
+    leader_client_key_file = "/vault/tls/vault.key"
+    leader_ca_cert_file = "/vault/tls/vault.ca"
+  }
+}
+```
+
+Alternatively, specify one `retry_join` which references the [name of the load balancer](/docs/concepts/integrated-storage#load-balancer-instead-of-autojoin) instead:
+```hcl
+storage "raft" {
+  path = "/vault/data"
+
+  retry_join {
+    leader_api_addr = "https://vault-active:8200"
+    leader_client_cert_file = "/vault/tls/vault.crt"
+    leader_client_key_file = "/vault/tls/vault.key"
+    leader_ca_cert_file = "/vault/tls/vault.ca"
+  }
+}
+```
+
+Both configuration options ensure that the the common name (CN) used for the `leader_api_addr` in the Raft stanza matches the name(s) listed in the TLS certificate.
