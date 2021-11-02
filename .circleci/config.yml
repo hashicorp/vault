@@ -977,7 +977,7 @@ jobs:
         name: Restore exact go modules cache
     - run:
         command: |
-          set -ex
+          set -exo pipefail
 
           EXTRA_TAGS=
           case "" in
@@ -1249,7 +1249,7 @@ jobs:
         name: Restore exact go modules cache
     - run:
         command: |
-          set -ex
+          set -exo pipefail
 
           EXTRA_TAGS=
           case "-race" in
@@ -1771,7 +1771,7 @@ jobs:
         name: Restore exact go modules cache
     - run:
         command: |
-          set -ex
+          set -exo pipefail
 
           EXTRA_TAGS=
           case "" in
@@ -2436,7 +2436,7 @@ jobs:
         name: Restore exact go modules cache
     - run:
         command: |
-          set -ex
+          set -exo pipefail
 
           EXTRA_TAGS=
           case "-race" in
