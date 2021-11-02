@@ -592,6 +592,9 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	if err != nil {
 		return err
 	}
+	if data == nil {
+		return nil
+	}
 
 	out := &activity.EntityActivityLog{}
 	err = proto.Unmarshal(data.Value, out)
@@ -622,6 +625,9 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
+	}
+	if data == nil {
+		return nil
 	}
 
 	out := &activity.EntityActivityLog{}
@@ -683,6 +689,9 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
+	}
+	if data == nil {
+		return nil
 	}
 
 	out := &activity.TokenCount{}
@@ -1583,31 +1592,33 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 	return config, nil
 }
 
-// HandleTokenUsage adds the TokenEntry to the current fragment of the activity log.
+// HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
+// and returns the corresponding Client ID.
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) {
+func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) string {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return
+		return ""
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return
+		return ""
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return
+		return ""
 	}
 
 	// Parse an entry's client ID and add it to the activity log
 	clientID, isTWE := a.CreateClientID(entry)
 	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE)
+	return clientID
 }
 
 // CreateClientID returns the client ID, and a boolean which is false if the clientID
@@ -1649,7 +1660,7 @@ func (a *ActivityLog) CreateClientID(entry *logical.TokenEntry) (string, bool) {
 
 	// Step 5: Hash the sum
 	hashed := sha256.Sum256([]byte(clientIDInput))
-	return base64.URLEncoding.EncodeToString(hashed[:]), true
+	return base64.StdEncoding.EncodeToString(hashed[:]), true
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {

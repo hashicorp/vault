@@ -3,11 +3,11 @@ package pki
 import (
 	"context"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 // Factory creates a new backend implementing the logical.Backend interface
@@ -75,6 +75,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchListCerts(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
+			pathTidyStatus(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -86,6 +87,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
+	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 
 	return &b
@@ -96,8 +98,36 @@ type backend struct {
 
 	storage           logical.Storage
 	crlLifetime       time.Duration
-	revokeStorageLock sync.RWMutex
+	revokeStorageLock vault.DeadlockRWMutex
 	tidyCASGuard      *uint32
+
+	tidyStatusLock vault.DeadlockRWMutex
+	tidyStatus     *tidyStatus
+}
+
+type tidyStatusState int
+
+const (
+	tidyStatusInactive tidyStatusState = iota
+	tidyStatusStarted
+	tidyStatusFinished
+	tidyStatusError
+)
+
+type tidyStatus struct {
+	// Parameters used to initiate the operation
+	safetyBuffer     int
+	tidyCertStore    bool
+	tidyRevokedCerts bool
+
+	// Status
+	state                   tidyStatusState
+	err                     error
+	timeStarted             time.Time
+	timeFinished            time.Time
+	message                 string
+	certStoreDeletedCount   uint
+	revokedCertDeletedCount uint
 }
 
 const backendHelp = `

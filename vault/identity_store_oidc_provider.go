@@ -130,6 +130,7 @@ type providerDiscovery struct {
 }
 
 type authCodeCacheEntry struct {
+	provider    string
 	clientID    string
 	entityID    string
 	redirectURI string
@@ -607,6 +608,9 @@ func (i *IdentityStore) providersReferencingTargetScopeName(ctx context.Context,
 func (i *IdentityStore) pathOIDCCreateUpdateAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
+
 	var assignment assignment
 	if req.Operation == logical.UpdateOperation {
 		entry, err := req.Storage.Get(ctx, assignmentPath+name)
@@ -699,6 +703,9 @@ func (i *IdentityStore) getOIDCAssignment(ctx context.Context, s logical.Storage
 func (i *IdentityStore) pathOIDCDeleteAssignment(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
+
 	clientNames, err := i.clientNamesReferencingTargetAssignmentName(ctx, req, name)
 	if err != nil {
 		return nil, err
@@ -734,6 +741,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateScope(ctx context.Context, req *logi
 	if name == openIDScope {
 		return logical.ErrorResponse("the %q scope name is reserved", openIDScope), nil
 	}
+
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
 	var scope scope
 	if req.Operation == logical.UpdateOperation {
@@ -848,20 +858,21 @@ func (i *IdentityStore) getOIDCScope(ctx context.Context, s logical.Storage, nam
 	return &scope, nil
 }
 
-// pathOIDCDeleteScope is used to delete an scope
+// pathOIDCDeleteScope is used to delete a scope
 func (i *IdentityStore) pathOIDCDeleteScope(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	targetScopeName := d.Get("name").(string)
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
-	providerNames, err := i.providersReferencingTargetScopeName(ctx, req, targetScopeName)
+	providerNames, err := i.providersReferencingTargetScopeName(ctx, req, name)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(providerNames) > 0 {
 		errorMessage := fmt.Sprintf("unable to delete scope %q because it is currently referenced by these providers: %s",
-			targetScopeName, strings.Join(providerNames, ", "))
+			name, strings.Join(providerNames, ", "))
 		return logical.ErrorResponse(errorMessage), logical.ErrInvalidRequest
 	}
 	err = req.Storage.Delete(ctx, scopePath+name)
@@ -891,6 +902,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	if err != nil {
 		return nil, err
 	}
+
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
 	client := client{
 		Name:        name,
@@ -949,17 +963,13 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
-	var key namedKey
 	// enforce key existence on client creation
-	entry, err := req.Storage.Get(ctx, namedKeyConfigPath+client.Key)
+	key, err := i.getNamedKey(ctx, req.Storage, client.Key)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if key == nil {
 		return logical.ErrorResponse("key %q does not exist", client.Key), nil
-	}
-	if err := entry.DecodeJSON(&key); err != nil {
-		return nil, err
 	}
 
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
@@ -1002,7 +1012,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 	}
 
 	// store client
-	entry, err = logical.StorageEntryJSON(clientPath+name, client)
+	entry, err := logical.StorageEntryJSON(clientPath+name, client)
 	if err != nil {
 		return nil, err
 	}
@@ -1047,9 +1057,12 @@ func (i *IdentityStore) pathOIDCReadClient(ctx context.Context, req *logical.Req
 	}, nil
 }
 
-// pathOIDCDeleteClient is used to delete an client
+// pathOIDCDeleteClient is used to delete a client
 func (i *IdentityStore) pathOIDCDeleteClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
 	// Delete the client from memdb
 	if err := i.memDBDeleteClientByName(ctx, name); err != nil {
@@ -1079,6 +1092,9 @@ func (i *IdentityStore) pathOIDCClientExistenceCheck(ctx context.Context, req *l
 func (i *IdentityStore) pathOIDCCreateUpdateProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var resp logical.Response
 	name := d.Get("name").(string)
+
+	i.oidcLock.Lock()
+	defer i.oidcLock.Unlock()
 
 	var provider provider
 	if req.Operation == logical.UpdateOperation {
@@ -1260,7 +1276,7 @@ func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, 
 	return &provider, nil
 }
 
-// pathOIDCDeleteProvider is used to delete an assignment
+// pathOIDCDeleteProvider is used to delete a provider
 func (i *IdentityStore) pathOIDCDeleteProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	return nil, req.Storage.Delete(ctx, providerPath+name)
@@ -1542,6 +1558,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 
 	// Create the auth code cache entry
 	authCodeEntry := &authCodeCacheEntry{
+		provider:    name,
 		clientID:    clientID,
 		entityID:    entity.GetID(),
 		redirectURI: redirectURI,
@@ -1724,10 +1741,15 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 
 	// Ensure the authorization code was issued to the authenticated client
 	if authCodeEntry.clientID != clientID {
-		return tokenResponse(nil, ErrTokenInvalidGrant, "authorization grant is invalid or expired")
+		return tokenResponse(nil, ErrTokenInvalidGrant, "authorization code was not issued to the client")
 	}
 
-	// Ensure that the redirect_uri parameter value is identical to the redirect_uri
+	// Ensure the authorization code was issued by the provider
+	if authCodeEntry.provider != name {
+		return tokenResponse(nil, ErrTokenInvalidGrant, "authorization code was not issued by the provider")
+	}
+
+	// Ensure the redirect_uri parameter value is identical to the redirect_uri
 	// parameter value that was included in the initial authorization request.
 	redirectURI := d.Get("redirect_uri").(string)
 	if redirectURI == "" {
@@ -1964,6 +1986,12 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 	if !isMember {
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "identity entity not authorized by client assignment")
+	}
+
+	// Validate that the client is authorized to use the provider
+	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
+		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
 	}
 
 	claims := map[string]interface{}{

@@ -1,11 +1,14 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { format } from 'date-fns';
 
 export default class HistoryComponent extends Component {
   max_namespaces = 10;
 
   @tracked selectedNamespace = null;
+
+  @tracked barChartSelection = false;
 
   // Determine if we have client count data based on the current tab,
   // since model is slightly different for current month vs history api
@@ -77,6 +80,19 @@ export default class HistoryComponent extends Component {
     return results;
   }
 
+  // Return csv filename with start and end dates
+  get getCsvFileName() {
+    let defaultFileName = `clients-by-namespace`,
+      startDate =
+        this.args.model.queryStart || `${format(new Date(this.args.model.activity.startTime), 'MM-yyyy')}`,
+      endDate =
+        this.args.model.queryEnd || `${format(new Date(this.args.model.activity.endTime), 'MM-yyyy')}`;
+    if (startDate && endDate) {
+      defaultFileName += `-${startDate}-${endDate}`;
+    }
+    return defaultFileName;
+  }
+
   // Get the namespace by matching the path from the namespace list
   getNamespace(path) {
     return this.args.model.activity.byNamespace.find(ns => {
@@ -92,11 +108,17 @@ export default class HistoryComponent extends Component {
     // In case of search select component, value returned is an array
     if (Array.isArray(value)) {
       this.selectedNamespace = this.getNamespace(value[0]);
+      this.barChartSelection = false;
     } else if (typeof value === 'object') {
       // While D3 bar selection returns an object
       this.selectedNamespace = this.getNamespace(value.label);
-    } else {
-      this.selectedNamespace = null;
+      this.barChartSelection = true;
     }
+  }
+
+  @action
+  resetData() {
+    this.barChartSelection = false;
+    this.selectedNamespace = null;
   }
 }
