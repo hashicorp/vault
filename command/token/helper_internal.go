@@ -30,9 +30,18 @@ func NewInternalTokenHelper() (*InternalTokenHelper, error) {
 }
 
 // populateTokenPath figures out the token path using homedir to get the user's
-// home directory
+// home directory or based on the env variable
 func (i *InternalTokenHelper) populateTokenPath() {
-	i.tokenPath = filepath.Join(i.homeDir, ".vault-token")
+	filename := ".vault-token"
+	location := os.Getenv(EnvTokenFileLocation)
+
+	if len(location) == 0 {
+		location = filepath.Join(i.homeDir, location)
+	} else if !strings.Contains(location, filename) {
+		location = filepath.Join(location, filename)
+	}
+
+	i.tokenPath = location
 }
 
 func (i *InternalTokenHelper) Path() string {

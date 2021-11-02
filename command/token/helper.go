@@ -12,3 +12,7 @@ type TokenHelper interface {
 	Get() (string, error)
 	Store(string) error
 }
+
+const (
+	EnvTokenFileLocation = "VAULT_CLI_TOKEN_FILE"
+)
