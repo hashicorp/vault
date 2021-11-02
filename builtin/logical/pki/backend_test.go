@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -3092,6 +3094,22 @@ func setCerts() {
 }
 
 func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
+	// Use a ridiculously long time to minimize the chance
+	// that we have to deal with more than one interval.
+	// InMemSink rounds down to an interval boundary rather than
+	// starting one at the time of initialization.
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	metricsConf := metrics.DefaultConfig("")
+	metricsConf.EnableHostname = false
+	metricsConf.EnableHostnameLabel = false
+	metricsConf.EnableServiceLabel = false
+	metricsConf.EnableTypePrefix = false
+
+	metrics.NewGlobal(metricsConf, inmemSink)
+
 	// Enable PKI secret engine
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -3242,6 +3260,91 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Sleep a bit to make sure we're past the safety buffer
 	time.Sleep(2 * time.Second)
+
+	// Issue a tidy-status on /pki
+	{
+		tidyStatus, err := client.Logical().Read("pki/tidy-status")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedData := map[string]interface{}{
+			"safety_buffer":              json.Number("1"),
+			"tidy_cert_store":            true,
+			"tidy_revoked_certs":         true,
+			"state":                      "Finished",
+			"error":                      nil,
+			"time_started":               nil,
+			"time_finished":              nil,
+			"message":                    nil,
+			"cert_store_deleted_count":   json.Number("1"),
+			"revoked_cert_deleted_count": json.Number("1"),
+		}
+		// Let's copy the times from the response so that we can use deep.Equal()
+		timeStarted, ok := tidyStatus.Data["time_started"]
+		if !ok || timeStarted == "" {
+			t.Fatal("Expected tidy status response to include a value for time_started")
+		}
+		expectedData["time_started"] = timeStarted
+		timeFinished, ok := tidyStatus.Data["time_finished"]
+		if !ok || timeFinished == "" {
+			t.Fatal("Expected tidy status response to include a value for time_finished")
+		}
+		expectedData["time_finished"] = timeFinished
+
+		if diff := deep.Equal(expectedData, tidyStatus.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+	// Check the tidy metrics
+	{
+		// Map of gagues to expected value
+		expectedGauges := map[string]float32{
+			"secrets.pki.tidy.cert_store_current_entry":   0,
+			"secrets.pki.tidy.cert_store_total_entries":   1,
+			"secrets.pki.tidy.revoked_cert_current_entry": 0,
+			"secrets.pki.tidy.revoked_cert_total_entries": 1,
+			"secrets.pki.tidy.start_time_epoch":           0,
+		}
+		// Map of counters to the sum of the metrics for that counter
+		expectedCounters := map[string]float64{
+			"secrets.pki.tidy.cert_store_deleted_count":   1,
+			"secrets.pki.tidy.revoked_cert_deleted_count": 1,
+			"secrets.pki.tidy.success":                    2,
+			// Note that "secrets.pki.tidy.failure" won't be in the captured metrics
+		}
+
+		// If the metrics span mnore than one interval, skip the checks
+		intervals := inmemSink.Data()
+		if len(intervals) == 1 {
+			interval := inmemSink.Data()[0]
+
+			for gauge, value := range expectedGauges {
+				if _, ok := interval.Gauges[gauge]; !ok {
+					t.Fatalf("Expected metrics to include a value for gauge %s", gauge)
+				}
+				if value != interval.Gauges[gauge].Value {
+					t.Fatalf("Expected value metric %s to be %f but got %f", gauge, value, interval.Gauges[gauge].Value)
+				}
+
+			}
+			for counter, value := range expectedCounters {
+				if _, ok := interval.Counters[counter]; !ok {
+					t.Fatalf("Expected metrics to include a value for couter %s", counter)
+				}
+				if value != interval.Counters[counter].Sum {
+					t.Fatalf("Expected the sum of metric %s to be %f but got %f", counter, value, interval.Counters[counter].Sum)
+				}
+			}
+
+			tidyDuration, ok := interval.Samples["secrets.pki.tidy.duration"]
+			if !ok {
+				t.Fatal("Expected metrics to include a value for sample secrets.pki.tidy.duration")
+			}
+			if tidyDuration.Count <= 0 {
+				t.Fatalf("Expected metrics to have count > 0 for sample secrets.pki.tidy.duration, but got %d", tidyDuration.Count)
+			}
+		}
+	}
 
 	req = client.NewRequest("GET", "/v1/pki/crl")
 	resp, err = client.RawRequest(req)
