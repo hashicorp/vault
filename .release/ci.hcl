@@ -8,7 +8,7 @@ project "vault" {
   github {
     organization = "hashicorp"
     repository = "vault"
-    release_branches = ["crt_onboarding_1.7.x"]
+    release_branches = ["release/1.7.x"]
   }
 }
 
