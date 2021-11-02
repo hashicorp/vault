@@ -38,7 +38,7 @@ steps:
       environment:
         GOPRIVATE: 'github.com/hashicorp/*'
       command: |
-        set -x
+        set -ex
 
         EXTRA_TAGS=
         case "<< parameters.extra_flags >>" in
