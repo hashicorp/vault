@@ -3,11 +3,11 @@ package pki
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 )
 
 // Factory creates a new backend implementing the logical.Backend interface
@@ -98,10 +98,10 @@ type backend struct {
 
 	storage           logical.Storage
 	crlLifetime       time.Duration
-	revokeStorageLock vault.DeadlockRWMutex
+	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
 
-	tidyStatusLock vault.DeadlockRWMutex
+	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
 }
 
