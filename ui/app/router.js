@@ -9,15 +9,16 @@ export default class Router extends EmberRouter {
 Router.map(function() {
   this.route('vault', { path: '/' }, function() {
     this.route('cluster', { path: '/:cluster_name' }, function() {
+      this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
+      this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
       this.route('init');
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
-      this.route('metrics', function() {
+      this.route('clients', function() {
         this.route('index', { path: '/' });
-        this.route('config');
         this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });

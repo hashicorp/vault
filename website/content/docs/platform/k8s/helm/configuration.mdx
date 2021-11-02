@@ -67,6 +67,8 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: true`) - When set to `true`, enables leader election for Vault Agent Injector. This is required when using auto-tls and more than 1 replica.
 
+    - `useContainer` (`boolean: false`) - The deployment of the leader-elector container will soon be removed from this chart since vault-k8s now uses an internal mechanism to determine leadership. To enable the deployment of the leader-elector container for use with vault-k8s 0.12.0 and earlier, set `useContainer=true`
+
     - `image` - Values that configure the Vault Agent Injector Leader Election image.
 
       - `repository` (`string: "gcr.io/google_containers/leader-elector"`) - The name of the leader election image for the Vault Agent Injector.
@@ -79,15 +81,15 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "0.12.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "0.14.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
   - `agentImage` - Values that configure the Vault Agent sidecar image.
 
-    - `repository` (`string: "vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
+    - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
 
-    - `tag` (`string: "1.8.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `tag` (`string: "1.8.4"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
 
   - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
 
@@ -170,6 +172,13 @@ and consider if they're appropriate for your deployment.
 
   - `extraEnvironmentVars` (`dictionary: {}`) - Extra environment variables to set in the injector deployment.
 
+    ```yaml
+    # Example setting injector TLS options in a deployment:
+    extraEnvironmentVars:
+      AGENT_INJECT_TLS_MIN_VERSION: tls13
+      AGENT_INJECT_TLS_CIPHER_SUITES: ...
+    ```
+
   - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. This can either be multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
 
     ```yaml
@@ -240,9 +249,9 @@ and consider if they're appropriate for your deployment.
 
   - `image` - Values that configure the Vault Docker image.
 
-    - `repository` (`string: "vault"`) - The name of the Docker image for the containers running Vault.
+    - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
 
-    - `tag` (`string: "1.8.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "1.8.4"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -287,6 +296,8 @@ and consider if they're appropriate for your deployment.
         kubernetes.io/tls-acme: "true"
       ```
 
+    - `ingressClassName` (`string: ""`) - Specify the [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) that should be used to implement the Ingress
+
     - `activeService` (`boolean: true`) - When HA mode is enabled and K8s service registration is being used, configure the ingress to point to the Vault active service.
 
     - `extraPaths` (`array: []`) - Configures extra paths to prepend to the host configuration.
@@ -296,8 +307,10 @@ and consider if they're appropriate for your deployment.
       extraPaths: 
         - path: /*
           backend:
-            serviceName: ssl-redirect
-            servicePort: use-annotation
+            service:
+              name: ssl-redirect
+              port:
+                number: use-annotation
       ```
 
     - `tls` (`array: []`) - Configure the TLS portion of the Ingress spec.
@@ -586,6 +599,8 @@ and consider if they're appropriate for your deployment.
 
     - `type` (`string: "ClusterIP"`) - Sets the type of service to create, such as `NodePort`.
 
+    - `externalTrafficPolicy` (`string: "Cluster") - The [externalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy) can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types.
+
     - `port` (`int: 8200`) - Port on which Vault server is listening inside the pod.
 
     - `targetPort` (`int: 8200`) - Port on which the service is listening.
@@ -817,6 +832,8 @@ and consider if they're appropriate for your deployment.
 
   - `targetPort` (`int: 8200`) - Sets the target port value of the service.
 
+  - `externalTrafficPolicy` (`string: "Cluster"`) - The [externalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy) can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types.
+
   - `loadBalancerSourceRanges` (`string`) - This value defines additional source CIDRs when using `serviceType: LoadBalancer`. This should be formatted as a multi-line string.
 
   ```yaml
@@ -899,6 +916,10 @@ and consider if they're appropriate for your deployment.
       annotations: |
         foo: bar
       ```
+
+    - `providersDir` (`string: "/etc/kubernetes/secrets-store-csi-providers"`) - Provider host path (must match the CSI provider's path)
+
+    - `kubeletRootDir` (`string: "/var/lib/kubelet"`) - Kubelet host path
 
   - `pod` - Values that configure the Vault CSI Provider pod.
 

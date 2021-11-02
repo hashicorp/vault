@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: add profile support for AWS credentials when using the AWS auth method
+```

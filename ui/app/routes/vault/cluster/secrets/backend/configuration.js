@@ -4,45 +4,32 @@ import Route from '@ember/routing/route';
 export default Route.extend({
   wizard: service(),
   store: service(),
-  model() {
+  async model() {
     let backend = this.modelFor('vault.cluster.secrets.backend');
     if (this.wizard.featureState === 'list') {
       this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', backend.get('type'));
     }
-    // if KV2 then we pull in specific attrs from the config endpoint saved on the secret-engine record and display them
     if (backend.isV2KV) {
-      let secretEngineRecord = this.store.peekRecord('secret-engine', backend.id);
-      // create objects like you would normally pull from the model
-      let casRequired = {
-        name: 'casRequired',
-        options: {
-          label: 'Check-and-Set required',
-        },
-      };
-      let deleteVersionAfter = {
-        name: 'deleteVersionAfter',
-        options: {
-          label: 'Delete version after',
-        },
-      };
-      let maxVersions = {
-        name: 'maxVersions',
-        options: {
-          label: 'Maximum versions',
-        },
-      };
-      backend.attrs.pushObject(casRequired);
-      backend.attrs.pushObject(deleteVersionAfter);
-      backend.attrs.pushObject(maxVersions);
-      // set value on the model
-      backend.set('casRequired', secretEngineRecord.casRequired ? secretEngineRecord.casRequired : 'False');
-      backend.set(
-        'deleteVersionAfter',
-        secretEngineRecord.deleteVersionAfter ? secretEngineRecord.deleteVersionAfter : 'Never delete'
-      );
-      backend.set('maxVersions', secretEngineRecord.maxVersions ? secretEngineRecord.maxVersions : 'Not set');
+      let canRead = await this.store
+        .findRecord('capabilities', `${backend.id}/config`)
+        .then(response => response.canRead);
+      // only set these config params if they can read the config endpoint.
+      if (canRead) {
+        // design wants specific default to show that can't be set in the model
+        backend.set('casRequired', backend.casRequired ? backend.casRequired : 'False');
+        backend.set(
+          'deleteVersionAfter',
+          backend.deleteVersionAfter !== '0s' ? backend.deleteVersionAfter : 'Never delete'
+        );
+        backend.set('maxVersions', backend.maxVersions ? backend.maxVersions : 'Not set');
+      } else {
+        // remove the default values from the model if they don't have read access otherwise it will display the defaults even if they've been set (because they error on returning config data)
+        // normally would catch the config error in the secret-v2 adapter, but I need the functions to proceed, not stop. So we remove the values here.
+        backend.set('casRequired', null);
+        backend.set('deleteVersionAfter', null);
+        backend.set('maxVersions', null);
+      }
     }
-
     return backend;
   },
 });

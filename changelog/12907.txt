@@ -1,0 +1,5 @@
+```release-note:feature
+**KV Custom Metadata**: Add ability in kv-v2 to specify version-agnostic custom key metadata via the
+metadata endpoint. The data will be present in responses made to the data endpoint independent of the
+calling token's `read` access to the metadata endpoint.
+```

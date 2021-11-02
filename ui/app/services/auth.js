@@ -23,6 +23,7 @@ export default Service.extend({
   namespaceService: service('namespace'),
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
+  isRenewing: false,
   init() {
     this._super(...arguments);
     this.checkForRootToken();
@@ -97,7 +98,7 @@ export default Service.extend({
       } else if (response.status >= 200 && response.status < 300) {
         return resolve(response.json());
       } else {
-        return reject();
+        return reject(response);
       }
     });
   },
@@ -249,14 +250,14 @@ export default Service.extend({
     if (currentlyRenewing) {
       return;
     }
-    this.set('isRenewing', true);
+    this.isRenewing = true;
     return this.renewCurrentToken().then(
       resp => {
-        this.set('isRenewing', false);
+        this.isRenewing = false;
         return this.persistAuthData(tokenName, resp.data || resp.auth);
       },
       e => {
-        this.set('isRenewing', false);
+        this.isRenewing = false;
         throw e;
       }
     );

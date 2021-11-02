@@ -17,8 +17,8 @@ type ResponseWrapInfo struct {
 	// expected expiration.
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time" sentinel:""`
 
-	// If the contained response is the output of a token creation call, the
-	// created token's accessor will be accessible here
+	// If the contained response is the output of a token or approle secret-id creation call, the
+	// created token's/secret-id's accessor will be accessible here
 	WrappedAccessor string `json:"wrapped_accessor" structs:"wrapped_accessor" mapstructure:"wrapped_accessor" sentinel:""`
 
 	// WrappedEntityID is the entity identifier of the caller who initiated the

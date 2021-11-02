@@ -11,7 +11,10 @@
   {
     "divider": true
   },
-
+  {
+    "title": "Browser Support",
+    "path": "browser-support"
+  },
   {
     "title": "Installing Vault",
     "path": "install"
@@ -92,6 +95,10 @@
         "title": "Tokens",
         "path": "concepts/tokens"
       },
+      {
+        "title": "Identity",
+        "path": "concepts/identity"
+        },
       {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"

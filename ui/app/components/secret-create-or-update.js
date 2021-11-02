@@ -11,7 +11,7 @@
  *  @modelForData={{@modelForData}}
  *  @isV2=true
  *  @secretData={{@secretData}}
- *  @canCreateSecretMetadata=true
+ *  @canCreateSecretMetadata=false
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
@@ -20,7 +20,7 @@
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
  * @param {boolean} isV2 - whether or not KV1 or KV2
  * @param {object} secretData - class that is created in secret-edit
- * @param {boolean} canCreateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret create access.
+ * @param {boolean} canUpdateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret update. create is not enough for metadata.
  */
 
 import Component from '@glimmer/component';
@@ -44,6 +44,7 @@ export default class SecretCreateOrUpdate extends Component {
   @tracked codemirrorString = null;
   @tracked error = null;
   @tracked secretPaths = null;
+  @tracked pathWhiteSpaceWarning = false;
   @tracked validationErrorCount = 0;
   @tracked validationMessages = null;
 
@@ -82,6 +83,8 @@ export default class SecretCreateOrUpdate extends Component {
   }
   checkValidation(name, value) {
     if (name === 'path') {
+      // check for whitespace
+      this.pathHasWhiteSpace(value);
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
@@ -106,6 +109,10 @@ export default class SecretCreateOrUpdate extends Component {
       this.transitionToRoute(LIST_ROOT_ROUTE);
     }
   }
+  pathHasWhiteSpace(value) {
+    let validation = new RegExp('\\s', 'g'); // search for whitespace
+    this.pathWhiteSpaceWarning = validation.test(value);
+  }
   // successCallback is called in the context of the component
   persistKey(successCallback) {
     let secret = this.args.model;
@@ -117,6 +124,8 @@ export default class SecretCreateOrUpdate extends Component {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
+    let changed = secret.changedAttributes();
+    let changedKeys = Object.keys(changed);
 
     return secretData
       .save()
@@ -125,7 +134,9 @@ export default class SecretCreateOrUpdate extends Component {
           if (isV2) {
             secret.set('id', key);
           }
-          if (isV2 && Object.keys(secret.changedAttributes()).length > 0) {
+          // this secret.save() saves to the metadata endpoint. Only saved if metadata has been added
+          // and if the currentVersion attr changed that's because we added it (only happens if they don't have read access to metadata on mode = update which does not allow you to change metadata)
+          if (isV2 && changedKeys.length > 0 && changedKeys[0] !== 'currentVersion') {
             // save secret metadata
             secret
               .save()
@@ -134,7 +145,7 @@ export default class SecretCreateOrUpdate extends Component {
               })
               .catch(e => {
                 // when mode is not create the metadata error is handled in secret-edit-metadata
-                if (this.mode === 'create') {
+                if (this.args.mode === 'create') {
                   this.error = e.errors.join(' ');
                 }
                 return;

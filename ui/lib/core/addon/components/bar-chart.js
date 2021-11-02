@@ -19,6 +19,7 @@
  * @param {string} title - title of the chart
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend
  * @param {object} dataset - dataset for the chart
+ * @param {array} tooltipData - misc. information needed to display tooltip (i.e. total clients from query params)
  * @param {string} [description] - description of the chart
  * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis
  * @param {function} [onClick] - takes function from parent and passes it to click event on data bars
@@ -64,10 +65,6 @@ class BarChartComponent extends Component {
     return this.args.mapLegend;
   }
 
-  get dataset() {
-    return this.args.dataset || null;
-  }
-
   hasLegend() {
     if (!this.args.mapLegend || !Array.isArray(this.args.mapLegend)) {
       return false;
@@ -78,12 +75,12 @@ class BarChartComponent extends Component {
   }
 
   @action
-  renderBarChart(element) {
+  renderBarChart(element, args) {
     let elementId = guidFor(element);
-    let totalCount = this.dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
+    let dataset = args[0];
+    let totalCount = args[1];
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
-    let dataset = this.dataset;
     let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
     // creates an array of data for each map legend key
     // each array contains coordinates for each data bar
@@ -94,7 +91,7 @@ class BarChartComponent extends Component {
     container
       .append('div')
       .attr('class', 'chart-tooltip')
-      .attr('style', 'position: fixed; opacity: 0;')
+      .attr('style', 'position: absolute; opacity: 0;')
       .style('color', 'white')
       .style('background', `${TOOLTIP_BACKGROUND}`)
       .style('font-size', '.929rem')
@@ -117,6 +114,8 @@ class BarChartComponent extends Component {
     // creates group for each array of stackedData
     let groups = chartSvg
       .selectAll('g')
+      .remove()
+      .exit()
       .data(stackedData)
       .enter()
       .append('g')
@@ -124,8 +123,8 @@ class BarChartComponent extends Component {
       .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`)
       .style('fill', (d, i) => BAR_COLOR_DEFAULT[i]);
 
-    let yAxis = axisLeft(yScale);
-    yAxis(groups.append('g'));
+    let yAxis = axisLeft(yScale).tickSize(0);
+    yAxis(chartSvg.append('g').attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top})`));
 
     let truncate = selection =>
       selection.text(string =>
@@ -134,14 +133,15 @@ class BarChartComponent extends Component {
 
     chartSvg.selectAll('.tick text').call(truncate);
 
-    let rects = groups
+    groups
       .selectAll('rect')
-      .data(d => d)
+      // iterate through the stacked data and chart respectively
+      .data(stackedData => stackedData)
       .enter()
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', chartData => `${xScale(chartData[1] - chartData[0] - 5)}%`)
+      .attr('width', chartData => `${xScale(chartData[1] - chartData[0]) - 0.25}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', chartData => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
@@ -214,11 +214,11 @@ class BarChartComponent extends Component {
         select('.chart-tooltip')
           .style('opacity', 1)
           .style('max-width', '200px')
-          .style('left', `${event.pageX - 90}px`)
-          .style('top', `${event.pageY - 90}px`)
+          .style('left', `${event.pageX - 325}px`)
+          .style('top', `${event.pageY - 140}px`)
           .text(
             `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
-            ${chartData.distinct_entities} unique entities, ${chartData.non_entity_tokens} active tokens.
+            ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
           `
           );
       });
@@ -264,8 +264,8 @@ class BarChartComponent extends Component {
       .on('mousemove', function(chartData) {
         if (chartData.label.length >= CHAR_LIMIT) {
           select('.chart-tooltip')
-            .style('left', `${event.pageX - 100}px`)
-            .style('top', `${event.pageY - 50}px`)
+            .style('left', `${event.pageX - 300}px`)
+            .style('top', `${event.pageY - 100}px`)
             .text(`${chartData.label}`)
             .style('max-width', 'fit-content');
         } else {
@@ -273,21 +273,11 @@ class BarChartComponent extends Component {
         }
       });
 
-    // TODO: these render twice, need to only render and append once per line
-    // creates total count text and coordinates to display to the right of data bars
-    let totalCountData = [];
-    rects.each(function(d) {
-      let textDatum = {
-        total: d.data.total,
-        x: parseFloat(select(this).attr('width')) + parseFloat(select(this).attr('x')),
-        y: parseFloat(select(this).attr('y')) + parseFloat(select(this).attr('height')),
-      };
-      totalCountData.push(textDatum);
-    });
-
-    groups
+    chartSvg
+      .append('g')
+      .attr('transform', `translate(${CHART_MARGIN.left}, ${CHART_MARGIN.top + 2})`)
       .selectAll('text')
-      .data(totalCountData)
+      .data(dataset)
       .enter()
       .append('text')
       .text(d => d.total)
@@ -295,13 +285,13 @@ class BarChartComponent extends Component {
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
-      .attr('y', d => `${d.y}`)
-      .attr('x', d => `${d.x + 1}%`);
+      .attr('alignment-baseline', 'mathematical')
+      .attr('x', chartData => `${xScale(chartData.total)}%`)
+      .attr('y', chartData => yScale(chartData.label));
 
-    // removes axes lines
-    groups.selectAll('.domain, .tick line').remove();
+    chartSvg.select('.domain').remove();
 
-    // TODO: make more flexible, make legend a div instead of svg?
+    // TODO: if mapLegend has more than 4 keys, y attrs ('cy' and 'y') will need to be set to a variable. Currently map keys are centered in the legend SVG (50%)
     // each map key symbol & label takes up 20% of legend SVG width
     let startingXCoordinate = 100 - this.mapLegend.length * 20; // subtract from 100% to find starting x-coordinate
     let legendSvg = select('.legend');

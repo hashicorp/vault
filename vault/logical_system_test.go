@@ -207,9 +207,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -308,9 +309,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -2476,9 +2478,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"accessor":                resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
 				"uuid":                    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
-					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-					"force_no_cache":    false,
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -3306,15 +3309,15 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			assert(t, actualResp != nil, "response is nil")
-			assert(t, actualResp.Data != nil, "expected data, got nil")
+			assertTrue(t, actualResp != nil, "response is nil")
+			assertTrue(t, actualResp.Data != nil, "expected data, got nil")
 			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
 			assertIsString(t, actualResp.Data["password"], "password key should have a string value")
 			password := actualResp.Data["password"].(string)
 
 			// Delete the password so the rest of the response can be compared
 			delete(actualResp.Data, "password")
-			assert(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
+			assertTrue(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
 
 			// Check to make sure the password is correctly formatted
 			passwordLength := len([]rune(password))
@@ -3331,7 +3334,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	})
 }
 
-func assert(t *testing.T, pass bool, f string, vals ...interface{}) {
+func assertTrue(t *testing.T, pass bool, f string, vals ...interface{}) {
 	t.Helper()
 	if !pass {
 		t.Fatalf(f, vals...)

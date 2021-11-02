@@ -27,6 +27,7 @@ _testmain.go
 # Other dirs
 /bin/
 /pkg/
+/vendor
 
 # Generated Web UI goes here
 /http/web_ui/**

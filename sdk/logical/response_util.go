@@ -17,7 +17,7 @@ import (
 func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	if err == nil && (resp == nil || !resp.IsError()) {
 		switch {
-		case req.Operation == ReadOperation:
+		case req.Operation == ReadOperation, req.Operation == PatchOperation:
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}
@@ -143,6 +143,10 @@ func AdjustErrorStatusCode(status *int, err error) {
 
 	// Adjust status code when sealed
 	if errwrap.Contains(err, consts.ErrSealed.Error()) {
+		*status = http.StatusServiceUnavailable
+	}
+
+	if errwrap.Contains(err, consts.ErrAPILocked.Error()) {
 		*status = http.StatusServiceUnavailable
 	}
 

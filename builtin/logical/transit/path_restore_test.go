@@ -231,7 +231,7 @@ func TestTransit_Restore(t *testing.T) {
 				Storage:   s,
 			}
 
-			resp, err = b.HandleRequest(context.Background(), readReq)
+			resp, _ = b.HandleRequest(context.Background(), readReq)
 			if resp != nil && resp.IsError() {
 				t.Fatalf("resp: %#v\nerr: %v", resp, err)
 			}

@@ -28,7 +28,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
   value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `hashicorp/vault:1.8.1`.
+  not needed. Defaults to `hashicorp/vault:1.8.4`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -183,6 +183,8 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-copy-volume-mounts` - copies the mounts from the specified
   container and mounts them to the Vault Agent containers. The service account volume is
   ignored.
+
+- `vault.hashicorp.com/agent-service-account-token-volume-name` - the optional name of a projected volume containing a service account token for use with auto-auth against Vault's Kubernetes auth method. If the volume is mounted to another container in the deployment, the token volume will be mounted to the same location in the vault-agent containers. Otherwise it will be mounted at the default location of `/var/run/secrets/vault.hashicorp.com/serviceaccount/`.
 
 ## Vault Annotations
 

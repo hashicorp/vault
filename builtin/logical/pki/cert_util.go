@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -11,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"regexp"
@@ -329,7 +331,9 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				// is enabled
 				if data.role.AllowBareDomains &&
 					(strings.EqualFold(sanitizedName, currDomain) ||
-						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
+						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
+							// Handle the use case of AllowedDomain being an email address
+							(isEmail && strings.EqualFold(name, currDomain))) {
 					valid = true
 					break
 				}
@@ -449,7 +453,8 @@ func generateCert(ctx context.Context,
 	b *backend,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
-	isCA bool) (*certutil.ParsedCertBundle, error) {
+	isCA bool,
+	randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
 
 	if input.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
@@ -494,7 +499,7 @@ func generateCert(ctx context.Context,
 		}
 	}
 
-	parsedBundle, err := certutil.CreateCertificate(data)
+	parsedBundle, err := certutil.CreateCertificateWithRandomSource(data, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +509,7 @@ func generateCert(ctx context.Context,
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
-func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCSRBundle, error) {
+func generateIntermediateCSR(b *backend, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
 	creation, err := generateCreationBundle(b, input, nil, nil)
 	if err != nil {
 		return nil, err
@@ -514,7 +519,7 @@ func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCS
 	}
 
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
-	parsedBundle, err := certutil.CreateCSR(creation, addBasicConstraints)
+	parsedBundle, err := certutil.CreateCSRWithRandomSource(creation, addBasicConstraints, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -591,6 +596,18 @@ func signCert(b *backend,
 				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
 				data.role.KeyBits,
 				pubKey.Params().BitSize)}
+		}
+
+	case "ed25519":
+		// Verify that the key matches the role type
+		if csr.PublicKeyAlgorithm != x509.PublicKeyAlgorithm(x509.Ed25519) {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"role requires keys of type %s",
+				data.role.KeyType)}
+		}
+		_, ok := csr.PublicKey.(ed25519.PublicKey)
+		if !ok {
+			return nil, errutil.UserError{Err: "could not parse CSR's public key"}
 		}
 
 	case "any":

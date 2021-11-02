@@ -49,10 +49,10 @@ export default Model.extend(Validations, {
   }),
   // KV 2 additional config default options
   maxVersions: attr('number', {
-    defaultValue: 10,
+    defaultValue: 0,
     label: 'Maximum number of versions',
     subText:
-      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value.',
+      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value. When 0 is used or the value is unset, Vault will keep 10 versions.',
   }),
   casRequired: attr('boolean', {
     defaultValue: false,
@@ -80,8 +80,9 @@ export default Model.extend(Validations, {
 
   isV2KV: computed.equal('modelTypeForKV', 'secret-v2'),
 
-  formFields: computed('engineType', function() {
+  formFields: computed('engineType', 'options.version', function() {
     let type = this.engineType;
+    let version = this.options?.version;
     let fields = [
       'type',
       'path',
@@ -93,6 +94,10 @@ export default Model.extend(Validations, {
     ];
     if (type === 'kv' || type === 'generic') {
       fields.push('options.{version}');
+    }
+    // version comes in as number not string
+    if (type === 'kv' && version === 2) {
+      fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     return fields;
   }),
