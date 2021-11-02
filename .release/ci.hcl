@@ -118,8 +118,21 @@ event "sign" {
   }
 }
 
-event "verify" {
+event "sign-linux-rpms" {
   depends = ["sign"]
+  action "sign-linux-rpms" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "sign-linux-rpms"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
+
+event "verify" {
+  depends = ["sign-linux-rpms"]
   action "verify" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
