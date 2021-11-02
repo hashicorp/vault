@@ -1002,18 +1002,18 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
+            // On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
             # The appended true condition ensures the command will succeed if no packages are found
             if [ $USE_DOCKER == 1 ]; then
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
                   select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
             else
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list-json jq -r 'select(.Deps != null) |
                   select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
@@ -1273,18 +1273,18 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
+            // On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
             # The appended true condition ensures the command will succeed if no packages are found
             if [ $USE_DOCKER == 1 ]; then
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
                   select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
             else
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list-json jq -r 'select(.Deps != null) |
                   select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
@@ -1795,18 +1795,18 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
+            // On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
             # The appended true condition ensures the command will succeed if no packages are found
             if [ $USE_DOCKER == 1 ]; then
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
                   select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
             else
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list-json jq -r 'select(.Deps != null) |
                   select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
@@ -2461,18 +2461,18 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
+            // On its own line so that -e will fail the tests if we detect errors here.
+            go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
             # The appended true condition ensures the command will succeed if no packages are found
             if [ $USE_DOCKER == 1 ]; then
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list.json jq -r 'select(.Deps != null) |
                   select(any(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker"))) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
             else
-              package_names=$(go list -test -json ./... |
-                jq -r 'select(.Deps != null) |
+              package_names=$(< test-list-json jq -r 'select(.Deps != null) |
                   select(all(.Deps[] ; contains("github.com/hashicorp/vault/helper/testhelpers/docker")|not)) |
                   .ForTest | select(. != null)' |
                   sort -u | grep -v vault/integ | circleci tests split --split-by=timings --timings-type=classname) || true
