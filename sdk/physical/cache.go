@@ -184,10 +184,8 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 		return nil, err
 	}
 
-	if ent != nil {
-		// Cache the result
-		c.lru.Add(key, ent)
-	}
+	// Cache the result, even if nil
+	c.lru.Add(key, ent)
 
 	return ent, nil
 }
