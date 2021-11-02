@@ -36,7 +36,7 @@ func (i *InternalTokenHelper) populateTokenPath() {
 	location := os.Getenv(EnvTokenFileLocation)
 
 	if len(location) == 0 {
-		location = filepath.Join(i.homeDir, location)
+		location = filepath.Join(i.homeDir, filename)
 	} else if !strings.Contains(location, filename) {
 		location = filepath.Join(location, filename)
 	}
