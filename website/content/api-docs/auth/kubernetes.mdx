@@ -39,7 +39,7 @@ access the Kubernetes API.
   keys.
 - `issuer` `(string: "")` - Optional JWT issuer. If no issuer is specified, then this plugin will
   use `kubernetes/serviceaccount` as the default issuer. See [these instructions](/docs/platform/k8s/csi#setting-issuer-for-kubernetes-authentication) for looking up the issuer for a given Kubernetes cluster.
-- `disable_iss_validation` `(bool: false)` - Disable JWT issuer validation. Allows to skip ISS validation.
+- `disable_iss_validation` `(bool: true)` - Disable JWT issuer validation. Allows to skip ISS validation.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 
 ### Caveats
