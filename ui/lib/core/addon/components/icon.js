@@ -2,6 +2,8 @@
  * @module Icon
  * `Icon` components are glyphs used to indicate important information.
  *
+ * Flight icon documentation at https://flight-hashicorp.vercel.app/
+ *
  * @example
  * ```js
  * <Icon @name="cancel-square-outline" />

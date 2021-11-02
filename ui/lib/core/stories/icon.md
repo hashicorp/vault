@@ -3,12 +3,15 @@
 ## Icon
 `Icon` components are glyphs used to indicate important information.
 
+Flight icon documentation at https://flight-hashicorp.vercel.app/
+
 **Params**
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| glyph | <code>String</code> | <code></code> | The name of the SVG to render inline. |
-| [size] | <code>String</code> | <code>&#x27;m&#x27;</code> | The size of the Icon, can be one of 's', 'm', 'l', 'xlm', 'xl', 'xxl'. The default is 'm'. |
+| name | <code>String</code> | <code></code> | The name of the SVG to render inline. |
+| [sizeClass] | <code>String</code> | <code>&#x27;m&#x27;</code> | Used for sizing the hs-icon, can be one of 's', 'm', 'l', 'xlm', 'xl', 'xxl'. The default is 'm'. |
+| [size] | <code>String</code> | <code>&quot;16&quot;</code> | size for flight icon, can be 16 or 24 |
 
 **Example**
   
