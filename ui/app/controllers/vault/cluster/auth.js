@@ -9,9 +9,10 @@ export default Controller.extend({
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
-  queryParams: [{ authMethod: 'with' }],
+  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
+  oidcProvider: '',
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
 

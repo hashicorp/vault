@@ -25,7 +25,7 @@ There can be many different types of clients that authenticate and communicate w
 2. **Applications or Microservices:** 2-Factor Authentication methods such as AppRole, or by LDAP, Active Directory, or based on the platform’s identity, such as credentials from AWS, Azure, GCP, AliCloud, OCI, Kubernetes, Cloud Foundry, etc.
 3. **[Servers and Platforms](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#machine-programmatic-authentication):** VMs, Containers, Pods (Identified by LDAP, Active Directory service accounts, AWS, Azure, GCP, AliCloud, OCI, Kubernetes, TLS Certs
 4. **Orchestrators:** Nomad, Terraform, Ansible, or Continuous Integration Continuous Delivery (CI/CD) Pipelines where each pipeline usually identified by 2FA methods, App Role, or platform based identity
-5. **Vault Agents******:**** acting on behalf of a app/microsevice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
+5. **[Vault Agents](/docs/agent/autoauth):** acting on behalf of a app/microsevice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
 6. **Tokens**: which are not tied to any identities at all. **_These should be used sparingly._**
    Hashicorp recommends always associating tokens to an entity alias and token role.
 
@@ -69,13 +69,13 @@ How does this relate to Vault clients? As outlined above, and as an example, if 
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | **[AliCloud](https://www.vaultproject.io/docs/auth/alicloud)**                                   | Principal ID                                                                         |
 | **[AppRole](https://www.vaultproject.io/api-docs/auth/approle#create-update-approle)**           | Role ID                                                                              |
-| **[AWS IAM](https://www.vaultproject.io/docs/auth/aws)**                                         | Configurable via iam_alias to one of: Role ID (default), IAM unique ID, Full ARN     |
-| **[AWS EC2](https://www.vaultproject.io/docs/auth/aws)**                                         | Configurable via ec2_alias to one of: Role ID (default), EC2 instance ID, AMI ID     |
-| **[Azure](https://www.vaultproject.io/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)\*\*                                                         |
+| **[AWS IAM](https://www.vaultproject.io/docs/auth/aws#iam-auth-method)**                         | Configurable via iam_alias to one of: Role ID (default), IAM unique ID, Full ARN     |
+| **[AWS EC2](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method)**                         | Configurable via ec2_alias to one of: Role ID (default), EC2 instance ID, AMI ID     |
+| **[Azure](https://www.vaultproject.io/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)                                                             |
 | **[Cloud Foundry](https://www.vaultproject.io/docs/auth/cf)**                                    | App ID                                                                               |
 | **[GitHub](https://www.vaultproject.io/docs/auth/github)**                                       | User login name associated with token                                                |
 | **[Google Cloud](https://www.vaultproject.io/api-docs/auth/gcp#create-role)**                    | Configurable via iam_alias to one of: Role ID (default), Service account unique ID   |
-| **[JWT/OIDC](https://www.vaultproject.io/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)\*\*    |
+| **[JWT/OIDC](https://www.vaultproject.io/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)        |
 | **[Kerberos](https://www.vaultproject.io/docs/auth/kerberos)**                                   | Username                                                                             |
 | **[Kubernetes](https://www.vaultproject.io/api-docs/auth/kubernetes#create-role)**               | Service account UID                                                                  |
 | **[LDAP](https://www.vaultproject.io/docs/auth/ldap)**                                           | Username                                                                             |
@@ -83,9 +83,9 @@ How does this relate to Vault clients? As outlined above, and as an example, if 
 | **[Okta](https://www.vaultproject.io/api-docs/auth/okta#register-user)**                         | Username                                                                             |
 | **[RADIUS](https://www.vaultproject.io/docs/auth/radius)**                                       | Username                                                                             |
 | **[TLS Certificate](https://www.vaultproject.io/api-docs/auth/cert#create-ca-certificate-role)** | Subject CommonName                                                                   |
-| **[Token](https://www.vaultproject.io/docs/auth/token)**                                         | entity_alias, if provided (Note: please ensure that entity_alias is always used)\*\* |
+| **[Token](https://www.vaultproject.io/docs/auth/token)**                                         | entity_alias, if provided (Note: please ensure that entity_alias is always used)     |
 | **[Username/Password](https://www.vaultproject.io/api-docs/auth/userpass#create-update-user)**   | Username                                                                             |
-|                                                                                                  |                                                                                      |
+
 
 ## Considerations with CI/CD
 
