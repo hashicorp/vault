@@ -1002,7 +1002,7 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
-            // On its own line so that -e will fail the tests if we detect errors here.
+            # On its own line so that -e will fail the tests if we detect errors here.
             go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
@@ -1273,7 +1273,7 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
-            // On its own line so that -e will fail the tests if we detect errors here.
+            # On its own line so that -e will fail the tests if we detect errors here.
             go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
@@ -1795,7 +1795,7 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
-            // On its own line so that -e will fail the tests if we detect errors here.
+            # On its own line so that -e will fail the tests if we detect errors here.
             go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
@@ -2461,7 +2461,7 @@ jobs:
           for dir in "${modules[@]}"
           do
             pushd "$dir"
-            // On its own line so that -e will fail the tests if we detect errors here.
+            # On its own line so that -e will fail the tests if we detect errors here.
             go list -test -json ./... > test-list.json
             # Split Go tests by prior test times.  If use_docker is true, only run
             # tests that depend on docker, otherwise only those that don't.
