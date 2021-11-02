@@ -1,0 +1,3 @@
+```release-note:feature
+core/token: Added possibility to load `.vault-token` file from non-standard path (outside Home directory), specified by the environment variable `VAULT_CLI_TOKEN_FILE`.
+```
