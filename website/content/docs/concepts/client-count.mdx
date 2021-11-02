@@ -216,7 +216,7 @@ Consumers of the audit log will be able to distinguish between a non-entity `cli
 `client_id` that is also an entity IDs by either:
 A. Comparing the value of the `client_id` in the request with the value of the `entity_id` in the `Auth`
 section of the response and checking if they are the same.
-B. Checking that the format of the `client_id` is `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`(this signifies 
+B. Checking that the format of the `client_id` is `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` (this signifies 
 that the `client_id` is an `entity_id`, versus a `client_id` which appears to be a base64 encoding 
 signifies that the `client_id` is associated with a non-entity token). 
 
