@@ -211,8 +211,8 @@ page.
 - `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
    or `"forward"`.
 
--> **Note:** When the `cache` block is defined, either a
-[template][agent-template] or a [listener][agent-listener] must also be defined
+-> **Note:** When the `cache` block is defined, at least one
+[template][agent-template] or [listener][agent-listener] must also be defined
 in the config, otherwise there is no way to utilize the cache.
 
 [agent-template]: /docs/agent/template
