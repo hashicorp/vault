@@ -106,6 +106,12 @@ type GetObjectResponse struct {
 	// Content-Encoding header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.11.
 	ContentEncoding *string `presentIn:"header" name:"content-encoding"`
 
+	// Cache-Control header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.9.
+	CacheControl *string `presentIn:"header" name:"cache-control"`
+
+	// Content-Disposition header, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 19.5.1
+	ContentDisposition *string `presentIn:"header" name:"content-disposition"`
+
 	// The object modification time, as described in RFC 2616 (https://tools.ietf.org/rfc/rfc2616), section 14.29.
 	LastModified *common.SDKTime `presentIn:"header" name:"last-modified"`
 

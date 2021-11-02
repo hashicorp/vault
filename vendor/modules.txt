@@ -292,12 +292,13 @@ github.com/couchbase/gocbcore/v9/memd
 github.com/couchbase/gocbcore/v9/scram
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/denisenkom/go-mssqldb v0.0.0-20200428022330-06a60b6afbbc
+# github.com/denisenkom/go-mssqldb v0.11.0
 ## explicit
 github.com/denisenkom/go-mssqldb
 github.com/denisenkom/go-mssqldb/internal/cp
 github.com/denisenkom/go-mssqldb/internal/decimal
 github.com/denisenkom/go-mssqldb/internal/querytext
+github.com/denisenkom/go-mssqldb/msdsn
 # github.com/denverdino/aliyungo v0.0.0-20170926055100-d3308649c661
 github.com/denverdino/aliyungo/common
 github.com/denverdino/aliyungo/ecs
@@ -528,12 +529,12 @@ github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.7.0
 ## explicit
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.16.1
+# github.com/hashicorp/go-hclog v0.16.2
 ## explicit
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
 github.com/hashicorp/go-immutable-radix
-# github.com/hashicorp/go-kms-wrapping v0.5.16
+# github.com/hashicorp/go-kms-wrapping v0.6.8
 ## explicit
 github.com/hashicorp/go-kms-wrapping
 github.com/hashicorp/go-kms-wrapping/internal/xor
@@ -568,6 +569,9 @@ github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/go-rootcerts v1.0.2
 ## explicit
 github.com/hashicorp/go-rootcerts
+# github.com/hashicorp/go-secure-stdlib/awsutil v0.1.2
+## explicit
+github.com/hashicorp/go-secure-stdlib/awsutil
 # github.com/hashicorp/go-slug v0.4.1
 github.com/hashicorp/go-slug
 # github.com/hashicorp/go-sockaddr v1.0.2
@@ -702,10 +706,10 @@ github.com/hashicorp/vault-plugin-secrets-openldap/client
 # github.com/hashicorp/vault-plugin-secrets-terraform v0.1.0
 ## explicit
 github.com/hashicorp/vault-plugin-secrets-terraform
-# github.com/hashicorp/vault/api v1.0.5-0.20210210214158-405eced08457 => ./api
+# github.com/hashicorp/vault/api v1.1.1 => ./api
 ## explicit
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.2.1-0.20210927220619-d41fb44977e1 => ./sdk
+# github.com/hashicorp/vault/sdk v0.2.1-0.20211101201606-6453490da33b => ./sdk
 ## explicit
 github.com/hashicorp/vault/sdk/database/dbplugin
 github.com/hashicorp/vault/sdk/database/dbplugin/v5
@@ -975,7 +979,7 @@ github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/openlyinc/pointy v1.1.2
 github.com/openlyinc/pointy
-# github.com/oracle/oci-go-sdk v12.5.0+incompatible
+# github.com/oracle/oci-go-sdk v13.1.0+incompatible
 ## explicit
 github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/common/auth
@@ -1137,6 +1141,7 @@ github.com/stretchr/testify/require
 # github.com/svanharmelen/jsonapi v0.0.0-20180618144545-0c0828c3f16d
 github.com/svanharmelen/jsonapi
 # github.com/tencentcloud/tencentcloud-sdk-go v3.0.171+incompatible
+## explicit
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http

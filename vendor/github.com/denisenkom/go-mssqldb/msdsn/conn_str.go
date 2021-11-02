@@ -1,7 +1,10 @@
-package mssql
+package msdsn
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -11,49 +14,105 @@ import (
 	"unicode"
 )
 
-const defaultServerPort = 1433
+type (
+	Encryption int
+	Log        uint64
+)
 
-type connectParams struct {
-	logFlags                  uint64
-	port                      uint64
-	host                      string
-	instance                  string
-	database                  string
-	user                      string
-	password                  string
-	dial_timeout              time.Duration
-	conn_timeout              time.Duration
-	keepAlive                 time.Duration
-	encrypt                   bool
-	disableEncryption         bool
-	trustServerCertificate    bool
-	certificate               string
-	hostInCertificate         string
-	hostInCertificateProvided bool
-	serverSPN                 string
-	workstation               string
-	appname                   string
-	typeFlags                 uint8
-	failOverPartner           string
-	failOverPort              uint64
-	packetSize                uint16
-	fedAuthAccessToken        string
+const (
+	EncryptionOff      = 0
+	EncryptionRequired = 1
+	EncryptionDisabled = 3
+)
+
+const (
+	LogErrors      Log = 1
+	LogMessages    Log = 2
+	LogRows        Log = 4
+	LogSQL         Log = 8
+	LogParams      Log = 16
+	LogTransaction Log = 32
+	LogDebug       Log = 64
+	LogRetries     Log = 128
+)
+
+type Config struct {
+	Port       uint64
+	Host       string
+	Instance   string
+	Database   string
+	User       string
+	Password   string
+	Encryption Encryption
+	TLSConfig  *tls.Config
+
+	FailOverPartner string
+	FailOverPort    uint64
+
+	// If true the TLSConfig servername should use the routed server.
+	HostInCertificateProvided bool
+
+	// Read Only intent for application database.
+	// NOTE: This does not make queries to most databases read-only.
+	ReadOnlyIntent bool
+
+	LogFlags Log
+
+	ServerSPN   string
+	Workstation string
+	AppName     string
+
+	// If true disables database/sql's automatic retry of queries
+	// that start on bad connections.
+	DisableRetry bool
+
+	// Do not use the following.
+
+	DialTimeout time.Duration // DialTimeout defaults to 15s. Set negative to disable.
+	ConnTimeout time.Duration // Use context for timeouts.
+	KeepAlive   time.Duration // Leave at default.
+	PacketSize  uint16
 }
 
-func parseConnectParams(dsn string) (connectParams, error) {
-	var p connectParams
+func SetupTLS(certificate string, insecureSkipVerify bool, hostInCertificate string) (*tls.Config, error) {
+	var config tls.Config
+	if certificate != "" {
+		pem, err := ioutil.ReadFile(certificate)
+		if err != nil {
+			return nil, fmt.Errorf("cannot read certificate %q: %v", certificate, err)
+		}
+		certs := x509.NewCertPool()
+		certs.AppendCertsFromPEM(pem)
+		config.RootCAs = certs
+	}
+	if insecureSkipVerify {
+		config.InsecureSkipVerify = true
+	}
+	config.ServerName = hostInCertificate
+
+	// fix for https://github.com/denisenkom/go-mssqldb/issues/166
+	// Go implementation of TLS payload size heuristic algorithm splits single TDS package to multiple TCP segments,
+	// while SQL Server seems to expect one TCP segment per encrypted TDS package.
+	// Setting DynamicRecordSizingDisabled to true disables that algorithm and uses 16384 bytes per TLS package
+	config.DynamicRecordSizingDisabled = true
+
+	return &config, nil
+}
+
+func Parse(dsn string) (Config, map[string]string, error) {
+	p := Config{}
 
 	var params map[string]string
 	if strings.HasPrefix(dsn, "odbc:") {
 		parameters, err := splitConnectionStringOdbc(dsn[len("odbc:"):])
 		if err != nil {
-			return p, err
+			return p, params, err
 		}
 		params = parameters
 	} else if strings.HasPrefix(dsn, "sqlserver://") {
 		parameters, err := splitConnectionStringURL(dsn)
 		if err != nil {
-			return p, err
+			return p, params, err
 		}
 		params = parameters
 	} else {
@@ -62,57 +121,55 @@ func parseConnectParams(dsn string) (connectParams, error) {
 
 	strlog, ok := params["log"]
 	if ok {
-		var err error
-		p.logFlags, err = strconv.ParseUint(strlog, 10, 64)
+		flags, err := strconv.ParseUint(strlog, 10, 64)
 		if err != nil {
-			return p, fmt.Errorf("Invalid log parameter '%s': %s", strlog, err.Error())
+			return p, params, fmt.Errorf("invalid log parameter '%s': %s", strlog, err.Error())
 		}
+		p.LogFlags = Log(flags)
 	}
 	server := params["server"]
 	parts := strings.SplitN(server, `\`, 2)
-	p.host = parts[0]
-	if p.host == "." || strings.ToUpper(p.host) == "(LOCAL)" || p.host == "" {
-		p.host = "localhost"
+	p.Host = parts[0]
+	if p.Host == "." || strings.ToUpper(p.Host) == "(LOCAL)" || p.Host == "" {
+		p.Host = "localhost"
 	}
 	if len(parts) > 1 {
-		p.instance = parts[1]
+		p.Instance = parts[1]
 	}
-	p.database = params["database"]
-	p.user = params["user id"]
-	p.password = params["password"]
+	p.Database = params["database"]
+	p.User = params["user id"]
+	p.Password = params["password"]
 
-	p.port = 0
+	p.Port = 0
 	strport, ok := params["port"]
 	if ok {
 		var err error
-		p.port, err = strconv.ParseUint(strport, 10, 16)
+		p.Port, err = strconv.ParseUint(strport, 10, 16)
 		if err != nil {
-			f := "Invalid tcp port '%v': %v"
-			return p, fmt.Errorf(f, strport, err.Error())
+			f := "invalid tcp port '%v': %v"
+			return p, params, fmt.Errorf(f, strport, err.Error())
 		}
 	}
 
-	// https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/configure-the-network-packet-size-server-configuration-option
-	// Default packet size remains at 4096 bytes
-	p.packetSize = 4096
+	// https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/configure-the-network-packet-size-server-configuration-option\
 	strpsize, ok := params["packet size"]
 	if ok {
 		var err error
 		psize, err := strconv.ParseUint(strpsize, 0, 16)
 		if err != nil {
-			f := "Invalid packet size '%v': %v"
-			return p, fmt.Errorf(f, strpsize, err.Error())
+			f := "invalid packet size '%v': %v"
+			return p, params, fmt.Errorf(f, strpsize, err.Error())
 		}
 
 		// Ensure packet size falls within the TDS protocol range of 512 to 32767 bytes
 		// NOTE: Encrypted connections have a maximum size of 16383 bytes.  If you request
 		// a higher packet size, the server will respond with an ENVCHANGE request to
 		// alter the packet size to 16383 bytes.
-		p.packetSize = uint16(psize)
-		if p.packetSize < 512 {
-			p.packetSize = 512
-		} else if p.packetSize > 32767 {
-			p.packetSize = 32767
+		p.PacketSize = uint16(psize)
+		if p.PacketSize < 512 {
+			p.PacketSize = 512
+		} else if p.PacketSize > 32767 {
+			p.PacketSize = 32767
 		}
 	}
 
@@ -123,79 +180,95 @@ func parseConnectParams(dsn string) (connectParams, error) {
 	if strconntimeout, ok := params["connection timeout"]; ok {
 		timeout, err := strconv.ParseUint(strconntimeout, 10, 64)
 		if err != nil {
-			f := "Invalid connection timeout '%v': %v"
-			return p, fmt.Errorf(f, strconntimeout, err.Error())
+			f := "invalid connection timeout '%v': %v"
+			return p, params, fmt.Errorf(f, strconntimeout, err.Error())
 		}
-		p.conn_timeout = time.Duration(timeout) * time.Second
+		p.ConnTimeout = time.Duration(timeout) * time.Second
 	}
-	p.dial_timeout = 15 * time.Second
+	p.DialTimeout = 15 * time.Second
 	if strdialtimeout, ok := params["dial timeout"]; ok {
 		timeout, err := strconv.ParseUint(strdialtimeout, 10, 64)
 		if err != nil {
-			f := "Invalid dial timeout '%v': %v"
-			return p, fmt.Errorf(f, strdialtimeout, err.Error())
+			f := "invalid dial timeout '%v': %v"
+			return p, params, fmt.Errorf(f, strdialtimeout, err.Error())
 		}
-		p.dial_timeout = time.Duration(timeout) * time.Second
+		p.DialTimeout = time.Duration(timeout) * time.Second
 	}
 
 	// default keep alive should be 30 seconds according to spec:
 	// https://msdn.microsoft.com/en-us/library/dd341108.aspx
-	p.keepAlive = 30 * time.Second
+	p.KeepAlive = 30 * time.Second
 	if keepAlive, ok := params["keepalive"]; ok {
 		timeout, err := strconv.ParseUint(keepAlive, 10, 64)
 		if err != nil {
-			f := "Invalid keepAlive value '%s': %s"
-			return p, fmt.Errorf(f, keepAlive, err.Error())
+			f := "invalid keepAlive value '%s': %s"
+			return p, params, fmt.Errorf(f, keepAlive, err.Error())
 		}
-		p.keepAlive = time.Duration(timeout) * time.Second
+		p.KeepAlive = time.Duration(timeout) * time.Second
 	}
+
+	var (
+		trustServerCert   = false
+		certificate       = ""
+		hostInCertificate = ""
+	)
 	encrypt, ok := params["encrypt"]
 	if ok {
 		if strings.EqualFold(encrypt, "DISABLE") {
-			p.disableEncryption = true
+			p.Encryption = EncryptionDisabled
 		} else {
-			var err error
-			p.encrypt, err = strconv.ParseBool(encrypt)
+			e, err := strconv.ParseBool(encrypt)
 			if err != nil {
-				f := "Invalid encrypt '%s': %s"
-				return p, fmt.Errorf(f, encrypt, err.Error())
+				f := "invalid encrypt '%s': %s"
+				return p, params, fmt.Errorf(f, encrypt, err.Error())
+			}
+			if e {
+				p.Encryption = EncryptionRequired
 			}
 		}
 	} else {
-		p.trustServerCertificate = true
+		trustServerCert = true
 	}
 	trust, ok := params["trustservercertificate"]
 	if ok {
 		var err error
-		p.trustServerCertificate, err = strconv.ParseBool(trust)
+		trustServerCert, err = strconv.ParseBool(trust)
 		if err != nil {
-			f := "Invalid trust server certificate '%s': %s"
-			return p, fmt.Errorf(f, trust, err.Error())
+			f := "invalid trust server certificate '%s': %s"
+			return p, params, fmt.Errorf(f, trust, err.Error())
 		}
 	}
-	p.certificate = params["certificate"]
-	p.hostInCertificate, ok = params["hostnameincertificate"]
+	certificate = params["certificate"]
+	hostInCertificate, ok = params["hostnameincertificate"]
 	if ok {
-		p.hostInCertificateProvided = true
+		p.HostInCertificateProvided = true
 	} else {
-		p.hostInCertificate = p.host
-		p.hostInCertificateProvided = false
+		hostInCertificate = p.Host
+		p.HostInCertificateProvided = false
+	}
+
+	if p.Encryption != EncryptionDisabled {
+		var err error
+		p.TLSConfig, err = SetupTLS(certificate, trustServerCert, hostInCertificate)
+		if err != nil {
+			return p, params, fmt.Errorf("failed to setup TLS: %w", err)
+		}
 	}
 
 	serverSPN, ok := params["serverspn"]
 	if ok {
-		p.serverSPN = serverSPN
+		p.ServerSPN = serverSPN
 	} else {
-		p.serverSPN = generateSpn(p.host, resolveServerPort(p.port))
+		p.ServerSPN = generateSpn(p.Host, p.Port)
 	}
 
 	workstation, ok := params["workstation id"]
 	if ok {
-		p.workstation = workstation
+		p.Workstation = workstation
 	} else {
 		workstation, err := os.Hostname()
 		if err == nil {
-			p.workstation = workstation
+			p.Workstation = workstation
 		}
 	}
 
@@ -203,34 +276,86 @@ func parseConnectParams(dsn string) (connectParams, error) {
 	if !ok {
 		appname = "go-mssqldb"
 	}
-	p.appname = appname
+	p.AppName = appname
 
 	appintent, ok := params["applicationintent"]
 	if ok {
 		if appintent == "ReadOnly" {
-			if p.database == "" {
-				return p, fmt.Errorf("Database must be specified when ApplicationIntent is ReadOnly")
+			if p.Database == "" {
+				return p, params, fmt.Errorf("database must be specified when ApplicationIntent is ReadOnly")
 			}
-			p.typeFlags |= fReadOnlyIntent
+			p.ReadOnlyIntent = true
 		}
 	}
 
 	failOverPartner, ok := params["failoverpartner"]
 	if ok {
-		p.failOverPartner = failOverPartner
+		p.FailOverPartner = failOverPartner
 	}
 
 	failOverPort, ok := params["failoverport"]
 	if ok {
 		var err error
-		p.failOverPort, err = strconv.ParseUint(failOverPort, 0, 16)
+		p.FailOverPort, err = strconv.ParseUint(failOverPort, 0, 16)
 		if err != nil {
-			f := "Invalid tcp port '%v': %v"
-			return p, fmt.Errorf(f, failOverPort, err.Error())
+			f := "invalid failover port '%v': %v"
+			return p, params, fmt.Errorf(f, failOverPort, err.Error())
 		}
 	}
 
-	return p, nil
+	disableRetry, ok := params["disableretry"]
+	if ok {
+		var err error
+		p.DisableRetry, err = strconv.ParseBool(disableRetry)
+		if err != nil {
+			f := "invalid disableRetry '%s': %s"
+			return p, params, fmt.Errorf(f, disableRetry, err.Error())
+		}
+	} else {
+		p.DisableRetry = disableRetryDefault
+	}
+
+	return p, params, nil
+}
+
+// convert connectionParams to url style connection string
+// used mostly for testing
+func (p Config) URL() *url.URL {
+	q := url.Values{}
+	if p.Database != "" {
+		q.Add("database", p.Database)
+	}
+	if p.LogFlags != 0 {
+		q.Add("log", strconv.FormatUint(uint64(p.LogFlags), 10))
+	}
+	host := p.Host
+	if p.Port > 0 {
+		host = fmt.Sprintf("%s:%d", p.Host, p.Port)
+	}
+	q.Add("disableRetry", fmt.Sprintf("%t", p.DisableRetry))
+	res := url.URL{
+		Scheme: "sqlserver",
+		Host:   host,
+		User:   url.UserPassword(p.User, p.Password),
+	}
+	if p.Instance != "" {
+		res.Path = p.Instance
+	}
+	if len(q) > 0 {
+		res.RawQuery = q.Encode()
+	}
+	return &res
+}
+
+var adoSynonyms = map[string]string{
+	"application name": "app name",
+	"data source":      "server",
+	"address":          "server",
+	"network address":  "server",
+	"addr":             "server",
+	"user":             "user id",
+	"uid":              "user id",
+	"initial catalog":  "database",
 }
 
 func splitConnectionString(dsn string) (res map[string]string) {
@@ -248,6 +373,20 @@ func splitConnectionString(dsn string) (res map[string]string) {
 		var value string = ""
 		if len(lst) > 1 {
 			value = strings.TrimSpace(lst[1])
+		}
+		synonym, hasSynonym := adoSynonyms[name]
+		if hasSynonym {
+			name = synonym
+		}
+		// "server" in ADO can include a protocol and a port.
+		// We only support tcp protocol
+		if name == "server" {
+			value = strings.TrimPrefix(value, "tcp:")
+			serverParts := strings.Split(value, ",")
+			if len(serverParts) == 2 && len(serverParts[1]) > 0 {
+				value = serverParts[0]
+				res["port"] = serverParts[1]
+			}
 		}
 		res[name] = value
 	}
@@ -340,7 +479,7 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 		case parserStateBeforeKey:
 			switch {
 			case c == '=':
-				return res, fmt.Errorf("Unexpected character = at index %d. Expected start of key or semi-colon or whitespace.", i)
+				return res, fmt.Errorf("unexpected character = at index %d. Expected start of key or semi-colon or whitespace", i)
 			case !unicode.IsSpace(c) && c != ';':
 				state = parserStateKey
 				key += string(c)
@@ -419,7 +558,7 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 			case unicode.IsSpace(c):
 				// Ignore whitespace
 			default:
-				return res, fmt.Errorf("Unexpected character %c at index %d. Expected semi-colon or whitespace.", c, i)
+				return res, fmt.Errorf("unexpected character %c at index %d. Expected semi-colon or whitespace", c, i)
 			}
 
 		case parserStateEndValue:
@@ -429,7 +568,7 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 			case unicode.IsSpace(c):
 				// Ignore whitespace
 			default:
-				return res, fmt.Errorf("Unexpected character %c at index %d. Expected semi-colon or whitespace.", c, i)
+				return res, fmt.Errorf("unexpected character %c at index %d. Expected semi-colon or whitespace", c, i)
 			}
 		}
 	}
@@ -444,7 +583,7 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 	case parserStateBareValue:
 		res[key] = strings.TrimRightFunc(value, unicode.IsSpace)
 	case parserStateBracedValue:
-		return res, fmt.Errorf("Unexpected end of braced value at index %d.", len(dsn))
+		return res, fmt.Errorf("unexpected end of braced value at index %d", len(dsn))
 	case parserStateBracedValueClosingBrace: // End of braced value
 		res[key] = value
 	case parserStateEndValue: // Okay
@@ -456,14 +595,6 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 // Normalizes the given string as an ODBC-format key
 func normalizeOdbcKey(s string) string {
 	return strings.ToLower(strings.TrimRightFunc(s, unicode.IsSpace))
-}
-
-func resolveServerPort(port uint64) uint64 {
-	if port == 0 {
-		return defaultServerPort
-	}
-
-	return port
 }
 
 func generateSpn(host string, port uint64) string {

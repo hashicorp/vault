@@ -34,7 +34,7 @@ type ObjectLifecycleRule struct {
 	// Years are defined as 365.2425 days long and likewise round up to the next midnight UTC.
 	TimeUnit ObjectLifecycleRuleTimeUnitEnum `mandatory:"true" json:"timeUnit"`
 
-	// A boolean that determines whether this rule is currently enabled.
+	// A Boolean that determines whether this rule is currently enabled.
 	IsEnabled *bool `mandatory:"true" json:"isEnabled"`
 
 	// A filter limiting object names that the rule will apply to.

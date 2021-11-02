@@ -6,16 +6,72 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	alias := &identity.Alias{
+		ID:            "testAliasID1",
+		CanonicalID:   "testEntityID",
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor",
+		Name:          "testAliasName",
+	}
+	alias2 := &identity.Alias{
+		ID:            "testAliasID2",
+		CanonicalID:   "testEntityID",
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor2",
+		Name:          "testAliasName2",
+	}
+	entity := &identity.Entity{
+		ID:       "testEntityID",
+		Name:     "testEntityName",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			alias,
+			alias2,
+		},
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("testEntityID"),
+	}
+
+	err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false)
+	require.NoError(t, err)
+
+	err = c.identityStore.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias, alias2})
+	require.NoError(t, err)
+
+	txn.Commit()
+
+	alias, err = c.identityStore.MemDBAliasByID("testAliasID1", false, false)
+	require.NoError(t, err)
+	require.Nil(t, alias)
+
+	alias, err = c.identityStore.MemDBAliasByID("testAliasID2", false, false)
+	require.NoError(t, err)
+	require.Nil(t, alias)
+
+	entity, err = c.identityStore.MemDBEntityByID("testEntityID", false)
+	require.NoError(t, err)
+
+	require.Len(t, entity.Aliases, 0)
+}
 
 func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	err := AddTestCredentialBackend("github", credGithub.Factory)
@@ -187,7 +243,8 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 
 func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	ctx := namespace.RootContext(nil)
-	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, ghAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
 	alias := &logical.Alias{
 		MountType:     "github",
 		MountAccessor: ghAccessor,
@@ -239,7 +296,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":           "githubuser2",
 			"canonical_id":   entity.ID,
-			"mount_accessor": ghAccessor,
+			"mount_accessor": upAccessor,
 		},
 	}
 
@@ -610,6 +667,48 @@ func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*Id
 	}
 
 	return c.identityStore, meGH.Accessor, c, root
+}
+
+func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, string, *Core) {
+	// Setup 2 auth backends, github and userpass
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, _, _ := TestCoreUnsealed(t)
+
+	githubMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err = c.enableCredential(ctx, githubMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+
+	err = c.enableCredential(ctx, userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return c.identityStore, githubMe.Accessor, userpassMe.Accessor, c
+
 }
 
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {

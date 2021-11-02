@@ -47,7 +47,8 @@ type Wrapper struct {
 
 	userAgent string
 
-	currentKeyID *atomic.Value
+	currentKeyID   *atomic.Value
+	keyNotRequired bool
 
 	client *cloudkms.KeyManagementClient
 }
@@ -59,7 +60,8 @@ func NewWrapper(opts *wrapping.WrapperOptions) *Wrapper {
 		opts = new(wrapping.WrapperOptions)
 	}
 	s := &Wrapper{
-		currentKeyID: new(atomic.Value),
+		currentKeyID:   new(atomic.Value),
+		keyNotRequired: opts.KeyNotRequired,
 	}
 	s.currentKeyID.Store("")
 	return s
@@ -81,7 +83,7 @@ func (s *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 	s.userAgent = config["user_agent"]
 
 	// Do not return an error in this case. Let client initialization in
-	// getClient() attempt to sort out where to get default credentials internally
+	// createClient() attempt to sort out where to get default credentials internally
 	// within the SDK (e.g. checking for GOOGLE_APPLICATION_CREDENTIALS), and let
 	// it error out there if none is found. This is here to establish precedence on
 	// non-default input methods.
@@ -128,6 +130,8 @@ func (s *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 		s.cryptoKey = os.Getenv(EnvVaultGCPCKMSSealCryptoKey)
 	case config["crypto_key"] != "":
 		s.cryptoKey = config["crypto_key"]
+	case s.keyNotRequired:
+		// key not required to set config
 	default:
 		return nil, errors.New("'crypto_key' not found for GCP CKMS wrapper configuration")
 	}
@@ -137,18 +141,20 @@ func (s *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 
 	// Set and check s.client
 	if s.client == nil {
-		kmsClient, err := s.getClient()
+		kmsClient, err := s.createClient()
 		if err != nil {
 			return nil, fmt.Errorf("error initializing GCP CKMS wrapper client: %w", err)
 		}
 		s.client = kmsClient
 
 		// Make sure user has permissions to encrypt (also checks if key exists)
-		ctx := context.Background()
-		if _, err := s.Encrypt(ctx, []byte("vault-gcpckms-test"), nil); err != nil {
-			return nil, fmt.Errorf("failed to encrypt with GCP CKMS - ensure the "+
-				"key exists and the service account has at least "+
-				"roles/cloudkms.cryptoKeyEncrypterDecrypter permission: %w", err)
+		if !s.keyNotRequired {
+			ctx := context.Background()
+			if _, err := s.Encrypt(ctx, []byte("vault-gcpckms-test"), nil); err != nil {
+				return nil, fmt.Errorf("failed to encrypt with GCP CKMS - ensure the "+
+					"key exists and the service account has at least "+
+					"roles/cloudkms.cryptoKeyEncrypterDecrypter permission: %w", err)
+			}
 		}
 	}
 
@@ -280,7 +286,13 @@ func (s *Wrapper) Decrypt(ctx context.Context, in *wrapping.EncryptedBlobInfo, a
 	return plaintext, nil
 }
 
-func (s *Wrapper) getClient() (*cloudkms.KeyManagementClient, error) {
+// Client returns the GCP KMS client used by the wrapper.
+func (s *Wrapper) Client() *cloudkms.KeyManagementClient {
+	return s.client
+}
+
+// createClient returns a configured GCP KMS client.
+func (s *Wrapper) createClient() (*cloudkms.KeyManagementClient, error) {
 	client, err := cloudkms.NewKeyManagementClient(context.Background(),
 		option.WithCredentialsFile(s.credsPath),
 		option.WithUserAgent(s.userAgent),
@@ -290,4 +302,9 @@ func (s *Wrapper) getClient() (*cloudkms.KeyManagementClient, error) {
 	}
 
 	return client, nil
+}
+
+// KeyRingResourceName returns the relative resource name of the configured key ring.
+func (s *Wrapper) KeyRingResourceName() string {
+	return fmt.Sprintf("projects/%s/locations/%s/keyRings/%s", s.project, s.location, s.keyRing)
 }
