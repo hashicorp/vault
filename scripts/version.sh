@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 version_file=$1
 version=$(awk '$1 == "Version" && $2 == "=" { gsub(/"/, "", $3); print $3 }' < "${version_file}")
