@@ -43,20 +43,14 @@ export default Component.extend({
   },
   // Computed diff
   visualDiff: computed('leftSideVersionData', 'rightSideVersionData', function() {
-    let diffpatcher = jsondiffpatch.create({
-      arrays: {
-        detectMove: false,
-      },
-    });
+    let diffpatcher = jsondiffpatch.create({});
 
     let delta = diffpatcher.diff(this.leftSideVersionData, this.rightSideVersionData);
     if (delta == undefined) {
       return 'No changes, previous state matches.';
     }
     // beautiful html diff
-    jsondiffpatch.formatters.html.hideUnchanged();
-
-    return jsondiffpatch.formatters.html.format(delta, 'current');
+    return jsondiffpatch.formatters.html.format(delta, this.leftSideVersionData);
   }),
   actions: {
     updateValue(...args) {
