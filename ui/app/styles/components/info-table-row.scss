@@ -92,10 +92,15 @@
 }
 
 .label-overflow {
-  > span {
-    display: inline;
-  }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  // inline display necessary for nested elements so ellipsis shows
+  > div {
+    display: inline;
+  }
+  > div > span {
+    display: inline;
+  }
 }
