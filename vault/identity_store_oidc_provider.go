@@ -1489,6 +1489,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		return authResponse("", state, ErrAuthInvalidRequest, "response_type parameter is required")
 	}
 	if responseType != "code" {
+		i.Logger().Debug("authorize", "response_type", responseType)
 		return authResponse("", state, ErrAuthUnsupportedResponseType, "unsupported response_type value")
 	}
 
