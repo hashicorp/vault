@@ -1,0 +1,3 @@
+```release-note:improvement
+README: Removed reference to IRC server/channel from README.md
+```
