@@ -68,11 +68,6 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-      - name: Setup go tools
-        env:
-          GO111MODULE: off
-        run: |
-          go get golang.org/x/tools/cmd/goimports
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -119,11 +114,6 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-      - name: Setup go tools
-        env:
-          GO111MODULE: off
-        run: |
-          go get golang.org/x/tools/cmd/goimports
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
@@ -195,11 +185,6 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go }}
-      - name: Setup go tools
-        env:
-          GO111MODULE: off
-        run: |
-          go get golang.org/x/tools/cmd/goimports
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
