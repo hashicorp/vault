@@ -1,3 +1,5 @@
+// icons that exist in the public folder which are not part of the Structure set
+// values represent match to icon in Flight set with null representing no match
 export const localIconMap = {
   hashicorp: null,
   loop: 'sync',
@@ -26,7 +28,9 @@ export const localIconMap = {
   auth: 'user',
   'android-sync': 'sync-reverse',
 };
-
+// complete list of Structure icons mapped to their Flight counterpart
+// null values represent no direct correlation to icon in Flight set
+// Flight icon lookup @ https://flight-hashicorp.vercel.app/
 export const structureIconMap = {
   'alert-circle-fill': 'alert-circle-fill',
   'alert-circle-outline': 'alert-circle',
