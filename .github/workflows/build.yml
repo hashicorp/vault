@@ -5,7 +5,7 @@ on:
     # Sequence of patterns matched against refs/heads
     branches:    
       # Push events on release/1.9.x branch
-      - release/1.9.x
+      - crt_onboarding_1.9.x
 
 env:
   PKG_NAME: "vault"
