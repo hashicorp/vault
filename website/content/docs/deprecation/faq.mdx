@@ -8,25 +8,25 @@ description: |-
 
 # Frequently Asked Questions (FAQ)
 
-This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/docs/enterprise/license/faq) page. For up-to-date information on our feature deprecations and notice, please refer to the [Feature Deprecation Notice and Plans](/docs/deprecation) document.
+This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/docs/enterprise/license/faq) page. Pleaser refer to the [Feature Deprecation Notice and Plans](/docs/deprecation) document for up-to-date information on Vault feature deprecations and notice.
 
-- [Q: What is the impact to anyone using the legacy MFA feature?](#q-what-is-the-impact-to-anyone-using-the-legacy-mfa-feature)
+- [Q: What is the impact on anyone using the legacy MFA feature?](#q-what-is-the-impact-on-anyone-using-the-legacy-mfa-feature)
 - [Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?](#q-i-m-currently-using-the-etcd-storage-backend-feature-how-does-the-deprecation-impact-me)
-- [Q: What should I be doing if I am using Mount Filters, AppID, or any of the standalone DB engines?](#q-what-is-the-impact-to-anyone-using-the-legacy-mfa-feature)
+- [Q: What should I do if I use Mount Filters, AppID, or any of the standalone DB engines?](#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines)
 
-### Q: What is the impact to anyone using the legacy MFA feature?
+### Q: What is the impact on anyone using the legacy MFA feature?
 
 If you are an Enterprise Vault user, there is no impact. There are no changes to the Enterprise MFA offering.
 
-If you are an OSS user and are using the legacy MFA, this will impact you since we plan to deprecate the legacy MFA feature. However, while we will continue to provide support for MFA in Vault OSS in the upcoming Vault 1.10 release, our target is to remove the legacy MFA feature from the product in the following Vault 1.11 release. Therefore, you should plan to migrate to the new MFA feature when Vault OSS supports it.
+If you are an OSS user and use the legacy MFA, this will impact you since we plan to deprecate the legacy MFA feature. However, while we will continue to provide support for MFA in Vault OSS in the upcoming Vault 1.10 release, our target is to remove the legacy MFA feature from the product in the following Vault 1.11 release. Therefore, you should plan to migrate to the new MFA feature when Vault OSS supports it.
 
 ### Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?
 
-The Etcd v2 has been deprecated with the release of Etcd v3.5, and will be decomissioned by Etcd v3.6. Etcd v2 API will be removed in Vaut 1.10. Users of Etcd storage backend should prepare to migrate Vault storage to an Etcd V3 cluster prior to upgrading to Vault 1.10. All storage migrations should be backed up prior to migration.
+The Etcd v2 has been deprecated with the release of Etcd v3.5 and will be decommissioned by Etcd v3.6. Etcd v2 API will be removed in Vault 1.10. The Etcd storage backend users should migrate Vault storage to an Etcd V3 cluster before upgrading to Vault 1.10. We recommend that you back up all storage migrations before upgrading.
 
-If you are an Enterprise user, we recommend that you consider migrating to HashiCorp supported storage backends: Integrated Storage, or Consul (if your use case requires you to use this). Your HashiCorp sales or support representative can assist you with this decision.
+If you are an Enterprise user, we recommend that you consider migrating to HashiCorp supported storage backends: **Integrated Storage** or **Consul** (if your use case requires you to use this). Your HashiCorp sales or support representative can assist you with this decision.
 
-### Q: What should I be doing if I am using Mount Filters, AppID, or any of the standalone DB engines?
+### Q: What should I do if I use Mount Filters, AppID, or any of the standalone DB engines?
 
 These features were deprecated in prior releases of Vault. We are targeting the removal of these features from the product in the Vault 1.11 release. Please plan to upgrade to these features before the release of Vault 1.11. Refer to the table below for a list of alternative features.
 
