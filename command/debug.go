@@ -107,7 +107,7 @@ type DebugCommand struct {
 	metricsCollection           []map[string]interface{}
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
-	inFlightReqStatusCollection    []map[string]interface{}
+	inFlightReqStatusCollection []map[string]interface{}
 
 	// cachedClient holds the client retrieved during preflight
 	cachedClient *api.Client
