@@ -210,7 +210,7 @@ As of Vault 1.9, the Vault Audit Log will contain a `client_id` field in the req
 be empty for requests that are untracked by the Audit Log. Such requests are unauthenticated requests / 
 login requests, requests made with the root token, and wrapped requests. The `client_id` field will
 contain an Entity ID for requests that are made with tokens with entities, or a unique client ID for 
-non-entitiy tokens. 
+non-entity tokens. 
 
 Consumers of the audit log will be able to distinguish between a non-entity `client_id` and a 
 `client_id` that is also an entity IDs by either:
