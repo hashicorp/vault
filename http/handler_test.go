@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -358,6 +357,7 @@ func TestHandler_InFlightRequestWithLoad(t *testing.T) {
 		select {
 		case <-timeout:
 			stop <- "done"
+			t.Fatalf("could not capture any in-flight-req")
 			return
 		default:
 		}
@@ -393,7 +393,6 @@ func TestHandler_InFlightRequestWithLoad(t *testing.T) {
 			t.Fatalf("data assertion failed")
 		}
 		if inFlightReqData != nil || len(inFlightReqData) > 0 {
-			fmt.Println("found something", inFlightReqData)
 			stop <- "done"
 			return
 		}

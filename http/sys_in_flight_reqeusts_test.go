@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestInFlightRequest(t *testing.T) {
+func TestInFlightRequestUnauthenticated(t *testing.T) {
 	conf := &vault.CoreConfig{}
 	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)
 	ln, addr := TestServer(t, core)

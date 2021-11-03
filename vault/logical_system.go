@@ -2956,7 +2956,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
-func (b *SystemBackend) handleInFlightRequestInfo(_ context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	now := time.Now()
 	currentInFlightReqMap := make(map[string]interface{})
 	syncMapRangeResult := true

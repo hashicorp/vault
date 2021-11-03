@@ -1348,7 +1348,7 @@ func (b *SystemBackend) inFlightRequestPath() *framework.Path {
 		Pattern: "in-flight-req",
 		Operations: map[logical.Operation]framework.OperationHandler {
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.handleInFlightRequestInfo,
+				Callback: b.handleInFlightRequestData,
 				Summary: strings.TrimSpace(sysHelp["in-flight-req"][0]),
 				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
 			},
