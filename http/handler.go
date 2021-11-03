@@ -397,7 +397,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// in-flight requests
 		inFlightReqID, err := uuid.GenerateUUID()
 		if err != nil {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("failed to generate an identifier for the inflight request"))
+			respondError(w, http.StatusBadRequest, fmt.Errorf("failed to generate an identifier for the in-flight request"))
 		}
 		err = core.StoreInFlightReqData(
 			inFlightReqID,
@@ -485,7 +485,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		h.ServeHTTP(w, r)
 
-		// deleting the inflight request entry
+		// deleting the in-flight request entry
 		core.DeleteInFlightReqData(inFlightReqID)
 
 		cancelFunc()

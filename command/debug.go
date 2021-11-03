@@ -107,7 +107,7 @@ type DebugCommand struct {
 	metricsCollection           []map[string]interface{}
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
-	inflightStatusCollection    []map[string]interface{}
+	inFlightReqStatusCollection    []map[string]interface{}
 
 	// cachedClient holds the client retrieved during preflight
 	cachedClient *api.Client
@@ -623,8 +623,8 @@ func (c *DebugCommand) capturePollingTargets() error {
 	if err := c.persistCollection(c.hostInfoCollection, "host_info.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "host_info.json", err))
 	}
-	if err := c.persistCollection(c.inflightStatusCollection, "in_flight_info.json"); err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "in_flight_info.json", err))
+	if err := c.persistCollection(c.inFlightReqStatusCollection, "in_flight_req_data.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "in_flight_req_data.json", err))
 	}
 	return nil
 }
@@ -908,7 +908,7 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 			}
 		}
 
-		c.logger.Info("capturing inflight request status", "count", idxCount)
+		c.logger.Info("capturing in-flight request status", "count", idxCount)
 		idxCount++
 
 		req := c.cachedClient.NewRequest("GET", "/v1/sys/in-flight-req")
@@ -925,21 +925,21 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 			}
 			resp.Body.Close()
 
-			inFlightReqStatRaw, ok := data["data"]
+			inFlightReqDataRaw, ok := data["data"]
 			if !ok {
 				c.captureError("inFlightReq-status", fmt.Errorf("failed to read in-flight-request data"))
 			}
-			inFlightReqStat, ok := inFlightReqStatRaw.(map[string]interface{})
+			inFlightReqData, ok := inFlightReqDataRaw.(map[string]interface{})
 			if !ok {
 				c.captureError("inFlightReq-status", fmt.Errorf("failed to parse in-flight-request data"))
 			}
 
-			if inFlightReqStat != nil && len(inFlightReqStat) > 0 {
+			if inFlightReqData != nil && len(inFlightReqData) > 0 {
 				statusEntry := map[string]interface{}{
 					"timestamp":         time.Now().UTC(),
-					"in_flight_request": inFlightReqStat,
+					"in_flight_requests": inFlightReqData,
 				}
-				c.inflightStatusCollection = append(c.inflightStatusCollection, statusEntry)
+				c.inFlightReqStatusCollection = append(c.inFlightReqStatusCollection, statusEntry)
 			}
 		}
 	}
