@@ -40,6 +40,11 @@ The website can be run locally through node.js or [Docker](https://www.docker.co
 
 > **Note:** If you are using a text editor that uses a "safe write" save style such as **vim** or **goland**, this can cause issues with the live reload in development. If you turn off safe write, this should solve the problem. In vim, this can be done by running `:set backupcopy=yes`. In goland, search the settings for "safe write" and turn that setting off.
 
+| :warning: WARNING :warning: |
+|:----------------------------|
+| If you've previously run the website successfully using either the Docker or Node.js approach but are now facing some issue then try `docker rmi $(docker images -a -q) && make build-image && make website-local` or `rm -rf node_modules`; failing that consider cloning this repository again and re-attempting the steps anew in a clean clone. |
+
+
 ### With Docker
 
 Running the site locally is simple. Provided you have Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
