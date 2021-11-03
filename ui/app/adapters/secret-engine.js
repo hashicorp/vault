@@ -36,9 +36,12 @@ export default ApplicationAdapter.extend({
         mountModel.data = { ...mountModel.data, ...configModel.data };
       }
     } catch (error) {
+      // no path means this was an error on listing
+      if (!query.path) {
+        throw error;
+      }
       // control groups will throw a 403 permission denied error. If this happens return the mountModel
       // error is handled on routing
-      console.log(error);
     }
     return mountModel;
   },
