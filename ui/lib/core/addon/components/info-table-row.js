@@ -69,9 +69,11 @@ export default Component.extend({
     this._super(...arguments);
     const labelDiv = this.element.querySelector('div');
     const labelText = this.element.querySelector('.is-label');
-    if (labelText.offsetWidth > labelDiv.offsetWidth) {
-      labelDiv.classList.add('label-overflow');
-      this.set('hasLabelOverflow', true);
+    if (labelDiv && labelText) {
+      if (labelText.offsetWidth > labelDiv.offsetWidth) {
+        labelDiv.classList.add('label-overflow');
+        this.set('hasLabelOverflow', true);
+      }
     }
   },
 });
