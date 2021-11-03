@@ -3,7 +3,7 @@ schema = "1"
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "#feed-releng" #TODO update slack channel
+    notification_channel = "CRF6FFKEW" // #vault-releases
   }
   github {
     organization = "hashicorp"
