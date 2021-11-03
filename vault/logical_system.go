@@ -174,6 +174,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
@@ -2955,6 +2956,37 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 	return b.Core.metricsHelper.ResponseForFormat(format), nil
 }
 
+func (b *SystemBackend) handleInFlightRequestInfo(_ context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	now := time.Now()
+	currentInFlightReqMap := make(map[string]interface{})
+	syncMapRangeResult := true
+	b.Core.inFlightReqMap.Range(func(key, value interface{}) bool {
+		v, ok := value.(*InFlightReqData)
+		if !ok {
+			syncMapRangeResult = false
+			return false
+		}
+		// don't report the request to the in-flight-req path
+		if v.ReqPath != "/v1/sys/in-flight-req" {
+			v.Duration = fmt.Sprintf("%v microseconds", now.Sub(v.StartTime).Microseconds())
+			currentInFlightReqMap[key.(string)] = v
+		}
+
+		return true
+	})
+
+	// TODO: should an error be returned here? and if so, what status code should be returned? 500 or 400?
+	if !syncMapRangeResult {
+		return nil, fmt.Errorf("failed to read recorded in-flight requests")
+	}
+
+	resp := &logical.Response{}
+	resp.Data = currentInFlightReqMap
+
+	return resp, nil
+
+}
+
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
 	w := req.ResponseWriter
@@ -4792,6 +4824,14 @@ This path responds to the following HTTP methods.
 	"metrics": {
 		"Export the metrics aggregated for telemetry purpose.",
 		"",
+	},
+	"in-flight-req": {
+		"reports in-flight requests",
+		`
+This path responds to the following HTTP methods.
+		GET /
+			Returns a map of in-flight requests.
+		`,
 	},
 	"internal-counters-requests": {
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",

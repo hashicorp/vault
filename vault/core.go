@@ -365,6 +365,9 @@ type Core struct {
 	// metrics emission and sealing leading to a nil pointer
 	metricsMutex sync.Mutex
 
+	// inFlightReqMap is used to store info about in-flight requests
+	inFlightReqMap *sync.Map
+
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
 	metricSink *metricsutil.ClusterMetricSink
@@ -845,6 +848,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
+
+	c.inFlightReqMap = &sync.Map{}
 
 	c.SetConfig(conf.RawConfig)
 
@@ -2938,4 +2943,27 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+type InFlightReqData struct {
+	StartTime        time.Time `json:"start_time"`
+	ClientRemoteAddr string    `json:"client_remote_address"`
+	ReqPath          string    `json:"request_path"`
+	Duration         string    `json:"duration"`
+}
+
+func (c *Core) StoreInFlightReqData(reqID string, inFlightReqdata *InFlightReqData) error {
+	if c.inFlightReqMap == nil {
+		return fmt.Errorf("failed to store in-flight request data. Map not initialized")
+	}
+	c.inFlightReqMap.Store(reqID, inFlightReqdata)
+	return nil
+}
+
+func (c *Core) DeleteInFlightReqData(reqID string) error{
+	if c.inFlightReqMap == nil {
+		return fmt.Errorf("failed to delete in-flight request data. Map not initialized")
+	}
+	c.inFlightReqMap.Delete(reqID)
+	return nil
 }

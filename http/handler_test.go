@@ -294,6 +294,36 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 	}
 }
 
+func TestHandler_InFlightRequest(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatalf("nil response")
+	}
+
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual == nil {
+		t.Fatalf("")
+	}
+}
+
 // TestHandler_MissingToken tests the response / error code if a request comes
 // in with a missing client token. See
 // https://github.com/hashicorp/vault/issues/8377

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-uuid"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -146,6 +147,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
 		mux.Handle("/v1/sys/health", handleSysHealth(core))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
@@ -389,6 +391,25 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// The uuid for the request is going to be generated when a logical
+		// request is generated. But, here we generate one to be able to track
+		// in-flight requests
+		inFlightReqID, err := uuid.GenerateUUID()
+		if err != nil {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("failed to generate an identifier for the inflight request"))
+		}
+		err = core.StoreInFlightReqData(
+			inFlightReqID,
+			&vault.InFlightReqData {
+				StartTime: time.Now(),
+				ClientRemoteAddr: r.RemoteAddr,
+				ReqPath: r.URL.Path,
+			})
+		if err != nil {
+			respondError(w, http.StatusBadRequest, err)
+		}
+
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		if props.ListenerConfig != nil {
@@ -463,6 +484,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 
 		h.ServeHTTP(w, r)
+
+		// deleting the inflight request entry
+		core.DeleteInFlightReqData(inFlightReqID)
 
 		cancelFunc()
 		return

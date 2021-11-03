@@ -1343,6 +1343,19 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 	}
 }
 
+func (b *SystemBackend) inFlightRequestPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "in-flight-req",
+		Operations: map[logical.Operation]framework.OperationHandler {
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleInFlightRequestInfo,
+				Summary: strings.TrimSpace(sysHelp["in-flight-req"][0]),
+				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
+			},
+		},
+	}
+}
+
 func (b *SystemBackend) hostInfoPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "host-info/?",

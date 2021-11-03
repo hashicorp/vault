@@ -236,6 +236,11 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			[]string{"server_status.json"},
 		},
 		{
+			"in-flight-req",
+			[]string{"in-flight-req"},
+			[]string{"in_flight_info.json"},
+		},
+		{
 			"all-minus-pprof",
 			[]string{"config", "host", "metrics", "replication-status", "server-status"},
 			[]string{"config.json", "host_info.json", "metrics.json", "replication_status.json", "server_status.json"},
