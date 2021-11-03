@@ -264,8 +264,4 @@ build:
 .PHONY: version
 # This is used for release builds by .github/workflows/build.yml
 version:
-ifneq (,$(wildcard sdk/version/version_base.go))
 	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
-else
-	@$(CURDIR)/scripts/version.sh version/version.go
-endif
