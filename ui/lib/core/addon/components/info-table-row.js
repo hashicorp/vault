@@ -42,7 +42,7 @@ export default Component.extend({
   tooltipText: '',
   isTooltipCopyable: false,
   defaultShown: '',
-  hasLabelOverflow: false,
+  hasLabelOverflow: false, // is calculated and set in didInsertElement
 
   valueIsBoolean: computed('value', function() {
     return typeOf(this.value) === 'boolean';
