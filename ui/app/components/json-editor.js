@@ -42,13 +42,14 @@ export default Component.extend({
     }
   },
   // Computed diff
-  visualDiff: computed('currentVersionData', 'previous', function() {
+  visualDiff: computed('leftSideVersionData', 'rightSideVersionData', function() {
     let diffpatcher = jsondiffpatch.create({
       arrays: {
         detectMove: false,
       },
     });
-    let delta = diffpatcher.diff(this.currentVersionData, 'current');
+
+    let delta = diffpatcher.diff(this.leftSideVersionData, this.rightSideVersionData);
     if (delta == undefined) {
       return 'No changes, previous state matches.';
     }

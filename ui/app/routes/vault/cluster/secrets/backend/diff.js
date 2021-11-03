@@ -6,13 +6,12 @@ export default class diff extends Route {
   secretMetadata;
 
   beforeModel() {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    this.backend = backend;
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    this.backend = backend; // coming in undefined on totally
   }
 
   model(params) {
     let { id } = params;
-
     return this.store
       .queryRecord('secret-v2', {
         backend: this.backend,
@@ -29,9 +28,9 @@ export default class diff extends Route {
 
   setupController(controller, model) {
     controller.set('backend', this.backend); // for backendCrumb
-    controller.set('id', this.id); // for navigation on tabs
+    controller.set('id', model.id); // for navigation on tabs
     controller.set('model', model);
-    controller.set('noReadAccess', this.noReadAccess);
+    controller.set('noReadAccess', model.noReadAccess);
     controller.set('currentVersion', model.currentVersion);
   }
 }
