@@ -28,7 +28,7 @@ const ACTION_VALUES = {
   sign: {
     isSupported: 'supportsSigning',
     description: 'Get the cryptographic signature of the given data',
-    glyph: 'penicil-tool',
+    glyph: 'pencil-tool',
   },
   hmac: {
     isSupported: true,
