@@ -2967,3 +2967,11 @@ func (c *Core) DeleteInFlightReqData(reqID string) error{
 	c.inFlightReqMap.Delete(reqID)
 	return nil
 }
+
+func (c *Core) RangeInFlightReqData(rangeFunc func(key, value interface{}) bool) error {
+	if c.inFlightReqMap == nil {
+		return fmt.Errorf("failed to range over in-flight request data. Map not initialized")
+	}
+	c.inFlightReqMap.Range(rangeFunc)
+	return nil
+}

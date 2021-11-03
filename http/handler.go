@@ -147,7 +147,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
 		mux.Handle("/v1/sys/health", handleSysHealth(core))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
-		mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
@@ -198,6 +197,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 		}
 
+		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedInFlightAccess {
+			mux.Handle("/v1/sys/in-flight-req", handleUnAuthenticatedInFlightRequest(core))
+		} else {
+			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
+		}
 		additionalRoutes(mux, core)
 	}
 

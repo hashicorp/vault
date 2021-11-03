@@ -5,12 +5,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -321,6 +323,80 @@ func TestHandler_InFlightRequest(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	if actual == nil {
 		t.Fatalf("")
+	}
+}
+
+func TestHandler_InFlightRequestWithLoad(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	stop := make(chan string)
+
+	go func() {
+		i := 0
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				break
+			}
+			// WRITE
+			secResp := testHttpPut(t, token, addr+"/v1/secret/foo"+strconv.Itoa(i), map[string]interface{}{
+				"data": "bar",
+			})
+			testResponseStatus(t, secResp, 204)
+			i++
+		}
+	}()
+
+	timeout := time.After(10 * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			stop <- "done"
+			return
+		default:
+		}
+		req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		req.Header.Set(consts.AuthHeaderName, token)
+
+		client := cleanhttp.DefaultClient()
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		if resp == nil {
+			t.Fatalf("nil response")
+		}
+
+		var actual map[string]interface{}
+		testResponseStatus(t, resp, 200)
+		testResponseBody(t, resp, &actual)
+
+		if actual == nil {
+			t.Fatalf("")
+		}
+		inFlightReqDataRaw, ok := actual["data"]
+		if !ok {
+			t.Fatalf("failed to read in-flight-request data")
+		}
+		inFlightReqData, ok := inFlightReqDataRaw.(map[string]interface{})
+		if !ok {
+			t.Fatalf("data assertion failed")
+		}
+		if inFlightReqData != nil || len(inFlightReqData) > 0 {
+			fmt.Println("found something", inFlightReqData)
+			stop <- "done"
+			return
+		}
 	}
 }
 

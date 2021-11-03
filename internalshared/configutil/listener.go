@@ -24,9 +24,11 @@ type ListenerTelemetry struct {
 }
 
 type ListenerProfiling struct {
-	UnusedKeys                    UnusedKeyMap `hcl:",unusedKeyPositions"`
-	UnauthenticatedPProfAccess    bool         `hcl:"-"`
-	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
+	UnusedKeys                       UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedPProfAccess       bool         `hcl:"-"`
+	UnauthenticatedPProfAccessRaw    interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
+	UnauthenticatedInFlightAccess    bool         `hcl:"-"`
+	UnauthenticatedInFlightAccessRaw interface{}  `hcl:"unauthenticated_in_flight_request_access,alias:unauthenticatedInFlightAccessRaw"`
 }
 
 // Listener is the listener configuration for the server.
@@ -352,6 +354,11 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Profiling.UnauthenticatedPProfAccessRaw = nil
+			}
+			if l.Profiling.UnauthenticatedInFlightAccessRaw != nil {
+				if l.Profiling.UnauthenticatedInFlightAccess, err = parseutil.ParseBool(l.Profiling.UnauthenticatedInFlightAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for profiling.unauthenticated_in_flight_request_access: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
 			}
 		}
 
