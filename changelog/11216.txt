@@ -1,0 +1,3 @@
+```release-note:improvement
+helper/certutil: select appropriate signature algorithm for ECDSA signature on certificates.
+```
