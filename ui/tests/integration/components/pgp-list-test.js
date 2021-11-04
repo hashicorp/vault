@@ -128,4 +128,26 @@ module('Integration | Component | pgp list', function(hooks) {
       'lengthening the list with an array with one base64 converted files'
     );
   });
+
+  test('it should render correct amount of file components on listLength change', async function(assert) {
+    assert.expect(4);
+
+    this.set('listLength', null);
+
+    await render(hbs`
+      <PgpList
+        @listLength={{this.listLength}}
+      />
+    `);
+    [1, 5, 3, 0].forEach(count => {
+      this.set('listLength', count);
+      if (count) {
+        assert
+          .dom('[data-test-pgp-file]')
+          .exists({ count }, `Correct number of file inputs render when listLength is updated to ${count}`);
+      } else {
+        assert.dom('[data-test-empty-text]').exists('Placeholder renders when list length is zero');
+      }
+    });
+  });
 });
