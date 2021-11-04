@@ -1,3 +1,21 @@
+## 1.7.6
+### November 4, 2021
+
+BUG FIXES:
+
+* auth/aws: fix config/rotate-root to store new key [[GH-12715](https://github.com/hashicorp/vault/pull/12715)]
+* core/identity: Cleanup alias in the in-memory entity after an alias deletion by ID [[GH-12834](https://github.com/hashicorp/vault/pull/12834)]
+* core/identity: Disallow entity alias creation/update if a conflicting alias exists for the target entity and mount combination [[GH-12747](https://github.com/hashicorp/vault/pull/12747)]
+* core: Fix a deadlock on HA leadership transfer [[GH-12691](https://github.com/hashicorp/vault/pull/12691)]
+* http (enterprise): Always forward internal/counters endpoints from perf standbys to active node
+* kmip (enterprise): Fix handling of custom attributes when servicing GetAttributes requests
+* kmip (enterprise): Fix handling of invalid role parameters within various vault api calls
+* kmip (enterprise): Forward KMIP register operations to the active node
+* secrets/keymgmt (enterprise): Fix support for Azure Managed HSM Key Vault instances. [[GH-12957](https://github.com/hashicorp/vault/pull/12957)]
+* storage/postgres: Update postgres library (github.com/lib/pq) to properly remove terminated TLS connections from the connection pool. [[GH-12413](https://github.com/hashicorp/vault/pull/12413)]
+* database/postgres: Update postgres library (github.com/lib/pq) to properly remove terminated TLS connections from the connection pool. [[GH-12413](https://github.com/hashicorp/vault/pull/12413)]
+* transform (enterprise): Fix an error where the decode response of an expired token is an empty result rather than an error.
+
 ## 1.7.5
 ### 29 September 2021
 
