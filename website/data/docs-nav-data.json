@@ -12,18 +12,18 @@
     "divider": true
   },
   {
-        "title": "Feature Deprecation Notice and Plans",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "deprecation"
-          },
-                  {
-            "title": "FAQ",
-            "path": "deprecation/faq"
-          }
-        ]
+    "title": "Feature Deprecation Notice and Plans",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "deprecation"
       },
+      {
+        "title": "FAQ",
+        "path": "deprecation/faq"
+      }
+    ]
+  },
   {
     "title": "Browser Support",
     "path": "browser-support"
@@ -115,7 +115,11 @@
       {
         "title": "Identity",
         "path": "concepts/identity"
-        },
+      },
+      {
+        "title": "OIDC Provider",
+        "path": "concepts/oidc-provider"
+      },
       {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"
