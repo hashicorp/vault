@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -31,6 +33,11 @@ type responseJSON struct {
 	TokenType    string `json:"token_type"`
 }
 
+type errorJSON struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
 type metadataJSON struct {
 	Compute computeJSON `json:"compute"`
 }
@@ -44,17 +51,18 @@ type computeJSON struct {
 
 const (
 	defaultMountPath     = "azure"
-	defaultResourceURL   = "https://management.azure.com"
+	defaultResourceURL   = "https://management.azure.com/"
 	metadataEndpoint     = "http://169.254.169.254"
-	metadataAPIVersion   = "2018-02-01"
+	metadataAPIVersion   = "2021-05-01"
 	apiVersionQueryParam = "api-version"
 	resourceQueryParam   = "resource"
+	clientTimeout        = 10 * time.Second
 )
 
 // NewAzureAuth initializes a new Azure auth method interface to be
 // passed as a parameter to the client.Auth().Login method.
 //
-// Supported options: WithMountPath, WithResourceURL
+// Supported options: WithMountPath, WithCloud
 func NewAzureAuth(roleName string, opts ...LoginOption) (*AzureAuth, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("no role name provided for login")
@@ -118,9 +126,15 @@ func WithMountPath(mountPath string) LoginOption {
 	}
 }
 
-func WithResourceURL(url string) LoginOption {
+// WithCloud allows you to specify a different cloud environment than
+// the default of Azure Public Cloud. This should match the cloud
+// environment that an administrator configured your Vault server to use.
+//
+// See https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go
+// for a list of valid environments.
+func WithCloud(cloud azure.Environment) LoginOption {
 	return func(a *AzureAuth) error {
-		a.resource = url
+		a.resource = cloud.ResourceManagerEndpoint
 		return nil
 	}
 }
@@ -145,16 +159,27 @@ func (a *AzureAuth) getJWT() (string, error) {
 	}
 	req.Header.Add("Metadata", "true")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: clientTimeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("error calling Azure token endpoint: %w", err)
 	}
+	defer resp.Body.Close()
 
 	responseBytes, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return "", fmt.Errorf("error reading response body from Azure token endpoint: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp errorJSON
+		_ = json.Unmarshal(responseBytes, &errResp)
+		if err != nil {
+			return "", fmt.Errorf("received error message but was unable to unmarshal its contents")
+		}
+		return "", fmt.Errorf("%s error from Azure token endpoint: %s", errResp.Error, errResp.ErrorDescription)
 	}
 
 	var r responseJSON
@@ -182,16 +207,27 @@ func getMetadata() (metadataJSON, error) {
 	}
 	req.Header.Add("Metadata", "true")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: clientTimeout,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return metadataJSON{}, fmt.Errorf("error calling metadata endpoint: %w", err)
 	}
+	defer resp.Body.Close()
 
 	responseBytes, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return metadataJSON{}, fmt.Errorf("error reading response body from metadata endpoint: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp errorJSON
+		_ = json.Unmarshal(responseBytes, &errResp)
+		if err != nil {
+			return metadataJSON{}, fmt.Errorf("received error message but was unable to unmarshal its contents")
+		}
+		return metadataJSON{}, fmt.Errorf("%s error from metadata endpoint: %s", errResp.Error, errResp.ErrorDescription)
 	}
 
 	var r metadataJSON
