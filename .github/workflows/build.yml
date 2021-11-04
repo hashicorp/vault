@@ -154,6 +154,7 @@ jobs:
           binary: "dist/${{ env.PKG_NAME }}"
           deb_depends: "openssl"
           rpm_depends: "openssl"
+          config_dir: ".release/linux/package/"
           preinstall: ".release/linux/preinst"
           postinstall: ".release/linux/postinst"
           postremove: ".release/linux/postrm"
