@@ -1,3 +1,19 @@
+## 1.8.5
+### November 4, 2021
+
+BUG FIXES:
+
+* auth/aws: fix config/rotate-root to store new key [[GH-12715](https://github.com/hashicorp/vault/pull/12715)]
+* core/identity: Cleanup alias in the in-memory entity after an alias deletion by ID [[GH-12834](https://github.com/hashicorp/vault/pull/12834)]
+* core/identity: Disallow entity alias creation/update if a conflicting alias exists for the target entity and mount combination [[GH-12747](https://github.com/hashicorp/vault/pull/12747)]
+* http (enterprise): Always forward internal/counters endpoints from perf standbys to active node
+* identity/token: Adds missing call to unlock mutex in key deletion error handling [[GH-12916](https://github.com/hashicorp/vault/pull/12916)]
+* kmip (enterprise): Fix handling of custom attributes when servicing GetAttributes requests
+* kmip (enterprise): Fix handling of invalid role parameters within various vault api calls
+* kmip (enterprise): Forward KMIP register operations to the active node
+* secrets/keymgmt (enterprise): Fix support for Azure Managed HSM Key Vault instances. [[GH-12952](https://github.com/hashicorp/vault/pull/12952)]
+* transform (enterprise): Fix an error where the decode response of an expired token is an empty result rather than an error.
+
 ## 1.8.4
 ### 6 October 2021
 
