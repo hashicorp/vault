@@ -47,6 +47,7 @@ type BaseCommand struct {
 	flagNamespace      string
 	flagNS             string
 	flagPolicyOverride bool
+	flagTLSMinVersion  string
 	flagTLSServerName  string
 	flagTLSSkipVerify  bool
 	flagWrapTTL        time.Duration
@@ -92,12 +93,13 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	// If we need custom TLS configuration, then set it
 	if c.flagCACert != "" || c.flagCAPath != "" || c.flagClientCert != "" ||
-		c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSSkipVerify {
+		c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSMinVersion != "" || c.flagTLSSkipVerify {
 		t := &api.TLSConfig{
 			CACert:        c.flagCACert,
 			CAPath:        c.flagCAPath,
 			ClientCert:    c.flagClientCert,
 			ClientKey:     c.flagClientKey,
+			TLSMinVersion: c.flagTLSMinVersion,
 			TLSServerName: c.flagTLSServerName,
 			Insecure:      c.flagTLSSkipVerify,
 		}

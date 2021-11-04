@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
@@ -267,18 +268,21 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
+	oldTLSMinVersion := os.Getenv(EnvVaultTLSMinVersion)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
 	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
+	os.Setenv(EnvVaultTLSMinVersion, "tls13")
 	os.Setenv(EnvVaultMaxRetries, "5")
 	defer os.Setenv(EnvVaultCACert, oldCACert)
 	defer os.Setenv(EnvVaultCAPath, oldCAPath)
 	defer os.Setenv(EnvVaultClientCert, oldClientCert)
 	defer os.Setenv(EnvVaultClientKey, oldClientKey)
 	defer os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
+	defer os.Setenv(EnvVaultTLSMinVersion, oldTLSMinVersion)
 	defer os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
 
 	config := DefaultConfig()
@@ -295,6 +299,9 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+	if tlsConfig.MinVersion != tls.VersionTLS13 {
+		t.Fatalf("bad: expect setup TLS min version")
 	}
 }
 

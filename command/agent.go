@@ -280,6 +280,13 @@ func (c *AgentCommand) Run(args []string) int {
 		EnvVar:  api.EnvVaultClientKey,
 	})
 	config.Vault.ClientKey = c.flagClientKey
+	c.setStringFlag(f, config.Vault.TLSMinVersion, &StringVar{
+		Name:    flagNameTLSMinVersion,
+		Target:  &c.flagTLSMinVersion,
+		Default: "tls12",
+		EnvVar:  api.EnvVaultTLSMinVersion,
+	})
+	config.Vault.TLSMinVersion = c.flagTLSMinVersion
 	c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
 		Name:    flagNameTLSSkipVerify,
 		Target:  &c.flagTLSSkipVerify,

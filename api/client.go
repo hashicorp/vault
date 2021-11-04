@@ -24,6 +24,7 @@ import (
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
 
@@ -43,6 +44,7 @@ const (
 	EnvVaultSRVLookup     = "VAULT_SRV_LOOKUP"
 	EnvVaultSkipVerify    = "VAULT_SKIP_VERIFY"
 	EnvVaultNamespace     = "VAULT_NAMESPACE"
+	EnvVaultTLSMinVersion = "VAULT_TLS_MIN_VERSION"
 	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
 	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
@@ -166,6 +168,9 @@ type TLSConfig struct {
 	// ClientKey is the path to the private key for Vault communication
 	ClientKey string
 
+	// TLSMinVersion specifies the minimum supported version of TLS.
+	TLSMinVersion string
+
 	// TLSServerName, if set, is used to set the SNI host when connecting via
 	// TLS.
 	TLSServerName string
@@ -268,6 +273,10 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 		}
 	}
 
+	if t.TLSMinVersion != "" {
+		clientTLSConfig.MinVersion = tlsutil.TLSLookup[t.TLSMinVersion]
+	}
+
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
@@ -286,6 +295,7 @@ func (c *Config) ReadEnvironment() error {
 	var envClientKey string
 	var envClientTimeout time.Duration
 	var envInsecure bool
+	var envTLSMinVersion string
 	var envTLSServerName string
 	var envMaxRetries *uint64
 	var envSRVLookup bool
@@ -355,6 +365,9 @@ func (c *Config) ReadEnvironment() error {
 		}
 	}
 
+	if v := os.Getenv(EnvVaultTLSMinVersion); v != "" {
+		envTLSMinVersion = v
+	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}
@@ -370,6 +383,7 @@ func (c *Config) ReadEnvironment() error {
 		ClientCert:    envClientCert,
 		ClientKey:     envClientKey,
 		TLSServerName: envTLSServerName,
+		TLSMinVersion: envTLSMinVersion,
 		Insecure:      envInsecure,
 	}
 

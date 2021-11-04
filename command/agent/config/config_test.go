@@ -990,3 +990,28 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+func TestLoadConfigFile_Vault_TLS(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-vault-tls.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		Vault: &Vault{
+			Address:       "http://127.0.0.1:1111",
+			TLSMinVersion: "tls13",
+			Retry: &Retry{
+				NumRetries: 5,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}

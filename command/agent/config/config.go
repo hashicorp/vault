@@ -58,6 +58,7 @@ type Vault struct {
 	Address          string      `hcl:"address"`
 	CACert           string      `hcl:"ca_cert"`
 	CAPath           string      `hcl:"ca_path"`
+	TLSMinVersion    string      `hcl:"tls_min_version"`
 	TLSSkipVerify    bool        `hcl:"-"`
 	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
 	ClientCert       string      `hcl:"client_cert"`

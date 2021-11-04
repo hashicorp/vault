@@ -96,8 +96,9 @@ const (
 	// flagNameClientCert is the flag used in the base command to read in the
 	// client cert
 	flagNameClientCert = "client-cert"
-	// flagNameTLSSkipVerify is the flag used in the base command to read in
-	// the option to ignore TLS certificate verification.
+	// flagNameTLSMinVersion specifies the maximum supported version of TLS.
+	flagNameTLSMinVersion = "tls-min-version"
+	// flagNameTLSSkipVerify specifies the minimum supported version of TLS.
 	flagNameTLSSkipVerify = "tls-skip-verify"
 	// flagTLSServerName is the flag used in the base command to read in
 	// the TLS server name.
