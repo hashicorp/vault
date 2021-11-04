@@ -1285,9 +1285,6 @@ func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, 
 	}
 
 	provider.effectiveIssuer = i.getFullIssuerURI(ns.Path, provider.Issuer, name)
-	if err != nil {
-		return nil, err
-	}
 
 	return &provider, nil
 }
