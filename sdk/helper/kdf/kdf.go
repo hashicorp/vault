@@ -21,6 +21,10 @@ type PRF func([]byte, []byte) ([]byte, error)
 // CounterMode implements the counter mode KDF that uses a pseudo-random-function (PRF)
 // along with a counter to generate derived keys. The KDF takes a base key
 // a derivation context, and the required number of output bits.
+//
+// This KDF implementation is non-standard and does not pass NIST's CAVP for the
+// SP800-108 KBKDF as claimed in the package header above. It is strongly urged
+// not to use this implementation!
 func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32) ([]byte, error) {
 	// Ensure the PRF is byte aligned
 	if prfLen%8 != 0 {
@@ -50,6 +54,11 @@ func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32
 	// Iteratively generate more key material
 	var out []byte
 	var i uint32
+
+	// XXX: Note: this KDF deviates here from the standard: i begins at zero in
+	// this Go implementation, but per NIST SP800-108, Page 12, Section 5.1 KDF
+	// in Counter Mode, Process Step 4, i begins at one. This affects the PRF
+	// input and thus generates different derived keys.
 	for i = 0; i < rounds; i++ {
 		// Update the counter in the input string
 		binary.BigEndian.PutUint32(input[:4], i)
