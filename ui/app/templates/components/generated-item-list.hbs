@@ -52,7 +52,7 @@
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{model}} @itemNoun={{itemType}} as |list|>
+<ListView @items={{model}} @itemNoun={{itemType}} @paginationRouteName="vault.cluster.access.method.item.list" as |list|>
   {{#if list.empty}}
     <list.empty @title="No {{pluralize itemType}} yet"
       @message="A list of {{pluralize itemType}} will be listed here. Create your first {{itemType}} to get started.">
