@@ -89,6 +89,22 @@ of dirty pages in the merkle tree at time of checkpoint creation. [[GH-2093](htt
 * ui: updating database TTL picker help text. [[GH-12212](https://github.com/hashicorp/vault/pull/12212)]
 * ui: fix missing navbar items on login to namespace [[GH-12478](https://github.com/hashicorp/vault/pull/12478)]
 
+## 1.8.5
+### November 4, 2021
+
+BUG FIXES:
+
+* auth/aws: fix config/rotate-root to store new key [[GH-12715](https://github.com/hashicorp/vault/pull/12715)]
+* core/identity: Cleanup alias in the in-memory entity after an alias deletion by ID [[GH-12834](https://github.com/hashicorp/vault/pull/12834)]
+* core/identity: Disallow entity alias creation/update if a conflicting alias exists for the target entity and mount combination [[GH-12747](https://github.com/hashicorp/vault/pull/12747)]
+* http (enterprise): Always forward internal/counters endpoints from perf standbys to active node
+* identity/token: Adds missing call to unlock mutex in key deletion error handling [[GH-12916](https://github.com/hashicorp/vault/pull/12916)]
+* kmip (enterprise): Fix handling of custom attributes when servicing GetAttributes requests
+* kmip (enterprise): Fix handling of invalid role parameters within various vault api calls
+* kmip (enterprise): Forward KMIP register operations to the active node
+* secrets/keymgmt (enterprise): Fix support for Azure Managed HSM Key Vault instances. [[GH-12952](https://github.com/hashicorp/vault/pull/12952)]
+* transform (enterprise): Fix an error where the decode response of an expired token is an empty result rather than an error.
+
 ## 1.8.4
 ### 6 October 2021
 
@@ -333,6 +349,24 @@ BUG FIXES:
 * ui: fix control group access for database credential [[GH-12024](https://github.com/hashicorp/vault/pull/12024)]
 * ui: fix issue where select-one option was not showing in secrets database role creation [[GH-11294](https://github.com/hashicorp/vault/pull/11294)]
 * ui: fix oidc login with Safari [[GH-11884](https://github.com/hashicorp/vault/pull/11884)]
+
+## 1.7.6
+### November 4, 2021
+
+BUG FIXES:
+
+* auth/aws: fix config/rotate-root to store new key [[GH-12715](https://github.com/hashicorp/vault/pull/12715)]
+* core/identity: Cleanup alias in the in-memory entity after an alias deletion by ID [[GH-12834](https://github.com/hashicorp/vault/pull/12834)]
+* core/identity: Disallow entity alias creation/update if a conflicting alias exists for the target entity and mount combination [[GH-12747](https://github.com/hashicorp/vault/pull/12747)]
+* core: Fix a deadlock on HA leadership transfer [[GH-12691](https://github.com/hashicorp/vault/pull/12691)]
+* http (enterprise): Always forward internal/counters endpoints from perf standbys to active node
+* kmip (enterprise): Fix handling of custom attributes when servicing GetAttributes requests
+* kmip (enterprise): Fix handling of invalid role parameters within various vault api calls
+* kmip (enterprise): Forward KMIP register operations to the active node
+* secrets/keymgmt (enterprise): Fix support for Azure Managed HSM Key Vault instances. [[GH-12957](https://github.com/hashicorp/vault/pull/12957)]
+* storage/postgres: Update postgres library (github.com/lib/pq) to properly remove terminated TLS connections from the connection pool. [[GH-12413](https://github.com/hashicorp/vault/pull/12413)]
+* database/postgres: Update postgres library (github.com/lib/pq) to properly remove terminated TLS connections from the connection pool. [[GH-12413](https://github.com/hashicorp/vault/pull/12413)]
+* transform (enterprise): Fix an error where the decode response of an expired token is an empty result rather than an error.
 
 ## 1.7.5
 ### 29 September 2021
