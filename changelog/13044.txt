@@ -1,0 +1,3 @@
+```release-note:improvement
+trims newline character from wrapping token in UnWrap Go SDK
+```
