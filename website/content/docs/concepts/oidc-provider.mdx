@@ -11,7 +11,7 @@ description: >-
 
 This document describes how Vault can be an **OpenID Connect(OIDC) identity provider** by enabling applications to leverage Vault as a source of identity using the OIDC protocol.
 
-This feature allows clients speaking to the OIDC protocol to take advantage of Vault's various authentication methods and source of identity. Clients can configure their authentication logic to talk to Vault. Once enabled, Vault will act as the bridge to identity providers via its existing authentication methods. Clients will also obtain identity information for their end-users by leveraging custom templating of Vault identity information.
+This feature allows clients speaking the OIDC protocol to take advantage of Vault's various authentication methods and source of identity. Clients can configure their authentication logic to talk to Vault. Once enabled, Vault will act as the bridge to identity providers via its existing authentication methods. Clients will also obtain identity information for their end-users by leveraging custom templating of Vault identity information.
 
 Vault as an OIDC provider allows mutual Vault and Boundary customers to leverage Vault's identity system to delegate authentication and authorization to Vault.  Vault, therefore, acts as an identity provider for Boundary. Other HashiCorp products such as Consul can also leverage Vault's identity system and provide delegated authentication and authorization to its users. Having Vault as an OIDC provider allows a single sign-on experience to their end-users for organizations that want to leverage Vault as an identity provider.
 
