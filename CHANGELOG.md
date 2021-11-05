@@ -22,7 +22,7 @@ FEATURES:
   endpoint through HTTP `PATCH`.  A new `patch` ACL capability has been added and
   is required to make such requests. [[GH-12687](https://github.com/hashicorp/vault/pull/12687)]
 * **Key Management Secrets Engine (Enterprise)**: Adds support for distributing and managing keys in GCP Cloud KMS. [[GH-2158](https://github.com/hashicorp/vault/pull/2158)]
-* **Namespaces (Enterprise)**: Adds support for locking Vault API for particular namespaces. [[GH-2213](https://github.com/hashicorp/vault/pull/2213)]
+* **Namespaces (Enterprise)**: Adds support for locking the Vault API for particular namespaces. [[GH-2213](https://github.com/hashicorp/vault/pull/2213)]
 * **OIDC Authorization Code Flow**: The Vault UI now supports OIDC Authorization Code Flow [[GH-12800](https://github.com/hashicorp/vault/pull/12800)]
 * **OIDC Identity Provider (Tech Preview)**: Adds support for Vault to be an OpenID Connect (OIDC) provider. [[GH-12932](https://github.com/hashicorp/vault/pull/12932)]
 * **Oracle DB in the UI**: Oracle DB connection is now supported in the UI [[GH-12752](https://github.com/hashicorp/vault/pull/12752)]
