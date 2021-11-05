@@ -70,7 +70,8 @@ remain.
 ## API Locked Response
 
 If a request is made to a non-exempt path from a locked namespace, e.g. `nsA`,
-the response will yield an error of the form:
+Vault will respond with an HTTP 503: Service Unavailable. It will also yield an
+error of the form:
 
 `API access to this namespace has been locked by an administrator - "nsA" must be unlocked to gain access.`
 
