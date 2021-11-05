@@ -138,7 +138,7 @@ Each provider offers an unauthenticated endpoint that facilitates OIDC Discovery
 
 ### Keys
 
-Each provider offers an unauthenticated endpoint that provides the public portion of keys used to sign ID tokens. The keys are published in a JSON Web Key Set [(JWKS)](https://datatracker.ietf.org/doc/html/rfc7517) format. The keyset for an individual provider contains the keys referenced by all clients via the `allowed_clients` configuration parameter. A `Cache-Control` header to set based on responses, allowing clients to refresh their keys upon rotation. The `max-age` of the header is set based on the earliest rotation time of any of the keys in the keyset.
+Each provider offers an unauthenticated endpoint that provides the public portion of keys used to sign ID tokens. The keys are published in a JSON Web Key Set [(JWKS)](https://datatracker.ietf.org/doc/html/rfc7517) format. The keyset for an individual provider contains the keys referenced by all clients via the `allowed_client_ids` configuration parameter. A `Cache-Control` header to set based on responses, allowing clients to refresh their keys upon rotation. The `max-age` of the header is set based on the earliest rotation time of any of the keys in the keyset.
 
 ### Authorization Endpoint
 
