@@ -377,21 +377,14 @@ func TestHandler_InFlightRequestWithLoad(t *testing.T) {
 			t.Fatalf("nil response")
 		}
 
-		var actual map[string]interface{}
+		var inFlightReqData map[string]interface{}
 		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
+		testResponseBody(t, resp, &inFlightReqData)
 
-		if actual == nil {
+		if inFlightReqData == nil {
 			t.Fatalf("")
 		}
-		inFlightReqDataRaw, ok := actual["data"]
-		if !ok {
-			t.Fatalf("failed to read in-flight-request data")
-		}
-		inFlightReqData, ok := inFlightReqDataRaw.(map[string]interface{})
-		if !ok {
-			t.Fatalf("data assertion failed")
-		}
+
 		if inFlightReqData != nil || len(inFlightReqData) > 0 {
 			stop <- "done"
 			return

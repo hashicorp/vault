@@ -519,11 +519,7 @@ func (c *Core) cachedGaugeMetricsEmitter() {
 }
 
 func (c *Core) inFlightReqGaugeMetric() {
-	totalInFlightReq := 0
-	c.inFlightReqMap.Range(func(key, value interface{}) bool {
-		totalInFlightReq++
-		return true
-	})
+	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
 	// Adding a gauge metric to capture total number of inflight requests
 	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_request"}, float32(totalInFlightReq), nil)
 }

@@ -366,7 +366,7 @@ type Core struct {
 	metricsMutex sync.Mutex
 
 	// inFlightReqMap is used to store info about in-flight requests
-	inFlightReqMap *sync.Map
+	inFlightReqData *InFlightRequests
 
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
@@ -849,7 +849,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
 
-	c.inFlightReqMap = &sync.Map{}
+	c.inFlightReqData = &InFlightRequests{
+		InFlightReqMap:   &sync.Map{},
+		InFlightReqCount: uberAtomic.NewUint64(0),
+	}
 
 	c.SetConfig(conf.RawConfig)
 
@@ -2945,33 +2948,48 @@ type LicenseState struct {
 	Terminated bool
 }
 
+type InFlightRequests struct {
+	InFlightReqMap   *sync.Map
+	InFlightReqCount *uberAtomic.Uint64
+}
+
 type InFlightReqData struct {
 	StartTime        time.Time `json:"start_time"`
 	ClientRemoteAddr string    `json:"client_remote_address"`
 	ReqPath          string    `json:"request_path"`
-	Duration         string    `json:"duration"`
+	SnapshotTime     time.Time `json:"snapshot_time"`
 }
 
-func (c *Core) StoreInFlightReqData(reqID string, inFlightReqdata *InFlightReqData) error {
-	if c.inFlightReqMap == nil {
-		return fmt.Errorf("failed to store in-flight request data. Map not initialized")
-	}
-	c.inFlightReqMap.Store(reqID, inFlightReqdata)
-	return nil
+func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
+	c.inFlightReqData.InFlightReqMap.Store(reqID, data)
+	c.inFlightReqData.InFlightReqCount.Inc()
+
 }
 
-func (c *Core) DeleteInFlightReqData(reqID string) error{
-	if c.inFlightReqMap == nil {
-		return fmt.Errorf("failed to delete in-flight request data. Map not initialized")
-	}
-	c.inFlightReqMap.Delete(reqID)
-	return nil
+func (c *Core) DeleteInFlightReqData(reqID string) {
+	c.inFlightReqData.InFlightReqMap.Delete(reqID)
+	c.inFlightReqData.InFlightReqCount.Dec()
 }
 
-func (c *Core) RangeInFlightReqData(rangeFunc func(key, value interface{}) bool) error {
-	if c.inFlightReqMap == nil {
-		return fmt.Errorf("failed to range over in-flight request data. Map not initialized")
+func (c *Core) GetInFlightReqData() (map[string]*InFlightReqData, error) {
+
+	currentInFlightReqMap := make(map[string]*InFlightReqData)
+	syncMapRangeResult := true
+	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
+		v, ok := value.(*InFlightReqData)
+		if !ok {
+			syncMapRangeResult = false
+			return false
+		}
+
+		currentInFlightReqMap[key.(string)] = v
+
+		return true
+	})
+
+	if !syncMapRangeResult {
+		return nil, fmt.Errorf("failed to read the recorded in-flight requests")
 	}
-	c.inFlightReqMap.Range(rangeFunc)
-	return nil
+
+	return currentInFlightReqMap, nil
 }

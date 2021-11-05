@@ -2957,31 +2957,32 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 }
 
 func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	now := time.Now()
-	currentInFlightReqMap := make(map[string]interface{})
-	syncMapRangeResult := true
-	b.Core.inFlightReqMap.Range(func(key, value interface{}) bool {
-		v, ok := value.(*InFlightReqData)
-		if !ok {
-			syncMapRangeResult = false
-			return false
-		}
-		// don't report the request to the in-flight-req path
-		if v.ReqPath != "/v1/sys/in-flight-req" {
-			v.Duration = fmt.Sprintf("%v microseconds", now.Sub(v.StartTime).Microseconds())
-			currentInFlightReqMap[key.(string)] = v
-		}
-
-		return true
-	})
-
-	// TODO: should an error be returned here? and if so, what status code should be returned? 500 or 400?
-	if !syncMapRangeResult {
-		return nil, fmt.Errorf("failed to read recorded in-flight requests")
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "text/plain",
+			logical.HTTPStatusCode:  http.StatusInternalServerError,
+		},
 	}
 
-	resp := &logical.Response{}
-	resp.Data = currentInFlightReqMap
+	now := time.Now()
+	currentInFlightReqMap, err := b.Core.GetInFlightReqData()
+	if err != nil {
+		resp.Data[logical.HTTPRawBody] = err.Error()
+		return resp, nil
+	}
+
+	for _, v := range currentInFlightReqMap {
+		v.SnapshotTime = now
+	}
+
+	content, err := json.Marshal(currentInFlightReqMap)
+	if err != nil {
+		resp.Data[logical.HTTPRawBody] = fmt.Sprintf("error while marshalling the in-flight requests data: %s", err)
+		return resp, nil
+	}
+	resp.Data[logical.HTTPContentType] = "application/json"
+	resp.Data[logical.HTTPRawBody] = content
+	resp.Data[logical.HTTPStatusCode] = http.StatusOK
 
 	return resp, nil
 

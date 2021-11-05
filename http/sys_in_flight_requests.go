@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,29 +18,26 @@ func handleUnAuthenticatedInFlightRequest(core *vault.Core) http.Handler {
 			return
 		}
 		now := time.Now()
-		currentInFlightReqMap := make(map[string]interface{})
-		syncMapRangeResult := true
-		core.RangeInFlightReqData(func(key, value interface{}) bool {
-			v, ok := value.(*vault.InFlightReqData)
-			if !ok {
-				syncMapRangeResult = false
-				return false
-			}
-			// don't report the request to the in-flight-req path
-			if v.ReqPath != "/v1/sys/in-flight-req" {
-				v.Duration = fmt.Sprintf("%v microseconds", now.Sub(v.StartTime).Microseconds())
-				currentInFlightReqMap[key.(string)] = v
-			}
 
-			return true
-		})
-
-		// TODO: should an error be returned here? and if so, what status code should be returned? 500 or 400?
-		if !syncMapRangeResult {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to read recorded in-flight requests"))
+		currentInFlightReqMap, err := core.GetInFlightReqData()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		respondOk(w, currentInFlightReqMap)
+		for _, v := range currentInFlightReqMap {
+			v.SnapshotTime = now
+		}
+
+		content, err := json.Marshal(currentInFlightReqMap)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("error while marshalling the in-flight requests data: %w", err))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(content)
+
 	})
 }

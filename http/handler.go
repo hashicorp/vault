@@ -401,9 +401,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// in-flight requests
 		inFlightReqID, err := uuid.GenerateUUID()
 		if err != nil {
-			respondError(w, http.StatusBadRequest, fmt.Errorf("failed to generate an identifier for the in-flight request"))
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
 		}
-		err = core.StoreInFlightReqData(
+		core.StoreInFlightReqData(
 			inFlightReqID,
 			&vault.InFlightReqData {
 				StartTime: time.Now(),
@@ -413,6 +413,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 		}
+		// deleting the in-flight request entry
+		defer core.DeleteInFlightReqData(inFlightReqID)
 
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
@@ -488,9 +490,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 
 		h.ServeHTTP(w, r)
-
-		// deleting the in-flight request entry
-		core.DeleteInFlightReqData(inFlightReqID)
 
 		cancelFunc()
 		return

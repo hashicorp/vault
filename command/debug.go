@@ -482,7 +482,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 }
 
 func (c *DebugCommand) defaultTargets() []string {
-	return []string{"config", "host", "in-flight-req", "metrics", "pprof", "replication-status", "server-status", "log"}
+	return []string{"config", "host", "requests", "metrics", "pprof", "replication-status", "server-status", "log"}
 }
 
 func (c *DebugCommand) captureStaticTargets() error {
@@ -494,6 +494,7 @@ func (c *DebugCommand) captureStaticTargets() error {
 		if err != nil {
 			c.captureError("config", err)
 			c.logger.Error("config: error capturing config state", "error", err)
+			return nil
 		}
 
 		if resp != nil && resp.Data != nil {
@@ -583,7 +584,7 @@ func (c *DebugCommand) capturePollingTargets() error {
 	}
 
 	// Collect in-flight request status if target is specified
-	if strutil.StrListContains(c.flagTargets, "in-flight-req") {
+	if strutil.StrListContains(c.flagTargets, "requests") {
 		g.Add(func() error {
 			c.collectInFlightRequestStatus(ctx)
 			return nil
@@ -623,8 +624,8 @@ func (c *DebugCommand) capturePollingTargets() error {
 	if err := c.persistCollection(c.hostInfoCollection, "host_info.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "host_info.json", err))
 	}
-	if err := c.persistCollection(c.inFlightReqStatusCollection, "in_flight_req_data.json"); err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "in_flight_req_data.json", err))
+	if err := c.persistCollection(c.inFlightReqStatusCollection, "requests.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "requests.json", err))
 	}
 	return nil
 }
@@ -649,6 +650,7 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("host", err)
+			return
 		}
 		if resp != nil {
 			defer resp.Body.Close()
@@ -656,6 +658,7 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("host", err)
+				return
 			}
 			if secret != nil && secret.Data != nil {
 				hostEntry := secret.Data
@@ -843,6 +846,7 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("replication-status", err)
+			return
 		}
 		if resp != nil {
 			defer resp.Body.Close()
@@ -850,6 +854,7 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("replication-status", err)
+				return
 			}
 			if secret != nil && secret.Data != nil {
 				replicationEntry := secret.Data
@@ -879,10 +884,12 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 		healthInfo, err := c.cachedClient.Sys().Health()
 		if err != nil {
 			c.captureError("server-status.health", err)
+			return
 		}
 		sealInfo, err := c.cachedClient.Sys().SealStatus()
 		if err != nil {
 			c.captureError("server-status.seal", err)
+			return
 		}
 
 		statusEntry := map[string]interface{}{
@@ -915,29 +922,22 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, req)
 		if err != nil {
 			c.captureError("inFlightReq-status", err)
+			return
 		}
 
 		var data map[string]interface{}
 		if resp != nil {
+			defer resp.Body.Close()
 			err = jsonutil.DecodeJSONFromReader(resp.Body, &data)
 			if err != nil {
 				c.captureError("inFlightReq-status", err)
-			}
-			resp.Body.Close()
-
-			inFlightReqDataRaw, ok := data["data"]
-			if !ok {
-				c.captureError("inFlightReq-status", fmt.Errorf("failed to read in-flight-request data"))
-			}
-			inFlightReqData, ok := inFlightReqDataRaw.(map[string]interface{})
-			if !ok {
-				c.captureError("inFlightReq-status", fmt.Errorf("failed to parse in-flight-request data"))
+				return
 			}
 
-			if inFlightReqData != nil && len(inFlightReqData) > 0 {
+			if data != nil && len(data) > 0 {
 				statusEntry := map[string]interface{}{
 					"timestamp":         time.Now().UTC(),
-					"in_flight_requests": inFlightReqData,
+					"in_flight_requests": data,
 				}
 				c.inFlightReqStatusCollection = append(c.inFlightReqStatusCollection, statusEntry)
 			}

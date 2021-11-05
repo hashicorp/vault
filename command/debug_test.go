@@ -237,8 +237,8 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 		},
 		{
 			"in-flight-req",
-			[]string{"in-flight-req"},
-			[]string{"in_flight_req_data.json"},
+			[]string{"requests"},
+			[]string{"requests.json"},
 		},
 		{
 			"all-minus-pprof",
