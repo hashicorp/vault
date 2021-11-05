@@ -12,6 +12,8 @@ const (
 	ctrBeforeFixed ctrLocation = iota + 1
 	ctrAfterFixed
 	ctrMiddleFixed
+	ctrBeforeIter // Used by Feedback mode KDF
+	ctrAfterIter  // Used by Feedback mode KDF
 )
 
 type counterCAVPTestCase struct {
