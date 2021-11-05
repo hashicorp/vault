@@ -18,7 +18,7 @@ FEATURES:
 * **KV Custom Metadata**: Add ability in kv-v2 to specify version-agnostic custom key metadata via the
   metadata endpoint. The data will be present in responses made to the data endpoint independent of the
   calling token's `read` access to the metadata endpoint. [[GH-12907](https://github.com/hashicorp/vault/pull/12907)]
-* **KV patch**: Add partial update support the for the `/<mount>/data/:path` kv-v2
+* **KV patch**: Add partial update support for the `/<mount>/data/:path` kv-v2
   endpoint through HTTP `PATCH`.  A new `patch` ACL capability has been added and
   is required to make such requests. [[GH-12687](https://github.com/hashicorp/vault/pull/12687)]
 * **Key Management Secrets Engine (Enterprise)**: Adds support for distributing and managing keys in GCP Cloud KMS. [[GH-2158](https://github.com/hashicorp/vault/pull/2158)]
