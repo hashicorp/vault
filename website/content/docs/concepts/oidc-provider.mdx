@@ -146,7 +146,7 @@ Each provider offers an authenticated [authorization endpoint](https://openid.ne
 
 The endpoint will [validate](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequestValidation) client requests ensuring all required parameters are present and valid. The `redirect_uri` of the request will be validated against the client's `redirect_uris`. The requesting Vault entity will be validated against the client's `assignments`. An appropriate [error code](https://openid.net/specs/openid-connect-core-1_0.html#AuthError) is returned for invalid requests.
 
-An authorization code is generated with a successful validation of the request. The authorization code is single-use and cached with a lifetime of approximately 5 minutes, which mitigates the risk of leaks. A response including the original `state` presented by the client and `code` will be returned to the Vault UI and initiates the request. Vault will issue an HTTP 302 redirect to the `redirect_uri` of the request, which includes the `code`, `state`, and `nonce` as query parameters.
+An authorization code is generated with a successful validation of the request. The authorization code is single-use and cached with a lifetime of approximately 5 minutes, which mitigates the risk of leaks. A response including the original `state` presented by the client and `code` will be returned to the Vault UI which initiated the request. Vault will issue an HTTP 302 redirect to the `redirect_uri` of the request, which includes the `code`, `state`, and `nonce` as query parameters.
 
 ### Token Endpoint
 
