@@ -641,6 +641,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-delete-open-modal]');
     await settled();
+    assert.dom('.modal.is-active').exists('Modal appears');
     assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists(); // we have a if Ember.testing catch in the delete action because it breaks things in testing
     // we can however destroy the versions
     await click('#destroy-all-versions');
