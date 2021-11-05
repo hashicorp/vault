@@ -7,6 +7,8 @@ description: >-
 
 # OIDC Provider
 
+~> **Note**: The Vault OIDC Provider feature currently only supports the [authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
+
 This document describes how Vault can be an **OpenID Connect(OIDC) identity provider** by enabling applications to leverage Vault as a source of identity using the OIDC protocol.
 
 This feature allows clients speaking to the OIDC protocol to take advantage of Vault's various authentication methods and source of identity. Clients can configure their authentication logic to talk to Vault. Once enabled, Vault will act as the bridge to identity providers via its existing authentication methods. Clients will also obtain identity information for their end-users by leveraging custom templating of Vault identity information.
@@ -56,20 +58,8 @@ Example of a JSON template for a scope:
 }
 ```
 
-The full list of template parameters include:
+The full list of template parameters are included in the following table:
 
-* `identity.entity.id`
-* `identity.entity.name`
-* `identity.entity.groups.ids`
-* `identity.entity.groups.names`
-* `identity.entity.metadata`
-* `identity.entity.metadata.<metadata key>`
-* `identity.entity.aliases.<mount accessor>.id`
-* `identity.entity.aliases.<mount accessor>.name`
-* `identity.entity.aliases.<mount accessor>.metadata`
-* `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`
-* `time.now`
-* `time.now.plus.<duration>`
 | Name                                                                             | Description                                                                             |
 | :------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
 | `identity.entity.id`                                                             | The entity's ID                                                                         |
@@ -89,10 +79,9 @@ The full list of template parameters include:
 | `time.now.minus.<duration>`                                                      | Current time minus a Go-parsable [duration](https://golang.org/pkg/time/#ParseDuration) |
 
 
+Several named scopes can be made available on an individual provider. Note that the top-level keys in a JSON template may conflict with those in another scope. When scopes are made available on a provider, their templates are checked for top-level conflicts. A warning will be issued to the Vault operator if any conflicts are found. This may result in an error if the scopes are requested in an OIDC Authentication Request.
 
-Several named scopes can be made available on an individual provider. Note that the top-level keys in a JSON template may conflict with those in another scope. When scopes are made available on a provider, their templates are checked for top-level conflicts. A warning will be issued to the vault operator if any conflicts are found. Note that this may result in an error if the scopes are requested in an OIDC Authentication Request.
-
-The openid scope is a unique case scope that may not be modified or deleted. The scope will exist in Vault and is supported by each provider by default. The scope represents the minimum set of claims required by the OIDC specification for inclusion in ID tokens. As such, templates may not contain top-level keys that overwrite the claims populated by the openid scope.
+The `openid` scope is a unique case scope that may not be modified or deleted. The scope will exist in Vault and supported by each provider by default. The scope represents the minimum set of claims required by the OIDC specification for inclusion in ID tokens. As such, templates may not contain top-level keys that overwrite the claims populated by the openid scope.
 
 The following defines the claims key and value mapping for the openid scope:
 
@@ -132,6 +121,8 @@ Key resources are referenced by clients via the key parameter. This parameter sp
 
 The following sections provide implementation details for the OIDC compliant APIs provided by Vault OIDC providers.
 
+Vault OIDC providers enable registered clients to authenticate and obtain identity information (or "claims") for their end-users. They do this by providing the APIs and behavior required to satisfy the OIDC specification for the [authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth). Initially, all clients are treated as first-party. This means that end-users will not be required to provide consent to the provider as detailed in section [3.1.2.4](https://openid.net/specs/openid-connect-core-1_0.html#Consent) of the OIDC specification. The provider will release information to clients as long as the end-user has ACL access to the provider and their identity has been authorized via an assignment.
+
 ### OpenID configuration
 
 Each provider offers an unauthenticated endpoint that facilitates OIDC Discovery. All required metadata listed in [OpenID Provider Metadata](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) is included in the discovery document. Additionally, the recommended `userinfo_endpoint` and `scopes_supported` metadata are included.
@@ -144,18 +135,18 @@ Each provider offers an unauthenticated endpoint that provides the public portio
 
 Each provider offers an authenticated [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). The authorization endpoint for each provider is added to Vault's [default policy](/docs/concepts/policies#default-policy) using the `identity/oidc/provider/+/authorize` path. The endpoint incorporates all required [authentication request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest) parameters as input. Additionally, the `state` and `nonce` parameters are required.
 
-The endpoint will [validate](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequestValidation) client requests ensuring all required parameters are present and valid. The `redirect_uri` of the request will be validated against the client's `redirect_uris`. The requesting Vault entity will be validated against the client's `assignments`. An appropriate [error code](https://openid.net/specs/openid-connect-core-1_0.html#AuthError) is returned for invalid requests.
+The endpoint [validates](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequestValidation) client requests and ensures that all required parameters are present and valid. The `redirect_uri` of the request are validated against the client's `redirect_uris`. The requesting Vault entity will be validated against the client's `assignments`. An appropriate [error code](https://openid.net/specs/openid-connect-core-1_0.html#AuthError) is returned for invalid requests.
 
 An authorization code is generated with a successful validation of the request. The authorization code is single-use and cached with a lifetime of approximately 5 minutes, which mitigates the risk of leaks. A response including the original `state` presented by the client and `code` will be returned to the Vault UI which initiated the request. Vault will issue an HTTP 302 redirect to the `redirect_uri` of the request, which includes the `code`, `state`, and `nonce` as query parameters.
 
 ### Token Endpoint
 
-Each provider will offer a [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint). The endpoint may be unauthenticated in Vault but is authenticated by requiring a `client_secret` as described in [client authentication](https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication). The endpoint ingests all required [token request](https://openid.net/specs/openid-connect-core-1_0.html#TokenRequest) parameters as input. The endpoint [validates](https://openid.net/specs/openid-connect-core-1_0.html#TokenRequestValidation) the client requests and exchanges an authorization code for the ID token and access token. The cache of authorization codes will be verified against the code presented in the exchange. The appropriate [error code](https://openid.net/specs/openid-connect-core-1_0.html#TokenErrorResponse) are returned for all invalid requests.
+Each provider will offer a [token endpoint](/api-docs/secret/identity/oidc-provider.mdx). The endpoint may be unauthenticated in Vault but is authenticated by requiring a `client_secret` as described in [client authentication](https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication). The endpoint ingests all required [token request](/api-docs/secret/identity/oidc-provider.mdx) parameters as input. The endpoint [validates](/api-docs/secret/identity/oidc-provider.mdx) the client requests and exchanges an authorization code for the ID token and access token. The cache of authorization codes will be verified against the code presented in the exchange. The appropriate [error codes](https://openid.net/specs/openid-connect-core-1_0.html#TokenErrorResponse) are returned for all invalid requests.
 
 The ID token is generated and returned upon successful client authentication and request validation. The ID token will contain a combination of required and configurable claims. The required claims are enumerated in the scopes section above for the `openid` scope. The configurable claims are populated by templates associated with the scopes provided in the authentication request that generated the authorization code.
 
-An access token is also generated and returned upon successful client authentication and request validation. The access token is a Vault [batch token](https://www.vaultproject.io/docs/concepts/tokens#batch-tokens) with a policy that only provides read access to the issuing provider's [userinfo endpoint](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo). The access token is also a TTL as defined by the `access_token_ttl` of the requesting client.
+An access token is also generated and returned upon successful client authentication and request validation. The access token is a Vault [batch token](/docs/concepts/tokens#batch-tokens) with a policy that only provides read access to the issuing provider's [userinfo endpoint](/api-docs/secret/identity/oidc-provider#userinfo-endpoint). The access token is also a TTL as defined by the `access_token_ttl` of the requesting client.
 
 ### UserInfo Endpoint
 
-Each provider provides an authenticated [userinfo endpoint](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo). The endpoint accepts the access token obtained from the token endpoint as a [bearer token](/api-docs#authentication). The userinfo response is a JSON object with the `application/json` content type. The JSON object contains claims for the Vault entity associated with the access token. The claims returned are determined by the scopes requested in the authentication request that produced the access token. The `sub` claim is always returned as the entity ID in the userinfo response.
+Each provider provides an authenticated [userinfo endpoint](/api-docs/secret/identity/oidc-provider#userinfo-endpoint). The endpoint accepts the access token obtained from the token endpoint as a [bearer token](/api-docs#authentication). The userinfo response is a JSON object with the `application/json` content type. The JSON object contains claims for the Vault entity associated with the access token. The claims returned are determined by the scopes requested in the authentication request that produced the access token. The `sub` claim is always returned as the entity ID in the userinfo response.
