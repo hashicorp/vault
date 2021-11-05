@@ -70,7 +70,24 @@ The full list of template parameters include:
 * `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`
 * `time.now`
 * `time.now.plus.<duration>`
-* `time.now.minus.<duration>`
+| Name                                                                             | Description                                                                             |
+| :------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| `identity.entity.id`                                                             | The entity's ID                                                                         |
+| `identity.entity.name`                                                           | The entity's name                                                                       |
+| `identity.entity.groups.ids`                                                     | The IDs of the groups the entity is a member of                                         |
+| `identity.entity.groups.names`                                                   | The names of the groups the entity is a member of                                       |
+| `identity.entity.metadata`                                                       | Metadata associated with the entity                                                     |
+| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                   |
+| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                     |
+| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                   |
+| `identity.entity.aliases.<mount accessor>.metadata`                              | Metadata associated with the alias for the given mount                                  |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key                 |
+| `identity.entity.aliases.<mount accessor>.custom_metadata`                       | Custom metadata associated with the alias for the given mount                           |
+| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key   |
+| `time.now`                                                                       | Current time as integral seconds since the Epoch                                        |
+| `time.now.plus.<duration>`                                                       | Current time plus a Go-parsable [duration](https://golang.org/pkg/time/#ParseDuration)  |
+| `time.now.minus.<duration>`                                                      | Current time minus a Go-parsable [duration](https://golang.org/pkg/time/#ParseDuration) |
+
 
 
 Several named scopes can be made available on an individual provider. Note that the top-level keys in a JSON template may conflict with those in another scope. When scopes are made available on a provider, their templates are checked for top-level conflicts. An error will occur if any conflict exists.
