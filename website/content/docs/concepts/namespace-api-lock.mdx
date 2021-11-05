@@ -14,7 +14,7 @@ A Vault Administrator can lock the API for particular namespaces. In this state,
 Vault will block all but a select few API endpoints from responding to clients
 operating in a locked namespace (or a descendant of a locked namespace). The
 endpoints that do respond, the exempt paths, are largely for checking the status
-of various systems, or for unlocking the API.
+of various systems (e.g. `sys/health`), or for unlocking the API.
 
 When the API is locked for a particular namespace, it is also locked for all
 descendants of that namespace. If the API was already locked for a descendant
