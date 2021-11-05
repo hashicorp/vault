@@ -2965,11 +2965,7 @@ func (b *SystemBackend) handleInFlightRequestData(_ context.Context, req *logica
 	}
 
 	now := time.Now()
-	currentInFlightReqMap, err := b.Core.GetInFlightReqData()
-	if err != nil {
-		resp.Data[logical.HTTPRawBody] = err.Error()
-		return resp, nil
-	}
+	currentInFlightReqMap := b.Core.GetInFlightReqData()
 
 	for _, v := range currentInFlightReqMap {
 		v.SnapshotTime = now

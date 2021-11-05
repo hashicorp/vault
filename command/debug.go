@@ -884,12 +884,10 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 		healthInfo, err := c.cachedClient.Sys().Health()
 		if err != nil {
 			c.captureError("server-status.health", err)
-			return
 		}
 		sealInfo, err := c.cachedClient.Sys().SealStatus()
 		if err != nil {
 			c.captureError("server-status.seal", err)
-			return
 		}
 
 		statusEntry := map[string]interface{}{
@@ -921,7 +919,7 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 		req := c.cachedClient.NewRequest("GET", "/v1/sys/in-flight-req")
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, req)
 		if err != nil {
-			c.captureError("inFlightReq-status", err)
+			c.captureError("requests", err)
 			return
 		}
 
@@ -930,17 +928,15 @@ func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
 			defer resp.Body.Close()
 			err = jsonutil.DecodeJSONFromReader(resp.Body, &data)
 			if err != nil {
-				c.captureError("inFlightReq-status", err)
+				c.captureError("requests", err)
 				return
 			}
 
-			if data != nil && len(data) > 0 {
-				statusEntry := map[string]interface{}{
-					"timestamp":         time.Now().UTC(),
-					"in_flight_requests": data,
-				}
-				c.inFlightReqStatusCollection = append(c.inFlightReqStatusCollection, statusEntry)
+			statusEntry := map[string]interface{}{
+				"timestamp":          time.Now().UTC(),
+				"in_flight_requests": data,
 			}
+			c.inFlightReqStatusCollection = append(c.inFlightReqStatusCollection, statusEntry)
 		}
 	}
 }

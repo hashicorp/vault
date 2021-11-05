@@ -410,9 +410,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				ClientRemoteAddr: r.RemoteAddr,
 				ReqPath: r.URL.Path,
 			})
-		if err != nil {
-			respondError(w, http.StatusBadRequest, err)
-		}
 		// deleting the in-flight request entry
 		defer core.DeleteInFlightReqData(inFlightReqID)
 

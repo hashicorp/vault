@@ -2971,25 +2971,16 @@ func (c *Core) DeleteInFlightReqData(reqID string) {
 	c.inFlightReqData.InFlightReqCount.Dec()
 }
 
-func (c *Core) GetInFlightReqData() (map[string]*InFlightReqData, error) {
+func (c *Core) GetInFlightReqData() map[string]*InFlightReqData {
 
 	currentInFlightReqMap := make(map[string]*InFlightReqData)
-	syncMapRangeResult := true
 	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
-		v, ok := value.(*InFlightReqData)
-		if !ok {
-			syncMapRangeResult = false
-			return false
-		}
-
+		// there is only one writer to this map, so skip checking for errors
+		v, _ := value.(*InFlightReqData)
 		currentInFlightReqMap[key.(string)] = v
 
 		return true
 	})
 
-	if !syncMapRangeResult {
-		return nil, fmt.Errorf("failed to read the recorded in-flight requests")
-	}
-
-	return currentInFlightReqMap, nil
+	return currentInFlightReqMap
 }

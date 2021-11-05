@@ -19,11 +19,7 @@ func handleUnAuthenticatedInFlightRequest(core *vault.Core) http.Handler {
 		}
 		now := time.Now()
 
-		currentInFlightReqMap, err := core.GetInFlightReqData()
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
-			return
-		}
+		currentInFlightReqMap := core.GetInFlightReqData()
 
 		for _, v := range currentInFlightReqMap {
 			v.SnapshotTime = now
