@@ -22,12 +22,10 @@ FEATURES:
   endpoint through HTTP `PATCH`.  A new `patch` ACL capability has been added and
   is required to make such requests. [[GH-12687](https://github.com/hashicorp/vault/pull/12687)]
 * **Key Management Secrets Engine (Enterprise)**: Adds support for distributing and managing keys in GCP Cloud KMS. [[GH-2158](https://github.com/hashicorp/vault/pull/2158)]
-* **Namespaces (Enterprise)**: Adds support for locking the Vault API for particular namespaces. [[GH-2213](https://github.com/hashicorp/vault/pull/2213)]
+* **Namespace Locking (Enterprise)**: Adds support for preventing requests against particular namespaces. [[GH-2213](https://github.com/hashicorp/vault/pull/2213)]
 * **OIDC Identity Provider (Tech Preview)**: Adds support for Vault to be an OpenID Connect (OIDC) provider. [[GH-12932](https://github.com/hashicorp/vault/pull/12932)]
 * **Oracle DB in the UI**: Oracle DB connection is now supported in the UI [[GH-12752](https://github.com/hashicorp/vault/pull/12752)]
 * **Postgres in the UI**: Postgres DB is now supported by the UI [[GH-12945](https://github.com/hashicorp/vault/pull/12945)]
-* **Transform (Enterprise)**: Add advanced features for encoding and decoding for Transform FPE
-* **Transform (Enterprise)**: Add a `reference` field to batch items, and propogate it to the response
 * Add ClientID to Token With Entities in Activity Log: Vault tokens without entities are now tracked with client IDs and deduplicated in the Activity Log [[GH-12820](https://github.com/hashicorp/vault/pull/12820)]
 * api: adds native Login method to Go client module with different auth method interfaces to support easier authentication [[GH-12796](https://github.com/hashicorp/vault/pull/12796)]
 * auth/kubernetes: Add ability to configure entity alias names based on the serviceaccount's namespace and name. [#110](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/110) [#112](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/112) [[GH-12633](https://github.com/hashicorp/vault/pull/12633)]
@@ -83,6 +81,8 @@ IMPROVEMENTS:
 * secrets/ssh: Use entropy augmentation when available for generation of the signing key. [[GH-12560](https://github.com/hashicorp/vault/pull/12560)]
 * serviceregistration: add `external-source: "vault"` metadata value for Consul registration. [[GH-12163](https://github.com/hashicorp/vault/pull/12163)]
 * storage/raft: Best-effort handling of cancelled contexts. [[GH-12162](https://github.com/hashicorp/vault/pull/12162)]
+* transform (enterprise): Add advanced features for encoding and decoding for Transform FPE
+* transform (enterprise): Add a `reference` field to batch items, and propogate it to the response
 * ui: Add KV secret search box when no metadata list access. [[GH-12626](https://github.com/hashicorp/vault/pull/12626)]
 * ui: Add creation time to KV 2 version history and version view [[GH-12663](https://github.com/hashicorp/vault/pull/12663)]
 * ui: Added resize for JSON editor [[GH-12906](https://github.com/hashicorp/vault/pull/12906)] [[GH-12906](https://github.com/hashicorp/vault/pull/12906)]
