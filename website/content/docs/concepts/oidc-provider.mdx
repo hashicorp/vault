@@ -90,7 +90,7 @@ The full list of template parameters include:
 
 
 
-Several named scopes can be made available on an individual provider. Note that the top-level keys in a JSON template may conflict with those in another scope. When scopes are made available on a provider, their templates are checked for top-level conflicts. An error will occur if any conflict exists.
+Several named scopes can be made available on an individual provider. Note that the top-level keys in a JSON template may conflict with those in another scope. When scopes are made available on a provider, their templates are checked for top-level conflicts. A warning will be issued to the vault operator if any conflicts are found. Note that this may result in an error if the scopes are requested in an OIDC Authentication Request.
 
 The openid scope is a unique case scope that may not be modified or deleted. The scope will exist in Vault and is supported by each provider by default. The scope represents the minimum set of claims required by the OIDC specification for inclusion in ID tokens. As such, templates may not contain top-level keys that overwrite the claims populated by the openid scope.
 
