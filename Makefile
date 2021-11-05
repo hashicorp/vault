@@ -256,15 +256,12 @@ ci-verify:
 .NOTPARALLEL: ember-dist ember-dist-dev static-assets
 
 .PHONY: build
+# This is used for release builds by .github/workflows/build.yml
 build: static-dist
-	@echo "--> Building go"
+	@echo "--> Building Vault $(VAULT_VERSION)"
 	@go build -v -tags "$(GO_TAGS)" -ldflags " -X $VERSION_PKG_PATH.Version=$(VAULT_VERSION) -X $VERSION_PKG_PATH.GitCommit=$(VAULT_COMMIT)" -o dist/
 
-version:
-ifneq (,$(wildcard sdk/version/version_base.go))
-	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
-else
-	@$(CURDIR)/scripts/version.sh version/version.go
-endif
-
 .PHONY: version
+# This is used for release builds by .github/workflows/build.yml
+version:
+	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
