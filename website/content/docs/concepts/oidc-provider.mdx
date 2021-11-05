@@ -121,7 +121,7 @@ Key resources are referenced by clients via the key parameter. This parameter sp
 
 The following sections provide implementation details for the OIDC compliant APIs provided by Vault OIDC providers.
 
-Vault OIDC providers enable registered clients to authenticate and obtain identity information (or "claims") for their end-users. They do this by providing the APIs and behavior required to satisfy the OIDC specification for the [authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth). Initially, all clients are treated as first-party. This means that end-users will not be required to provide consent to the provider as detailed in section [3.1.2.4](https://openid.net/specs/openid-connect-core-1_0.html#Consent) of the OIDC specification. The provider will release information to clients as long as the end-user has ACL access to the provider and their identity has been authorized via an assignment.
+Vault OIDC providers enable registered clients to authenticate and obtain identity information (or "claims") for their end-users. They do this by providing the APIs and behavior required to satisfy the OIDC specification for the [authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth). All clients are treated as first-party. This means that end-users will not be required to provide consent to the provider as detailed in section [3.1.2.4](https://openid.net/specs/openid-connect-core-1_0.html#Consent) of the OIDC specification. The provider will release information to clients as long as the end-user has ACL access to the provider and their identity has been authorized via an assignment.
 
 ### OpenID configuration
 
