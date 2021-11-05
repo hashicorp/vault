@@ -122,6 +122,24 @@ $ curl \
 }
 ```
 
+### Sample Request - X-Vault-Namespace
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --header "X-Vault-Namespace: some/path
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/namespaces/api-lock/lock
+```
+
+### Sample Response - X-Vault-Namespace
+
+```json
+{
+    "unlock_key": "<unlock key for some/path>"
+}
+```
+
 ### Sample Request - Descendant of Current Namespace
 
 ```shell-session
