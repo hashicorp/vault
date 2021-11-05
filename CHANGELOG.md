@@ -14,7 +14,7 @@ CHANGES:
 FEATURES:
 
 * **Customizable HTTP Headers**: Add support to define custom HTTP headers for root path (`/`) and also on API endpoints (`/v1/*`) [[GH-12485](https://github.com/hashicorp/vault/pull/12485)]
-* **Elasticsearch in the UI**: Elasticsearch DB is now supported by the UI [[GH-12672](https://github.com/hashicorp/vault/pull/12672)]
+* **Elasticsearch Database UI**: The UI now supports adding and editing Elasticsearch connections in the database secret engine [[GH-12672](https://github.com/hashicorp/vault/pull/12672)]
 * **KV Custom Metadata**: Add ability in kv-v2 to specify version-agnostic custom key metadata via the
   metadata endpoint. The data will be present in responses made to the data endpoint independent of the
   calling token's `read` access to the metadata endpoint. [[GH-12907](https://github.com/hashicorp/vault/pull/12907)]
@@ -24,8 +24,8 @@ FEATURES:
 * **Key Management Secrets Engine (Enterprise)**: Adds support for distributing and managing keys in GCP Cloud KMS. [[GH-2158](https://github.com/hashicorp/vault/pull/2158)]
 * **Namespace Locking (Enterprise)**: Adds support for preventing requests against particular namespaces. [[GH-2213](https://github.com/hashicorp/vault/pull/2213)]
 * **OIDC Identity Provider (Tech Preview)**: Adds support for Vault to be an OpenID Connect (OIDC) provider. [[GH-12932](https://github.com/hashicorp/vault/pull/12932)]
-* **Oracle DB in the UI**: Oracle DB connection is now supported in the UI [[GH-12752](https://github.com/hashicorp/vault/pull/12752)]
-* **Postgres in the UI**: Postgres DB is now supported by the UI [[GH-12945](https://github.com/hashicorp/vault/pull/12945)]
+* **Oracle Database UI**: The UI now supports adding and editing Oracle connections in the database secret engine [[GH-12752](https://github.com/hashicorp/vault/pull/12752)]
+* **Postgres Database UI**: The UI now supports adding and editing Postgres connections in the database secret engine [[GH-12945](https://github.com/hashicorp/vault/pull/12945)]
 * Deduplicate Token With Entities in Activity Log: Vault tokens without entities are now tracked with client IDs and deduplicated in the Activity Log [[GH-12820](https://github.com/hashicorp/vault/pull/12820)]
 * api: adds native Login method to Go client module with different auth method interfaces to support easier authentication [[GH-12796](https://github.com/hashicorp/vault/pull/12796)]
 * auth/kubernetes: Add ability to configure entity alias names based on the serviceaccount's namespace and name. [#110](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/110) [#112](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/112) [[GH-12633](https://github.com/hashicorp/vault/pull/12633)]
