@@ -18,6 +18,8 @@ ENV VERSION=$VERSION
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
+RUN apk add --no-cache libcap su-exec dumb-init tzdata
+
 COPY dist/$TARGETOS/$TARGETARCH/$BIN_NAME /bin/
 
 # /vault/logs is made available to use as a location to store audit logs, if
@@ -53,5 +55,4 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 
 # # By default you'll get a single-node development server that stores everything
 # # in RAM and bootstraps itself. Don't use this configuration for production.
-USER ${NAME}
 CMD ["server", "-dev"]
