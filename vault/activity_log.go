@@ -783,30 +783,29 @@ func (a *ActivityLog) resetCurrentLog() {
 }
 
 func (a *ActivityLog) deleteLogWorker(startTimestamp int64, whenDone chan struct{}) {
-	ctx := namespace.RootContext(nil)
 	entityPath := fmt.Sprintf("%v%v/", activityEntityBasePath, startTimestamp)
 	tokenPath := fmt.Sprintf("%v%v/", activityTokenBasePath, startTimestamp)
 
 	// TODO: handle seal gracefully, if we're still working?
-	entitySegments, err := a.view.List(ctx, entityPath)
+	entitySegments, err := a.view.List(a.core.activeContext, entityPath)
 	if err != nil {
 		a.logger.Error("could not list entity paths", "error", err)
 		return
 	}
 	for _, p := range entitySegments {
-		err = a.view.Delete(ctx, entityPath+p)
+		err = a.view.Delete(a.core.activeContext, entityPath+p)
 		if err != nil {
 			a.logger.Error("could not delete entity log", "error", err)
 		}
 	}
 
-	tokenSegments, err := a.view.List(ctx, tokenPath)
+	tokenSegments, err := a.view.List(a.core.activeContext, tokenPath)
 	if err != nil {
 		a.logger.Error("could not list token paths", "error", err)
 		return
 	}
 	for _, p := range tokenSegments {
-		err = a.view.Delete(ctx, tokenPath+p)
+		err = a.view.Delete(a.core.activeContext, tokenPath+p)
 		if err != nil {
 			a.logger.Error("could not delete token log", "error", err)
 		}
@@ -1125,7 +1124,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker() {
 	}
 
 	sendFunc := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), activityFragmentSendTimeout)
+		ctx, cancel := context.WithTimeout(a.core.activeContext, activityFragmentSendTimeout)
 		defer cancel()
 		err := a.sendCurrentFragment(ctx)
 		if err != nil {
@@ -1209,7 +1208,7 @@ func (a *ActivityLog) activeFragmentWorker() {
 	}
 
 	writeFunc := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), activitySegmentWriteTimeout)
+		ctx, cancel := context.WithTimeout(a.core.activeContext, activitySegmentWriteTimeout)
 		defer cancel()
 		err := a.saveCurrentSegmentToStorage(ctx, false)
 		if err != nil {
@@ -1281,8 +1280,6 @@ type ActivityIntentLog struct {
 // Handle rotation to end-of-month
 // currentTime is an argument for unit-testing purposes
 func (a *ActivityLog) HandleEndOfMonth(currentTime time.Time) error {
-	ctx := namespace.RootContext(nil)
-
 	// Hold lock to prevent segment or enable changing,
 	// disable will apply to *next* month.
 	a.l.Lock()
@@ -1312,7 +1309,7 @@ func (a *ActivityLog) HandleEndOfMonth(currentTime time.Time) error {
 	if err != nil {
 		return err
 	}
-	err = a.view.Put(ctx, entry)
+	err = a.view.Put(a.core.activeContext, entry)
 	if err != nil {
 		return err
 	}
@@ -1320,7 +1317,7 @@ func (a *ActivityLog) HandleEndOfMonth(currentTime time.Time) error {
 	// Save the current segment; this does not guarantee that fragment will be
 	// empty when it returns, but dropping some measurements is acceptable.
 	// We use force=true here in case an entry didn't appear this month
-	err = a.saveCurrentSegmentToStorageLocked(ctx, true)
+	err = a.saveCurrentSegmentToStorageLocked(a.core.activeContext, true)
 
 	// Don't return this error, just log it, we are done with that segment anyway.
 	if err != nil {
@@ -1679,7 +1676,7 @@ func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string 
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
 func (a *ActivityLog) precomputedQueryWorker() error {
-	ctx, cancel := context.WithCancel(namespace.RootContext(nil))
+	ctx, cancel := context.WithCancel(a.core.activeContext)
 	defer cancel()
 
 	// Cancel the context if activity log is shut down.
@@ -1884,7 +1881,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
 func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int) error {
-	ctx, cancel := context.WithCancel(namespace.RootContext(nil))
+	ctx, cancel := context.WithCancel(a.core.activeContext)
 	defer cancel()
 
 	// Cancel the context if activity log is shut down.
