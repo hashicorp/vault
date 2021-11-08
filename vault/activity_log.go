@@ -411,6 +411,8 @@ func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool
 	// be written to storage, since if we remove this code we will incur
 	// data loss for one segment's worth of TWEs.
 	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 || force {
+		// We can get away with simply using the oldest version stored because
+		// the storing of versions was introduced at the same time as this code.
 		oldestVersion, oldestUpgradeTime, err := a.core.FindOldestVersionTimestamp()
 		switch {
 		case err != nil:
@@ -1086,7 +1088,6 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 // stopActivityLog removes the ActivityLog from Core
 // and frees any resources.
 func (c *Core) stopActivityLog() {
-
 	// preSeal may run before startActivityLog got a chance to complete.
 	if c.activityLog != nil {
 		// Shut down background worker
