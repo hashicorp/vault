@@ -1228,11 +1228,6 @@ func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.R
 
 // pathOIDCReadProvider is used to read an existing provider
 func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	name := d.Get("name").(string)
 
 	provider, err := i.getOIDCProvider(ctx, req.Storage, name)
@@ -1243,26 +1238,13 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 		return nil, nil
 	}
 
-	issuer := i.getFullIssuerURI(ns.Path, provider.Issuer, name)
-
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"issuer":             issuer,
+			"issuer":             provider.effectiveIssuer,
 			"allowed_client_ids": provider.AllowedClientIDs,
 			"scopes_supported":   provider.ScopesSupported,
 		},
 	}, nil
-}
-
-func (i *IdentityStore) getFullIssuerURI(nsPath, issuer, name string) string {
-	fullIssuerURI := issuer
-	if fullIssuerURI == "" {
-		fullIssuerURI = i.redirectAddr
-	}
-
-	fullIssuerURI += "/v1/" + nsPath + "identity/oidc/provider/" + name
-
-	return fullIssuerURI
 }
 
 func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, name string) (*provider, error) {
@@ -1284,7 +1266,12 @@ func (i *IdentityStore) getOIDCProvider(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 
-	provider.effectiveIssuer = i.getFullIssuerURI(ns.Path, provider.Issuer, name)
+	provider.effectiveIssuer = provider.Issuer
+	if provider.effectiveIssuer == "" {
+		provider.effectiveIssuer = i.redirectAddr
+	}
+
+	provider.effectiveIssuer += "/v1/" + ns.Path + "identity/oidc/provider/" + name
 
 	return &provider, nil
 }
