@@ -81,7 +81,7 @@ jobs:
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '10'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
@@ -129,7 +129,7 @@ jobs:
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '10'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
@@ -206,7 +206,7 @@ jobs:
       - name: Setup node and yarn
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '10'
           cache: 'yarn'
           cache-dependency-path: 'ui/yarn.lock'
       - name: Build
