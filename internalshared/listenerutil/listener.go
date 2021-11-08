@@ -104,7 +104,6 @@ PASSPHRASECORRECT:
 		GetCertificate:           cg.GetCertificate,
 		NextProtos:               []string{"h2", "http/1.1"},
 		ClientAuth:               tls.RequestClientCert,
-		PreferServerCipherSuites: l.TLSPreferServerCipherSuites,
 	}
 
 	if l.TLSMinVersion == "" {
