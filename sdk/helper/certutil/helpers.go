@@ -33,6 +33,14 @@ import (
 	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
 
+const rsaMinimumSecureKeySize = 2048
+
+// Mapping of key types to default key lengths
+var defaultAlgorithmKeyBits = map[string]int {
+	"rsa": 2048,
+	"ec": 256,
+}
+
 // Mapping of NIST P-Curve's key length to expected signature bits.
 var expectedNISTPCurveHashBits = map[int]int{
 	224: 256,
@@ -536,7 +544,7 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 // Validates that the combination of keyType, keyBits, and hashBits are
 // valid together; replaces individual calls to ValidateSignatureLength and
 // ValidateKeyTypeLength.
-func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) error {
+func ValidateKeyTypeSignatureLength(keyType string, keyBits *int, hashBits *int) error {
 	if err := ValidateKeyTypeLength(keyType, keyBits); err != nil {
 		return err
 	}
@@ -546,10 +554,10 @@ func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) 
 		// store policy section 5.1.2, enforce that NIST P-curves use a hash
 		// length corresponding to curve length. Note that ed25519 does not
 		// the "ec" key type.
-		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
+		expectedHashBits := expectedNISTPCurveHashBits[*keyBits]
 
 		if expectedHashBits != *hashBits && *hashBits != 0 {
-			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, keyBits)
+			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, *keyBits)
 		} else if *hashBits == 0 {
 			*hashBits = expectedHashBits
 		}
@@ -587,21 +595,32 @@ func ValidateSignatureLength(hashBits int) error {
 	return nil
 }
 
-func ValidateKeyTypeLength(keyType string, keyBits int) error {
+func ValidateKeyTypeLength(keyType string, keyBits *int) error {
+	if *keyBits == 0 {
+		newValue, present := defaultAlgorithmKeyBits[keyType]
+		if present {
+			*keyBits = newValue
+		}
+	}
+
+	if keyType == "rsa" && *keyBits < rsaMinimumSecureKeySize {
+		return fmt.Errorf("RSA keys < %d bits are unsafe and not supported: got %d", rsaMinimumSecureKeySize, *keyBits)
+	}
+
 	switch keyType {
 	case "rsa":
-		switch keyBits {
+		switch *keyBits {
 		case 2048:
 		case 3072:
 		case 4096:
 		case 8192:
 		default:
-			return fmt.Errorf("unsupported bit length for RSA key: %d", keyBits)
+			return fmt.Errorf("unsupported bit length for RSA key: %d", *keyBits)
 		}
 	case "ec":
-		_, present := expectedNISTPCurveHashBits[keyBits]
+		_, present := expectedNISTPCurveHashBits[*keyBits]
 		if !present {
-			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
+			return fmt.Errorf("unsupported bit length for EC key: %d", *keyBits)
 		}
 	case "any", "ed25519":
 	default:
