@@ -1826,7 +1826,7 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 	doneCh := make(chan struct{})
 	timeout := time.After(20 * time.Second)
 
-	go a.deleteLogWorker(1111, doneCh)
+	go a.deleteLogWorker(core.activeContext, 1111, doneCh)
 	select {
 	case <-doneCh:
 		break
@@ -1975,7 +1975,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	month2 := timeutil.StartOfNextMonth(month1)
 
 	// Trigger end-of-month
-	a.HandleEndOfMonth(month1)
+	a.HandleEndOfMonth(core.activeContext, month1)
 
 	// Check segment is present, with 1 entity
 	path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, segment0)
@@ -2017,7 +2017,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	a.AddEntityToFragment(id2, "root", time.Now().Unix())
 
-	a.HandleEndOfMonth(month2)
+	a.HandleEndOfMonth(core.activeContext, month2)
 	segment2 := a.GetStartTimestamp()
 
 	a.AddEntityToFragment(id3, "root", time.Now().Unix())
@@ -2358,7 +2358,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker()
+		err = a.precomputedQueryWorker(core.activeContext)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2727,7 +2727,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker()
+		err = a.precomputedQueryWorker(core.activeContext)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3061,7 +3061,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker()
+		err = a.precomputedQueryWorker(core.activeContext)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3186,7 +3186,7 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 	// This will block if the shutdown didn't work.
 	go func() {
 		// We expect this to error because of BlockingInmemStorage
-		_ = a.precomputedQueryWorker()
+		_ = a.precomputedQueryWorker(core.activeContext)
 		close(done)
 	}()
 
@@ -3324,7 +3324,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 
 	t.Log("24 months")
 	now := times[len(times)-1]
-	err := a.retentionWorker(now, 24)
+	err := a.retentionWorker(core.activeContext, now, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3333,7 +3333,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 
 	t.Log("12 months")
-	err = a.retentionWorker(now, 12)
+	err = a.retentionWorker(core.activeContext, now, 12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3345,7 +3345,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 
 	t.Log("1 month")
-	err = a.retentionWorker(now, 1)
+	err = a.retentionWorker(core.activeContext, now, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3356,7 +3356,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	checkPresent(21)
 
 	t.Log("0 months")
-	err = a.retentionWorker(now, 0)
+	err = a.retentionWorker(core.activeContext, now, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
