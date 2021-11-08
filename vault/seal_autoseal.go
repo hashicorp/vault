@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -32,7 +33,7 @@ type autoSeal struct {
 	recoveryConfig  atomic.Value
 	core            *Core
 	logger          log.Logger
-	healthcheck     *time.Ticker
+	healthCheck     *time.Ticker
 	healthCheckStop chan struct{}
 }
 
@@ -507,7 +508,7 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 }
 
 func (d *autoSeal) StartHealthCheck() {
-	d.healthcheck = time.NewTicker(sealHeathTestInterval)
+	d.healthCheck = time.NewTicker(sealHeathTestInterval)
 	d.healthCheckStop = make(chan struct{})
 	go func() {
 		lastTestOk := true
@@ -515,24 +516,24 @@ func (d *autoSeal) StartHealthCheck() {
 		for {
 			select {
 			case <-d.healthCheckStop:
-				d.healthcheck.Stop()
+				d.healthCheck.Stop()
 				close(d.healthCheckStop)
-				d.healthcheck = nil
+				d.healthCheck = nil
 				d.healthCheckStop = nil
 				return
-			case t := <-d.healthcheck.C:
+			case t := <-d.healthCheck.C:
 				testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
 				ciphertext, err := d.Wrapper.Encrypt(d.core.activeContext, []byte(testVal), nil)
 				if err != nil {
 					lastTestOk = false
-					d.logger.Warn("failed to encrypt seal health test value, seal backend may be offline", "error", err)
+					d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
 				} else {
 					plaintext, err := d.Wrapper.Decrypt(d.core.activeContext, ciphertext, nil)
 					if err != nil {
 						lastTestOk = false
-						d.logger.Warn("failed to decrypt seal health test value, seal backend may be offline", "error", err)
+						d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
 					}
-					if subtle.ConstantTimeCompare([]byte(testVal), plaintext) != 1 {
+					if !bytes.Equal([]byte(testVal), plaintext) {
 						lastTestOk = false
 						d.logger.Warn("seal health test value failed to decrypt to expected value")
 					} else {
