@@ -20,6 +20,9 @@ Note that this command is designed to run indefinitely. It is similar to
 it encounters an unexpected error. As a user, you must terminate this
 process yourself to shut it down.
 
+If Vault is emitting log messages faster than a receiver can process them, the
+log messages will be truncated.
+
 ## Examples
 
 Monitor server logs at the `debug` log level:
