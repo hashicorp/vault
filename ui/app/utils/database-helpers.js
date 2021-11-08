@@ -136,7 +136,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     ],
   },
   {
-    value: 'oracle-database-plugin',
+    value: 'vault-plugin-database-oracle',
     displayName: 'Oracle',
     fields: [
       { attr: 'plugin_name' },
@@ -188,7 +188,7 @@ export const STATEMENT_FIELDS = {
     'mysql-aurora-database-plugin': [],
     'mysql-legacy-database-plugin': [],
     'mysql-rds-database-plugin': [],
-    'oracle-database-plugin': [],
+    'vault-plugin-database-oracle': [],
     'postgresql-database-plugin': [],
   },
   dynamic: {
@@ -200,7 +200,7 @@ export const STATEMENT_FIELDS = {
     'mysql-aurora-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-legacy-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-rds-database-plugin': ['creation_statements', 'revocation_statements'],
-    'oracle-database-plugin': ['creation_statements', 'revocation_statements'],
+    'vault-plugin-database-oracle': ['creation_statements', 'revocation_statements'],
     'postgresql-database-plugin': [
       'creation_statements',
       'revocation_statements',

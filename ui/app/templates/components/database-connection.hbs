@@ -83,6 +83,12 @@
 {{/if}}
 
 {{#if (eq @mode 'create')}}
+
+  {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
+    <AlertBanner @type="warning" @message={{"Custom plugin names are currently not supported in Vault UI. 
+        Please ensure Oracle database plugin is registered with the name vault-plugin-database-oracle."}} />
+  {{/if}}
+
   <form {{on 'submit' this.handleCreateConnection}}>
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
