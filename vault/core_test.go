@@ -55,14 +55,14 @@ func TestSealConfig_Invalid(t *testing.T) {
 	}
 }
 
-// TestCore_HasVaultVersion checks that VersionTimestamps are correct and initialized
+// TestCore_HasVaultVersion checks that versionTimestamps are correct and initialized
 // after a core has been unsealed.
 func TestCore_HasVaultVersion(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	if c.VersionTimestamps == nil {
+	if c.versionTimestamps == nil {
 		t.Fatalf("Version timestamps for core were not initialized for a new core")
 	}
-	upgradeTime, ok := c.VersionTimestamps[version.Version]
+	upgradeTime, ok := c.versionTimestamps[version.Version]
 	if !ok {
 		t.Fatalf("%s upgrade time not found", version.Version)
 	}

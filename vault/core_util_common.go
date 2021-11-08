@@ -43,14 +43,14 @@ func (c *Core) storeVersionTimestamp(ctx context.Context, version string, curren
 // upgrade timestamp from storage. The earliest version this can be (barring
 // downgrades) is 1.9.0.
 func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
-	if c.VersionTimestamps == nil || len(c.VersionTimestamps) == 0 {
+	if c.versionTimestamps == nil || len(c.versionTimestamps) == 0 {
 		return "", time.Time{}, fmt.Errorf("version timestamps are not initialized")
 	}
 
 	// initialize oldestUpgradeTime to current time
 	oldestUpgradeTime := time.Now()
 	var oldestVersion string
-	for version, upgradeTime := range c.VersionTimestamps {
+	for version, upgradeTime := range c.versionTimestamps {
 		if upgradeTime.Before(oldestUpgradeTime) {
 			oldestVersion = version
 			oldestUpgradeTime = upgradeTime
@@ -83,7 +83,7 @@ func (c *Core) loadVersionTimestamps(ctx context.Context) (retErr error) {
 		if vaultVersion.Version == "" || vaultVersion.TimestampInstalled.IsZero() {
 			return fmt.Errorf("found empty serialized vault version at path %s", versionPath)
 		}
-		c.VersionTimestamps[vaultVersion.Version] = vaultVersion.TimestampInstalled
+		c.versionTimestamps[vaultVersion.Version] = vaultVersion.TimestampInstalled
 	}
 	return nil
 }
