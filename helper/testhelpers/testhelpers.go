@@ -724,6 +724,8 @@ func SetNonRootToken(client *api.Client) error {
 	return nil
 }
 
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
 func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
@@ -734,5 +736,5 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	t.Fatal(err)
+	t.Fatalf("did not complete before deadline, err: %v", err)
 }
