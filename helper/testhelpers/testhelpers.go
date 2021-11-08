@@ -723,3 +723,16 @@ func SetNonRootToken(client *api.Client) error {
 	client.SetToken(secret.Auth.ClientToken)
 	return nil
 }
+
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatal(err)
+}
