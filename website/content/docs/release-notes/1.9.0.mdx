@@ -9,7 +9,7 @@ description: |-
 
 **Software Release Date**: November 19, 2021
 
-**Summary**: This document captures major updates as part of Vault release 1.9.0, including new features, breaking changes, enhancements, deprecation, and EOL plans. Readers should refer to the [changelog]() for any other details.
+**Summary**: This document captures major updates as part of Vault release 1.9.0, including new features, breaking changes, enhancements, deprecation, and EOL plans. Refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md) for more details.
 
 ## New features
 
@@ -33,11 +33,15 @@ The following section provides details about the ADP module features added in th
 
 #### Advanced I/O handling for Tranform FPE (ADP-Transform)
 
-This feature provides users of the ADP Transform FPE capability with increased flexibility in generating input and output. This feature includes the ability to specify which capture groups within the input regex need to be encoded or decoded and the format of the encoded value.
+This feature provides ADP Transform FPE users flexibility in generating input and output data with optional prefixes, dashes, spaces--all handled by the Transform Secrets engine. The [Tranformation template](https://learn.hashicorp.com/tutorials/vault/transform#advanced-handling) or capture groups specifies how the input regex are encoded or decoded including the format of the encoded value.
 
 #### MS SQL TDE (ADP)
 
-## Other enhancements
+We added support to Vault Enterprise for customers who want Vault to manage encryption keys for Transparent Data Encryption on MSSQL servers.
+
+## Other Features/enhancements
+
+This section describes other features and enhancments introduced as part of the Vault 1.9 release.
 
 ### Agent Persistent Cache improvements
 
@@ -45,48 +49,61 @@ TBD
 
 ### Customized username generation for database dynamic credentials
 
-This feature enables customization of username for database dynamic credentials. This should help customers better manage and correlate usernames for various actions such as troubleshooting etc. Vault 1.9 supports Postgres, MSSQL, MySQL, Oracle, MongoDB.
+This feature enables customization of username for database dynamic credentials. This feature helps customers better manage and correlate usernames for various actions such as troubleshooting, etc. Vault 1.9 supports Postgres, MSSQL, MySQL, Oracle, MongoDB.
 
 ### Customizable HTTP headers for Vault
 
-This features allows security operators to configure custom headers to HTTP root path (/) and API endpoints (/v1/*), in addition to the previously supported UI paths through the server HCL configuration file. If desired, this will enable customers to add custom security headers at these paths, thereby maintaining an improved security posture.
+This [features](https://github.com/hashicorp/vault/pull/12485) allows security operators to configure [custom headers](/docs/configuration/listener/tcp) to HTTP root path (/) and API endpoints (/v1/*), in addition to the previously supported UI paths through the server HCL configuration file. If desired, this will enable customers to add custom security headers at these paths, thereby maintaining an improved security posture.
 
-### Executing Vault on s390x CPU architecture
+### Support for IBM s390X CPU architecture
 
-This feature adds support for Vault to run on the x390x architecture via the equivalent binary.
+This feature adds support for Vault to run on the IBM s390x architecture via the [equivalent binary](https://releases.hashicorp.com/vault/1.9.0).
 
 
 ### Namespace API Lock
 
-This feature provides namespace administrators to flexibly control operations such as locking APIs from child namespaces to which they have access. This enables them to restrict access to their domain in a multi-tenant environment and perform break-glass procedures in times of emergency to protect a cluster from within their child namespace.
+This feature (NEED LINK) provides namespace administrators to flexibly control operations such as locking APIs from child namespaces to which they have access. This enables them to restrict access to their domain in a multi-tenant environment and perform break-glass procedures in times of emergency to protect a cluster from within their child namespace.
+
+### Vault Terraform Provider v3
+
+We have upgraded the [Vault Terraform Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) to the latest version of the [Terraform Plugin SDKv2](https://www.terraform.io/docs/extend/sdkv2-intro.html) to leverage new features.
+
+### Azure Secrets Engine Enhancements
+
+The following enhancement are included:
+
+* Added `use_microsoft_graph_api` configuration parameter is added to use with Microsoft Graph API. We are targeting to remove Azure Active Directory API by June 30, 2022.
+* Rotate root
+
+## Customized metadata for KV
+
+This [enhancement](https://github.com/hashicorp/vault/pull/12907) provides the ability to set version-agnostic custom key metadata for Vault KVv2 secrets via a metadata endpoint. This custom metadata will also be visible in the UI.
 
 ## UI enhancements
 
 ### Expanding the UI for more DB secrets engines
 
-We have been adding support for DB secrets engines in the UI over the past few releases. In the Vault 1.9 release, we have added support for Oracle and ElasticSearch DB secrets engines in the UI.
+We have been adding support for DB secrets engines in the UI over the past few releases. In the Vault 1.9 release, we have added support for [Oracle](https://github.com/hashicorp/vault/pull/12752) and [ElasticSearch](https://github.com/hashicorp/vault/pull/12672) and [PostgresSQL](https://github.com/hashicorp/vault/pull/12945) database secrets engines in the UI.
 
 ### PKI certificate metadata
 
-This enhancement adds support for additional PKI certificate metadata in the UI, such as Date issued, Date of expiry, serial number, subject/name.
-
-### Customized metadata for KV
-
-This enhancement provides the ability to set custom metadata for Vault KVv2 secrets via a map structure. This custom metadata will also be visible in the UI.
+The [PKI Secrets Engine](/docs/secrets/pki) now displays additional PKI certificate metadata in the UI, such as date issued, date of expiry, serial number, and subject/name.
 
 ## GA support for previously supported Tech Preview Features
 
 ### Key Management Secrets (KMS) Engine - GCP
 
-The KMS Engine for GCP was introduced as a Tech Preview feature in Vault 1.8. As of 1.9 it is supported as GA.
+The [KMS Engine for GCP](https://www.vaultproject.io/docs/secrets/gcpkms) was introduced as a Tech Preview feature in Vault 1.8. As of 1.9, it is now generally available to assist with automating many GCP key management operations.
 
 ## Tech Preview Features
 
-### KV: Patch Operations
+### KV Secrets Engine v2 Patch Operations
 
-This feature provides a more streamlined method for managing KV secrets, enabling customers to better maintain least privilege security in automated environments. It allows for writing new KV secrets and new versions for existing KV secrets without having to provide the ability to read from the engine. This feature also provides the ability to read a key from a KV endpoint but not the value.
+This feature provides a more streamlined method for managing [KV v2 secrets](https://www.vaultproject.io/api-docs/secret/kv/kv-v2), enabling customers to better maintain least privilege security in automated environments. This feature allows performing partial updates to KV v2 secrets without requiring to read the full KV secret's key/value pairs. In the future,  new KV secrets and new versions for existing KV secrets without having to provide the ability to read from the engine. This feature also provides the ability to read a key from a KV endpoint but not the value.
 
 ### Vault as an OIDC Provider
+
+Vault can now act as an OIDC Provider so applications can leverage the pre-existing Vault identities to authenticate and authorize into applications.
 
 ## Breaking changes
 
@@ -94,7 +111,7 @@ The following section details breaking changes introduced with Vault 1.9.
 
 ### Removal of HTTP Request Counters
 
-In Vault 1.9, the [internal HTTP Request count API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests) backwards removed from the product. Calls to the endpoint will result in a **404 error** with a message stating that functionality on this path has been removed.
+In Vault 1.9, the [internal HTTP Request count API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests) was removed from the product. Calls to the endpoint will result in a **404 error** with a message stating that functionality on this path has been removed.
 Please refer to the [upgrade guide](/docs/upgrading/upgrade-to-1.9.0) for more information.
 
 As called out in the documentation, Vault does not make backwards compatible guarantees on internal APIs (those prefaced with `sys/internal`). They are subject to change and may disappear without notice.
