@@ -8,6 +8,9 @@ description: The `/sys/monitor` endpoint is used to receive streaming logs from 
 
 The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
 
+If Vault is emitting log messages faster than a receiver can process them, the
+some log lines will be dropped.
+
 ## Monitor system logs
 
 This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
