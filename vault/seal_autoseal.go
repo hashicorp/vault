@@ -5,14 +5,15 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	mathrand "math/rand"
+	"sync/atomic"
+	"time"
+
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
-	mathrand "math/rand"
-	"sync/atomic"
-	"time"
 )
 
 // barrierTypeUpgradeCheck checks for backwards compat on barrier type, not
