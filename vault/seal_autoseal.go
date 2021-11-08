@@ -32,7 +32,7 @@ type autoSeal struct {
 	core            *Core
 	logger          log.Logger
 	healthcheck     *time.Ticker
-	stopHealthcheck chan struct{}
+	healthCheckStop chan struct{}
 }
 
 // Ensure we are implementing the Seal interface
@@ -505,43 +505,51 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 	return nil
 }
 
-func (d *autoSeal) HealthCheck() {
+func (d *autoSeal) StartHealthCheck() {
 	d.healthcheck = time.NewTicker(sealHeathTestInterval)
-	d.stopHealthcheck = make(chan struct{})
-	lastTestOk := true
-	lastSeenOk := time.Now()
-	for {
-		select {
-		case <-d.stopHealthcheck:
-			d.healthcheck.Stop()
-			close(d.stopHealthcheck)
-			d.healthcheck = nil
-			d.stopHealthcheck = nil
-			return
-		case t := <-d.healthcheck.C:
-			testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-			ciphertext, err := d.Wrapper.Encrypt(d.core.activeContext, []byte(testVal), nil)
-			if err != nil {
-				lastTestOk = false
-				d.logger.Warn("failed to encrypt seal health test value, seal backend may be offline", "error", err)
-			} else {
-				plaintext, err := d.Wrapper.Decrypt(d.core.activeContext, ciphertext, nil)
+	d.healthCheckStop = make(chan struct{})
+	go func() {
+		lastTestOk := true
+		lastSeenOk := time.Now()
+		for {
+			select {
+			case <-d.healthCheckStop:
+				d.healthcheck.Stop()
+				close(d.healthCheckStop)
+				d.healthcheck = nil
+				d.healthCheckStop = nil
+				return
+			case t := <-d.healthcheck.C:
+				testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
+				ciphertext, err := d.Wrapper.Encrypt(d.core.activeContext, []byte(testVal), nil)
 				if err != nil {
 					lastTestOk = false
-					d.logger.Warn("failed to decrypt seal health test value, seal backend may be offline", "error", err)
-				}
-				if subtle.ConstantTimeCompare([]byte(testVal), plaintext) != 1 {
-					lastTestOk = false
-					d.logger.Warn("seal health test value failed to decrypt to expected value")
+					d.logger.Warn("failed to encrypt seal health test value, seal backend may be offline", "error", err)
 				} else {
-					d.logger.Debug("seal health test passed")
-					if !lastTestOk {
-						d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+					plaintext, err := d.Wrapper.Decrypt(d.core.activeContext, ciphertext, nil)
+					if err != nil {
+						lastTestOk = false
+						d.logger.Warn("failed to decrypt seal health test value, seal backend may be offline", "error", err)
 					}
-					lastTestOk = true
-					lastSeenOk = t
+					if subtle.ConstantTimeCompare([]byte(testVal), plaintext) != 1 {
+						lastTestOk = false
+						d.logger.Warn("seal health test value failed to decrypt to expected value")
+					} else {
+						d.logger.Debug("seal health test passed")
+						if !lastTestOk {
+							d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+						}
+						lastTestOk = true
+						lastSeenOk = t
+					}
 				}
 			}
 		}
+	}()
+}
+
+func (d *autoSeal) StopHealthCheck() {
+	if d.healthCheckStop != nil {
+		d.healthCheckStop <- struct{}{}
 	}
 }

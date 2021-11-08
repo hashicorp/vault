@@ -2143,7 +2143,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 
 		// Start a periodic but infrequent heartbeat to detect auto-seal backend outages at runtime rather than being
 		// surprised by this at the next need to unseal.
-		go seal.HealthCheck()
+		seal.StartHealthCheck()
 	}
 
 	c.metricsCh = make(chan struct{})
@@ -2230,8 +2230,8 @@ func (c *Core) preSeal() error {
 		c.autoRotateCancel = nil
 	}
 
-	if seal, ok := c.seal.(*autoSeal); ok && seal.stopHealthcheck != nil {
-		seal.stopHealthcheck <- struct{}{}
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
 	}
 
 	preSealPhysical(c)
