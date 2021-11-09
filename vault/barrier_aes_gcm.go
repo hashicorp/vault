@@ -1213,51 +1213,7 @@ func (b *AESGCMBarrier) TotalLocalEncryptions() int64 {
 }
 
 func (b *AESGCMBarrier) CheckBarrierAutoRotate(ctx context.Context) (string, error) {
-	const oneYear = 24 * 365 * time.Hour
-	reason, err := func() (string, error) {
-		b.l.RLock()
-		defer b.l.RUnlock()
-		if b.keyring != nil {
-			// Rotation Checks
-			var reason string
-
-			rc, err := b.RotationConfig()
-			if err != nil {
-				return "", err
-			}
-
-			if !rc.Disabled {
-				activeKey := b.keyring.ActiveKey()
-				ops := b.encryptions()
-				switch {
-				case activeKey.Encryptions == 0 && !activeKey.InstallTime.IsZero() && time.Since(activeKey.InstallTime) > oneYear:
-					reason = legacyRotateReason
-				case ops > rc.MaxOperations:
-					reason = "reached max operations"
-				case rc.Interval > 0 && time.Since(activeKey.InstallTime) > rc.Interval:
-					reason = "rotation interval reached"
-				}
-			}
-			return reason, nil
-		}
-		return "", nil
-	}()
-	if err != nil {
-		return "", err
-	}
-	if reason != "" {
-		return reason, nil
-	}
-
-	b.l.Lock()
-	defer b.l.Unlock()
-	if b.keyring != nil {
-		err := b.persistEncryptions(ctx)
-		if err != nil {
-			return "", err
-		}
-	}
-	return reason, nil
+	return "", nil
 }
 
 // Must be called with lock held

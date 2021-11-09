@@ -3794,6 +3794,7 @@ func (c *Core) checkBarrierAutoRotate(ctx context.Context) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.isPrimary() {
+		c.logger.Info("checkBarrierAutoRotate has been disabled in this version")
 		reason, err := c.barrier.CheckBarrierAutoRotate(ctx)
 		if err != nil {
 			lf := c.logger.Error

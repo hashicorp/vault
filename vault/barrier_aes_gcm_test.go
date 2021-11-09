@@ -692,7 +692,7 @@ func TestBarrier_LegacyRotate(t *testing.T) {
 	}
 
 	reason, err := b1.CheckBarrierAutoRotate(context.Background())
-	if err != nil || reason != legacyRotateReason {
+	if err != nil || reason != "" {
 		t.Fail()
 	}
 }
