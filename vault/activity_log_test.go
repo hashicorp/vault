@@ -206,7 +206,7 @@ func TestActivityLog_UniqueEntities(t *testing.T) {
 
 func readSegmentFromStorageNil(t *testing.T, c *Core, path string) {
 	t.Helper()
-	logSegment, err := c.barrier.Get(c.activeContext, path)
+	logSegment, err := c.barrier.Get(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func readSegmentFromStorageNil(t *testing.T, c *Core, path string) {
 
 func readSegmentFromStorage(t *testing.T, c *Core, path string) *logical.StorageEntry {
 	t.Helper()
-	logSegment, err := c.barrier.Get(c.activeContext, path)
+	logSegment, err := c.barrier.Get(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func readSegmentFromStorage(t *testing.T, c *Core, path string) *logical.Storage
 
 func expectMissingSegment(t *testing.T, c *Core, path string) {
 	t.Helper()
-	logSegment, err := c.barrier.Get(c.activeContext, path)
+	logSegment, err := c.barrier.Get(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,9 +263,10 @@ func expectedEntityIDs(t *testing.T, out *activity.EntityActivityLog, ids []stri
 
 func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
 
 	a := core.activityLog
-	a.SetStandbyEnable(core.activeContext, true)
+	a.SetStandbyEnable(ctx, true)
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	nsIDs := [...]string{"ns1_id", "ns2_id", "ns3_id"}
@@ -275,7 +276,7 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 		a.AddTokenToFragment(nsIDs[0])
 	}
 	a.AddTokenToFragment(nsIDs[1])
-	err := a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing tokens to storage: %v", err)
 	}
@@ -307,7 +308,7 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 
 	a.AddTokenToFragment(nsIDs[0])
 	a.AddTokenToFragment(nsIDs[2])
-	err = a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err = a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing tokens to storage: %v", err)
 	}
@@ -346,9 +347,10 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 // tokenCount, as this field will not be used going forward.
 func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
 
 	a := core.activityLog
-	a.SetStandbyEnable(core.activeContext, true)
+	a.SetStandbyEnable(ctx, true)
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	tokenPath := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
@@ -365,7 +367,7 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		a.HandleTokenUsage(&entityEntry)
 	}
-	err := a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing TWEs to storage: %v", err)
 	}
@@ -411,9 +413,10 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 
 func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
 
 	a := core.activityLog
-	a.SetStandbyEnable(core.activeContext, true)
+	a.SetStandbyEnable(ctx, true)
 	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
 
 	now := time.Now()
@@ -427,7 +430,7 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 
 	a.AddEntityToFragment(ids[0], "root", times[0])
 	a.AddEntityToFragment(ids[1], "root2", times[1])
-	err := a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
 	}
@@ -445,7 +448,7 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 
 	a.AddEntityToFragment(ids[0], "root", times[2])
 	a.AddEntityToFragment(ids[2], "root", times[2])
-	err = a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err = a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing segments to storage: %v", err)
 	}
@@ -514,7 +517,7 @@ func TestActivityLog_availableLogsEmptyDirectory(t *testing.T) {
 	// verify that directory is empty, and nothing goes wrong
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
-	times, err := a.availableLogs(core.activeContext)
+	times, err := a.availableLogs(context.Background())
 	if err != nil {
 		t.Fatalf("error getting start_time(s) for empty activity log")
 	}
@@ -535,7 +538,7 @@ func TestActivityLog_availableLogs(t *testing.T) {
 	}
 
 	// verify above files are there, and dates in correct order
-	times, err := a.availableLogs(core.activeContext)
+	times, err := a.availableLogs(context.Background())
 	if err != nil {
 		t.Fatalf("error getting start_time(s) for activity log")
 	}
@@ -590,7 +593,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	}
 
 	// Save incomplete segment
-	err := a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err := a.saveCurrentSegmentToStorage(context.Background(), false)
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
 	}
@@ -656,7 +659,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 		t.Fatal("timed out waiting for new fragment")
 	}
 
-	err = a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err = a.saveCurrentSegmentToStorage(context.Background(), false)
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
 	}
@@ -726,7 +729,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 	{
 		req := logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
 		req.Storage = view
-		resp, err := b.HandleRequest(core.activeContext, req)
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -747,7 +750,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["default_report_months"] = 0
-		_, err := b.HandleRequest(core.activeContext, req)
+		_, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -755,7 +758,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["enabled"] = "bad-value"
-		_, err = b.HandleRequest(core.activeContext, req)
+		_, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -764,7 +767,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req.Storage = view
 		req.Data["retention_months"] = 0
 		req.Data["enabled"] = "enable"
-		_, err = b.HandleRequest(core.activeContext, req)
+		_, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -775,7 +778,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["default_report_months"] = 1
-		resp, err := b.HandleRequest(core.activeContext, req)
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -786,7 +789,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["retention_months"] = 2
-		resp, err = b.HandleRequest(core.activeContext, req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -797,7 +800,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		req = logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["enabled"] = "enable"
-		resp, err = b.HandleRequest(core.activeContext, req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -807,7 +810,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 
 		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
 		req.Storage = view
-		resp, err = b.HandleRequest(core.activeContext, req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -834,7 +837,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 		originalEnabled := core.activityLog.GetEnabled()
 		newEnabled := activityLogEnabledDefault
 
-		resp, err := b.HandleRequest(core.activeContext, req)
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -842,7 +845,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 
 		req = logical.TestRequest(t, logical.ReadOperation, "internal/counters/config")
 		req.Storage = view
-		resp, err = b.HandleRequest(core.activeContext, req)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -949,8 +952,9 @@ func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range testCases {
-		result, exists, err := a.getLastEntitySegmentNumber(core.activeContext, time.Unix(tc.input, 0))
+		result, exists, err := a.getLastEntitySegmentNumber(ctx, time.Unix(tc.input, 0))
 		if err != nil {
 			t.Fatalf("unexpected error for input %d: %v", tc.input, err)
 		}
@@ -993,8 +997,9 @@ func TestActivityLog_tokenCountExists(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range testCases {
-		exists, err := a.tokenCountExists(core.activeContext, time.Unix(tc.input, 0))
+		exists, err := a.tokenCountExists(ctx, time.Unix(tc.input, 0))
 		if err != nil {
 			t.Fatalf("unexpected error for input %d: %v", tc.input, err)
 		}
@@ -1159,13 +1164,14 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
 
+	ctx := context.Background()
 	for _, tc := range testCases {
 		a.l.Lock()
 		a.fragmentLock.Lock()
 		// loadCurrentClientSegment requires us to grab the fragment lock and the
 		// activityLog lock, as per the comment in the loadCurrentClientSegment
 		// function
-		err := a.loadCurrentClientSegment(core.activeContext, time.Unix(tc.time, 0), tc.seqNum)
+		err := a.loadCurrentClientSegment(ctx, time.Unix(tc.time, 0), tc.seqNum)
 		a.fragmentLock.Unlock()
 		a.l.Unlock()
 
@@ -1269,6 +1275,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
 
+	ctx := context.Background()
 	for _, tc := range testCases {
 		if tc.refresh {
 			a.l.Lock()
@@ -1279,7 +1286,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 			a.l.Unlock()
 		}
 
-		err := a.loadPriorEntitySegment(core.activeContext, time.Unix(tc.time, 0), tc.seqNum)
+		err := a.loadPriorEntitySegment(ctx, time.Unix(tc.time, 0), tc.seqNum)
 		if err != nil {
 			t.Fatalf("got error loading data for %q: %v", tc.path, err)
 		}
@@ -1326,12 +1333,13 @@ func TestActivityLog_loadTokenCount(t *testing.T) {
 		},
 	}
 
+	ctx := context.Background()
 	for _, tc := range testCases {
 		WriteToStorage(t, core, ActivityLogPrefix+tc.path, data)
 	}
 
 	for _, tc := range testCases {
-		err := a.loadTokenCount(core.activeContext, time.Unix(tc.time, 0))
+		err := a.loadTokenCount(ctx, time.Unix(tc.time, 0))
 		if err != nil {
 			t.Fatalf("got error loading data for %q: %v", tc.path, err)
 		}
@@ -1348,9 +1356,10 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	sysView := core.systemBarrierView
 
 	a := core.activityLog
+	ctx := namespace.RootContext(nil)
 
 	// Disable, then enable, to exercise newly-enabled code
-	a.SetConfig(core.activeContext, activityConfig{
+	a.SetConfig(ctx, activityConfig{
 		Enabled:             "disable",
 		RetentionMonths:     12,
 		DefaultReportMonths: 12,
@@ -1367,7 +1376,7 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 	req.Storage = sysView
 	req.Data["enabled"] = "enable"
-	resp, err := b.HandleRequest(core.activeContext, req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1378,7 +1387,7 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	// Simulate seal/unseal cycle
 	core.stopActivityLog()
 	var wg sync.WaitGroup
-	core.setupActivityLog(core.activeContext, &wg)
+	core.setupActivityLog(ctx, &wg)
 	wg.Wait()
 
 	a = core.activityLog
@@ -1389,7 +1398,7 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 	a.AddEntityToFragment("1111-1111", "root", time.Now().Unix())
 	a.AddTokenToFragment("root")
 
-	err = a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err = a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1479,7 +1488,7 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, time.Now().UTC())
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1582,7 +1591,7 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 		a.l.Unlock()
 	}()
 
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, time.Now().UTC())
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1615,7 +1624,7 @@ func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
 	a, _, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 
 	var wg sync.WaitGroup
-	ctx, cancelFn := context.WithCancel(a.core.activeContext)
+	ctx, cancelFn := context.WithCancel(context.Background())
 	cancelFn()
 
 	err := a.refreshFromStoredLog(ctx, &wg, time.Now().UTC())
@@ -1629,7 +1638,7 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, time.Now().UTC())
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1664,7 +1673,7 @@ func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, time.Now().UTC())
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1692,7 +1701,7 @@ func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, now)
+	err := a.refreshFromStoredLog(context.Background(), &wg, now)
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1709,7 +1718,7 @@ func TestActivityLog_refreshFromStoredLogTwoMonthsPrevious(t *testing.T) {
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, now)
+	err := a.refreshFromStoredLog(context.Background(), &wg, now)
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1728,7 +1737,7 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	a.SetEnable(true)
 
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, time.Now().UTC())
+	err := a.refreshFromStoredLog(context.Background(), &wg, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("got error loading stored activity logs: %v", err)
 	}
@@ -1826,7 +1835,7 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 	doneCh := make(chan struct{})
 	timeout := time.After(20 * time.Second)
 
-	go a.deleteLogWorker(core.activeContext, 1111, doneCh)
+	go a.deleteLogWorker(1111, doneCh)
 	select {
 	case <-doneCh:
 		break
@@ -1868,6 +1877,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 	core, b, _ := testCoreSystemBackend(t)
 	a := core.activityLog
 	view := core.systemBarrierView
+	ctx := namespace.RootContext(nil)
 
 	enableRequest := func() {
 		t.Helper()
@@ -1876,7 +1886,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["enabled"] = "enable"
-		resp, err := b.HandleRequest(core.activeContext, req)
+		resp, err := b.HandleRequest(ctx, req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1890,7 +1900,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/config")
 		req.Storage = view
 		req.Data["enabled"] = "disable"
-		resp, err := b.HandleRequest(core.activeContext, req)
+		resp, err := b.HandleRequest(ctx, req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1908,7 +1918,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 
 	a.SetStartTimestamp(a.GetStartTimestamp() - 10)
 	seg1 := a.GetStartTimestamp()
-	err := a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1956,9 +1966,10 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
+	ctx := namespace.RootContext(nil)
 
 	// Make sure we're enabled.
-	a.SetConfig(core.activeContext, activityConfig{
+	a.SetConfig(ctx, activityConfig{
 		Enabled:             "enable",
 		RetentionMonths:     12,
 		DefaultReportMonths: 12,
@@ -1975,7 +1986,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	month2 := timeutil.StartOfNextMonth(month1)
 
 	// Trigger end-of-month
-	a.HandleEndOfMonth(core.activeContext, month1)
+	a.HandleEndOfMonth(month1)
 
 	// Check segment is present, with 1 entity
 	path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, segment0)
@@ -1993,7 +2004,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	}
 
 	// Check intent log is present
-	intentRaw, err := core.barrier.Get(core.activeContext, "sys/counters/activity/endofmonth")
+	intentRaw, err := core.barrier.Get(ctx, "sys/counters/activity/endofmonth")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2017,12 +2028,12 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	a.AddEntityToFragment(id2, "root", time.Now().Unix())
 
-	a.HandleEndOfMonth(core.activeContext, month2)
+	a.HandleEndOfMonth(month2)
 	segment2 := a.GetStartTimestamp()
 
 	a.AddEntityToFragment(id3, "root", time.Now().Unix())
 
-	err = a.saveCurrentSegmentToStorage(core.activeContext, false)
+	err = a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2074,6 +2085,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 
 	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	a := core.activityLog
+	ctx := namespace.RootContext(nil)
 
 	// Generate overlapping sets of entity IDs from this list.
 
@@ -2275,7 +2287,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 
 	checkPrecomputedQuery := func(i int) {
 		t.Helper()
-		pq, err := a.queryStore.Get(core.activeContext, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		pq, err := a.queryStore.Get(ctx, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2358,7 +2370,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(core.activeContext)
+		err = a.precomputedQueryWorker()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2449,8 +2461,9 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 
 func TestActivityLog_SaveAfterDisable(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
 	a := core.activityLog
-	a.SetConfig(core.activeContext, activityConfig{
+	a.SetConfig(ctx, activityConfig{
 		Enabled:             "enable",
 		RetentionMonths:     12,
 		DefaultReportMonths: 12,
@@ -2460,7 +2473,7 @@ func TestActivityLog_SaveAfterDisable(t *testing.T) {
 	startTimestamp := a.GetStartTimestamp()
 
 	// This kicks off an asynchronous delete
-	a.SetConfig(core.activeContext, activityConfig{
+	a.SetConfig(ctx, activityConfig{
 		Enabled:             "disable",
 		RetentionMonths:     12,
 		DefaultReportMonths: 12,
@@ -2475,7 +2488,7 @@ func TestActivityLog_SaveAfterDisable(t *testing.T) {
 	}
 
 	// Segment should not be written even with force
-	err := a.saveCurrentSegmentToStorage(core.activeContext, true)
+	err := a.saveCurrentSegmentToStorage(context.Background(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2498,6 +2511,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 
 	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	a := core.activityLog
+	ctx := namespace.RootContext(nil)
 
 	// Generate overlapping sets of entity IDs from this list.
 	//   january:      40-44                                          RRRRR
@@ -2645,7 +2659,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 
 	checkPrecomputedQuery := func(i int) {
 		t.Helper()
-		pq, err := a.queryStore.Get(core.activeContext, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		pq, err := a.queryStore.Get(ctx, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2727,7 +2741,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(core.activeContext)
+		err = a.precomputedQueryWorker()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2831,6 +2845,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 
 	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
 	a := core.activityLog
+	ctx := namespace.RootContext(nil)
 
 	// Generate overlapping sets of entity IDs from this list.
 	//   january:      40-44                                          RRRRR
@@ -2979,7 +2994,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 
 	checkPrecomputedQuery := func(i int) {
 		t.Helper()
-		pq, err := a.queryStore.Get(core.activeContext, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
+		pq, err := a.queryStore.Get(ctx, expectedCounts[i].StartTime, expectedCounts[i].EndTime)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3061,7 +3076,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker(core.activeContext)
+		err = a.precomputedQueryWorker()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3186,7 +3201,7 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 	// This will block if the shutdown didn't work.
 	go func() {
 		// We expect this to error because of BlockingInmemStorage
-		_ = a.precomputedQueryWorker(core.activeContext)
+		_ = a.precomputedQueryWorker()
 		close(done)
 	}()
 
@@ -3324,7 +3339,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 
 	t.Log("24 months")
 	now := times[len(times)-1]
-	err := a.retentionWorker(core.activeContext, now, 24)
+	err := a.retentionWorker(now, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3333,7 +3348,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 
 	t.Log("12 months")
-	err = a.retentionWorker(core.activeContext, now, 12)
+	err = a.retentionWorker(now, 12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3345,7 +3360,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 
 	t.Log("1 month")
-	err = a.retentionWorker(core.activeContext, now, 1)
+	err = a.retentionWorker(now, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3356,7 +3371,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	checkPresent(21)
 
 	t.Log("0 months")
-	err = a.retentionWorker(core.activeContext, now, 0)
+	err = a.retentionWorker(now, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3369,6 +3384,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
+	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
 	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
 	entities = entities[1:]
@@ -3380,7 +3396,7 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	a.SetEnable(true)
 	var wg sync.WaitGroup
-	err := a.refreshFromStoredLog(a.core.activeContext, &wg, now)
+	err := a.refreshFromStoredLog(ctx, &wg, now)
 	if err != nil {
 		t.Fatalf("error loading clients: %v", err)
 	}
@@ -3395,7 +3411,7 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
 
-	results, err := a.partialMonthClientCount(a.core.activeContext)
+	results, err := a.partialMonthClientCount(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
