@@ -1623,7 +1623,7 @@ func TestActivityLog_DeleteWorker(t *testing.T) {
 	doneCh := make(chan struct{})
 	timeout := time.After(20 * time.Second)
 
-	go a.deleteLogWorker(1111, doneCh)
+	go a.deleteLogWorker(namespace.RootContext(nil), 1111, doneCh)
 	select {
 	case <-doneCh:
 		break
@@ -1774,7 +1774,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	month2 := timeutil.StartOfNextMonth(month1)
 
 	// Trigger end-of-month
-	a.HandleEndOfMonth(month1)
+	a.HandleEndOfMonth(ctx, month1)
 
 	// Check segment is present, with 1 entity
 	path := fmt.Sprintf("%ventity/%v/0", ActivityLogPrefix, segment0)
@@ -1812,7 +1812,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 
 	a.AddEntityToFragment(id2, "root", time.Now().Unix())
 
-	a.HandleEndOfMonth(month2)
+	a.HandleEndOfMonth(ctx, month2)
 	segment2 := a.GetStartTimestamp()
 
 	a.AddEntityToFragment(id3, "root", time.Now().Unix())
@@ -2127,7 +2127,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 		// Pretend we've successfully rolled over to the following month
 		a.SetStartTimestamp(tc.NextMonth)
 
-		err = a.precomputedQueryWorker()
+		err = a.precomputedQueryWorker(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2253,7 +2253,8 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 
 	// This will block if the shutdown didn't work.
 	go func() {
-		a.precomputedQueryWorker()
+		// We expect this to error because of BlockingInmemStorage
+		_ = a.precomputedQueryWorker(namespace.RootContext(nil))
 		close(done)
 	}()
 
@@ -2391,9 +2392,10 @@ func TestActivityLog_Deletion(t *testing.T) {
 		}
 	}
 
+	ctx := namespace.RootContext(nil)
 	t.Log("24 months")
 	now := times[len(times)-1]
-	err := a.retentionWorker(now, 24)
+	err := a.retentionWorker(ctx, now, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2402,7 +2404,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 
 	t.Log("12 months")
-	err = a.retentionWorker(now, 12)
+	err = a.retentionWorker(ctx, now, 12)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2414,7 +2416,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	}
 
 	t.Log("1 month")
-	err = a.retentionWorker(now, 1)
+	err = a.retentionWorker(ctx, now, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2425,7 +2427,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	checkPresent(21)
 
 	t.Log("0 months")
-	err = a.retentionWorker(now, 0)
+	err = a.retentionWorker(ctx, now, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
