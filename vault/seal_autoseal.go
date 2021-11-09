@@ -21,7 +21,10 @@ import (
 // applicable in the OSS side
 var barrierTypeUpgradeCheck = func(_ string, _ *SealConfig) {}
 
-const sealHeathTestInterval = 1 * time.Minute
+const (
+	sealHeathTestIntervalNominal   = 10 * time.Minute
+	sealHeathTestIntervalUnhealthy = 1 * time.Minute
+)
 
 // autoSeal is a Seal implementation that contains logic for encrypting and
 // decrypting stored keys via an underlying AutoSealAccess implementation, as
@@ -507,8 +510,10 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 	return nil
 }
 
+// StartHealthCheck starts a goroutine that tests the health of the auto-unseal backend once every 10 minutes.
+// If unhealthy, logs a warning on the condition and begins testing every one minute until healthy again.
 func (d *autoSeal) StartHealthCheck() {
-	d.healthCheck = time.NewTicker(sealHeathTestInterval)
+	d.healthCheck = time.NewTicker(sealHeathTestIntervalNominal)
 	d.healthCheckStop = make(chan struct{})
 	go func() {
 		lastTestOk := true
@@ -516,8 +521,9 @@ func (d *autoSeal) StartHealthCheck() {
 		for {
 			select {
 			case <-d.healthCheckStop:
-				d.healthCheck.Stop()
-				close(d.healthCheckStop)
+				if d.healthCheck != nil {
+					d.healthCheck.Stop()
+				}
 				d.healthCheck = nil
 				d.healthCheckStop = nil
 				return
@@ -525,21 +531,33 @@ func (d *autoSeal) StartHealthCheck() {
 				testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
 				ciphertext, err := d.Wrapper.Encrypt(d.core.activeContext, []byte(testVal), nil)
 				if err != nil {
-					lastTestOk = false
 					d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
+					if lastTestOk {
+						d.healthCheck.Reset(sealHeathTestIntervalUnhealthy)
+					}
+					lastTestOk = false
 				} else {
 					plaintext, err := d.Wrapper.Decrypt(d.core.activeContext, ciphertext, nil)
 					if err != nil {
-						lastTestOk = false
 						d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
+						if lastTestOk {
+							d.healthCheck.Reset(sealHeathTestIntervalUnhealthy)
+						}
+						lastTestOk = false
 					}
 					if !bytes.Equal([]byte(testVal), plaintext) {
-						lastTestOk = false
 						d.logger.Warn("seal health test value failed to decrypt to expected value")
+						if lastTestOk {
+							d.healthCheck.Reset(sealHeathTestIntervalUnhealthy)
+						}
+						lastTestOk = false
 					} else {
 						d.logger.Debug("seal health test passed")
 						if !lastTestOk {
 							d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+						}
+						if !lastTestOk {
+							d.healthCheck.Reset(sealHeathTestIntervalNominal)
 						}
 						lastTestOk = true
 						lastSeenOk = t
@@ -552,6 +570,6 @@ func (d *autoSeal) StartHealthCheck() {
 
 func (d *autoSeal) StopHealthCheck() {
 	if d.healthCheckStop != nil {
-		d.healthCheckStop <- struct{}{}
+		close(d.healthCheckStop)
 	}
 }
