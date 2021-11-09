@@ -28,15 +28,16 @@ Blocking access to much of Vault can be an important break-glass tool in the
 event of unexpected behavior.
 
 For HCP Vault, this provides functionality analogous to sealing Vault, without
-the Vault Administrator requesting that the Managed Service Provider seal/unseal
+the Vault administrator requesting that the Managed Service Provider seal/unseal
 Vault.
 
 This feature also becomes valuable for secure multitenancy in a variety of Vault
-deployment strategies. One can restrict Vault access for just part of an
+deployment strategies. You can restrict Vault access for just part of an
 organization, without affecting adjacent parts of the business. If unexpected
-behavior is detected in sub-organization A, an Administrator can disable Vault
-access for any entity under A, without disabling access for sub-organization B.
-Once the cause has been identified and resolved, the API can be unlocked for A.
+behavior is detected in sub-organization A, an administrator can disable Vault
+access for any entity under sub-organization A, without disabling access for
+sub-organization B. Once the cause has been identified and resolved, the API can
+be unlocked for sub-organization A.
 
 ## Locking
 
