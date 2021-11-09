@@ -25,6 +25,16 @@ access the Kubernetes API.
 | :----- | :------------------------ |
 | `POST` | `/auth/kubernetes/config` |
 
+### Deprecations
+
+The following parameters have been deprecated:
+
+* `disable_iss_validation` `(bool: true)` Disable JWT issuer validation. Allows to skip ISS validation.
+   *TODO* instead do this.
+
+* `issuer` `(string: "")` Optional JWT issuer. If no issuer is specified, then this plugin will
+   *TODO* instead do this..
+
 ### Parameters
 
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
@@ -37,9 +47,7 @@ access the Kubernetes API.
   JWTs. If a certificate is given, its public key will be
   extracted. Not every installation of Kubernetes exposes these
   keys.
-- `issuer` `(string: "")` **Deprecated** - Optional JWT issuer. If no issuer is specified, then this plugin will
   use `kubernetes/serviceaccount` as the default issuer. See [these instructions](/docs/platform/k8s/csi#setting-issuer-for-kubernetes-authentication) for looking up the issuer for a given Kubernetes cluster.
-- `disable_iss_validation` `(bool: true)` **Deprecated** - Disable JWT issuer validation. Allows to skip ISS validation.
 - `disable_local_ca_jwt` `(bool: false)` - Disable defaulting to the local CA cert and service account JWT when running in a Kubernetes pod.
 
 ### Caveats
