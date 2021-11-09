@@ -33,7 +33,6 @@ const oidcEntity = async function(name, policy) {
     `read -field=id identity/entity/name/${OIDC_USER}`,
   ]);
   return consoleComponent.lastLogOutput;
-  // b7762a9b-1a77-e4ba-47e6-d6d2ca87c0cb
 };
 
 const oidcGroup = async function(entityId) {
@@ -42,7 +41,6 @@ const oidcGroup = async function(entityId) {
     `read -field=id identity/group/name/engineering`,
   ]);
   return consoleComponent.lastLogOutput;
-  // 9b6303d1-3fa3-9a50-327c-e11b057104a3
 };
 
 const authAccessor = async function(path = 'userpass') {
@@ -52,7 +50,6 @@ const authAccessor = async function(path = 'userpass') {
     `read -field=accessor sys/internal/ui/mounts/auth/${path}`,
   ]);
   return consoleComponent.lastLogOutput;
-  // auth_userpass_d1b33f35
 };
 
 const entityAlias = async function(entityId, accessor, groupId) {
@@ -79,7 +76,6 @@ const setupWebapp = async function(redirect) {
     throw new Error(`OIDC setup failed: ${output}`);
   }
   return output;
-  // RM5mU4p6y1xMzc24LjGd7pir85gNxQUA
 };
 const setupProvider = async function(clientId) {
   let providerName = `my-provider-${new Date().getTime()}`;
@@ -106,10 +102,6 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
     return `${prev}&${key}=${queryParams[key]}`;
   }, '?');
   return `/vault/identity/oidc/provider/${providerName}/authorize${queryString}`;
-  // /vault/identity/oidc/provider/my-provider-1635875876837/authorize?=true&client_id=aRMuW4lEZ3KQxFTOv8GK3Nt7Hd3aRlhg&nonce=abc123&redirect_uri=http%3A%2F%2F127.0.0.1%3A8251%2Fcallback&response_type=code&scope=openid&state=foobar
-  // return `/vault/identity/oidc/provider/${providerName}/authorize?scope=openid&response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(
-  //   redirect
-  // )}&state=foobar&nonce=1234&prompt=none`;
 };
 
 const setupOidc = async function() {
@@ -150,7 +142,6 @@ module('Acceptance | oidc provider', function(hooks) {
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'
     );
-    // await this.pauseTest();
     assert.dom('[data-test-auth-logo]').exists('Vault logo exists on auth page');
     assert
       .dom('[data-test-auth-helptext]')
@@ -166,25 +157,47 @@ module('Acceptance | oidc provider', function(hooks) {
     assert.equal(currentURL(), url, 'URL is as expected after login');
     assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert.ok(
-      find('[data-test-oidc-redirect]').innerText.includes(`${callback}?code=`),
-      'Successful redirect'
+      find('[data-test-oidc-redirect]').textContent.includes(`${callback}?code=`),
+      'Successful redirect to callback'
     );
-    // let noPromptUrl = getAuthUrl(providerName, callback, clientId, { prompt: 'none' });
-    // await logout.visit();
-    // await settled();
-    // visit(noPromptUrl);
-    // await this.pauseTest();
   });
 
-  test('OIDC Provider returns error if prompt=none and no token', async function(assert) {
-    let { providerName, callback, clientId } = await setupOidc();
-
-    await logout.visit();
+  test('OIDC Provider redirects to auth if current token and prompt = login', async function(assert) {
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
     await settled();
-    let url = getAuthzUrl(providerName, callback, clientId, { prompt: 'none' });
-    console.log({ url });
+    const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
     visit(url);
     await settled();
-    await this.pauseTest();
+    assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth when no token');
+    assert.notOk(
+      currentURL().includes('prompt=login'),
+      'Url params no longer include prompt=login after redirect'
+    );
+    await authFormComponent.selectMethod(authMethodPath);
+    await authFormComponent.username(OIDC_USER);
+    await authFormComponent.password(USER_PASSWORD);
+    await authFormComponent.login();
+    await settled();
+    assert.ok(
+      find('[data-test-oidc-redirect]').textContent.includes(`${callback}?code=`),
+      'Successful redirect to callback'
+    );
+  });
+
+  test('OIDC Provider shows consent form when prompt = consent', async function(assert) {
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
+    await logout.visit();
+    await authFormComponent.selectMethod(authMethodPath);
+    await authFormComponent.username(OIDC_USER);
+    await authFormComponent.password(USER_PASSWORD);
+    await authFormComponent.login();
+    visit(url);
+    await settled();
+    assert.notOk(
+      currentURL().startsWith('/vault/auth'),
+      'Does not redirect to auth because user is already logged in'
+    );
+    assert.dom('[data-test-consent-form]').exists('Consent form exists');
   });
 });

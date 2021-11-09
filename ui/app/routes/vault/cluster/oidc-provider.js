@@ -28,7 +28,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
     let qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
     qp.redirect_to = null;
-    console.log('NO PROMPT', qp.prompt);
     if (!currentToken && 'none' === qp.prompt?.toLowerCase()) {
       this._redirect(qp.redirect_uri, {
         state: qp.state,

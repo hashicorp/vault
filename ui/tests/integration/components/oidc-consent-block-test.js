@@ -96,7 +96,6 @@ module('Integration | Component | oidc-consent-block', function(hooks) {
         'shows the correct copy for consent form'
       );
     await click('[data-test-edit-form-submit]');
-    console.log(spy, spy.args);
     assert.ok(
       spy.calledWith(`${redirectBase}/?code=unescaped%3Cstring&state=foo`),
       'Redirects to correct route, with escaped values and without superflous params'
