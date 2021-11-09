@@ -16,24 +16,24 @@ func DecodeRootToken(encoded, otp string, otpLength int) (string, error) {
 		// Backwards compat
 		tokenBytes, err := xor.XORBase64(encoded, otp)
 		if err != nil {
-			return "", fmt.Errorf("Error xoring token: %s", err)
+			return "", fmt.Errorf("error xoring token: %s", err)
 		}
 
 		uuidToken, err := uuid.FormatUUID(tokenBytes)
 		if err != nil {
-			return "", fmt.Errorf("Error formatting base64 token value: %s", err)
+			return "", fmt.Errorf("error formatting base64 token value: %s", err)
 		}
 		return strings.TrimSpace(uuidToken), nil
 	}
 
 	tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
 	if err != nil {
-		return "", fmt.Errorf("Error decoding base64'd token: %v", err)
+		return "", fmt.Errorf("error decoding base64'd token: %v", err)
 	}
 
 	tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
 	if err != nil {
-		return "", fmt.Errorf("Error xoring token: %v", err)
+		return "", fmt.Errorf("error xoring token: %v", err)
 	}
 	return string(tokenBytes), nil
 }
