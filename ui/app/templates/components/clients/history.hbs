@@ -1,7 +1,3 @@
-{{!-- ARG TODO move to correct place --}}
-<div class="for-demo">
-  <CalendarWidget/>
-</div>
 {{#if (eq @model.config.queriesAvailable false)}}
   {{#if (eq @model.config.enabled 'On')}}
     <EmptyState
@@ -69,6 +65,7 @@
         @resultEnd={{@model.activity.endTime}}
         @defaultSpan={{or @model.config.defaultReportMonths 12}}
         @retentionMonths={{@model.config.retentionMonths}}
+        @useCalendar={{true}}
       />
     {{/if}}
     {{#if @isLoading}}

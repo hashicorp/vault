@@ -38,10 +38,12 @@ export default Component.extend({
   retentionMonths: 24,
 
   startDate: computed('start', function() {
+    console.log(this.start);
     if (!this.start) return null;
     let date;
     try {
       date = parseDateString(this.start, '/');
+      console.log(date, 'parsed');
       if (date) return date;
       return null;
     } catch (e) {
@@ -110,6 +112,14 @@ export default Component.extend({
     handleQuery() {
       const start = format(this.startDate, 'MM-yyyy');
       const end = format(this.endDate, 'MM-yyyy');
+      this.router.transitionTo('vault.cluster.clients', {
+        queryParams: {
+          start,
+          end,
+        },
+      });
+    },
+    handleQueryFromCalendar(start, end) {
       this.router.transitionTo('vault.cluster.clients', {
         queryParams: {
           start,

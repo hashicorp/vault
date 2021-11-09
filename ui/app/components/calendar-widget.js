@@ -225,6 +225,23 @@ class CalendarWidget extends Component {
         this.addClass(element, 'is-selected');
       }
     });
+
+    // get quick select number
+    // use current date to determine range in MM/yyyy format
+    // currentMonth
+
+    // TODO: fix selection, does not select 12 months back properly
+
+    let date = new Date();
+    // will never query same month that you are in, always add a month to get the N months prior
+    date.setMonth(date.getMonth() - quickSelectNumber - 1);
+
+    let dateAgain = new Date();
+    dateAgain.setMonth(dateAgain.getMonth() - 1);
+
+    let startDate = format(dateAgain, 'MM-yyyy');
+    let endDate = format(date, 'MM-yyyy');
+    this.args.handleQuery(endDate, startDate);
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
