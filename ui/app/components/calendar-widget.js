@@ -1,14 +1,11 @@
 /**
  * @module CalendarWidget
- * CalendarWidget components are used to...
+ * CalendarWidget components are used in the client counts metrics. It helps user understand the ranges they can select.
  *
  * @example
  * ```js
- * <CalendarWidget @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <CalendarWidget/>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
  */
 
 import Component from '@glimmer/component';

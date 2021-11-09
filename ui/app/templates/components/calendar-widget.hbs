@@ -1,70 +1,70 @@
-    <BasicDropdown
-      @class="popup-menu"
-      @horizontalPosition="auto-right"
-      @verticalPosition="below"
-      as |D|
-    >
-      <D.trigger
-        @class={{concat "calendar-widget-dropdown" (if D.isOpen " is-active")}}
-        @tagName="button"
-      >
-        Select Date
-        <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} /> 
-      </D.trigger>
-      <D.content @class="popup-menu-content">
-        <div class="calendar-widget-container">
-            <div class="select-year">
-                <p>{{this.displayYear}}</p>
-                <div class="icon-container">
-                    <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
-                        <Chevron @direction="left" @size="s" class="has-text-grey" />
-                    </button>
-                    <button type="button" class="button is-transparent" disabled={{this.disableFutureYear}} {{on "click" this.addYear}}>
-                        <Chevron @direction="right" @size="s" class="has-text-grey" />
-                    </button>
-                </div>
-            </div>
-            <div class="select-months">
-              <p>SELECT MONTHS</p>
-              <ToolTip @horizontalPosition="center" @verticalPosition="above" as |T|>
-                <T.trigger>
-                   <Icon 
-                    @glyph="cancel-circle-outline"
-                    class={{concat "level-right cancel-circle-icon" (if this.areMonthsSelected " is-active")}}
-                    {{on "click" this.deselectMonths}}
-                  />
-                </T.trigger>
-                <T.content @class="tool-tip">
-                  <div class="box">
-                    Clear selected months
-                  </div>
-                </T.content>
-              </ToolTip>
-
-            </div>
-            <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-1">January</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-2">February</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-3">March</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-4">April</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-5">May</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-6">June</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-7">July</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-8">August</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-9">September</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-10">October</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-11">November</div>
-                <div {{on "click" this.selectMonth}} class="is-month-list" id="month-12">December</div>
-            </div>
-            <div class="border-col"></div>
-            <div class="calendar-widget-nav month-nav">
-                <ul>
-                    <li {{on "click" (fn this.selectMonths 0)}}>Last month</li>
-                    <li {{on "click" (fn this.selectMonths 2)}}>Last 3 months</li>
-                    <li {{on "click" (fn this.selectMonths 5)}}>Last 6 months</li>
-                    <li {{on "click" (fn this.selectMonths 11)}}>Last 12 months</li>
-                </ul>
-            </div>
+<BasicDropdown
+  @class="popup-menu"
+  @horizontalPosition="auto-right"
+  @verticalPosition="below"
+  as |D|
+>
+  <D.trigger
+    @class={{concat "calendar-widget-dropdown" (if D.isOpen " is-active")}}
+    @tagName="button"
+  >
+    Select Date
+    <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} /> 
+  </D.trigger>
+  <D.content @class="popup-menu-content">
+    <div class="calendar-widget-container">
+      <div class="select-year">
+        <p>{{this.displayYear}}</p>
+        <div class="icon-container">
+          <button type="button" class="button is-transparent" disabled={{this.disablePastYear}} {{on "click" this.subYear}}>
+            <Chevron @direction="left" @size="s" class="has-text-grey" />
+          </button>
+          <button type="button" class="button is-transparent" disabled={{this.disableFutureYear}} {{on "click" this.addYear}}>
+            <Chevron @direction="right" @size="s" class="has-text-grey" />
+          </button>
         </div>
-      </D.content>
-    </BasicDropdown>
+      </div>
+      <div class="select-months">
+        <p>SELECT MONTHS</p>
+        <ToolTip @horizontalPosition="center" @verticalPosition="above" as |T|>
+          <T.trigger>
+            <Icon 
+              @glyph="cancel-circle-outline"
+              class={{concat "level-right cancel-circle-icon" (if this.areMonthsSelected " is-active")}}
+              {{on "click" this.deselectMonths}}
+            />
+          </T.trigger>
+          <T.content @class="tool-tip">
+            <div class="box">
+              Clear selected months
+            </div>
+          </T.content>
+        </ToolTip>
+      </div>
+
+      <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-1">January</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-2">February</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-3">March</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-4">April</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-5">May</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-6">June</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-7">July</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-8">August</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-9">September</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-10">October</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-11">November</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-12">December</div>
+      </div>
+      <div class="border-col"></div>
+      <div class="calendar-widget-nav month-nav">
+        <ul>
+          <li {{on "click" (fn this.selectMonths 0)}}>Last month</li>
+          <li {{on "click" (fn this.selectMonths 2)}}>Last 3 months</li>
+          <li {{on "click" (fn this.selectMonths 5)}}>Last 6 months</li>
+          <li {{on "click" (fn this.selectMonths 11)}}>Last 12 months</li>
+        </ul>
+      </div>
+    </div>
+  </D.content>
+</BasicDropdown>

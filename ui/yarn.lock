@@ -1587,7 +1587,7 @@
     "@handlebars/parser" "^1.1.0"
     simple-html-tokenizer "^0.5.10"
 
-"@glimmer/tracking@^1.0.2":
+"@glimmer/tracking@^1.0.2", "@glimmer/tracking@^1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@glimmer/tracking/-/tracking-1.0.4.tgz#f1bc1412fe5e2236d0f8d502994a8f88af1bbb21"
   integrity sha512-F+oT8I55ba2puSGIzInmVrv/8QA2PcK1VD+GWgFMhF6WC97D+uZX7BFg+a3s/2N4FVBq5KHE+QxZzgazM151Yw==
@@ -7915,7 +7915,7 @@ ember-cli-babel@^6.0.0-beta.4, ember-cli-babel@^6.10.0, ember-cli-babel@^6.16.0,
     ember-cli-version-checker "^2.1.2"
     semver "^5.5.0"
 
-ember-cli-babel@^7.10.0, ember-cli-babel@^7.17.2, ember-cli-babel@^7.4.1:
+ember-cli-babel@^7.10.0, ember-cli-babel@^7.17.2, ember-cli-babel@^7.26.6, ember-cli-babel@^7.4.1:
   version "7.26.6"
   resolved "https://registry.yarnpkg.com/ember-cli-babel/-/ember-cli-babel-7.26.6.tgz#322fbbd3baad9dd99e3276ff05bc6faef5e54b39"
   integrity sha512-040svtfj2RC35j/WMwdWJFusZaXmNoytLAMyBDGLMSlRvznudTxZjGlPV6UupmtTBApy58cEF8Fq4a+COWoEmQ==
@@ -8076,7 +8076,27 @@ ember-cli-htmlbars@^3.0.0, ember-cli-htmlbars@^3.0.1:
     json-stable-stringify "^1.0.1"
     strip-bom "^3.0.0"
 
-ember-cli-htmlbars@^5.3.1, ember-cli-htmlbars@^5.6.3, ember-cli-htmlbars@^5.7.1:
+ember-cli-htmlbars@^4.0.0, ember-cli-htmlbars@^4.2.3, ember-cli-htmlbars@^4.3.1:
+  version "4.5.0"
+  resolved "https://registry.yarnpkg.com/ember-cli-htmlbars/-/ember-cli-htmlbars-4.5.0.tgz#d299e4f7eba6f30dc723ee086906cc550beb252e"
+  integrity sha512-bYJpK1pqFu9AadDAGTw05g2LMNzY8xTCIqQm7dMJmKEoUpLRFbPf4SfHXrktzDh7Q5iggl6Skzf1M0bPlIxARw==
+  dependencies:
+    "@ember/edition-utils" "^1.2.0"
+    babel-plugin-htmlbars-inline-precompile "^3.2.0"
+    broccoli-debug "^0.6.5"
+    broccoli-persistent-filter "^2.3.1"
+    broccoli-plugin "^3.1.0"
+    common-tags "^1.8.0"
+    ember-cli-babel-plugin-helpers "^1.1.0"
+    fs-tree-diff "^2.0.1"
+    hash-for-dep "^1.5.1"
+    heimdalljs-logger "^0.1.10"
+    json-stable-stringify "^1.0.1"
+    semver "^6.3.0"
+    strip-bom "^4.0.0"
+    walk-sync "^2.0.2"
+
+ember-cli-htmlbars@^5.1.0, ember-cli-htmlbars@^5.3.1, ember-cli-htmlbars@^5.6.3, ember-cli-htmlbars@^5.7.1:
   version "5.7.1"
   resolved "https://registry.yarnpkg.com/ember-cli-htmlbars/-/ember-cli-htmlbars-5.7.1.tgz#eb5b88c7d9083bc27665fb5447a9b7503b32ce4f"
   integrity sha512-9laCgL4tSy48orNoQgQKEHp93MaqAs9ZOl7or5q+8iyGGJHW6sVXIYrVv5/5O9HfV6Ts8/pW1rSoaeKyLUE+oA==
@@ -8474,6 +8494,17 @@ ember-concurrency-test-waiter@^0.3.2:
     ember-compatibility-helpers "^1.2.0"
     ember-maybe-import-regenerator "^0.1.6"
 
+"ember-concurrency@^0.8.27 || ^0.9.0 || ^0.10.0 || ^1.0.0 || ^2.0.0-rc.1":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/ember-concurrency/-/ember-concurrency-2.2.0.tgz#0acfb8ca855e0fdfa4c543be150028299a89ba32"
+  integrity sha512-Ns1MH6t08oJqfeWQ4EMxyf6bLsXM87SbUPwGNUsg7idpikvkGr1PWqtvU6qxDTv1mA4Vrwdhv0I9yxN0ShH9Bg==
+  dependencies:
+    "@glimmer/tracking" "^1.0.4"
+    ember-cli-babel "^7.26.6"
+    ember-cli-htmlbars "^5.7.1"
+    ember-compatibility-helpers "^1.2.0"
+    ember-destroyable-polyfill "^2.0.2"
+
 ember-concurrency@^2.1.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/ember-concurrency/-/ember-concurrency-2.1.2.tgz#a27178fb24951933fa72dd7cf1dca852693cc5c1"
@@ -8551,7 +8582,6 @@ ember-debug-handlers-polyfill@^1.1.1:
   resolved "https://registry.yarnpkg.com/ember-debug-handlers-polyfill/-/ember-debug-handlers-polyfill-1.1.1.tgz#e9ae0a720271a834221179202367421b580002ef"
   integrity sha512-lO7FBAqJjzbL+IjnWhVfQITypPOJmXdZngZR/Vdn513W4g/Q6Sjicao/mDzeDCb48Y70C4Facwk0LjdIpSZkRg==
 
-<<<<<<< HEAD
 ember-decorators@^6.1.1:
   version "6.1.1"
   resolved "https://registry.yarnpkg.com/ember-decorators/-/ember-decorators-6.1.1.tgz#6d770f8999cf5a413a1ee459afd520838c0fc470"
@@ -8561,8 +8591,6 @@ ember-decorators@^6.1.1:
     "@ember-decorators/object" "^6.1.1"
     ember-cli-babel "^7.7.3"
 
-=======
->>>>>>> main
 ember-destroyable-polyfill@^2.0.2, ember-destroyable-polyfill@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/ember-destroyable-polyfill/-/ember-destroyable-polyfill-2.0.3.tgz#1673ed66609a82268ef270a7d917ebd3647f11e1"
