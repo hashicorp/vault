@@ -172,10 +172,9 @@ any storage backend.
    and wait until this process is complete (look for `seal re-wrap completed`).
 
 1. Seal migration is now completed. Take down the old active node, update its
-   configuration of the old active node to use the new seal blocks (completely
-   unaware of the old seal type) and bring it back up. It will be auto-unsealed if
-   the new seal is one of the Auto seals, or will require unseal keys if the new
-   seal is Shamir.
+   configuration to use the new seal blocks (completely unaware of the old seal type)
+   and bring it back up. It will be auto-unsealed if the new seal is one of the
+   Auto seals, or will require unseal keys if the new seal is Shamir.
 
 1. At this point, configuration files of all the nodes can be updated to only have the
    new seal information. Standby nodes can be restarted right away and the active
