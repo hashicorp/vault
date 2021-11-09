@@ -2,10 +2,9 @@
   <div class="for-demo">
     <CalendarWidget 
       @handleQuery={{action "handleQueryFromCalendar"}} 
-      @start={{start}}
-      @end={{end}}
     />
   </div>
+{{else}}
   <form onsubmit={{action "handleQuery"}}>
     <div class="field-body pricing-metrics-date-form" data-test-pricing-metrics-form>
       <div class="field is-narrow">
