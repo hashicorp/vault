@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -142,14 +141,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
 		if err != nil {
-			switch err.(type) {
-			case errutil.UserError:
-				batchResponseItems[i].Error = err.Error()
-				continue
-			default:
-				p.Unlock()
-				return nil, err
-			}
+			// Policy decryption returns InternalError in some cases which might not actually be considered internal errors.
+			batchResponseItems[i].Error = err.Error()
+			continue
 		}
 		batchResponseItems[i].Plaintext = plaintext
 	}
