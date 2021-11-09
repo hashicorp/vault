@@ -1,8 +1,14 @@
-# Each line is a file pattern followed by one or more owners.
+# Each line is a file pattern followed by one or more owners. Being an owner
+# means those groups or individuals will be added as reviewers to PRs affecting
+# those areas of the code.
+#
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
 
-
-/builtin/credential/         @hashicorp/vault-ecosystem
+# Select Auth engines are owned by Ecosystem
+/builtin/credential/aws/      @hashicorp/vault-ecosystem
+/builtin/credential/github/   @hashicorp/vault-ecosystem
+/builtin/credential/ldap/     @hashicorp/vault-ecosystem
+/builtin/credential/okta/     @hashicorp/vault-ecosystem
 
 # Secrets engines (pki, ssh, totp and transit omitted)
 /builtin/logical/aws/         @hashicorp/vault-ecosystem
@@ -16,5 +22,8 @@
 /builtin/logical/postgresql/  @hashicorp/vault-ecosystem
 /builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem
 
-/command/agent/              @hashicorp/vault-ecosystem
-/plugins/                    @hashicorp/vault-ecosystem
+/command/agent/               @hashicorp/vault-ecosystem
+/plugins/                     @hashicorp/vault-ecosystem
+
+/website/content/                         @taoism4504
+/website/content/docs/plugin-portal.mdx   @taoism4504  @acahn

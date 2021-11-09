@@ -37,6 +37,33 @@ It is possible to enable a custom plugin with a name that's identical to a
 built-in plugin. In such a situation, Vault will always choose the custom plugin
 when enabling it.
 
+## Plugin Lifecycle
+
+Vault plugins are long-running processes that remain running once they are
+spawned by Vault, the parent process. Plugin processes can be started by Vault's
+active node and performance standby nodes. Additionally, there are cases where
+plugin processes may be terminated by Vault. These cases include but are not
+limited to:
+
+- Vault active node step-down
+- Vault barrier seal
+- Vault graceful shutdown
+- Disabling a Secrets Engine or Auth method that uses external plugins
+- Database configured connection deletion
+- Database configured connection update
+- Database configured connection reset request
+- Database root credentials rotation
+- WAL Rollback from a previously failed root credentials rotation operation
+
+The lifecycle of plugin processes are managed automatically by Vault.
+Termination of these processes are typical in certain scenarios, such as the
+ones listed above. Vault will start plugin processes when needed, typically by
+lazily loading the plugin when a request that requires the plugin is received by
+Vault. A plugin process may be started or terminated through other internal
+processes within Vault as well. Since Vault manages and tracks the lifecycle of
+its plugins, these processes should not be terminated by anything other than
+Vault.
+
 ## Plugin Communication
 
 Vault creates a mutually authenticated TLS connection for communication with the
@@ -120,6 +147,11 @@ settings. Like Vault, plugins support [the use of mlock when available](/docs/co
 ~> Note: If Vault is configured with `mlock` enabled, then the Vault executable and each
 plugin executable in your [plugins directory](/docs/internals/plugins#plugin-directory) must be
 given the ability to use the `mlock` syscall.
+
+### Plugin Upgrades
+
+Plugins may be updated by registering and reloading them. More details on the
+upgrade procedure can be found in [Upgrading Vault Plugins](/docs/upgrading/plugins).
 
 ### Troubleshooting
 

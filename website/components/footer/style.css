@@ -3,7 +3,7 @@
   flex-shrink: 0;
   display: flex;
 
-  & .g-container {
+  & .g-grid-container {
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;

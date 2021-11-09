@@ -105,7 +105,9 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     await clickTrigger('#allowed_roles');
     await settled();
     await typeInSearch(roleName);
+    await settled();
     await selectChoose('#allowed_roles', '.ember-power-select-option', 0);
+    await settled();
     await transformationsPage.submit();
     await settled();
     assert.equal(

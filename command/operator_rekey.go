@@ -177,7 +177,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
 		Completion: complete.PredictAnything,
 		Usage: "Comma-separated list of paths to files on disk containing " +
-			"public GPG keys OR a comma-separated list of Keybase usernames using " +
+			"public PGP keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
 			"specified in this list.",
@@ -404,13 +404,13 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	var started bool
 	var nonce string
 
-	switch status.(type) {
+	switch status := status.(type) {
 	case *api.RekeyStatusResponse:
-		stat := status.(*api.RekeyStatusResponse)
+		stat := status
 		started = stat.Started
 		nonce = stat.Nonce
 	case *api.RekeyVerificationStatusResponse:
-		stat := status.(*api.RekeyVerificationStatusResponse)
+		stat := status
 		started = stat.Started
 		nonce = stat.Nonce
 	default:
@@ -489,12 +489,12 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	var complete bool
 	var mightContainUnsealKeys bool
 
-	switch resp.(type) {
+	switch resp := resp.(type) {
 	case *api.RekeyUpdateResponse:
-		complete = resp.(*api.RekeyUpdateResponse).Complete
+		complete = resp.Complete
 		mightContainUnsealKeys = true
 	case *api.RekeyVerificationUpdateResponse:
-		complete = resp.(*api.RekeyVerificationUpdateResponse).Complete
+		complete = resp.Complete
 	default:
 		c.UI.Error("Unknown update response type")
 		return 1
@@ -608,9 +608,9 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	out := []string{}
 	out = append(out, "Key | Value")
 
-	switch in.(type) {
+	switch in := in.(type) {
 	case *api.RekeyStatusResponse:
-		status := in.(*api.RekeyStatusResponse)
+		status := in
 		out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		if status.Started {
@@ -631,7 +631,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 			out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 		}
 	case *api.RekeyVerificationStatusResponse:
-		status := in.(*api.RekeyVerificationStatusResponse)
+		status := in
 		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))

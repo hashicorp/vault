@@ -8,8 +8,6 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
-	github.com/elazarl/go-bindata-assetfs/... \
-	github.com/hashicorp/go-bindata/... \
 	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
@@ -17,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.16.5
+GO_VERSION_MIN=1.17.2
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -139,13 +137,7 @@ update-plugins:
 	grep vault-plugin- go.mod | cut -d ' ' -f 1 | while read -r P; do echo "Updating $P..."; go get -v "$P"; done
 
 static-assets-dir:
-	@mkdir -p ./pkg/web_ui
-
-static-assets: static-assets-dir
-	@echo "--> Generating static assets"
-	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
-	@mv bindata_assetfs.go http
-	@$(MAKE) -f $(THIS_FILE) fmt
+	@mkdir -p ./http/web_ui
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
@@ -187,23 +179,31 @@ ember-dist-dev:
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build:dev
 
-static-dist: ember-dist static-assets
-static-dist-dev: ember-dist-dev static-assets
+static-dist: ember-dist 
+static-dist-dev: ember-dist-dev 
 
-proto:
-	protoc vault/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc vault/activity/activity_log.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc physical/raft/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/database/dbplugin/v5/proto/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
+proto: bootstrap
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/activity_log.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/storagepacker/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/forwarding/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/logical/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative physical/raft/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/mfa/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/v5/proto/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/plugin/pb/*.proto
+
+	# No additional sed expressions should be added to this list. Going forward
+	# we should just use the variable names choosen by protobuf. These are left
+	# here for backwards compatability, namely for SDK compilation.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+
+	# This will inject the sentinel struct tags as decorated in the proto files.
+	protoc-go-inject-tag -input=./helper/identity/types.pb.go
+	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
 	@true
@@ -257,8 +257,8 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
 
-.NOTPARALLEL: ember-dist ember-dist-dev static-assets
+.NOTPARALLEL: ember-dist ember-dist-dev
 
 -include packagespec.mk

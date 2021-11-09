@@ -898,6 +898,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -1034,6 +1041,21 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	return nil, nil
+}
+
+func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	entry := b.Core.router.MatchingMountEntry(ctx, path)
+
+	if entry == nil {
+		return logical.ErrorResponse("No secret engine mount at %s", path), nil
+	}
+
+	return &logical.Response{
+		Data: mountInfo(entry),
+	}, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -1564,7 +1586,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
 		headers := rawVal.([]string)
-
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
 
@@ -1869,6 +1890,31 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+func expandStringValsWithCommas(configMap map[string]interface{}) error {
+	configParamNameSlice := []string{
+		"audit_non_hmac_request_keys",
+		"audit_non_hmac_response_keys",
+		"passthrough_request_headers",
+		"allowed_response_headers",
+	}
+	for _, paramName := range configParamNameSlice {
+		if raw, ok := configMap[paramName]; ok {
+			switch t := raw.(type) {
+			case string:
+				// To be consistent with auth tune, and in cases where a single comma separated strings
+				// is provided in the curl command, we split the entries by the commas.
+				rawNew := raw.(string)
+				res, err := parseutil.ParseCommaStringSlice(rawNew)
+				if err != nil {
+					return fmt.Errorf("invalid input parameter %v of type %v", paramName, t)
+				}
+				configMap[paramName] = res
+			}
+		}
+	}
+	return nil
+}
+
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
@@ -1895,6 +1941,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	var apiConfig APIMountConfig
 
 	configMap := data.Get("config").(map[string]interface{})
+	// Augmenting configMap for some config options to treat them as comma separated entries
+	err := expandStringValsWithCommas(configMap)
+	if err != nil {
+		return logical.ErrorResponse(
+				"unable to parse given auth config information"),
+			logical.ErrInvalidRequest
+	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
@@ -2585,6 +2638,9 @@ func (b *SystemBackend) handleConfigUIHeadersUpdate(ctx context.Context, req *lo
 	// Translate the list of values to the valid header string
 	value := http.Header{}
 	for _, v := range values {
+		if b.Core.ExistCustomResponseHeader(header) {
+			return logical.ErrorResponse("This header already exists in the server configuration and cannot be set in the UI."), logical.ErrInvalidRequest
+		}
 		value.Add(header, v)
 	}
 	err := b.Core.uiConfig.SetHeader(ctx, header, value.Values(header))
@@ -2777,6 +2833,10 @@ func (b *SystemBackend) handleWrappingUnwrap(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	if unwrapNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
 	unwrapCtx := namespace.ContextWithNamespace(ctx, unwrapNS)
 
 	var response string
@@ -3357,7 +3417,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&ListCapabilityInt > 0,
 			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
-			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
+			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
+			perms.CapabilitiesBitmap&PatchCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -3642,6 +3703,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&UpdateCapabilityInt > 0 {
 			capabilities = append(capabilities, UpdateCapability)
+		}
+		if perms.CapabilitiesBitmap&PatchCapabilityInt > 0 {
+			capabilities = append(capabilities, PatchCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,

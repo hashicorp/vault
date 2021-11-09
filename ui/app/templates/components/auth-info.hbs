@@ -10,8 +10,8 @@
           <li class="action">
             <AlertBanner @type="warning" @message="We've stopped auto-renewing your token due to inactivity.
                 It will expire in {{date-from-now this.auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
-                On {{date-format this.auth.tokenExpirationDate 'MMMM Do yyyy, h:mm:ss a'}}" />
-          </li> 
+                On {{date-format this.auth.tokenExpirationDate 'MMMM do yyyy, h:mm:ss a'}}" />
+          </li>
         {{/if}}
         <li class="action">
           <button type="button" class="link" onclick={{action "restartGuide"}}>
@@ -26,7 +26,7 @@
         {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
           {{#if this.auth.authData.renewable}}
             <li class="action">
-              <button type="button" {{action "renewToken"}} class="link button {{if this.isRenewing 'is-loading'}}">
+              <button type="button" {{on "click" this.renewToken}} class="link button {{if this.isRenewing 'is-loading'}}">
                 Renew token
               </button>
             </li>

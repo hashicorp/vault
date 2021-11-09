@@ -238,7 +238,7 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 		// Update the policies if supplied
 		entityPoliciesRaw, ok := d.GetOk("policies")
 		if ok {
-			entity.Policies = entityPoliciesRaw.([]string)
+			entity.Policies = strutil.RemoveDuplicates(entityPoliciesRaw.([]string), false)
 		}
 
 		if strutil.StrListContains(entity.Policies, "root") {
@@ -353,7 +353,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	respData["name"] = entity.Name
 	respData["metadata"] = entity.Metadata
 	respData["merged_entity_ids"] = entity.MergedEntityIDs
-	respData["policies"] = entity.Policies
+	respData["policies"] = strutil.RemoveDuplicates(entity.Policies, false)
 	respData["disabled"] = entity.Disabled
 	respData["namespace_id"] = entity.NamespaceID
 
@@ -373,8 +373,10 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["merged_from_canonical_ids"] = alias.MergedFromCanonicalIDs
 		aliasMap["creation_time"] = ptypes.TimestampString(alias.CreationTime)
 		aliasMap["last_update_time"] = ptypes.TimestampString(alias.LastUpdateTime)
+		aliasMap["local"] = alias.Local
+		aliasMap["custom_metadata"] = alias.CustomMetadata
 
-		if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
 			aliasMap["mount_path"] = mountValidationResp.MountPath
 		}
@@ -583,7 +585,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	// internal and external
 	groups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entity.ID, true, false)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for _, group := range groups {
@@ -696,7 +698,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 					entry["mount_path"] = mi.MountPath
 				} else {
 					mi = mountInfo{}
-					if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+					if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 						mi.MountType = mountValidationResp.MountType
 						mi.MountPath = mountValidationResp.MountPath
 						entry["mount_type"] = mi.MountType
@@ -733,8 +735,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return errors.New("entity id to merge into does not belong to the request's namespace"), nil
 	}
 
+	sanitizedFromEntityIDs := strutil.RemoveDuplicates(fromEntityIDs, false)
+
 	// Merge the MFA secrets
-	for _, fromEntityID := range fromEntityIDs {
+	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
@@ -765,8 +769,19 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 	}
 
-	isPerfSecondaryOrStandby := i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby
-	for _, fromEntityID := range fromEntityIDs {
+	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
+		i.localNode.HAState() == consts.PerfStandby
+	var fromEntityGroups []*identity.Group
+
+	toEntityAccessors := make(map[string]struct{})
+
+	for _, alias := range toEntity.Aliases {
+		if _, ok := toEntityAccessors[alias.MountAccessor]; !ok {
+			toEntityAccessors[alias.MountAccessor] = struct{}{}
+		}
+	}
+
+	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
 		}
@@ -795,13 +810,17 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
+			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
+				i.logger.Warn("skipping from_entity alias during entity merge as to_entity has an alias with its accessor", "from_entity", fromEntityID, "skipped_alias", alias.ID)
+				continue
+			}
 			// Add the alias to the desired entity
 			toEntity.Aliases = append(toEntity.Aliases, alias)
 		}
 
 		// If told to, merge policies
 		if mergePolicies {
-			toEntity.Policies = strutil.MergeSlices(toEntity.Policies, fromEntity.Policies)
+			toEntity.Policies = strutil.RemoveDuplicates(strutil.MergeSlices(toEntity.Policies, fromEntity.Policies), false)
 		}
 
 		// If the entity from which we are merging from was already a merged
@@ -812,6 +831,22 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		// Add the entity from which we are merging from to the list of entities
 		// the entity we are merging into is composed of.
 		toEntity.MergedEntityIDs = append(toEntity.MergedEntityIDs, fromEntity.ID)
+
+		// Remove entity ID as a member from all the groups it belongs, both
+		// internal and external
+		groups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, fromEntity.ID, true, false)
+		if err != nil {
+			return nil, err
+		}
+		for _, group := range groups {
+			group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, fromEntity.ID)
+			err = i.UpsertGroupInTxn(ctx, txn, group, persist && !isPerfSecondaryOrStandby)
+			if err != nil {
+				return nil, err
+			}
+
+			fromEntityGroups = append(fromEntityGroups, group)
+		}
 
 		// Delete the entity which we are merging from in MemDB using the same transaction
 		err = i.MemDBDeleteEntityByIDInTxn(txn, fromEntity.ID)
@@ -832,6 +867,14 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	err = i.MemDBUpsertEntityInTxn(txn, toEntity)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, group := range fromEntityGroups {
+		group.MemberEntityIDs = append(group.MemberEntityIDs, toEntity.ID)
+		err = i.UpsertGroupInTxn(ctx, txn, group, persist && !isPerfSecondaryOrStandby)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if persist && !isPerfSecondaryOrStandby {

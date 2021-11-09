@@ -117,8 +117,8 @@ To run the tests locally in a browser other than IE11, swap out `launch_in_ci: [
 
 ### Building Vault UI into a Vault Binary
 
-We use `go-bindata-assetfs` to build the static assets of the
-Ember application into a Vault binary.
+We use the [embed](https://golang.org/pkg/embed/) package from Go 1.16+ to build
+the static assets of the Ember application into a Vault binary.
 
 This can be done by running these commands from the root directory run:
 `make static-dist`
@@ -178,7 +178,32 @@ Note that placing a param inside brackets (e.g. `[closedLabel=More options]` ind
 
 2. Generate a new story with `ember generate story [name-of-component]`
 3. Inside the newly generated `stories` file, add at least one example of the component. If the component should be interactive, enable the [Storybook Knobs addon](https://github.com/storybooks/storybook/tree/master/addons/knobs).
-4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]` (e.g. `yarn gen-md alert-banner core`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file.
+4. Generate the `notes` file for the component with `yarn gen-story-md [name-of-component] [name-of-engine-or-addon]` (e.g. `yarn gen-md alert-banner core`). This will generate markdown documentation of the component and place it at `vault/ui/stories/[name-of-component].md`. If your component is a template-only component, you will need to manually create the markdown file. The markdown file will need to be imported in your `[component-name].stories.js` file (e.g. `import notes from './[name-of-component].md'`).
+5. The completed `[component-name].stories.js` file should look something like this (with knobs):
+````js
+import hbs from 'htmlbars-inline-precompile';
+import { storiesOf } from '@storybook/ember';
+import { text, withKnobs } from '@storybook/addon-knobs';
+import notes from './stat-text.md';
+
+storiesOf('MyComponent', module)
+  .addParameters({ options: { showPanel: true } })
+  .addDecorator(withKnobs())
+  .add(
+    `MyComponent`,
+    () => ({
+      template: hbs`
+      <h5 class="title is-5">My Component</h5>
+      <MyComponent @param={{param}} @anotherParam={{anotherParam}} />
+    `,
+      context: {
+        param: text('param', 'My parameter'),
+        anotherParam: boolean('anotherParam', true)
+      },
+    }),
+    { notes }
+  );
+````
 
 See the [Storybook Docs](https://storybook.js.org/docs/basics/introduction/) for more information on writing stories.
 
