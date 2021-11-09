@@ -973,7 +973,8 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 	if !a.enabled && a.currentSegment.startTimestamp != 0 {
 		a.logger.Trace("deleting current segment")
 		a.deleteDone = make(chan struct{})
-		go a.deleteLogWorker(ctx, a.currentSegment.startTimestamp, a.deleteDone)
+		// this is called from a request under stateLock, so use activeContext
+		go a.deleteLogWorker(a.core.activeContext, a.currentSegment.startTimestamp, a.deleteDone)
 		a.resetCurrentLog()
 	}
 
