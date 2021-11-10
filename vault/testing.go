@@ -188,6 +188,10 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		conf.Logger = opts.Logger
 	}
 
+	if opts.RedirectAddr != "" {
+		conf.RedirectAddr = opts.RedirectAddr
+	}
+
 	for k, v := range opts.LogicalBackends {
 		conf.LogicalBackends[k] = v
 	}
