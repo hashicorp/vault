@@ -571,8 +571,6 @@ func (d *autoSeal) StartHealthCheck() {
 							d.logger.Debug("seal health test passed")
 							if !lastTestOk {
 								d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
-							}
-							if !lastTestOk {
 								healthCheck.Reset(sealHealthTestIntervalNominal)
 							}
 							lastTestOk = true
