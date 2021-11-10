@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 

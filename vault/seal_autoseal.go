@@ -26,6 +26,7 @@ var (
 	// vars for unit testings
 	sealHealthTestIntervalNominal   = 10 * time.Minute
 	sealHealthTestIntervalUnhealthy = 1 * time.Minute
+	sealHealthTestTimeout           = 1 * time.Minute
 )
 
 // autoSeal is a Seal implementation that contains logic for encrypting and
@@ -523,7 +524,9 @@ func (d *autoSeal) StartHealthCheck() {
 	healthCheck := time.NewTicker(sealHealthTestIntervalNominal)
 	d.healthCheckStop = make(chan struct{})
 	healthCheckStop := d.healthCheckStop
+
 	go func() {
+		ctx := d.core.activeContext
 		lastTestOk := true
 		lastSeenOk := time.Now()
 		for {
@@ -535,8 +538,9 @@ func (d *autoSeal) StartHealthCheck() {
 				healthCheckStop = nil
 				return
 			case t := <-healthCheck.C:
+				ctx, _ := context.WithTimeout(ctx, sealHealthTestTimeout)
 				testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-				ciphertext, err := d.Access.Encrypt(d.core.activeContext, []byte(testVal), nil)
+				ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
 				if err != nil {
 					d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
 					if lastTestOk {
@@ -545,7 +549,8 @@ func (d *autoSeal) StartHealthCheck() {
 					lastTestOk = false
 					d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 				} else {
-					plaintext, err := d.Access.Decrypt(d.core.activeContext, ciphertext, nil)
+					ctx, _ = context.WithTimeout(d.core.activeContext, sealHealthTestTimeout)
+					plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
 					if err != nil {
 						d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
 						if lastTestOk {
