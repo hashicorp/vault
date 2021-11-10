@@ -42,7 +42,7 @@ The website can be run locally through node.js or [Docker](https://www.docker.co
 
 | :warning: WARNING :warning: |
 |:----------------------------|
-| If you've previously run the website successfully using either the Docker or Node.js approach but are now facing some issue then try `docker rmi $(docker images -a -q) && make build-image && make website-local` or `rm -rf node_modules`; failing that consider cloning this repository again and re-attempting the steps anew in a clean clone. |
+| If you've previously run the website successfully using either the Docker or Node.js approach but are now facing some issue then try `docker rmi $(docker images -aq hashicorp-vault-website-local) && make build-image && make website-local` or `rm -rf node_modules`; failing that consider cloning this repository again and re-attempting the steps anew in a clean clone. |
 
 
 ### With Docker
