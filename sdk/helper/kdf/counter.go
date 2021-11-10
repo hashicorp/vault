@@ -16,6 +16,11 @@ import (
 // sized according to the originally specified keyLengths, is guaranteed to
 // successfully return a key.
 //
+// This method is fairly low-level and generic; preference should generally
+// be given to a higher-level function like CounterDerive(...) or using this
+// function with specific parameter-yielding functions like
+// SP800CounterParams(...).
+//
 // See also NIST SP800-108 and PKCS#11 v3.0 for security concerns and
 // more information about KBKDFParameters.
 func NewCounter(prf hash.Hash, params []KBKDFParameter, keyLengths []int) (io.Reader, error) {
@@ -72,4 +77,46 @@ func NewCounter(prf hash.Hash, params []KBKDFParameter, keyLengths []int) (io.Re
 
 	// Construct the PRF. Note that counter needs to start at one!
 	return &counterKDF{prf, params, keyLengths, 1, 0}, nil
+}
+
+// SP800-108, Section 5.1 Counter Mode, uses the parameter structure returned
+// by this function. Counter and Length variables are left to be inferred by
+// the reader, but generally agreement is that it is a big-endian, 4-byte
+// value (from NIST CAVP test cases and OpenSSL's KBKDF implementations).
+// Additionally, NIST under-specifies multiple derived keys from the same
+// KBKDF invocation (though, seems to allow them), so we default to SumOfKeys
+// DKM method.
+func SP800CounterParams(label []byte, context []byte) []KBKDFParameter {
+	return []KBKDFParameter{
+		CounterVariable{false, 32},
+		ByteArray(label),
+		ByteArray([]byte{0}),
+		ByteArray(context),
+		DKMLength{SumOfKeys, false, 32},
+	}
+}
+
+// One-shot Key derivation using SP800-108 Counter-Mode KDF with fixed
+// default parameters (aligning with the existing CounterMode(...) function).
+// Note that the output is different than that of CounterMode(...) because
+// that function starts the counter at zero rather than 1.
+func CounterDerive(prf hash.Hash, context []byte, keyLength int) ([]byte, error) {
+	params := []KBKDFParameter{
+		CounterVariable{false, 32},
+		ByteArray(context),
+		DKMLength{SumOfKeys, false, 32},
+	}
+
+	kdf, err := NewCounter(prf, params, []int{keyLength})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]byte, keyLength)
+	_, err = kdf.Read(result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
