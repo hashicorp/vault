@@ -3,6 +3,6 @@ identity/auth (enterprise): Logins on `local` auth mounts will generate identity
 entities for the tokens issued. The aliases of the entity resulting from local
 auth mounts (local-aliases), will be scoped by the cluster. This means that the
 local-aliases will never leave the geographical boundary of the cluster where
-they were issued. This is something be mindful about for those who implement
-local auth mounts to comply with GDPR guidelines.
+they were issued. This is something to be mindful about for those who have
+implemented local auth mounts for complying with GDPR guidelines.
 ```
