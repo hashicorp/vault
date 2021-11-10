@@ -529,6 +529,15 @@ func (d *autoSeal) StartHealthCheck() {
 		ctx := d.core.activeContext
 		lastTestOk := true
 		lastSeenOk := time.Now()
+
+		fail := func(msg string, args ...interface{}) {
+			d.logger.Warn(msg, args...)
+			if lastTestOk {
+				healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+			}
+			lastTestOk = false
+			d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Nanoseconds()))
+		}
 		for {
 			select {
 			case <-healthCheckStop:
@@ -546,37 +555,27 @@ func (d *autoSeal) StartHealthCheck() {
 					ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
 
 					if err != nil {
-						d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
-						if lastTestOk {
-							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
-						}
-						lastTestOk = false
-						d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
+						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
 					} else {
-						plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
-						if err != nil {
-							d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
-							if lastTestOk {
-								healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+						func() {
+							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+							defer cancel()
+							plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
+							if err != nil {
+								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
 							}
-							lastTestOk = false
-						}
-						if !bytes.Equal([]byte(testVal), plaintext) {
-							d.logger.Warn("seal health test value failed to decrypt to expected value")
-							if lastTestOk {
-								healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+							if !bytes.Equal([]byte(testVal), plaintext) {
+								fail("seal health test value failed to decrypt to expected value")
+							} else {
+								d.logger.Debug("seal health test passed")
+								if !lastTestOk {
+									d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+									healthCheck.Reset(sealHealthTestIntervalNominal)
+								}
+								lastTestOk = true
+								lastSeenOk = t
 							}
-							lastTestOk = false
-						} else {
-							d.logger.Debug("seal health test passed")
-							if !lastTestOk {
-								d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
-								healthCheck.Reset(sealHealthTestIntervalNominal)
-							}
-							lastTestOk = true
-							lastSeenOk = t
-						}
-						d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Nanoseconds()))
+						}()
 					}
 				}()
 			}
