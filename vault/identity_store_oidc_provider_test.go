@@ -2514,7 +2514,11 @@ func TestOIDC_pathOIDCAssignmentExistenceCheck(t *testing.T) {
 
 // TestOIDC_Path_OIDCProvider tests CRUD operations for providers
 func TestOIDC_Path_OIDCProvider(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	redirectAddr := "http://localhost:8200"
+	conf := &CoreConfig{
+		RedirectAddr: redirectAddr,
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
@@ -2551,7 +2555,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "",
+		"issuer":             redirectAddr + "/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{},
 		"scopes_supported":   []string{},
 	}
@@ -2591,7 +2595,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "",
+		"issuer":             redirectAddr + "/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{"test-scope"},
 	}
@@ -2634,7 +2638,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "https://example.com:8200",
+		"issuer":             "https://example.com:8200/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{"test-scope"},
 	}
@@ -2733,7 +2737,12 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 // TestOIDC_Path_OIDCProvider_DeDuplication tests that a
 // provider doensn't have duplicate scopes or client IDs
 func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	redirectAddr := "http://localhost:8200"
+	conf := &CoreConfig{
+		RedirectAddr: redirectAddr,
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
+
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
@@ -2769,7 +2778,7 @@ func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "",
+		"issuer":             redirectAddr + "/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-id1", "test-id2"},
 		"scopes_supported":   []string{"test-scope1"},
 	}
@@ -2804,7 +2813,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "https://example.com:8200",
+		"issuer":             "https://example.com:8200/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{},
 	}
@@ -2831,7 +2840,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "https://changedurl.com",
+		"issuer":             "https://changedurl.com/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{},
 	}
