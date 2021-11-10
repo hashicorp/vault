@@ -574,6 +574,7 @@ func (d *autoSeal) StartHealthCheck() {
 								}
 								lastTestOk = true
 								lastSeenOk = t
+								d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 							}
 						}()
 					}
