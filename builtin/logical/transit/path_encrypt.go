@@ -361,7 +361,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		if ciphertext == "" {
-			batchResponseItems[i].Error = fmt.Errorf("empty ciphertext returned for input item %d", i).Error()
+			batchResponseItems[i].Error = fmt.Sprintf("empty ciphertext returned for input item %d", i)
 			continue
 		}
 
