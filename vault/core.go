@@ -2143,6 +2143,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := seal.UpgradeKeys(c.activeContext); err != nil {
 			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
 		}
+
+		// Start a periodic but infrequent heartbeat to detect auto-seal backend outages at runtime rather than being
+		// surprised by this at the next need to unseal.
+		seal.StartHealthCheck()
 	}
 
 	c.metricsCh = make(chan struct{})
@@ -2222,6 +2226,10 @@ func (c *Core) preSeal() error {
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
+	}
+
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
 	}
 
 	preSealPhysical(c)
