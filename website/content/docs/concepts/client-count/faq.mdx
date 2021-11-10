@@ -187,7 +187,7 @@ Known issues for both tools include the following:
 **Auditor tool**:
   - New updates to the client count logic (made in the API/UI starting Vault 1.8) are not reflected in the Vault auditor tool. We do not plan to update the auditor tool to be consistent with the API/UI and will eventually deprecate it. Use this tool as a stop-gap until you upgrade to a newer version of Vault
 
-**API/UI**:
+**UI/API**:
   - Via the UI/API, the billing period cannot be computed for start and end dates that fall in the middle of a month. For example, if the billing period starts on March 15th and ends on March 14th within the subsequent year, the tool can only compute the billing period assuming March 1 is the start date or April 1 is the start date, but not using the March 15th start date
   - As of Vault 1.9, KMIP clients are not provided by the API/CLI. We have plans to add this to a future version
   - High cardinality alias issues. Refer to question [In what situations can generate too many or too few clients within Vault? What can we do in these situations?](#q-in-what-situations-can-generate-too-many-or-too-few-clients-within-vault-what-can-we-do-in-these-situations) for more information.
@@ -238,6 +238,6 @@ While we have taken measures to enhance our Vault client's computation logic to 
 
 ### Q: Do child namespaces create duplicate tokens?
 
- If a token is used in a child namespace, it is counted as a single client. However, suppose you're logged into a parent namespace and reached into child namespace to create a token meant to be used within the child. In that case, the token will be a non-entity token (this use case is when you're creating a token to give to someone else whose identity make be unknown).
+A token created in a parent namespace can be used in a child namespace without adding additional clients.
 
-To elaborate, if a token is used in a child namespace, it is counted as a single client. The client count API (leveraged by the UI) tracks where a token was created, and an entity's token can only be created in the namespace it is a part of. Internally, the `TokenEntry` (storage object to store tokens) gets created when the token is created. When the token is used, Vault retrieves the namespace out from the `TokenEntry` and uses that to create the clientID. Therefore, even if a token is used in a child namespace, it is counted as a single client.
+However, creating a new token across a parent/child namespace boundary could result in a token without an entity and a new client. This is because identity is scoped to a single namespace and tokens cannot be associated with identities that live outside their namespace.
