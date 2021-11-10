@@ -227,19 +227,4 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 			t.Fatalf("Expected value metric %s to be non-zero", asu)
 		}
 	}
-
-	// Concurrency test the start/stop feature
-	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			autoSeal.StartHealthCheck()
-			autoSeal.StopHealthCheck()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	if autoSeal.healthCheckStop != nil {
-		t.Fatal("expected health tests to be stopped")
-	}
 }
