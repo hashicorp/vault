@@ -1044,6 +1044,21 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	return nil, nil
 }
 
+func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	entry := b.Core.router.MatchingMountEntry(ctx, path)
+
+	if entry == nil {
+		return logical.ErrorResponse("No secret engine mount at %s", path), nil
+	}
+
+	return &logical.Response{
+		Data: mountInfo(entry),
+	}, nil
+}
+
 // used to intercept an HTTPCodedError so it goes back to callee
 func handleError(
 	err error) (*logical.Response, error) {

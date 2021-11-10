@@ -1055,17 +1055,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 // HandleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
-func (c *Core) HandleVersionTimeStamps(ctx context.Context) error {
+func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now()
-	isUpdated, err := c.StoreVersionTimestamp(ctx, version.Version, currentTime)
+	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime)
 	if err != nil {
-		return err
+		return fmt.Errorf("error storing vault version: %w", err)
 	}
 	if isUpdated {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
 	}
 	// Finally, load the versions into core fields
-	err = c.HandleLoadVersionTimestamps(ctx)
+	err = c.loadVersionTimestamps(ctx)
 	if err != nil {
 		return err
 	}
@@ -2008,6 +2008,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
+		return err
+	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2164,11 +2167,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := c.postSealMigration(ctx); err != nil {
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
 		}
-	}
-	err := c.HandleVersionTimeStamps(c.activeContext)
-	if err != nil {
-		c.logger.Warn("post-unseal version timestamp setup failed", "error", err)
-
 	}
 
 	c.logger.Info("post-unseal setup complete")
@@ -2697,7 +2695,6 @@ func (c *Core) SetConfig(conf *server.Config) {
 }
 
 func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
-
 	customHeaders := c.customListenerHeader.Load()
 	if customHeaders == nil {
 		return nil

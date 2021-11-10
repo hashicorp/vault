@@ -19,7 +19,7 @@
  * @param {string} title - title of the chart
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend
  * @param {object} dataset - dataset for the chart
- * @param {array} tooltipData - misc. information needed to display tooltip (i.e. total clients from query params)
+ * @param {any} tooltipData - misc. information needed to display tooltip (i.e. total clients from query params)
  * @param {string} [description] - description of the chart
  * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis
  * @param {function} [onClick] - takes function from parent and passes it to click event on data bars

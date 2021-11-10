@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -2228,10 +2230,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	}
 }
 
-// TestBackend_SignSelfIssued_DifferentTypes is a copy of
-// TestBackend_SignSelfIssued, but uses a different key type for the internal
-// root (EC instead of RSA). This verifies that we can cross-sign CAs that are
-// different key types, at the cost of verifying the algorithm used
+// TestBackend_SignSelfIssued_DifferentTypes tests the functionality of the
+// require_matching_certificate_algorithms flag.
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -2275,10 +2275,11 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 			CommonName: "foo.bar.com",
 		},
 		SerialNumber:          big.NewInt(1234),
-		IsCA:                  false,
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 
+	// Tests absent the flag
 	ss, _ := getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -2294,29 +2295,19 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	if resp == nil {
 		t.Fatal("got nil response")
 	}
-	if !resp.IsError() {
-		t.Fatalf("expected error due to non-CA; got: %#v", *resp)
-	}
 
 	// Set CA to true, but leave issuer alone
 	template.IsCA = true
 
-	issuer := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "bar.foo.com",
-		},
-		SerialNumber:          big.NewInt(2345),
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-
-	ss, ssCert := getSelfSigned(t, template, issuer, key)
+	// Tests with flag present but false
+	ss, _ = getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"certificate": ss,
+			"require_matching_certificate_algorithms": false,
 		},
 	})
 	if err != nil {
@@ -2325,68 +2316,20 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	if resp == nil {
 		t.Fatal("got nil response")
 	}
-	if !resp.IsError() {
-		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
-	}
 
-	ss, ssCert = getSelfSigned(t, template, template, key)
+	// Test with flag present and true
+	ss, _ = getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"certificate": ss,
+			"require_matching_certificate_algorithms": true,
 		},
 	})
 	if err == nil {
-		t.Fatal("expected error due to different signature algo but not opted-in")
-	}
-
-	ss, ssCert = getSelfSigned(t, template, template, key)
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "root/sign-self-issued",
-		Storage:   storage,
-		Data: map[string]interface{}{
-			"certificate":                         ss,
-			"allow_different_signature_algorithm": "true",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("got nil response")
-	}
-	if resp.IsError() {
-		t.Fatalf("error in response: %s", resp.Error().Error())
-	}
-
-	newCertString := resp.Data["certificate"].(string)
-	block, _ := pem.Decode([]byte(newCertString))
-	newCert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signingBundle, err := fetchCAInfo(context.Background(), &logical.Request{Storage: storage})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reflect.DeepEqual(newCert.Subject, newCert.Issuer) {
-		t.Fatal("expected different subject/issuer")
-	}
-	if !reflect.DeepEqual(newCert.Issuer, signingBundle.Certificate.Subject) {
-		t.Fatalf("expected matching issuer/CA subject\n\nIssuer:\n%#v\nSubject:\n%#v\n", newCert.Issuer, signingBundle.Certificate.Subject)
-	}
-	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
-		t.Fatal("expected different authority/subject")
-	}
-	if !bytes.Equal(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
-		t.Fatal("expected authority on new cert to be same as signing subject")
-	}
-	if newCert.Subject.CommonName != "foo.bar.com" {
-		t.Fatalf("unexpected common name on new cert: %s", newCert.Subject.CommonName)
+		t.Fatal("expected error due to mismatched algorithms")
 	}
 }
 
@@ -3151,6 +3094,22 @@ func setCerts() {
 }
 
 func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
+	// Use a ridiculously long time to minimize the chance
+	// that we have to deal with more than one interval.
+	// InMemSink rounds down to an interval boundary rather than
+	// starting one at the time of initialization.
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	metricsConf := metrics.DefaultConfig("")
+	metricsConf.EnableHostname = false
+	metricsConf.EnableHostnameLabel = false
+	metricsConf.EnableServiceLabel = false
+	metricsConf.EnableTypePrefix = false
+
+	metrics.NewGlobal(metricsConf, inmemSink)
+
 	// Enable PKI secret engine
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -3301,6 +3260,91 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Sleep a bit to make sure we're past the safety buffer
 	time.Sleep(2 * time.Second)
+
+	// Issue a tidy-status on /pki
+	{
+		tidyStatus, err := client.Logical().Read("pki/tidy-status")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedData := map[string]interface{}{
+			"safety_buffer":              json.Number("1"),
+			"tidy_cert_store":            true,
+			"tidy_revoked_certs":         true,
+			"state":                      "Finished",
+			"error":                      nil,
+			"time_started":               nil,
+			"time_finished":              nil,
+			"message":                    nil,
+			"cert_store_deleted_count":   json.Number("1"),
+			"revoked_cert_deleted_count": json.Number("1"),
+		}
+		// Let's copy the times from the response so that we can use deep.Equal()
+		timeStarted, ok := tidyStatus.Data["time_started"]
+		if !ok || timeStarted == "" {
+			t.Fatal("Expected tidy status response to include a value for time_started")
+		}
+		expectedData["time_started"] = timeStarted
+		timeFinished, ok := tidyStatus.Data["time_finished"]
+		if !ok || timeFinished == "" {
+			t.Fatal("Expected tidy status response to include a value for time_finished")
+		}
+		expectedData["time_finished"] = timeFinished
+
+		if diff := deep.Equal(expectedData, tidyStatus.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+	// Check the tidy metrics
+	{
+		// Map of gagues to expected value
+		expectedGauges := map[string]float32{
+			"secrets.pki.tidy.cert_store_current_entry":   0,
+			"secrets.pki.tidy.cert_store_total_entries":   1,
+			"secrets.pki.tidy.revoked_cert_current_entry": 0,
+			"secrets.pki.tidy.revoked_cert_total_entries": 1,
+			"secrets.pki.tidy.start_time_epoch":           0,
+		}
+		// Map of counters to the sum of the metrics for that counter
+		expectedCounters := map[string]float64{
+			"secrets.pki.tidy.cert_store_deleted_count":   1,
+			"secrets.pki.tidy.revoked_cert_deleted_count": 1,
+			"secrets.pki.tidy.success":                    2,
+			// Note that "secrets.pki.tidy.failure" won't be in the captured metrics
+		}
+
+		// If the metrics span mnore than one interval, skip the checks
+		intervals := inmemSink.Data()
+		if len(intervals) == 1 {
+			interval := inmemSink.Data()[0]
+
+			for gauge, value := range expectedGauges {
+				if _, ok := interval.Gauges[gauge]; !ok {
+					t.Fatalf("Expected metrics to include a value for gauge %s", gauge)
+				}
+				if value != interval.Gauges[gauge].Value {
+					t.Fatalf("Expected value metric %s to be %f but got %f", gauge, value, interval.Gauges[gauge].Value)
+				}
+
+			}
+			for counter, value := range expectedCounters {
+				if _, ok := interval.Counters[counter]; !ok {
+					t.Fatalf("Expected metrics to include a value for couter %s", counter)
+				}
+				if value != interval.Counters[counter].Sum {
+					t.Fatalf("Expected the sum of metric %s to be %f but got %f", counter, value, interval.Counters[counter].Sum)
+				}
+			}
+
+			tidyDuration, ok := interval.Samples["secrets.pki.tidy.duration"]
+			if !ok {
+				t.Fatal("Expected metrics to include a value for sample secrets.pki.tidy.duration")
+			}
+			if tidyDuration.Count <= 0 {
+				t.Fatalf("Expected metrics to have count > 0 for sample secrets.pki.tidy.duration, but got %d", tidyDuration.Count)
+			}
+		}
+	}
 
 	req = client.NewRequest("GET", "/v1/pki/crl")
 	resp, err = client.RawRequest(req)
