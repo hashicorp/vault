@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -64,74 +65,155 @@ func TestTransit_BatchDecryption(t *testing.T) {
 }
 
 func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
+	var req *logical.Request
 	var resp *logical.Response
 	var err error
 
 	b, s := createBackendWithStorage(t)
 
-	policyData := map[string]interface{}{
-		"derived": true,
-	}
-
-	policyReq := &logical.Request{
+	// Create a derived key.
+	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/existing_key",
 		Storage:   s,
-		Data:      policyData,
+		Data: map[string]interface{}{
+			"derived": true,
+		},
 	}
-
-	resp, err = b.HandleRequest(context.Background(), policyReq)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dGVzdGNvbnRleHQ="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dGVzdGNvbnRleHQ="},
+	// Encrypt some values for use in test cases.
+	plaintextItems := []BatchRequestItem{
+		{Plaintext: "dGhlIHF1aWNrIGJyb3duIGZveA==", Context: "dGVzdGNvbnRleHQ="},
+		{Plaintext: "anVtcGVkIG92ZXIgdGhlIGxhenkgZG9n", Context: "dGVzdGNvbnRleHQy"},
 	}
-
-	batchData := map[string]interface{}{
-		"batch_input": batchInput,
-	}
-	batchReq := &logical.Request{
+	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/existing_key",
 		Storage:   s,
-		Data:      batchData,
+		Data: map[string]interface{}{
+			"batch_input": []interface{}{
+				map[string]interface{}{"plaintext": plaintextItems[0].Plaintext, "context": plaintextItems[0].Context},
+				map[string]interface{}{"plaintext": plaintextItems[1].Plaintext, "context": plaintextItems[1].Context},
+			},
+		},
 	}
-	resp, err = b.HandleRequest(context.Background(), batchReq)
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionInputItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+	encryptedItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 
-	batchDecryptionInput := make([]interface{}, len(batchDecryptionInputItems))
-	for i, item := range batchDecryptionInputItems {
-		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "context": "dGVzdGNvbnRleHQ="}
+	tests := []struct {
+		name      string
+		in        []interface{}
+		want      []DecryptBatchResponseItem
+		shouldErr bool
+	}{
+		{
+			name:      "nil-input",
+			in:        nil,
+			shouldErr: true,
+		},
+		{
+			name:      "empty-input",
+			in:        []interface{}{},
+			shouldErr: true,
+		},
+		{
+			name: "single-item-success",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].Context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Plaintext: plaintextItems[0].Plaintext},
+			},
+		},
+		{
+			name: "single-item-invalid-ciphertext",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": "xxx", "context": plaintextItems[0].Context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "invalid ciphertext: no prefix"},
+			},
+		},
+		{
+			name: "single-item-wrong-context",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].Context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+			},
+		},
+		{
+			name: "batch-full-success",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[0].Context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].Context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Plaintext: plaintextItems[0].Plaintext},
+				{Plaintext: plaintextItems[1].Plaintext},
+			},
+		},
+		{
+			name: "batch-partial-success",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].Context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].Context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Plaintext: plaintextItems[1].Plaintext},
+			},
+		},
+		{
+			name: "batch-full-failure",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].Context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].Context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Error: "cipher: message authentication failed"},
+			},
+		},
 	}
 
-	batchDecryptionData := map[string]interface{}{
-		"batch_input": batchDecryptionInput,
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req = &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "decrypt/existing_key",
+				Storage:   s,
+				Data: map[string]interface{}{
+					"batch_input": tt.in,
+				},
+			}
+			resp, err = b.HandleRequest(context.Background(), req)
 
-	batchDecryptionReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "decrypt/existing_key",
-		Storage:   s,
-		Data:      batchDecryptionData,
-	}
-	resp, err = b.HandleRequest(context.Background(), batchDecryptionReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+			didErr := err != nil || (resp != nil && resp.IsError())
+			if didErr {
+				if !tt.shouldErr {
+					t.Fatalf("unexpected error err:%v, resp:%#v", err, resp)
+				}
+			} else {
+				if tt.shouldErr {
+					t.Fatal("expected error, but none occurred")
+				}
 
-	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
+				respItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
 
-	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	for _, item := range batchDecryptionResponseItems {
-		if item.Plaintext != plaintext {
-			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, item.Plaintext)
-		}
+				if !reflect.DeepEqual(tt.want, respItems) {
+					t.Fatalf("response items mismatch, want:%#v, got:%#v", tt.want, respItems)
+				}
+			}
+		})
 	}
 }
