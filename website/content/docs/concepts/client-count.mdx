@@ -198,7 +198,7 @@ To reduce the number of non-entity tokens in use, consider switching to an authe
 As of Vault 1.9, non-entity tokens are tracked as unique clients based on the policies the token
 has access to and the namespace in which it was created. Non-entity tokens that are assigned 
 the same set of policies and are created in the same namespace will be tracked as the same client. 
-Conversely, if two non-entity tokens have a different policy set or are created in different namespaces
+Conversely, if two non-entity tokens have a different policy set or are created in different namespaces,
 they will be tracked as two separate clients. 
 
 Please note that before the release of Vault 1.9, non-entity tokens were each tracked separately. That is 
