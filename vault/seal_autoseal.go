@@ -536,7 +536,7 @@ func (d *autoSeal) StartHealthCheck() {
 				healthCheck.Reset(sealHealthTestIntervalUnhealthy)
 			}
 			lastTestOk = false
-			d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Nanoseconds()))
+			d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Milliseconds()))
 		}
 		for {
 			select {
