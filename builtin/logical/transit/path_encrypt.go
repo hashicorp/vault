@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -357,19 +356,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
-			switch err.(type) {
-			case errutil.UserError:
-				batchResponseItems[i].Error = err.Error()
-				continue
-			default:
-				p.Unlock()
-				return nil, err
-			}
+			batchResponseItems[i].Error = err.Error()
+			continue
 		}
 
 		if ciphertext == "" {
-			p.Unlock()
-			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
+			batchResponseItems[i].Error = fmt.Errorf("empty ciphertext returned for input item %d", i).Error()
+			continue
 		}
 
 		keyVersion := item.KeyVersion
