@@ -212,7 +212,7 @@ const connectionTests = [
   // keep oracle as last DB because it is skipped in some tests (line 285) the UI doesn't return to empty state after
   {
     name: 'oracle-connection',
-    plugin: 'oracle-database-plugin',
+    plugin: 'vault-plugin-database-oracle',
     url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
     requiredFields: async (assert, name) => {
       assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
@@ -282,7 +282,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
         await connectionPage.connectionUrl(testCase.url);
       }
       // skip adding oracle db connection since plugin doesn't exist
-      if (testCase.plugin === 'oracle-database-plugin') {
+      if (testCase.plugin === 'vault-plugin-database-oracle') {
         testCase.requiredFields(assert, testCase.name);
         continue;
       }
