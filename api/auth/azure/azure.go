@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -62,7 +61,7 @@ const (
 // NewAzureAuth initializes a new Azure auth method interface to be
 // passed as a parameter to the client.Auth().Login method.
 //
-// Supported options: WithMountPath, WithCloud
+// Supported options: WithMountPath, WithResource
 func NewAzureAuth(roleName string, opts ...LoginOption) (*AzureAuth, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("no role name provided for login")
@@ -126,15 +125,16 @@ func WithMountPath(mountPath string) LoginOption {
 	}
 }
 
-// WithCloud allows you to specify a different cloud environment than
-// the default of Azure Public Cloud. This should match the cloud
-// environment that an administrator configured your Vault server to use.
+// WithResource allows you to specify a different resource URL to use as the aud value
+// on the JWT token than the default of Azure Public Cloud's ARM URL.
+// This should match the resource URI that an administrator configured your
+// Vault server to use.
 //
 // See https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go
 // for a list of valid environments.
-func WithCloud(cloud azure.Environment) LoginOption {
+func WithResource(url string) LoginOption {
 	return func(a *AzureAuth) error {
-		a.resource = cloud.ResourceManagerEndpoint
+		a.resource = url
 		return nil
 	}
 }
@@ -153,7 +153,7 @@ func (a *AzureAuth) getJWT() (string, error) {
 	identityParameters.Add(resourceQueryParam, a.resource)
 	identityEndpoint.RawQuery = identityParameters.Encode()
 
-	req, err := http.NewRequest("GET", identityEndpoint.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, identityEndpoint.String(), nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating HTTP request: %w", err)
 	}
@@ -201,7 +201,7 @@ func getMetadata() (metadataJSON, error) {
 	metadataParameters := metadataEndpoint.Query()
 	metadataParameters.Add(apiVersionQueryParam, metadataAPIVersion)
 	metadataEndpoint.RawQuery = metadataParameters.Encode()
-	req, err := http.NewRequest("GET", metadataEndpoint.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, metadataEndpoint.String(), nil)
 	if err != nil {
 		return metadataJSON{}, fmt.Errorf("error creating HTTP Request for metadata endpoint: %w", err)
 	}

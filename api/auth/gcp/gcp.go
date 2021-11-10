@@ -157,7 +157,7 @@ func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error)
 
 	// build request to metadata server
 	c := &http.Client{}
-	req, err := http.NewRequest("GET", identityMetadataURL, nil)
+	req, err := http.NewRequest(http.MethodGet, identityMetadataURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating http request: %w", err)
 	}
