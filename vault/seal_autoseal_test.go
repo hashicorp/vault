@@ -3,8 +3,14 @@ package vault
 import (
 	"bytes"
 	"context"
+	"errors"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	proto "github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -156,4 +162,84 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 		t.Fatalf("UpgradeKeys: want no error, got %v", err)
 	}
 	check()
+}
+
+func TestAutoSeal_HealthCheck(t *testing.T) {
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	metricsConf := metrics.DefaultConfig("")
+	metricsConf.EnableHostname = false
+	metricsConf.EnableHostnameLabel = false
+	metricsConf.EnableServiceLabel = false
+	metricsConf.EnableTypePrefix = false
+
+	metrics.NewGlobal(metricsConf, inmemSink)
+
+	core, _, _ := TestCoreUnsealed(t)
+	testSeal, testErr := seal.NewToggleableTestSeal(nil)
+
+	var encKeys []string
+	changeKey := func(key string) {
+		encKeys = append(encKeys, key)
+		testSeal.Wrapper.(*seal.ToggleableWrapper).Wrapper.(*wrapping.TestWrapper).SetKeyID(key)
+	}
+
+	// Set initial encryption key.
+	changeKey("kaz")
+
+	autoSeal := NewAutoSeal(testSeal)
+	autoSeal.SetCore(core)
+	pBackend := newTestBackend(t)
+	core.physical = pBackend
+	core.metricSink = metricsutil.NewClusterMetricSink("", inmemSink)
+
+	sealHealthTestIntervalNominal = 10 * time.Millisecond
+	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
+	autoSeal.StartHealthCheck()
+	*testErr = errors.New("disconnected")
+
+	time.Sleep(50 * time.Millisecond)
+
+	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster="
+	intervals := inmemSink.Data()
+	if len(intervals) == 1 {
+		interval := inmemSink.Data()[0]
+
+		if _, ok := interval.Gauges[asu]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
+		}
+		if interval.Gauges[asu].Value != 0 {
+			t.Fatalf("Expected value metric %s to be non-zero", asu)
+		}
+	}
+	*testErr = nil
+	time.Sleep(50 * time.Millisecond)
+	intervals = inmemSink.Data()
+	if len(intervals) == 1 {
+		interval := inmemSink.Data()[0]
+
+		if _, ok := interval.Gauges[asu]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
+		}
+		if interval.Gauges[asu].Value == 0 {
+			t.Fatalf("Expected value metric %s to be non-zero", asu)
+		}
+	}
+
+	// Concurrency test the start/stop feature
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			autoSeal.StartHealthCheck()
+			autoSeal.StopHealthCheck()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	if autoSeal.healthCheckStop != nil {
+		t.Fatal("expected health tests to be stopped")
+	}
 }

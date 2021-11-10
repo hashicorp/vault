@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	mathrand "math/rand"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -19,9 +20,10 @@ import (
 
 // barrierTypeUpgradeCheck checks for backwards compat on barrier type, not
 // applicable in the OSS side
-var barrierTypeUpgradeCheck = func(_ string, _ *SealConfig) {}
-
-const (
+var (
+	barrierTypeUpgradeCheck     = func(_ string, _ *SealConfig) {}
+	autoSealUnavailableDuration = []string{"seal", "unreachable", "time"}
+	// vars for unit testings
 	sealHealthTestIntervalNominal   = 10 * time.Minute
 	sealHealthTestIntervalUnhealthy = 1 * time.Minute
 )
@@ -32,11 +34,12 @@ const (
 type autoSeal struct {
 	*seal.Access
 
-	barrierConfig   atomic.Value
-	recoveryConfig  atomic.Value
-	core            *Core
-	logger          log.Logger
-	healthCheck     *time.Ticker
+	barrierConfig  atomic.Value
+	recoveryConfig atomic.Value
+	core           *Core
+	logger         log.Logger
+
+	hcLock          sync.Mutex
 	healthCheckStop chan struct{}
 }
 
@@ -513,42 +516,47 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 // StartHealthCheck starts a goroutine that tests the health of the auto-unseal backend once every 10 minutes.
 // If unhealthy, logs a warning on the condition and begins testing every one minute until healthy again.
 func (d *autoSeal) StartHealthCheck() {
-	d.healthCheck = time.NewTicker(sealHealthTestIntervalNominal)
+	d.StopHealthCheck()
+	d.hcLock.Lock()
+	defer d.hcLock.Unlock()
+
+	healthCheck := time.NewTicker(sealHealthTestIntervalNominal)
 	d.healthCheckStop = make(chan struct{})
+	healthCheckStop := d.healthCheckStop
 	go func() {
 		lastTestOk := true
 		lastSeenOk := time.Now()
 		for {
 			select {
-			case <-d.healthCheckStop:
-				if d.healthCheck != nil {
-					d.healthCheck.Stop()
+			case <-healthCheckStop:
+				if healthCheck != nil {
+					healthCheck.Stop()
 				}
-				d.healthCheck = nil
-				d.healthCheckStop = nil
+				healthCheckStop = nil
 				return
-			case t := <-d.healthCheck.C:
+			case t := <-healthCheck.C:
 				testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-				ciphertext, err := d.Wrapper.Encrypt(d.core.activeContext, []byte(testVal), nil)
+				ciphertext, err := d.Access.Encrypt(d.core.activeContext, []byte(testVal), nil)
 				if err != nil {
 					d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
 					if lastTestOk {
-						d.healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+						healthCheck.Reset(sealHealthTestIntervalUnhealthy)
 					}
 					lastTestOk = false
+					d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 				} else {
-					plaintext, err := d.Wrapper.Decrypt(d.core.activeContext, ciphertext, nil)
+					plaintext, err := d.Access.Decrypt(d.core.activeContext, ciphertext, nil)
 					if err != nil {
 						d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
 						if lastTestOk {
-							d.healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
 						}
 						lastTestOk = false
 					}
 					if !bytes.Equal([]byte(testVal), plaintext) {
 						d.logger.Warn("seal health test value failed to decrypt to expected value")
 						if lastTestOk {
-							d.healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
 						}
 						lastTestOk = false
 					} else {
@@ -557,11 +565,12 @@ func (d *autoSeal) StartHealthCheck() {
 							d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
 						}
 						if !lastTestOk {
-							d.healthCheck.Reset(sealHealthTestIntervalNominal)
+							healthCheck.Reset(sealHealthTestIntervalNominal)
 						}
 						lastTestOk = true
 						lastSeenOk = t
 					}
+					d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Nanoseconds()))
 				}
 			}
 		}
@@ -569,6 +578,8 @@ func (d *autoSeal) StartHealthCheck() {
 }
 
 func (d *autoSeal) StopHealthCheck() {
+	d.hcLock.Lock()
+	defer d.hcLock.Unlock()
 	if d.healthCheckStop != nil {
 		close(d.healthCheckStop)
 		d.healthCheckStop = nil
