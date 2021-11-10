@@ -175,7 +175,7 @@ func (a *AzureAuth) getJWT() (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp errorJSON
-		_ = json.Unmarshal(responseBytes, &errResp)
+		err = json.Unmarshal(responseBytes, &errResp)
 		if err != nil {
 			return "", fmt.Errorf("received error message but was unable to unmarshal its contents")
 		}

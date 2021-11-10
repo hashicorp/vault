@@ -171,6 +171,7 @@ func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("error making request to metadata service: %w", err)
 	}
+	defer resp.Body.Close()
 
 	// get jwt from response
 	body, err := ioutil.ReadAll(resp.Body)
