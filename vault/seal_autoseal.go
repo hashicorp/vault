@@ -538,45 +538,49 @@ func (d *autoSeal) StartHealthCheck() {
 				healthCheckStop = nil
 				return
 			case t := <-healthCheck.C:
-				ctx, _ := context.WithTimeout(ctx, sealHealthTestTimeout)
-				testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-				ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
-				if err != nil {
-					d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
-					if lastTestOk {
-						healthCheck.Reset(sealHealthTestIntervalUnhealthy)
-					}
-					lastTestOk = false
-					d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
-				} else {
-					ctx, _ = context.WithTimeout(d.core.activeContext, sealHealthTestTimeout)
-					plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
+				func() {
+					ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+					defer cancel()
+
+					testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
+					ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
+
 					if err != nil {
-						d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
+						d.logger.Warn("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
 						if lastTestOk {
 							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
 						}
 						lastTestOk = false
-					}
-					if !bytes.Equal([]byte(testVal), plaintext) {
-						d.logger.Warn("seal health test value failed to decrypt to expected value")
-						if lastTestOk {
-							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
-						}
-						lastTestOk = false
+						d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
 					} else {
-						d.logger.Debug("seal health test passed")
-						if !lastTestOk {
-							d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+						plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
+						if err != nil {
+							d.logger.Warn("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
+							if lastTestOk {
+								healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+							}
+							lastTestOk = false
 						}
-						if !lastTestOk {
-							healthCheck.Reset(sealHealthTestIntervalNominal)
+						if !bytes.Equal([]byte(testVal), plaintext) {
+							d.logger.Warn("seal health test value failed to decrypt to expected value")
+							if lastTestOk {
+								healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+							}
+							lastTestOk = false
+						} else {
+							d.logger.Debug("seal health test passed")
+							if !lastTestOk {
+								d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+							}
+							if !lastTestOk {
+								healthCheck.Reset(sealHealthTestIntervalNominal)
+							}
+							lastTestOk = true
+							lastSeenOk = t
 						}
-						lastTestOk = true
-						lastSeenOk = t
+						d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Nanoseconds()))
 					}
-					d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Nanoseconds()))
-				}
+				}()
 			}
 		}
 	}()
