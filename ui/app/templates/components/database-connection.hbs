@@ -85,8 +85,10 @@
 {{#if (eq @mode 'create')}}
 
   {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
-    <AlertBanner @type="warning" @message={{"Custom plugin names are currently not supported in Vault UI. 
-        Please ensure Oracle database plugin is registered with the name vault-plugin-database-oracle."}} />
+      <AlertBanner @type="warning">
+        Please ensure that your Oracle plugin has the default name of <b>vault-plugin-database-oracle</b>. 
+        Custom naming is not supported in the UI at this time.
+      </AlertBanner>
   {{/if}}
 
   <form {{on 'submit' this.handleCreateConnection}}>
