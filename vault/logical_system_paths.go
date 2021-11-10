@@ -1826,6 +1826,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadMount,
+					Summary:  "Read the configuration of the secret engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
 					Summary:  "Enable a new secrets engine at the given path.",
