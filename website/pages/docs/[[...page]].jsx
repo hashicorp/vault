@@ -3,10 +3,7 @@ import DocsPage from '@hashicorp/react-docs-page'
 import Columns from 'components/columns'
 import Tag from 'components/inline-tag'
 // Imports below are used in server-side only
-import {
-  generateStaticPaths,
-  generateStaticProps,
-} from '@hashicorp/react-docs-page/server'
+import { getStaticGenerationFunctions } from '@hashicorp/react-docs-page/server'
 
 const NAV_DATA_FILE = 'data/docs-nav-data.json'
 const CONTENT_DIR = 'content/docs'
@@ -24,24 +21,23 @@ export default function DocsLayout(props) {
   )
 }
 
-export async function getStaticPaths() {
-  return {
-    fallback: false,
-    paths: await generateStaticPaths({
-      navDataFile: NAV_DATA_FILE,
-      localContentDir: CONTENT_DIR,
-    }),
-  }
-}
+const { getStaticPaths, getStaticProps } = getStaticGenerationFunctions(
+  process.env.ENABLE_VERSIONED_DOCS === 'true'
+    ? {
+        strategy: 'remote',
+        basePath: basePath,
+        fallback: 'blocking',
+        revalidate: 360, // 1 hour
+        product: productSlug,
+      }
+    : {
+        strategy: 'fs',
+        basePath: basePath,
+        localContentDir: CONTENT_DIR,
+        navDataFile: NAV_DATA_FILE,
+        product: productSlug,
+        revalidate: false,
+      }
+)
 
-export async function getStaticProps({ params }) {
-  return {
-    props: await generateStaticProps({
-      navDataFile: NAV_DATA_FILE,
-      localContentDir: CONTENT_DIR,
-      product: { name: productName, slug: productSlug },
-      params,
-      additionalComponents,
-    }),
-  }
-}
+export { getStaticPaths, getStaticProps }
