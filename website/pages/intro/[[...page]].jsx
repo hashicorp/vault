@@ -12,6 +12,7 @@ export default function DocsLayout(props) {
       product={{ name: productName, slug: productSlug }}
       baseRoute={basePath}
       staticProps={props}
+      showVersionSelect={process.env.ENABLE_VERSIONED_DOCS === 'true'}
     />
   )
 }

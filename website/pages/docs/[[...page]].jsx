@@ -17,6 +17,7 @@ export default function DocsLayout(props) {
       baseRoute={basePath}
       staticProps={props}
       additionalComponents={additionalComponents}
+      showVersionSelect={process.env.ENABLE_VERSIONED_DOCS === 'true'}
     />
   )
 }
