@@ -35,7 +35,7 @@ The following section provides details about the ADP module features added in th
 
 #### Advanced I/O handling for Tranform FPE (ADP-Transform)
 
-This feature provides ADP Transform FPE users flexibility in generating input and output data with optional prefixes, dashes, spaces--all handled by the Transform Secrets engine. The [Tranformation template](https://learn.hashicorp.com/tutorials/vault/transform#advanced-handling) or capture groups specifies how the input regex are encoded or decoded including the format of the encoded value.
+Users of the Format Preserving Encryption (FPE) feature of ADP Transform will now benefit from increased flexibility with regards to formatting the input and output of their data. [Transformation templates](https://learn.hashicorp.com/tutorials/vault/transform#advanced-handling) are receiving two new fields-- **encode_format** and **decode_formats** that allow users to specify and format individual [capturing groups](https://www.regular-expressions.info/refcapture.html) within the regular expressions that define their formats.
 
 #### MS SQL TDE (ADP)
 
@@ -47,7 +47,7 @@ This section describes other features and enhancments introduced as part of the 
 
 ### Vaut Agent improvements
 
-TBD
+Improvements were made to the Vault Agent Cache to ensure that [consul-template is always routed through the Vault Agent cache](https://github.com/hashicorp/vault/pull/12762), therefore, eliminating the need for listeners to be defined in the Vault Agent for just templating. 
 
 ### Customized username generation for database dynamic credentials
 
