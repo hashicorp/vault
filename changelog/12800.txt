@@ -1,3 +1,0 @@
-```release-note:feature
-**OIDC Authorization Code Flow**: The Vault UI now supports OIDC Authorization Code Flow
-```
