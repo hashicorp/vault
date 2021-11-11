@@ -1226,8 +1226,12 @@
     "path": "partnerships"
   },
   {
-    "divider": true
+    "title": "Troubleshoot",
+    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
   },
+  {
+    "divider": true
+  }, 
   {
     "title": "Platforms",
     "routes": [
