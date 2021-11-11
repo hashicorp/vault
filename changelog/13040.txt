@@ -1,0 +1,3 @@
+```release-note:deprecation
+auth/kubernetes: `disable_iss_validation` and `issuer` configuration fields deprecation  [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127)
+```
