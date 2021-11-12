@@ -54,7 +54,7 @@ Using the identity system allows for Vault to make sure that entities aren’t c
 
 ### Non-entity Tokens
 
-If you chose to use the [Token Auth Method](https://www.vaultproject.io/docs/auth/token) without an identity, a non-entity token, to avoid driving up client count, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](https://www.vaultproject.io/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](https://www.vaultproject.io/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. See more on entity alias below.
+If you chose to use the [Token Auth Method](/docs/auth/token) without an identity to avoid driving up client count, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. See more on entity alias below.
 
 ## Authentication Methods and how they’re counted in Vault
 
@@ -115,7 +115,7 @@ Prior to Vault 1.6, this metric could only be measured from the audit log, using
 a contiguous sequence of months, can be measured by Vault itself.
 
 As of Vault 1.9, the total client count should always be measured using Vault itself. The
-metrics shown by the Vault UI should be regarded as the source of truth for this data. 
+metrics shown by the Vault UI are the source of truth for this data. 
 
 Please refer to [Vault Usage Metrics](https://learn.hashicorp.com/tutorials/vault/usage-metrics) for a
 step-by-step tutorial and description of how to use the UI.
@@ -206,8 +206,8 @@ to say, two non-entity tokens would always be counted as two separate clients.
 
 ## Auditing clients
 
-As of Vault 1.9, the Vault Audit Log will contain a `client_id` field in the request. The `client_id` field
-will contain an Entity ID for requests that are made with tokens with entities, or a unique client ID for 
+As of Vault 1.9, the Vault Audit Log contains a `client_id` field in the request. The `client_id` field
+contains an Entity ID for requests that are made with tokens with entities, or a unique client ID for 
 non-entity tokens. 
 
 Consumers of the audit log will be able to distinguish between these two types of client IDs by comparing
