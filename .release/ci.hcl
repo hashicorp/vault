@@ -3,18 +3,24 @@ schema = "1"
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "#feed-releng" #TODO update slack channel
+    notification_channel = "CRF6FFKEW" // #vault-releases
   }
   github {
     organization = "hashicorp"
     repository = "vault"
-    release_branches = ["crt_onboarding_main"]
+    release_branches = [
+      "main",
+      "release/1.6.x",
+      "release/1.7.x",
+      "release/1.8.x",
+      "release/1.9.x"
+    ]
   }
 }
 
 event "merge" {
   // "entrypoint" to use if build is not run automatically
-  // i.e. send "merge" complete signal to orchestrator to trigger build
+  // i.e. send "merge" complete signal to orchestrator to trigger buil
 }
 
 event "build" {

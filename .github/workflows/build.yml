@@ -4,8 +4,8 @@ on:
   push:
     # Sequence of patterns matched against refs/heads
     branches:    
-      # Push events on crt_onboarding_main branch
-      - crt_onboarding_main
+      # Push events on main branch
+      - main
 
 env:
   PKG_NAME: "vault"
