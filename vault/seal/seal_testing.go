@@ -2,6 +2,7 @@ package seal
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -25,7 +26,7 @@ func NewTestSeal(opts *TestSealOpts) *Access {
 	}
 }
 
-func NewToggleableTestSeal(opts *TestSealOpts) (*Access, *error) {
+func NewToggleableTestSeal(opts *TestSealOpts) (*Access, func(error)) {
 	if opts == nil {
 		opts = new(TestSealOpts)
 	}
@@ -34,26 +35,37 @@ func NewToggleableTestSeal(opts *TestSealOpts) (*Access, *error) {
 	return &Access{
 		Wrapper:        w,
 		OverriddenType: opts.Name,
-	}, &w.Error
+	}, w.SetError
 }
 
 type ToggleableWrapper struct {
 	wrapping.Wrapper
-	Error error
+	error error
+	l     sync.RWMutex
 }
 
-func (t ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, bytes2 []byte) (*wrapping.EncryptedBlobInfo, error) {
-	if t.Error != nil {
-		return nil, t.Error
+func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, bytes2 []byte) (*wrapping.EncryptedBlobInfo, error) {
+	t.l.RLock()
+	t.l.RUnlock()
+	if t.error != nil {
+		return nil, t.error
 	}
 	return t.Wrapper.Encrypt(ctx, bytes, bytes2)
 }
 
 func (t ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.EncryptedBlobInfo, bytes []byte) ([]byte, error) {
-	if t.Error != nil {
-		return nil, t.Error
+	t.l.RLock()
+	t.l.RUnlock()
+	if t.error != nil {
+		return nil, t.error
 	}
 	return t.Wrapper.Decrypt(ctx, info, bytes)
+}
+
+func (t *ToggleableWrapper) SetError(err error) {
+	t.l.Lock()
+	defer t.l.Unlock()
+	t.error = err
 }
 
 var _ wrapping.Wrapper = &ToggleableWrapper{}
