@@ -207,10 +207,11 @@ the key_type.`,
 
 			"signature_bits": &framework.FieldSchema{
 				Type:    framework.TypeInt,
-				Default: 256,
+				Default: 0,
 				Description: `The number of bits to use in the signature
-algorithm. Defaults to 256 for SHA256.
-Set to 384 for SHA384 and 512 for SHA512.`,
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 			},
 
 			"key_usage": &framework.FieldSchema{
@@ -624,11 +625,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		), nil
 	}
 
-	if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	if err := certutil.ValidateSignatureLength(entry.SignatureBits); err != nil {
+	if err := certutil.ValidateKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, &entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
