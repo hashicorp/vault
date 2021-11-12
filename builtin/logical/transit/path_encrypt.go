@@ -5,9 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
@@ -262,6 +264,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
+	userErrorInBatch := false
+	internalErrorInBatch := false
+
 	// Before processing the batch request items, get the policy. If the
 	// policy is supposed to be upserted, then determine if 'derived' is to
 	// be set or not, based on the presence of 'context' field in all the
@@ -273,6 +278,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
+			userErrorInBatch = true
 			batchResponseItems[i].Error = err.Error()
 			continue
 		}
@@ -281,6 +287,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -290,6 +297,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -356,11 +364,18 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
+			switch err.(type) {
+			case errutil.InternalError:
+				internalErrorInBatch = true
+			default:
+				userErrorInBatch = true
+			}
 			batchResponseItems[i].Error = err.Error()
 			continue
 		}
 
 		if ciphertext == "" {
+			userErrorInBatch = true
 			batchResponseItems[i].Error = fmt.Sprintf("empty ciphertext returned for input item %d", i)
 			continue
 		}
@@ -396,6 +411,18 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	p.Unlock()
+
+	// Depending on the errors in the batch, different status codes should be returned. User errors
+	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
+	// that user errors are non-retryable without making changes to the request, and should be surfaced
+	// to the user first.
+	switch {
+	case userErrorInBatch:
+		logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
+	case internalErrorInBatch:
+		logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
+	}
+
 	return resp, nil
 }
 
