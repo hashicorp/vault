@@ -64,7 +64,7 @@ IMPROVEMENTS:
 * core: observe the client counts broken down by namespace for partial month client count [[GH-12393](https://github.com/hashicorp/vault/pull/12393)]
 * core: Artifact builds will now only run on merges to the release branches or to `main`
 * core: The [dockerfile](https://github.com/hashicorp/vault/blob/main/Dockerfile) that is used to build the vault docker image available at [hashicorp/vault](https://hub.docker.com/repository/docker/hashicorp/vault) now lives in the root of this repo, and the entrypoint is available under [.release/docker/docker-entrypoint.sh](https://github.com/hashicorp/vault/blob/main/.release/docker/docker-entrypoint.sh)
-* core: The vault linx packaging service configs and pre/post install scripts are now available under [.release/linux](https://github.com/hashicorp/vault/blob/main/.release/linux)
+* core: The vault linux packaging service configs and pre/post install scripts are now available under [.release/linux](https://github.com/hashicorp/vault/blob/main/.release/linux)
 * core: Vault linux packages are now available for all supported linux architectures including arm, arm64, 386, and amd64
 * db/cassandra: make the connect_timeout config option actually apply to connection timeouts, in addition to non-connection operations [[GH-12903](https://github.com/hashicorp/vault/pull/12903)]
 * identity/token: Only return keys from the `.well-known/keys` endpoint that are being used by roles to sign/verify tokens. [[GH-12780](https://github.com/hashicorp/vault/pull/12780)]
