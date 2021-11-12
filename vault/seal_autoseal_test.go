@@ -177,7 +177,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	metrics.NewGlobal(metricsConf, inmemSink)
 
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal, testErr := seal.NewToggleableTestSeal(nil)
+	testSeal, setErr := seal.NewToggleableTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
@@ -196,8 +196,8 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 
 	sealHealthTestIntervalNominal = 10 * time.Millisecond
 	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
+	setErr(errors.New("disconnected"))
 	autoSeal.StartHealthCheck()
-	*testErr = errors.New("disconnected")
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -213,7 +213,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 			t.Fatalf("Expected value metric %s to be non-zero", asu)
 		}
 	}
-	*testErr = nil
+	setErr(nil)
 	time.Sleep(50 * time.Millisecond)
 	intervals = inmemSink.Data()
 	if len(intervals) == 1 {
