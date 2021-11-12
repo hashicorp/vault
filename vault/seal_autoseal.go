@@ -524,9 +524,9 @@ func (d *autoSeal) StartHealthCheck() {
 	healthCheck := time.NewTicker(sealHealthTestIntervalNominal)
 	d.healthCheckStop = make(chan struct{})
 	healthCheckStop := d.healthCheckStop
+	ctx := d.core.activeContext
 
 	go func() {
-		ctx := d.core.activeContext
 		lastTestOk := true
 		lastSeenOk := time.Now()
 
