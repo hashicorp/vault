@@ -27,7 +27,7 @@ A provider must have the following configuration parameters:
 
 * **Issuer URL**: used in the `iss` claim of ID tokens
 * **Allowed client IDs**: limits which clients can access the provider
-* **Scopes supported**: limits what identity information is available as claims.
+* **Scopes supported**: limits what identity information is available as claims
 
 The issuer URL parameter is necessary for the validation of ID tokens by clients. If an URL parameter is not provided explicitly, it will default to a URL with Vault's [api_addr](/docs/configuration#api_addr) as the `scheme://host:port` component and `/v1/:namespace/identity/oidc/provider/:name` as the path component. This means tokens issued by a provider in a specified Vault cluster must be validated within that same cluster. If the issuer URL is provided explicitly, it must point to a Vault instance that is network-reachable by clients for ID token validation.
 
