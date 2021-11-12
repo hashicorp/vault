@@ -4,8 +4,8 @@ on:
   push:
     # Sequence of patterns matched against refs/heads
     branches:    
-      # Push events on crt_onboarding_1.6.x branch (TODO: switch back to release/1.6.x once builds are passing)
-      - crt_onboarding_1.6.x
+      # Push events on release/1.6.x branch
+      - release/1.6.x
 
 env:
   PKG_NAME: "vault"
