@@ -41,13 +41,17 @@ Users of the Format Preserving Encryption (FPE) feature of ADP Transform will no
 
 We added support to Vault Enterprise for customers who want Vault to manage encryption keys for Transparent Data Encryption on MSSQL servers.
 
+#### Key Management Secrets(KMS) engine - GCP
+
+The [KMS Engine for GCP](https://www.vaultproject.io/docs/secrets/gcpkms) provides encryption and key management via the Google Cloud KMS to assist with automating many GCP key management functions.
+
 ## Other Features and Enhancements
 
 This section describes other features and enhancments introduced as part of the Vault 1.9 release.
 
 ### Vaut Agent improvements
 
-Improvements were made to the Vault Agent Cache to ensure that [consul-template is always routed through the Vault Agent cache](https://github.com/hashicorp/vault/pull/12762), therefore, eliminating the need for listeners to be defined in the Vault Agent for just templating. 
+Improvements were made to the Vault Agent Cache to ensure that [consul-template is always routed through the Vault Agent cache](https://github.com/hashicorp/vault/pull/12762), therefore, eliminating the need for listeners to be defined in the Vault Agent for just templating.
 
 ### Customized username generation for database dynamic credentials
 
@@ -88,12 +92,6 @@ We have been adding support for DB secrets engines in the UI over the past few r
 ### PKI certificate metadata
 
 The [PKI Secrets Engine](/docs/secrets/pki) now displays additional PKI certificate metadata in the UI, such as date issued, date of expiry, serial number, and subject/name.
-
-## GA Support for Previously Supported Tech Preview Features
-
-### Key Management Secrets(KMS) engine - GCP
-
-The [KMS Engine for GCP](https://www.vaultproject.io/docs/secrets/gcpkms) was introduced as a Tech Preview feature in Vault 1.8. As of 1.9, it is now generally available to assist with automating many GCP key management operations.
 
 ## Tech Preview Features
 
