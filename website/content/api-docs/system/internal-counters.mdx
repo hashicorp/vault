@@ -89,9 +89,13 @@ $ curl \
 
 ## Client Count
 
-This endpoint returns the number of clients per namespace, as the sum of active entities and non-entity tokens.
+This endpoint returns the number of clients per namespace, as the sum of clients calculated from the use 
+of active entities and non-entity tokens.
 An "active entity" is a distinct entity that has created one or more tokens in the given time period.
-A "non-entity token" is a token with no attached entity ID.
+A "non-entity token" is a token with no attached entity ID. 
+Both non-entity tokens and active entities have distinct client IDs. For more information on how clients
+map to these client IDs, and how clients are counted, please visit the 
+[client count](https://www.vaultproject.io/docs/concepts/client-count) concepts page.
 
 A time period may be specified; otherwise it reports on a default reporting period, such as the
 previous twelve calendar months. Reports are only available with month granularity, after each month
