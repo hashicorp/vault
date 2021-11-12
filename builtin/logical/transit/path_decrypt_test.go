@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -208,8 +209,16 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 					t.Fatal("expected error, but none occurred")
 				}
 
-				respItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
+				if rawRespBody, ok := resp.Data[logical.HTTPRawBody]; ok {
+					httpResp := &logical.HTTPResponse{}
+					err = jsonutil.DecodeJSON([]byte(rawRespBody.(string)), httpResp)
+					if err != nil {
+						t.Fatalf("failed to unmarshal nested response: err:%v, resp:%#v", err, resp)
+					}
+					resp = logical.HTTPResponseToLogicalResponse(httpResp)
+				}
 
+				respItems := resp.Data["batch_results"]
 				if !reflect.DeepEqual(tt.want, respItems) {
 					t.Fatalf("response items mismatch, want:%#v, got:%#v", tt.want, respItems)
 				}
