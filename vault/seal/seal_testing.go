@@ -46,7 +46,7 @@ type ToggleableWrapper struct {
 
 func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, bytes2 []byte) (*wrapping.EncryptedBlobInfo, error) {
 	t.l.RLock()
-	t.l.RUnlock()
+	defer t.l.RUnlock()
 	if t.error != nil {
 		return nil, t.error
 	}
@@ -55,7 +55,7 @@ func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, bytes2 []
 
 func (t ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.EncryptedBlobInfo, bytes []byte) ([]byte, error) {
 	t.l.RLock()
-	t.l.RUnlock()
+	defer t.l.RUnlock()
 	if t.error != nil {
 		return nil, t.error
 	}
