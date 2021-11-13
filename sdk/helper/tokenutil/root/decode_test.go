@@ -2,6 +2,7 @@ package root
 
 import (
 	"context"
+	"fmt"
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"testing"
