@@ -871,6 +871,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -993,6 +994,7 @@ func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{groupName},
+		"iam_tags":                 map[string]string(nil),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1036,6 +1038,7 @@ func TestBackend_iamUserGroups(t *testing.T) {
 		"user_path":                "/path/",
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{group1Name, group2Name},
+		"iam_tags":                 map[string]string(nil),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1359,6 +1362,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
+				"iam_tags":                 map[string]string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1428,6 +1432,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				"user_path":                "",
 				"permissions_boundary_arn": "",
 				"iam_groups":               groups,
+				"iam_tags":                 map[string]string(nil),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
