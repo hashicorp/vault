@@ -2,6 +2,8 @@ package root
 
 import (
 	"context"
+	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -60,7 +62,16 @@ func TestSimpleRootGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.SetToken(token)
-	t.Infof("raw token is %s and client token is %s", result.RootToken, token)
+
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:  fmt.Sprintf("root decoder-%s", id),
+		Level: hclog.Trace,
+	})
+	logger.Info("raw token is", result.RootToken, "and client token is", token)
 
 	secret, err := client.Auth().Token().LookupSelf()
 	if err != nil {
