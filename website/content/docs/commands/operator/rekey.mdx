@@ -35,6 +35,16 @@ $ vault operator rekey \
     -key-threshold=9
 ```
 
+Initialize a rekey when Auto Unseal is used for the Vault cluster:
+
+```shell-session
+$ vault operator rekey \
+    -target=recovery \
+    -init \
+    -key-shares=15 \
+    -key-threshold=9
+```
+
 Initialize a rekey and activate the verification process:
 
 ```shell-session
