@@ -2,9 +2,6 @@ package root
 
 import (
 	"context"
-	"fmt"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -34,22 +31,40 @@ func TestSimpleRootGeneration(t *testing.T) {
 		LegacyShamirSeal: true,
 	}
 
-	result, err := core.Initialize(context.Background(), initParams)
+	// Check if the seal configuration is valid
+	if err := barrierConfig.Validate(); err != nil {
+		t.Fatal("invalid seal configuration", "error", err)
+	}
+
+	initResult, err := core.Initialize(context.Background(), initParams)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	unsealKeys := result.SecretShares
+	unsealKeys := initResult.SecretShares
+
+	err = core.GenerateRootInit("", "", vault.GenerateStandardRootTokenStrategy)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	var encodedRoot string
 	for _, unsealKey := range unsealKeys {
-		if _, err := core.Unseal(vault.TestKeyCopy(unsealKey)); err != nil {
+		updateRes, err := core.GenerateRootUpdate(context.TODO(), unsealKey, "", vault.GenerateStandardRootTokenStrategy)
+		if err != nil {
 			t.Fatalf("unseal err: %s", err)
+		} else if updateRes.Progress == recoveryConfig.SecretShares {
+			encodedRoot = updateRes.EncodedToken
 		}
 	}
 
-	token, err := DecodeRootToken(result.RootToken, "", 0)
+	token, err := DecodeRootToken(encodedRoot, "", 0)
+	if err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
 
-	if core.Sealed() {
-		t.Fatal("should not be sealed")
+	if token != initResult.RootToken {
+		t.Fatal("Decoded root token is different than the original token (", token, initResult.RootToken)
 	}
 
 	ln, addr := http.TestServer(t, core)
@@ -63,16 +78,6 @@ func TestSimpleRootGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.SetToken(token)
-
-	id, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  fmt.Sprintf("root decoder-%s", id),
-		Level: hclog.Trace,
-	})
-	logger.Info("raw token is", result.RootToken, "and client token is", token)
 
 	secret, err := client.Auth().Token().LookupSelf()
 	if err != nil {
