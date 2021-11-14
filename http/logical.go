@@ -497,7 +497,10 @@ func getConnection(r *http.Request) (connection *logical.Connection) {
 	if err != nil {
 		remoteAddr = ""
 	} else {
-		remotePort, _ = strconv.Atoi(port)
+		remotePort, err = strconv.Atoi(port)
+		if err != nil {
+			remotePort = 0
+		}
 	}
 
 	connection = &logical.Connection{

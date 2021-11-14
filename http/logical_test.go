@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/api"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -497,5 +500,92 @@ func TestLogical_ShouldParseForm(t *testing.T) {
 		if isForm != test.isForm {
 			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
 		}
+	}
+}
+
+func TestLogical_AuditPort(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	if err := c.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	auditLogFile, err := ioutil.TempFile("", "httppatch")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to enable audit file, err: %#v\n", err)
+	}
+
+	writeData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().Write("kv/data/foo", writeData)
+	if err != nil {
+		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+	}
+
+	decoder := json.NewDecoder(auditLogFile)
+
+	var auditRecord map[string]interface{}
+	count := 0
+	for decoder.Decode(&auditRecord) == nil {
+		count += 1
+
+		// Skip the first line
+		if count == 1 {
+			continue
+		}
+
+		auditRequest := map[string]interface{}{}
+
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		}
+
+		if _, ok := auditRequest["remote_address"].(string); !ok {
+			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_address"])
+		}
+
+		if _, ok := auditRequest["remote_port"].(float64); !ok {
+			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_port"])
+		}
+	}
+
+	if count != 4 {
+		t.Fatalf("wrong number of audit entries: %d", count)
 	}
 }
