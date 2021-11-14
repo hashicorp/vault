@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 )
 
 // DecodeRootToken will decode the root token returned by the Vault API

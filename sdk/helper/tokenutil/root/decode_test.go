@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -65,25 +63,5 @@ func TestSimpleRootGeneration(t *testing.T) {
 
 	if token != initResult.RootToken {
 		t.Fatal("Decoded root token is different than the original token (", token, initResult.RootToken)
-	}
-
-	ln, addr := http.TestServer(t, core)
-	defer ln.Close()
-
-	config := api.DefaultConfig()
-	config.Address = addr
-
-	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.SetToken(token)
-
-	secret, err := client.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret == nil || secret.Data == nil || secret.Data["id"].(string) == "" {
-		t.Fatalf("failed to perform lookup self through agent")
 	}
 }
