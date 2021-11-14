@@ -22,17 +22,44 @@ func getRequestTimeout(t *testing.T) time.Duration {
 	return dur
 }
 
+// AssertInitializeCircleCiTest help to diagnose CircleCI failures within AssertInitialize for mssql tests failing
+// with "Failed to initialize: error verifying connection ..."
+func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) dbplugin.InitializeResponse {
+	maxAttempts := 5
+	var resp dbplugin.InitializeResponse
+	var err error
+	for i := 1; i <= maxAttempts; i++ {
+		resp, err = verifyInitialize(t, db, req)
+		if err != nil {
+			t.Logf("Failed AssertInitialize attempt: %d with error:\n%+v\n", i, err)
+		} else {
+			if i > 1 {
+				t.Fatalf("AssertInitialize worked the %d time around with a 1 second sleep, but failed originally", i)
+			}
+			return resp
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	t.Fatalf("Failed to initialize: %+v", err)
+	return resp
+}
+
 func AssertInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) dbplugin.InitializeResponse {
+	resp, err := verifyInitialize(t, db, req)
+	if err != nil {
+		t.Fatalf("Failed to initialize: %s", err)
+	}
+	return resp
+}
+
+func verifyInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 
-	resp, err := db.Initialize(ctx, req)
-	if err != nil {
-		t.Fatalf("Failed to initialize: %s", err)
-	}
-	return resp
+	return db.Initialize(ctx, req)
 }
 
 func AssertNewUser(t *testing.T, db dbplugin.Database, req dbplugin.NewUserRequest) dbplugin.NewUserResponse {
