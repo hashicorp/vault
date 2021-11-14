@@ -1590,7 +1590,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "policies/password$",
+			Pattern: "policies/password/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
