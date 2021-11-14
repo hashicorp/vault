@@ -12,6 +12,15 @@ that the value breaks under the label on smaller viewports.
 | label | <code>string</code> | <code>null</code> | The display name for the value. |
 | helperText | <code>string</code> | <code>null</code> | Text to describe the value displayed beneath the label. |
 | alwaysRender | <code>Boolean</code> | <code>false</code> | Indicates if the component content should be always be rendered.  When false, the value of `value` will be used to determine if the component should render. |
+| [type] | <code>string</code> | <code>&quot;array&quot;</code> | The type of value being passed in.  This is used for when you want to trim an array.  For example, if you have an array value that can equal length 15+ this will trim to show 5 and count how many more are there |
+| [isLink] | <code>Boolean</code> | <code>true</code> | Passed through to InfoTableItemArray. Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed. |
+| [modelType] | <code>string</code> | <code>null</code> | Passed through to InfoTableItemArray. Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink. |
+| [queryParam] | <code>String</code> |  | Passed through to InfoTableItemArray. If you want to specific a tab for the View All XX to display to.  Ex: role |
+| [backend] | <code>String</code> |  | Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex: transformation |
+| [viewAll] | <code>String</code> |  | Passed through to InfoTableItemArray. Specify the word at the end of the link View all. |
+| [tooltipText] | <code>String</code> |  | Text if a tooltip should display over the value. |
+| [isTooltipCopyable] | <code>Boolean</code> |  | Allows tooltip click to copy |
+| [defaultShown] | <code>String</code> |  | Text that renders as value if alwaysRender=true. Eg. "Vault default" |
 
 **Example**
   

@@ -60,10 +60,11 @@ const (
 	identityMountPath  = "identity/"
 	cubbyholeMountPath = "cubbyhole/"
 
-	systemMountType    = "system"
-	identityMountType  = "identity"
-	cubbyholeMountType = "cubbyhole"
-	pluginMountType    = "plugin"
+	systemMountType      = "system"
+	identityMountType    = "identity"
+	cubbyholeMountType   = "cubbyhole"
+	pluginMountType      = "plugin"
+	mountTypeNSCubbyhole = "ns_cubbyhole"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -1515,6 +1516,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             identityUUID,
 		Accessor:         identityAccessor,
 		BackendAwareUUID: identityBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
+		},
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

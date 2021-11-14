@@ -128,6 +128,29 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
+func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
+	confRaw := &server.Config{
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:                  "tcp",
+					Address:               "127.0.0.1",
+					CustomResponseHeaders: CustomResponseHeaders,
+				},
+			},
+			DisableMlock: true,
+		},
+	}
+	conf := &CoreConfig{
+		RawConfig:       confRaw,
+		EnableUI:        enableUI,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	core := TestCoreWithSealAndUI(t, conf)
+	return testCoreUnsealed(t, core)
+}
+
 func TestCoreUI(t testing.T, enableUI bool) *Core {
 	conf := &CoreConfig{
 		EnableUI:        enableUI,
@@ -163,6 +186,10 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
+	}
+
+	if opts.RedirectAddr != "" {
+		conf.RedirectAddr = opts.RedirectAddr
 	}
 
 	for k, v := range opts.LogicalBackends {
@@ -434,12 +461,19 @@ func TestKeyCopy(key []byte) []byte {
 	return result
 }
 
-func TestDynamicSystemView(c *Core) *dynamicSystemView {
+func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView {
 	me := &MountEntry{
 		Config: MountConfig{
 			DefaultLeaseTTL: 24 * time.Hour,
 			MaxLeaseTTL:     2 * 24 * time.Hour,
 		},
+		NamespaceID: namespace.RootNamespace.ID,
+		namespace:   namespace.RootNamespace,
+	}
+
+	if ns != nil {
+		me.NamespaceID = ns.ID
+		me.namespace = ns
 	}
 
 	return &dynamicSystemView{c, me}

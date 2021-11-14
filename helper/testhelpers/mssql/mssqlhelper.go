@@ -53,6 +53,8 @@ func connectMSSQL(ctx context.Context, host string, port int) (docker.ServiceCon
 		User:   url.UserPassword("sa", mssqlPassword),
 		Host:   fmt.Sprintf("%s:%d", host, port),
 	}
+	// Attempt to address connection flakiness within tests such as "Failed to initialize: error verifying connection ..."
+	u.Query().Add("Connection Timeout", "30")
 
 	db, err := sql.Open("mssql", u.String())
 	if err != nil {

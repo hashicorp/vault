@@ -88,7 +88,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Invalid number of arguments (expected 1, got %d)", len(args)))
 		return 1
 	case version == nil:
-		c.UI.Error(fmt.Sprintf("Version flag must be specified"))
+		c.UI.Error("Version flag must be specified")
 		return 1
 	case c.flagVersion <= 0:
 		c.UI.Error(fmt.Sprintf("Invalid value %d for the version flag", c.flagVersion))
@@ -111,7 +111,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 	}
 
 	if !v2 {
-		c.UI.Error(fmt.Sprintf("K/V engine mount must be version 2 for rollback support"))
+		c.UI.Error("K/V engine mount must be version 2 for rollback support")
 		return 2
 	}
 
@@ -193,12 +193,12 @@ func (c *KVRollbackCommand) Run(args []string) int {
 
 		// Verify it hasn't been deleted
 		if meta["deletion_time"] != nil && meta["deletion_time"].(string) != "" {
-			c.UI.Error(fmt.Sprintf("Cannot roll back to a version that has been deleted"))
+			c.UI.Error("Cannot roll back to a version that has been deleted")
 			return 2
 		}
 
 		if meta["destroyed"] != nil && meta["destroyed"].(bool) {
-			c.UI.Error(fmt.Sprintf("Cannot roll back to a version that has been destroyed"))
+			c.UI.Error("Cannot roll back to a version that has been destroyed")
 			return 2
 		}
 

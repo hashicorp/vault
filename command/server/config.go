@@ -392,6 +392,17 @@ func ParseConfig(d, source string) (*Config, error) {
 		return nil, err
 	}
 
+	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
+		return nil, err
+	} else {
+		result.APIAddr = rendered
+	}
+	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
+		return nil, err
+	} else {
+		result.ClusterAddr = rendered
+	}
+
 	sharedConfig, err := configutil.ParseConfig(d)
 	if err != nil {
 		return nil, err
@@ -526,8 +537,8 @@ func ParseConfig(d, source string) (*Config, error) {
 	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, nil, append(result.FoundKeys, sharedConfig.FoundKeys...))
 	// Assign file info
 	for _, v := range result.UnusedKeys {
-		for _, p := range v {
-			p.Filename = source
+		for i := range v {
+			v[i].Filename = source
 		}
 	}
 

@@ -1,4 +1,4 @@
-// +build !race,!hsm
+// +build !race,!hsm,!fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -244,7 +244,7 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
-			"parsing \"34日\": invalid syntax",
+			"unknown unit \"\\xe6\\x97\\xa5\" in duration",
 			1,
 			"-test-server-config",
 		},

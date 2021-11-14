@@ -1,0 +1,3 @@
+```release-note:improvement
+core: build with Go 1.17, and mitigate a breaking change they made that could impact how approle and ssh interpret IPs/CIDRs
+```

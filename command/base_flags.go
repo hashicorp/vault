@@ -887,28 +887,28 @@ func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, 
 	if allowedFormats&TimeVar_RFC3339Nano != 0 {
 		t, err := time.Parse(time.RFC3339Nano, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_RFC3339Second != 0 {
 		t, err := time.Parse(time.RFC3339, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Day != 0 {
 		t, err := time.Parse("2006-01-02", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Month != 0 {
 		t, err := time.Parse("2006-01", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 

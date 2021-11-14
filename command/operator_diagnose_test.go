@@ -415,6 +415,58 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 				},
 			},
 		},
+		{
+			"diagnose_telemetry_partial_circonus",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_bad_telemetry1.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:    "Check Telemetry",
+					Status:  diagnose.ErrorStatus,
+					Message: "incomplete Circonus telemetry configuration, missing circonus_api_url",
+				},
+			},
+		},
+		{
+			"diagnose_telemetry_partial_dogstats",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_bad_telemetry2.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:    "Check Telemetry",
+					Status:  diagnose.ErrorStatus,
+					Message: "incomplete DogStatsD telemetry configuration, missing dogstatsd_addr, while dogstatsd_tags specified",
+				},
+			},
+		},
+		{
+			"diagnose_telemetry_partial_stackdriver",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_bad_telemetry3.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:    "Check Telemetry",
+					Status:  diagnose.ErrorStatus,
+					Message: "incomplete Stackdriver telemetry configuration, missing stackdriver_project_id",
+				},
+			},
+		},
+		{
+			"diagnose_telemetry_default",
+			[]string{
+				"-config", "./server/test-fixtures/config4.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:     "Check Telemetry",
+					Status:   diagnose.WarningStatus,
+					Warnings: []string{"Telemetry is using default configuration"},
+				},
+			},
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {

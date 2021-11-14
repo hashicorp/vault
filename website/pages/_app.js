@@ -6,6 +6,7 @@ import Head from 'next/head'
 import { ErrorBoundary } from '@hashicorp/platform-runtime-error-monitoring'
 import createConsentManager from '@hashicorp/react-consent-manager/loader'
 import NProgress from '@hashicorp/platform-util/nprogress'
+import useFathomAnalytics from '@hashicorp/platform-analytics'
 import useAnchorLinkAnalytics from '@hashicorp/platform-util/anchor-link-analytics'
 import HashiHead from '@hashicorp/react-head'
 import ProductSubnav from 'components/subnav'
@@ -21,6 +22,7 @@ const { ConsentManager, openConsentManager } = createConsentManager({
 })
 
 export default function App({ Component, pageProps }) {
+  useFathomAnalytics()
   useAnchorLinkAnalytics()
 
   return (
@@ -55,13 +57,13 @@ export default function App({ Component, pageProps }) {
         ]}
       />
       {ALERT_BANNER_ACTIVE && (
-        <AlertBanner {...alertBannerData} product="vault" />
+        <AlertBanner {...alertBannerData} product="vault" hideOnMobile />
       )}
       <HashiStackMenu />
       <ProductSubnav />
       <Component {...pageProps} />
       <Footer openConsentManager={openConsentManager} />
-      <ConsentManager />
+      <ConsentManager className="g-consent-manager" />
     </ErrorBoundary>
   )
 }
