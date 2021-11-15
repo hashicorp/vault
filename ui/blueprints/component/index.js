@@ -57,9 +57,11 @@ module.exports = {
     let templatePath = '';
     let importTemplate = '';
     let contents = '';
+    let hasLayout = '';
 
     // if we're in an addon, build import statement
     if (options.project.isEmberCLIAddon() || (options.inRepoAddon && !options.inDummy) || !!options.in) {
+      hasLayout = 'layout';
       if (options.pod) {
         templatePath = './template';
       } else {
@@ -70,12 +72,15 @@ module.exports = {
       }
       importTemplate = "import layout from '" + templatePath + "';\n";
       contents = '\n  layout';
+    } else {
+      hasLayout = 'null';
     }
 
     return {
       importTemplate: importTemplate,
       contents: contents,
       path: getPathOption(options),
+      hasLayout: hasLayout,
     };
   },
 };

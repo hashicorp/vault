@@ -11,7 +11,12 @@
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
-import Component from '@ember/component';
+
+import Component from '@glimmer/component';
+import { setComponentTemplate } from '@ember/component';
 <%= importTemplate %>
-export default Component.extend({<%= contents %>
-});
+
+class <%= classifiedModuleName %> extends Component {<%= contents %>  
+}
+
+export default setComponentTemplate(<%= hasLayout %>, <%= classifiedModuleName %>)
