@@ -7,7 +7,8 @@ description: >-
 
 # OIDC Provider
 
-~> **Note**: The Vault OIDC Provider feature currently only supports the [authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
+~> **Note:** This feature is currently a ***Tech Preview*** and not recommended for deployment in production.
+
 
 This document describes how Vault can be an **OpenID Connect (OIDC) identity provider** by enabling applications to leverage Vault as a source of identity using the OIDC protocol.
 
@@ -50,11 +51,12 @@ Example of a JSON template for a scope:
 
 ```
 {
-  "groups": {{identity.entity.groups.names}},
-  "email": {{identity.entity.metadata.user_email}},
-  "auth0": {
-      "name": {{identity.entity.aliases.$MNT_ACCESSOR.metadata.user}}
-  }
+  "userinfo": {
+    "groups": {{identity.entity.group_names}},
+    "email": {{identity.entity.metadata.user_email}},
+    "username": {{identity.entity.aliases.usermap_123.metadata.username}},
+  },
+  "nbf": {{time.now}}
 }
 ```
 
@@ -118,6 +120,8 @@ Assignment resources are referenced by clients via the `assignments` parameter. 
 Key resources are referenced by clients via the key parameter. This parameter specifies the key that will be used to sign ID tokens for the client. See existing [documentation](/api-docs/secret/identity/tokens#create-a-named-key) for details on keyring management, supported signing algorithms, rotation periods, and verification TTLs. Currently, a key referenced by a client cannot be changed.
 
 ## OIDC flow
+
+~> **Note**: The Vault OIDC Provider feature currently only supports the [authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth).
 
 The following sections provide implementation details for the OIDC compliant APIs provided by Vault OIDC providers.
 
