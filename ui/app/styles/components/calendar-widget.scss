@@ -1,11 +1,9 @@
 $dark-gray: #535f73;
-.for-demo {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: -100px;
-  height: 500px;
-  width: 100%;
+.calendar-title {
+  color: $ui-gray-400;
+  text-transform: uppercase;
+  font-size: $size-8;
+  font-weight: $font-weight-semibold;
 }
 .calendar-widget-dropdown {
   @extend .button;

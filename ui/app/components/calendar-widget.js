@@ -28,8 +28,28 @@ class CalendarWidget extends Component {
   @tracked areMonthsSelected = false;
   @tracked shiftClickCount = 0;
   @tracked shiftClickRange = [];
+  @tracked startDate;
+  @tracked endDate;
+
+  constructor() {
+    super(...arguments);
+    this.startDate = this.calculateStartDate();
+    this.endDate = this.calculateEndDate();
+  }
 
   // HELPER FUNCTIONS //
+
+  calculateEndDate(quickSelectNumber) {
+    let date = new Date();
+    // will never query same month that you are in, always add a month to get the N months prior
+    date.setMonth(date.getMonth() - (quickSelectNumber ? quickSelectNumber : 13) - 1);
+    return format(date, 'MM-yyyy');
+  }
+  calculateStartDate() {
+    let date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return format(date, 'MM-yyyy');
+  }
 
   checkIfMonthsSelected() {
     this.allMonthsNodeList.forEach(e => {
@@ -38,6 +58,7 @@ class CalendarWidget extends Component {
       }
     });
   }
+
   calculateLastMonth() {
     return sub(this.currentDate(), { months: 1 });
   }
@@ -232,16 +253,8 @@ class CalendarWidget extends Component {
 
     // TODO: fix selection, does not select 12 months back properly
 
-    let date = new Date();
-    // will never query same month that you are in, always add a month to get the N months prior
-    date.setMonth(date.getMonth() - quickSelectNumber - 1);
-
-    let dateAgain = new Date();
-    dateAgain.setMonth(dateAgain.getMonth() - 1);
-
-    let startDate = format(dateAgain, 'MM-yyyy');
-    let endDate = format(date, 'MM-yyyy');
-    this.args.handleQuery(endDate, startDate);
+    this.endDate = this.calculateEndDate(quickSelectNumber);
+    this.args.handleQuery(this.calculateEndDate(quickSelectNumber), this.calculateStartDate());
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
