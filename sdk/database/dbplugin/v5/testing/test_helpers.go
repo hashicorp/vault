@@ -23,7 +23,7 @@ func getRequestTimeout(t *testing.T) time.Duration {
 }
 
 // AssertInitializeCircleCiTest help to diagnose CircleCI failures within AssertInitialize for mssql tests failing
-// with "Failed to initialize: error verifying connection ..."
+// with "Failed to initialize: error verifying connection ...". This will now mark a test as failed instead of being fatal
 func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) dbplugin.InitializeResponse {
 	t.Helper()
 	maxAttempts := 5
@@ -32,18 +32,18 @@ func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplug
 
 	for i := 1; i <= maxAttempts; i++ {
 		resp, err = verifyInitialize(t, db, req)
-		switch {
-		case err != nil:
-			t.Logf("Failed AssertInitialize attempt: %d with error:\n%+v\n", i, err)
+		if err != nil {
+			t.Errorf("Failed AssertInitialize attempt: %d with error:\n%+v\n", i, err)
 			time.Sleep(1 * time.Second)
-		case i == 1:
-			return resp
-		default:
-			t.Fatalf("AssertInitialize worked the %d time around with a 1 second sleep, but failed originally", i)
+			continue
 		}
+
+		if i > 1 {
+			t.Logf("AssertInitialize worked the %d time around with a 1 second sleep", i)
+		}
+		break
 	}
 
-	t.Fatalf("Failed to initialize: %+v", err)
 	return resp
 }
 
