@@ -27,6 +27,9 @@ Uninstall an encryption key in the transit backend:
 $ vault delete transit/keys/my-key
 ```
 
+Note: changing the `deletion_allowed` parameter to `true` is necessary for the
+key to be successfully deleted, you can read more on key parameters [here](/api/secret/transit#update-key-configuration)
+
 Delete an IAM role:
 
 ```shell-session
