@@ -88,7 +88,9 @@ func (pq *PriorityQueue) Pop() (*Item, error) {
 	pq.lock.Lock()
 	defer pq.lock.Unlock()
 
-	if pq.Len() == 0 {
+	// We're using pq.data.Len() here to avoid deadlocking the exported
+	// Len() method.
+	if pq.data.Len() == 0 {
 		return nil, ErrEmpty
 	}
 
