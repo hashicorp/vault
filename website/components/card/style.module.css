@@ -107,6 +107,7 @@
 .heading {
   margin: 0;
   composes: g-type-display-5 from global;
+  color: var(--black);
 
   @nest * + & {
     margin-top: var(--token-spacing-05);
