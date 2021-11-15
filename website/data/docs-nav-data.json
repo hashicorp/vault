@@ -1041,7 +1041,21 @@
       },
       {
         "title": "Identity",
-        "path": "secrets/identity"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity-tokens"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secrets/oidc-provider"
+          }
+        ]
+
       },
       {
         "title": "MongoDB Atlas",
