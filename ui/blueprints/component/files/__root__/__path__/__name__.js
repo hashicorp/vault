@@ -1,3 +1,6 @@
+import Component from '@glimmer/component';
+<%= importTemplate %>
+<%= setComponentTemplate %>
 /**
  * @module <%= classifiedModuleName %>
  * <%= classifiedModuleName %> components are used to...
@@ -11,9 +14,6 @@
  * @param {string} [param1=defaultValue] - param1 is...
  */
 
-import Component from '@glimmer/component';
-<%= importTemplate %>
-<%= setComponentTemplate %>
 <%= exportDefault %>class <%= classifiedModuleName %> extends Component { 
 }
 
