@@ -1048,11 +1048,11 @@
           },
           {
             "title": "Identity Tokens",
-            "path": "secrets/identity-token"
+            "path": "secrets/identity/identity-token"
           },
           {
             "title": "OIDC Provider",
-            "path": "secrets/oidc-provider"
+            "path": "secrets/identity/oidc-provider"
           }
         ]
 
