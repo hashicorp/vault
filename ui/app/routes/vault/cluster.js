@@ -7,7 +7,6 @@ import Ember from 'ember';
 import getStorage from '../../lib/token-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
-import { assert } from '@ember/debug';
 
 const POLL_INTERVAL_MS = 10000;
 
