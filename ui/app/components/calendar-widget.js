@@ -5,7 +5,10 @@
  *
  * @example
  * ```js
- * <CalendarWidget/>
+ * <CalendarWidget
+ * @param {function} handleQuery - calls the parent pricing-metrics-dates handleQueryFromCalendar method which sends the data for the network request.
+ * />
+ *
  * ```
  */
 
@@ -28,7 +31,7 @@ class CalendarWidget extends Component {
   @tracked allMonthsNodeList = [];
   @tracked isClearAllMonths = false;
   @tracked areMonthsSelected = false;
-  @tracked shiftClickCount = 0;
+  @tracked mouseClickCount = 0;
   @tracked clickRange = [];
   @tracked startDate; // the older time e.g. 10/2020
   @tracked endDate; // the newer time e.g. 11/2021
@@ -45,6 +48,7 @@ class CalendarWidget extends Component {
     // will never query same month that you are in, always add a month to get the N months prior
     // defaults to one year selected if no quickSelectNumber
     date.setMonth(date.getMonth() - (quickSelectNumber ? quickSelectNumber : 11) - 1);
+    console.log(date, 'start');
     return format(date, 'MM-yyyy');
   }
 
@@ -160,6 +164,14 @@ class CalendarWidget extends Component {
 
   @action // individually click on months
   selectMonth(e) {
+    // if three clicks you want to clear the months and not send the start date.
+    this.mouseClickCount = ++this.mouseClickCount;
+    if (this.mouseClickCount > 2) {
+      this.deselectMonths();
+      this.mouseClickCount = 0;
+      return;
+    }
+
     e.target.classList.contains('is-selected')
       ? this.removeClass(e.target, 'is-selected')
       : this.addClass(e.target, 'is-selected');
@@ -176,36 +188,16 @@ class CalendarWidget extends Component {
     return reverseMonthArray;
   }
 
-  handleSelectRange(e) {
+  handleSelectRange() {
     let startAndEndMonths = [];
-    // count shift clicks
-    if (e.shiftKey) {
-      this.shiftClickCount = ++this.shiftClickCount;
 
-      // if going wild with shift clicks, reset count and deselect all months
-      if (this.shiftClickCount > 2) {
-        this.deselectMonths();
-        this.shiftClickCount = 0;
+    this.allMonthsNodeList.forEach(e => {
+      if (e.classList.contains('is-selected')) {
+        startAndEndMonths.push(parseInt(e.id.split('-')[1]));
         return;
       }
+    });
 
-      if (this.shiftClickCount === 2) {
-        this.allMonthsNodeList.forEach(e => {
-          if (e.classList.contains('is-selected')) {
-            startAndEndMonths.push(parseInt(e.id.split('-')[1]));
-            return;
-          }
-        });
-      }
-    } else {
-      // same function if no shift
-      this.allMonthsNodeList.forEach(e => {
-        if (e.classList.contains('is-selected')) {
-          startAndEndMonths.push(parseInt(e.id.split('-')[1]));
-          return;
-        }
-      });
-    }
     if (startAndEndMonths.length < 2) {
       // exit because you have one month selected
       return;
@@ -236,7 +228,7 @@ class CalendarWidget extends Component {
     // creates array of integers correlating to selected months
     let selectedRange = this.createRange(startRange, endMonth);
     // array of month-ids for months selected from previous year
-    let previousYearMonthIds = selectedRange.filter(n => n < 0).map(n => `month-${n + 13}`);
+    let previousYearMonthIds = selectedRange.filter(n => n <= 0).map(n => `month-${n + 12}`);
 
     // array of month-ids for months selected from current year
     let currentYearMonthIds = selectedRange.filter(n => n > 0).map(n => `month-${n}`);
