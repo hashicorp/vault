@@ -1048,7 +1048,7 @@
           },
           {
             "title": "Identity Tokens",
-            "path": "secrets/identity-tokens"
+            "path": "secrets/identity-token"
           },
           {
             "title": "OIDC Provider",
