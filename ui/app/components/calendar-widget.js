@@ -1,6 +1,7 @@
+// ARG TODO documentation takes start and end for handQuery
 /**
  * @module CalendarWidget
- * CalendarWidget components are used in the client counts metrics. It helps user understand the ranges they can select.
+ * CalendarWidget components are used in the client counts metrics. It helps users understand the ranges they can select.
  *
  * @example
  * ```js
@@ -16,8 +17,9 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 class CalendarWidget extends Component {
-  currentYear = parseInt(format(this.currentDate(), 'yyyy')); // integer
-  currentMonth = parseInt(format(this.currentDate(), 'M')); // integer
+  currentDate = new Date();
+  currentYear = parseInt(format(this.currentDate, 'yyyy')); // integer
+  currentMonth = parseInt(format(this.currentDate, 'M')); // integer
 
   @tracked displayYear = this.currentYear;
   @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
@@ -27,9 +29,9 @@ class CalendarWidget extends Component {
   @tracked isClearAllMonths = false;
   @tracked areMonthsSelected = false;
   @tracked shiftClickCount = 0;
-  @tracked shiftClickRange = [];
-  @tracked startDate;
-  @tracked endDate;
+  @tracked clickRange = [];
+  @tracked startDate; // the older time e.g. 10/2020
+  @tracked endDate; // the newer time e.g. 11/2021
 
   constructor() {
     super(...arguments);
@@ -38,33 +40,43 @@ class CalendarWidget extends Component {
   }
 
   // HELPER FUNCTIONS //
-
-  calculateEndDate(quickSelectNumber) {
-    let date = new Date();
+  calculateStartDate(quickSelectNumber) {
+    let date = new Date(); // need to modify so define here and not globally
     // will never query same month that you are in, always add a month to get the N months prior
-    date.setMonth(date.getMonth() - (quickSelectNumber ? quickSelectNumber : 13) - 1);
+    // defaults to one year selected if no quickSelectNumber
+    date.setMonth(date.getMonth() - (quickSelectNumber ? quickSelectNumber : 11) - 1);
     return format(date, 'MM-yyyy');
   }
-  calculateStartDate() {
-    let date = new Date();
+
+  calculateEndDate() {
+    let date = new Date(); // need to modify so define here and not globally
     date.setMonth(date.getMonth() - 1);
     return format(date, 'MM-yyyy');
   }
 
   checkIfMonthsSelected() {
+    // ARG TODO going to have issue with display Year and gather multiple years
+    // ARG TODO we should also automatically select the years between if they select two months
+    let selectedArray = [];
     this.allMonthsNodeList.forEach(e => {
       if (e.classList.contains('is-selected')) {
         this.areMonthsSelected = true;
+        selectedArray.push(e.id);
+        // set start date the older time
+        let sortedSelected = selectedArray.sort();
+        this.startDate = `${sortedSelected[0].split('-')[1]}-${this.displayYear}`;
+
+        // set end date the newer time
+        let reverseSelected = selectedArray.reverse();
+        this.endDate = `${reverseSelected[0].split('-')[1]}-${this.displayYear}`;
       }
     });
+    // then set the date on the query
+    this.args.handleQuery(this.startDate, this.endDate);
   }
 
   calculateLastMonth() {
-    return sub(this.currentDate(), { months: 1 });
-  }
-
-  currentDate() {
-    return new Date();
+    return sub(this.currentDate, { months: 1 });
   }
 
   isCurrentYear() {
@@ -96,7 +108,6 @@ class CalendarWidget extends Component {
   }
 
   // ACTIONS //
-
   @action
   disableMonths() {
     this.allMonthsNodeList = document.querySelectorAll('.is-month-list');
@@ -123,7 +134,7 @@ class CalendarWidget extends Component {
   @action
   subYear() {
     this.displayYear = this.displayYear - 1;
-    this.selectMonths(this.preselectRangeOfMonths);
+    this.quickSelectMonths(this.preselectRangeOfMonths);
     // call disable months action
     this.disableMonths();
     this.disableFutureYear = this.isCurrentYear();
@@ -137,7 +148,7 @@ class CalendarWidget extends Component {
   @action
   addYear() {
     this.displayYear = this.displayYear + 1;
-    this.selectMonths(this.preselectRangeOfMonths);
+    this.quickSelectMonths(this.preselectRangeOfMonths);
     this.disableMonths();
     this.disableFutureYear = this.isCurrentYear();
     this.disablePastYear = this.isObsoleteYear();
@@ -147,17 +158,14 @@ class CalendarWidget extends Component {
     }
   }
 
-  @action
+  @action // individually click on months
   selectMonth(e) {
     e.target.classList.contains('is-selected')
       ? this.removeClass(e.target, 'is-selected')
       : this.addClass(e.target, 'is-selected');
 
     this.checkIfMonthsSelected();
-
-    if (e.shiftKey) {
-      this.handleShift();
-    }
+    this.handleSelectRange(e);
   }
 
   reverseMonthNodeList() {
@@ -168,19 +176,29 @@ class CalendarWidget extends Component {
     return reverseMonthArray;
   }
 
-  handleShift() {
-    // count shift clicks
-    this.shiftClickCount = ++this.shiftClickCount;
-
-    // if going wild with shift clicks, reset count and deselect all months
-    if (this.shiftClickCount > 2) {
-      this.deselectMonths();
-      this.shiftClickCount = 0;
-      return;
-    }
-
+  handleSelectRange(e) {
     let startAndEndMonths = [];
-    if (this.shiftClickCount === 2) {
+    // count shift clicks
+    if (e.shiftKey) {
+      this.shiftClickCount = ++this.shiftClickCount;
+
+      // if going wild with shift clicks, reset count and deselect all months
+      if (this.shiftClickCount > 2) {
+        this.deselectMonths();
+        this.shiftClickCount = 0;
+        return;
+      }
+
+      if (this.shiftClickCount === 2) {
+        this.allMonthsNodeList.forEach(e => {
+          if (e.classList.contains('is-selected')) {
+            startAndEndMonths.push(parseInt(e.id.split('-')[1]));
+            return;
+          }
+        });
+      }
+    } else {
+      // same function if no shift
       this.allMonthsNodeList.forEach(e => {
         if (e.classList.contains('is-selected')) {
           startAndEndMonths.push(parseInt(e.id.split('-')[1]));
@@ -188,12 +206,12 @@ class CalendarWidget extends Component {
         }
       });
     }
-
-    this.shiftClickRange = this.createRange(startAndEndMonths[0], startAndEndMonths[1]).map(
-      n => `month-${n}`
-    );
-
-    this.shiftClickRange.forEach(id => {
+    if (startAndEndMonths.length < 2) {
+      // exit because you have one month selected
+      return;
+    }
+    this.clickRange = this.createRange(startAndEndMonths[0], startAndEndMonths[1]).map(n => `month-${n}`);
+    this.clickRange.forEach(id => {
       this.allMonthsNodeList.forEach(e => {
         if (e.id === id) {
           this.addClass(e, 'is-selected');
@@ -203,7 +221,7 @@ class CalendarWidget extends Component {
   }
 
   @action
-  selectMonths(quickSelectNumber) {
+  quickSelectMonths(quickSelectNumber) {
     this.preselectRangeOfMonths = quickSelectNumber;
     this.deselectAllMonths();
     // if the user has not selected anything exit function
@@ -247,14 +265,10 @@ class CalendarWidget extends Component {
       }
     });
 
-    // get quick select number
-    // use current date to determine range in MM/yyyy format
-    // currentMonth
-
     // TODO: fix selection, does not select 12 months back properly
 
-    this.endDate = this.calculateEndDate(quickSelectNumber);
-    this.args.handleQuery(this.calculateEndDate(quickSelectNumber), this.calculateStartDate());
+    this.startDate = this.calculateStartDate(quickSelectNumber);
+    this.args.handleQuery(this.startDate, this.calculateEndDate());
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
