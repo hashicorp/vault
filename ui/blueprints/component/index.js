@@ -54,14 +54,14 @@ module.exports = {
   },
 
   locals: function(options) {
-    let templatePath = '';
+    let exportDefault = 'export default ';
+    let exportAddOn = '';
     let importTemplate = '';
-    let contents = '';
-    let hasLayout = '';
+    let setComponentTemplate = '';
+    let templatePath = '';
 
-    // if we're in an addon, build import statement
+    // if we're in an addon, build import statement and set layout
     if (options.project.isEmberCLIAddon() || (options.inRepoAddon && !options.inDummy) || !!options.in) {
-      hasLayout = 'layout';
       if (options.pod) {
         templatePath = './template';
       } else {
@@ -70,17 +70,20 @@ module.exports = {
           'templates/components/' +
           stringUtil.dasherize(options.entity.name);
       }
-      importTemplate = "import layout from '" + templatePath + "';\n";
-      contents = '\n  layout';
-    } else {
-      hasLayout = 'null';
+      exportDefault = '';
+      exportAddOn = `export default setComponentTemplate(layout, ${stringUtil.classify(
+        options.entity.name
+      )})`;
+      importTemplate = "import layout from '" + templatePath + "';";
+      setComponentTemplate = "import { setComponentTemplate } from '@ember/component'; \n";
     }
 
     return {
+      exportDefault: exportDefault,
+      exportAddOn: exportAddOn,
       importTemplate: importTemplate,
-      contents: contents,
+      setComponentTemplate: setComponentTemplate,
       path: getPathOption(options),
-      hasLayout: hasLayout,
     };
   },
 };
