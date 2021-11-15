@@ -42,7 +42,7 @@ This plugin currently supports LDAP v3.
    ```
 
    Note: it's not possible to retrieve the generated password once rotated by Vault.
-   It's recommended a dedicated entry management account be created specfically for Vault.
+   It's recommended a dedicated entry management account be created specifically for Vault.
 
 ### Password Generation
 
@@ -237,7 +237,7 @@ To create a user programmatically in AD, you first `add` a user object and then 
 password and enable the account.
 
 - Passwords in AD are set using the `unicodePwd` field. This must be proceeded by two (2) colons (`::`).
-- When setting a password programatically in AD, the following critera must be met:
+- When setting a password programmatically in AD, the following criteria must be met:
 
   - The password must be enclosed in double quotes (`" "`)
   - The password must be in [`UTF16LE` format](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/6e803168-f140-4d23-b2d3-c3a8ab5917d2)
