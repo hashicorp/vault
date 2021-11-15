@@ -530,8 +530,8 @@ and consider if they're appropriate for your deployment.
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
         matchLabels:
-          app: {{ template "vault.name" . }}
-          release: "{{ .Release.Name }}"
+          app.kubernetes.io/name: {{ template "vault.name" . }}
+          app.kubernetes.io/instance: "{{ .Release.Name }}"
           component: server
         topologyKey: kubernetes.io/hostname
   ```
