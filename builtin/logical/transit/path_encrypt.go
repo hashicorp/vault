@@ -397,6 +397,11 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	} else {
 		if batchResponseItems[0].Error != "" {
 			p.Unlock()
+
+			if internalErrorInBatch {
+				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
+			}
+
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 
@@ -418,9 +423,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// to the user first.
 	switch {
 	case userErrorInBatch:
-		logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
+		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
 	case internalErrorInBatch:
-		logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
+		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
 	}
 
 	return resp, nil
