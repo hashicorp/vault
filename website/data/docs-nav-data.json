@@ -1051,7 +1051,7 @@
             "path": "secrets/identity/identity-token"
           },
           {
-            "title": "OIDC Provider",
+            "title": "OIDC Identity Provider",
             "path": "secrets/identity/oidc-provider"
           }
         ]
