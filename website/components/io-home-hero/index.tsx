@@ -3,7 +3,7 @@ import Button from '@hashicorp/react-button'
 import classNames from 'classnames'
 import s from './style.module.css'
 
-interface HeroProps {
+interface IoHomeHeroProps {
   brand: 'vault' | 'consul'
   heading: string
   description: string
@@ -11,16 +11,16 @@ interface HeroProps {
     title: string
     url: string
   }>
-  cards: Array<HeroCardProps>
+  cards: Array<IoHomeHeroCardProps>
 }
 
-export default function Hero({
+export default function IoHomeHero({
   brand,
   heading,
   description,
   ctas,
   cards,
-}: HeroProps) {
+}: IoHomeHeroProps) {
   const [loaded, setLoaded] = React.useState(false)
 
   React.useEffect(() => {
@@ -59,7 +59,7 @@ export default function Hero({
           <div className={s.cards}>
             {cards.map((card, index) => {
               return (
-                <HeroCard
+                <IoHomeHeroCard
                   index={index}
                   heading={card.heading}
                   description={card.description}
@@ -79,7 +79,7 @@ export default function Hero({
   )
 }
 
-interface HeroCardProps {
+interface IoHomeHeroCardProps {
   index?: number
   heading: string
   description: string
@@ -91,13 +91,13 @@ interface HeroCardProps {
   subText: string
 }
 
-function HeroCard({
+function IoHomeHeroCard({
   index,
   heading,
   description,
   cta,
   subText,
-}: HeroCardProps) {
+}: IoHomeHeroCardProps) {
   return (
     <article
       className={s.card}
