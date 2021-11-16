@@ -1,3 +1,3 @@
 ```release-note:improvement
-trims newline character from wrapping token in UnWrap Go SDK
+api: Trim newline character from wrapping token in logical.Unwrap from the api package
 ```

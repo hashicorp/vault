@@ -236,7 +236,7 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
-	wt := strings.TrimSuffix(string(wrappingToken), "\n")
+	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
 			c.c.SetToken(wt)
