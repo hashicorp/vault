@@ -23,7 +23,7 @@ of Vault's default policy during upgrades, existing deployments of Vault that ar
 to 1.9.0 will not have this required ACL rule.
 
 If you're upgrading to 1.9.0 and want to use the new OIDC provider feature, the following
-ACL rule must be applied to the default policy **or** a policy associated with the Vault
+ACL rule must be added to the default policy **or** a policy associated with the Vault
 [Auth Method](https://www.vaultproject.io/docs/auth) used to authenticate end-users during
 the OIDC flow.
 
