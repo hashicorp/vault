@@ -125,8 +125,6 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
 	// Ensure there is a client token
-	//TODO: change missing client token to permission denied
-
 	if req.ClientToken == "" {
 		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
