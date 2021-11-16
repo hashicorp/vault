@@ -1,4 +1,6 @@
+import * as React from 'react'
 import Button from '@hashicorp/react-button'
+import classNames from 'classnames'
 import s from './style.module.css'
 
 interface HeroProps {
@@ -19,8 +21,16 @@ export default function Hero({
   ctas,
   cards,
 }: HeroProps) {
+  const [loaded, setLoaded] = React.useState(false)
+
+  React.useEffect(() => {
+    setTimeout(() => {
+      setLoaded(true)
+    }, 250)
+  }, [])
+
   return (
-    <header className={s.hero}>
+    <header className={classNames(s.hero, loaded && s.loaded)}>
       <span className={s.pattern} />
       <div className={s.container}>
         <div className={s.content}>
@@ -50,6 +60,7 @@ export default function Hero({
             {cards.map((card, index) => {
               return (
                 <HeroCard
+                  index={index}
                   heading={card.heading}
                   description={card.description}
                   cta={{
@@ -69,6 +80,7 @@ export default function Hero({
 }
 
 interface HeroCardProps {
+  index: string
   heading: string
   description: string
   cta: {
@@ -79,9 +91,22 @@ interface HeroCardProps {
   subText: string
 }
 
-function HeroCard({ heading, description, cta, subText }: HeroCardProps) {
+function HeroCard({
+  index,
+  heading,
+  description,
+  cta,
+  subText,
+}: HeroCardProps) {
   return (
-    <article className={s.card}>
+    <article
+      className={s.card}
+      style={
+        {
+          '--n': index,
+        } as React.CSSProperties
+      }
+    >
       <h2 className={s.cardHeading}>{heading}</h2>
       <p className={s.cardDescription}>{description}</p>
       <Button

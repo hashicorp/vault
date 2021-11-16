@@ -102,6 +102,7 @@
   --token-elevation-mid: 0 2px 3px rgba(101, 106, 118, 0.1),
     0 8px 16px -10px rgba(101, 106, 118, 0.2);
 
+  opacity: 0;
   padding: 40px 32px;
   display: flex;
   align-items: flex-start;
@@ -110,6 +111,13 @@
   background-color: var(--white);
   border-radius: var(--token-radius);
   box-shadow: 0 0 0 1px rgba(38, 53, 61, 0.1), var(--token-elevation-mid);
+
+  @nest .loaded & {
+    animation-name: slideIn;
+    animation-duration: 0.5s;
+    animation-delay: calc(var(--n) * 0.1s);
+    animation-fill-mode: forwards;
+  }
 }
 
 .cardHeading {
@@ -126,4 +134,15 @@
   margin: 32px 0 0;
   composes: g-type-body-small from global;
   color: var(--gray-3);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
