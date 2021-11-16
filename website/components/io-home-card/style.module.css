@@ -1,9 +1,4 @@
 .card {
-  /*
-   * Tokens
-   * https://github.com/hashicorp/design-system-tokens
-   */
-
   /* Radii */
   --token-radius: 6px;
 
@@ -34,7 +29,7 @@
     border-radius: var(--token-radius);
     box-shadow: 0 0 0 1px rgba(38, 53, 61, 0.1), var(--token-elevation-mid);
     transition: var(--token-transition);
-    transition-properties: background-color, box-shadow;
+    transition-property: background-color, box-shadow;
 
     &:hover {
       box-shadow: 0 0 0 2px rgba(38, 53, 61, 0.15), var(--token-elevation-high);
