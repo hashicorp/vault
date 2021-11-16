@@ -80,7 +80,7 @@ export default function Hero({
 }
 
 interface HeroCardProps {
-  index: number
+  index?: number
   heading: string
   description: string
   cta: {
