@@ -914,54 +914,6 @@ func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Sec
 	}
 }
 
-func TestHandler_Patch_NotFound(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": kv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
-	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
-
-	// Mount a KVv2 backend
-	err := c.Sys().Mount("kv", &api.MountInput{
-		Type: "kv-v2",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	kvData := map[string]interface{}{
-		"data": map[string]interface{}{
-			"bar": "a",
-		},
-	}
-
-	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
-		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", kvData)
-	})
-
-	if err == nil {
-		t.Fatalf("expected PATCH request to fail, resp: %#v\n", resp)
-	}
-
-	responseError := err.(*api.ResponseError)
-	if responseError.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected PATCH request to fail with %d status code - err: %#v, resp: %#v\n", http.StatusNotFound, responseError, resp)
-	}
-}
-
 func TestHandler_Patch_Audit(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
