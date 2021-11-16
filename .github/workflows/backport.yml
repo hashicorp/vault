@@ -1,0 +1,49 @@
+---
+name: Backport Assistant Runner
+
+on:
+  pull_request_target:
+    types:
+      - closed
+      - labeled
+
+jobs:
+  backport:
+    if: github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    container: hashicorpdev/backport-assistant:0.2.3
+    steps:
+      - name: Backport changes to stable-website
+        run: |
+          backport-assistant backport -automerge
+        env:
+          BACKPORT_LABEL_REGEXP: "backport/(?P<target>website)"
+          BACKPORT_TARGET_TEMPLATE: "stable-{{.target}}"
+          GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Backport changes to latest release branch
+        run: |
+          resp=$(curl -f -s "https://api.github.com/repos/$GITHUB_REPOSITORY/labels?per_page=100")
+          ret="$?"
+          if [[ "$ret" -ne 0 ]]; then
+              echo "The GitHub API returned $ret"
+              exit $ret
+          fi
+
+          # get the latest backport label excluding any website labels, ex: `backport/0.3.x` and not `backport/website`
+          latest_backport_label=$(echo "$resp" | jq -r '.[] | select(.name | (startswith("backport/") and (contains("website") | not))) | .name' | sort -rV | head -n1)
+          echo "Latest backport label: $latest_backport_label"
+
+          # set BACKPORT_TARGET_TEMPLATE for backport-assistant
+          # trims backport/ from the beginning with parameter substitution
+          export BACKPORT_TARGET_TEMPLATE="release/${latest_backport_label#backport/}"
+          backport-assistant backport -automerge
+        env:
+          BACKPORT_LABEL_REGEXP: "backport/(?P<target>website)"
+          GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Backport changes to targeted release branch
+        run: |
+          backport-assistant backport -automerge
+        env:
+          BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.\\w+)"
+          BACKPORT_TARGET_TEMPLATE: "release/{{.target}}"
+          GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
