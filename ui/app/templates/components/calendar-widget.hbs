@@ -9,6 +9,7 @@
     @class={{concat "calendar-widget-dropdown" (if D.isOpen " is-active")}}
     @tagName="button"
   >
+  {{!-- ARG global search string utils for this instead of creating a new helper --}}
     {{replace-dash-forwardslash this.startDate}} - {{replace-dash-forwardslash this.endDate}} 
     <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} /> 
   </D.trigger>
@@ -42,20 +43,19 @@
           </T.content>
         </ToolTip>
       </div>
-
       <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-1">January</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-2">February</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-3">March</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-4">April</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-5">May</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-6">June</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-7">July</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-8">August</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-9">September</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-10">October</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-11">November</div>
-        <div {{on "click" this.selectMonth}} class="is-month-list" id="month-12">December</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "1-" this.displayYear}}>January</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "2-" this.displayYear}}>February</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "3-" this.displayYear}}>March</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "4-" this.displayYear}}>April</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "5-" this.displayYear}}>May</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "6-" this.displayYear}}>June</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "7-" this.displayYear}}>July</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "8-" this.displayYear}}>August</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "9-" this.displayYear}}>September</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "10-" this.displayYear}}>October</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "11-" this.displayYear}}>November</div>
+        <div {{on "click" this.selectMonth}} class="is-month-list" id={{concat "12-" this.displayYear}}>December</div>
       </div>
       <div class="border-col"></div>
       <div class="calendar-widget-nav month-nav">
