@@ -1015,6 +1015,10 @@
           {
             "title": "AWS KMS",
             "path": "secrets/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secrets/key-management/gcpkms"
           }
         ]
       },
@@ -1271,7 +1275,7 @@
   },
   {
     "divider": true
-  }, 
+  },
   {
     "title": "Platforms",
     "routes": [
