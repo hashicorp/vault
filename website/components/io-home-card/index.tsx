@@ -8,7 +8,7 @@ import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-l
 import { productLogos } from './product-logos'
 import s from './style.module.css'
 
-interface CardProps {
+interface IoHomeCardProps {
   variant?: 'light' | 'gray' | 'dark'
   products?: Array<keyof typeof productLogos>
   link: {
@@ -23,16 +23,22 @@ interface CardProps {
         horizontal: 'none' | 'sm' | 'md'
         vertical: 'none' | 'sm' | 'md'
       }
-  children: React.ReactNode
+  eyebrow?: string
+  heading?: string
+  description?: string
+  children?: React.ReactNode
 }
 
-function Card({
+function IoHomeCard({
   variant = 'light',
   products,
   link,
   inset = 'md',
+  eyebrow,
+  heading,
+  description,
   children,
-}: CardProps) {
+}: IoHomeCardProps) {
   const space =
     typeof inset === 'string' ? camelCase(['space', inset.toString()]) : null
   const spaceHorizontal =
@@ -70,7 +76,15 @@ function Card({
           s[spaceVertical]
         )}
       >
-        {children}
+        {children ? (
+          children
+        ) : (
+          <>
+            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+            {heading && <Heading>{heading}</Heading>}
+            {description && <Description>{description}</Description>}
+          </>
+        )}
         <footer className={s.footer}>
           {products && (
             <ul className={s.products}>
@@ -121,8 +135,8 @@ function Description({ children }: DescriptionProps) {
   return <p className={s.description}>{children}</p>
 }
 
-Card.Eyebrow = Eyebrow
-Card.Heading = Heading
-Card.Description = Description
+IoHomeCard.Eyebrow = Eyebrow
+IoHomeCard.Heading = Heading
+IoHomeCard.Description = Description
 
-export default Card
+export default IoHomeCard
