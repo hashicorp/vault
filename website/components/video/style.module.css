@@ -1,5 +1,5 @@
 .video {
-  --columns: 12;
+  --columns: 1;
 
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
@@ -7,26 +7,33 @@
   background-color: var(--black);
   border-radius: 6px;
   overflow: hidden;
+
+  @media (--medium-up) {
+    --columns: 12;
+  }
 }
 
 .thumbnail {
   position: relative;
   display: grid;
   place-items: center;
-  grid-column: 1 / 9;
+  grid-column: 1 / -1;
+  background-color: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 64px 32px;
 
-  & > button {
+  @media (--medium-up) {
+    grid-column: 1 / 7;
+  }
+
+  @media (--large) {
+    grid-column: 1 / 9;
+  }
+
+  & > svg {
     position: relative;
-    margin: 0;
-    padding: 0;
-    width: 96px;
-    height: 96px;
-    background-color: transparent;
-    border-radius: 9999px;
-    border: 0;
     z-index: 1;
-    box-shadow: 0 16px 16px -10px rgba(101, 106, 118, 0.2);
-    cursor: pointer;
   }
 
   &::after {
@@ -38,15 +45,30 @@
     height: 100%;
     background-image: linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0.45),
-      rgba(0, 0, 0, 0.45)
+      rgba(0, 0, 0, 0.5),
+      rgba(0, 0, 0, 0.5)
     );
+    opacity: 0.5;
+    transition: opacity ease-in-out 0.2s;
+  }
+
+  &:hover::after {
+    opacity: 0.75;
   }
 }
 
 .content {
-  padding: 80px 32px;
-  grid-column: 9 / -1;
+  padding: 32px;
+  grid-column: 1 / -1;
+
+  @media (--medium-up) {
+    padding: 80px 32px;
+    grid-column: 7 / -1;
+  }
+
+  @media (--large) {
+    grid-column: 9 / -1;
+  }
 }
 
 .heading {

@@ -6,13 +6,11 @@ import s from './style.module.css'
 export default function Video({ thumbnail, heading, description, person }) {
   return (
     <figure className={s.video}>
-      <div className={s.thumbnail}>
-        <button>
-          <VisuallyHidden>Play video</VisuallyHidden>
-          <PlayIcon />
-        </button>
+      <button className={s.thumbnail}>
+        <VisuallyHidden>Play video</VisuallyHidden>
+        <PlayIcon />
         <Image src={thumbnail} layout="fill" objectFit="cover" />
-      </div>
+      </button>
       <figcaption className={s.content}>
         <h3 className={s.heading}>{heading}</h3>
         <p className={s.description}>{description}</p>
