@@ -57,17 +57,17 @@ function IoHomeCard({
           children
         ) : (
           <>
-            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-            {heading && <Heading>{heading}</Heading>}
-            {description && <Description>{description}</Description>}
+            {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
+            {heading ? <Heading>{heading}</Heading> : null}
+            {description ? <Description>{description}</Description> : null}
           </>
         )}
         <footer className={s.footer}>
           {products && (
             <ul className={s.products}>
-              {products.map((product) => {
+              {products.map((product, index) => {
                 return (
-                  <li>
+                  <li key={index}>
                     <InlineSvg className={s.logo} src={productLogos[product]} />
                   </li>
                 )
