@@ -65,9 +65,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	// Resolve the token policy
 	te, err := e.core.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		if !e.core.IsDRSecondary() {
-			e.core.logger.Error("failed to lookup sudo token", "error", err)
-		}
+		e.core.logger.Error("failed to lookup sudo token", "error", err)
 		return false
 	}
 
