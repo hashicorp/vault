@@ -12,6 +12,19 @@
     "divider": true
   },
   {
+    "title": "Feature Deprecation Notice and Plans",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "deprecation"
+      },
+      {
+        "title": "FAQ",
+        "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
     "title": "Browser Support",
     "path": "browser-support"
   },
@@ -102,7 +115,11 @@
       {
         "title": "Identity",
         "path": "concepts/identity"
-        },
+      },
+      {
+        "title": "OIDC Provider",
+        "path": "concepts/oidc-provider"
+      },
       {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"
@@ -154,7 +171,16 @@
       },
       {
         "title": "Client Count",
-        "path": "concepts/client-count"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/client-count"
+          },
+          {
+            "title": "FAQ",
+            "path": "concepts/client-count/faq"
+          }
+        ]
       },
       {
         "title": "Transform",
@@ -1015,7 +1041,21 @@
       },
       {
         "title": "Identity",
-        "path": "secrets/identity"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+
       },
       {
         "title": "MongoDB Atlas",
@@ -1661,20 +1701,24 @@
         "path": "release-notes"
       },
       {
-        "title": "1.5.0",
-        "path": "release-notes/1.5.0"
+        "title": "1.9.0",
+        "path": "release-notes/1.9.0"
       },
       {
-        "title": "1.6.0",
-        "path": "release-notes/1.6.0"
+        "title": "1.8.0",
+        "path": "release-notes/1.8.0"
       },
       {
         "title": "1.7.0",
         "path": "release-notes/1.7.0"
       },
       {
-        "title": "1.8.0",
-        "path": "release-notes/1.8.0"
+        "title": "1.6.0",
+        "path": "release-notes/1.6.0"
+      },
+      {
+        "title": "1.5.0",
+        "path": "release-notes/1.5.0"
       }
     ]
   },
