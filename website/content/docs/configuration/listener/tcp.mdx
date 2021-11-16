@@ -22,7 +22,7 @@ specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
 advertise the correct address to other nodes.
 
 ## Listener's custom response headers
-Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
+As of version 1.9 Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for
 the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/api/system/config-ui) which allows users
@@ -260,8 +260,8 @@ listener "tcp" {
 
 ### Configuring custom http response headers
 
-This example shows configuring custom http response headers. Operators can configure
-`"custom_response_headers"` sub-stanza in the listener stanza to set custom http
+Note: Requires Vault version 1.9 or newer. This example shows configuring custom http response headers. 
+Operators can configure `"custom_response_headers"` sub-stanza in the listener stanza to set custom http
 headers appropriate to their applications. Examples of such headers are `"Strict-Transport-Security"`
 and `"Content-Security-Policy"` which are known HTTP headers, and could be configured to harden
 the security of an application communicating with the Vault endpoints. Note that vulnerability
