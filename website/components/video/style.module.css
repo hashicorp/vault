@@ -1,0 +1,85 @@
+.video {
+  --columns: 12;
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 32px;
+  background-color: var(--black);
+}
+
+.thumbnail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  grid-column: 1 / 8;
+
+  & > button {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    width: 96px;
+    height: 96px;
+    background-color: transparent;
+    border-radius: 9999px;
+    border: 0;
+    z-index: 1;
+    box-shadow: 0 16px 16px -10px rgba(101, 106, 118, 0.2);
+    cursor: pointer;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.45),
+      rgba(0, 0, 0, 0.45)
+    );
+  }
+}
+
+.content {
+  padding: 80px 32px;
+  grid-column: 8 / -1;
+}
+
+.heading {
+  margin: 0;
+  composes: g-type-display-4 from global;
+  color: var(--white);
+}
+
+.description {
+  margin: 8px 0 0;
+  composes: g-type-body-small from global;
+  color: var(--white);
+}
+
+.person {
+  margin-top: 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.personThumbnail {
+  display: flex;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.personName {
+  margin: 0;
+  composes: g-type-body-strong from global;
+  color: var(--white);
+}
+
+.personDescription {
+  margin: 4px 0 0;
+  composes: g-type-label-strong from global;
+  color: var(--gray-3);
+}
