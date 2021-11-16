@@ -1,4 +1,4 @@
-import Hero from 'components/hero'
+import IoHomeHero from 'components/io-home-hero'
 import RAW_CONTENT from './content.json'
 
 export async function getStaticProps() {
@@ -8,7 +8,7 @@ export async function getStaticProps() {
 export default function Homepage({ content }) {
   return (
     <>
-      <Hero
+      <IoHomeHero
         brand="vault"
         heading="Manage Secrets &amp; Protect Sensitive Data"
         description="Secure, store and tightly control access to tokens, passwords, certificates, encryption keys for protecting secrets and other sensitive data using a UI, CLI, or HTTP API."
