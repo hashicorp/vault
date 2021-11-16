@@ -15,14 +15,7 @@ interface IoHomeCardProps {
     url: string
     type: 'inbound' | 'outbound'
   }
-  inset?:
-    | 'none'
-    | 'sm'
-    | 'md'
-    | {
-        horizontal: 'none' | 'sm' | 'md'
-        vertical: 'none' | 'sm' | 'md'
-      }
+  inset?: 'none' | 'sm' | 'md'
   eyebrow?: string
   heading?: string
   description?: string
@@ -39,16 +32,7 @@ function IoHomeCard({
   description,
   children,
 }: IoHomeCardProps) {
-  const space =
-    typeof inset === 'string' ? camelCase(['space', inset.toString()]) : null
-  const spaceHorizontal =
-    typeof inset === 'object' && inset.horizontal
-      ? camelCase(['space', 'horizontal', inset.horizontal])
-      : null
-  const spaceVertical =
-    typeof inset === 'object' && inset.vertical
-      ? camelCase(['space', 'vertical', inset.vertical])
-      : null
+  const space = camelCase(['space', inset])
 
   const LinkWrapper = ({ className, children }) =>
     link.type === 'inbound' ? (
@@ -68,14 +52,7 @@ function IoHomeCard({
 
   return (
     <article className={classNames(s.card)}>
-      <LinkWrapper
-        className={classNames(
-          s[variant],
-          s[space],
-          s[spaceHorizontal],
-          s[spaceVertical]
-        )}
-      >
+      <LinkWrapper className={classNames(s[variant], s[space])}>
         {children ? (
           children
         ) : (

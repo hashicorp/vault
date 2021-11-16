@@ -70,36 +70,6 @@
     &.spaceMd {
       padding: var(--token-spacing-06);
     }
-
-    &.spaceHorizontalNone {
-      padding-left: 0;
-      padding-right: 0;
-    }
-
-    &.spaceHorizontalSm {
-      padding-left: var(--token-spacing-05);
-      padding-right: var(--token-spacing-05);
-    }
-
-    &.spaceHorizontalMd {
-      padding-left: var(--token-spacing-06);
-      padding-right: var(--token-spacing-06);
-    }
-
-    &.spaceVerticalNone {
-      padding-top: 0;
-      padding-bottom: 0;
-    }
-
-    &.spaceVerticalSm {
-      padding-top: var(--token-spacing-05);
-      padding-bottom: var(--token-spacing-05);
-    }
-
-    &.spaceVerticalMd {
-      padding-top: var(--token-spacing-06);
-      padding-bottom: var(--token-spacing-06);
-    }
   }
 }
 
