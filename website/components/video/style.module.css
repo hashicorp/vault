@@ -21,7 +21,7 @@
   background-color: transparent;
   border: 0;
   cursor: pointer;
-  padding: 64px 32px;
+  padding: 96px 32px;
 
   @media (--medium-up) {
     grid-column: 1 / 7;
@@ -37,6 +37,11 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1;
+
+    @media (--small) {
+      width: 52px;
+      height: 52px;
+    }
   }
 
   &::after {
