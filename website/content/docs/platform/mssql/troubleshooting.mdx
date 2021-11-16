@@ -1,0 +1,30 @@
+---
+layout: docs
+page_title: Troubleshoot Vault EKM Provider
+description: Troubleshooting steps for the Vault EKM Provider for Microsoft SQL Server.
+---
+
+# Trobuleshooting the Vault EKM Provider
+
+## Check Windows Event Logs
+
+Logs from the Vault EKM provider will appear in Windows Event Viewer under
+"Windows Logs" > "Application" with source "Transit Vault EKM Provider".
+
+### Enable trace logging
+
+If the logs in the Event Viewer don't give enough information to help debug
+your issue, you can enable trace logging. Find the provider's config file at
+`config.json` in your install location, which defaults to
+`C:\Program Files\HashiCorp\Transit Vault EKM Provider\`. Set `enableTrace` to
+true, for example:
+
+```json
+{
+    "vaultApiBaseUrl":  "http://vault.example.com:8200",
+    "enableTrace": true
+}
+```
+
+Restart the server for the config change to take effect, and you should see more
+detailed logs in the same section of Windows Event Viewer.
