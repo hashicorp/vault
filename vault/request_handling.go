@@ -141,9 +141,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		var err error
 		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
-			if !c.IsDRSecondary() {
-				c.logger.Error("failed to lookup acl token", "error", err)
-			}
+			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
 		}
 		// Set the token entry here since it has not been cached yet
