@@ -5,13 +5,15 @@
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   gap: 32px;
   background-color: var(--black);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .thumbnail {
   position: relative;
   display: grid;
   place-items: center;
-  grid-column: 1 / 8;
+  grid-column: 1 / 9;
 
   & > button {
     position: relative;
@@ -44,7 +46,7 @@
 
 .content {
   padding: 80px 32px;
-  grid-column: 8 / -1;
+  grid-column: 9 / -1;
 }
 
 .heading {
