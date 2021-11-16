@@ -14,6 +14,26 @@ official guidance until the release has been completed.
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.9.0 compared to 1.8. Please read it carefully.
 
+## OIDC Provider
+
+Vault 1.9.0 introduced the ability for Vault to be an OpenID Connect (OIDC) identity
+provider. To support the feature, Vault's [default policy](https://www.vaultproject.io/docs/concepts/policies#default-policy)
+was modified to include an ACL rule for its Authorization Endpoint. Due to the handling
+of Vault's default policy during upgrades, existing deployments of Vault that are upgraded
+to 1.9.0 will not have this required ACL rule.
+
+If you're upgrading to 1.9.0 and want to use the new OIDC provider feature, the following
+ACL rule must be applied to the default policy **or** a policy associated with the Vault
+[Auth Method](https://www.vaultproject.io/docs/auth) used to authenticate end-users during
+the OIDC flow.
+
+```hcl
+# Allow a token to make requests to the Authorization Endpoint for OIDC providers.
+path "identity/oidc/provider/+/authorize" {
+  capabilities = ["read", "update"]
+}
+```
+
 ## Identity Tokens
 
 The Identity secrets engine has changed the procedure for creating Identity
