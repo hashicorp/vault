@@ -115,7 +115,7 @@
   @nest .loaded & {
     animation-name: slideIn;
     animation-duration: 0.5s;
-    animation-delay: calc(var(--n) * 0.1s);
+    animation-delay: calc(var(--index) * 0.1s);
     animation-fill-mode: forwards;
   }
 }

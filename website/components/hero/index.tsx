@@ -80,7 +80,7 @@ export default function Hero({
 }
 
 interface HeroCardProps {
-  index: string
+  index: number
   heading: string
   description: string
   cta: {
@@ -103,7 +103,7 @@ function HeroCard({
       className={s.card}
       style={
         {
-          '--n': index,
+          '--index': index,
         } as React.CSSProperties
       }
     >
