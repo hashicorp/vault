@@ -1,7 +1,6 @@
 import * as React from 'react'
 import Link from 'next/link'
 import InlineSvg from '@hashicorp/react-inline-svg'
-import camelCase from 'camelcase'
 import classNames from 'classnames'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-link-16'
@@ -32,8 +31,6 @@ function IoHomeCard({
   description,
   children,
 }: IoHomeCardProps) {
-  const space = camelCase(['space', inset])
-
   const LinkWrapper = ({ className, children }) =>
     link.type === 'inbound' ? (
       <Link href={link.url}>
@@ -52,7 +49,7 @@ function IoHomeCard({
 
   return (
     <article className={classNames(s.card)}>
-      <LinkWrapper className={classNames(s[variant], s[space])}>
+      <LinkWrapper className={classNames(s[variant], s[inset])}>
         {children ? (
           children
         ) : (

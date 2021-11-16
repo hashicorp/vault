@@ -54,15 +54,15 @@
     }
 
     /* Spacing */
-    &.spaceNone {
+    &.none {
       padding: 0;
     }
 
-    &.spaceSm {
+    &.sm {
       padding: var(--token-spacing-05);
     }
 
-    &.spaceMd {
+    &.md {
       padding: var(--token-spacing-06);
     }
   }
