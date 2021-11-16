@@ -1,0 +1,98 @@
+import Button from '@hashicorp/react-button'
+import s from './style.module.css'
+
+interface HeroProps {
+  brand: 'vault' | 'consul'
+  heading: string
+  description: string
+  ctas: Array<{
+    title: string
+    url: string
+  }>
+  cards: Array<HeroCardProps>
+}
+
+export default function Hero({
+  brand,
+  heading,
+  description,
+  ctas,
+  cards,
+}: HeroProps) {
+  return (
+    <header className={s.hero}>
+      <span className={s.pattern} />
+      <div className={s.container}>
+        <div className={s.content}>
+          <h1 className={s.heading}>{heading}</h1>
+          <p className={s.description}>{description}</p>
+          {ctas && (
+            <div className={s.ctas}>
+              {ctas.map((cta) => {
+                return (
+                  <Button
+                    title={cta.title}
+                    url={cta.url}
+                    linkType="inbound"
+                    theme={{
+                      brand: 'neutral',
+                      variant: 'tertiary',
+                      background: 'light',
+                    }}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </div>
+        {cards && (
+          <div className={s.cards}>
+            {cards.map((card, index) => {
+              return (
+                <HeroCard
+                  heading={card.heading}
+                  description={card.description}
+                  cta={{
+                    brand: index === 0 ? 'neutral' : brand,
+                    title: card.cta.title,
+                    url: card.cta.url,
+                  }}
+                  subText={card.subText}
+                />
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </header>
+  )
+}
+
+interface HeroCardProps {
+  heading: string
+  description: string
+  cta: {
+    title: string
+    url: string
+    brand?: 'neutral' | 'vault' | 'consul'
+  }
+  subText: string
+}
+
+function HeroCard({ heading, description, cta, subText }: HeroCardProps) {
+  return (
+    <article className={s.card}>
+      <h2 className={s.cardHeading}>{heading}</h2>
+      <p className={s.cardDescription}>{description}</p>
+      <Button
+        title={cta.title}
+        url={cta.url}
+        theme={{
+          variant: 'primary',
+          brand: cta.brand,
+        }}
+      />
+      <p className={s.cardSubText}>{subText}</p>
+    </article>
+  )
+}
