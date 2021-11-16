@@ -155,12 +155,9 @@ export default Route.extend(UnloadModelRoute, {
     try {
       if (secretModel.failedServerRead) {
         // we couldn't read metadata, so we want to directly fetch the version
-
-        versionModel =
-          this.store.peekRecord('secret-v2-version', JSON.stringify(versionId)) ||
-          (await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
-            reload: true,
-          }));
+        versionModel = await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
+          reload: true,
+        });
       } else {
         // we may have previously errored, so roll it back here
         version.rollbackAttributes();
