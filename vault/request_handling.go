@@ -143,6 +143,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		if err != nil {
 			if !c.IsDRSecondary() {
 				c.logger.Error("failed to lookup acl token", "error", err)
+				panic("TODO SW let's see if a test can get me a call stack")
 			}
 			return nil, nil, nil, nil, ErrInternalError
 		}
