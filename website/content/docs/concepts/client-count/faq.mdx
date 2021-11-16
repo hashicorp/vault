@@ -30,10 +30,8 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: How can I disable the counting of client activity?](http://localhost:3000/docs/concepts/client-count/faq#q-how-can-i-disable-the-counting-of-client-activity)
 - [Q: If I request data for January 2021 - December 2021, but April’s data does not exist, what will be included in the total client count result?](#q-if-i-request-data-for-january-2021-december-2021-but-april-s-data-does-not-exist-what-will-be-included-in-the-total-client-count-result)
 - [Q: How can I configure the activity for log retention?](#q-how-can-i-configure-the-activity-for-log-retention)
-- [Q: In what situations can generate too many or too few clients within Vault? What can we do in these situations?](#q-in-what-situations-can-generate-too-many-or-too-few-clients-within-vault-what-can-we-do-in-these-situations)
 - [Q: What do we recommend in situations where high cardinality aliases occur?](#q-what-do-we-recommend-in-situations-where-high-cardinality-aliases-occur)
 - [Q: Do child namespaces create duplicate tokens?](#q-do-child-namespaces-create-duplicate-tokens)
-
 
 
 ### Q: What is a client?
@@ -190,8 +188,6 @@ Known issues for both tools include the following:
 **UI/API**:
   - Via the UI/API, the billing period cannot be computed for start and end dates that fall in the middle of a month. For example, if the billing period starts on March 15th and ends on March 14th within the subsequent year, the tool can only compute the billing period assuming March 1 is the start date or April 1 is the start date, but not using the March 15th start date
   - As of Vault 1.9, KMIP clients are not provided by the API/CLI. We have plans to add this to a future version
-  - High cardinality alias issues. Refer to question [In what situations can generate too many or too few clients within Vault? What can we do in these situations?](#q-in-what-situations-can-generate-too-many-or-too-few-clients-within-vault-what-can-we-do-in-these-situations) for more information.
-
 
 ### Q: Under what conditions can cause the loss of client data?
 
@@ -210,31 +206,6 @@ In this scenario where you requested data for January 2021 through December 2021
 ### Q: How can I configure the activity for log retention?
 
 Specify retention months in the client config by following the steps in the documentation on [Update the Client Count Configuration](https://www.vaultproject.io/api-docs/system/internal-counters#update-the-client-count-configuration).
-
-### Q: In what situations can generate too many or too few clients within Vault? What can we do in these situations?
-
-Prior to Vault 1.8, there were a few situations in which non-entity tokens resulted in too many clients.
-
-* Creation and usage of control groups and wrapping tokens increased the client count
-* The use of non-entity tokens resulted in increased clients as they were not de-duplicated and were instead counted towards the total client count every time they were used
-* The use of local auth mounts resulted in the non-entity token client count totals
-
-For more information, refer to the question [Which Vault version reflects the most accurate count of clients within Vault?](#q-which-vault-version-reflects-the-most-accurate-client-counts).
-
-While we have taken measures to enhance our Vault client's computation logic to prevent encountering undesirable client count results, there may still be cases where the client counts can become too high or low. Some of the possible scenarios that can influence the client count are described below.
-
-* **Not all entities equate to the same value**: In the approle auth method, the identity alias is the role ID. The role ID is associated with a single application. This application could have thousands of instances running and have thousands of outstanding tokens at any time, all pointing to a single client. However, in userpass or OIDC auth, the identity alias is the username associated with one human. This one human will likely only have one token at any given time. It could be unexpected that human accounts are of the same cost as machines when the usage is lower. This disincentivizes Vault admins from onboarding teams of humans. Meanwhile, Vault continues to build features geared towards human users (OIDC Provider, improved UI/UX, etc.).
-
-* **Highly cardinality aliases**: There are cases in which the use of Vault results in high cardinality aliases. The uniqueness of the identity alias is what defines the number of entities generated for an auth method. Some auth methods allow you to configure the identity alias (what determines the number of identities) as a unique value on every login. This will result in an unbounded client count. For example:
-
-  - AWS IAM allows operators to configure the `iam_alias` to: Role ID (default), IAM unique ID, or Full ARN.
-  - AWS EC2 allows operators to configure the `ec2_alias` to: Role ID (default), EC2 instance ID, orAMI ID. InstanceID is often unique per login.
-  - GCP allows operators to configure the `iam_alias` to: Role ID (default), Service account unique ID. Service accounts are often unique per login.
-  - Kubernetes uses the service account UID as the alias. The Vault user could be minting a new service account for each login.
-  - Cert Auth uses the cert’s `Subject CommonName` as the alias name, but there is no control over the uniqueness of this value.
-  - There is no control over the uniqueness of the `user_claim` in the JWT auth method.
-  - There is no control over the cardinality of aliases used by custom auth plugins, or even if they return an alias at all.
-  - There may be other issues with Alicloud, Azure, etc., that we may be unaware.
 
 ### Q: Do child namespaces create duplicate tokens?
 
