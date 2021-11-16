@@ -1,4 +1,4 @@
-.video {
+.videoCallout {
   --columns: 1;
 
   display: grid;
@@ -114,4 +114,9 @@
   margin: 4px 0 0;
   composes: g-type-label-strong from global;
   color: var(--gray-3);
+}
+
+.video {
+  background-color: var(--gray-2);
+  aspect-ratio: 16 / 9;
 }
