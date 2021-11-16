@@ -1,4 +1,5 @@
 import IoHomeHero from 'components/io-home-hero'
+import IoHomeVideoCallout from 'components/io-home-video-callout'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
 
@@ -42,6 +43,19 @@ export default function Homepage({ content }) {
           },
         ]}
       />
+
+      <div className="g-grid-container">
+        <IoHomeVideoCallout
+          heading="How Vault works"
+          description="Vault tightly controls access to secrets and encryption keys by authenticating against trusted sources of identity such as Active Directory, LDAP, Kubernetes, CloudFoundry, and cloud platforms."
+          thumbnail="/img/TEMP-thumbnail.png"
+          person={{
+            name: 'Armon Dadgar',
+            description: 'Co-founder & CTO',
+            thumbnail: '/img/TEMP-thumbnail.png',
+          }}
+        />
+      </div>
 
       <IoHomeCallToAction
         brand="vault"

@@ -5,7 +5,7 @@ import Dialog from 'components/dialog'
 import PlayIcon from './play-icon'
 import s from './style.module.css'
 
-export default function VideoCallout({
+export default function IoHomeVideoCallout({
   thumbnail,
   heading,
   description,
