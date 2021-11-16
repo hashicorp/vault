@@ -373,6 +373,7 @@ func TestRouter_LoginPath(t *testing.T) {
 		{"auth/foo/bar", false},
 		{"auth/foo/login", true},
 		{"auth/foo/login/", false},
+		{"auth/invalid/login/", false},
 		{"auth/foo/oauth", false},
 		{"auth/foo/oauth/", true},
 		{"auth/foo/oauth/redirect", true},
