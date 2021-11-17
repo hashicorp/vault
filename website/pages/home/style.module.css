@@ -17,6 +17,7 @@
 .inPractice {
   position: relative;
   margin: 0 auto 128px;
+  padding: 64px 0;
   max-width: 1600px;
 
   &::before {
@@ -37,7 +38,6 @@
 }
 
 .inPracticeHeader {
-  padding-top: 64px;
   padding-bottom: 64px;
   margin-right: auto;
   margin-left: auto;
@@ -58,6 +58,28 @@
   margin: 16px 0 0;
   composes: g-type-body from global;
   color: var(--gray-5);
+}
+
+.inPracticeCards {
+  --columns: 6;
+  --minCol: 300px;
+
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
+  gap: 32px;
+  overflow-x: auto;
+
+  @media (--medium-up) {
+    --columns: 3;
+    --minCol: 0;
+  }
+
+  & > li {
+    display: flex;
+  }
 }
 
 /*
