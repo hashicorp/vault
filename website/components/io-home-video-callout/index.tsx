@@ -1,7 +1,7 @@
 import * as React from 'react'
 import Image from 'next/image'
 import VisuallyHidden from '@reach/visually-hidden'
-import Dialog from 'components/dialog'
+import IoHomeDialog from 'components/io-home-dialog'
 import PlayIcon from './play-icon'
 import s from './style.module.css'
 
@@ -43,13 +43,13 @@ export default function IoHomeVideoCallout({
           )}
         </figcaption>
       </figure>
-      <Dialog
+      <IoHomeDialog
         isOpen={showDialog}
         onDismiss={hideVideo}
         label={`${heading} video}`}
       >
         <div className={s.video}></div>
-      </Dialog>
+      </IoHomeDialog>
     </>
   )
 }

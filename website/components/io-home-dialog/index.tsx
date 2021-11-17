@@ -3,16 +3,16 @@ import { DialogOverlay, DialogContent, DialogOverlayProps } from '@reach/dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import s from './style.module.css'
 
-export interface DialogProps extends DialogOverlayProps {
+export interface IoHomeDialogProps extends DialogOverlayProps {
   label: string
 }
 
-export default function Dialog({
+export default function IoHomeDialog({
   isOpen,
   onDismiss,
   children,
   label,
-}: DialogProps) {
+}: IoHomeDialogProps) {
   const AnimatedDialogOverlay = motion(DialogOverlay)
   return (
     <AnimatePresence>
