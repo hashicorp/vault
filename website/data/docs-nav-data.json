@@ -1453,6 +1453,23 @@
             "path": "platform/servicenow/troubleshooting"
           }
         ]
+      },
+      {
+        "title": "Microsoft SQL Server EKM provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/mssql"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/mssql/installation"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/mssql/troubleshooting"
+          }
+        ]
       }
     ]
   },
