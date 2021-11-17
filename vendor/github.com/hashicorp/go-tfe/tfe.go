@@ -1,6 +1,8 @@
 package tfe
 
 import (
+	"log"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -19,8 +21,10 @@ import (
 	"github.com/google/go-querystring/query"
 	"github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	"github.com/svanharmelen/jsonapi"
+	"github.com/hashicorp/jsonapi"
 	"golang.org/x/time/rate"
+
+	slug "github.com/hashicorp/go-slug"
 )
 
 const (
@@ -35,20 +39,6 @@ const (
 	DefaultBasePath = "/api/v2/"
 	// PingEndpoint is a no-op API endpoint used to configure the rate limiter
 	PingEndpoint = "ping"
-)
-
-var (
-	// ErrWorkspaceLocked is returned when trying to lock a
-	// locked workspace.
-	ErrWorkspaceLocked = errors.New("workspace already locked")
-	// ErrWorkspaceNotLocked is returned when trying to unlock
-	// a unlocked workspace.
-	ErrWorkspaceNotLocked = errors.New("workspace already unlocked")
-
-	// ErrUnauthorized is returned when a receiving a 401.
-	ErrUnauthorized = errors.New("unauthorized")
-	// ErrResourceNotFound is returned when a receiving a 404.
-	ErrResourceNotFound = errors.New("resource not found")
 )
 
 // RetryLogHook allows a function to run before each retry.
@@ -108,6 +98,7 @@ type Client struct {
 	retryServerErrors bool
 	remoteAPIVersion  string
 
+	Admin                      Admin
 	AgentPools                 AgentPools
 	AgentTokens                AgentTokens
 	Applies                    Applies
@@ -124,6 +115,7 @@ type Client struct {
 	Policies                   Policies
 	PolicyChecks               PolicyChecks
 	PolicySetParameters        PolicySetParameters
+	PolicySetVersions          PolicySetVersions
 	PolicySets                 PolicySets
 	RegistryModules            RegistryModules
 	Runs                       Runs
@@ -143,6 +135,18 @@ type Client struct {
 	Meta Meta
 }
 
+// Admin is the the Terraform Enterprise Admin API. It provides access to site
+// wide admin settings. These are only available for Terraform Enterprise and
+// do not function against Terraform Cloud.
+type Admin struct {
+	Organizations     AdminOrganizations
+	Workspaces        AdminWorkspaces
+	Runs              AdminRuns
+	TerraformVersions AdminTerraformVersions
+	Users             AdminUsers
+	Settings          *AdminSettings
+}
+
 // Meta contains any Terraform Cloud APIs which provide data about the API itself.
 type Meta struct {
 	IPRanges IPRanges
@@ -153,7 +157,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	config := DefaultConfig()
 
 	// Layer in the provided config for any non-blank values.
-	if cfg != nil {
+	if cfg != nil { // nolint
 		if cfg.Address != "" {
 			config.Address = cfg.Address
 		}
@@ -220,6 +224,16 @@ func NewClient(cfg *Config) (*Client, error) {
 	// method later.
 	client.remoteAPIVersion = meta.APIVersion
 
+	// Create Admin
+	client.Admin = Admin{
+		Organizations:     &adminOrganizations{client: client},
+		Workspaces:        &adminWorkspaces{client: client},
+		Runs:              &adminRuns{client: client},
+		Settings:          newAdminSettings(client),
+		TerraformVersions: &adminTerraformVersions{client: client},
+		Users:             &adminUsers{client: client},
+	}
+
 	// Create the services.
 	client.AgentPools = &agentPools{client: client}
 	client.AgentTokens = &agentTokens{client: client}
@@ -237,6 +251,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	client.Policies = &policies{client: client}
 	client.PolicyChecks = &policyChecks{client: client}
 	client.PolicySetParameters = &policySetParameters{client: client}
+	client.PolicySetVersions = &policySetVersions{client: client}
 	client.PolicySets = &policySets{client: client}
 	client.RegistryModules = &registryModules{client: client}
 	client.Runs = &runs{client: client}
@@ -343,14 +358,15 @@ func rateLimitBackoff(min, max time.Duration, attemptNum int, resp *http.Respons
 	// First create some jitter bounded by the min and max durations.
 	jitter := time.Duration(rnd.Float64() * float64(max-min))
 
-	if resp != nil {
-		if v := resp.Header.Get(headerRateReset); v != "" {
-			if reset, _ := strconv.ParseFloat(v, 64); reset > 0 {
-				// Only update min if the given time to wait is longer.
-				if wait := time.Duration(reset * 1e9); wait > min {
-					min = wait
-				}
-			}
+	if resp != nil && resp.Header.Get(headerRateReset) != "" {
+		v := resp.Header.Get(headerRateReset)
+		reset, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// Only update min if the given time to wait is longer
+		if reset > 0 && time.Duration(reset*1e9) > min {
+			min = time.Duration(reset * 1e9)
 		}
 	}
 
@@ -404,13 +420,15 @@ func (c *Client) getRawAPIMetadata() (rawAPIMetadata, error) {
 
 // configureLimiter configures the rate limiter.
 func (c *Client) configureLimiter(rawLimit string) {
-
 	// Set default values for when rate limiting is disabled.
 	limit := rate.Inf
 	burst := 0
 
 	if v := rawLimit; v != "" {
-		if rateLimit, _ := strconv.ParseFloat(v, 64); rateLimit > 0 {
+		if rateLimit, err := strconv.ParseFloat(v, 64); rateLimit > 0 {
+			if err != nil {
+				log.Fatal(err)
+			}
 			// Configure the limit and burst using a split of 2/3 for the limit and
 			// 1/3 for the burst. This enables clients to burst 1/3 of the allowed
 			// calls before the limiter kicks in. The remaining calls will then be
@@ -425,10 +443,12 @@ func (c *Client) configureLimiter(rawLimit string) {
 	c.limiter = rate.NewLimiter(limit, burst)
 }
 
-// newRequest creates an API request. A relative URL path can be provided in
-// path, in which case it is resolved relative to the apiVersionPath of the
-// Client. Relative URL paths should always be specified without a preceding
-// slash.
+// newRequest creates an API request with proper headers and serialization.
+//
+// A relative URL path can be provided, in which case it is resolved relative to the baseURL
+// of the Client. Relative URL paths should always be specified without a preceding slash. Adding a
+// preceding slash allows for ignoring the configured baseURL for non-standard endpoints.
+//
 // If v is supplied, the value will be JSONAPI encoded and included as the
 // request body. If the method is GET, the value will be parsed and added as
 // query parameters.
@@ -516,18 +536,18 @@ func serializeRequestBody(v interface{}) (interface{}, error) {
 
 	// Infer whether the request uses jsonapi or regular json
 	// serialization based on how the fields are tagged.
-	jsonApiFields := 0
+	jsonAPIFields := 0
 	jsonFields := 0
 	for i := 0; i < modelType.NumField(); i++ {
 		structField := modelType.Field(i)
 		if structField.Tag.Get("jsonapi") != "" {
-			jsonApiFields++
+			jsonAPIFields++
 		}
 		if structField.Tag.Get("json") != "" {
 			jsonFields++
 		}
 	}
-	if jsonApiFields > 0 && jsonFields > 0 {
+	if jsonAPIFields > 0 && jsonFields > 0 {
 		// Defining a struct with both json and jsonapi tags doesn't
 		// make sense, because a struct can only be serialized
 		// as one or another. If this does happen, it's a bug
@@ -537,13 +557,12 @@ func serializeRequestBody(v interface{}) (interface{}, error) {
 
 	if jsonFields > 0 {
 		return json.Marshal(v)
-	} else {
-		buf := bytes.NewBuffer(nil)
-		if err := jsonapi.MarshalPayloadWithoutIncluded(buf, v); err != nil {
-			return nil, err
-		}
-		return buf, nil
 	}
+	buf := bytes.NewBuffer(nil)
+	if err := jsonapi.MarshalPayloadWithoutIncluded(buf, v); err != nil {
+		return nil, err
+	}
+	return buf, nil
 }
 
 // do sends an API request and returns the API response. The API response
@@ -595,12 +614,16 @@ func (c *Client) do(ctx context.Context, req *retryablehttp.Request, v interface
 		return err
 	}
 
-	// Get the value of v so we can test if it's a struct.
-	dst := reflect.Indirect(reflect.ValueOf(v))
+	return unmarshalResponse(resp.Body, v)
+}
 
-	// Return an error if v is not a struct or an io.Writer.
+func unmarshalResponse(responseBody io.Reader, model interface{}) error {
+	// Get the value of model so we can test if it's a struct.
+	dst := reflect.Indirect(reflect.ValueOf(model))
+
+	// Return an error if model is not a struct or an io.Writer.
 	if dst.Kind() != reflect.Struct {
-		return fmt.Errorf("v must be a struct or an io.Writer")
+		return fmt.Errorf("%v must be a struct or an io.Writer", dst)
 	}
 
 	// Try to get the Items and Pagination struct fields.
@@ -610,7 +633,7 @@ func (c *Client) do(ctx context.Context, req *retryablehttp.Request, v interface
 	// Unmarshal a single value if v does not contain the
 	// Items and Pagination struct fields.
 	if !items.IsValid() || !pagination.IsValid() {
-		return jsonapi.UnmarshalPayload(resp.Body, v)
+		return jsonapi.UnmarshalPayload(responseBody, model)
 	}
 
 	// Return an error if v.Items is not a slice.
@@ -620,7 +643,7 @@ func (c *Client) do(ctx context.Context, req *retryablehttp.Request, v interface
 
 	// Create a temporary buffer and copy all the read data into it.
 	body := bytes.NewBuffer(nil)
-	reader := io.TeeReader(resp.Body, body)
+	reader := io.TeeReader(responseBody, body)
 
 	// Unmarshal as a list of values as v.Items is a slice.
 	raw, err := jsonapi.UnmarshalManyPayload(reader, items.Type().Elem())
@@ -675,8 +698,8 @@ type Pagination struct {
 func parsePagination(body io.Reader) (*Pagination, error) {
 	var raw struct {
 		Meta struct {
-			Pagination Pagination `json:"pagination"`
-		} `json:"meta"`
+			Pagination Pagination `jsonapi:"pagination"`
+		} `jsonapi:"meta"`
 	}
 
 	// JSON decode the raw response.
@@ -727,4 +750,23 @@ func checkResponseCode(r *http.Response) error {
 	}
 
 	return fmt.Errorf(strings.Join(errs, "\n"))
+}
+
+func packContents(path string) (*bytes.Buffer, error) {
+	body := bytes.NewBuffer(nil)
+
+	file, err := os.Stat(path)
+	if err != nil {
+		return body, err
+	}
+	if !file.Mode().IsDir() {
+		return body, ErrMissingDirectory
+	}
+
+	_, err = slug.Pack(path, body, true)
+	if err != nil {
+		return body, err
+	}
+
+	return body, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
 )
@@ -16,7 +15,7 @@ var _ NotificationConfigurations = (*notificationConfigurations)(nil)
 // related methods that the Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/notification-configurations.html
+// https://www.terraform.io/docs/cloud/api/notification-configurations.html
 type NotificationConfigurations interface {
 	// List all the notification configurations within a workspace.
 	List(ctx context.Context, workspaceID string, options NotificationConfigurationListOptions) (*NotificationConfigurationList, error)
@@ -93,12 +92,12 @@ type NotificationConfiguration struct {
 
 // DeliveryResponse represents a notification configuration delivery response.
 type DeliveryResponse struct {
-	Body       string      `json:"body"`
-	Code       int         `json:"code"`
-	Headers    http.Header `json:"headers"`
-	SentAt     time.Time   `json:"sent-at,iso8601"`
-	Successful bool        `json:"successful"`
-	URL        string      `json:"url"`
+	Body       string              `jsonapi:"attr,body"`
+	Code       string              `jsonapi:"attr,code"`
+	Headers    map[string][]string `jsonapi:"attr,headers"`
+	SentAt     time.Time           `jsonapi:"attr,sent-at,rfc3339"`
+	Successful string              `jsonapi:"attr,successful"`
+	URL        string              `jsonapi:"attr,url"`
 }
 
 // NotificationConfigurationListOptions represents the options for listing
@@ -110,7 +109,7 @@ type NotificationConfigurationListOptions struct {
 // List all the notification configurations associated with a workspace.
 func (s *notificationConfigurations) List(ctx context.Context, workspaceID string, options NotificationConfigurationListOptions) (*NotificationConfigurationList, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 
 	u := fmt.Sprintf("workspaces/%s/notification-configurations", url.QueryEscape(workspaceID))
@@ -131,8 +130,11 @@ func (s *notificationConfigurations) List(ctx context.Context, workspaceID strin
 // NotificationConfigurationCreateOptions represents the options for
 // creating a new notification configuration.
 type NotificationConfigurationCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,notification-configurations"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,notification-configurations"`
 
 	// The destination type of the notification configuration
 	DestinationType *NotificationDestinationType `jsonapi:"attr,destination-type"`
@@ -168,7 +170,7 @@ func (o NotificationConfigurationCreateOptions) valid() error {
 		return errors.New("enabled is required")
 	}
 	if !validString(o.Name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 
 	if *o.DestinationType == NotificationDestinationTypeGeneric || *o.DestinationType == NotificationDestinationTypeSlack {
@@ -182,14 +184,11 @@ func (o NotificationConfigurationCreateOptions) valid() error {
 // Creates a notification configuration with the given options.
 func (s *notificationConfigurations) Create(ctx context.Context, workspaceID string, options NotificationConfigurationCreateOptions) (*NotificationConfiguration, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("workspaces/%s/notification-configurations", url.QueryEscape(workspaceID))
 	req, err := s.client.newRequest("POST", u, &options)
@@ -230,8 +229,11 @@ func (s *notificationConfigurations) Read(ctx context.Context, notificationConfi
 // NotificationConfigurationUpdateOptions represents the options for
 // updating a existing notification configuration.
 type NotificationConfigurationUpdateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,notification-configurations"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,notification-configurations"`
 
 	// Whether the notification configuration should be enabled or not
 	Enabled *bool `jsonapi:"attr,enabled,omitempty"`
@@ -261,9 +263,6 @@ func (s *notificationConfigurations) Update(ctx context.Context, notificationCon
 	if !validStringID(&notificationConfigurationID) {
 		return nil, errors.New("invalid value for notification configuration ID")
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("notification-configurations/%s", url.QueryEscape(notificationConfigurationID))
 	req, err := s.client.newRequest("PATCH", u, &options)

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -105,7 +104,7 @@ func (b *azureSecretBackend) createSPSecret(ctx context.Context, s logical.Stora
 		return nil, err
 	}
 	appID := to.String(app.AppID)
-	appObjID := to.String(app.ObjectID)
+	appObjID := to.String(app.ID)
 
 	// Write a WAL entry in case the SP create process doesn't complete
 	walID, err := framework.PutWAL(ctx, s, walAppKey, &walApp{
@@ -114,29 +113,29 @@ func (b *azureSecretBackend) createSPSecret(ctx context.Context, s logical.Stora
 		Expiration: time.Now().Add(maxWALAge),
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("error writing WAL: {{err}}", err)
+		return nil, fmt.Errorf("error writing WAL: %w", err)
 	}
 
 	// Create a service principal associated with the new App
-	sp, password, err := c.createSP(ctx, app, spExpiration)
+	spID, password, err := c.createSP(ctx, app, spExpiration)
 	if err != nil {
 		return nil, err
 	}
 
 	// Assign Azure roles to the new SP
-	raIDs, err := c.assignRoles(ctx, sp, role.AzureRoles)
+	raIDs, err := c.assignRoles(ctx, spID, role.AzureRoles)
 	if err != nil {
 		return nil, err
 	}
 
 	// Assign Azure group memberships to the new SP
-	if err := c.addGroupMemberships(ctx, sp, role.AzureGroups); err != nil {
+	if err := c.addGroupMemberships(ctx, spID, role.AzureGroups); err != nil {
 		return nil, err
 	}
 
 	// SP is fully created so delete the WAL
 	if err := framework.DeleteWAL(ctx, s, walID); err != nil {
-		return nil, errwrap.Wrapf("error deleting WAL: {{err}}", err)
+		return nil, fmt.Errorf("error deleting WAL: %w", err)
 	}
 
 	data := map[string]interface{}{
@@ -145,7 +144,7 @@ func (b *azureSecretBackend) createSPSecret(ctx context.Context, s logical.Stora
 	}
 	internalData := map[string]interface{}{
 		"app_object_id":        appObjID,
-		"sp_object_id":         sp.ObjectID,
+		"sp_object_id":         spID,
 		"role_assignment_ids":  raIDs,
 		"group_membership_ids": groupObjectIDs(role.AzureGroups),
 		"role":                 roleName,
@@ -237,7 +236,7 @@ func (b *azureSecretBackend) spRevoke(ctx context.Context, req *logical.Request,
 
 	c, err := b.getClient(ctx, req.Storage)
 	if err != nil {
-		return nil, errwrap.Wrapf("error during revoke: {{err}}", err)
+		return nil, fmt.Errorf("error during revoke: %w", err)
 	}
 
 	// unassigning roles is effectively a garbage collection operation. Errors will be noted but won't fail the
@@ -268,7 +267,7 @@ func (b *azureSecretBackend) staticSPRevoke(ctx context.Context, req *logical.Re
 
 	c, err := b.getClient(ctx, req.Storage)
 	if err != nil {
-		return nil, errwrap.Wrapf("error during revoke: {{err}}", err)
+		return nil, fmt.Errorf("error during revoke: %w", err)
 	}
 
 	keyIDRaw, ok := req.Secret.InternalData["key_id"]

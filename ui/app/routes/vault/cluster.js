@@ -40,6 +40,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const currentTokenName = this.auth.get('currentTokenName');
     // if no namespace queryParam and user authenticated,
     // use user's root namespace to redirect to properly param'd url
+    if (this.featureFlagService.managedNamespaceRoot && !this.version.hasNamespaces) {
+      window.alert('Cannot use Cloud Admin Namespace flag with OSS Vault');
+    }
     if (!namespace && currentTokenName && !Ember.testing) {
       const storage = getStorage().getItem(currentTokenName);
       namespace = storage?.userRootNamespace;
@@ -109,6 +112,18 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         this.refresh();
       }
       return true;
+    },
+    loading(transition) {
+      if (transition.queryParamsOnly || Ember.testing) {
+        return;
+      }
+      // eslint-disable-next-line ember/no-controller-access-in-routes
+      let controller = this.controllerFor('vault.cluster');
+      controller.set('currentlyLoading', true);
+
+      transition.finally(function() {
+        controller.set('currentlyLoading', false);
+      });
     },
   },
 });

@@ -18,14 +18,28 @@
 
 package flatbuf
 
-type DateUnit = int16
+import "strconv"
+
+type DateUnit int16
+
 const (
-	DateUnitDAY DateUnit = 0
+	DateUnitDAY         DateUnit = 0
 	DateUnitMILLISECOND DateUnit = 1
 )
 
 var EnumNamesDateUnit = map[DateUnit]string{
-	DateUnitDAY:"DAY",
-	DateUnitMILLISECOND:"MILLISECOND",
+	DateUnitDAY:         "DAY",
+	DateUnitMILLISECOND: "MILLISECOND",
 }
 
+var EnumValuesDateUnit = map[string]DateUnit{
+	"DAY":         DateUnitDAY,
+	"MILLISECOND": DateUnitMILLISECOND,
+}
+
+func (v DateUnit) String() string {
+	if s, ok := EnumNamesDateUnit[v]; ok {
+		return s
+	}
+	return "DateUnit(" + strconv.FormatInt(int64(v), 10) + ")"
+}

@@ -1,6 +1,7 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -30,8 +31,10 @@ type jsonOrigin struct {
 }
 
 type jsonRole struct {
-	RoleName   string `json:"role"`
-	BucketName string `json:"bucket_name"`
+	RoleName       string `json:"role"`
+	BucketName     string `json:"bucket_name"`
+	ScopeName      string `json:"scope_name"`
+	CollectionName string `json:"collection_name"`
 }
 
 type jsonRoleDescription struct {
@@ -66,13 +69,24 @@ type jsonGroup struct {
 
 // Role represents a specific permission.
 type Role struct {
-	Name   string `json:"role"`
-	Bucket string `json:"bucket_name"`
+	Name       string `json:"role"`
+	Bucket     string `json:"bucket_name"`
+	Scope      string `json:"scope_name"`
+	Collection string `json:"collection_name"`
 }
 
 func (ro *Role) fromData(data jsonRole) error {
 	ro.Name = data.RoleName
 	ro.Bucket = data.BucketName
+	ro.Scope = data.ScopeName
+	ro.Collection = data.CollectionName
+
+	if ro.Scope == "*" {
+		ro.Scope = ""
+	}
+	if ro.Collection == "*" {
+		ro.Collection = ""
+	}
 
 	return nil
 }
@@ -126,14 +140,14 @@ func (ro *RoleAndOrigins) fromData(data jsonRoleOrigins) error {
 	}
 
 	origins := make([]Origin, len(data.Origins))
-	for _, originData := range data.Origins {
+	for i, originData := range data.Origins {
 		var origin Origin
 		err := origin.fromData(originData)
 		if err != nil {
 			return err
 		}
 
-		origins = append(origins, origin)
+		origins[i] = origin
 	}
 	ro.Origins = origins
 
@@ -227,7 +241,8 @@ func (g *Group) fromData(data jsonGroup) error {
 // UserManager provides methods for performing Couchbase user management.
 type UserManager struct {
 	provider mgmtProvider
-	tracer   requestTracer
+	tracer   RequestTracer
+	meter    *meterWrapper
 }
 
 func (um *UserManager) tryParseErrorMessage(req *mgmtRequest, resp *mgmtResponse) error {
@@ -263,6 +278,12 @@ type GetAllUsersOptions struct {
 	RetryStrategy RetryStrategy
 
 	DomainName string
+	ParentSpan RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetAllUsers returns a list of all the users from the cluster.
@@ -271,26 +292,30 @@ func (um *UserManager) GetAllUsers(opts *GetAllUsersOptions) ([]UserAndMetadata,
 		opts = &GetAllUsersOptions{}
 	}
 
-	span := um.tracer.StartSpan("GetAllUsers", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
-
 	if opts.DomainName == "" {
 		opts.DomainName = string(LocalDomain)
 	}
 
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_get_all_users", start)
+
+	path := fmt.Sprintf("/settings/rbac/users/%s", opts.DomainName)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_get_all_users", "management")
+	span.SetAttribute("db.operation", "GET "+path)
+	defer span.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "GET",
-		Path:          fmt.Sprintf("/settings/rbac/users/%s", opts.DomainName),
+		Path:          path,
 		IsIdempotent:  true,
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -328,6 +353,12 @@ type GetUserOptions struct {
 	RetryStrategy RetryStrategy
 
 	DomainName string
+	ParentSpan RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetUser returns the data for a particular user
@@ -336,26 +367,30 @@ func (um *UserManager) GetUser(name string, opts *GetUserOptions) (*UserAndMetad
 		opts = &GetUserOptions{}
 	}
 
-	span := um.tracer.StartSpan("GetUser", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
-
 	if opts.DomainName == "" {
 		opts.DomainName = string(LocalDomain)
 	}
 
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_get_user", start)
+
+	path := fmt.Sprintf("/settings/rbac/users/%s/%s", opts.DomainName, name)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_get_user", "management")
+	span.SetAttribute("db.operation", "GET "+path)
+	defer span.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "GET",
-		Path:          fmt.Sprintf("/settings/rbac/users/%s/%s", opts.DomainName, name),
+		Path:          path,
 		IsIdempotent:  true,
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -391,6 +426,12 @@ type UpsertUserOptions struct {
 	RetryStrategy RetryStrategy
 
 	DomainName string
+	ParentSpan RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // UpsertUser updates a built-in RBAC user on the cluster.
@@ -399,20 +440,60 @@ func (um *UserManager) UpsertUser(user User, opts *UpsertUserOptions) error {
 		opts = &UpsertUserOptions{}
 	}
 
-	span := um.tracer.StartSpan("UpsertUser", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_upsert_user", start)
 
 	if opts.DomainName == "" {
 		opts.DomainName = string(LocalDomain)
 	}
+
+	parseWildcard := func(str string) string {
+		if str == "*" {
+			return ""
+		}
+
+		return str
+	}
+
+	isNullOrWildcard := func(str string) bool {
+		if str == "*" || str == "" {
+			return true
+		}
+
+		return false
+	}
+
+	path := fmt.Sprintf("/settings/rbac/users/%s/%s", opts.DomainName, user.Username)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_upsert_user", "management")
+	span.SetAttribute("db.operation", "PUT "+path)
+	defer span.End()
 
 	var reqRoleStrs []string
 	for _, roleData := range user.Roles {
 		if roleData.Bucket == "" {
 			reqRoleStrs = append(reqRoleStrs, roleData.Name)
 		} else {
-			reqRoleStrs = append(reqRoleStrs, fmt.Sprintf("%s[%s]", roleData.Name, roleData.Bucket))
+			scope := parseWildcard(roleData.Scope)
+			collection := parseWildcard(roleData.Collection)
+
+			if scope != "" && isNullOrWildcard(roleData.Bucket) {
+				return makeInvalidArgumentsError("when a scope is specified, the bucket cannot be null or wildcard")
+			}
+			if collection != "" && isNullOrWildcard(scope) {
+				return makeInvalidArgumentsError("when a collection is specified, the scope cannot be null or wildcard")
+			}
+
+			roleStr := fmt.Sprintf("%s[%s", roleData.Name, roleData.Bucket)
+			if scope != "" {
+				roleStr += ":" + roleData.Scope
+			}
+			if collection != "" {
+				roleStr += ":" + roleData.Collection
+			}
+			roleStr += "]"
+
+			reqRoleStrs = append(reqRoleStrs, roleStr)
+
 		}
 	}
 
@@ -429,16 +510,16 @@ func (um *UserManager) UpsertUser(user User, opts *UpsertUserOptions) error {
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "PUT",
-		Path:          fmt.Sprintf("/settings/rbac/users/%s/%s", opts.DomainName, user.Username),
+		Path:          path,
 		Body:          []byte(reqForm.Encode()),
 		ContentType:   "application/x-www-form-urlencoded",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -461,6 +542,12 @@ type DropUserOptions struct {
 	RetryStrategy RetryStrategy
 
 	DomainName string
+	ParentSpan RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropUser removes a built-in RBAC user on the cluster.
@@ -469,25 +556,29 @@ func (um *UserManager) DropUser(name string, opts *DropUserOptions) error {
 		opts = &DropUserOptions{}
 	}
 
-	span := um.tracer.StartSpan("DropUser", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
-
 	if opts.DomainName == "" {
 		opts.DomainName = string(LocalDomain)
 	}
 
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_drop_user", start)
+
+	path := fmt.Sprintf("/settings/rbac/users/%s/%s", opts.DomainName, name)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_drop_user", "management")
+	span.SetAttribute("db.operation", "DELETE "+path)
+	defer span.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "DELETE",
-		Path:          fmt.Sprintf("/settings/rbac/users/%s/%s", opts.DomainName, name),
+		Path:          path,
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -508,6 +599,12 @@ func (um *UserManager) DropUser(name string, opts *DropUserOptions) error {
 type GetRolesOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetRoles lists the roles supported by the cluster.
@@ -516,9 +613,12 @@ func (um *UserManager) GetRoles(opts *GetRolesOptions) ([]RoleAndDescription, er
 		opts = &GetRolesOptions{}
 	}
 
-	span := um.tracer.StartSpan("GetRoles", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_get_roles", start)
+
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_get_roles", "management")
+	span.SetAttribute("db.operation", "GET /settings/rbac/roles")
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
@@ -528,10 +628,10 @@ func (um *UserManager) GetRoles(opts *GetRolesOptions) ([]RoleAndDescription, er
 		IsIdempotent:  true,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -567,6 +667,12 @@ func (um *UserManager) GetRoles(opts *GetRolesOptions) ([]RoleAndDescription, er
 type GetGroupOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetGroup fetches a single group from the server.
@@ -578,22 +684,26 @@ func (um *UserManager) GetGroup(groupName string, opts *GetGroupOptions) (*Group
 		opts = &GetGroupOptions{}
 	}
 
-	span := um.tracer.StartSpan("GetGroup", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_get_group", start)
+
+	path := fmt.Sprintf("/settings/rbac/groups/%s", groupName)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_get_group", "management")
+	span.SetAttribute("db.operation", "GET "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "GET",
-		Path:          fmt.Sprintf("/settings/rbac/groups/%s", groupName),
+		Path:          path,
 		RetryStrategy: opts.RetryStrategy,
 		IsIdempotent:  true,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -627,6 +737,12 @@ func (um *UserManager) GetGroup(groupName string, opts *GetGroupOptions) (*Group
 type GetAllGroupsOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetAllGroups fetches all groups from the server.
@@ -635,22 +751,26 @@ func (um *UserManager) GetAllGroups(opts *GetAllGroupsOptions) ([]Group, error) 
 		opts = &GetAllGroupsOptions{}
 	}
 
-	span := um.tracer.StartSpan("GetAllGroups", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_get_all_groups", start)
+
+	path := "/settings/rbac/groups"
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_get_all_groups", "management")
+	span.SetAttribute("db.operation", "GET "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "GET",
-		Path:          "/settings/rbac/groups",
+		Path:          path,
 		RetryStrategy: opts.RetryStrategy,
 		IsIdempotent:  true,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -686,6 +806,12 @@ func (um *UserManager) GetAllGroups(opts *GetAllGroupsOptions) ([]Group, error) 
 type UpsertGroupOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // UpsertGroup creates, or updates, a group on the server.
@@ -697,9 +823,13 @@ func (um *UserManager) UpsertGroup(group Group, opts *UpsertGroupOptions) error 
 		opts = &UpsertGroupOptions{}
 	}
 
-	span := um.tracer.StartSpan("UpsertGroup", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_upsert_group", start)
+
+	path := fmt.Sprintf("/settings/rbac/groups/%s", group.Name)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_upsert_group", "management")
+	span.SetAttribute("db.operation", "PUT "+path)
+	defer span.End()
 
 	var reqRoleStrs []string
 	for _, roleData := range group.Roles {
@@ -718,16 +848,16 @@ func (um *UserManager) UpsertGroup(group Group, opts *UpsertGroupOptions) error 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "PUT",
-		Path:          fmt.Sprintf("/settings/rbac/groups/%s", group.Name),
+		Path:          path,
 		Body:          []byte(reqForm.Encode()),
 		ContentType:   "application/x-www-form-urlencoded",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -748,6 +878,12 @@ func (um *UserManager) UpsertGroup(group Group, opts *UpsertGroupOptions) error 
 type DropGroupOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropGroup removes a group from the server.
@@ -760,21 +896,25 @@ func (um *UserManager) DropGroup(groupName string, opts *DropGroupOptions) error
 		opts = &DropGroupOptions{}
 	}
 
-	span := um.tracer.StartSpan("DropGroup", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer um.meter.ValueRecord(meterValueServiceManagement, "manager_users_drop_group", start)
+
+	path := fmt.Sprintf("/settings/rbac/groups/%s", groupName)
+	span := createSpan(um.tracer, opts.ParentSpan, "manager_users_drop_group", "management")
+	span.SetAttribute("db.operation", "DELETE "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Method:        "DELETE",
-		Path:          fmt.Sprintf("/settings/rbac/groups/%s", groupName),
+		Path:          path,
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := um.provider.executeMgmtRequest(req)
+	resp, err := um.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}

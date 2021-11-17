@@ -2,11 +2,9 @@ package gocb
 
 import (
 	"crypto/x509"
-	"sync"
-	"time"
-
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 	"github.com/pkg/errors"
+	"sync"
 )
 
 type connectionManager interface {
@@ -14,11 +12,12 @@ type connectionManager interface {
 	openBucket(bucketName string) error
 	buildConfig(cluster *Cluster) error
 	getKvProvider(bucketName string) (kvProvider, error)
-	getViewProvider() (viewProvider, error)
+	getKvCapabilitiesProvider(bucketName string) (kvCapabilityVerifier, error)
+	getViewProvider(bucketName string) (viewProvider, error)
 	getQueryProvider() (queryProvider, error)
 	getAnalyticsProvider() (analyticsProvider, error)
 	getSearchProvider() (searchProvider, error)
-	getHTTPProvider() (httpProvider, error)
+	getHTTPProvider(bucketName string) (httpProvider, error)
 	getDiagnosticsProvider(bucketName string) (diagnosticsProvider, error)
 	getWaitUntilReadyProvider(bucketName string) (waitUntilReadyProvider, error)
 	connection(bucketName string) (*gocbcore.Agent, error)
@@ -57,26 +56,38 @@ func (c *stdConnectionMgr) buildConfig(cluster *Cluster) error {
 				return nil
 			}
 
+			if cluster.securityConfig.TLSRootCAs == nil {
+				return &x509.CertPool{}
+			}
+
 			return cluster.securityConfig.TLSRootCAs
 		}
 	} else {
 		tlsRootCAProvider = cluster.internalConfig.TLSRootCAProvider
 	}
 
+	var authMechanisms []gocbcore.AuthMechanism
+	for _, mech := range cluster.securityConfig.AllowedSaslMechanisms {
+		authMechanisms = append(authMechanisms, gocbcore.AuthMechanism(mech))
+	}
+
 	config := &gocbcore.AgentGroupConfig{
 		AgentConfig: gocbcore.AgentConfig{
-			UserAgent:              Identifier(),
-			TLSRootCAProvider:      tlsRootCAProvider,
-			ConnectTimeout:         cluster.timeoutsConfig.ConnectTimeout,
-			UseMutationTokens:      cluster.useMutationTokens,
-			KVConnectTimeout:       7000 * time.Millisecond,
-			UseDurations:           cluster.useServerDurations,
-			UseCollections:         true,
-			UseZombieLogger:        cluster.orphanLoggerEnabled,
-			ZombieLoggerInterval:   cluster.orphanLoggerInterval,
-			ZombieLoggerSampleSize: int(cluster.orphanLoggerSampleSize),
-			NoRootTraceSpans:       true,
-			Tracer:                 &requestTracerWrapper{cluster.tracer},
+			UserAgent: Identifier(),
+			SecurityConfig: gocbcore.SecurityConfig{
+				TLSRootCAProvider: tlsRootCAProvider,
+				AuthMechanisms:    authMechanisms,
+			},
+			IoConfig: gocbcore.IoConfig{
+				UseCollections:         true,
+				UseDurations:           cluster.useServerDurations,
+				UseMutationTokens:      cluster.useMutationTokens,
+				UseOutOfOrderResponses: true,
+			},
+			KVConfig: gocbcore.KVConfig{
+				ConnectTimeout: cluster.timeoutsConfig.ConnectTimeout,
+			},
+			DefaultRetryStrategy: cluster.retryStrategyWrapper,
 			CircuitBreakerConfig: gocbcore.CircuitBreakerConfig{
 				Enabled:                  !breakerCfg.Disabled,
 				VolumeThreshold:          breakerCfg.VolumeThreshold,
@@ -86,7 +97,19 @@ func (c *stdConnectionMgr) buildConfig(cluster *Cluster) error {
 				CanaryTimeout:            breakerCfg.CanaryTimeout,
 				CompletionCallback:       completionCallback,
 			},
-			DefaultRetryStrategy: cluster.retryStrategyWrapper,
+			OrphanReporterConfig: gocbcore.OrphanReporterConfig{
+				Enabled:        cluster.orphanLoggerEnabled,
+				ReportInterval: cluster.orphanLoggerInterval,
+				SampleSize:     int(cluster.orphanLoggerSampleSize),
+			},
+			TracerConfig: gocbcore.TracerConfig{
+				NoRootTraceSpans: true,
+				Tracer:           &coreRequestTracerWrapper{tracer: cluster.tracer},
+			},
+			MeterConfig: gocbcore.MeterConfig{
+				// At the moment we only support our own operations metric so there's no point in setting a meter for gocbcore.
+				Meter: nil,
+			},
 		},
 	}
 
@@ -95,7 +118,7 @@ func (c *stdConnectionMgr) buildConfig(cluster *Cluster) error {
 		return err
 	}
 
-	config.Auth = &coreAuthWrapper{
+	config.SecurityConfig.Auth = &coreAuthWrapper{
 		auth: cluster.authenticator(),
 	}
 
@@ -134,12 +157,27 @@ func (c *stdConnectionMgr) getKvProvider(bucketName string) (kvProvider, error) 
 	return agent, nil
 }
 
-func (c *stdConnectionMgr) getViewProvider() (viewProvider, error) {
+func (c *stdConnectionMgr) getKvCapabilitiesProvider(bucketName string) (kvCapabilityVerifier, error) {
+	if c.agentgroup == nil {
+		return nil, errors.New("cluster not yet connected")
+	}
+	agent := c.agentgroup.GetAgent(bucketName)
+	if agent == nil {
+		return nil, errors.New("bucket not yet connected")
+	}
+	return agent.Internal(), nil
+}
+
+func (c *stdConnectionMgr) getViewProvider(bucketName string) (viewProvider, error) {
 	if c.agentgroup == nil {
 		return nil, errors.New("cluster not yet connected")
 	}
 
-	return &viewProviderWrapper{provider: c.agentgroup}, nil
+	agent := c.agentgroup.GetAgent(bucketName)
+	if agent == nil {
+		return nil, errors.New("bucket not yet connected")
+	}
+	return &viewProviderWrapper{provider: agent}, nil
 }
 
 func (c *stdConnectionMgr) getQueryProvider() (queryProvider, error) {
@@ -166,12 +204,21 @@ func (c *stdConnectionMgr) getSearchProvider() (searchProvider, error) {
 	return &searchProviderWrapper{provider: c.agentgroup}, nil
 }
 
-func (c *stdConnectionMgr) getHTTPProvider() (httpProvider, error) {
+func (c *stdConnectionMgr) getHTTPProvider(bucketName string) (httpProvider, error) {
 	if c.agentgroup == nil {
 		return nil, errors.New("cluster not yet connected")
 	}
 
-	return &httpProviderWrapper{provider: c.agentgroup}, nil
+	if bucketName == "" {
+		return &httpProviderWrapper{provider: c.agentgroup}, nil
+	}
+
+	agent := c.agentgroup.GetAgent(bucketName)
+	if agent == nil {
+		return nil, errors.New("bucket not yet connected")
+	}
+
+	return &httpProviderWrapper{provider: agent}, nil
 }
 
 func (c *stdConnectionMgr) getDiagnosticsProvider(bucketName string) (diagnosticsProvider, error) {

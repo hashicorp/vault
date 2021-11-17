@@ -1,10 +1,11 @@
 package gocb
 
 import (
+	"context"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
-	"github.com/couchbase/gocbcore/v9/memd"
+	gocbcore "github.com/couchbase/gocbcore/v10"
+	"github.com/couchbase/gocbcore/v10/memd"
 
 	"github.com/pkg/errors"
 )
@@ -17,7 +18,7 @@ type kvOpManager struct {
 	wasResolved   bool
 	mutationToken *MutationToken
 
-	span            requestSpan
+	span            RequestSpan
 	documentID      string
 	transcoder      Transcoder
 	timeout         time.Duration
@@ -29,16 +30,33 @@ type kvOpManager struct {
 	durabilityLevel DurabilityLevel
 	retryStrategy   *retryStrategyWrapper
 	cancelCh        chan struct{}
+	impersonate     string
+
+	operationName string
+	createdTime   time.Time
+	meter         *meterWrapper
+	preserveTTL   bool
+
+	ctx context.Context
 }
 
 func (m *kvOpManager) getTimeout() time.Duration {
 	if m.timeout > 0 {
+		if m.durabilityLevel > 0 && m.timeout < durabilityTimeoutFloor {
+			m.timeout = durabilityTimeoutFloor
+			logWarnf("Durable operation in use so timeout value coerced up to %s", m.timeout.String())
+		}
 		return m.timeout
 	}
 
 	defaultTimeout := m.parent.timeoutsConfig.KVTimeout
 	if m.durabilityLevel > DurabilityLevelMajority || m.persistTo > 0 {
 		defaultTimeout = m.parent.timeoutsConfig.KVDurableTimeout
+	}
+
+	if m.durabilityLevel > 0 && defaultTimeout < durabilityTimeoutFloor {
+		defaultTimeout = durabilityTimeoutFloor
+		logWarnf("Durable operation in user so timeout value coerced up to %s", defaultTimeout.String())
 	}
 
 	return defaultTimeout
@@ -72,8 +90,8 @@ func (m *kvOpManager) SetValue(val interface{}) {
 		return
 	}
 
-	espan := m.parent.startKvOpTrace("encode", m.span)
-	defer espan.Finish()
+	espan := m.parent.startKvOpTrace("request_encoding", m.span.Context(), true)
+	defer espan.End()
 
 	bytes, flags, err := m.transcoder.Encode(val)
 	if err != nil {
@@ -101,6 +119,15 @@ func (m *kvOpManager) SetDuraOptions(persistTo, replicateTo uint, level Durabili
 	m.persistTo = persistTo
 	m.replicateTo = replicateTo
 	m.durabilityLevel = level
+
+	if level > DurabilityLevelNone {
+		levelStr, err := level.toManagementAPI()
+		if err != nil {
+			logDebugf("Could not convert durability level to string: %v", err)
+			return
+		}
+		m.span.SetAttribute(spanAttribDBDurability, levelStr)
+	}
 }
 
 func (m *kvOpManager) SetRetryStrategy(retryStrategy RetryStrategy) {
@@ -111,11 +138,34 @@ func (m *kvOpManager) SetRetryStrategy(retryStrategy RetryStrategy) {
 	m.retryStrategy = wrapper
 }
 
-func (m *kvOpManager) Finish() {
-	m.span.Finish()
+func (m *kvOpManager) SetImpersonate(user string) {
+	m.impersonate = user
 }
 
-func (m *kvOpManager) TraceSpan() requestSpan {
+func (m *kvOpManager) SetContext(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	m.ctx = ctx
+}
+
+func (m *kvOpManager) SetPreserveExpiry(preserveTTL bool) {
+	m.preserveTTL = preserveTTL
+}
+
+func (m *kvOpManager) Finish(noMetrics bool) {
+	m.span.End()
+
+	if !noMetrics {
+		m.meter.ValueRecord(meterValueServiceKV, m.operationName, m.createdTime)
+	}
+}
+
+func (m *kvOpManager) TraceSpanContext() RequestSpanContext {
+	return m.span.Context()
+}
+
+func (m *kvOpManager) TraceSpan() RequestSpan {
 	return m.span
 }
 
@@ -152,8 +202,18 @@ func (m *kvOpManager) DurabilityLevel() memd.DurabilityLevel {
 }
 
 func (m *kvOpManager) DurabilityTimeout() time.Duration {
+	if m.durabilityLevel == 0 {
+		return 0
+	}
+
 	timeout := m.getTimeout()
-	duraTimeout := timeout * 10 / 9
+
+	duraTimeout := time.Duration(float64(timeout) * 0.9)
+
+	if duraTimeout < durabilityTimeoutFloor {
+		duraTimeout = durabilityTimeoutFloor
+	}
+
 	return duraTimeout
 }
 
@@ -168,6 +228,14 @@ func (m *kvOpManager) Deadline() time.Time {
 
 func (m *kvOpManager) RetryStrategy() *retryStrategyWrapper {
 	return m.retryStrategy
+}
+
+func (m *kvOpManager) Impersonate() string {
+	return m.impersonate
+}
+
+func (m *kvOpManager) PreserveExpiry() bool {
+	return m.preserveTTL
 }
 
 func (m *kvOpManager) CheckReadyForOp() error {
@@ -225,6 +293,9 @@ func (m *kvOpManager) Wait(op gocbcore.PendingOp, err error) error {
 	case <-m.cancelCh:
 		op.Cancel()
 		<-m.signal
+	case <-m.ctx.Done():
+		op.Cancel()
+		<-m.signal
 	}
 
 	if m.wasResolved && (m.persistTo > 0 || m.replicateTo > 0) {
@@ -233,6 +304,7 @@ func (m *kvOpManager) Wait(op gocbcore.PendingOp, err error) error {
 		}
 
 		return m.parent.waitForDurability(
+			m.ctx,
 			m.span,
 			m.documentID,
 			m.mutationToken.token,
@@ -240,19 +312,28 @@ func (m *kvOpManager) Wait(op gocbcore.PendingOp, err error) error {
 			m.persistTo,
 			m.Deadline(),
 			m.cancelCh,
+			m.impersonate,
 		)
 	}
 
 	return nil
 }
 
-func (c *Collection) newKvOpManager(opName string, tracectx requestSpanContext) *kvOpManager {
-	span := c.startKvOpTrace(opName, tracectx)
+func (c *Collection) newKvOpManager(opName string, parentSpan RequestSpan) *kvOpManager {
+	var tracectx RequestSpanContext
+	if parentSpan != nil {
+		tracectx = parentSpan.Context()
+	}
+
+	span := c.startKvOpTrace(opName, tracectx, false)
 
 	return &kvOpManager{
-		parent: c,
-		signal: make(chan struct{}, 1),
-		span:   span,
+		parent:        c,
+		signal:        make(chan struct{}, 1),
+		span:          span,
+		operationName: opName,
+		createdTime:   time.Now(),
+		meter:         c.meter,
 	}
 }
 
@@ -268,6 +349,11 @@ func durationToExpiry(dura time.Duration) uint32 {
 		return 1
 	}
 
-	// Translate into a uint32 in seconds.
-	return uint32(dura / time.Second)
+	if dura < 30*24*time.Hour {
+		// Translate into a uint32 in seconds.
+		return uint32(dura / time.Second)
+	}
+
+	// Send the duration as a unix timestamp of now plus duration.
+	return uint32(time.Now().Add(dura).Unix())
 }

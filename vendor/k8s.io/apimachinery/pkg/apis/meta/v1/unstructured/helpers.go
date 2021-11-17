@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // NestedFieldCopy returns a deep copy of the value of a nested field.
@@ -278,14 +278,6 @@ func getNestedString(obj map[string]interface{}, fields ...string) string {
 	val, found, err := NestedString(obj, fields...)
 	if !found || err != nil {
 		return ""
-	}
-	return val
-}
-
-func getNestedInt64(obj map[string]interface{}, fields ...string) int64 {
-	val, found, err := NestedInt64(obj, fields...)
-	if !found || err != nil {
-		return 0
 	}
 	return val
 }

@@ -15,7 +15,7 @@ var _ PlanExports = (*planExports)(nil)
 // PlanExports describes all the plan export related methods that the Terraform
 // Enterprise API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/plan-exports.html
+// TFE API docs: https://www.terraform.io/docs/cloud/api/plan-exports.html
 type PlanExports interface {
 	// Export a plan by its ID with the given options.
 	Create(ctx context.Context, options PlanExportCreateOptions) (*PlanExport, error)
@@ -58,11 +58,11 @@ const (
 
 // PlanExportStatusTimestamps holds the timestamps for plan export statuses.
 type PlanExportStatusTimestamps struct {
-	CanceledAt time.Time `json:"canceled-at"`
-	ErroredAt  time.Time `json:"errored-at"`
-	ExpiredAt  time.Time `json:"expired-at"`
-	FinishedAt time.Time `json:"finished-at"`
-	QueuedAt   time.Time `json:"queued-at"`
+	CanceledAt time.Time `jsonapi:"attr,canceled-at,rfc3339"`
+	ErroredAt  time.Time `jsonapi:"attr,errored-at,rfc3339"`
+	ExpiredAt  time.Time `jsonapi:"attr,expired-at,rfc3339"`
+	FinishedAt time.Time `jsonapi:"attr,finished-at,rfc3339"`
+	QueuedAt   time.Time `jsonapi:"attr,queued-at,rfc3339"`
 }
 
 // PlanExport represents an export of Terraform Enterprise plan data.
@@ -75,8 +75,11 @@ type PlanExport struct {
 
 // PlanExportCreateOptions represents the options for exporting data from a plan.
 type PlanExportCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,plan-exports"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,plan-exports"`
 
 	// The plan to export.
 	Plan *Plan `jsonapi:"relation,plan"`
@@ -99,9 +102,6 @@ func (s *planExports) Create(ctx context.Context, options PlanExportCreateOption
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	req, err := s.client.newRequest("POST", "plan-exports", &options)
 	if err != nil {

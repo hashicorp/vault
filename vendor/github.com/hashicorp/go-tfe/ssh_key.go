@@ -14,7 +14,7 @@ var _ SSHKeys = (*sshKeys)(nil)
 // Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/ssh-keys.html
+// https://www.terraform.io/docs/cloud/api/ssh-keys.html
 type SSHKeys interface {
 	// List all the SSH keys for a given organization
 	List(ctx context.Context, organization string, options SSHKeyListOptions) (*SSHKeyList, error)
@@ -57,7 +57,7 @@ type SSHKeyListOptions struct {
 // List all the SSH keys for a given organization
 func (s *sshKeys) List(ctx context.Context, organization string, options SSHKeyListOptions) (*SSHKeyList, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/ssh-keys", url.QueryEscape(organization))
@@ -77,8 +77,11 @@ func (s *sshKeys) List(ctx context.Context, organization string, options SSHKeyL
 
 // SSHKeyCreateOptions represents the options for creating an SSH key.
 type SSHKeyCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,ssh-keys"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,ssh-keys"`
 
 	// A name to identify the SSH key.
 	Name *string `jsonapi:"attr,name"`
@@ -89,7 +92,7 @@ type SSHKeyCreateOptions struct {
 
 func (o SSHKeyCreateOptions) valid() error {
 	if !validString(o.Name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 	if !validString(o.Value) {
 		return errors.New("value is required")
@@ -100,15 +103,12 @@ func (o SSHKeyCreateOptions) valid() error {
 // Create an SSH key and associate it with an organization.
 func (s *sshKeys) Create(ctx context.Context, organization string, options SSHKeyCreateOptions) (*SSHKey, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("organizations/%s/ssh-keys", url.QueryEscape(organization))
 	req, err := s.client.newRequest("POST", u, &options)

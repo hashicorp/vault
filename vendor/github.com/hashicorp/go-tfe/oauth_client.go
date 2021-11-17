@@ -88,7 +88,7 @@ type OAuthClientListOptions struct {
 // List all the OAuth clients for a given organization.
 func (s *oAuthClients) List(ctx context.Context, organization string, options OAuthClientListOptions) (*OAuthClientList, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/oauth-clients", url.QueryEscape(organization))
@@ -108,8 +108,11 @@ func (s *oAuthClients) List(ctx context.Context, organization string, options OA
 
 // OAuthClientCreateOptions represents the options for creating an OAuth client.
 type OAuthClientCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,oauth-clients"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,oauth-clients"`
 
 	// The base URL of your VCS provider's API.
 	APIURL *string `jsonapi:"attr,api-url"`
@@ -141,7 +144,7 @@ func (o OAuthClientCreateOptions) valid() error {
 		return errors.New("service provider is required")
 	}
 	if validString(o.PrivateKey) && *o.ServiceProvider != *ServiceProvider(ServiceProviderAzureDevOpsServer) {
-		return errors.New("Private Key can only be present with Azure DevOps Server service provider")
+		return errors.New("private Key can only be present with Azure DevOps Server service provider")
 	}
 	return nil
 }
@@ -149,14 +152,11 @@ func (o OAuthClientCreateOptions) valid() error {
 // Create an OAuth client to connect an organization and a VCS provider.
 func (s *oAuthClients) Create(ctx context.Context, organization string, options OAuthClientCreateOptions) (*OAuthClient, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("organizations/%s/oauth-clients", url.QueryEscape(organization))
 	req, err := s.client.newRequest("POST", u, &options)

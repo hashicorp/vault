@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	onlineArchiveBasePath = "groups/%s/clusters/%s/onlineArchives"
+	onlineArchiveBasePath = "api/atlas/v1.0/groups/%s/clusters/%s/onlineArchives"
 )
 
 // OnlineArchiveService provides access to the online archive related functions in the Atlas API.
@@ -35,7 +35,7 @@ type OnlineArchiveService interface {
 	Delete(context.Context, string, string, string) (*Response, error)
 }
 
-// OnlineArchiveServiceOp provides an implementation of the OnlineArchiveService interface
+// OnlineArchiveServiceOp provides an implementation of the OnlineArchiveService interface.
 type OnlineArchiveServiceOp service
 
 var _ OnlineArchiveService = &OnlineArchiveServiceOp{}
@@ -174,7 +174,7 @@ func (s *OnlineArchiveServiceOp) Delete(ctx context.Context, projectID, clusterN
 	return resp, err
 }
 
-// OnlineArchives is a collection of OnlineArchive
+// OnlineArchives is a collection of OnlineArchive.
 type OnlineArchives struct {
 	Links      []*Link          `json:"links,omitempty"`
 	Results    []*OnlineArchive `json:"results,omitempty"`
@@ -196,13 +196,14 @@ type OnlineArchive struct {
 
 // OnlineArchiveCriteria criteria to use for archiving data.
 type OnlineArchiveCriteria struct {
-	DateField       string  `json:"dateField,omitempty"`
-	DateFormat      string  `json:"dateFormat,omitempty"`
-	ExpireAfterDays float64 `json:"expireAfterDays"`
-	Type            string  `json:"type,omitempty"`
+	DateField       string   `json:"dateField,omitempty"` // DateField is mandatory when Type is DATE
+	DateFormat      string   `json:"dateFormat,omitempty"`
+	ExpireAfterDays *float64 `json:"expireAfterDays,omitempty"`
+	Query           string   `json:"query,omitempty"` // Query is mandatory when Type is CUSTOM
+	Type            string   `json:"type,omitempty"`
 }
 
-// PartitionFields fields to use to partition data
+// PartitionFields fields to use to partition data.
 type PartitionFields struct {
 	FieldName string   `json:"fieldName,omitempty"`
 	FieldType string   `json:"fieldType,omitempty"`

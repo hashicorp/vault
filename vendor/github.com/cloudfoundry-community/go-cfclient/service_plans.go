@@ -50,6 +50,7 @@ func (c *Client) ListServicePlansByQuery(query url.Values) ([]ServicePlan, error
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting service plans")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading service plans request:")

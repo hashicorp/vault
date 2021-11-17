@@ -35,6 +35,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var newGroupClientHook clientHook
+
 // GroupCallOptions contains the retry settings for each method of GroupClient.
 type GroupCallOptions struct {
 	ListGroups       []gax.CallOption
@@ -153,7 +155,17 @@ type GroupClient struct {
 // updated automatically as monitored resources are added and removed
 // from the infrastructure.
 func NewGroupClient(ctx context.Context, opts ...option.ClientOption) (*GroupClient, error) {
-	connPool, err := gtransport.DialPool(ctx, append(defaultGroupClientOptions(), opts...)...)
+	clientOpts := defaultGroupClientOptions()
+
+	if newGroupClientHook != nil {
+		hookOpts, err := newGroupClientHook(ctx, clientHookParams{})
+		if err != nil {
+			return nil, err
+		}
+		clientOpts = append(clientOpts, hookOpts...)
+	}
+
+	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
 	if err != nil {
 		return nil, err
 	}

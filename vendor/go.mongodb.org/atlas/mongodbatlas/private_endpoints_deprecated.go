@@ -22,6 +22,7 @@ import (
 
 // PrivateEndpointsServiceDeprecated is an interface for interfacing with the Private Endpoints
 // of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint/
 type PrivateEndpointsServiceDeprecated interface {
 	Create(context.Context, string, *PrivateEndpointConnectionDeprecated) (*PrivateEndpointConnectionDeprecated, *Response, error)
@@ -34,7 +35,7 @@ type PrivateEndpointsServiceDeprecated interface {
 }
 
 // PrivateEndpointsServiceOpDeprecated handles communication with the PrivateEndpoints related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type PrivateEndpointsServiceOpDeprecated service
 
 var _ PrivateEndpointsServiceDeprecated = &PrivateEndpointsServiceOpDeprecated{}
@@ -59,6 +60,7 @@ type InterfaceEndpointConnectionDeprecated struct {
 }
 
 // Create one private endpoint connection in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-create-one-private-endpoint-connection/
 func (s *PrivateEndpointsServiceOpDeprecated) Create(ctx context.Context, groupID string, createRequest *PrivateEndpointConnectionDeprecated) (*PrivateEndpointConnectionDeprecated, *Response, error) {
 	if groupID == "" {
@@ -85,6 +87,7 @@ func (s *PrivateEndpointsServiceOpDeprecated) Create(ctx context.Context, groupI
 }
 
 // Get retrieves details for one private endpoint connection by ID in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-get-one-private-endpoint-connection/
 func (s *PrivateEndpointsServiceOpDeprecated) Get(ctx context.Context, groupID, privateLinkID string) (*PrivateEndpointConnectionDeprecated, *Response, error) {
 	if groupID == "" {
@@ -112,6 +115,7 @@ func (s *PrivateEndpointsServiceOpDeprecated) Get(ctx context.Context, groupID, 
 }
 
 // List retrieves details for all private endpoint connections in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-get-all-private-endpoint-connections/
 func (s *PrivateEndpointsServiceOpDeprecated) List(ctx context.Context, groupID string, listOptions *ListOptions) ([]PrivateEndpointConnectionDeprecated, *Response, error) {
 	if groupID == "" {
@@ -141,6 +145,7 @@ func (s *PrivateEndpointsServiceOpDeprecated) List(ctx context.Context, groupID 
 }
 
 // Delete removes one private endpoint connection in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-delete-one-private-endpoint-connection/
 func (s *PrivateEndpointsServiceOpDeprecated) Delete(ctx context.Context, groupID, privateLinkID string) (*Response, error) {
 	if groupID == "" {
@@ -162,6 +167,7 @@ func (s *PrivateEndpointsServiceOpDeprecated) Delete(ctx context.Context, groupI
 }
 
 // AddOneInterfaceEndpoint adds one interface endpoint to a private endpoint connection in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-create-one-interface-endpoint/
 func (s *PrivateEndpointsServiceOpDeprecated) AddOneInterfaceEndpoint(ctx context.Context, groupID, privateLinkID, interfaceEndpointID string) (*InterfaceEndpointConnectionDeprecated, *Response, error) {
 	if groupID == "" {
@@ -192,6 +198,7 @@ func (s *PrivateEndpointsServiceOpDeprecated) AddOneInterfaceEndpoint(ctx contex
 }
 
 // GetOneInterfaceEndpoint retrieves one interface endpoint in a private endpoint connection in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-get-one-interface-endpoint/
 func (s *PrivateEndpointsServiceOpDeprecated) GetOneInterfaceEndpoint(ctx context.Context, groupID, privateLinkID, interfaceEndpointID string) (*InterfaceEndpointConnectionDeprecated, *Response, error) {
 	if groupID == "" {
@@ -222,6 +229,7 @@ func (s *PrivateEndpointsServiceOpDeprecated) GetOneInterfaceEndpoint(ctx contex
 }
 
 // DeleteOneInterfaceEndpoint removes one interface endpoint from a private endpoint connection in an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint-delete-one-interface-endpoint/
 func (s *PrivateEndpointsServiceOpDeprecated) DeleteOneInterfaceEndpoint(ctx context.Context, groupID, privateLinkID, interfaceEndpointID string) (*Response, error) {
 	if groupID == "" {

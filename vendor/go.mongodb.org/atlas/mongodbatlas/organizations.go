@@ -20,27 +20,31 @@ import (
 	"net/http"
 )
 
-const (
-	orgsBasePath = "orgs"
-)
+const orgsBasePath = "api/atlas/v1.0/orgs"
 
 // OrganizationsService provides access to the organization related functions in the Atlas API.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/organizations/
 type OrganizationsService interface {
 	List(context.Context, *OrganizationsListOptions) (*Organizations, *Response, error)
+	Invitations(context.Context, string, *InvitationOptions) ([]*Invitation, *Response, error)
 	Get(context.Context, string) (*Organization, *Response, error)
+	Invitation(context.Context, string, string) (*Invitation, *Response, error)
 	Projects(context.Context, string, *ListOptions) (*Projects, *Response, error)
 	Users(context.Context, string, *ListOptions) (*AtlasUsersResponse, *Response, error)
 	Delete(context.Context, string) (*Response, error)
+	InviteUser(context.Context, string, *Invitation) (*Invitation, *Response, error)
+	UpdateInvitation(context.Context, string, *Invitation) (*Invitation, *Response, error)
+	UpdateInvitationByID(context.Context, string, string, *Invitation) (*Invitation, *Response, error)
+	DeleteInvitation(context.Context, string, string) (*Response, error)
 }
 
-// OrganizationsServiceOp provides an implementation of the OrganizationsService interface
+// OrganizationsServiceOp provides an implementation of the OrganizationsService interface.
 type OrganizationsServiceOp service
 
 var _ OrganizationsService = &OrganizationsServiceOp{}
 
-// OrganizationsListOptions filtering options for organizations
+// OrganizationsListOptions filtering options for organizations.
 type OrganizationsListOptions struct {
 	Name               string `url:"name,omitempty"`
 	IncludeDeletedOrgs *bool  `url:"includeDeletedOrgs,omitempty"`
@@ -55,7 +59,7 @@ type Organization struct {
 	Name      string  `json:"name,omitempty"`
 }
 
-// Organizations represents an array of organization
+// Organizations represents an array of organization.
 type Organizations struct {
 	Links      []*Link         `json:"links"`
 	Results    []*Organization `json:"results"`

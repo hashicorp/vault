@@ -1,12 +1,16 @@
 package gocb
 
 import (
-	gocbcore "github.com/couchbase/gocbcore/v9"
-	"github.com/couchbase/gocbcore/v9/memd"
+	"fmt"
+	gocbcore "github.com/couchbase/gocbcore/v10"
+	"github.com/couchbase/gocbcore/v10/memd"
+	"time"
 )
 
 const (
-	goCbVersionStr = "v2.1.4"
+	goCbVersionStr = "v2.3.3"
+
+	durabilityTimeoutFloor = 1500 * time.Millisecond
 )
 
 // QueryIndexType provides information on the type of indexer used for an index.
@@ -76,6 +80,9 @@ const (
 
 	// ServiceTypeAnalytics represents an analytics service.
 	ServiceTypeAnalytics ServiceType = ServiceType(gocbcore.CbasService)
+
+	// ServiceTypeEventing represents an eventing service.
+	ServiceTypeEventing ServiceType = ServiceType(gocbcore.EventingService)
 )
 
 // QueryProfileMode specifies the profiling mode to use during a query.
@@ -124,15 +131,23 @@ const (
 	SubdocDocFlagAddDoc SubdocDocFlag = SubdocDocFlag(memd.SubdocDocFlagAddDoc)
 
 	// SubdocDocFlagAccessDeleted indicates that you wish to receive soft-deleted documents.
+	// Internal: This should never be used and is not supported.
 	SubdocDocFlagAccessDeleted SubdocDocFlag = SubdocDocFlag(memd.SubdocDocFlagAccessDeleted)
+
+	// SubdocDocFlagCreateAsDeleted indicates that you wish to create a document in deleted state.
+	// Internal: This should never be used and is not supported.
+	SubdocDocFlagCreateAsDeleted SubdocDocFlag = SubdocDocFlag(memd.SubdocDocFlagCreateAsDeleted)
 )
 
 // DurabilityLevel specifies the level of synchronous replication to use.
 type DurabilityLevel uint8
 
 const (
+	// DurabilityLevelNone specifies that no durability level should be applied.
+	DurabilityLevelNone DurabilityLevel = iota
+
 	// DurabilityLevelMajority specifies that a mutation must be replicated (held in memory) to a majority of nodes.
-	DurabilityLevelMajority DurabilityLevel = iota + 1
+	DurabilityLevelMajority
 
 	// DurabilityLevelMajorityAndPersistOnMaster specifies that a mutation must be replicated (held in memory) to a
 	// majority of nodes and also persisted (written to disk) on the active node.
@@ -142,6 +157,36 @@ const (
 	// of nodes.
 	DurabilityLevelPersistToMajority
 )
+
+func (dl DurabilityLevel) toManagementAPI() (string, error) {
+	switch dl {
+	case DurabilityLevelNone:
+		return "none", nil
+	case DurabilityLevelMajority:
+		return "majority", nil
+	case DurabilityLevelMajorityAndPersistOnMaster:
+		return "majorityAndPersistActive", nil
+	case DurabilityLevelPersistToMajority:
+		return "persistToMajority", nil
+	default:
+		return "", invalidArgumentsError{
+			message: fmt.Sprintf("unknown durability level: %d", dl),
+		}
+	}
+}
+
+func durabilityLevelFromManagementAPI(level string) DurabilityLevel {
+	switch level {
+	case "majority":
+		return DurabilityLevelMajority
+	case "majorityAndPersistActive":
+		return DurabilityLevelMajorityAndPersistOnMaster
+	case "persistToMajority":
+		return DurabilityLevelPersistToMajority
+	default:
+		return DurabilityLevelNone
+	}
+}
 
 // MutationMacro can be supplied to MutateIn operations to perform ExpandMacros operations.
 type MutationMacro string
@@ -201,3 +246,112 @@ const (
 	// PingStateError indicates that the ping operation failed.
 	PingStateError
 )
+
+// SaslMechanism represents a type of auth that can be performed.
+type SaslMechanism string
+
+const (
+	// PlainSaslMechanism represents that PLAIN auth should be performed.
+	PlainSaslMechanism SaslMechanism = SaslMechanism(gocbcore.PlainAuthMechanism)
+
+	// ScramSha1SaslMechanism represents that SCRAM SHA1 auth should be performed.
+	ScramSha1SaslMechanism SaslMechanism = SaslMechanism(gocbcore.ScramSha1AuthMechanism)
+
+	// ScramSha256SaslMechanism represents that SCRAM SHA256 auth should be performed.
+	ScramSha256SaslMechanism SaslMechanism = SaslMechanism(gocbcore.ScramSha256AuthMechanism)
+
+	// ScramSha512SaslMechanism represents that SCRAM SHA512 auth should be performed.
+	ScramSha512SaslMechanism SaslMechanism = SaslMechanism(gocbcore.ScramSha512AuthMechanism)
+)
+
+// Capability represents a server capability.
+// Internal: This should never be used and is not supported.
+type Capability uint32
+
+const (
+	CapabilityDurableWrites Capability = iota + 1
+	CapabilityCreateAsDeleted
+	CapabilityReplaceBodyWithXattr
+)
+
+// CapabilityStatus represents a status for a server capability.
+// Internal: This should never be used and is not supported.
+type CapabilityStatus uint32
+
+const (
+	CapabilityStatusUnknown     CapabilityStatus = CapabilityStatus(gocbcore.BucketCapabilityStatusUnknown)
+	CapabilityStatusSupported   CapabilityStatus = CapabilityStatus(gocbcore.BucketCapabilityStatusSupported)
+	CapabilityStatusUnsupported CapabilityStatus = CapabilityStatus(gocbcore.BucketCapabilityStatusUnsupported)
+)
+
+const (
+	spanNameDispatchToServer      = "dispatch_to_server"
+	spanNameRequestEncoding       = "request_encoding"
+	spanAttribDBSystemKey         = "db.system"
+	spanAttribDBSystemValue       = "couchbase"
+	spanAttribOperationIDKey      = "db.couchbase.operation_id"
+	spanAttribOperationKey        = "db.operation"
+	spanAttribLocalIDKey          = "db.couchbase.local_id"
+	spanAttribNetHostNameKey      = "net.host.name"
+	spanAttribNetHostPortKey      = "net.host.port"
+	spanAttribNetPeerNameKey      = "net.peer.name"
+	spanAttribNetPeerPortKey      = "net.peer.port"
+	spanAttribServerDurationKey   = "db.couchbase.server_duration"
+	spanAttribServiceKey          = "db.couchbase.service"
+	spanAttribDBNameKey           = "db.name"
+	spanAttribDBCollectionNameKey = "db.couchbase.collection"
+	spanAttribDBScopeNameKey      = "db.couchbase.scope"
+	spanAttribDBDurability        = "db.couchbase.durability"
+
+	meterNameCBOperations       = "db.couchbase.operations"
+	meterAttribServiceKey       = "db.couchbase.service"
+	meterAttribOperationKey     = "db.operation"
+	meterValueServiceKV         = "kv"
+	meterValueServiceQuery      = "query"
+	meterValueServiceAnalytics  = "analytics"
+	meterValueServiceSearch     = "search"
+	meterValueServiceViews      = "views"
+	meterValueServiceManagement = "management"
+)
+
+type AnalyticsLinkType string
+
+const (
+	AnalyticsLinkTypeS3External      AnalyticsLinkType = "s3"
+	AnalyticsLinkTypeAzureExternal   AnalyticsLinkType = "azureblob"
+	AnalyticsLinkTypeCouchbaseRemote AnalyticsLinkType = "couchbase"
+)
+
+type AnalyticsEncryptionLevel uint8
+
+const (
+	AnalyticsEncryptionLevelNone AnalyticsEncryptionLevel = iota
+	AnalyticsEncryptionLevelHalf
+	AnalyticsEncryptionLevelFull
+)
+
+func (ael AnalyticsEncryptionLevel) String() string {
+	switch ael {
+	case AnalyticsEncryptionLevelNone:
+		return "none"
+	case AnalyticsEncryptionLevelHalf:
+		return "half"
+	case AnalyticsEncryptionLevelFull:
+		return "full"
+	}
+
+	return ""
+}
+
+func analyticsEncryptionLevelFromString(level string) AnalyticsEncryptionLevel {
+	switch level {
+	case "none":
+		return AnalyticsEncryptionLevelNone
+	case "half":
+		return AnalyticsEncryptionLevelHalf
+	case "full":
+		return AnalyticsEncryptionLevelFull
+	}
+
+	return AnalyticsEncryptionLevelNone
+}

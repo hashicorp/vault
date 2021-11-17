@@ -3,7 +3,6 @@ package mssql
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -13,8 +12,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"github.com/denisenkom/go-mssqldb/msdsn"
 )
 
 func parseInstances(msg []byte) map[string]map[string]string {
@@ -82,19 +84,20 @@ const (
 // https://msdn.microsoft.com/en-us/library/dd304214.aspx
 const (
 	packSQLBatch   packetType = 1
-	packRPCRequest            = 3
-	packReply                 = 4
+	packRPCRequest packetType = 3
+	packReply      packetType = 4
 
 	// 2.2.1.7 Attention: https://msdn.microsoft.com/en-us/library/dd341449.aspx
 	// 4.19.2 Out-of-Band Attention Signal: https://msdn.microsoft.com/en-us/library/dd305167.aspx
-	packAttention = 6
+	packAttention packetType = 6
 
-	packBulkLoadBCP = 7
-	packTransMgrReq = 14
-	packNormal      = 15
-	packLogin7      = 16
-	packSSPIMessage = 17
-	packPrelogin    = 18
+	packBulkLoadBCP  packetType = 7
+	packFedAuthToken packetType = 8
+	packTransMgrReq  packetType = 14
+	packNormal       packetType = 15
+	packLogin7       packetType = 16
+	packSSPIMessage  packetType = 17
+	packPrelogin     packetType = 18
 )
 
 // prelogin fields
@@ -118,6 +121,17 @@ const (
 	encryptReq    = 3 // Encryption is required.
 )
 
+const (
+	featExtSESSIONRECOVERY    byte = 0x01
+	featExtFEDAUTH            byte = 0x02
+	featExtCOLUMNENCRYPTION   byte = 0x04
+	featExtGLOBALTRANSACTIONS byte = 0x05
+	featExtAZURESQLSUPPORT    byte = 0x08
+	featExtDATACLASSIFICATION byte = 0x09
+	featExtUTF8SUPPORT        byte = 0x0A
+	featExtTERMINATOR         byte = 0xFF
+)
+
 type tdsSession struct {
 	buf          *tdsBuffer
 	loginAck     loginAckStruct
@@ -126,19 +140,17 @@ type tdsSession struct {
 	columns      []columnStruct
 	tranid       uint64
 	logFlags     uint64
-	log          optionalLogger
+	logger       ContextLogger
 	routedServer string
 	routedPort   uint16
 }
 
 const (
-	logErrors      = 1
-	logMessages    = 2
-	logRows        = 4
-	logSQL         = 8
-	logParams      = 16
-	logTransaction = 32
-	logDebug       = 64
+	// Default packet size for a TDS buffer.
+	defaultPacketSize = 4096
+
+	// Default port if no port given.
+	defaultServerPort = 1433
 )
 
 type columnStruct struct {
@@ -155,13 +167,13 @@ func (p keySlice) Less(i, j int) bool { return p[i] < p[j] }
 func (p keySlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 // http://msdn.microsoft.com/en-us/library/dd357559.aspx
-func writePrelogin(w *tdsBuffer, fields map[uint8][]byte) error {
+func writePrelogin(packetType packetType, w *tdsBuffer, fields map[uint8][]byte) error {
 	var err error
 
-	w.BeginPacket(packPrelogin, false)
+	w.BeginPacket(packetType, false)
 	offset := uint16(5*len(fields) + 1)
 	keys := make(keySlice, 0, len(fields))
-	for k, _ := range fields {
+	for k := range fields {
 		keys = append(keys, k)
 	}
 	sort.Sort(keys)
@@ -210,12 +222,15 @@ func readPrelogin(r *tdsBuffer) (map[uint8][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if packet_type != 4 {
-		return nil, errors.New("Invalid respones, expected packet type 4, PRELOGIN RESPONSE")
+	if packet_type != packReply {
+		return nil, errors.New("invalid respones, expected packet type 4, PRELOGIN RESPONSE")
+	}
+	if len(struct_buf) == 0 {
+		return nil, errors.New("invalid empty PRELOGIN response, it must contain at least one byte")
 	}
 	offset := 0
 	results := map[uint8][]byte{}
-	for true {
+	for {
 		rec_type := struct_buf[offset]
 		if rec_type == preloginTERMINATOR {
 			break
@@ -240,17 +255,21 @@ const (
 	fIntSecurity   = 0x80
 )
 
+// OptionFlags3
+// http://msdn.microsoft.com/en-us/library/dd304019.aspx
+const (
+	fChangePassword           = 1
+	fSendYukonBinaryXML       = 2
+	fUserInstance             = 4
+	fUnknownCollationHandling = 8
+	fExtension                = 0x10
+)
+
 // TypeFlags
 const (
 	// 4 bits for fSQLType
 	// 1 bit for fOLEDB
 	fReadOnlyIntent = 32
-)
-
-// OptionFlags3
-// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/773a62b6-ee89-4c02-9e5e-344882630aac
-const (
-	fExtension = 0x10
 )
 
 type login struct {
@@ -295,7 +314,7 @@ func (e *featureExts) Add(f featureExt) error {
 	}
 	id := f.featureID()
 	if _, exists := e.features[id]; exists {
-		f := "Login error: Feature with ID '%v' is already present in FeatureExt block."
+		f := "login error: Feature with ID '%v' is already present in FeatureExt block"
 		return fmt.Errorf(f, id)
 	}
 	if e.features == nil {
@@ -326,37 +345,63 @@ func (e featureExts) toBytes() []byte {
 	return d
 }
 
-type featureExtFedAuthSTS struct {
-	FedAuthEcho  bool
+// featureExtFedAuth tracks federated authentication state before and during login
+type featureExtFedAuth struct {
+	// FedAuthLibrary is populated by the federated authentication provider.
+	FedAuthLibrary int
+
+	// ADALWorkflow is populated by the federated authentication provider.
+	ADALWorkflow byte
+
+	// FedAuthEcho is populated from the prelogin response
+	FedAuthEcho bool
+
+	// FedAuthToken is populated during login with the value from the provider.
 	FedAuthToken string
-	Nonce        []byte
+
+	// Nonce is populated during login with the value from the provider.
+	Nonce []byte
+
+	// Signature is populated during login with the value from the server.
+	Signature []byte
 }
 
-func (e *featureExtFedAuthSTS) featureID() byte {
-	return 0x02
+func (e *featureExtFedAuth) featureID() byte {
+	return featExtFEDAUTH
 }
 
-func (e *featureExtFedAuthSTS) toBytes() []byte {
+func (e *featureExtFedAuth) toBytes() []byte {
 	if e == nil {
 		return nil
 	}
 
-	options := byte(0x01) << 1 // 0x01 => STS bFedAuthLibrary 7BIT
+	options := byte(e.FedAuthLibrary) << 1
 	if e.FedAuthEcho {
 		options |= 1 // fFedAuthEcho
 	}
 
-	d := make([]byte, 5)
-	d[0] = options
+	// Feature extension format depends on the federated auth library.
+	// Options are described at
+	// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/773a62b6-ee89-4c02-9e5e-344882630aac
+	var d []byte
 
-	// looks like string in
-	// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/f88b63bb-b479-49e1-a87b-deda521da508
-	tokenBytes := str2ucs2(e.FedAuthToken)
-	binary.LittleEndian.PutUint32(d[1:], uint32(len(tokenBytes))) // Should be a signed int32, but since the length is relatively small, this should work
-	d = append(d, tokenBytes...)
+	switch e.FedAuthLibrary {
+	case fedAuthLibrarySecurityToken:
+		d = make([]byte, 5)
+		d[0] = options
 
-	if len(e.Nonce) == 32 {
-		d = append(d, e.Nonce...)
+		// looks like string in
+		// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/f88b63bb-b479-49e1-a87b-deda521da508
+		tokenBytes := str2ucs2(e.FedAuthToken)
+		binary.LittleEndian.PutUint32(d[1:], uint32(len(tokenBytes))) // Should be a signed int32, but since the length is relatively small, this should work
+		d = append(d, tokenBytes...)
+
+		if len(e.Nonce) == 32 {
+			d = append(d, e.Nonce...)
+		}
+
+	case fedAuthLibraryADAL:
+		d = []byte{options, e.ADALWorkflow}
 	}
 
 	return d
@@ -418,7 +463,7 @@ func str2ucs2(s string) []byte {
 
 func ucs22str(s []byte) (string, error) {
 	if len(s)%2 != 0 {
-		return "", fmt.Errorf("Illegal UCS2 string length: %d", len(s))
+		return "", fmt.Errorf("illegal UCS2 string length: %d", len(s))
 	}
 	buf := make([]uint16, len(s)/2)
 	for i := 0; i < len(s); i += 2 {
@@ -436,7 +481,7 @@ func manglePassword(password string) []byte {
 }
 
 // http://msdn.microsoft.com/en-us/library/dd304019.aspx
-func sendLogin(w *tdsBuffer, login login) error {
+func sendLogin(w *tdsBuffer, login *login) error {
 	w.BeginPacket(packLogin7, false)
 	hostname := str2ucs2(login.HostName)
 	username := str2ucs2(login.UserName)
@@ -569,6 +614,36 @@ func sendLogin(w *tdsBuffer, login login) error {
 			return err
 		}
 	}
+	return w.FinishPacket()
+}
+
+// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-tds/827d9632-2957-4d54-b9ea-384530ae79d0
+func sendFedAuthInfo(w *tdsBuffer, fedAuth *featureExtFedAuth) (err error) {
+	fedauthtoken := str2ucs2(fedAuth.FedAuthToken)
+	tokenlen := len(fedauthtoken)
+	datalen := 4 + tokenlen + len(fedAuth.Nonce)
+
+	w.BeginPacket(packFedAuthToken, false)
+	err = binary.Write(w, binary.LittleEndian, uint32(datalen))
+	if err != nil {
+		return
+	}
+
+	err = binary.Write(w, binary.LittleEndian, uint32(tokenlen))
+	if err != nil {
+		return
+	}
+
+	_, err = w.Write(fedauthtoken)
+	if err != nil {
+		return
+	}
+
+	_, err = w.Write(fedAuth.Nonce)
+	if err != nil {
+		return
+	}
+
 	return w.FinishPacket()
 }
 
@@ -768,26 +843,27 @@ type auth interface {
 // SQL Server AlwaysOn Availability Group Listeners are bound by DNS to a
 // list of IP addresses.  So if there is more than one, try them all and
 // use the first one that allows a connection.
-func dialConnection(ctx context.Context, c *Connector, p connectParams) (conn net.Conn, err error) {
+func dialConnection(ctx context.Context, c *Connector, p msdsn.Config) (conn net.Conn, err error) {
 	var ips []net.IP
-	ips, err = net.LookupIP(p.host)
-	if err != nil {
-		ip := net.ParseIP(p.host)
-		if ip == nil {
-			return nil, err
+	ip := net.ParseIP(p.Host)
+	if ip == nil {
+		ips, err = net.LookupIP(p.Host)
+		if err != nil {
+			return
 		}
+	} else {
 		ips = []net.IP{ip}
 	}
 	if len(ips) == 1 {
 		d := c.getDialer(&p)
-		addr := net.JoinHostPort(ips[0].String(), strconv.Itoa(int(resolveServerPort(p.port))))
+		addr := net.JoinHostPort(ips[0].String(), strconv.Itoa(int(resolveServerPort(p.Port))))
 		conn, err = d.DialContext(ctx, "tcp", addr)
 
 	} else {
 		//Try Dials in parallel to avoid waiting for timeouts.
 		connChan := make(chan net.Conn, len(ips))
 		errChan := make(chan error, len(ips))
-		portStr := strconv.Itoa(int(resolveServerPort(p.port)))
+		portStr := strconv.Itoa(int(resolveServerPort(p.Port)))
 		for _, ip := range ips {
 			go func(ip net.IP) {
 				d := c.getDialer(&p)
@@ -802,7 +878,7 @@ func dialConnection(ctx context.Context, c *Connector, p connectParams) (conn ne
 		}
 		// Wait for either the *first* successful connection, or all the errors
 	wait_loop:
-		for i, _ := range ips {
+		for i := range ips {
 			select {
 			case conn = <-connChan:
 				// Got a connection to use, close any others
@@ -824,66 +900,28 @@ func dialConnection(ctx context.Context, c *Connector, p connectParams) (conn ne
 	}
 	// Can't do the usual err != nil check, as it is possible to have gotten an error before a successful connection
 	if conn == nil {
-		f := "Unable to open tcp connection with host '%v:%v': %v"
-		return nil, fmt.Errorf(f, p.host, resolveServerPort(p.port), err.Error())
+		f := "unable to open tcp connection with host '%v:%v': %v"
+		return nil, fmt.Errorf(f, p.Host, resolveServerPort(p.Port), err.Error())
 	}
 	return conn, err
 }
 
-func connect(ctx context.Context, c *Connector, log optionalLogger, p connectParams) (res *tdsSession, err error) {
-	dialCtx := ctx
-	if p.dial_timeout > 0 {
-		var cancel func()
-		dialCtx, cancel = context.WithTimeout(ctx, p.dial_timeout)
-		defer cancel()
-	}
-	// if instance is specified use instance resolution service
-	if p.instance != "" && p.port == 0 {
-		p.instance = strings.ToUpper(p.instance)
-		d := c.getDialer(&p)
-		instances, err := getInstances(dialCtx, d, p.host)
-		if err != nil {
-			f := "Unable to get instances from Sql Server Browser on host %v: %v"
-			return nil, fmt.Errorf(f, p.host, err.Error())
-		}
-		strport, ok := instances[p.instance]["tcp"]
-		if !ok {
-			f := "No instance matching '%v' returned from host '%v'"
-			return nil, fmt.Errorf(f, p.instance, p.host)
-		}
-		port, err := strconv.ParseUint(strport, 0, 16)
-		if err != nil {
-			f := "Invalid tcp port returned from Sql Server Browser '%v': %v"
-			return nil, fmt.Errorf(f, strport, err.Error())
-		}
-		p.port = port
-	}
-
-initiate_connection:
-	conn, err := dialConnection(dialCtx, c, p)
-	if err != nil {
-		return nil, err
-	}
-
-	toconn := newTimeoutConn(conn, p.conn_timeout)
-
-	outbuf := newTdsBuffer(p.packetSize, toconn)
-	sess := tdsSession{
-		buf:      outbuf,
-		log:      log,
-		logFlags: p.logFlags,
-	}
-
-	instance_buf := []byte(p.instance)
+func preparePreloginFields(p msdsn.Config, fe *featureExtFedAuth) map[uint8][]byte {
+	instance_buf := []byte(p.Instance)
 	instance_buf = append(instance_buf, 0) // zero terminate instance name
+
 	var encrypt byte
-	if p.disableEncryption {
+	switch p.Encryption {
+	default:
+		panic(fmt.Errorf("Unsupported Encryption Config %v", p.Encryption))
+	case msdsn.EncryptionDisabled:
 		encrypt = encryptNotSup
-	} else if p.encrypt {
+	case msdsn.EncryptionRequired:
 		encrypt = encryptOn
-	} else {
+	case msdsn.EncryptionOff:
 		encrypt = encryptOff
 	}
+
 	fields := map[uint8][]byte{
 		preloginVERSION:    {0, 0, 0, 0, 0, 0},
 		preloginENCRYPTION: {encrypt},
@@ -892,7 +930,182 @@ initiate_connection:
 		preloginMARS:       {0}, // MARS disabled
 	}
 
-	err = writePrelogin(outbuf, fields)
+	if fe.FedAuthLibrary != fedAuthLibraryReserved {
+		fields[preloginFEDAUTHREQUIRED] = []byte{1}
+	}
+
+	return fields
+}
+
+func interpretPreloginResponse(p msdsn.Config, fe *featureExtFedAuth, fields map[uint8][]byte) (encrypt byte, err error) {
+	// If the server returns the preloginFEDAUTHREQUIRED field, then federated authentication
+	// is supported. The actual value may be 0 or 1, where 0 means either SSPI or federated
+	// authentication is allowed, while 1 means only federated authentication is allowed.
+	if fedAuthSupport, ok := fields[preloginFEDAUTHREQUIRED]; ok {
+		if len(fedAuthSupport) != 1 {
+			return 0, fmt.Errorf("federated authentication flag length should be 1: is %d", len(fedAuthSupport))
+		}
+
+		// We need to be able to echo the value back to the server
+		fe.FedAuthEcho = fedAuthSupport[0] != 0
+	} else if fe.FedAuthLibrary != fedAuthLibraryReserved {
+		return 0, fmt.Errorf("federated authentication is not supported by the server")
+	}
+
+	encryptBytes, ok := fields[preloginENCRYPTION]
+	if !ok {
+		return 0, fmt.Errorf("encrypt negotiation failed")
+	}
+	encrypt = encryptBytes[0]
+	if p.Encryption == msdsn.EncryptionRequired && (encrypt == encryptNotSup || encrypt == encryptOff) {
+		return 0, fmt.Errorf("server does not support encryption")
+	}
+
+	return
+}
+
+func prepareLogin(ctx context.Context, c *Connector, p msdsn.Config, logger ContextLogger, auth auth, fe *featureExtFedAuth, packetSize uint32) (l *login, err error) {
+	var typeFlags uint8
+	if p.ReadOnlyIntent {
+		typeFlags |= fReadOnlyIntent
+	}
+	l = &login{
+		TDSVersion:   verTDS74,
+		PacketSize:   packetSize,
+		Database:     p.Database,
+		OptionFlags2: fODBC, // to get unlimited TEXTSIZE
+		HostName:     p.Workstation,
+		ServerName:   p.Host,
+		AppName:      p.AppName,
+		TypeFlags:    typeFlags,
+	}
+	switch {
+	case fe.FedAuthLibrary == fedAuthLibrarySecurityToken:
+		if uint64(p.LogFlags)&logDebug != 0 {
+			logger.Log(ctx, msdsn.LogDebug, "Starting federated authentication using security token")
+		}
+
+		fe.FedAuthToken, err = c.securityTokenProvider(ctx)
+		if err != nil {
+			if uint64(p.LogFlags)&logDebug != 0 {
+				logger.Log(ctx, msdsn.LogDebug, fmt.Sprintf("Failed to retrieve service principal token for federated authentication security token library: %v", err))
+			}
+			return nil, err
+		}
+
+		l.FeatureExt.Add(fe)
+
+	case fe.FedAuthLibrary == fedAuthLibraryADAL:
+		if uint64(p.LogFlags)&logDebug != 0 {
+			logger.Log(ctx, msdsn.LogDebug, "Starting federated authentication using ADAL")
+		}
+
+		l.FeatureExt.Add(fe)
+
+	case auth != nil:
+		if uint64(p.LogFlags)&logDebug != 0 {
+			logger.Log(ctx, msdsn.LogDebug, "Starting SSPI login")
+		}
+
+		l.SSPI, err = auth.InitialBytes()
+		if err != nil {
+			return nil, err
+		}
+
+		l.OptionFlags2 |= fIntSecurity
+		return l, nil
+
+	default:
+		// Default to SQL server authentication with user and password
+		l.UserName = p.User
+		l.Password = p.Password
+	}
+
+	return l, nil
+}
+
+func connect(ctx context.Context, c *Connector, logger ContextLogger, p msdsn.Config) (res *tdsSession, err error) {
+	dialCtx := ctx
+	if p.DialTimeout >= 0 {
+		dt := p.DialTimeout
+		if dt == 0 {
+			dt = 15 * time.Second
+		}
+		var cancel func()
+		dialCtx, cancel = context.WithTimeout(ctx, dt)
+		defer cancel()
+	}
+	// if instance is specified use instance resolution service
+	if len(p.Instance) > 0 && p.Port != 0 && uint64(p.LogFlags)&logDebug != 0 {
+		// both instance name and port specified
+		// when port is specified instance name is not used
+		// you should not provide instance name when you provide port
+		logger.Log(ctx, msdsn.LogDebug, "WARN: You specified both instance name and port in the connection string, port will be used and instance name will be ignored")
+	}
+	if len(p.Instance) > 0 {
+		p.Instance = strings.ToUpper(p.Instance)
+		d := c.getDialer(&p)
+		instances, err := getInstances(dialCtx, d, p.Host)
+		if err != nil {
+			f := "unable to get instances from Sql Server Browser on host %v: %v"
+			return nil, fmt.Errorf(f, p.Host, err.Error())
+		}
+		strport, ok := instances[p.Instance]["tcp"]
+		if !ok {
+			f := "no instance matching '%v' returned from host '%v'"
+			return nil, fmt.Errorf(f, p.Instance, p.Host)
+		}
+		port, err := strconv.ParseUint(strport, 0, 16)
+		if err != nil {
+			f := "invalid tcp port returned from Sql Server Browser '%v': %v"
+			return nil, fmt.Errorf(f, strport, err.Error())
+		}
+		p.Port = port
+	}
+	if p.Port == 0 {
+		p.Port = defaultServerPort
+	}
+
+	packetSize := p.PacketSize
+	if packetSize == 0 {
+		packetSize = defaultPacketSize
+	}
+	// Ensure packet size falls within the TDS protocol range of 512 to 32767 bytes
+	// NOTE: Encrypted connections have a maximum size of 16383 bytes.  If you request
+	// a higher packet size, the server will respond with an ENVCHANGE request to
+	// alter the packet size to 16383 bytes.
+	if packetSize < 512 {
+		packetSize = 512
+	} else if packetSize > 32767 {
+		packetSize = 32767
+	}
+
+initiate_connection:
+	conn, err := dialConnection(dialCtx, c, p)
+	if err != nil {
+		return nil, err
+	}
+
+	toconn := newTimeoutConn(conn, p.ConnTimeout)
+
+	outbuf := newTdsBuffer(packetSize, toconn)
+	sess := tdsSession{
+		buf:      outbuf,
+		logger:   logger,
+		logFlags: uint64(p.LogFlags),
+	}
+
+	fedAuth := &featureExtFedAuth{
+		FedAuthLibrary: fedAuthLibraryReserved,
+	}
+	if c.fedAuthRequired {
+		fedAuth.FedAuthLibrary = c.fedAuthLibrary
+		fedAuth.ADALWorkflow = c.fedAuthADALWorkflow
+	}
+
+	fields := preparePreloginFields(p, fedAuth)
+
+	err = writePrelogin(packPrelogin, outbuf, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -902,39 +1115,36 @@ initiate_connection:
 		return nil, err
 	}
 
-	encryptBytes, ok := fields[preloginENCRYPTION]
-	if !ok {
-		return nil, fmt.Errorf("Encrypt negotiation failed")
-	}
-	encrypt = encryptBytes[0]
-	if p.encrypt && (encrypt == encryptNotSup || encrypt == encryptOff) {
-		return nil, fmt.Errorf("Server does not support encryption")
+	encrypt, err := interpretPreloginResponse(p, fedAuth, fields)
+	if err != nil {
+		return nil, err
 	}
 
 	if encrypt != encryptNotSup {
-		var config tls.Config
-		if p.certificate != "" {
-			pem, err := ioutil.ReadFile(p.certificate)
-			if err != nil {
-				return nil, fmt.Errorf("Cannot read certificate %q: %v", p.certificate, err)
+		var config *tls.Config
+		if pc := p.TLSConfig; pc != nil {
+			config = pc
+			if config.DynamicRecordSizingDisabled == false {
+				config = config.Clone()
+
+				// fix for https://github.com/denisenkom/go-mssqldb/issues/166
+				// Go implementation of TLS payload size heuristic algorithm splits single TDS package to multiple TCP segments,
+				// while SQL Server seems to expect one TCP segment per encrypted TDS package.
+				// Setting DynamicRecordSizingDisabled to true disables that algorithm and uses 16384 bytes per TLS package
+				config.DynamicRecordSizingDisabled = true
 			}
-			certs := x509.NewCertPool()
-			certs.AppendCertsFromPEM(pem)
-			config.RootCAs = certs
 		}
-		if p.trustServerCertificate {
-			config.InsecureSkipVerify = true
+		if config == nil {
+			config, err = msdsn.SetupTLS("", false, p.Host)
+			if err != nil {
+				return nil, err
+			}
 		}
-		config.ServerName = p.hostInCertificate
-		// fix for https://github.com/denisenkom/go-mssqldb/issues/166
-		// Go implementation of TLS payload size heuristic algorithm splits single TDS package to multiple TCP segments,
-		// while SQL Server seems to expect one TCP segment per encrypted TDS package.
-		// Setting DynamicRecordSizingDisabled to true disables that algorithm and uses 16384 bytes per TLS package
-		config.DynamicRecordSizingDisabled = true
+
 		// setting up connection handler which will allow wrapping of TLS handshake packets inside TDS stream
 		handshakeConn := tlsHandshakeConn{buf: outbuf}
 		passthrough := passthroughConn{c: &handshakeConn}
-		tlsConn := tls.Client(&passthrough, &config)
+		tlsConn := tls.Client(&passthrough, config)
 		err = tlsConn.Handshake()
 		passthrough.c = toconn
 		outbuf.transport = tlsConn
@@ -948,54 +1158,48 @@ initiate_connection:
 		}
 	}
 
-	login := login{
-		TDSVersion:   verTDS74,
-		PacketSize:   uint32(outbuf.PackageSize()),
-		Database:     p.database,
-		OptionFlags2: fODBC, // to get unlimited TEXTSIZE
-		HostName:     p.workstation,
-		ServerName:   p.host,
-		AppName:      p.appname,
-		TypeFlags:    p.typeFlags,
-	}
-	auth, authOk := getAuth(p.user, p.password, p.serverSPN, p.workstation)
-	switch {
-	case p.fedAuthAccessToken != "": // accesstoken ignores user/password
-		featurext := &featureExtFedAuthSTS{
-			FedAuthEcho:  len(fields[preloginFEDAUTHREQUIRED]) > 0 && fields[preloginFEDAUTHREQUIRED][0] == 1,
-			FedAuthToken: p.fedAuthAccessToken,
-			Nonce:        fields[preloginNONCEOPT],
-		}
-		login.FeatureExt.Add(featurext)
-	case authOk:
-		login.SSPI, err = auth.InitialBytes()
-		if err != nil {
-			return nil, err
-		}
-		login.OptionFlags2 |= fIntSecurity
+	auth, authOk := getAuth(p.User, p.Password, p.ServerSPN, p.Workstation)
+	if authOk {
 		defer auth.Free()
-	default:
-		login.UserName = p.user
-		login.Password = p.password
+	} else {
+		auth = nil
 	}
+
+	login, err := prepareLogin(ctx, c, p, logger, auth, fedAuth, uint32(outbuf.PackageSize()))
+	if err != nil {
+		return nil, err
+	}
+
 	err = sendLogin(outbuf, login)
 	if err != nil {
 		return nil, err
 	}
 
-	// processing login response
-	success := false
-	for {
-		tokchan := make(chan tokenStruct, 5)
-		go processResponse(context.Background(), &sess, tokchan, nil)
-		for tok := range tokchan {
+	// Loop until a packet containing a login acknowledgement is received.
+	// SSPI and federated authentication scenarios may require multiple
+	// packet exchanges to complete the login sequence.
+	for loginAck := false; !loginAck; {
+		reader := startReading(&sess, ctx, outputs{})
+		// don't send attention or wait for cancel confirmation during login
+		reader.noAttn = true
+
+		for {
+			tok, err := reader.nextToken()
+			if err != nil {
+				return nil, err
+			}
+
+			if tok == nil {
+				break
+			}
+
 			switch token := tok.(type) {
 			case sspiMsg:
 				sspi_msg, err := auth.NextBytes(token)
 				if err != nil {
 					return nil, err
 				}
-				if sspi_msg != nil && len(sspi_msg) > 0 {
+				if len(sspi_msg) > 0 {
 					outbuf.BeginPacket(packSSPIMessage, false)
 					_, err = outbuf.Write(sspi_msg)
 					if err != nil {
@@ -1007,31 +1211,60 @@ initiate_connection:
 					}
 					sspi_msg = nil
 				}
+			// TODO: for Live ID authentication it may be necessary to
+			// compare fedAuth.Nonce == token.Nonce and keep track of signature
+			//case fedAuthAckStruct:
+			//fedAuth.Signature = token.Signature
+			case fedAuthInfoStruct:
+				// For ADAL workflows this contains the STS URL and server SPN.
+				// If received outside of an ADAL workflow, ignore.
+				if c == nil || c.adalTokenProvider == nil {
+					continue
+				}
+
+				// Request the AD token given the server SPN and STS URL
+				fedAuth.FedAuthToken, err = c.adalTokenProvider(ctx, token.ServerSPN, token.STSURL)
+				if err != nil {
+					return nil, err
+				}
+
+				// Now need to send the token as a FEDINFO packet
+				err = sendFedAuthInfo(outbuf, fedAuth)
+				if err != nil {
+					return nil, err
+				}
 			case loginAckStruct:
-				success = true
 				sess.loginAck = token
-			case error:
-				return nil, fmt.Errorf("Login error: %s", token.Error())
+				loginAck = true
 			case doneStruct:
 				if token.isError() {
-					return nil, fmt.Errorf("Login error: %s", token.getError())
+					tokenErr := token.getError()
+					tokenErr.Message = "login error: " + tokenErr.Message
+					return nil, tokenErr
 				}
-				goto loginEnd
+			case error:
+				return nil, fmt.Errorf("login error: %s", token.Error())
 			}
 		}
 	}
-loginEnd:
-	if !success {
-		return nil, fmt.Errorf("Login failed")
-	}
+
 	if sess.routedServer != "" {
 		toconn.Close()
-		p.host = sess.routedServer
-		p.port = uint64(sess.routedPort)
-		if !p.hostInCertificateProvided {
-			p.hostInCertificate = sess.routedServer
+		p.Host = sess.routedServer
+		p.Port = uint64(sess.routedPort)
+		if !p.HostInCertificateProvided && p.TLSConfig != nil {
+			p.TLSConfig = p.TLSConfig.Clone()
+			p.TLSConfig.ServerName = sess.routedServer
 		}
 		goto initiate_connection
 	}
 	return &sess, nil
+}
+
+func resolveServerPort(port uint64) uint64 {
+	if port == 0 {
+		return defaultServerPort
+	}
+
+	return port
 }

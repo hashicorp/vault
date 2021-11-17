@@ -13,9 +13,9 @@ import (
 	"errors"
 
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -29,6 +29,7 @@ type EndSessions struct {
 	database   string
 	deployment driver.Deployment
 	selector   description.ServerSelector
+	serverAPI  *driver.ServerAPIOptions
 }
 
 // NewEndSessions constructs and returns a new EndSessions.
@@ -38,7 +39,7 @@ func NewEndSessions(sessionIDs bsoncore.Document) *EndSessions {
 	}
 }
 
-func (es *EndSessions) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (es *EndSessions) processResponse(driver.ResponseInfo) error {
 	var err error
 	return err
 }
@@ -59,6 +60,7 @@ func (es *EndSessions) Execute(ctx context.Context) error {
 		Database:          es.database,
 		Deployment:        es.deployment,
 		Selector:          es.selector,
+		ServerAPI:         es.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -147,5 +149,15 @@ func (es *EndSessions) ServerSelector(selector description.ServerSelector) *EndS
 	}
 
 	es.selector = selector
+	return es
+}
+
+// ServerAPI sets the server API version for this operation.
+func (es *EndSessions) ServerAPI(serverAPI *driver.ServerAPIOptions) *EndSessions {
+	if es == nil {
+		es = new(EndSessions)
+	}
+
+	es.serverAPI = serverAPI
 	return es
 }

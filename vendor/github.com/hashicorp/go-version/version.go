@@ -278,6 +278,14 @@ func comparePrereleases(v string, other string) int {
 	return 0
 }
 
+// Core returns a new version constructed from only the MAJOR.MINOR.PATCH
+// segments of the version, without prerelease or metadata.
+func (v *Version) Core() *Version {
+	segments := v.Segments64()
+	segmentsOnly := fmt.Sprintf("%d.%d.%d", segments[0], segments[1], segments[2])
+	return Must(NewVersion(segmentsOnly))
+}
+
 // Equal tests if two versions are equal.
 func (v *Version) Equal(o *Version) bool {
 	if v == nil || o == nil {

@@ -1,6 +1,10 @@
 package client
 
-import "log"
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
 
 // Settings holds optional client settings.
 type Settings struct {
@@ -8,6 +12,12 @@ type Settings struct {
 	assumePreAuthentication bool
 	preAuthEType            int32
 	logger                  *log.Logger
+}
+
+// jsonSettings is used when marshaling the Settings details to JSON format.
+type jsonSettings struct {
+	DisablePAFXFast         bool
+	AssumePreAuthentication bool
 }
 
 // NewSettings creates a new client settings struct.
@@ -64,6 +74,20 @@ func (s *Settings) Logger() *log.Logger {
 // Log will write to the service's logger if it is configured.
 func (cl *Client) Log(format string, v ...interface{}) {
 	if cl.settings.Logger() != nil {
-		cl.settings.Logger().Printf(format, v...)
+		cl.settings.Logger().Output(2, fmt.Sprintf(format, v...))
 	}
+}
+
+// JSON returns a JSON representation of the settings.
+func (s *Settings) JSON() (string, error) {
+	js := jsonSettings{
+		DisablePAFXFast:         s.disablePAFXFast,
+		AssumePreAuthentication: s.assumePreAuthentication,
+	}
+	b, err := json.MarshalIndent(js, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+
 }

@@ -3,6 +3,8 @@ package kv
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"strings"
 	"time"
 
@@ -41,6 +43,13 @@ The length of time before a version is deleted. If not set, the backend's
 configured delete_version_after is used. Cannot be greater than the
 backend's delete_version_after. A zero duration clears the current setting.
 A negative duration will cause an error.
+`,
+			},
+			"custom_metadata": {
+				Type: framework.TypeKVPairs,
+				Description: `
+User-provided key-value pairs that are used to describe arbitrary and
+version-agnostic information about a secret.
 `,
 			},
 		},
@@ -136,9 +145,72 @@ func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 				"max_versions":         meta.MaxVersions,
 				"cas_required":         meta.CasRequired,
 				"delete_version_after": deleteVersionAfter.String(),
+				"custom_metadata":      meta.CustomMetadata,
 			},
 		}, nil
 	}
+}
+
+const maxCustomMetadataKeys = 64
+const maxCustomMetadataKeyLength = 128
+const maxCustomMetadataValueLength = 512
+const customMetadataValidationErrorPrefix = "custom_metadata validation failed"
+
+// Perform input validation on custom_metadata field. If the key count
+// exceeds maxCustomMetadataKeys, the validation will be short-circuited
+// to prevent unnecessary (and potentially costly) validation to be run.
+// If the key count falls at or below maxCustomMetadataKeys, multiple
+// checks will be made per key and value. These checks include:
+//   - 0 < length of key <= maxCustomMetadataKeyLength
+//   - 0 < length of value <= maxCustomMetadataValueLength
+//   - keys and values cannot include unprintable characters
+func validateCustomMetadata(customMetadata map[string]string) error {
+	var errs *multierror.Error
+
+	if keyCount := len(customMetadata); keyCount > maxCustomMetadataKeys {
+		errs = multierror.Append(errs, fmt.Errorf("%s: payload must contain at most %d keys, provided %d",
+			customMetadataValidationErrorPrefix,
+			maxCustomMetadataKeys,
+			keyCount))
+
+		return errs.ErrorOrNil()
+	}
+
+	// Perform validation on each key and value and return ALL errors
+	for key, value := range customMetadata {
+		if keyLen := len(key); 0 == keyLen || keyLen > maxCustomMetadataKeyLength {
+			errs = multierror.Append(errs, fmt.Errorf("%s: length of key %q is %d but must be 0 < len(key) <= %d",
+				customMetadataValidationErrorPrefix,
+				key,
+				keyLen,
+				maxCustomMetadataKeyLength))
+		}
+
+		if valueLen := len(value); 0 == valueLen || valueLen > maxCustomMetadataValueLength {
+			errs = multierror.Append(errs, fmt.Errorf("%s: length of value for key %q is %d but must be 0 < len(value) <= %d",
+				customMetadataValidationErrorPrefix,
+				key,
+				valueLen,
+				maxCustomMetadataValueLength))
+		}
+
+		if !strutil.Printable(key) {
+			// Include unquoted format (%s) to also include the string without the unprintable
+			//  characters visible to allow for easier debug and key identification
+			errs = multierror.Append(errs, fmt.Errorf("%s: key %q (%s) contains unprintable characters",
+				customMetadataValidationErrorPrefix,
+				key,
+				key))
+		}
+
+		if !strutil.Printable(value) {
+			errs = multierror.Append(errs, fmt.Errorf("%s: value for key %q contains unprintable characters",
+				customMetadataValidationErrorPrefix,
+				key))
+		}
+	}
+
+	return errs.ErrorOrNil()
 }
 
 func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
@@ -151,15 +223,27 @@ func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 		maxRaw, mOk := data.GetOk("max_versions")
 		casRaw, cOk := data.GetOk("cas_required")
 		deleteVersionAfterRaw, dvaOk := data.GetOk("delete_version_after")
+		customMetadataRaw, cmOk := data.GetOk("custom_metadata")
 
 		// Fast path validation
-		if !mOk && !cOk && !dvaOk {
+		if !mOk && !cOk && !dvaOk && !cmOk {
 			return nil, nil
 		}
 
 		config, err := b.config(ctx, req.Storage)
 		if err != nil {
 			return nil, err
+		}
+
+		customMetadataMap := map[string]string{}
+
+		if cmOk {
+			customMetadataMap = customMetadataRaw.(map[string]string)
+			customMetadataErrs := validateCustomMetadata(customMetadataMap)
+
+			if customMetadataErrs != nil {
+				return logical.ErrorResponse(customMetadataErrs.Error()), nil
+			}
 		}
 
 		var resp *logical.Response
@@ -194,6 +278,9 @@ func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 		}
 		if dvaOk {
 			meta.DeleteVersionAfter = ptypes.DurationProto(time.Duration(deleteVersionAfterRaw.(int)) * time.Second)
+		}
+		if cmOk {
+			meta.CustomMetadata = customMetadataMap
 		}
 
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)

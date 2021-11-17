@@ -1,7 +1,8 @@
 package gocb
 
 import (
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	"encoding/json"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 	"github.com/pkg/errors"
 )
 
@@ -15,9 +16,47 @@ type HTTPError struct {
 	RetryAttempts uint32        `json:"retry_attempts,omitempty"`
 }
 
+// MarshalJSON implements the Marshaler interface.
+func (e HTTPError) MarshalJSON() ([]byte, error) {
+	var innerError string
+	if e.InnerError != nil {
+		innerError = e.InnerError.Error()
+	}
+	return json.Marshal(struct {
+		InnerError    string        `json:"msg,omitempty"`
+		UniqueID      string        `json:"unique_id,omitempty"`
+		Endpoint      string        `json:"endpoint,omitempty"`
+		RetryReasons  []RetryReason `json:"retry_reasons,omitempty"`
+		RetryAttempts uint32        `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:    innerError,
+		UniqueID:      e.UniqueID,
+		Endpoint:      e.Endpoint,
+		RetryReasons:  e.RetryReasons,
+		RetryAttempts: e.RetryAttempts,
+	})
+}
+
 // Error returns the string representation of this error.
 func (e HTTPError) Error() string {
-	return e.InnerError.Error() + " | " + serializeWrappedError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError    error         `json:"-"`
+		UniqueID      string        `json:"unique_id,omitempty"`
+		Endpoint      string        `json:"endpoint,omitempty"`
+		RetryReasons  []RetryReason `json:"retry_reasons,omitempty"`
+		RetryAttempts uint32        `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:    e.InnerError,
+		UniqueID:      e.UniqueID,
+		Endpoint:      e.Endpoint,
+		RetryReasons:  e.RetryReasons,
+		RetryAttempts: e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying cause for this error.

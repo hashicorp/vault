@@ -36,8 +36,9 @@ type UpdateBucketDetails struct {
 	// on the bucket, public access is allowed for the `GetObject` and `HeadObject` operations.
 	PublicAccessType UpdateBucketDetailsPublicAccessTypeEnum `mandatory:"false" json:"publicAccessType,omitempty"`
 
-	// A property that determines whether events will be generated for operations on objects in this bucket.
-	// This is false by default.
+	// Whether or not events are emitted for object state changes in this bucket. By default, `objectEventsEnabled` is
+	// set to `false`. Set `objectEventsEnabled` to `true` to emit events for object state changes. For more information
+	// about events, see Overview of Events (https://docs.cloud.oracle.com/Content/Events/Concepts/eventsoverview.htm).
 	ObjectEventsEnabled *bool `mandatory:"false" json:"objectEventsEnabled"`
 
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no predefined name, type, or namespace.
@@ -50,10 +51,9 @@ type UpdateBucketDetails struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// A KMS key OCID that will be associated with the given bucket. If it is empty the Update operation will
-	// actually remove the KMS key, if there is one, from the given bucket. Note that the old kms key should
-	// still be enbaled in KMS otherwise all the objects in the bucket encrypted with the old KMS key will no
-	// longer be accessible.
+	// The OCID of the Key Management master encryption key to associate with the specified bucket. If this value
+	// is empty, the Update operation will remove the associated key, if there is one, from the bucket. (The bucket
+	// will continue to be encrypted, but with an encryption key managed by Oracle.)
 	KmsKeyId *string `mandatory:"false" json:"kmsKeyId"`
 }
 

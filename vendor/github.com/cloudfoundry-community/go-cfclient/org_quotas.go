@@ -104,8 +104,8 @@ func (c *Client) getOrgQuotasResponse(requestUrl string) (OrgQuotasResponse, err
 	if err != nil {
 		return OrgQuotasResponse{}, errors.Wrap(err, "Error requesting org quotas")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return OrgQuotasResponse{}, errors.Wrap(err, "Error reading org quotas body")
 	}
@@ -127,6 +127,7 @@ func (c *Client) CreateOrgQuota(orgQuote OrgQuotaRequest) (*OrgQuota, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -144,6 +145,7 @@ func (c *Client) UpdateOrgQuota(orgQuotaGUID string, orgQuota OrgQuotaRequest) (
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -155,6 +157,7 @@ func (c *Client) DeleteOrgQuota(guid string, async bool) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if (async && (resp.StatusCode != http.StatusAccepted)) || (!async && (resp.StatusCode != http.StatusNoContent)) {
 		return errors.Wrapf(err, "Error deleting organization %s, response code: %d", guid, resp.StatusCode)
 	}

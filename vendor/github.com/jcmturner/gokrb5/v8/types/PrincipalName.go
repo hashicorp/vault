@@ -35,6 +35,9 @@ func (pn PrincipalName) GetSalt(realm string) string {
 
 // Equal tests if the PrincipalName is equal to the one provided.
 func (pn PrincipalName) Equal(n PrincipalName) bool {
+	if len(pn.NameString) != len(n.NameString) {
+		return false
+	}
 	//https://tools.ietf.org/html/rfc4120#section-6.2 - the name type is not significant when checking for equivalence
 	for i, s := range pn.NameString {
 		if n.NameString[i] != s {

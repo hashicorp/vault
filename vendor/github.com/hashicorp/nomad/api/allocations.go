@@ -2,17 +2,10 @@ package api
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"sort"
-	"strconv"
-	"sync"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 var (
@@ -88,199 +81,22 @@ func (a *Allocations) Exec(ctx context.Context,
 	stdin io.Reader, stdout, stderr io.Writer,
 	terminalSizeCh <-chan TerminalSize, q *QueryOptions) (exitCode int, err error) {
 
-	ctx, cancelFn := context.WithCancel(ctx)
-	defer cancelFn()
+	s := &execSession{
+		client:  a.client,
+		alloc:   alloc,
+		task:    task,
+		tty:     tty,
+		command: command,
 
-	errCh := make(chan error, 4)
+		stdin:  stdin,
+		stdout: stdout,
+		stderr: stderr,
 
-	sender, output := a.execFrames(ctx, alloc, task, tty, command, errCh, q)
-
-	select {
-	case err := <-errCh:
-		return -2, err
-	default:
+		terminalSizeCh: terminalSizeCh,
+		q:              q,
 	}
 
-	// Errors resulting from sending input (in goroutines) are silently dropped.
-	// To mitigate this, extra care is needed to distinguish between actual send errors
-	// and from send errors due to command terminating and our race to detect failures.
-	// If we have an actual network failure or send a bad input, we'd get an
-	// error in the reading side of websocket.
-
-	go func() {
-
-		bytes := make([]byte, 2048)
-		for {
-			if ctx.Err() != nil {
-				return
-			}
-
-			input := ExecStreamingInput{Stdin: &ExecStreamingIOOperation{}}
-
-			n, err := stdin.Read(bytes)
-
-			// always send data if we read some
-			if n != 0 {
-				input.Stdin.Data = bytes[:n]
-				sender(&input)
-			}
-
-			// then handle error
-			if err == io.EOF {
-				// if n != 0, send data and we'll get n = 0 on next read
-				if n == 0 {
-					input.Stdin.Close = true
-					sender(&input)
-					return
-				}
-			} else if err != nil {
-				errCh <- err
-				return
-			}
-		}
-	}()
-
-	// forwarding terminal size
-	go func() {
-		for {
-			resizeInput := ExecStreamingInput{}
-
-			select {
-			case <-ctx.Done():
-				return
-			case size, ok := <-terminalSizeCh:
-				if !ok {
-					return
-				}
-				resizeInput.TTYSize = &size
-				sender(&resizeInput)
-			}
-
-		}
-	}()
-
-	// send a heartbeat every 10 seconds
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			// heartbeat message
-			case <-time.After(10 * time.Second):
-				sender(&execStreamingInputHeartbeat)
-			}
-
-		}
-	}()
-
-	for {
-		select {
-		case err := <-errCh:
-			// drop websocket code, not relevant to user
-			if wsErr, ok := err.(*websocket.CloseError); ok && wsErr.Text != "" {
-				return -2, errors.New(wsErr.Text)
-			}
-			return -2, err
-		case <-ctx.Done():
-			return -2, ctx.Err()
-		case frame, ok := <-output:
-			if !ok {
-				return -2, errors.New("disconnected without receiving the exit code")
-			}
-
-			switch {
-			case frame.Stdout != nil:
-				if len(frame.Stdout.Data) != 0 {
-					stdout.Write(frame.Stdout.Data)
-				}
-				// don't really do anything if stdout is closing
-			case frame.Stderr != nil:
-				if len(frame.Stderr.Data) != 0 {
-					stderr.Write(frame.Stderr.Data)
-				}
-				// don't really do anything if stderr is closing
-			case frame.Exited && frame.Result != nil:
-				return frame.Result.ExitCode, nil
-			default:
-				// noop - heartbeat
-			}
-		}
-	}
-}
-
-func (a *Allocations) execFrames(ctx context.Context, alloc *Allocation, task string, tty bool, command []string,
-	errCh chan<- error, q *QueryOptions) (sendFn func(*ExecStreamingInput) error, output <-chan *ExecStreamingOutput) {
-	nodeClient, _ := a.client.GetNodeClientWithTimeout(alloc.NodeID, ClientConnTimeout, q)
-
-	if q == nil {
-		q = &QueryOptions{}
-	}
-	if q.Params == nil {
-		q.Params = make(map[string]string)
-	}
-
-	commandBytes, err := json.Marshal(command)
-	if err != nil {
-		errCh <- fmt.Errorf("failed to marshal command: %s", err)
-		return nil, nil
-	}
-
-	q.Params["tty"] = strconv.FormatBool(tty)
-	q.Params["task"] = task
-	q.Params["command"] = string(commandBytes)
-
-	reqPath := fmt.Sprintf("/v1/client/allocation/%s/exec", alloc.ID)
-
-	var conn *websocket.Conn
-
-	if nodeClient != nil {
-		conn, _, err = nodeClient.websocket(reqPath, q)
-		if _, ok := err.(net.Error); err != nil && !ok {
-			errCh <- err
-			return nil, nil
-		}
-	}
-
-	if conn == nil {
-		conn, _, err = a.client.websocket(reqPath, q)
-		if err != nil {
-			errCh <- err
-			return nil, nil
-		}
-	}
-
-	// Create the output channel
-	frames := make(chan *ExecStreamingOutput, 10)
-
-	go func() {
-		defer conn.Close()
-		for ctx.Err() == nil {
-
-			// Decode the next frame
-			var frame ExecStreamingOutput
-			err := conn.ReadJSON(&frame)
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				close(frames)
-				return
-			} else if err != nil {
-				errCh <- err
-				return
-			}
-
-			frames <- &frame
-		}
-	}()
-
-	var sendLock sync.Mutex
-	send := func(v *ExecStreamingInput) error {
-		sendLock.Lock()
-		defer sendLock.Unlock()
-
-		return conn.WriteJSON(v)
-	}
-
-	return send, frames
-
+	return s.run(ctx)
 }
 
 func (a *Allocations) Stats(alloc *Allocation, q *QueryOptions) (*AllocResourceUsage, error) {
@@ -291,13 +107,8 @@ func (a *Allocations) Stats(alloc *Allocation, q *QueryOptions) (*AllocResourceU
 }
 
 func (a *Allocations) GC(alloc *Allocation, q *QueryOptions) error {
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
-	if err != nil {
-		return err
-	}
-
 	var resp struct{}
-	_, err = nodeClient.query("/v1/client/allocation/"+alloc.ID+"/gc", &resp, nil)
+	_, err := a.client.query("/v1/client/allocation/"+alloc.ID+"/gc", &resp, nil)
 	return err
 }
 
@@ -326,18 +137,13 @@ type AllocStopResponse struct {
 }
 
 func (a *Allocations) Signal(alloc *Allocation, q *QueryOptions, task, signal string) error {
-	nodeClient, err := a.client.GetNodeClient(alloc.NodeID, q)
-	if err != nil {
-		return err
-	}
-
 	req := AllocSignalRequest{
 		Signal: signal,
 		Task:   task,
 	}
 
 	var resp GenericResponse
-	_, err = nodeClient.putQuery("/v1/client/allocation/"+alloc.ID+"/signal", &req, &resp, q)
+	_, err := a.client.putQuery("/v1/client/allocation/"+alloc.ID+"/signal", &req, &resp, q)
 	return err
 }
 
@@ -389,6 +195,7 @@ type AllocationMetric struct {
 	ClassExhausted     map[string]int
 	DimensionExhausted map[string]int
 	QuotaExhausted     []string
+	ResourcesExhausted map[string]*Resources
 	// Deprecated, replaced with ScoreMetaData
 	Scores            map[string]float64
 	AllocationTime    time.Duration
@@ -404,6 +211,58 @@ type NodeScoreMeta struct {
 	NormScore float64
 }
 
+// Stub returns a list stub for the allocation
+func (a *Allocation) Stub() *AllocationListStub {
+	return &AllocationListStub{
+		ID:                    a.ID,
+		EvalID:                a.EvalID,
+		Name:                  a.Name,
+		Namespace:             a.Namespace,
+		NodeID:                a.NodeID,
+		NodeName:              a.NodeName,
+		JobID:                 a.JobID,
+		JobType:               *a.Job.Type,
+		JobVersion:            *a.Job.Version,
+		TaskGroup:             a.TaskGroup,
+		DesiredStatus:         a.DesiredStatus,
+		DesiredDescription:    a.DesiredDescription,
+		ClientStatus:          a.ClientStatus,
+		ClientDescription:     a.ClientDescription,
+		TaskStates:            a.TaskStates,
+		DeploymentStatus:      a.DeploymentStatus,
+		FollowupEvalID:        a.FollowupEvalID,
+		RescheduleTracker:     a.RescheduleTracker,
+		PreemptedAllocations:  a.PreemptedAllocations,
+		PreemptedByAllocation: a.PreemptedByAllocation,
+		CreateIndex:           a.CreateIndex,
+		ModifyIndex:           a.ModifyIndex,
+		CreateTime:            a.CreateTime,
+		ModifyTime:            a.ModifyTime,
+	}
+}
+
+// ServerTerminalStatus returns true if the desired state of the allocation is
+// terminal.
+func (a *Allocation) ServerTerminalStatus() bool {
+	switch a.DesiredStatus {
+	case AllocDesiredStatusStop, AllocDesiredStatusEvict:
+		return true
+	default:
+		return false
+	}
+}
+
+// ClientTerminalStatus returns true if the client status is terminal and will
+// therefore no longer transition.
+func (a *Allocation) ClientTerminalStatus() bool {
+	switch a.ClientStatus {
+	case AllocClientStatusComplete, AllocClientStatusFailed, AllocClientStatusLost:
+		return true
+	default:
+		return false
+	}
+}
+
 // AllocationListStub is used to return a subset of an allocation
 // during list operations.
 type AllocationListStub struct {
@@ -417,6 +276,7 @@ type AllocationListStub struct {
 	JobType               string
 	JobVersion            uint64
 	TaskGroup             string
+	AllocatedResources    *AllocatedResources `json:",omitempty"`
 	DesiredStatus         string
 	DesiredDescription    string
 	ClientStatus          string
@@ -452,11 +312,20 @@ type AllocatedTaskResources struct {
 	Cpu      AllocatedCpuResources
 	Memory   AllocatedMemoryResources
 	Networks []*NetworkResource
+	Devices  []*AllocatedDeviceResource
 }
 
 type AllocatedSharedResources struct {
 	DiskMB   int64
 	Networks []*NetworkResource
+	Ports    []PortMapping
+}
+
+type PortMapping struct {
+	Label  string
+	Value  int
+	To     int
+	HostIP string
 }
 
 type AllocatedCpuResources struct {
@@ -464,7 +333,15 @@ type AllocatedCpuResources struct {
 }
 
 type AllocatedMemoryResources struct {
-	MemoryMB int64
+	MemoryMB    int64
+	MemoryMaxMB int64
+}
+
+type AllocatedDeviceResource struct {
+	Vendor    string
+	Type      string
+	Name      string
+	DeviceIDs []string
 }
 
 // AllocIndexSort reverse sorts allocs by CreateIndex.
@@ -482,18 +359,23 @@ func (a AllocIndexSort) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
+func (a Allocation) GetTaskGroup() *TaskGroup {
+	for _, tg := range a.Job.TaskGroups {
+		if *tg.Name == a.TaskGroup {
+			return tg
+		}
+	}
+	return nil
+}
+
 // RescheduleInfo is used to calculate remaining reschedule attempts
 // according to the given time and the task groups reschedule policy
 func (a Allocation) RescheduleInfo(t time.Time) (int, int) {
-	var reschedulePolicy *ReschedulePolicy
-	for _, tg := range a.Job.TaskGroups {
-		if *tg.Name == a.TaskGroup {
-			reschedulePolicy = tg.ReschedulePolicy
-		}
-	}
-	if reschedulePolicy == nil {
+	tg := a.GetTaskGroup()
+	if tg == nil || tg.ReschedulePolicy == nil {
 		return 0, 0
 	}
+	reschedulePolicy := tg.ReschedulePolicy
 	availableAttempts := *reschedulePolicy.Attempts
 	interval := *reschedulePolicy.Interval
 	attempted := 0

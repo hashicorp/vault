@@ -30,6 +30,9 @@ var (
 // IsMultipleOf8 returns whether v is a multiple of 8.
 func IsMultipleOf8(v int64) bool { return v&7 == 0 }
 
+// IsMultipleOf64 returns whether v is a multiple of 64
+func IsMultipleOf64(v int64) bool { return v&63 == 0 }
+
 func BytesForBits(bits int64) int64 { return (bits + 7) >> 3 }
 
 // NextPowerOf2 rounds x to the next power of two.

@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	usersBasePath = "groups/%s/users"
+	usersGroupBasePath = "api/atlas/v1.0/groups/%s/users"
+	usersBasePath      = "api/atlas/v1.0/users"
 )
 
 // AtlasUsersService is an interface for interfacing with the AtlasUsers
@@ -36,19 +37,19 @@ type AtlasUsersService interface {
 }
 
 // AtlasUsersServiceOp handles communication with the AtlasUsers related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type AtlasUsersServiceOp service
 
 var _ AtlasUsersService = &AtlasUsersServiceOp{}
 
-// AtlasUsersResponse represents a array of users
+// AtlasUsersResponse represents a array of users.
 type AtlasUsersResponse struct {
 	Links      []*Link     `json:"links"`
 	Results    []AtlasUser `json:"results"`
 	TotalCount int         `json:"totalCount"`
 }
 
-// AtlasUser represents a user
+// AtlasUser represents a user.
 type AtlasUser struct {
 	EmailAddress string      `json:"emailAddress"`
 	FirstName    string      `json:"firstName"`
@@ -66,7 +67,7 @@ type AtlasUser struct {
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/user-get-all/
 func (s *AtlasUsersServiceOp) List(ctx context.Context, orgID string, listOptions *ListOptions) ([]AtlasUser, *Response, error) {
-	path := fmt.Sprintf(usersBasePath, orgID)
+	path := fmt.Sprintf(usersGroupBasePath, orgID)
 
 	// Add query params from listOptions
 	path, err := setListOptions(path, listOptions)
@@ -100,7 +101,7 @@ func (s *AtlasUsersServiceOp) Get(ctx context.Context, userID string) (*AtlasUse
 		return nil, nil, NewArgError("userID", "must be set")
 	}
 
-	path := fmt.Sprintf("users/%s", userID)
+	path := fmt.Sprintf("%s/%s", usersBasePath, userID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -124,7 +125,7 @@ func (s *AtlasUsersServiceOp) GetByName(ctx context.Context, username string) (*
 		return nil, nil, NewArgError("username", "must be set")
 	}
 
-	path := fmt.Sprintf("users/byName/%s", username)
+	path := fmt.Sprintf("%s/byName/%s", usersBasePath, username)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -148,7 +149,7 @@ func (s *AtlasUsersServiceOp) Create(ctx context.Context, createRequest *AtlasUs
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
 
-	req, err := s.Client.NewRequest(ctx, http.MethodPost, "users", createRequest)
+	req, err := s.Client.NewRequest(ctx, http.MethodPost, usersBasePath, createRequest)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -7,6 +7,10 @@ import (
 	"syscall"
 )
 
+// RuntimeSig is set to SIGURG, a signal used by the runtime on *nix systems to
+// manage pre-emptive scheduling.
+const RuntimeSig = syscall.SIGURG
+
 var SignalLookup = map[string]os.Signal{
 	"SIGABRT":  syscall.SIGABRT,
 	"SIGALRM":  syscall.SIGALRM,

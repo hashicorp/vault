@@ -17,10 +17,11 @@
 package arrow // import "github.com/apache/arrow/go/arrow"
 
 import (
-	"encoding/binary"
 	"math"
 	"reflect"
 	"unsafe"
+
+	"github.com/apache/arrow/go/arrow/endian"
 )
 
 var (
@@ -45,17 +46,17 @@ func ({{.name}}Traits) BytesRequired(n int) int { return {{.Name}}SizeBytes * n 
 // PutValue
 func ({{.name}}Traits) PutValue(b []byte, v {{.Type}}) {
 {{- if eq .Type "float32" -}}
-	binary.LittleEndian.PutUint32(b, math.Float32bits(v))
+	endian.Native.PutUint32(b, math.Float32bits(v))
 {{- else if eq .Type "float64" -}}
-	binary.LittleEndian.PutUint64(b, math.Float64bits(v))
+	endian.Native.PutUint64(b, math.Float64bits(v))
 {{- else if eq .Size "1" -}}
 	b[0] = byte(v)
 {{- else if eq .Size "2" -}}
-	binary.LittleEndian.PutUint16(b, uint16(v))
+	endian.Native.PutUint16(b, uint16(v))
 {{- else if eq .Size "4" -}}
-	binary.LittleEndian.PutUint32(b, uint32(v))
+	endian.Native.PutUint32(b, uint32(v))
 {{- else if eq .Size "8" -}}
-	binary.LittleEndian.PutUint64(b, uint64(v))
+	endian.Native.PutUint64(b, uint64(v))
 {{- else -}}
 	panic("invalid type {{.Type}}")
 {{end}}

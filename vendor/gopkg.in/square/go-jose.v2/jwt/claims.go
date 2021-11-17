@@ -36,8 +36,9 @@ type Claims struct {
 }
 
 // NumericDate represents date and time as the number of seconds since the
-// epoch, including leap seconds. Non-integer values can be represented
+// epoch, ignoring leap seconds. Non-integer values can be represented
 // in the serialized format, but we round to the nearest second.
+// See RFC7519 Section 2: https://tools.ietf.org/html/rfc7519#section-2
 type NumericDate int64
 
 // NewNumericDate constructs NumericDate from time.Time value.

@@ -66,10 +66,10 @@ func convertInputParameter(val interface{}) (interface{}, error) {
 func (c *Conn) CheckNamedValue(nv *driver.NamedValue) error {
 	switch v := nv.Value.(type) {
 	case sql.Out:
-		if c.outs == nil {
-			c.outs = make(map[string]interface{})
+		if c.outs.params == nil {
+			c.outs.params = make(map[string]interface{})
 		}
-		c.outs[nv.Name] = v.Dest
+		c.outs.params[nv.Name] = v.Dest
 
 		if v.Dest == nil {
 			return errors.New("destination is a nil pointer")
@@ -110,7 +110,7 @@ func (c *Conn) CheckNamedValue(nv *driver.NamedValue) error {
 		return nil
 	case *ReturnStatus:
 		*v = 0 // By default the return value should be zero.
-		c.returnStatus = v
+		c.outs.returnStatus = v
 		return driver.ErrRemoveArgument
 	case TVP:
 		return nil
@@ -193,4 +193,9 @@ func (s *Stmt) makeParamExtra(val driver.Value) (res param, err error) {
 
 func scanIntoOut(name string, fromServer, scanInto interface{}) error {
 	return convertAssign(scanInto, fromServer)
+}
+
+func isOutputValue(val driver.Value) bool {
+	_, out := val.(sql.Out)
+	return out
 }

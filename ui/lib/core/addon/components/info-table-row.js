@@ -25,6 +25,7 @@ import layout from '../templates/components/info-table-row';
  * @param [backend] {String} - Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex: transformation
  * @param [viewAll] {String} - Passed through to InfoTableItemArray. Specify the word at the end of the link View all.
  * @param [tooltipText] {String} - Text if a tooltip should display over the value.
+ * @param [isTooltipCopyable] {Boolean} - Allows tooltip click to copy
  * @param [defaultShown] {String} - Text that renders as value if alwaysRender=true. Eg. "Vault default"
  */
 
@@ -39,9 +40,40 @@ export default Component.extend({
   helperText: null,
   value: null,
   tooltipText: '',
+  isTooltipCopyable: false,
   defaultShown: '',
+  hasLabelOverflow: false, // is calculated and set in didInsertElement
 
   valueIsBoolean: computed('value', function() {
     return typeOf(this.value) === 'boolean';
   }),
+
+  valueIsEmpty: computed('value', function() {
+    let { value } = this;
+    if (typeOf(value) === 'array' && value.length === 0) {
+      return true;
+    }
+    switch (value) {
+      case undefined:
+        return true;
+      case null:
+        return true;
+      case '':
+        return true;
+      default:
+        return false;
+    }
+  }),
+
+  didInsertElement() {
+    this._super(...arguments);
+    const labelDiv = this.element.querySelector('div');
+    const labelText = this.element.querySelector('.is-label');
+    if (labelDiv && labelText) {
+      if (labelText.offsetWidth > labelDiv.offsetWidth) {
+        labelDiv.classList.add('label-overflow');
+        this.set('hasLabelOverflow', true);
+      }
+    }
+  },
 });

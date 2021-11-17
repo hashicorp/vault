@@ -14,50 +14,6 @@ import (
 )
 
 // RFC 3962
-//+--------------------------------------------------------------------+
-//|               protocol key format        128- or 256-bit string    |
-//|                                                                    |
-//|            string-to-key function        PBKDF2+DK with variable   |
-//|                                          iteration count (see      |
-//|                                          above)                    |
-//|                                                                    |
-//|  default string-to-key parameters        00 00 10 00               |
-//|                                                                    |
-//|        key-generation seed length        key size                  |
-//|                                                                    |
-//|            random-to-key function        identity function         |
-//|                                                                    |
-//|                  hash function, H        SHA-1                     |
-//|                                                                    |
-//|               HMAC output size, h        12 octets (96 bits)       |
-//|                                                                    |
-//|             message block size, m        1 octet                   |
-//|                                                                    |
-//|  encryption/decryption functions,        AES in CBC-CTS mode       |
-//|  E and D                                 (cipher block size 16     |
-//|                                          octets), with next-to-    |
-//|                                          last block (last block    |
-//|                                          if only one) as CBC-style |
-//|                                          ivec                      |
-//+--------------------------------------------------------------------+
-//
-//+--------------------------------------------------------------------+
-//|                         encryption types                           |
-//+--------------------------------------------------------------------+
-//|         type name                  etype value          key size   |
-//+--------------------------------------------------------------------+
-//|   aes128-cts-hmac-sha1-96              17                 128      |
-//|   aes256-cts-hmac-sha1-96              18                 256      |
-//+--------------------------------------------------------------------+
-//
-//+--------------------------------------------------------------------+
-//|                          checksum types                            |
-//+--------------------------------------------------------------------+
-//|        type name                 sumtype value           length    |
-//+--------------------------------------------------------------------+
-//|    hmac-sha1-96-aes128                15                   96      |
-//|    hmac-sha1-96-aes256                16                   96      |
-//+--------------------------------------------------------------------+
 
 // Aes128CtsHmacSha96 implements Kerberos encryption type aes128-cts-hmac-sha1-96
 type Aes128CtsHmacSha96 struct {

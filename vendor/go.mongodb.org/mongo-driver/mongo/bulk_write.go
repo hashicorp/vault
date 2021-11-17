@@ -10,11 +10,11 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/operation"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
@@ -168,7 +168,7 @@ func (bw *bulkWrite) runInsert(ctx context.Context, batch bulkWriteBatch) (opera
 	var i int
 	for _, model := range batch.models {
 		converted := model.(*InsertOneModel)
-		doc, _, err := transformAndEnsureIDv2(bw.collection.registry, converted.Document)
+		doc, _, err := transformAndEnsureID(bw.collection.registry, converted.Document)
 		if err != nil {
 			return operation.InsertResult{}, err
 		}
@@ -181,7 +181,8 @@ func (bw *bulkWrite) runInsert(ctx context.Context, batch bulkWriteBatch) (opera
 		Session(bw.session).WriteConcern(bw.writeConcern).CommandMonitor(bw.collection.client.monitor).
 		ServerSelector(bw.selector).ClusterClock(bw.collection.client.clock).
 		Database(bw.collection.db.name).Collection(bw.collection.name).
-		Deployment(bw.collection.client.deployment).Crypt(bw.collection.client.crypt)
+		Deployment(bw.collection.client.deployment).Crypt(bw.collection.client.cryptFLE).
+		ServerAPI(bw.collection.client.serverAPI)
 	if bw.bypassDocumentValidation != nil && *bw.bypassDocumentValidation {
 		op = op.BypassDocumentValidation(*bw.bypassDocumentValidation)
 	}
@@ -230,7 +231,8 @@ func (bw *bulkWrite) runDelete(ctx context.Context, batch bulkWriteBatch) (opera
 		Session(bw.session).WriteConcern(bw.writeConcern).CommandMonitor(bw.collection.client.monitor).
 		ServerSelector(bw.selector).ClusterClock(bw.collection.client.clock).
 		Database(bw.collection.db.name).Collection(bw.collection.name).
-		Deployment(bw.collection.client.deployment).Crypt(bw.collection.client.crypt).Hint(hasHint)
+		Deployment(bw.collection.client.deployment).Crypt(bw.collection.client.cryptFLE).Hint(hasHint).
+		ServerAPI(bw.collection.client.serverAPI)
 	if bw.ordered != nil {
 		op = op.Ordered(*bw.ordered)
 	}
@@ -248,7 +250,7 @@ func (bw *bulkWrite) runDelete(ctx context.Context, batch bulkWriteBatch) (opera
 func createDeleteDoc(filter interface{}, collation *options.Collation, hint interface{}, deleteOne bool,
 	registry *bsoncodec.Registry) (bsoncore.Document, error) {
 
-	f, err := transformBsoncoreDocument(registry, filter)
+	f, err := transformBsoncoreDocument(registry, filter, true, "filter")
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +266,7 @@ func createDeleteDoc(filter interface{}, collation *options.Collation, hint inte
 		doc = bsoncore.AppendDocumentElement(doc, "collation", collation.ToDocument())
 	}
 	if hint != nil {
-		hintVal, err := transformValue(registry, hint)
+		hintVal, err := transformValue(registry, hint, false, "hint")
 		if err != nil {
 			return nil, err
 		}
@@ -310,8 +312,8 @@ func (bw *bulkWrite) runUpdate(ctx context.Context, batch bulkWriteBatch) (opera
 		Session(bw.session).WriteConcern(bw.writeConcern).CommandMonitor(bw.collection.client.monitor).
 		ServerSelector(bw.selector).ClusterClock(bw.collection.client.clock).
 		Database(bw.collection.db.name).Collection(bw.collection.name).
-		Deployment(bw.collection.client.deployment).Crypt(bw.collection.client.crypt).Hint(hasHint).
-		ArrayFilters(hasArrayFilters)
+		Deployment(bw.collection.client.deployment).Crypt(bw.collection.client.cryptFLE).Hint(hasHint).
+		ArrayFilters(hasArrayFilters).ServerAPI(bw.collection.client.serverAPI)
 	if bw.ordered != nil {
 		op = op.Ordered(*bw.ordered)
 	}
@@ -339,7 +341,7 @@ func createUpdateDoc(
 	checkDollarKey bool,
 	registry *bsoncodec.Registry,
 ) (bsoncore.Document, error) {
-	f, err := transformBsoncoreDocument(registry, filter)
+	f, err := transformBsoncoreDocument(registry, filter, true, "filter")
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +377,7 @@ func createUpdateDoc(
 	}
 
 	if hint != nil {
-		hintVal, err := transformValue(registry, hint)
+		hintVal, err := transformValue(registry, hint, false, "hint")
 		if err != nil {
 			return nil, err
 		}

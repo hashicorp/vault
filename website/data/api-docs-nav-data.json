@@ -133,6 +133,10 @@
           {
             "title": "AWS KMS",
             "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
           }
         ]
       },
@@ -187,6 +191,10 @@
           {
             "title": "Lookup",
             "path": "secret/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secret/identity/oidc-provider"
           }
         ]
       },
@@ -408,6 +416,14 @@
       {
         "title": "<code>/sys/internal/ui/mounts</code>",
         "path": "system/internal-ui-mounts"
+      },
+      {
+        "title": "<code>/sys/internal/ui/namespaces</code>",
+        "path": "system/internal-ui-namespaces"
+      },
+      {
+        "title": "<code>/sys/internal/ui/resultant-acl</code>",
+        "path": "system/internal-ui-resultant-acl"
       },
       {
         "title": "<code>/sys/key-status</code>",

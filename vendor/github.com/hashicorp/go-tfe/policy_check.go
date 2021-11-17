@@ -17,7 +17,7 @@ var _ PolicyChecks = (*policyChecks)(nil)
 // Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/policy-checks.html
+// https://www.terraform.io/docs/cloud/api/policy-checks.html
 type PolicyChecks interface {
 	// List all policy checks of the given run.
 	List(ctx context.Context, runID string, options PolicyCheckListOptions) (*PolicyCheckList, error)
@@ -82,34 +82,33 @@ type PolicyCheck struct {
 
 // PolicyActions represents the policy check actions.
 type PolicyActions struct {
-	IsOverridable bool `json:"is-overridable"`
+	IsOverridable bool `jsonapi:"attr,is-overridable"`
 }
 
 // PolicyPermissions represents the policy check permissions.
 type PolicyPermissions struct {
-	CanOverride bool `json:"can-override"`
+	CanOverride bool `jsonapi:"attr,can-override"`
 }
 
 // PolicyResult represents the complete policy check result,
 type PolicyResult struct {
-	AdvisoryFailed int  `json:"advisory-failed"`
-	Duration       int  `json:"duration"`
-	HardFailed     int  `json:"hard-failed"`
-	Passed         int  `json:"passed"`
-	Result         bool `json:"result"`
-	// Sentinel       *sentinel.EvalResult `json:"sentinel"`
-	SoftFailed  int `json:"soft-failed"`
-	TotalFailed int `json:"total-failed"`
+	AdvisoryFailed int  `jsonapi:"attr,advisory-failed"`
+	Duration       int  `jsonapi:"attr,duration"`
+	HardFailed     int  `jsonapi:"attr,hard-failed"`
+	Passed         int  `jsonapi:"attr,passed"`
+	Result         bool `jsonapi:"attr,result"`
+	SoftFailed     int  `jsonapi:"attr,soft-failed"`
+	TotalFailed    int  `jsonapi:"attr,total-failed"`
 }
 
 // PolicyStatusTimestamps holds the timestamps for individual policy check
 // statuses.
 type PolicyStatusTimestamps struct {
-	ErroredAt    time.Time `json:"errored-at"`
-	HardFailedAt time.Time `json:"hard-failed-at"`
-	PassedAt     time.Time `json:"passed-at"`
-	QueuedAt     time.Time `json:"queued-at"`
-	SoftFailedAt time.Time `json:"soft-failed-at"`
+	ErroredAt    time.Time `jsonapi:"attr,errored-at,rfc3339"`
+	HardFailedAt time.Time `jsonapi:"attr,hard-failed-at,rfc3339"`
+	PassedAt     time.Time `jsonapi:"attr,passed-at,rfc3339"`
+	QueuedAt     time.Time `jsonapi:"attr,queued-at,rfc3339"`
+	SoftFailedAt time.Time `jsonapi:"attr,soft-failed-at,rfc3339"`
 }
 
 // PolicyCheckListOptions represents the options for listing policy checks.
@@ -120,7 +119,7 @@ type PolicyCheckListOptions struct {
 // List all policy checks of the given run.
 func (s *policyChecks) List(ctx context.Context, runID string, options PolicyCheckListOptions) (*PolicyCheckList, error) {
 	if !validStringID(&runID) {
-		return nil, errors.New("invalid value for run ID")
+		return nil, ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("runs/%s/policy-checks", url.QueryEscape(runID))

@@ -1,12 +1,13 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"net/url"
 	"strings"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 	"github.com/pkg/errors"
 )
 
@@ -58,11 +59,38 @@ type viewRowReader interface {
 	Close() error
 }
 
+// ViewResultRaw provides raw access to views data.
+// VOLATILE: This API is subject to change at any time.
+type ViewResultRaw struct {
+	reader viewRowReader
+}
+
+// NextBytes returns the next row as bytes.
+func (vrr *ViewResultRaw) NextBytes() []byte {
+	return vrr.reader.NextRow()
+}
+
+// Err returns any errors that have occurred on the stream
+func (vrr *ViewResultRaw) Err() error {
+	return vrr.reader.Err()
+}
+
+// Close marks the results as closed, returning any errors that occurred during reading the results.
+func (vrr *ViewResultRaw) Close() error {
+	return vrr.reader.Close()
+}
+
+// MetaData returns any meta-data that was available from this query as bytes.
+func (vrr *ViewResultRaw) MetaData() ([]byte, error) {
+	return vrr.reader.MetaData()
+}
+
 // ViewResult implements an iterator interface which can be used to iterate over the rows of the query results.
 type ViewResult struct {
 	reader viewRowReader
 
 	currentRow ViewRow
+	jsonErr    error
 }
 
 func newViewResult(reader viewRowReader) *ViewResult {
@@ -71,8 +99,24 @@ func newViewResult(reader viewRowReader) *ViewResult {
 	}
 }
 
+// Raw returns a ViewResultRaw which can be used to access the raw byte data from view queries.
+// Calling this function invalidates the underlying ViewResult which will no longer be able to be used.
+// VOLATILE: This API is subject to change at any time.
+func (r *ViewResult) Raw() *ViewResultRaw {
+	vr := &ViewResultRaw{
+		reader: r.reader,
+	}
+
+	r.reader = nil
+	return vr
+}
+
 // Next assigns the next result from the results into the value pointer, returning whether the read was successful.
 func (r *ViewResult) Next() bool {
+	if r.reader == nil {
+		return false
+	}
+
 	rowBytes := r.reader.NextRow()
 	if rowBytes == nil {
 		return false
@@ -81,27 +125,48 @@ func (r *ViewResult) Next() bool {
 	r.currentRow = ViewRow{}
 
 	var rowData jsonViewRow
-	if err := json.Unmarshal(rowBytes, &rowData); err == nil {
-		r.currentRow.ID = rowData.ID
-		r.currentRow.keyBytes = rowData.Key
-		r.currentRow.valueBytes = rowData.Value
+	if err := json.Unmarshal(rowBytes, &rowData); err != nil {
+		// This should never happen but if it does then lets store it in a best efforts basis and maybe the next
+		// row will be ok. We can then return this from .Err().
+		r.jsonErr = err
+		return true
 	}
+
+	r.currentRow.ID = rowData.ID
+	r.currentRow.keyBytes = rowData.Key
+	r.currentRow.valueBytes = rowData.Value
 
 	return true
 }
 
 // Row returns the contents of the current row.
 func (r *ViewResult) Row() ViewRow {
+	if r.reader == nil {
+		return ViewRow{}
+	}
+
 	return r.currentRow
 }
 
 // Err returns any errors that have occurred on the stream
 func (r *ViewResult) Err() error {
-	return r.reader.Err()
+	if r.reader == nil {
+		return errors.New("result object is no longer valid")
+	}
+
+	err := r.reader.Err()
+	if err != nil {
+		return err
+	}
+	return r.jsonErr
 }
 
 // Close marks the results as closed, returning any errors that occurred during reading the results.
 func (r *ViewResult) Close() error {
+	if r.reader == nil {
+		return r.Err()
+	}
+
 	return r.reader.Close()
 }
 
@@ -109,6 +174,10 @@ func (r *ViewResult) Close() error {
 // the meta-data will only be available once the object has been closed (either
 // implicitly or explicitly).
 func (r *ViewResult) MetaData() (*ViewMetaData, error) {
+	if r.reader == nil {
+		return nil, r.Err()
+	}
+
 	metaDataBytes, err := r.reader.MetaData()
 	if err != nil {
 		return nil, err
@@ -135,11 +204,15 @@ func (b *Bucket) ViewQuery(designDoc string, viewName string, opts *ViewOptions)
 		opts = &ViewOptions{}
 	}
 
-	span := b.tracer.StartSpan("ViewQuery", opts.parentSpan).
-		SetTag("couchbase.service", "view")
-	defer span.Finish()
+	start := time.Now()
+	defer b.meter.ValueRecord(meterValueServiceViews, "views", start)
 
 	designDoc = b.maybePrefixDevDocument(opts.Namespace, designDoc)
+
+	span := createSpan(b.tracer, opts.ParentSpan, "views", "views")
+	span.SetAttribute("db.name", b.Name())
+	span.SetAttribute("db.operation", designDoc+"/"+viewName)
+	defer span.End()
 
 	timeout := opts.Timeout
 	if timeout == 0 {
@@ -157,17 +230,20 @@ func (b *Bucket) ViewQuery(designDoc string, viewName string, opts *ViewOptions)
 		return nil, errors.Wrap(err, "could not parse query options")
 	}
 
-	return b.execViewQuery(span.Context(), "_view", designDoc, viewName, *urlValues, deadline, retryWrapper)
+	return b.execViewQuery(opts.Context, span.Context(), "_view", designDoc, viewName, *urlValues, deadline,
+		retryWrapper, opts.Internal.User)
 }
 
 func (b *Bucket) execViewQuery(
-	span requestSpanContext,
+	ctx context.Context,
+	span RequestSpanContext,
 	viewType, ddoc, viewName string,
 	options url.Values,
 	deadline time.Time,
 	wrapper *retryStrategyWrapper,
+	user string,
 ) (*ViewResult, error) {
-	provider, err := b.connectionManager.getViewProvider()
+	provider, err := b.connectionManager.getViewProvider(b.Name())
 	if err != nil {
 		return nil, ViewError{
 			InnerError:         wrapError(err, "failed to get query provider"),
@@ -176,7 +252,7 @@ func (b *Bucket) execViewQuery(
 		}
 	}
 
-	res, err := provider.ViewQuery(gocbcore.ViewQueryOptions{
+	res, err := provider.ViewQuery(ctx, gocbcore.ViewQueryOptions{
 		DesignDocumentName: ddoc,
 		ViewType:           viewType,
 		ViewName:           viewName,
@@ -184,6 +260,7 @@ func (b *Bucket) execViewQuery(
 		RetryStrategy:      wrapper,
 		Deadline:           deadline,
 		TraceContext:       span,
+		User:               user,
 	})
 	if err != nil {
 		return nil, maybeEnhanceViewError(err)

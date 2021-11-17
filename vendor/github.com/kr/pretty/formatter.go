@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/kr/text"
+	"github.com/rogpeppe/go-internal/fmtsort"
 )
 
 type formatter struct {
@@ -97,6 +98,14 @@ func (p *printer) printValue(v reflect.Value, showType, quote bool) {
 		return
 	}
 
+	if v.IsValid() && v.CanInterface() {
+		i := v.Interface()
+		if goStringer, ok := i.(fmt.GoStringer); ok {
+			io.WriteString(p, goStringer.GoString())
+			return
+		}
+	}
+
 	switch v.Kind() {
 	case reflect.Bool:
 		p.printInline(v, v.Bool(), showType)
@@ -123,10 +132,10 @@ func (p *printer) printValue(v reflect.Value, showType, quote bool) {
 				writeByte(p, '\n')
 				pp = p.indent()
 			}
-			keys := v.MapKeys()
+			sm := fmtsort.Sort(v)
 			for i := 0; i < v.Len(); i++ {
-				k := keys[i]
-				mv := v.MapIndex(k)
+				k := sm.Key[i]
+				mv := sm.Value[i]
 				pp.printValue(k, false, true)
 				writeByte(pp, ':')
 				if expand {

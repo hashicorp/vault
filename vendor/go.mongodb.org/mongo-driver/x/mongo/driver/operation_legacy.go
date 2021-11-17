@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/wiremessage"
 )
 
@@ -55,7 +55,14 @@ func (op Operation) legacyFind(ctx context.Context, dst []byte, srvr Server, con
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
+		// CurrentIndex is always 0 in this mode.
+		info := ResponseInfo{
+			ServerResponse:        finishedInfo.response,
+			Server:                srvr,
+			Connection:            conn,
+			ConnectionDescription: desc.Server,
+		}
+		return op.ProcessResponseFn(info)
 	}
 	return nil
 }
@@ -225,7 +232,14 @@ func (op Operation) legacyGetMore(ctx context.Context, dst []byte, srvr Server, 
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
+		// CurrentIndex is always 0 in this mode.
+		info := ResponseInfo{
+			ServerResponse:        finishedInfo.response,
+			Server:                srvr,
+			Connection:            conn,
+			ConnectionDescription: desc.Server,
+		}
+		return op.ProcessResponseFn(info)
 	}
 	return nil
 }
@@ -297,7 +311,7 @@ func (op Operation) legacyKillCursors(ctx context.Context, dst []byte, srvr Serv
 	if err != nil {
 		err = Error{Message: err.Error(), Labels: []string{TransientTransactionError, NetworkError}}
 		if ep, ok := srvr.(ErrorProcessor); ok {
-			ep.ProcessError(err, conn)
+			_ = ep.ProcessError(err, conn)
 		}
 
 		finishedInfo.cmdErr = err
@@ -339,7 +353,7 @@ func (op Operation) createLegacyKillCursorsWiremessage(dst []byte, desc descript
 	}
 
 	var collName string
-	var cursors bsoncore.Document
+	var cursors bsoncore.Array
 	for _, elem := range cmdElems {
 		switch elem.Key() {
 		case "killCursors":
@@ -393,7 +407,14 @@ func (op Operation) legacyListCollections(ctx context.Context, dst []byte, srvr 
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
+		// CurrentIndex is always 0 in this mode.
+		info := ResponseInfo{
+			ServerResponse:        finishedInfo.response,
+			Server:                srvr,
+			Connection:            conn,
+			ConnectionDescription: desc.Server,
+		}
+		return op.ProcessResponseFn(info)
 	}
 	return nil
 }
@@ -438,12 +459,17 @@ func (op Operation) createLegacyListCollectionsWiremessage(dst []byte, desc desc
 		optsElems = bsoncore.AppendDocumentElement(optsElems, "$readPreference", rp)
 	}
 
+	var batchSize int32
+	if val, ok := cmdDoc.Lookup("cursor", "batchSize").AsInt32OK(); ok {
+		batchSize = val
+	}
+
 	var wmIdx int32
 	wmIdx, dst = wiremessage.AppendHeaderStart(dst, info.requestID, 0, wiremessage.OpQuery)
 	dst = wiremessage.AppendQueryFlags(dst, op.slaveOK(desc))
 	dst = wiremessage.AppendQueryFullCollectionName(dst, op.getFullCollectionName(listCollectionsNamespace))
 	dst = wiremessage.AppendQueryNumberToSkip(dst, 0)
-	dst = wiremessage.AppendQueryNumberToReturn(dst, 0)
+	dst = wiremessage.AppendQueryNumberToReturn(dst, batchSize)
 	dst = op.appendLegacyQueryDocument(dst, filter, optsElems)
 	// leave out returnFieldsSelector because it is optional
 
@@ -520,7 +546,14 @@ func (op Operation) legacyListIndexes(ctx context.Context, dst []byte, srvr Serv
 	}
 
 	if op.ProcessResponseFn != nil {
-		return op.ProcessResponseFn(finishedInfo.response, srvr, desc.Server, 0)
+		// CurrentIndex is always 0 in this mode.
+		info := ResponseInfo{
+			ServerResponse:        finishedInfo.response,
+			Server:                srvr,
+			Connection:            conn,
+			ConnectionDescription: desc.Server,
+		}
+		return op.ProcessResponseFn(info)
 	}
 	return nil
 }
@@ -635,7 +668,7 @@ func (op Operation) appendLegacyQueryDocument(dst []byte, filter bsoncore.Docume
 func (op Operation) roundTripLegacyCursor(ctx context.Context, wm []byte, srvr Server, conn Connection, collName, identifier string) (bsoncore.Document, error) {
 	wm, err := op.roundTripLegacy(ctx, conn, wm)
 	if ep, ok := srvr.(ErrorProcessor); ok {
-		ep.ProcessError(err, conn)
+		_ = ep.ProcessError(err, conn)
 	}
 	if err != nil {
 		return nil, err

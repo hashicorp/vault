@@ -11,6 +11,7 @@ import (
 
 	"crypto/rand"
 
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/uuid"
 )
@@ -27,12 +28,18 @@ type Server struct {
 
 // returns whether or not a session has expired given a timeout in minutes
 // a session is considered expired if it has less than 1 minute left before becoming stale
-func (ss *Server) expired(timeoutMinutes uint32) bool {
-	if timeoutMinutes <= 0 {
+func (ss *Server) expired(topoDesc topologyDescription) bool {
+	// There is no server monitoring in LB mode, so we do not track session timeout minutes from server hello responses
+	// and never consider sessions to be expired.
+	if topoDesc.kind == description.LoadBalanced {
+		return false
+	}
+
+	if topoDesc.timeoutMinutes <= 0 {
 		return true
 	}
 	timeUnused := time.Since(ss.LastUsed).Minutes()
-	return timeUnused > float64(timeoutMinutes-1)
+	return timeUnused > float64(topoDesc.timeoutMinutes-1)
 }
 
 // update the last used time for this session.

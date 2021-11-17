@@ -13,7 +13,7 @@ var _ PolicySetParameters = (*policySetParameters)(nil)
 // PolicySetParameters describes all the parameter related methods that the Terraform
 // Enterprise API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/policy-set-params.html
+// TFE API docs: https://www.terraform.io/docs/cloud/api/policy-set-params.html
 type PolicySetParameters interface {
 	// List all the parameters associated with the given policy-set.
 	List(ctx context.Context, policySetID string, options PolicySetParameterListOptions) (*PolicySetParameterList, error)
@@ -89,8 +89,11 @@ func (s *policySetParameters) List(ctx context.Context, policySetID string, opti
 
 // PolicySetParameterCreateOptions represents the options for creating a new parameter.
 type PolicySetParameterCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,vars"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,vars"`
 
 	// The name of the parameter.
 	Key *string `jsonapi:"attr,key"`
@@ -126,9 +129,6 @@ func (s *policySetParameters) Create(ctx context.Context, policySetID string, op
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("policy-sets/%s/parameters", url.QueryEscape(policySetID))
 	req, err := s.client.newRequest("POST", u, &options)
@@ -171,8 +171,11 @@ func (s *policySetParameters) Read(ctx context.Context, policySetID string, para
 
 // PolicySetParameterUpdateOptions represents the options for updating a parameter.
 type PolicySetParameterUpdateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,vars"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,vars"`
 
 	// The name of the parameter.
 	Key *string `jsonapi:"attr,key,omitempty"`
@@ -192,9 +195,6 @@ func (s *policySetParameters) Update(ctx context.Context, policySetID string, pa
 	if !validStringID(&parameterID) {
 		return nil, errors.New("invalid value for parameter ID")
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = parameterID
 
 	u := fmt.Sprintf("policy-sets/%s/parameters/%s", url.QueryEscape(policySetID), url.QueryEscape(parameterID))
 	req, err := s.client.newRequest("PATCH", u, &options)

@@ -9,14 +9,12 @@
 // Package mongo provides a MongoDB Driver API for Go.
 //
 // Basic usage of the driver starts with creating a Client from a connection
-// string. To do so, call the NewClient and Connect functions:
+// string. To do so, call Connect:
 //
-// 		client, err := NewClient(options.Client().ApplyURI("mongodb://foo:bar@localhost:27017"))
-// 		if err != nil { return err }
-// 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-// 		defer cancel()
-// 		err = client.Connect(ctx)
-// 		if err != nil { return err }
+//    ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+//    defer cancel()
+//    client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://foo:bar@localhost:27017"))
+//    if err != nil { return err }
 //
 // This will create a new client and start monitoring the MongoDB server on localhost.
 // The Database and Collection types can be used to access the database:
@@ -52,6 +50,17 @@
 //      return err
 //    }
 //
+// Cursor.All will decode all of the returned elements at once:
+//
+//    var results []struct{
+//      Foo string
+//      Bar int32
+//    }
+//    if err = cur.All(context.Background(), &results); err != nil {
+//      log.Fatal(err)
+//    }
+//    // do something with results...
+//
 // Methods that only return a single document will return a *SingleResult, which works
 // like a *sql.Row:
 //
@@ -70,6 +79,18 @@
 // Additional examples can be found under the examples directory in the driver's repository and
 // on the MongoDB website.
 //
+// Error Handling
+//
+// Errors from the MongoDB server will implement the ServerError interface, which has functions to check for specific
+// error codes, labels, and message substrings. These can be used to check for and handle specific errors. Some methods,
+// like InsertMany and BulkWrite, can return an error representing multiple errors, and in those cases the ServerError
+// functions will return true if any of the contained errors satisfy the check.
+//
+// There are also helper functions to check for certain specific types of errors:
+//    IsDuplicateKeyError(error)
+//    IsNetworkError(error)
+//    IsTimeout(error)
+//
 // Potential DNS Issues
 //
 // Building with Go 1.11+ and using connection strings with the "mongodb+srv"[1] scheme is
@@ -84,8 +105,9 @@
 //
 // Note: Auto encryption is an enterprise-only feature.
 //
-// The libmongocrypt C library is required when using client-side encryption. To install libmongocrypt, follow the
-// instructions for your operating system:
+// The libmongocrypt C library is required when using client-side encryption. libmongocrypt version 1.1.0 or higher is
+// required when using driver version 1.5.0 or higher. To install libmongocrypt, follow the instructions for your
+// operating system:
 //
 // 1. Linux: follow the instructions listed at
 // https://github.com/mongodb/libmongocrypt#installing-libmongocrypt-from-distribution-packages to install the correct

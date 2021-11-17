@@ -178,15 +178,23 @@ func (b *azureAuthBackend) verifyClaims(claims *additionalClaims, role *azureRol
 		return fmt.Errorf("token is not yet valid (Token Not Before: %v)", notBefore)
 	}
 
+	if (len(role.BoundServicePrincipalIDs) == 1 && role.BoundServicePrincipalIDs[0] == "*") &&
+		(len(role.BoundGroupIDs) == 1 && role.BoundGroupIDs[0] == "*") {
+		return fmt.Errorf("expected specific bound_group_ids or bound_service_principal_ids; both cannot be '*'")
+	}
 	switch {
 	case len(role.BoundServicePrincipalIDs) == 1 && role.BoundServicePrincipalIDs[0] == "*":
+		// Globbing on PrincipalIDs; can skip Service Principal ID check
 	case len(role.BoundServicePrincipalIDs) > 0:
 		if !strListContains(role.BoundServicePrincipalIDs, claims.ObjectID) {
 			return fmt.Errorf("service principal not authorized: %s", claims.ObjectID)
 		}
 	}
 
-	if len(role.BoundGroupIDs) > 0 {
+	switch {
+	case len(role.BoundGroupIDs) == 1 && role.BoundGroupIDs[0] == "*":
+		// Globbing on GroupIDs; can skip group ID check
+	case len(role.BoundGroupIDs) > 0:
 		var found bool
 		for _, group := range claims.GroupIDs {
 			if strListContains(role.BoundGroupIDs, group) {

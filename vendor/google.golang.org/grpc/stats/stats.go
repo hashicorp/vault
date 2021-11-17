@@ -16,8 +16,6 @@
  *
  */
 
-//go:generate protoc --go_out=plugins=grpc:. grpc_testing/test.proto
-
 // Package stats is for collecting and reporting various network and RPC stats.
 // This package is for monitoring purpose only. All fields are read-only.
 // All APIs are experimental.
@@ -38,15 +36,22 @@ type RPCStats interface {
 	IsClient() bool
 }
 
-// Begin contains stats when an RPC begins.
+// Begin contains stats when an RPC attempt begins.
 // FailFast is only valid if this Begin is from client side.
 type Begin struct {
 	// Client is true if this Begin is from client side.
 	Client bool
-	// BeginTime is the time when the RPC begins.
+	// BeginTime is the time when the RPC attempt begins.
 	BeginTime time.Time
 	// FailFast indicates if this RPC is failfast.
 	FailFast bool
+	// IsClientStream indicates whether the RPC is a client streaming RPC.
+	IsClientStream bool
+	// IsServerStream indicates whether the RPC is a server streaming RPC.
+	IsServerStream bool
+	// IsTransparentRetryAttempt indicates whether this attempt was initiated
+	// due to transparently retrying a previous attempt.
+	IsTransparentRetryAttempt bool
 }
 
 // IsClient indicates if the stats information is from client side.

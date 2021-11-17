@@ -32,10 +32,10 @@ func (hc *heartbeat) run() {
 		case <-hbTicker.C:
 			err := hc.heartbeatMain()
 			if err != nil {
-				glog.V(2).Info("failed to heartbeat")
+				logger.Error("failed to heartbeat")
 			}
 		case <-hc.shutdownChan:
-			glog.V(2).Info("stopping heartbeat")
+			logger.Info("stopping heartbeat")
 			return
 		}
 	}
@@ -44,25 +44,23 @@ func (hc *heartbeat) run() {
 func (hc *heartbeat) start() {
 	hc.shutdownChan = make(chan bool)
 	go hc.run()
-	glog.V(2).Info("heartbeat started")
+	logger.Info("heartbeat started")
 }
 
 func (hc *heartbeat) stop() {
 	hc.shutdownChan <- true
 	close(hc.shutdownChan)
-	glog.V(2).Info("heartbeat stopped")
+	logger.Info("heartbeat stopped")
 }
 
 func (hc *heartbeat) heartbeatMain() error {
-	glog.V(2).Info("Heartbeating!")
+	logger.Info("Heartbeating!")
 	params := &url.Values{}
 	params.Add(requestIDKey, uuid.New().String())
 	params.Add(requestGUIDKey, uuid.New().String())
-	headers := make(map[string]string)
-	headers["Content-Type"] = headerContentTypeApplicationJSON
-	headers["accept"] = headerAcceptTypeApplicationSnowflake
-	headers["User-Agent"] = userAgent
-	headers[headerAuthorizationKey] = fmt.Sprintf(headerSnowflakeToken, hc.restful.Token)
+	headers := getHeaders()
+	token, _, _ := hc.restful.TokenAccessor.GetTokens()
+	headers[headerAuthorizationKey] = fmt.Sprintf(headerSnowflakeToken, token)
 
 	fullURL := hc.restful.getFullURL(heartBeatPath, params)
 	timeout := hc.restful.RequestTimeout
@@ -72,16 +70,15 @@ func (hc *heartbeat) heartbeatMain() error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
-		glog.V(2).Infof("heartbeatMain: resp: %v", resp)
+		logger.Infof("heartbeatMain: resp: %v", resp)
 		var respd execResponse
 		err = json.NewDecoder(resp.Body).Decode(&respd)
 		if err != nil {
-			glog.V(1).Infof("failed to decode JSON. err: %v", err)
-			glog.Flush()
+			logger.Infof("failed to decode JSON. err: %v", err)
 			return err
 		}
 		if respd.Code == sessionExpiredCode {
-			err = hc.restful.FuncRenewSession(context.TODO(), hc.restful, timeout)
+			err = hc.restful.renewExpiredSessionToken(context.Background(), timeout, token)
 			if err != nil {
 				return err
 			}
@@ -90,12 +87,11 @@ func (hc *heartbeat) heartbeatMain() error {
 	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		glog.V(1).Infof("failed to extract HTTP response body. err: %v", err)
+		logger.Errorf("failed to extract HTTP response body. err: %v", err)
 		return err
 	}
-	glog.V(1).Infof("HTTP: %v, URL: %v, Body: %v", resp.StatusCode, fullURL, b)
-	glog.V(1).Infof("Header: %v", resp.Header)
-	glog.Flush()
+	logger.Infof("HTTP: %v, URL: %v, Body: %v", resp.StatusCode, fullURL, b)
+	logger.Infof("Header: %v", resp.Header)
 	return &SnowflakeError{
 		Number:   ErrFailedToHeartbeat,
 		SQLState: SQLStateConnectionFailure,

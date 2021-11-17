@@ -16,10 +16,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -47,6 +47,7 @@ type FindAndModify struct {
 	retry                    *driver.RetryMode
 	crypt                    *driver.Crypt
 	hint                     bsoncore.Value
+	serverAPI                *driver.ServerAPIOptions
 
 	result FindAndModifyResult
 }
@@ -107,10 +108,10 @@ func NewFindAndModify(query bsoncore.Document) *FindAndModify {
 // Result returns the result of executing this operation.
 func (fam *FindAndModify) Result() FindAndModifyResult { return fam.result }
 
-func (fam *FindAndModify) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (fam *FindAndModify) processResponse(info driver.ResponseInfo) error {
 	var err error
 
-	fam.result, err = buildFindAndModifyResult(response, srvr)
+	fam.result, err = buildFindAndModifyResult(info.ServerResponse, info.Server)
 	return err
 
 }
@@ -135,6 +136,7 @@ func (fam *FindAndModify) Execute(ctx context.Context) error {
 		Selector:       fam.selector,
 		WriteConcern:   fam.writeConcern,
 		Crypt:          fam.crypt,
+		ServerAPI:      fam.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -424,5 +426,15 @@ func (fam *FindAndModify) Hint(hint bsoncore.Value) *FindAndModify {
 	}
 
 	fam.hint = hint
+	return fam
+}
+
+// ServerAPI sets the server API version for this operation.
+func (fam *FindAndModify) ServerAPI(serverAPI *driver.ServerAPIOptions) *FindAndModify {
+	if fam == nil {
+		fam = new(FindAndModify)
+	}
+
+	fam.serverAPI = serverAPI
 	return fam
 }

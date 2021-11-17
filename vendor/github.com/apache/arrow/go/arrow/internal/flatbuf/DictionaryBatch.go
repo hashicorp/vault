@@ -74,7 +74,8 @@ func (rcv *DictionaryBatch) Data(obj *RecordBatch) *RecordBatch {
 }
 
 /// If isDelta is true the values in the dictionary are to be appended to a
-/// dictionary with the indicated id
+/// dictionary with the indicated id. If isDelta is false this dictionary
+/// should replace the existing dictionary.
 func (rcv *DictionaryBatch) IsDelta() bool {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(8))
 	if o != 0 {
@@ -84,7 +85,8 @@ func (rcv *DictionaryBatch) IsDelta() bool {
 }
 
 /// If isDelta is true the values in the dictionary are to be appended to a
-/// dictionary with the indicated id
+/// dictionary with the indicated id. If isDelta is false this dictionary
+/// should replace the existing dictionary.
 func (rcv *DictionaryBatch) MutateIsDelta(n bool) bool {
 	return rcv._tab.MutateBoolSlot(8, n)
 }

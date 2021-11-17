@@ -1,9 +1,10 @@
 package gocb
 
 import (
+	"context"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 // BinaryCollection is a set of binary operations.
@@ -19,6 +20,17 @@ type AppendOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (c *Collection) binaryAppend(id string, val []byte, opts *AppendOptions) (mutOut *MutationResult, errOut error) {
@@ -26,13 +38,15 @@ func (c *Collection) binaryAppend(id string, val []byte, opts *AppendOptions) (m
 		opts = &AppendOptions{}
 	}
 
-	opm := c.newKvOpManager("Append", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("append", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -51,8 +65,9 @@ func (c *Collection) binaryAppend(id string, val []byte, opts *AppendOptions) (m
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		Cas:                    gocbcore.Cas(opts.Cas),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.AdjoinResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -85,6 +100,17 @@ type PrependOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (c *Collection) binaryPrepend(id string, val []byte, opts *PrependOptions) (mutOut *MutationResult, errOut error) {
@@ -92,13 +118,15 @@ func (c *Collection) binaryPrepend(id string, val []byte, opts *PrependOptions) 
 		opts = &PrependOptions{}
 	}
 
-	opm := c.newKvOpManager("Prepend", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("prepend", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -117,8 +145,9 @@ func (c *Collection) binaryPrepend(id string, val []byte, opts *PrependOptions) 
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		Cas:                    gocbcore.Cas(opts.Cas),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.AdjoinResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -159,6 +188,17 @@ type IncrementOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (c *Collection) binaryIncrement(id string, opts *IncrementOptions) (countOut *CounterResult, errOut error) {
@@ -166,13 +206,15 @@ func (c *Collection) binaryIncrement(id string, opts *IncrementOptions) (countOu
 		opts = &IncrementOptions{}
 	}
 
-	opm := c.newKvOpManager("Increment", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("increment", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	realInitial := uint64(0xFFFFFFFFFFFFFFFF)
 	if opts.Initial >= 0 {
@@ -198,8 +240,9 @@ func (c *Collection) binaryIncrement(id string, opts *IncrementOptions) (countOu
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		Cas:                    gocbcore.Cas(opts.Cas),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.CounterResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -243,6 +286,17 @@ type DecrementOptions struct {
 	ReplicateTo     uint
 	Cas             Cas
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (c *Collection) binaryDecrement(id string, opts *DecrementOptions) (countOut *CounterResult, errOut error) {
@@ -250,13 +304,15 @@ func (c *Collection) binaryDecrement(id string, opts *DecrementOptions) (countOu
 		opts = &DecrementOptions{}
 	}
 
-	opm := c.newKvOpManager("Decrement", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("decrement", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	realInitial := uint64(0xFFFFFFFFFFFFFFFF)
 	if opts.Initial >= 0 {
@@ -282,8 +338,9 @@ func (c *Collection) binaryDecrement(id string, opts *DecrementOptions) (countOu
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		Cas:                    gocbcore.Cas(opts.Cas),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.CounterResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)

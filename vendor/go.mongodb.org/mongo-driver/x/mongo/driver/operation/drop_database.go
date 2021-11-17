@@ -11,13 +11,12 @@ package operation
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -31,45 +30,12 @@ type DropDatabase struct {
 	deployment   driver.Deployment
 	selector     description.ServerSelector
 	writeConcern *writeconcern.WriteConcern
-	result       DropDatabaseResult
-}
-
-type DropDatabaseResult struct {
-	// The dropped database.
-	Dropped string
-}
-
-func buildDropDatabaseResult(response bsoncore.Document, srvr driver.Server) (DropDatabaseResult, error) {
-	elements, err := response.Elements()
-	if err != nil {
-		return DropDatabaseResult{}, err
-	}
-	ddr := DropDatabaseResult{}
-	for _, element := range elements {
-		switch element.Key() {
-		case "dropped":
-			var ok bool
-			ddr.Dropped, ok = element.Value().StringValueOK()
-			if !ok {
-				err = fmt.Errorf("response field 'dropped' is type string, but received BSON type %s", element.Value().Type)
-			}
-		}
-	}
-	return ddr, nil
+	serverAPI    *driver.ServerAPIOptions
 }
 
 // NewDropDatabase constructs and returns a new DropDatabase.
 func NewDropDatabase() *DropDatabase {
 	return &DropDatabase{}
-}
-
-// Result returns the result of executing this operation.
-func (dd *DropDatabase) Result() DropDatabaseResult { return dd.result }
-
-func (dd *DropDatabase) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
-	var err error
-	dd.result, err = buildDropDatabaseResult(response, srvr)
-	return err
 }
 
 // Execute runs this operations and returns an error if the operaiton did not execute successfully.
@@ -79,16 +45,16 @@ func (dd *DropDatabase) Execute(ctx context.Context) error {
 	}
 
 	return driver.Operation{
-		CommandFn:         dd.command,
-		ProcessResponseFn: dd.processResponse,
-		Client:            dd.session,
-		Clock:             dd.clock,
-		CommandMonitor:    dd.monitor,
-		Crypt:             dd.crypt,
-		Database:          dd.database,
-		Deployment:        dd.deployment,
-		Selector:          dd.selector,
-		WriteConcern:      dd.writeConcern,
+		CommandFn:      dd.command,
+		Client:         dd.session,
+		Clock:          dd.clock,
+		CommandMonitor: dd.monitor,
+		Crypt:          dd.crypt,
+		Database:       dd.database,
+		Deployment:     dd.deployment,
+		Selector:       dd.selector,
+		WriteConcern:   dd.writeConcern,
+		ServerAPI:      dd.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -176,5 +142,15 @@ func (dd *DropDatabase) WriteConcern(writeConcern *writeconcern.WriteConcern) *D
 	}
 
 	dd.writeConcern = writeConcern
+	return dd
+}
+
+// ServerAPI sets the server API version for this operation.
+func (dd *DropDatabase) ServerAPI(serverAPI *driver.ServerAPIOptions) *DropDatabase {
+	if dd == nil {
+		dd = new(DropDatabase)
+	}
+
+	dd.serverAPI = serverAPI
 	return dd
 }

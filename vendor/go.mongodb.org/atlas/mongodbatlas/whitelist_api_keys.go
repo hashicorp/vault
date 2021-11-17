@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const whitelistAPIKeysPath = "orgs/%s/apiKeys/%s/whitelist"
+const whitelistAPIKeysPath = "api/atlas/v1.0/orgs/%s/apiKeys/%s/whitelist"
 
 // WhitelistAPIKeysService is an interface for interfacing with the Whitelist API Keys
 // endpoints of the MongoDB Atlas API.
@@ -30,7 +30,7 @@ const whitelistAPIKeysPath = "orgs/%s/apiKeys/%s/whitelist"
 // Deprecated: AccessListAPIKeysService replaces WhitelistAPIKeysService.
 // Atlas now refers to programmatic API key whitelists as access lists.
 // Atlas has deprecated the whitelist method and will disable it in June 2021.
-// Please update any dependent work to use WhitelistAPIKeysService
+// Please update any dependent work to use WhitelistAPIKeysService.
 type WhitelistAPIKeysService interface {
 	List(context.Context, string, string, *ListOptions) (*WhitelistAPIKeys, *Response, error)
 	Get(context.Context, string, string, string) (*WhitelistAPIKey, *Response, error)
@@ -39,7 +39,7 @@ type WhitelistAPIKeysService interface {
 }
 
 // WhitelistAPIKeysServiceOp handles communication with the Whitelist API keys related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type WhitelistAPIKeysServiceOp service
 
 var _ WhitelistAPIKeysService = &WhitelistAPIKeysServiceOp{}
@@ -62,13 +62,14 @@ type WhitelistAPIKeys struct {
 	TotalCount int                `json:"totalCount,omitempty"` // Count of the total number of items in the result set. It may be greater than the number of objects in the results array if the entire result set is paginated.
 }
 
-// WhitelistAPIKeysReq represents the request to the mehtod create
+// WhitelistAPIKeysReq represents the request to the mehtod create.
 type WhitelistAPIKeysReq struct {
 	IPAddress string `json:"ipAddress,omitempty"` // IP address to be added to the whitelist for the API key.
 	CidrBlock string `json:"cidrBlock,omitempty"` // Whitelist entry in CIDR notation to be added for the API key.
 }
 
 // List gets all Whitelist API keys.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/apiKeys-org-whitelist-get-all/
 func (s *WhitelistAPIKeysServiceOp) List(ctx context.Context, orgID, apiKeyID string, listOptions *ListOptions) (*WhitelistAPIKeys, *Response, error) {
 	if orgID == "" {
@@ -103,6 +104,7 @@ func (s *WhitelistAPIKeysServiceOp) List(ctx context.Context, orgID, apiKeyID st
 }
 
 // Get gets the Whitelist API keys.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/cloud-provider-snapshot-get-one/
 func (s *WhitelistAPIKeysServiceOp) Get(ctx context.Context, orgID, apiKeyID, ipAddress string) (*WhitelistAPIKey, *Response, error) {
 	if orgID == "" {
@@ -131,7 +133,9 @@ func (s *WhitelistAPIKeysServiceOp) Get(ctx context.Context, orgID, apiKeyID, ip
 	return root, resp, err
 }
 
-// Create a submit a POST request containing ipAddress or cidrBlock values which are not already present in the whitelist, Atlas adds those entries to the list of existing entries in the whitelist.
+// Create a submit a POST request containing ipAddress or cidrBlock values which are not already present in the whitelist,
+// Atlas adds those entries to the list of existing entries in the whitelist.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/apiKeys-org-whitelist-create/
 func (s *WhitelistAPIKeysServiceOp) Create(ctx context.Context, orgID, apiKeyID string, createRequest []*WhitelistAPIKeysReq) (*WhitelistAPIKeys, *Response, error) {
 	if orgID == "" {
@@ -161,6 +165,7 @@ func (s *WhitelistAPIKeysServiceOp) Create(ctx context.Context, orgID, apiKeyID 
 }
 
 // Delete deletes the Whitelist API keys.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/cloud-provider-snapshot-delete-one/
 func (s *WhitelistAPIKeysServiceOp) Delete(ctx context.Context, orgID, apiKeyID, ipAddress string) (*Response, error) {
 	if orgID == "" {

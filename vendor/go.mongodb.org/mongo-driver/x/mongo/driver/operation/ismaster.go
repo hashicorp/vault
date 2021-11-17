@@ -7,11 +7,13 @@ import (
 	"runtime"
 	"strconv"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/internal"
+	"go.mongodb.org/mongo-driver/mongo/address"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/version"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/address"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -25,6 +27,8 @@ type IsMaster struct {
 	speculativeAuth    bsoncore.Document
 	topologyVersion    *description.TopologyVersion
 	maxAwaitTimeMS     *int64
+	serverAPI          *driver.ServerAPIOptions
+	loadBalanced       bool
 
 	res bsoncore.Document
 }
@@ -87,9 +91,21 @@ func (im *IsMaster) MaxAwaitTimeMS(awaitTime int64) *IsMaster {
 	return im
 }
 
+// ServerAPI sets the server API version for this operation.
+func (im *IsMaster) ServerAPI(serverAPI *driver.ServerAPIOptions) *IsMaster {
+	im.serverAPI = serverAPI
+	return im
+}
+
+// LoadBalanced specifies whether or not this operation is being sent over a connection to a load balanced cluster.
+func (im *IsMaster) LoadBalanced(lb bool) *IsMaster {
+	im.loadBalanced = lb
+	return im
+}
+
 // Result returns the result of executing this operation.
 func (im *IsMaster) Result(addr address.Address) description.Server {
-	return description.NewServer(addr, im.res)
+	return description.NewServer(addr, bson.Raw(im.res))
 }
 
 func (im *IsMaster) decodeStringSlice(element bsoncore.Element, name string) ([]string, error) {
@@ -179,7 +195,11 @@ func (im *IsMaster) handshakeCommand(dst []byte, desc description.SelectedServer
 
 // command appends all necessary command fields.
 func (im *IsMaster) command(dst []byte, _ description.SelectedServer) ([]byte, error) {
-	dst = bsoncore.AppendInt32Element(dst, "isMaster", 1)
+	if im.serverAPI != nil {
+		dst = bsoncore.AppendInt32Element(dst, "hello", 1)
+	} else {
+		dst = bsoncore.AppendInt32Element(dst, "isMaster", 1)
+	}
 
 	if tv := im.topologyVersion; tv != nil {
 		var tvIdx int32
@@ -191,6 +211,11 @@ func (im *IsMaster) command(dst []byte, _ description.SelectedServer) ([]byte, e
 	}
 	if im.maxAwaitTimeMS != nil {
 		dst = bsoncore.AppendInt64Element(dst, "maxAwaitTimeMS", *im.maxAwaitTimeMS)
+	}
+	if im.loadBalanced {
+		// The loadBalanced parameter should only be added if it's true. We should never explicitly send
+		// loadBalanced=false per the load balancing spec.
+		dst = bsoncore.AppendBooleanElement(dst, "loadBalanced", true)
 	}
 
 	return dst, nil
@@ -216,30 +241,44 @@ func (im *IsMaster) createOperation() driver.Operation {
 		CommandFn:  im.command,
 		Database:   "admin",
 		Deployment: im.d,
-		ProcessResponseFn: func(response bsoncore.Document, _ driver.Server, _ description.Server, _ int) error {
-			im.res = response
+		ProcessResponseFn: func(info driver.ResponseInfo) error {
+			im.res = info.ServerResponse
 			return nil
 		},
+		ServerAPI: im.serverAPI,
 	}
 }
 
-// GetDescription retrieves the server description for the given connection. This function implements the Handshaker
-// interface.
-func (im *IsMaster) GetDescription(ctx context.Context, _ address.Address, c driver.Connection) (description.Server, error) {
+// GetHandshakeInformation performs the MongoDB handshake for the provided connection and returns the relevant
+// information about the server. This function implements the driver.Handshaker interface.
+func (im *IsMaster) GetHandshakeInformation(ctx context.Context, _ address.Address, c driver.Connection) (driver.HandshakeInformation, error) {
 	err := driver.Operation{
 		Clock:      im.clock,
 		CommandFn:  im.handshakeCommand,
 		Deployment: driver.SingleConnectionDeployment{c},
 		Database:   "admin",
-		ProcessResponseFn: func(response bsoncore.Document, _ driver.Server, _ description.Server, _ int) error {
-			im.res = response
+		ProcessResponseFn: func(info driver.ResponseInfo) error {
+			im.res = info.ServerResponse
 			return nil
 		},
+		ServerAPI: im.serverAPI,
 	}.Execute(ctx, nil)
 	if err != nil {
-		return description.Server{}, err
+		return driver.HandshakeInformation{}, err
 	}
-	return im.Result(c.Address()), nil
+
+	info := driver.HandshakeInformation{
+		Description: im.Result(c.Address()),
+	}
+	if speculativeAuthenticate, ok := im.res.Lookup("speculativeAuthenticate").DocumentOK(); ok {
+		info.SpeculativeAuthenticate = speculativeAuthenticate
+	}
+	// Cast to bson.Raw to lookup saslSupportedMechs to avoid converting from bsoncore.Value to bson.RawValue for the
+	// StringSliceFromRawValue call.
+	if saslSupportedMechs, lookupErr := bson.Raw(im.res).LookupErr("saslSupportedMechs"); lookupErr == nil {
+		info.SaslSupportedMechs, err = internal.StringSliceFromRawValue("saslSupportedMechs", saslSupportedMechs)
+	}
+	return info, err
 }
 
 // FinishHandshake implements the Handshaker interface. This is a no-op function because a non-authenticated connection

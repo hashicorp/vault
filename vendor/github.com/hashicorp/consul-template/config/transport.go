@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"time"
+
+	"github.com/hashicorp/consul-template/dependency"
 )
 
 const (
@@ -36,6 +38,11 @@ var (
 // TransportConfig is the configuration to tune low-level APIs for the
 // interactions on the wire.
 type TransportConfig struct {
+	// CustomDialer overrides the default net.Dial with a custom dialer. This is
+	// useful for instance with Vault Agent Templating to direct Consul Template
+	// requests through an internal cache.
+	CustomDialer dependency.TransportDialer `mapstructure:"-"`
+
 	// DialKeepAlive is the amount of time for keep-alives.
 	DialKeepAlive *time.Duration `mapstructure:"dial_keep_alive"`
 
@@ -75,6 +82,7 @@ func (c *TransportConfig) Copy() *TransportConfig {
 
 	var o TransportConfig
 
+	o.CustomDialer = c.CustomDialer
 	o.DialKeepAlive = c.DialKeepAlive
 	o.DialTimeout = c.DialTimeout
 	o.DisableKeepAlives = c.DisableKeepAlives
@@ -103,6 +111,10 @@ func (c *TransportConfig) Merge(o *TransportConfig) *TransportConfig {
 	}
 
 	r := c.Copy()
+
+	if o.CustomDialer != nil {
+		r.CustomDialer = o.CustomDialer
+	}
 
 	if o.DialKeepAlive != nil {
 		r.DialKeepAlive = o.DialKeepAlive

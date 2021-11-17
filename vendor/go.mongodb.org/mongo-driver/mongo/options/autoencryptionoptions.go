@@ -34,8 +34,15 @@ func AutoEncryption() *AutoEncryptionOptions {
 	return &AutoEncryptionOptions{}
 }
 
-// SetKeyVaultClientOptions specifies options for the client used to communicate with the key vault collection. If this is
-// not set, the client used to do encryption will be re-used for key vault communication.
+// SetKeyVaultClientOptions specifies options for the client used to communicate with the key vault collection.
+//
+// If this is set, it is used to create an internal mongo.Client.
+// Otherwise, if the target mongo.Client being configured has an unlimited connection pool size (i.e. maxPoolSize=0),
+// it is reused to interact with the key vault collection.
+// Otherwise, if the target mongo.Client has a limited connection pool size, a separate internal mongo.Client is used
+// (and created if necessary). The internal mongo.Client may be shared during automatic encryption (if
+// BypassAutomaticEncryption is false). The internal mongo.Client is configured with the same options as the target
+// mongo.Client except minPoolSize is set to 0 and AutoEncryptionOptions is omitted.
 func (a *AutoEncryptionOptions) SetKeyVaultClientOptions(opts *ClientOptions) *AutoEncryptionOptions {
 	a.KeyVaultClientOptions = opts
 	return a
@@ -66,6 +73,13 @@ func (a *AutoEncryptionOptions) SetSchemaMap(schemaMap map[string]interface{}) *
 }
 
 // SetBypassAutoEncryption specifies whether or not auto encryption should be done.
+//
+// If this is unset or false and target mongo.Client being configured has an unlimited connection pool size
+// (i.e. maxPoolSize=0), it is reused in the process of auto encryption.
+// Otherwise, if the target mongo.Client has a limited connection pool size, a separate internal mongo.Client is used
+// (and created if necessary). The internal mongo.Client may be shared for key vault operations (if KeyVaultClient is
+// unset). The internal mongo.Client is configured with the same options as the target mongo.Client except minPoolSize
+// is set to 0 and AutoEncryptionOptions is omitted.
 func (a *AutoEncryptionOptions) SetBypassAutoEncryption(bypass bool) *AutoEncryptionOptions {
 	a.BypassAutoEncryption = &bypass
 	return a

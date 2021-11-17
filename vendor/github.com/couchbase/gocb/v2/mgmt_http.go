@@ -1,10 +1,11 @@
 package gocb
 
 import (
+	"context"
 	"io"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 type mgmtRequest struct {
@@ -20,7 +21,7 @@ type mgmtRequest struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
 
-	parentSpan requestSpanContext
+	parentSpanCtx RequestSpanContext
 }
 
 type mgmtResponse struct {
@@ -30,10 +31,10 @@ type mgmtResponse struct {
 }
 
 type mgmtProvider interface {
-	executeMgmtRequest(req mgmtRequest) (*mgmtResponse, error)
+	executeMgmtRequest(ctx context.Context, req mgmtRequest) (*mgmtResponse, error)
 }
 
-func (c *Cluster) executeMgmtRequest(req mgmtRequest) (mgmtRespOut *mgmtResponse, errOut error) {
+func (c *Cluster) executeMgmtRequest(ctx context.Context, req mgmtRequest) (mgmtRespOut *mgmtResponse, errOut error) {
 	timeout := req.Timeout
 	if timeout == 0 {
 		timeout = c.timeoutsConfig.ManagementTimeout
@@ -60,10 +61,10 @@ func (c *Cluster) executeMgmtRequest(req mgmtRequest) (mgmtRespOut *mgmtResponse
 		UniqueID:      req.UniqueID,
 		Deadline:      time.Now().Add(timeout),
 		RetryStrategy: retryStrategy,
-		TraceContext:  req.parentSpan,
+		TraceContext:  req.parentSpanCtx,
 	}
 
-	coreresp, err := provider.DoHTTPRequest(corereq)
+	coreresp, err := provider.DoHTTPRequest(ctx, corereq)
 	if err != nil {
 		return nil, makeGenericHTTPError(err, corereq, coreresp)
 	}
@@ -76,13 +77,13 @@ func (c *Cluster) executeMgmtRequest(req mgmtRequest) (mgmtRespOut *mgmtResponse
 	return resp, nil
 }
 
-func (b *Bucket) executeMgmtRequest(req mgmtRequest) (mgmtRespOut *mgmtResponse, errOut error) {
+func (b *Bucket) executeMgmtRequest(ctx context.Context, req mgmtRequest) (mgmtRespOut *mgmtResponse, errOut error) {
 	timeout := req.Timeout
 	if timeout == 0 {
 		timeout = b.timeoutsConfig.ManagementTimeout
 	}
 
-	provider, err := b.connectionManager.getHTTPProvider()
+	provider, err := b.connectionManager.getHTTPProvider(b.Name())
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +104,10 @@ func (b *Bucket) executeMgmtRequest(req mgmtRequest) (mgmtRespOut *mgmtResponse,
 		UniqueID:      req.UniqueID,
 		Deadline:      time.Now().Add(timeout),
 		RetryStrategy: retryStrategy,
+		TraceContext:  req.parentSpanCtx,
 	}
 
-	coreresp, err := provider.DoHTTPRequest(corereq)
+	coreresp, err := provider.DoHTTPRequest(ctx, corereq)
 	if err != nil {
 		return nil, makeGenericHTTPError(err, corereq, coreresp)
 	}

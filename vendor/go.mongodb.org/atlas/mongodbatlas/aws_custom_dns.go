@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const customAWSDNSPath = "groups/%s/awsCustomDNS"
+const customAWSDNSPath = "api/atlas/v1.0/groups/%s/awsCustomDNS"
 
 // AWSCustomDNSService provides access to the custom AWS DNS related functions in the Atlas API.
 //

@@ -18,7 +18,6 @@ package arrow
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 )
 
@@ -26,6 +25,7 @@ import (
 // a variable-size sequence of values, all having the same relative type.
 type ListType struct {
 	elem DataType // DataType of the list's elements
+	Meta Metadata
 }
 
 // ListOf returns the list type with element type t.
@@ -148,6 +148,40 @@ func (t *StructType) FieldByName(name string) (Field, bool) {
 	return t.fields[i], true
 }
 
+type MapType struct {
+	value      *ListType
+	KeysSorted bool
+}
+
+func MapOf(key, item DataType) *MapType {
+	if key == nil || item == nil {
+		panic("arrow: nil key or item type for MapType")
+	}
+
+	return &MapType{value: ListOf(StructOf(Field{Name: "key", Type: key}, Field{Name: "value", Type: item, Nullable: true}))}
+}
+
+func (*MapType) ID() Type     { return MAP }
+func (*MapType) Name() string { return "map" }
+
+func (t *MapType) String() string {
+	var o strings.Builder
+	o.WriteString(fmt.Sprintf("map<%s, %s",
+		t.value.Elem().(*StructType).Field(0).Type,
+		t.value.Elem().(*StructType).Field(1).Type))
+	if t.KeysSorted {
+		o.WriteString(", keys_sorted")
+	}
+	o.WriteString(">")
+	return o.String()
+}
+
+func (t *MapType) KeyField() Field        { return t.value.Elem().(*StructType).Field(0) }
+func (t *MapType) KeyType() DataType      { return t.KeyField().Type }
+func (t *MapType) ItemField() Field       { return t.value.Elem().(*StructType).Field(1) }
+func (t *MapType) ItemType() DataType     { return t.ItemField().Type }
+func (t *MapType) ValueType() *StructType { return t.value.Elem().(*StructType) }
+
 type Field struct {
 	Name     string   // Field name
 	Type     DataType // The field's data type
@@ -158,7 +192,17 @@ type Field struct {
 func (f Field) HasMetadata() bool { return f.Metadata.Len() != 0 }
 
 func (f Field) Equal(o Field) bool {
-	return reflect.DeepEqual(f, o)
+	switch {
+	case f.Name != o.Name:
+		return false
+	case f.Nullable != o.Nullable:
+		return false
+	case !TypeEqual(f.Type, o.Type, CheckMetadata()):
+		return false
+	case !f.Metadata.Equal(o.Metadata):
+		return false
+	}
+	return true
 }
 
 func (f Field) String() string {
@@ -177,4 +221,5 @@ func (f Field) String() string {
 var (
 	_ DataType = (*ListType)(nil)
 	_ DataType = (*StructType)(nil)
+	_ DataType = (*MapType)(nil)
 )

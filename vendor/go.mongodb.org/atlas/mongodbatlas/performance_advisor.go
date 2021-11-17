@@ -21,10 +21,11 @@ import (
 )
 
 const (
-	performanceAdvisorPath                     = "groups/%s/processes/%s/performanceAdvisor"
+	performanceAdvisorPath                     = "api/atlas/v1.0/groups/%s/processes/%s/performanceAdvisor"
 	performanceAdvisorNamespacesPath           = performanceAdvisorPath + "/namespaces"
 	performanceAdvisorSlowQueryLogsPath        = performanceAdvisorPath + "/slowQueryLogs"
 	performanceAdvisorSuggestedIndexesLogsPath = performanceAdvisorPath + "/suggestedIndexes"
+	performanceAdvisorManagedSlowMs            = "api/atlas/v1.0/groups/%s/managedSlowMs"
 )
 
 // PerformanceAdvisorService is an interface of the Performance Advisor
@@ -35,9 +36,11 @@ type PerformanceAdvisorService interface {
 	GetNamespaces(context.Context, string, string, *NamespaceOptions) (*Namespaces, *Response, error)
 	GetSlowQueries(context.Context, string, string, *SlowQueryOptions) (*SlowQueries, *Response, error)
 	GetSuggestedIndexes(context.Context, string, string, *SuggestedIndexOptions) (*SuggestedIndexes, *Response, error)
+	EnableManagedSlowOperationThreshold(context.Context, string) (*Response, error)
+	DisableManagedSlowOperationThreshold(context.Context, string) (*Response, error)
 }
 
-// PerformanceAdvisorServiceOp handles communication with the Performance Advisor related methods of the MongoDB Atlas API
+// PerformanceAdvisorServiceOp handles communication with the Performance Advisor related methods of the MongoDB Atlas API.
 type PerformanceAdvisorServiceOp service
 
 var _ PerformanceAdvisorService = &PerformanceAdvisorServiceOp{}
@@ -220,4 +223,52 @@ func (s *PerformanceAdvisorServiceOp) GetSuggestedIndexes(ctx context.Context, g
 	}
 
 	return root, resp, err
+}
+
+// EnableManagedSlowOperationThreshold enables the Atlas managed slow operation threshold for your project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/pa-managed-slow-ms-enable/
+func (s *PerformanceAdvisorServiceOp) EnableManagedSlowOperationThreshold(ctx context.Context, groupID string) (*Response, error) {
+	if groupID == "" {
+		return nil, NewArgError("groupID", "must be set")
+	}
+
+	basePath := fmt.Sprintf(performanceAdvisorManagedSlowMs, groupID)
+	path := fmt.Sprintf("%s/%s", basePath, "enable")
+
+	req, err := s.Client.NewRequest(ctx, http.MethodPost, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.Client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, err
+}
+
+// DisableManagedSlowOperationThreshold disables the Atlas managed slow operation threshold for your project.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/pa-managed-slow-ms-disable/
+func (s *PerformanceAdvisorServiceOp) DisableManagedSlowOperationThreshold(ctx context.Context, groupID string) (*Response, error) {
+	if groupID == "" {
+		return nil, NewArgError("groupID", "must be set")
+	}
+
+	basePath := fmt.Sprintf(performanceAdvisorManagedSlowMs, groupID)
+	path := fmt.Sprintf("%s/%s", basePath, "disable")
+
+	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.Client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, err
 }

@@ -3,7 +3,7 @@ package gocb
 import (
 	"time"
 
-	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 )
 
 // Bucket represents a single bucket within a cluster.
@@ -14,7 +14,8 @@ type Bucket struct {
 
 	transcoder           Transcoder
 	retryStrategyWrapper *retryStrategyWrapper
-	tracer               requestTracer
+	tracer               RequestTracer
+	meter                *meterWrapper
 
 	useServerDurations bool
 	useMutationTokens  bool
@@ -34,6 +35,7 @@ func newBucket(c *Cluster, bucketName string) *Bucket {
 		retryStrategyWrapper: c.retryStrategyWrapper,
 
 		tracer: c.tracer,
+		meter:  c.meter,
 
 		useServerDurations: c.useServerDurations,
 		useMutationTokens:  c.useMutationTokens,
@@ -59,25 +61,61 @@ func (b *Bucket) getKvProvider() (kvProvider, error) {
 	return agent, nil
 }
 
+func (b *Bucket) getKvCapabilitiesProvider() (kvCapabilityVerifier, error) {
+	if b.bootstrapError != nil {
+		return nil, b.bootstrapError
+	}
+
+	agent, err := b.connectionManager.getKvCapabilitiesProvider(b.bucketName)
+	if err != nil {
+		return nil, err
+	}
+
+	return agent, nil
+}
+
+func (b *Bucket) getQueryProvider() (queryProvider, error) {
+	if b.bootstrapError != nil {
+		return nil, b.bootstrapError
+	}
+
+	agent, err := b.connectionManager.getQueryProvider()
+	if err != nil {
+		return nil, err
+	}
+
+	return agent, nil
+}
+
+func (b *Bucket) getAnalyticsProvider() (analyticsProvider, error) {
+	if b.bootstrapError != nil {
+		return nil, b.bootstrapError
+	}
+
+	agent, err := b.connectionManager.getAnalyticsProvider()
+	if err != nil {
+		return nil, err
+	}
+
+	return agent, nil
+}
+
 // Name returns the name of the bucket.
 func (b *Bucket) Name() string {
 	return b.bucketName
 }
 
 // Scope returns an instance of a Scope.
-// VOLATILE: This API is subject to change at any time.
 func (b *Bucket) Scope(scopeName string) *Scope {
 	return newScope(b, scopeName)
 }
 
 // DefaultScope returns an instance of the default scope.
-// VOLATILE: This API is subject to change at any time.
 func (b *Bucket) DefaultScope() *Scope {
 	return b.Scope("_default")
 }
 
 // Collection returns an instance of a collection from within the default scope.
-// VOLATILE: This API is subject to change at any time.
 func (b *Bucket) Collection(collectionName string) *Collection {
 	return b.DefaultScope().Collection(collectionName)
 }
@@ -93,6 +131,7 @@ func (b *Bucket) ViewIndexes() *ViewIndexManager {
 		mgmtProvider: b,
 		bucketName:   b.Name(),
 		tracer:       b.tracer,
+		meter:        b.meter,
 	}
 }
 
@@ -103,6 +142,7 @@ func (b *Bucket) Collections() *CollectionManager {
 		mgmtProvider: b,
 		bucketName:   b.Name(),
 		tracer:       b.tracer,
+		meter:        b.meter,
 	}
 }
 
@@ -138,11 +178,18 @@ func (b *Bucket) WaitUntilReady(timeout time.Duration, opts *WaitUntilReadyOptio
 		gocbcoreServices[i] = gocbcore.ServiceType(svc)
 	}
 
+	wrapper := b.retryStrategyWrapper
+	if opts.RetryStrategy != nil {
+		wrapper = newRetryStrategyWrapper(opts.RetryStrategy)
+	}
+
 	err = provider.WaitUntilReady(
+		opts.Context,
 		time.Now().Add(timeout),
 		gocbcore.WaitUntilReadyOptions{
-			DesiredState: gocbcore.ClusterState(desiredState),
-			ServiceTypes: gocbcoreServices,
+			DesiredState:  gocbcore.ClusterState(desiredState),
+			ServiceTypes:  gocbcoreServices,
+			RetryStrategy: wrapper,
 		},
 	)
 	if err != nil {

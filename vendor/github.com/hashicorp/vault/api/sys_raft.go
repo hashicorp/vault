@@ -1,20 +1,24 @@
 package api
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-
-	"github.com/mitchellh/mapstructure"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/mitchellh/mapstructure"
 )
+
+var ErrIncompleteSnapshot = errors.New("incomplete snapshot, unable to read SHA256SUMS.sealed file")
 
 // RaftJoinResponse represents the response of the raft join API
 type RaftJoinResponse struct {
@@ -210,11 +214,60 @@ func (c *Sys) RaftSnapshot(snapWriter io.Writer) error {
 		return err
 	}
 
-	_, err = io.Copy(snapWriter, resp.Body)
+	// Make sure that the last file in the archive, SHA256SUMS.sealed, is present
+	// and non-empty.  This is to catch cases where the snapshot failed midstream,
+	// e.g. due to a problem with the seal that prevented encryption of that file.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var verified bool
+
+	rPipe, wPipe := io.Pipe()
+	dup := io.TeeReader(resp.Body, wPipe)
+	go func() {
+		defer func() {
+			io.Copy(ioutil.Discard, rPipe)
+			rPipe.Close()
+			wg.Done()
+		}()
+
+		uncompressed, err := gzip.NewReader(rPipe)
+		if err != nil {
+			return
+		}
+
+		t := tar.NewReader(uncompressed)
+		var h *tar.Header
+		for {
+			h, err = t.Next()
+			if err != nil {
+				return
+			}
+			if h.Name != "SHA256SUMS.sealed" {
+				continue
+			}
+			var b []byte
+			b, err = ioutil.ReadAll(t)
+			if err != nil || len(b) == 0 {
+				return
+			}
+			verified = true
+			return
+		}
+	}()
+
+	// Copy bytes from dup to snapWriter.  This will have a side effect that
+	// everything read from dup will be written to wPipe.
+	_, err = io.Copy(snapWriter, dup)
+	wPipe.Close()
 	if err != nil {
+		rPipe.CloseWithError(err)
 		return err
 	}
+	wg.Wait()
 
+	if !verified {
+		return ErrIncompleteSnapshot
+	}
 	return nil
 }
 
@@ -314,4 +367,23 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	}
 
 	return &result, err
+}
+
+// PutRaftAutopilotConfiguration allows modifying the raft autopilot configuration
+func (c *Sys) PutRaftAutopilotConfiguration(opts *AutopilotConfig) error {
+	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/autopilot/configuration")
+
+	if err := r.SetJSONBody(opts); err != nil {
+		return err
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
 }

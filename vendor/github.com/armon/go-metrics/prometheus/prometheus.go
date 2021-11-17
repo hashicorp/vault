@@ -20,6 +20,7 @@ var (
 	// PrometheusSink.
 	DefaultPrometheusOpts = PrometheusOpts{
 		Expiration: 60 * time.Second,
+		Name: "default_prometheus_sink",
 	}
 )
 
@@ -48,6 +49,7 @@ type PrometheusOpts struct {
 	GaugeDefinitions   []GaugeDefinition
 	SummaryDefinitions []SummaryDefinition
 	CounterDefinitions []CounterDefinition
+	Name               string
 }
 
 type PrometheusSink struct {
@@ -57,6 +59,7 @@ type PrometheusSink struct {
 	counters   sync.Map
 	expiration time.Duration
 	help       map[string]string
+	name       string
 }
 
 // GaugeDefinition can be provided to PrometheusOpts to declare a constant gauge that is not deleted on expiry.
@@ -106,12 +109,17 @@ func NewPrometheusSink() (*PrometheusSink, error) {
 
 // NewPrometheusSinkFrom creates a new PrometheusSink using the passed options.
 func NewPrometheusSinkFrom(opts PrometheusOpts) (*PrometheusSink, error) {
+	name := opts.Name
+	if name == "" {
+		name = "default_prometheus_sink"
+	}
 	sink := &PrometheusSink{
 		gauges:     sync.Map{},
 		summaries:  sync.Map{},
 		counters:   sync.Map{},
 		expiration: opts.Expiration,
 		help:       make(map[string]string),
+		name:       name,
 	}
 
 	initGauges(&sink.gauges, opts.GaugeDefinitions, sink.help)
@@ -126,11 +134,15 @@ func NewPrometheusSinkFrom(opts PrometheusOpts) (*PrometheusSink, error) {
 	return sink, reg.Register(sink)
 }
 
-// Describe is needed to meet the Collector interface.
+// Describe sends a Collector.Describe value from the descriptor created around PrometheusSink.Name
+// Note that we cannot describe all the metrics (gauges, counters, summaries) in the sink as
+// metrics can be added at any point during the lifecycle of the sink, which does not respect
+// the idempotency aspect of the Collector.Describe() interface
 func (p *PrometheusSink) Describe(c chan<- *prometheus.Desc) {
-	// We must emit some description otherwise an error is returned. This
-	// description isn't shown to the user!
-	prometheus.NewGauge(prometheus.GaugeOpts{Name: "Dummy", Help: "Dummy"}).Describe(c)
+	// dummy value to be able to register and unregister "empty" sinks
+	// Note this is not actually retained in the PrometheusSink so this has no side effects
+	// on the caller's sink. So it shouldn't show up to any of its consumers.
+	prometheus.NewGauge(prometheus.GaugeOpts{Name: p.name, Help: p.name}).Describe(c)
 }
 
 // Collect meets the collection interface and allows us to enforce our expiration
@@ -398,6 +410,7 @@ func NewPrometheusPushSink(address string, pushInterval time.Duration, name stri
 		summaries:  sync.Map{},
 		counters:   sync.Map{},
 		expiration: 60 * time.Second,
+		name:       "default_prometheus_sink",
 	}
 
 	pusher := push.New(address, name).Collector(promSink)

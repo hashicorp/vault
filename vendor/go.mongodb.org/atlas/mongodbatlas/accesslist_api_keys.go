@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const accessListAPIKeysPath = "orgs/%s/apiKeys/%s/accessList"
+const accessListAPIKeysPath = "api/atlas/v1.0/orgs/%s/apiKeys/%s/accessList"
 
 // AccessListAPIKeysService is an interface for interfacing with the AccessList API Keys
 // endpoints of the MongoDB Atlas API.
@@ -34,7 +34,7 @@ type AccessListAPIKeysService interface {
 }
 
 // AccessListAPIKeysServiceOp handles communication with the AccessList API keys related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type AccessListAPIKeysServiceOp service
 
 var _ AccessListAPIKeysService = &AccessListAPIKeysServiceOp{}
@@ -57,7 +57,7 @@ type AccessListAPIKeys struct {
 	TotalCount int                 `json:"totalCount,omitempty"` // Count of the total number of items in the result set. It may be greater than the number of objects in the results array if the entire result set is paginated.
 }
 
-// AccessListAPIKeysReq represents the request to the mehtod create
+// AccessListAPIKeysReq represents the request to the mehtod create.
 type AccessListAPIKeysReq struct {
 	IPAddress string `json:"ipAddress,omitempty"` // IP address to be added to the access list for the API key.
 	CidrBlock string `json:"cidrBlock,omitempty"` // CIDR-notation block of IP addresses to be added to the access list for the API key.
@@ -98,7 +98,7 @@ func (s *AccessListAPIKeysServiceOp) List(ctx context.Context, orgID, apiKeyID s
 	return root, resp, nil
 }
 
-// Get retrieve information on a single API Key access list entry using the unique identifier for the API Key and desired permitted address.
+// Get retrieves information on a single API Key access list entry using the unique identifier for the API Key and desired permitted address.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/api-access-list/get-one-api-access-entry/
 func (s *AccessListAPIKeysServiceOp) Get(ctx context.Context, orgID, apiKeyID, ipAddress string) (*AccessListAPIKey, *Response, error) {
@@ -128,7 +128,7 @@ func (s *AccessListAPIKeysServiceOp) Get(ctx context.Context, orgID, apiKeyID, i
 	return root, resp, err
 }
 
-// Create one or more new access list entries for the specified API Key.
+// Create creates one or more new access list entries for the specified API Key.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/api-access-list/create-api-access-entries/
 func (s *AccessListAPIKeysServiceOp) Create(ctx context.Context, orgID, apiKeyID string, createRequest []*AccessListAPIKeysReq) (*AccessListAPIKeys, *Response, error) {

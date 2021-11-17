@@ -1348,14 +1348,19 @@ func (client ObjectStorageClient) putObjectLifecyclePolicy(ctx context.Context, 
 	return response, err
 }
 
-// ReencryptBucket Reencrypts the data encryption key of the bucket and objects in the bucket. This is an asynchronous call, the
-// system will start a work request task to reencrypt the data encryption key of the objects and chunks in the bucket.
-// Only the objects created before the time the API call will be reencrypted. The call can take long time depending
-// on how many objects in the bucket and how big the objects are. This API will return a work request id, so the user
-// can use this id to retrieve the status of the work request task.
-// A user can update kmsKeyId of the bucket, and then call this API, so the data encryption key of the bucket and
-// objects in the bucket will be reencryped by the new kmsKeyId. Note that the system doesn't maintain what
-// ksmKeyId is used to encrypt the object, the user has to maintain the mapping if they want.
+// ReencryptBucket Re-encrypts the unique data encryption key that encrypts each object written to the bucket by using the most recent
+// version of the master encryption key assigned to the bucket. (All data encryption keys are encrypted by a master
+// encryption key. Master encryption keys are assigned to buckets and managed by Oracle by default, but you can assign
+// a key that you created and control through the Oracle Cloud Infrastructure Key Management service.) The kmsKeyId property
+// of the bucket determines which master encryption key is assigned to the bucket. If you assigned a different Key Management
+// master encryption key to the bucket, you can call this API to re-encrypt all data encryption keys with the newly
+// assigned key. Similarly, you might want to re-encrypt all data encryption keys if the assigned key has been rotated to
+// a new key version since objects were last added to the bucket. If you call this API and there is no kmsKeyId associated
+// with the bucket, the call will fail.
+// Calling this API starts a work request task to re-encrypt the data encryption key of all objects in the bucket. Only
+// objects created before the time of the API call will be re-encrypted. The call can take a long time, depending on how many
+// objects are in the bucket and how big they are. This API returns a work request ID that you can use to retrieve the status
+// of the work request task.
 func (client ObjectStorageClient) ReencryptBucket(ctx context.Context, request ReencryptBucketRequest) (response ReencryptBucketResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()

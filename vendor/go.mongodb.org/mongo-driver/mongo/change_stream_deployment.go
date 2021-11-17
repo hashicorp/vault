@@ -9,8 +9,8 @@ package mongo
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 )
 
 type changeStreamDeployment struct {
@@ -35,11 +35,11 @@ func (c *changeStreamDeployment) Connection(context.Context) (driver.Connection,
 	return c.conn, nil
 }
 
-func (c *changeStreamDeployment) ProcessError(err error, conn driver.Connection) {
+func (c *changeStreamDeployment) ProcessError(err error, conn driver.Connection) driver.ProcessErrorResult {
 	ep, ok := c.server.(driver.ErrorProcessor)
 	if !ok {
-		return
+		return driver.NoChange
 	}
 
-	ep.ProcessError(err, conn)
+	return ep.ProcessError(err, conn)
 }

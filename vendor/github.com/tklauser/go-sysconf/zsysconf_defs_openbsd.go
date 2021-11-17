@@ -1,6 +1,9 @@
 // Created by cgo -godefs - DO NOT EDIT
 // cgo -godefs sysconf_defs_openbsd.go
 
+//go:build openbsd
+// +build openbsd
+
 package sysconf
 
 const (

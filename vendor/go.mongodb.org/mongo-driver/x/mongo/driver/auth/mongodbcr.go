@@ -55,7 +55,8 @@ func (a *MongoDBCRAuthenticator) Auth(ctx context.Context, cfg *Config) error {
 	cmd := operation.NewCommand(doc).
 		Database(db).
 		Deployment(driver.SingleConnectionDeployment{cfg.Connection}).
-		ClusterClock(cfg.ClusterClock)
+		ClusterClock(cfg.ClusterClock).
+		ServerAPI(cfg.ServerAPI)
 	err := cmd.Execute(ctx)
 	if err != nil {
 		return newError(err, MONGODBCR)
@@ -80,7 +81,8 @@ func (a *MongoDBCRAuthenticator) Auth(ctx context.Context, cfg *Config) error {
 	cmd = operation.NewCommand(doc).
 		Database(db).
 		Deployment(driver.SingleConnectionDeployment{cfg.Connection}).
-		ClusterClock(cfg.ClusterClock)
+		ClusterClock(cfg.ClusterClock).
+		ServerAPI(cfg.ServerAPI)
 	err = cmd.Execute(ctx)
 	if err != nil {
 		return newError(err, MONGODBCR)

@@ -45,20 +45,20 @@ func (rcv *Interval) Table() flatbuffers.Table {
 func (rcv *Interval) Unit() IntervalUnit {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return IntervalUnit(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
 func (rcv *Interval) MutateUnit(n IntervalUnit) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 func IntervalStart(builder *flatbuffers.Builder) {
 	builder.StartObject(1)
 }
-func IntervalAddUnit(builder *flatbuffers.Builder, unit int16) {
-	builder.PrependInt16Slot(0, unit, 0)
+func IntervalAddUnit(builder *flatbuffers.Builder, unit IntervalUnit) {
+	builder.PrependInt16Slot(0, int16(unit), 0)
 }
 func IntervalEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

@@ -26,6 +26,45 @@ func (d *DefaultIndexOptions) SetStorageEngine(storageEngine interface{}) *Defau
 	return d
 }
 
+// TimeSeriesOptions specifies options on a time-series collection.
+type TimeSeriesOptions struct {
+	// Name of the top-level field to be used for time. Inserted documents must have this field,
+	// and the field must be of the BSON UTC datetime type (0x9).
+	TimeField string
+
+	// Optional name of the top-level field describing the series. This field is used to group
+	// related data and may be of any BSON type, except for array. This name may not be the same
+	// as the TimeField or _id.
+	MetaField *string
+
+	// Optional string specifying granularity of time-series data. Allowed granularity options are
+	// "seconds", "minutes" and "hours".
+	Granularity *string
+}
+
+// TimeSeries creates a new TimeSeriesOptions instance.
+func TimeSeries() *TimeSeriesOptions {
+	return &TimeSeriesOptions{}
+}
+
+// SetTimeField sets the value for the TimeField.
+func (tso *TimeSeriesOptions) SetTimeField(timeField string) *TimeSeriesOptions {
+	tso.TimeField = timeField
+	return tso
+}
+
+// SetMetaField sets the value for the MetaField.
+func (tso *TimeSeriesOptions) SetMetaField(metaField string) *TimeSeriesOptions {
+	tso.MetaField = &metaField
+	return tso
+}
+
+// SetGranularity sets the value for Granularity.
+func (tso *TimeSeriesOptions) SetGranularity(granularity string) *TimeSeriesOptions {
+	tso.Granularity = &granularity
+	return tso
+}
+
 // CreateCollectionOptions represents options that can be used to configure a CreateCollection operation.
 type CreateCollectionOptions struct {
 	// Specifies if the collection is capped (see https://docs.mongodb.com/manual/core/capped-collections/). If true,
@@ -70,6 +109,12 @@ type CreateCollectionOptions struct {
 	// is only valid for MongoDB versions >= 3.2. The default value is nil, meaning no validator will be used for the
 	// collection.
 	Validator interface{}
+
+	// Value indicating after how many seconds old time-series data should be deleted.
+	ExpireAfterSeconds *int64
+
+	// Options for specifying a time-series collection.
+	TimeSeriesOptions *TimeSeriesOptions
 }
 
 // CreateCollection creates a new CreateCollectionOptions instance.
@@ -131,6 +176,18 @@ func (c *CreateCollectionOptions) SetValidator(validator interface{}) *CreateCol
 	return c
 }
 
+// SetExpireAfterSeconds sets the value for the ExpireAfterSeconds field.
+func (c *CreateCollectionOptions) SetExpireAfterSeconds(eas int64) *CreateCollectionOptions {
+	c.ExpireAfterSeconds = &eas
+	return c
+}
+
+// SetTimeSeriesOptions sets the options for time-series collections.
+func (c *CreateCollectionOptions) SetTimeSeriesOptions(timeSeriesOpts *TimeSeriesOptions) *CreateCollectionOptions {
+	c.TimeSeriesOptions = timeSeriesOpts
+	return c
+}
+
 // MergeCreateCollectionOptions combines the given CreateCollectionOptions instances into a single
 // CreateCollectionOptions in a last-one-wins fashion.
 func MergeCreateCollectionOptions(opts ...*CreateCollectionOptions) *CreateCollectionOptions {
@@ -167,6 +224,12 @@ func MergeCreateCollectionOptions(opts ...*CreateCollectionOptions) *CreateColle
 		}
 		if opt.Validator != nil {
 			cc.Validator = opt.Validator
+		}
+		if opt.ExpireAfterSeconds != nil {
+			cc.ExpireAfterSeconds = opt.ExpireAfterSeconds
+		}
+		if opt.TimeSeriesOptions != nil {
+			cc.TimeSeriesOptions = opt.TimeSeriesOptions
 		}
 	}
 

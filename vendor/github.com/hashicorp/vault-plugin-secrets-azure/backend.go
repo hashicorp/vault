@@ -2,10 +2,12 @@ package azuresecrets
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault-plugin-secrets-azure/api"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -14,14 +16,15 @@ import (
 type azureSecretBackend struct {
 	*framework.Backend
 
-	getProvider func(*clientSettings) (AzureProvider, error)
+	getProvider func(*clientSettings, bool, api.Passwords) (api.AzureProvider, error)
 	client      *client
 	settings    *clientSettings
 	lock        sync.RWMutex
 
 	// Creating/deleting passwords against a single Application is a PATCH
 	// operation that must be locked per Application Object ID.
-	appLocks []*locksutil.LockEntry
+	appLocks       []*locksutil.LockEntry
+	updatePassword bool
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -33,7 +36,9 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 }
 
 func backend() *azureSecretBackend {
-	var b = azureSecretBackend{}
+	var b = azureSecretBackend{
+		updatePassword: true,
+	}
 
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -47,6 +52,7 @@ func backend() *azureSecretBackend {
 			[]*framework.Path{
 				pathConfig(&b),
 				pathServicePrincipal(&b),
+				pathRotateRoot(&b),
 			},
 		),
 		Secrets: []*framework.Secret{
@@ -56,17 +62,93 @@ func backend() *azureSecretBackend {
 		BackendType: logical.TypeLogical,
 		Invalidate:  b.invalidate,
 
-		WALRollback: b.walRollback,
-
 		// Role assignment can take up to a few minutes, so ensure we don't try
 		// to roll back during creation.
 		WALRollbackMinAge: 10 * time.Minute,
-	}
 
+		WALRollback:  b.walRollback,
+		PeriodicFunc: b.periodicFunc,
+	}
 	b.getProvider = newAzureProvider
 	b.appLocks = locksutil.CreateLocks()
 
 	return &b
+}
+
+func (b *azureSecretBackend) periodicFunc(ctx context.Context, sys *logical.Request) error {
+	b.Logger().Debug("starting periodic func")
+	if !b.updatePassword {
+		b.Logger().Debug("periodic func", "rotate-root", "no rotate-root update")
+		return nil
+	}
+
+	config, err := b.getConfig(ctx, sys.Storage)
+	if err != nil {
+		return err
+	}
+
+	// Config can be nil if deleted or when the engine is enabled
+	// but not yet configured.
+	if config == nil {
+		return nil
+	}
+
+	// Password should be at least a minute old before we process it
+	if config.NewClientSecret == "" || (time.Since(config.NewClientSecretCreated) < time.Minute) {
+		return nil
+	}
+
+	b.Logger().Debug("periodic func", "rotate-root", "new password detected, swapping in storage")
+	client, err := b.getClient(ctx, sys.Storage)
+	if err != nil {
+		return err
+	}
+
+	apps, err := client.provider.ListApplications(ctx, fmt.Sprintf("appId eq '%s'", config.ClientID))
+	if err != nil {
+		return err
+	}
+
+	if len(apps) == 0 {
+		return fmt.Errorf("no application found")
+	}
+	if len(apps) > 1 {
+		return fmt.Errorf("multiple applications found - double check your client_id")
+	}
+
+	app := apps[0]
+
+	credsToDelete := []string{}
+	for _, cred := range app.PasswordCredentials {
+		if *cred.KeyID != config.NewClientSecretKeyID {
+			credsToDelete = append(credsToDelete, *cred.KeyID)
+		}
+	}
+
+	if len(credsToDelete) != 0 {
+		b.Logger().Debug("periodic func", "rotate-root", "removing old passwords from Azure")
+		err = removeApplicationPasswords(ctx, client.provider, *app.ID, credsToDelete...)
+		if err != nil {
+			return err
+		}
+	}
+
+	b.Logger().Debug("periodic func", "rotate-root", "updating config with new password")
+	config.ClientSecret = config.NewClientSecret
+	config.ClientSecretKeyID = config.NewClientSecretKeyID
+	config.RootPasswordExpirationDate = config.NewClientSecretExpirationDate
+	config.NewClientSecret = ""
+	config.NewClientSecretKeyID = ""
+	config.NewClientSecretCreated = time.Time{}
+
+	err = b.saveConfig(ctx, config, sys.Storage)
+	if err != nil {
+		return err
+	}
+
+	b.updatePassword = false
+
+	return nil
 }
 
 // reset clears the backend's cached client
@@ -89,16 +171,15 @@ func (b *azureSecretBackend) invalidate(ctx context.Context, key string) {
 
 func (b *azureSecretBackend) getClient(ctx context.Context, s logical.Storage) (*client, error) {
 	b.lock.RLock()
-	unlockFunc := b.lock.RUnlock
-	defer func() { unlockFunc() }()
 
 	if b.client.Valid() {
+		b.lock.RUnlock()
 		return b.client, nil
 	}
 
 	b.lock.RUnlock()
 	b.lock.Lock()
-	unlockFunc = b.lock.Unlock
+	defer b.lock.Unlock()
 
 	if b.client.Valid() {
 		return b.client, nil
@@ -121,14 +202,18 @@ func (b *azureSecretBackend) getClient(ctx context.Context, s logical.Storage) (
 		b.settings = settings
 	}
 
-	p, err := b.getProvider(b.settings)
-	if err != nil {
-		return nil, err
+	if config == nil {
+		return nil, fmt.Errorf("config is nil")
 	}
 
-	passwords := passwords{
-		policyGenerator: b.System(),
-		policyName:      config.PasswordPolicy,
+	passwords := api.Passwords{
+		PolicyGenerator: b.System(),
+		PolicyName:      config.PasswordPolicy,
+	}
+
+	p, err := b.getProvider(b.settings, config.UseMsGraphAPI, passwords)
+	if err != nil {
+		return nil, err
 	}
 
 	c := &client{

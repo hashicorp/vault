@@ -20,17 +20,18 @@ import (
 	"net/http"
 )
 
-const processMeasurementsPath = "groups/%s/processes/%s:%d/measurements"
+const processMeasurementsPath = "api/atlas/v1.0/groups/%s/processes/%s:%d/measurements"
 
 // ProcessMeasurementsService is an interface for interfacing with the Process Measurements
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/process-measurements/
 type ProcessMeasurementsService interface {
 	List(context.Context, string, string, int, *ProcessMeasurementListOptions) (*ProcessMeasurements, *Response, error)
 }
 
 // ProcessMeasurementsServiceOp handles communication with the Process Measurements related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type ProcessMeasurementsServiceOp service
 
 var _ ProcessMeasurementsService = &ProcessMeasurementsServiceOp{}
@@ -71,6 +72,7 @@ type ProcessMeasurementListOptions struct {
 }
 
 // List lists measurements for a specific Atlas MongoDB process.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/process-measurements/
 func (s *ProcessMeasurementsServiceOp) List(ctx context.Context, groupID, host string, port int, opts *ProcessMeasurementListOptions) (*ProcessMeasurements, *Response, error) {
 	if groupID == "" {

@@ -1,9 +1,12 @@
-// Copyright (c) 2017-2019 Snowflake Computing Inc. All right reserved.
+// Copyright (c) 2017-2021 Snowflake Computing Inc. All rights reserved.
 
 package gosnowflake
 
 import (
 	"fmt"
+	"runtime/debug"
+	"strconv"
+	"time"
 )
 
 // SnowflakeError is a error type including various Snowflake specific information.
@@ -31,6 +34,49 @@ func (se *SnowflakeError) Error() string {
 		return fmt.Sprintf("%06d: %s: %s", se.Number, se.QueryID, message)
 	}
 	return fmt.Sprintf("%06d: %s", se.Number, message)
+}
+
+func (se *SnowflakeError) generateTelemetryExceptionData() *telemetryData {
+	data := &telemetryData{
+		Message: map[string]string{
+			typeKey:          sqlException,
+			driverTypeKey:    "Go",
+			driverVersionKey: SnowflakeGoDriverVersion,
+			stacktraceKey:    maskSecrets(string(debug.Stack())),
+		},
+		Timestamp: time.Now().UnixNano(),
+	}
+	if se.QueryID != "" {
+		data.Message[queryIDKey] = se.QueryID
+	}
+	if se.SQLState != "" {
+		data.Message[sqlStateKey] = se.SQLState
+	}
+	if se.Message != "" {
+		data.Message[reasonKey] = se.Message
+	}
+	if len(se.MessageArgs) > 0 {
+		data.Message[reasonKey] = fmt.Sprintf(se.Message, se.MessageArgs...)
+	}
+	if se.Number != 0 {
+		data.Message[errorNumberKey] = strconv.Itoa(se.Number)
+	}
+	return data
+}
+
+func (se *SnowflakeError) sendExceptionTelemetry(sc *snowflakeConn, data *telemetryData) error {
+	if sc != nil {
+		return sc.telemetry.addLog(data)
+	}
+	return nil // TODO oob telemetry
+}
+
+func (se *SnowflakeError) exceptionTelemetry(sc *snowflakeConn) *SnowflakeError {
+	data := se.generateTelemetryExceptionData()
+	if err := se.sendExceptionTelemetry(sc, data); err != nil {
+		logger.Debugf("failed to log to telemetry: %v", data)
+	}
+	return se
 }
 
 const (
@@ -98,6 +144,32 @@ const (
 	// ErrNoDefaultTransactionIsolationLevel is an error code for the case where non default isolation level is specified.
 	ErrNoDefaultTransactionIsolationLevel = 263001
 
+	/* file transfer */
+
+	// ErrInvalidStageFs is an error code denoting an invalid stage in the file system
+	ErrInvalidStageFs = 264001
+	// ErrFailedToDownloadFromStage is an error code denoting the failure to download a file from the stage
+	ErrFailedToDownloadFromStage = 264002
+	// ErrFailedToUploadToStage is an error code denoting the failure to upload a file to the stage
+	ErrFailedToUploadToStage = 264003
+	// ErrInvalidStageLocation is an error code denoting an invalid stage location
+	ErrInvalidStageLocation = 264004
+	// ErrLocalPathNotDirectory is an error code denoting a local path that is not a directory
+	ErrLocalPathNotDirectory = 264005
+	// ErrFileNotExists is an error code denoting the file to be transferred does not exist
+	ErrFileNotExists = 264006
+	// ErrCompressionNotSupported is an error code denoting the user specified compression type is not supported
+	ErrCompressionNotSupported = 264007
+	// ErrInternalNotMatchEncryptMaterial is an error code denoting the encryption material specified does not match
+	ErrInternalNotMatchEncryptMaterial = 264008
+
+	/* binding */
+
+	// ErrBindSerialization is an error code for a failed serialization of bind variables
+	ErrBindSerialization = 265001
+	// ErrBindUpload is an error code for the uploading process of bind elements to the stage
+	ErrBindUpload = 265002
+
 	/* converter */
 
 	// ErrInvalidTimestampTz is an error code for the case where a returned TIMESTAMP_TZ internal value is invalid
@@ -118,6 +190,17 @@ const (
 	ErrOCSPInvalidValidity = 269003
 	// ErrOCSPNoOCSPResponderURL is an error code for the case where the OCSP responder URL is not attached.
 	ErrOCSPNoOCSPResponderURL = 269004
+
+	/* Query Status*/
+
+	// ErrQueryStatus when check the status of a query, receive error or no status
+	ErrQueryStatus = 279001
+	// ErrQueryIDFormat the query ID given to fetch its result is not valid
+	ErrQueryIDFormat = 279101
+	// ErrQueryReportedError server side reports the query failed with error
+	ErrQueryReportedError = 279201
+	// ErrQueryIsRunning the query is still running
+	ErrQueryIsRunning = 279301
 
 	/* GS error code */
 
@@ -156,6 +239,7 @@ const (
 	errMsgOCSPStatusUnknown                  = "OCSP unknown"
 	errMsgOCSPInvalidValidity                = "invalid validity: producedAt: %v, thisUpdate: %v, nextUpdate: %v"
 	errMsgOCSPNoOCSPResponderURL             = "no OCSP server is attached to the certificate. %v"
+	errMsgBindColumnMismatch                 = "column %v has a different number of binds (%v) than column 1 (%v)"
 )
 
 var (

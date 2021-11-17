@@ -19,8 +19,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/youmark/pkcs8"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/internal"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
@@ -102,18 +104,21 @@ type ClientOptions struct {
 	DisableOCSPEndpointCheck *bool
 	HeartbeatInterval        *time.Duration
 	Hosts                    []string
+	LoadBalanced             *bool
 	LocalThreshold           *time.Duration
 	MaxConnIdleTime          *time.Duration
 	MaxPoolSize              *uint64
 	MinPoolSize              *uint64
 	PoolMonitor              *event.PoolMonitor
 	Monitor                  *event.CommandMonitor
+	ServerMonitor            *event.ServerMonitor
 	ReadConcern              *readconcern.ReadConcern
 	ReadPreference           *readpref.ReadPref
 	Registry                 *bsoncodec.Registry
 	ReplicaSet               *string
 	RetryReads               *bool
 	RetryWrites              *bool
+	ServerAPIOptions         *ServerAPIOptions
 	ServerSelectionTimeout   *time.Duration
 	SocketTimeout            *time.Duration
 	TLSConfig                *tls.Config
@@ -165,6 +170,24 @@ func (c *ClientOptions) validateAndSetError() {
 			return
 		}
 	}
+
+	// verify server API version if ServerAPIOptions are passed in.
+	if c.ServerAPIOptions != nil {
+		c.err = c.ServerAPIOptions.ServerAPIVersion.Validate()
+	}
+
+	// Validation for load-balanced mode.
+	if c.LoadBalanced != nil && *c.LoadBalanced {
+		if len(c.Hosts) > 1 {
+			c.err = internal.ErrLoadBalancedWithMultipleHosts
+		}
+		if c.ReplicaSet != nil {
+			c.err = internal.ErrLoadBalancedWithReplicaSet
+		}
+		if c.Direct != nil {
+			c.err = internal.ErrLoadBalancedWithDirectConnection
+		}
+	}
 }
 
 // GetURI returns the original URI used to configure the ClientOptions instance. If ApplyURI was not called during
@@ -182,7 +205,7 @@ func (c *ClientOptions) GetURI() string {
 // parameters are specified. If an option is set on ClientOptions after this method is called, that option will override
 // any option applied via the connection string.
 //
-// If the URI format is incorrect or there are conflicing options specified in the URI an error will be recorded and
+// If the URI format is incorrect or there are conflicting options specified in the URI an error will be recorded and
 // can be retrieved by calling Validate.
 //
 // For more information about the URI format, see https://docs.mongodb.com/manual/reference/connection-string/. See
@@ -246,6 +269,10 @@ func (c *ClientOptions) ApplyURI(uri string) *ClientOptions {
 	}
 
 	c.Hosts = cs.Hosts
+
+	if cs.LoadBalancedSet {
+		c.LoadBalanced = &cs.LoadBalanced
+	}
 
 	if cs.LocalThresholdSet {
 		c.LocalThreshold = &cs.LocalThreshold
@@ -478,6 +505,21 @@ func (c *ClientOptions) SetHosts(s []string) *ClientOptions {
 	return c
 }
 
+// SetLoadBalanced specifies whether or not the MongoDB deployment is hosted behind a load balancer. This can also be
+// set through the "loadBalanced" URI option. The driver will error during Client configuration if this option is set
+// to true and one of the following conditions are met:
+//
+// 1. Multiple hosts are specified, either via the ApplyURI or SetHosts methods. This includes the case where an SRV
+// URI is used and the SRV record resolves to multiple hostnames.
+// 2. A replica set name is specified, either via the URI or the SetReplicaSet method.
+// 3. The options specify whether or not a direct connection should be made, either via the URI or the SetDirect method.
+//
+// The default value is false.
+func (c *ClientOptions) SetLoadBalanced(lb bool) *ClientOptions {
+	c.LoadBalanced = &lb
+	return c
+}
+
 // SetLocalThreshold specifies the width of the 'latency window': when choosing between multiple suitable servers for an
 // operation, this is the acceptable non-negative delta between shortest and longest average round-trip times. A server
 // within the latency window is selected randomly. This can also be set through the "localThresholdMS" URI option (e.g.
@@ -525,6 +567,12 @@ func (c *ClientOptions) SetMonitor(m *event.CommandMonitor) *ClientOptions {
 	return c
 }
 
+// SetServerMonitor specifies an SDAM monitor used to monitor SDAM events.
+func (c *ClientOptions) SetServerMonitor(m *event.ServerMonitor) *ClientOptions {
+	c.ServerMonitor = m
+	return c
+}
+
 // SetReadConcern specifies the read concern to use for read operations. A read concern level can also be set through
 // the "readConcernLevel" URI option (e.g. "readConcernLevel=majority"). The default is nil, meaning the server will use
 // its configured default.
@@ -537,7 +585,7 @@ func (c *ClientOptions) SetReadConcern(rc *readconcern.ReadConcern) *ClientOptio
 // SetReadPreference specifies the read preference to use for read operations. This can also be set through the
 // following URI options:
 //
-// 1. "readPreference" - Specifiy the read preference mode (e.g. "readPreference=primary").
+// 1. "readPreference" - Specify the read preference mode (e.g. "readPreference=primary").
 //
 // 2. "readPreferenceTags": Specify one or more read preference tags
 // (e.g. "readPreferenceTags=region:south,datacenter:A").
@@ -704,8 +752,16 @@ func (c *ClientOptions) SetDisableOCSPEndpointCheck(disableCheck bool) *ClientOp
 	return c
 }
 
+// SetServerAPIOptions specifies a ServerAPIOptions instance used to configure the API version sent to the server
+// when running commands. See the options.ServerAPIOptions documentation for more information about the supported
+// options.
+func (c *ClientOptions) SetServerAPIOptions(opts *ServerAPIOptions) *ClientOptions {
+	c.ServerAPIOptions = opts
+	return c
+}
+
 // MergeClientOptions combines the given *ClientOptions into a single *ClientOptions in a last one wins fashion.
-// The specified options are merged with the existing options on the collection, with the specified options taking
+// The specified options are merged with the existing options on the client, with the specified options taking
 // precedence.
 func MergeClientOptions(opts ...*ClientOptions) *ClientOptions {
 	c := Client()
@@ -739,6 +795,9 @@ func MergeClientOptions(opts ...*ClientOptions) *ClientOptions {
 		if len(opt.Hosts) > 0 {
 			c.Hosts = opt.Hosts
 		}
+		if opt.LoadBalanced != nil {
+			c.LoadBalanced = opt.LoadBalanced
+		}
 		if opt.LocalThreshold != nil {
 			c.LocalThreshold = opt.LocalThreshold
 		}
@@ -756,6 +815,12 @@ func MergeClientOptions(opts ...*ClientOptions) *ClientOptions {
 		}
 		if opt.Monitor != nil {
 			c.Monitor = opt.Monitor
+		}
+		if opt.ServerAPIOptions != nil {
+			c.ServerAPIOptions = opt.ServerAPIOptions
+		}
+		if opt.ServerMonitor != nil {
+			c.ServerMonitor = opt.ServerMonitor
 		}
 		if opt.ReadConcern != nil {
 			c.ReadConcern = opt.ReadConcern
@@ -808,7 +873,12 @@ func MergeClientOptions(opts ...*ClientOptions) *ClientOptions {
 		if opt.err != nil {
 			c.err = opt.err
 		}
-
+		if opt.uri != "" {
+			c.uri = opt.uri
+		}
+		if opt.cs != nil {
+			c.cs = opt.cs
+		}
 	}
 
 	return c
@@ -875,14 +945,34 @@ func addClientCertFromBytes(cfg *tls.Config, data []byte, keyPasswd string) (str
 			certDecodedBlock = currentBlock.Bytes
 			start += len(certBlock)
 		} else if strings.HasSuffix(currentBlock.Type, "PRIVATE KEY") {
-			if keyPasswd != "" && x509.IsEncryptedPEMBlock(currentBlock) {
-				var encoded bytes.Buffer
-				buf, err := x509.DecryptPEMBlock(currentBlock, []byte(keyPasswd))
-				if err != nil {
-					return "", err
+			isEncrypted := x509.IsEncryptedPEMBlock(currentBlock) || strings.Contains(currentBlock.Type, "ENCRYPTED PRIVATE KEY")
+			if isEncrypted {
+				if keyPasswd == "" {
+					return "", fmt.Errorf("no password provided to decrypt private key")
 				}
 
-				pem.Encode(&encoded, &pem.Block{Type: currentBlock.Type, Bytes: buf})
+				var keyBytes []byte
+				var err error
+				// Process the X.509-encrypted or PKCS-encrypted PEM block.
+				if x509.IsEncryptedPEMBlock(currentBlock) {
+					// Only covers encrypted PEM data with a DEK-Info header.
+					keyBytes, err = x509.DecryptPEMBlock(currentBlock, []byte(keyPasswd))
+					if err != nil {
+						return "", err
+					}
+				} else if strings.Contains(currentBlock.Type, "ENCRYPTED") {
+					// The pkcs8 package only handles the PKCS #5 v2.0 scheme.
+					decrypted, err := pkcs8.ParsePKCS8PrivateKey(currentBlock.Bytes, []byte(keyPasswd))
+					if err != nil {
+						return "", err
+					}
+					keyBytes, err = x509MarshalPKCS8PrivateKey(decrypted)
+					if err != nil {
+						return "", err
+					}
+				}
+				var encoded bytes.Buffer
+				pem.Encode(&encoded, &pem.Block{Type: currentBlock.Type, Bytes: keyBytes})
 				keyBlock = encoded.Bytes()
 				start = len(data) - len(remaining)
 			} else {

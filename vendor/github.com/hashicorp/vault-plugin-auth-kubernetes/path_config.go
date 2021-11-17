@@ -51,22 +51,26 @@ the JWT used for login will be used to access the API.`,
 				Description: `Optional list of PEM-formated public keys or certificates
 used to verify the signatures of kubernetes service account
 JWTs. If a certificate is given, its public key will be
-extracted. Not every installation of Kuberentes exposes these keys.`,
+extracted. Not every installation of Kubernetes exposes these keys.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Service account verification keys",
 				},
 			},
 			"issuer": {
-				Type:        framework.TypeString,
-				Description: "Optional JWT issuer. If no issuer is specified, then this plugin will use kubernetes.io/serviceaccount as the default issuer.",
+				Type:       framework.TypeString,
+				Deprecated: true,
+				Description: `Optional JWT issuer. If no issuer is specified,
+then this plugin will use kubernetes.io/serviceaccount as the default issuer.
+(Deprecated, will be removed in a future release)`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "JWT Issuer",
 				},
 			},
 			"disable_iss_validation": {
 				Type:        framework.TypeBool,
-				Description: "Disable JWT issuer validation. Allows to skip ISS validation.",
-				Default:     false,
+				Deprecated:  true,
+				Description: `Disable JWT issuer validation (Deprecated, will be removed in a future release)`,
+				Default:     true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Disable JWT Issuer Validation",
 				},

@@ -137,21 +137,21 @@ This endpoint enables a new secrets engine at the given path.
 
   - `force_no_cache` `(bool: false)` - Disable caching.
 
-  - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the request data object.
+  - `audit_non_hmac_request_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the request data object.
 
-  - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
-    that will not be HMAC'd by audit devices in the response data object.
+  - `audit_non_hmac_response_keys` `(array: [])` - List of keys that will not be
+    HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`. If not set, behaves like `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist and pass from the request to the plugin.
+  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+    and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist, allowing a plugin to include them in the response.
+  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+    allowing a plugin to include them in the response.
 
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
@@ -212,6 +212,65 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
+## Get the configuration of a Secret Engine
+
+This endpoint returns the configuration of a specific secret engine.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET`  | `/sys/mounts/:path` |
+
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/mounts/cubbyhole
+```
+
+### Sample Response
+
+```json
+{
+  "config": {
+    "default_lease_ttl": 0,
+    "force_no_cache": false,
+    "max_lease_ttl": 0
+  },
+  "description": "per-token private secret storage",
+  "accessor": "cubbyhole_db85f061",
+  "external_entropy_access": false,
+  "options": null,
+  "uuid": "9c0e211a-904d-e41d-e1a2-7f1ff2bb8461",
+  "type": "cubbyhole",
+  "local": true,
+  "seal_wrap": false,
+  "request_id": "efdab917-ade2-1802-b8fa-fe2e6486d4e5",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "accessor": "cubbyhole_db85f061",
+    "config": {
+      "default_lease_ttl": 0,
+      "force_no_cache": false,
+      "max_lease_ttl": 0
+    },
+    "description": "per-token private secret storage",
+    "external_entropy_access": false,
+    "local": true,
+    "options": null,
+    "seal_wrap": false,
+    "type": "cubbyhole",
+    "uuid": "9c0e211a-904d-e41d-e1a2-7f1ff2bb8461"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
 ## Read Mount Configuration
 
 This endpoint reads the given mount's configuration. Unlike the `mounts`
@@ -261,23 +320,21 @@ This endpoint tunes configuration parameters for a given mount point.
 - `description` `(string: "")` – Specifies the description of the mount. This
   overrides the current stored value, if any.
 
-- `audit_non_hmac_request_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the request data
-  object.
+- `audit_non_hmac_request_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the request data object.
 
-- `audit_non_hmac_response_keys` `(array: [])` - Specifies the comma-separated
-  list of keys that will not be HMAC'd by audit devices in the response data
-  object.
+- `audit_non_hmac_response_keys` `(array: [])` - Specifies the list of keys that
+  will not be HMAC'd by audit devices in the response data object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist and pass from the request to the plugin.
+- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - Comma-separated list of headers
-  to whitelist, allowing a plugin to include them in the response.
+- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  allowing a plugin to include them in the response.
 
 ### Sample Payload
 

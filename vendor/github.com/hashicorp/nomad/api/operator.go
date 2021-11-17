@@ -1,6 +1,14 @@
 package api
 
-import "strconv"
+import (
+	"encoding/json"
+	"errors"
+	"io"
+	"io/ioutil"
+	"strconv"
+	"strings"
+	"time"
+)
 
 // Operator can be used to perform low-level operator tasks for Nomad.
 type Operator struct {
@@ -109,10 +117,17 @@ func (op *Operator) RaftRemovePeerByID(id string, q *WriteOptions) error {
 	return nil
 }
 
+// SchedulerConfiguration is the config for controlling scheduler behavior
 type SchedulerConfiguration struct {
+	// SchedulerAlgorithm lets you select between available scheduling algorithms.
+	SchedulerAlgorithm SchedulerAlgorithm
+
 	// PreemptionConfig specifies whether to enable eviction of lower
 	// priority jobs to place higher priority jobs.
 	PreemptionConfig PreemptionConfig
+
+	// MemoryOversubscriptionEnabled specifies whether memory oversubscription is enabled
+	MemoryOversubscriptionEnabled bool
 
 	// CreateIndex/ModifyIndex store the create/modify indexes of this configuration.
 	CreateIndex uint64
@@ -137,11 +152,22 @@ type SchedulerSetConfigurationResponse struct {
 	WriteMeta
 }
 
+// SchedulerAlgorithm is an enum string that encapsulates the valid options for a
+// SchedulerConfiguration stanza's SchedulerAlgorithm. These modes will allow the
+// scheduler to be user-selectable.
+type SchedulerAlgorithm string
+
+const (
+	SchedulerAlgorithmBinpack SchedulerAlgorithm = "binpack"
+	SchedulerAlgorithmSpread  SchedulerAlgorithm = "spread"
+)
+
 // PreemptionConfig specifies whether preemption is enabled based on scheduler type
 type PreemptionConfig struct {
-	SystemSchedulerEnabled  bool
-	BatchSchedulerEnabled   bool
-	ServiceSchedulerEnabled bool
+	SystemSchedulerEnabled   bool
+	SysBatchSchedulerEnabled bool
+	BatchSchedulerEnabled    bool
+	ServiceSchedulerEnabled  bool
 }
 
 // SchedulerGetConfiguration is used to query the current Scheduler configuration.
@@ -175,4 +201,147 @@ func (op *Operator) SchedulerCASConfiguration(conf *SchedulerConfiguration, q *W
 	}
 
 	return &out, wm, nil
+}
+
+// Snapshot is used to capture a snapshot state of a running cluster.
+// The returned reader that must be consumed fully
+func (op *Operator) Snapshot(q *QueryOptions) (io.ReadCloser, error) {
+	r, err := op.c.newRequest("GET", "/v1/operator/snapshot")
+	if err != nil {
+		return nil, err
+	}
+	r.setQueryOptions(q)
+	_, resp, err := requireOK(op.c.doRequest(r))
+	if err != nil {
+		return nil, err
+	}
+
+	digest := resp.Header.Get("Digest")
+
+	cr, err := newChecksumValidatingReader(resp.Body, digest)
+	if err != nil {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+
+		return nil, err
+	}
+
+	return cr, nil
+}
+
+// SnapshotRestore is used to restore a running nomad cluster to an original
+// state.
+func (op *Operator) SnapshotRestore(in io.Reader, q *WriteOptions) (*WriteMeta, error) {
+	wm, err := op.c.write("/v1/operator/snapshot", in, nil, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return wm, nil
+}
+
+type License struct {
+	// The unique identifier of the license
+	LicenseID string
+
+	// The customer ID associated with the license
+	CustomerID string
+
+	// If set, an identifier that should be used to lock the license to a
+	// particular site, cluster, etc.
+	InstallationID string
+
+	// The time at which the license was issued
+	IssueTime time.Time
+
+	// The time at which the license starts being valid
+	StartTime time.Time
+
+	// The time after which the license expires
+	ExpirationTime time.Time
+
+	// The time at which the license ceases to function and can
+	// no longer be used in any capacity
+	TerminationTime time.Time
+
+	// The product the license is valid for
+	Product string
+
+	// License Specific Flags
+	Flags map[string]interface{}
+
+	// Modules is a list of the licensed enterprise modules
+	Modules []string
+
+	// List of features enabled by the license
+	Features []string
+}
+
+type LicenseReply struct {
+	License        *License
+	ConfigOutdated bool
+	QueryMeta
+}
+
+type ApplyLicenseOptions struct {
+	Force bool
+}
+
+func (op *Operator) LicensePut(license string, q *WriteOptions) (*WriteMeta, error) {
+	return op.ApplyLicense(license, nil, q)
+}
+
+func (op *Operator) ApplyLicense(license string, opts *ApplyLicenseOptions, q *WriteOptions) (*WriteMeta, error) {
+	r, err := op.c.newRequest("PUT", "/v1/operator/license")
+	if err != nil {
+		return nil, err
+	}
+
+	if opts != nil && opts.Force {
+		r.params.Add("force", "true")
+	}
+
+	r.setWriteOptions(q)
+	r.body = strings.NewReader(license)
+
+	rtt, resp, err := requireOK(op.c.doRequest(r))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	wm := &WriteMeta{RequestTime: rtt}
+	parseWriteMeta(resp, wm)
+
+	return wm, nil
+}
+
+func (op *Operator) LicenseGet(q *QueryOptions) (*LicenseReply, *QueryMeta, error) {
+	req, err := op.c.newRequest("GET", "/v1/operator/license")
+	if err != nil {
+		return nil, nil, err
+	}
+	req.setQueryOptions(q)
+
+	var reply LicenseReply
+	rtt, resp, err := op.c.doRequest(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 204 {
+		return nil, nil, errors.New("Nomad Enterprise only endpoint")
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&reply)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	qm := &QueryMeta{}
+	parseQueryMeta(resp, qm)
+	qm.RequestTime = rtt
+
+	return &reply, qm, nil
 }

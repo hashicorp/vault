@@ -27,6 +27,13 @@ type ServiceInstanceRequest struct {
 	Tags            []string               `json:"tags,omitempty"`
 }
 
+type ServiceInstanceUpdateRequest struct {
+	Name            string                 `json:"name,omitempty"`
+	ServicePlanGuid string                 `json:"service_plan_guid,omitempty"`
+	Parameters      map[string]interface{} `json:"parameters,omitempty"`
+	Tags            []string               `json:"tags,omitempty"`
+}
+
 type ServiceInstanceResource struct {
 	Meta   Meta            `json:"metadata"`
 	Entity ServiceInstance `json:"entity"`
@@ -73,6 +80,7 @@ func (c *Client) ListServiceInstancesByQuery(query url.Values) ([]ServiceInstanc
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting service instances")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading service instances request:")
@@ -87,7 +95,7 @@ func (c *Client) ListServiceInstancesByQuery(query url.Values) ([]ServiceInstanc
 		}
 
 		requestUrl = sir.NextUrl
-		if requestUrl == "" {
+		if requestUrl == "" || query.Get("page") != "" {
 			break
 		}
 	}
@@ -98,6 +106,24 @@ func (c *Client) ListServiceInstances() ([]ServiceInstance, error) {
 	return c.ListServiceInstancesByQuery(nil)
 }
 
+func (c *Client) GetServiceInstanceParams(guid string) (map[string]interface{}, error) {
+	req := c.NewRequest("GET", "/v2/service_instances/"+guid+"/parameters")
+	res, err := c.DoRequest(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error requesting service instance parameters")
+	}
+
+	defer res.Body.Close()
+
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error JSON parsing service instance parameters")
+	}
+
+	return result, nil
+}
+
 func (c *Client) GetServiceInstanceByGuid(guid string) (ServiceInstance, error) {
 	var sir ServiceInstanceResource
 	req := c.NewRequest("GET", "/v2/service_instances/"+guid)
@@ -105,7 +131,7 @@ func (c *Client) GetServiceInstanceByGuid(guid string) (ServiceInstance, error) 
 	if err != nil {
 		return ServiceInstance{}, errors.Wrap(err, "Error requesting service instance")
 	}
-
+	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return ServiceInstance{}, errors.Wrap(err, "Error reading service instance response")
@@ -145,6 +171,7 @@ func (c *Client) CreateServiceInstance(req ServiceInstanceRequest) (ServiceInsta
 		return ServiceInstance{}, err
 	}
 
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusAccepted && res.StatusCode != http.StatusCreated {
 		return ServiceInstance{}, errors.Wrapf(err, "Error creating service, response code: %d", res.StatusCode)
 	}
@@ -162,12 +189,22 @@ func (c *Client) CreateServiceInstance(req ServiceInstanceRequest) (ServiceInsta
 	return c.mergeServiceInstance(sir), nil
 }
 
+func (c *Client) UpdateSI(serviceInstanceGuid string, req ServiceInstanceUpdateRequest, async bool) error {
+	buf := bytes.NewBuffer(nil)
+	err := json.NewEncoder(buf).Encode(req)
+	if err != nil {
+		return err
+	}
+	return c.UpdateServiceInstance(serviceInstanceGuid, buf, async)
+}
+
 func (c *Client) UpdateServiceInstance(serviceInstanceGuid string, updatedConfiguration io.Reader, async bool) error {
 	u := fmt.Sprintf("/v2/service_instances/%s?accepts_incomplete=%t", serviceInstanceGuid, async)
 	resp, err := c.DoRequest(c.NewRequestWithBody("PUT", u, updatedConfiguration))
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		return errors.Wrapf(err, "Error updating service instance %s, response code %d", serviceInstanceGuid, resp.StatusCode)
 	}
@@ -179,6 +216,7 @@ func (c *Client) DeleteServiceInstance(guid string, recursive, async bool) error
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		return errors.Wrapf(err, "Error deleting service instance %s, response code %d", guid, resp.StatusCode)
 	}

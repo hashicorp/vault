@@ -74,7 +74,7 @@ func (o RunTriggerListOptions) valid() error {
 // List all the run triggers associated with a workspace.
 func (s *runTriggers) List(ctx context.Context, workspaceID string, options RunTriggerListOptions) (*RunTriggerList, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 
 	if err := options.valid(); err != nil {
@@ -99,8 +99,11 @@ func (s *runTriggers) List(ctx context.Context, workspaceID string, options RunT
 // RunTriggerCreateOptions represents the options for
 // creating a new run trigger.
 type RunTriggerCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,run-triggers"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,run-triggers"`
 
 	// The source workspace
 	Sourceable *Workspace `jsonapi:"relation,sourceable"`
@@ -116,14 +119,11 @@ func (o RunTriggerCreateOptions) valid() error {
 // Creates a run trigger with the given options.
 func (s *runTriggers) Create(ctx context.Context, workspaceID string, options RunTriggerCreateOptions) (*RunTrigger, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("workspaces/%s/run-triggers", url.QueryEscape(workspaceID))
 	req, err := s.client.newRequest("POST", u, &options)

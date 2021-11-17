@@ -13,10 +13,10 @@ import (
 	"errors"
 
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -33,6 +33,7 @@ type CommitTransaction struct {
 	selector      description.ServerSelector
 	writeConcern  *writeconcern.WriteConcern
 	retry         *driver.RetryMode
+	serverAPI     *driver.ServerAPIOptions
 }
 
 // NewCommitTransaction constructs and returns a new CommitTransaction.
@@ -40,7 +41,7 @@ func NewCommitTransaction() *CommitTransaction {
 	return &CommitTransaction{}
 }
 
-func (ct *CommitTransaction) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (ct *CommitTransaction) processResponse(driver.ResponseInfo) error {
 	var err error
 	return err
 }
@@ -64,6 +65,7 @@ func (ct *CommitTransaction) Execute(ctx context.Context) error {
 		Deployment:        ct.deployment,
 		Selector:          ct.selector,
 		WriteConcern:      ct.writeConcern,
+		ServerAPI:         ct.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -188,5 +190,15 @@ func (ct *CommitTransaction) Retry(retry driver.RetryMode) *CommitTransaction {
 	}
 
 	ct.retry = &retry
+	return ct
+}
+
+// ServerAPI sets the server API version for this operation.
+func (ct *CommitTransaction) ServerAPI(serverAPI *driver.ServerAPIOptions) *CommitTransaction {
+	if ct == nil {
+		ct = new(CommitTransaction)
+	}
+
+	ct.serverAPI = serverAPI
 	return ct
 }

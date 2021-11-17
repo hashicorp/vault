@@ -111,6 +111,122 @@ type OperatorHealthReply struct {
 	Servers []ServerHealth
 }
 
+type AutopilotState struct {
+	Healthy                    bool
+	FailureTolerance           int
+	OptimisticFailureTolerance int
+
+	Servers         map[string]AutopilotServer
+	Leader          string
+	Voters          []string
+	ReadReplicas    []string                 `json:",omitempty"`
+	RedundancyZones map[string]AutopilotZone `json:",omitempty"`
+	Upgrade         *AutopilotUpgrade        `json:",omitempty"`
+}
+
+type AutopilotServer struct {
+	ID             string
+	Name           string
+	Address        string
+	NodeStatus     string
+	Version        string
+	LastContact    *ReadableDuration
+	LastTerm       uint64
+	LastIndex      uint64
+	Healthy        bool
+	StableSince    time.Time
+	RedundancyZone string `json:",omitempty"`
+	UpgradeVersion string `json:",omitempty"`
+	ReadReplica    bool
+	Status         AutopilotServerStatus
+	Meta           map[string]string
+	NodeType       AutopilotServerType
+}
+
+type AutopilotServerStatus string
+
+const (
+	AutopilotServerNone     AutopilotServerStatus = "none"
+	AutopilotServerLeader   AutopilotServerStatus = "leader"
+	AutopilotServerVoter    AutopilotServerStatus = "voter"
+	AutopilotServerNonVoter AutopilotServerStatus = "non-voter"
+	AutopilotServerStaging  AutopilotServerStatus = "staging"
+)
+
+type AutopilotServerType string
+
+const (
+	AutopilotTypeVoter          AutopilotServerType = "voter"
+	AutopilotTypeReadReplica    AutopilotServerType = "read-replica"
+	AutopilotTypeZoneVoter      AutopilotServerType = "zone-voter"
+	AutopilotTypeZoneExtraVoter AutopilotServerType = "zone-extra-voter"
+	AutopilotTypeZoneStandby    AutopilotServerType = "zone-standby"
+)
+
+type AutopilotZone struct {
+	Servers          []string
+	Voters           []string
+	FailureTolerance int
+}
+
+type AutopilotZoneUpgradeVersions struct {
+	TargetVersionVoters    []string `json:",omitempty"`
+	TargetVersionNonVoters []string `json:",omitempty"`
+	OtherVersionVoters     []string `json:",omitempty"`
+	OtherVersionNonVoters  []string `json:",omitempty"`
+}
+
+type AutopilotUpgrade struct {
+	Status                    AutopilotUpgradeStatus
+	TargetVersion             string                                  `json:",omitempty"`
+	TargetVersionVoters       []string                                `json:",omitempty"`
+	TargetVersionNonVoters    []string                                `json:",omitempty"`
+	TargetVersionReadReplicas []string                                `json:",omitempty"`
+	OtherVersionVoters        []string                                `json:",omitempty"`
+	OtherVersionNonVoters     []string                                `json:",omitempty"`
+	OtherVersionReadReplicas  []string                                `json:",omitempty"`
+	RedundancyZones           map[string]AutopilotZoneUpgradeVersions `json:",omitempty"`
+}
+
+type AutopilotUpgradeStatus string
+
+const (
+	// AutopilotUpgradeIdle is the status when no upgrade is in progress.
+	AutopilotUpgradeIdle AutopilotUpgradeStatus = "idle"
+
+	// AutopilotUpgradeAwaitNewVoters is the status when more servers of
+	// the target version must be added in order to start the promotion
+	// phase of the upgrade
+	AutopilotUpgradeAwaitNewVoters AutopilotUpgradeStatus = "await-new-voters"
+
+	// AutopilotUpgradePromoting is the status when autopilot is promoting
+	// servers of the target version.
+	AutopilotUpgradePromoting AutopilotUpgradeStatus = "promoting"
+
+	// AutopilotUpgradeDemoting is the status when autopilot is demoting
+	// servers not on the target version
+	AutopilotUpgradeDemoting AutopilotUpgradeStatus = "demoting"
+
+	// AutopilotUpgradeLeaderTransfer is the status when autopilot is transferring
+	// leadership from a server running an older version to a server
+	// using the target version.
+	AutopilotUpgradeLeaderTransfer AutopilotUpgradeStatus = "leader-transfer"
+
+	// AutopilotUpgradeAwaitNewServers is the status when autpilot has finished
+	// transferring leadership and has demoted all the other versioned
+	// servers but wants to indicate that more target version servers
+	// are needed to replace all the existing other version servers.
+	AutopilotUpgradeAwaitNewServers AutopilotUpgradeStatus = "await-new-servers"
+
+	// AutopilotUpgradeAwaitServerRemoval is the status when autopilot is waiting
+	// for the servers on non-target versions to be removed
+	AutopilotUpgradeAwaitServerRemoval AutopilotUpgradeStatus = "await-server-removal"
+
+	// AutopilotUpgradeDisabled is the status when automated ugprades are
+	// disabled in the autopilot configuration
+	AutopilotUpgradeDisabled AutopilotUpgradeStatus = "disabled"
+)
+
 // ReadableDuration is a duration type that is serialized to JSON in human readable format.
 type ReadableDuration time.Duration
 
@@ -168,7 +284,7 @@ func (op *Operator) AutopilotGetConfiguration(q *QueryOptions) (*AutopilotConfig
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	var out AutopilotConfiguration
 	if err := decodeBody(resp, &out); err != nil {
@@ -187,7 +303,7 @@ func (op *Operator) AutopilotSetConfiguration(conf *AutopilotConfiguration, q *W
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	closeResponseBody(resp)
 	return nil
 }
 
@@ -203,7 +319,7 @@ func (op *Operator) AutopilotCASConfiguration(conf *AutopilotConfiguration, q *W
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, resp.Body); err != nil {
@@ -218,15 +334,45 @@ func (op *Operator) AutopilotCASConfiguration(conf *AutopilotConfiguration, q *W
 func (op *Operator) AutopilotServerHealth(q *QueryOptions) (*OperatorHealthReply, error) {
 	r := op.c.newRequest("GET", "/v1/operator/autopilot/health")
 	r.setQueryOptions(q)
-	_, resp, err := requireOK(op.c.doRequest(r))
+
+	// we cannot just use requireOK because this endpoint might use a 429 status to indicate
+	// that unhealthiness
+	_, resp, err := op.c.doRequest(r)
 	if err != nil {
+		if resp != nil {
+			closeResponseBody(resp)
+		}
 		return nil, err
 	}
-	defer resp.Body.Close()
+
+	// these are the only 2 status codes that would indicate that we should
+	// expect the body to contain the right format.
+	if resp.StatusCode != 200 && resp.StatusCode != 429 {
+		return nil, generateUnexpectedResponseCodeError(resp)
+	}
+
+	defer closeResponseBody(resp)
 
 	var out OperatorHealthReply
 	if err := decodeBody(resp, &out); err != nil {
 		return nil, err
 	}
+	return &out, nil
+}
+
+func (op *Operator) AutopilotState(q *QueryOptions) (*AutopilotState, error) {
+	r := op.c.newRequest("GET", "/v1/operator/autopilot/state")
+	r.setQueryOptions(q)
+	_, resp, err := requireOK(op.c.doRequest(r))
+	if err != nil {
+		return nil, err
+	}
+	defer closeResponseBody(resp)
+
+	var out AutopilotState
+	if err := decodeBody(resp, &out); err != nil {
+		return nil, err
+	}
+
 	return &out, nil
 }

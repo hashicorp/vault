@@ -2,11 +2,14 @@ package mongodbatlas
 
 import (
 	"context"
+	"errors"
 	"sync"
 
-	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/mitchellh/mapstructure"
+	"github.com/mongodb-forks/digest"
 	"go.mongodb.org/atlas/mongodbatlas"
 )
 
@@ -65,4 +68,30 @@ func (c *mongoDBAtlasConnectionProducer) Connection(_ context.Context) (interfac
 	c.client = client
 
 	return c.client, nil
+}
+
+func (m *mongoDBAtlasConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) error {
+	m.Lock()
+	defer m.Unlock()
+
+	m.RawConfig = req.Config
+
+	err := mapstructure.WeakDecode(req.Config, m)
+	if err != nil {
+		return err
+	}
+
+	if len(m.PublicKey) == 0 {
+		return errors.New("public Key is not set")
+	}
+
+	if len(m.PrivateKey) == 0 {
+		return errors.New("private Key is not set")
+	}
+
+	// Set initialized to true at this point since all fields are set,
+	// and the connection can be established at a later time.
+	m.Initialized = true
+
+	return nil
 }

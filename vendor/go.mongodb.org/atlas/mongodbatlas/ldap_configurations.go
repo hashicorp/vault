@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	ldapConfigurationPath                = "groups/%s/userSecurity"
+	ldapConfigurationPath                = "api/atlas/v1.0/groups/%s/userSecurity"
 	ldapConfigurationPathuserToDNMapping = ldapConfigurationPath + "/ldap/userToDNMapping"
 	ldapVerifyConfigurationPath          = ldapConfigurationPath + "/ldap/verify"
 )
@@ -38,7 +38,7 @@ type LDAPConfigurationsService interface {
 	Delete(context.Context, string) (*LDAPConfiguration, *Response, error)
 }
 
-// LDAPConfigurationsServiceOp handles communication with the LDAP Configuration related methods of the MongoDB Atlas API
+// LDAPConfigurationsServiceOp handles communication with the LDAP Configuration related methods of the MongoDB Atlas API.
 type LDAPConfigurationsServiceOp service
 
 var _ LDAPConfigurationsService = &LDAPConfigurationsServiceOp{}
@@ -67,7 +67,7 @@ type LDAP struct {
 	AuthzQueryTemplate    string             `json:"authzQueryTemplate,omitempty"`    // An LDAP query template that Atlas executes to obtain the LDAP groups to which the authenticated user belongs.
 }
 
-// UserToDNMapping maps an LDAP username for authentication to an LDAP Distinguished Name (DN). Each document contains a match regular expression and either a substitution or ldapQuery template used to transform the LDAP username extracted from the regular expression
+// UserToDNMapping maps an LDAP username for authentication to an LDAP Distinguished Name (DN). Each document contains a match regular expression and either a substitution or ldapQuery template used to transform the LDAP username extracted from the regular expression.
 type UserToDNMapping struct {
 	Match        string `json:"match,omitempty"`        // A regular expression to match against a provided LDAP username.
 	Substitution string `json:"substitution,omitempty"` // An LDAP Distinguished Name (DN) formatting template that converts the LDAP name matched by the match regular expression into an LDAP Distinguished Name.

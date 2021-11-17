@@ -172,6 +172,10 @@ Or specify the contents of a file as a value:
 $ vault kv put secret/password value=@data.txt
 ```
 
+Note that if an argument is supplied in a @key=value format, Vault will treat that as a 
+kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
+does not support filenames with `=` in them.
+
 ### Reading Data
 
 After data is persisted, read it back using `vault kv get`:
@@ -246,6 +250,17 @@ when in High Availability mode.
 
 Provide Vault output (read/status/write) in the specified format. Valid formats are "table", "json", or "yaml".
 
+### `VAULT_LICENSE`
+
+[Enterprise, Server only] Specify a license to use for this node.  This takes
+precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
+[license_path in config](/docs/configuration#license_path).
+
+### `VAULT_LICENSE_PATH`
+
+[Enterprise, Server only] Specify a path to a license on disk to use for this node.
+This takes precedence over [license_path in config](/docs/configuration#license_path).
+
 ### `VAULT_MAX_RETRIES`
 
 Maximum number of retries when a `5xx` error code is encountered. The default is
@@ -308,11 +323,17 @@ can be supplied. If a MFA method expects multiple credential values, or if there
 are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be
 used.
 
+### `VAULT_HTTP_PROXY`
+
+HTTP proxy location which should be used to access Vault. When present, this
+overrides any other proxies found in the environment. Format should be
+`http://server:port`.
+
 ## Flags
 
 There are different CLI flags that are available depending on subcommands. Some
 flags, such as those used for setting HTTP and output options, are available
-globally, while others are specific to a particular subcommand. For a completely
+globally, while others are specific to a particular subcommand. For a complete
 list of available flags, run:
 
 ```shell-session

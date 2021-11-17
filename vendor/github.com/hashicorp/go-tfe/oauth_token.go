@@ -15,7 +15,7 @@ var _ OAuthTokens = (*oAuthTokens)(nil)
 // Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/oauth-tokens.html
+// https://www.terraform.io/docs/cloud/api/oauth-tokens.html
 type OAuthTokens interface {
 	// List all the OAuth tokens for a given organization.
 	List(ctx context.Context, organization string, options OAuthTokenListOptions) (*OAuthTokenList, error)
@@ -62,7 +62,7 @@ type OAuthTokenListOptions struct {
 // List all the OAuth tokens for a given organization.
 func (s *oAuthTokens) List(ctx context.Context, organization string, options OAuthTokenListOptions) (*OAuthTokenList, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/oauth-tokens", url.QueryEscape(organization))
@@ -103,8 +103,11 @@ func (s *oAuthTokens) Read(ctx context.Context, oAuthTokenID string) (*OAuthToke
 
 // OAuthTokenUpdateOptions represents the options for updating an OAuth token.
 type OAuthTokenUpdateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,oauth-tokens"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,oauth-tokens"`
 
 	// A private SSH key to be used for git clone operations.
 	PrivateSSHKey *string `jsonapi:"attr,ssh-key"`
@@ -115,9 +118,6 @@ func (s *oAuthTokens) Update(ctx context.Context, oAuthTokenID string, options O
 	if !validStringID(&oAuthTokenID) {
 		return nil, errors.New("invalid value for OAuth token ID")
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("oauth-tokens/%s", url.QueryEscape(oAuthTokenID))
 	req, err := s.client.newRequest("PATCH", u, &options)

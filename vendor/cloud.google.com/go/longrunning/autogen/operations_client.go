@@ -34,6 +34,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var newOperationsClientHook clientHook
+
 // OperationsCallOptions contains the retry settings for each method of OperationsClient.
 type OperationsCallOptions struct {
 	ListOperations  []gax.CallOption
@@ -132,7 +134,17 @@ type OperationsClient struct {
 // returns long-running operations should implement the Operations interface
 // so developers can have a consistent client experience.
 func NewOperationsClient(ctx context.Context, opts ...option.ClientOption) (*OperationsClient, error) {
-	connPool, err := gtransport.DialPool(ctx, append(defaultOperationsClientOptions(), opts...)...)
+	clientOpts := defaultOperationsClientOptions()
+
+	if newOperationsClientHook != nil {
+		hookOpts, err := newOperationsClientHook(ctx, clientHookParams{})
+		if err != nil {
+			return nil, err
+		}
+		clientOpts = append(clientOpts, hookOpts...)
+	}
+
+	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +154,7 @@ func NewOperationsClient(ctx context.Context, opts ...option.ClientOption) (*Ope
 
 		operationsClient: longrunningpb.NewOperationsClient(connPool),
 	}
-	c.SetGoogleClientInfo()
+	c.setGoogleClientInfo()
 
 	return c, nil
 }
@@ -160,10 +172,10 @@ func (c *OperationsClient) Close() error {
 	return c.connPool.Close()
 }
 
-// SetGoogleClientInfo sets the name and version of the application in
+// setGoogleClientInfo sets the name and version of the application in
 // the `x-goog-api-client` header passed on each request. Intended for
 // use by Google-written clients.
-func (c *OperationsClient) SetGoogleClientInfo(keyval ...string) {
+func (c *OperationsClient) setGoogleClientInfo(keyval ...string) {
 	kv := append([]string{"gl-go", versionGo()}, keyval...)
 	kv = append(kv, "gapic", versionClient, "gax", gax.Version, "grpc", grpc.Version)
 	c.xGoogMetadata = metadata.Pairs("x-goog-api-client", gax.XGoogHeader(kv...))
@@ -203,7 +215,7 @@ func (c *OperationsClient) ListOperations(ctx context.Context, req *longrunningp
 		}
 
 		it.Response = resp
-		return resp.Operations, resp.NextPageToken, nil
+		return resp.GetOperations(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -214,8 +226,8 @@ func (c *OperationsClient) ListOperations(ctx context.Context, req *longrunningp
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 

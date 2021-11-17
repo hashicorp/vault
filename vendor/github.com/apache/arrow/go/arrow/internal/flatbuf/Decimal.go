@@ -22,6 +22,10 @@ import (
 	flatbuffers "github.com/google/flatbuffers/go"
 )
 
+/// Exact decimal value represented as an integer value in two's
+/// complement. Currently only 128-bit (16-byte) and 256-bit (32-byte) integers
+/// are used. The representation uses the endianness indicated
+/// in the Schema.
 type Decimal struct {
 	_tab flatbuffers.Table
 }
@@ -70,14 +74,33 @@ func (rcv *Decimal) MutateScale(n int32) bool {
 	return rcv._tab.MutateInt32Slot(6, n)
 }
 
+/// Number of bits per value. The only accepted widths are 128 and 256.
+/// We use bitWidth for consistency with Int::bitWidth.
+func (rcv *Decimal) BitWidth() int32 {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(8))
+	if o != 0 {
+		return rcv._tab.GetInt32(o + rcv._tab.Pos)
+	}
+	return 128
+}
+
+/// Number of bits per value. The only accepted widths are 128 and 256.
+/// We use bitWidth for consistency with Int::bitWidth.
+func (rcv *Decimal) MutateBitWidth(n int32) bool {
+	return rcv._tab.MutateInt32Slot(8, n)
+}
+
 func DecimalStart(builder *flatbuffers.Builder) {
-	builder.StartObject(2)
+	builder.StartObject(3)
 }
 func DecimalAddPrecision(builder *flatbuffers.Builder, precision int32) {
 	builder.PrependInt32Slot(0, precision, 0)
 }
 func DecimalAddScale(builder *flatbuffers.Builder, scale int32) {
 	builder.PrependInt32Slot(1, scale, 0)
+}
+func DecimalAddBitWidth(builder *flatbuffers.Builder, bitWidth int32) {
+	builder.PrependInt32Slot(2, bitWidth, 128)
 }
 func DecimalEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

@@ -4,10 +4,10 @@
 [![GitHub Action Status](https://github.com/tklauser/numcpus/workflows/Tests/badge.svg)](https://github.com/tklauser/numcpus/actions?query=workflow%3ATests)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tklauser/numcpus)](https://goreportcard.com/report/github.com/tklauser/numcpus)
 
-Package numcpus provides information about the number of CPU.
+Package numcpus provides information about the number of CPU in a system.
 
-It gets the number of CPUs (online, offline, present, possible or kernel
-maximum) on a Linux, Darwin, FreeBSD, NetBSD, OpenBSD,  DragonflyBSD or
+It gets the number of CPUs (online, offline, present, possible, configured or
+kernel maximum) on a Linux, Darwin, FreeBSD, NetBSD, OpenBSD,  DragonflyBSD or
 Solaris/Illumos system.
 
 On Linux, the information is retrieved by reading the corresponding CPU
@@ -45,5 +45,5 @@ func main() {
 
 ## References
 
-* [Linux kernel sysfs documenation for CPU attributes](https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu)
+* [Linux kernel sysfs documentation for CPU attributes](https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu)
 * [Linux kernel CPU topology documentation](https://www.kernel.org/doc/Documentation/cputopology.txt)

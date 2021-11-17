@@ -65,6 +65,9 @@ type Child struct {
 	stopLock sync.RWMutex
 	stopCh   chan struct{}
 	stopped  bool
+
+	// whether to set process group id or not (default on)
+	setpgid bool
 }
 
 // NewInput is input to the NewChild function.
@@ -135,6 +138,7 @@ func New(i *NewInput) (*Child, error) {
 		killTimeout:  i.KillTimeout,
 		splay:        i.Splay,
 		stopCh:       make(chan struct{}, 1),
+		setpgid:      true,
 	}
 
 	return child, nil
@@ -264,6 +268,7 @@ func (c *Child) start() error {
 	cmd.Stdout = c.stdout
 	cmd.Stderr = c.stderr
 	cmd.Env = c.env
+	setSetpgid(cmd, c.setpgid)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -353,7 +358,22 @@ func (c *Child) signal(s os.Signal) error {
 	if !c.running() {
 		return nil
 	}
-	return c.cmd.Process.Signal(s)
+
+	sig, ok := s.(syscall.Signal)
+	if !ok {
+		return fmt.Errorf("bad signal: %s", s)
+	}
+	pid := c.cmd.Process.Pid
+	if c.setpgid {
+		// kill takes negative pid to indicate that you want to use gpid
+		pid = -(pid)
+	}
+	// cross platform way to signal process/process group
+	if p, err := os.FindProcess(pid); err != nil {
+		return err
+	} else {
+		return p.Signal(sig)
+	}
 }
 
 func (c *Child) reload() error {
@@ -381,32 +401,38 @@ func (c *Child) kill(immediately bool) {
 		}
 	}
 
-	exited := false
-	process := c.cmd.Process
-
-	if c.killSignal != nil {
-		if err := process.Signal(c.killSignal); err == nil {
-			// Wait a few seconds for it to exit
-			killCh := make(chan struct{}, 1)
-			go func() {
-				defer close(killCh)
-				process.Wait()
-			}()
-
-			select {
-			case <-c.stopCh:
-			case <-killCh:
-				exited = true
-			case <-time.After(c.killTimeout):
-			}
+	var exited bool
+	defer func() {
+		if !exited {
+			c.cmd.Process.Kill()
 		}
+		c.cmd = nil
+	}()
+
+	if c.killSignal == nil {
+		return
 	}
 
-	if !exited {
-		process.Kill()
+	if err := c.signal(c.killSignal); err != nil {
+		log.Printf("[ERR] (child) Kill failed: %s", err)
+		if processNotFoundErr(err) {
+			exited = true // checked in defer
+		}
+		return
 	}
 
-	c.cmd = nil
+	killCh := make(chan struct{}, 1)
+	go func() {
+		defer close(killCh)
+		c.cmd.Process.Wait()
+	}()
+
+	select {
+	case <-c.stopCh:
+	case <-killCh:
+		exited = true
+	case <-time.After(c.killTimeout):
+	}
 }
 
 func (c *Child) running() bool {

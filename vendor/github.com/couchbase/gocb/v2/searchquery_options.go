@@ -1,6 +1,7 @@
 package gocb
 
 import (
+	"context"
 	"time"
 
 	cbsearch "github.com/couchbase/gocb/v2/search"
@@ -54,7 +55,21 @@ type SearchOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
 
-	parentSpan requestSpanContext
+	DisableScoring bool
+
+	Collections []string
+
+	ParentSpan RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (opts *SearchOptions) toMap() (map[string]interface{}, error) {
@@ -105,7 +120,7 @@ func (opts *SearchOptions) toMap() (map[string]interface{}, error) {
 		consistency := make(map[string]interface{})
 
 		if opts.ScanConsistency == SearchScanConsistencyNotBounded {
-			consistency["level"] = "not_bounded"
+			consistency["level"] = ""
 		} else {
 			return nil, makeInvalidArgumentsError("unexpected consistency option")
 		}
@@ -124,14 +139,23 @@ func (opts *SearchOptions) toMap() (map[string]interface{}, error) {
 		}
 		ctl["consistency"] = consistency
 	}
+
 	if ctl != nil {
 		data["ctl"] = ctl
+	}
+
+	if opts.DisableScoring {
+		data["score"] = "none"
 	}
 
 	if opts.Raw != nil {
 		for k, v := range opts.Raw {
 			data[k] = v
 		}
+	}
+
+	if len(opts.Collections) > 0 {
+		data["collections"] = opts.Collections
 	}
 
 	return data, nil

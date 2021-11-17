@@ -3,7 +3,7 @@ package gocb
 import (
 	"crypto/tls"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 // UserPassPair represents a username and password pair.

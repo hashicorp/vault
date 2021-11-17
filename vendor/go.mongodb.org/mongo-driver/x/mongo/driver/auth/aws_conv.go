@@ -20,11 +20,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/signer/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/auth/internal/awsv4"
 )
 
 type clientState int
@@ -128,7 +127,7 @@ func getRegion(host string) (string, error) {
 	return region, nil
 }
 
-func (ac *awsConversation) validateAndMakeCredentials() (*credentials.Credentials, error) {
+func (ac *awsConversation) validateAndMakeCredentials() (*awsv4.StaticProvider, error) {
 	if ac.username != "" && ac.password == "" {
 		return nil, errors.New("ACCESS_KEY_ID is set, but SECRET_ACCESS_KEY is missing")
 	}
@@ -139,7 +138,11 @@ func (ac *awsConversation) validateAndMakeCredentials() (*credentials.Credential
 		return nil, errors.New("AWS_SESSION_TOKEN is set, but ACCESS_KEY_ID and SECRET_ACCESS_KEY are missing")
 	}
 	if ac.username != "" || ac.password != "" || ac.token != "" {
-		return credentials.NewStaticCredentials(ac.username, ac.password, ac.token), nil
+		return &awsv4.StaticProvider{Value: awsv4.Value{
+			AccessKeyID:     ac.username,
+			SecretAccessKey: ac.password,
+			SessionToken:    ac.token,
+		}}, nil
 	}
 	return nil, nil
 }
@@ -156,7 +159,7 @@ func executeAWSHTTPRequest(req *http.Request) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (ac *awsConversation) getEC2Credentials() (*credentials.Credentials, error) {
+func (ac *awsConversation) getEC2Credentials() (*awsv4.StaticProvider, error) {
 	// get token
 	req, err := http.NewRequest("PUT", awsEC2URI+awsEC2TokenPath, nil)
 	if err != nil {
@@ -212,7 +215,7 @@ func (ac *awsConversation) getEC2Credentials() (*credentials.Credentials, error)
 	return ac.validateAndMakeCredentials()
 }
 
-func (ac *awsConversation) getCredentials() (*credentials.Credentials, error) {
+func (ac *awsConversation) getCredentials() (*awsv4.StaticProvider, error) {
 	// Credentials passed through URI
 	creds, err := ac.validateAndMakeCredentials()
 	if creds != nil || err != nil {
@@ -323,9 +326,7 @@ func (ac *awsConversation) finalMsg(s1 []byte) ([]byte, error) {
 	req.Header.Set("X-MongoDB-GS2-CB-Flag", "n")
 
 	// Create signer with credentials
-	signer := v4.Signer{
-		Credentials: creds,
-	}
+	signer := awsv4.NewSigner(creds)
 
 	// Get signed header
 	_, err = signer.Sign(req, strings.NewReader(body), "sts", region, currentTime)

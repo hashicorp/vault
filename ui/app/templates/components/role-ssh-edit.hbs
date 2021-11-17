@@ -18,6 +18,15 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+        >
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator" />
+      {{/if}}
       {{#if (eq model.keyType "otp")}}
         <ToolbarSecretLink
           @secret={{model.id}}
@@ -38,17 +47,6 @@
         </ToolbarSecretLink>
       {{/if}}
       {{#if (or model.canUpdate model.canDelete)}}
-        <div class="toolbar-separator" />
-      {{/if}}
-      {{#if model.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-        >
-          Delete role
-        </ConfirmAction>
-      {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
         <ToolbarSecretLink
           @secret={{model.id}}
           @mode="edit"
@@ -67,7 +65,10 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @model={{model}} />
       <NamespaceReminder @mode={{mode}} @noun="SSH role" />
-      {{partial "partials/form-field-groups-loop"}}
+      <FormFieldGroupsLoop
+        @model={{model}}
+        @mode={{mode}}
+      />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">

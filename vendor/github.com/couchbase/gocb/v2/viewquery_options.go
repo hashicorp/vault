@@ -2,6 +2,7 @@ package gocb
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/url"
 	"strconv"
@@ -60,6 +61,7 @@ type ViewOptions struct {
 	EndKeyDocID     string
 	OnError         ViewErrorMode
 	Debug           bool
+	ParentSpan      RequestSpan
 
 	// Raw provides a way to provide extra parameters in the request body for the query.
 	Raw map[string]string
@@ -69,7 +71,15 @@ type ViewOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
 
-	parentSpan requestSpanContext
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (opts *ViewOptions) toURLValues() (*url.Values, error) {
@@ -110,7 +120,6 @@ func (opts *ViewOptions) toURLValues() (*url.Values, error) {
 		options.Set("reduce", "true")
 
 		// Only set group if a reduce view
-		options.Set("group", "false") // is this line necessary?
 		if opts.Group {
 			options.Set("group", "true")
 		}

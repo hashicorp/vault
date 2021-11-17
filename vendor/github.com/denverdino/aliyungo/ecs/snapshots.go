@@ -26,6 +26,8 @@ type SnapshotType struct {
 	SourceDiskSize int
 	SourceDiskType string //enum for System | Data
 	ProductCode    string
+	Status         string
+	Usage          string
 	CreationTime   util.ISO6801Time
 }
 

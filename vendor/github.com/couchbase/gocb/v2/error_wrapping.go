@@ -3,7 +3,7 @@ package gocb
 import (
 	"encoding/json"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 func serializeWrappedError(err error) string {
@@ -19,6 +19,7 @@ func maybeEnhanceCoreErr(err error) error {
 		return &KeyValueError{
 			InnerError:         kvErr.InnerError,
 			StatusCode:         kvErr.StatusCode,
+			DocumentID:         kvErr.DocumentKey,
 			BucketName:         kvErr.BucketName,
 			ScopeName:          kvErr.ScopeName,
 			CollectionName:     kvErr.CollectionName,

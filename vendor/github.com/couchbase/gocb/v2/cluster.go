@@ -1,13 +1,14 @@
 package gocb
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"strconv"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
-	gocbconnstr "github.com/couchbase/gocbcore/v9/connstr"
+	gocbcore "github.com/couchbase/gocbcore/v10"
+	gocbconnstr "github.com/couchbase/gocbcore/v10/connstr"
 	"github.com/pkg/errors"
 )
 
@@ -30,7 +31,8 @@ type Cluster struct {
 	orphanLoggerInterval   time.Duration
 	orphanLoggerSampleSize uint32
 
-	tracer requestTracer
+	tracer RequestTracer
+	meter  *meterWrapper
 
 	circuitBreakerConfig CircuitBreakerConfig
 	securityConfig       SecurityConfig
@@ -70,6 +72,12 @@ type OrphanReporterConfig struct {
 type SecurityConfig struct {
 	TLSRootCAs    *x509.CertPool
 	TLSSkipVerify bool
+
+	// AllowedSaslMechanisms is the list of mechanisms that the SDK can use to attempt authentication.
+	// Note that if you add PLAIN to the list, this will cause credential leakage on the network
+	// since PLAIN sends the credentials in cleartext. It is disabled by default to prevent downgrade attacks. We
+	// recommend using a TLS connection if using PLAIN.
+	AllowedSaslMechanisms []SaslMechanism
 }
 
 // InternalConfig specifies options for controlling various internal
@@ -100,8 +108,9 @@ type ClusterOptions struct {
 	RetryStrategy RetryStrategy
 
 	// Tracer specifies the tracer to use for requests.
-	// VOLATILE: This API is subject to change at any time.
-	Tracer requestTracer
+	Tracer RequestTracer
+
+	Meter Meter
 
 	// OrphanReporterConfig specifies options for the orphan reporter.
 	OrphanReporterConfig OrphanReporterConfig
@@ -180,13 +189,19 @@ func clusterFromOptions(opts ClusterOptions) *Cluster {
 		useServerDurations = false
 	}
 
-	var initialTracer requestTracer
+	var initialTracer RequestTracer
 	if opts.Tracer != nil {
 		initialTracer = opts.Tracer
 	} else {
-		initialTracer = newThresholdLoggingTracer(nil)
+		initialTracer = NewThresholdLoggingTracer(nil)
 	}
 	tracerAddRef(initialTracer)
+
+	meter := opts.Meter
+	if meter == nil {
+		agMeter := NewAggregatingMeter(nil)
+		meter = agMeter
+	}
 
 	return &Cluster{
 		auth: opts.Authenticator,
@@ -208,6 +223,7 @@ func clusterFromOptions(opts ClusterOptions) *Cluster {
 		orphanLoggerSampleSize: opts.OrphanReporterConfig.SampleSize,
 		useServerDurations:     useServerDurations,
 		tracer:                 initialTracer,
+		meter:                  newMeterWrapper(meter),
 		circuitBreakerConfig:   opts.CircuitBreakerConfig,
 		securityConfig:         opts.SecurityConfig,
 		internalConfig:         opts.InternalConfig,
@@ -316,6 +332,13 @@ func (c *Cluster) connSpec() gocbconnstr.ConnSpec {
 type WaitUntilReadyOptions struct {
 	DesiredState ClusterState
 	ServiceTypes []ServiceType
+
+	// Using a deadlined Context with WaitUntilReady will cause the shorter of the provided timeout and context deadline
+	// to cause cancellation.
+	Context context.Context
+
+	// VOLATILE: This API is subject to change at any time.
+	RetryStrategy RetryStrategy
 }
 
 // WaitUntilReady will wait for the cluster object to be ready for use.
@@ -345,17 +368,23 @@ func (c *Cluster) WaitUntilReady(timeout time.Duration, opts *WaitUntilReadyOpti
 		desiredState = ClusterStateOnline
 	}
 
-	services := opts.ServiceTypes
-	gocbcoreServices := make([]gocbcore.ServiceType, len(services))
-	for i, svc := range services {
+	gocbcoreServices := make([]gocbcore.ServiceType, len(opts.ServiceTypes))
+	for i, svc := range opts.ServiceTypes {
 		gocbcoreServices[i] = gocbcore.ServiceType(svc)
 	}
 
+	wrapper := c.retryStrategyWrapper
+	if opts.RetryStrategy != nil {
+		wrapper = newRetryStrategyWrapper(opts.RetryStrategy)
+	}
+
 	err = provider.WaitUntilReady(
+		opts.Context,
 		time.Now().Add(timeout),
 		gocbcore.WaitUntilReadyOptions{
-			DesiredState: gocbcore.ClusterState(desiredState),
-			ServiceTypes: gocbcoreServices,
+			DesiredState:  gocbcore.ClusterState(desiredState),
+			ServiceTypes:  gocbcoreServices,
+			RetryStrategy: wrapper,
 		},
 	)
 	if err != nil {
@@ -380,6 +409,12 @@ func (c *Cluster) Close(opts *ClusterCloseOptions) error {
 	if c.tracer != nil {
 		tracerDecRef(c.tracer)
 		c.tracer = nil
+	}
+	if c.meter != nil {
+		if meter, ok := c.meter.meter.(*LoggingMeter); ok {
+			meter.close()
+		}
+		c.meter = nil
 	}
 
 	return overallErr
@@ -422,7 +457,7 @@ func (c *Cluster) getSearchProvider() (searchProvider, error) {
 }
 
 func (c *Cluster) getHTTPProvider() (httpProvider, error) {
-	provider, err := c.connectionManager.getHTTPProvider()
+	provider, err := c.connectionManager.getHTTPProvider("")
 	if err != nil {
 		return nil, err
 	}
@@ -435,6 +470,7 @@ func (c *Cluster) Users() *UserManager {
 	return &UserManager{
 		provider: c,
 		tracer:   c.tracer,
+		meter:    c.meter,
 	}
 }
 
@@ -443,6 +479,7 @@ func (c *Cluster) Buckets() *BucketManager {
 	return &BucketManager{
 		provider: c,
 		tracer:   c.tracer,
+		meter:    c.meter,
 	}
 }
 
@@ -453,6 +490,7 @@ func (c *Cluster) AnalyticsIndexes() *AnalyticsIndexManager {
 		mgmtProvider:  c,
 		globalTimeout: c.timeoutsConfig.ManagementTimeout,
 		tracer:        c.tracer,
+		meter:         c.meter,
 	}
 }
 
@@ -462,6 +500,7 @@ func (c *Cluster) QueryIndexes() *QueryIndexManager {
 		provider:      c,
 		globalTimeout: c.timeoutsConfig.ManagementTimeout,
 		tracer:        c.tracer,
+		meter:         c.meter,
 	}
 }
 
@@ -470,5 +509,16 @@ func (c *Cluster) SearchIndexes() *SearchIndexManager {
 	return &SearchIndexManager{
 		mgmtProvider: c,
 		tracer:       c.tracer,
+		meter:        c.meter,
+	}
+}
+
+// EventingFunctions returns a EventingFunctionManager for managing eventing functions.
+// Volatile: This API is subject to change at any time.
+func (c *Cluster) EventingFunctions() *EventingFunctionManager {
+	return &EventingFunctionManager{
+		mgmtProvider: c,
+		tracer:       c.tracer,
+		meter:        c.meter,
 	}
 }

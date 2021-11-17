@@ -41,7 +41,12 @@ type Printfer interface {
 // It calls Printf once for each difference, with no trailing newline.
 // The standard library log.Logger is a Printfer.
 func Pdiff(p Printfer, a, b interface{}) {
-	diffPrinter{w: p}.diff(reflect.ValueOf(a), reflect.ValueOf(b))
+	d := diffPrinter{
+		w:        p,
+		aVisited: make(map[visit]visit),
+		bVisited: make(map[visit]visit),
+	}
+	d.diff(reflect.ValueOf(a), reflect.ValueOf(b))
 }
 
 type Logfer interface {
@@ -66,6 +71,9 @@ func Ldiff(l Logfer, a, b interface{}) {
 type diffPrinter struct {
 	w Printfer
 	l string // label
+
+	aVisited map[visit]visit
+	bVisited map[visit]visit
 }
 
 func (w diffPrinter) printf(f string, a ...interface{}) {
@@ -94,6 +102,28 @@ func (w diffPrinter) diff(av, bv reflect.Value) {
 	if at != bt {
 		w.printf("%v != %v", at, bt)
 		return
+	}
+
+	if av.CanAddr() && bv.CanAddr() {
+		avis := visit{av.UnsafeAddr(), at}
+		bvis := visit{bv.UnsafeAddr(), bt}
+		var cycle bool
+
+		// Have we seen this value before?
+		if vis, ok := w.aVisited[avis]; ok {
+			cycle = true
+			if vis != bvis {
+				w.printf("%# v (previously visited) != %# v", formatter{v: av, quote: true}, formatter{v: bv, quote: true})
+			}
+		} else if _, ok := w.bVisited[bvis]; ok {
+			cycle = true
+			w.printf("%# v != %# v (previously visited)", formatter{v: av, quote: true}, formatter{v: bv, quote: true})
+		}
+		w.aVisited[avis] = bvis
+		w.bVisited[bvis] = avis
+		if cycle {
+			return
+		}
 	}
 
 	switch kind := at.Kind(); kind {

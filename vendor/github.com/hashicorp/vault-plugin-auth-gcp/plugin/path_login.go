@@ -11,10 +11,10 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
@@ -187,11 +187,8 @@ func (b *GcpAuthBackend) parseAndValidateJwt(ctx context.Context, req *logical.R
 	if err = validateBaseJWTClaims(baseClaims, loginInfo.RoleName); err != nil {
 		return nil, err
 	}
-	loginInfo.JWTClaims = baseClaims
 
-	if len(baseClaims.Subject) == 0 {
-		return nil, errors.New("expected JWT to have non-empty 'sub' claim")
-	}
+	loginInfo.JWTClaims = baseClaims
 	loginInfo.EmailOrId = baseClaims.Subject
 
 	if loginInfo.Role.RoleType == gceRoleType {
@@ -270,8 +267,7 @@ func validateBaseJWTClaims(c *jwt.Claims, roleName string) error {
 		return fmt.Errorf("JWT must expire in %d minutes, expires in %v", maxJwtExpMaxMinutes, expIn)
 	}
 
-	sub := c.Subject
-	if len(sub) < 0 {
+	if len(c.Subject) == 0 {
 		return errors.New("expected JWT to have 'sub' claim with service account id or email")
 	}
 
@@ -690,8 +686,9 @@ func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, project strin
 	})
 }
 
-const pathLoginHelpSyn = `Authenticates Google Cloud Platform entities with Vault.`
-const pathLoginHelpDesc = `
+const (
+	pathLoginHelpSyn  = `Authenticates Google Cloud Platform entities with Vault.`
+	pathLoginHelpDesc = `
 Authenticate Google Cloud Platform (GCP) entities.
 
 Currently supports authentication for:
@@ -705,3 +702,4 @@ Vault verifies the signed JWT and parses the identity of the account.
 
 Renewal is rejected if the role, service account, or original signing key no longer exists.
 `
+)

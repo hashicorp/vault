@@ -42,16 +42,16 @@ func (rcv *Tensor) Table() flatbuffers.Table {
 	return rcv._tab
 }
 
-func (rcv *Tensor) TypeType() byte {
+func (rcv *Tensor) TypeType() Type {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetByte(o + rcv._tab.Pos)
+		return Type(rcv._tab.GetByte(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
-func (rcv *Tensor) MutateTypeType(n byte) bool {
-	return rcv._tab.MutateByteSlot(4, n)
+func (rcv *Tensor) MutateTypeType(n Type) bool {
+	return rcv._tab.MutateByteSlot(4, byte(n))
 }
 
 /// The type of data contained in a value cell. Currently only fixed-width
@@ -90,6 +90,7 @@ func (rcv *Tensor) ShapeLength() int {
 
 /// The dimensions of the tensor, optionally named
 /// Non-negative byte offsets to advance one value cell along each dimension
+/// If omitted, default to row-major order (C-like).
 func (rcv *Tensor) Strides(j int) int64 {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
 	if o != 0 {
@@ -108,6 +109,7 @@ func (rcv *Tensor) StridesLength() int {
 }
 
 /// Non-negative byte offsets to advance one value cell along each dimension
+/// If omitted, default to row-major order (C-like).
 func (rcv *Tensor) MutateStrides(j int, n int64) bool {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
 	if o != 0 {
@@ -135,8 +137,8 @@ func (rcv *Tensor) Data(obj *Buffer) *Buffer {
 func TensorStart(builder *flatbuffers.Builder) {
 	builder.StartObject(5)
 }
-func TensorAddTypeType(builder *flatbuffers.Builder, typeType byte) {
-	builder.PrependByteSlot(0, typeType, 0)
+func TensorAddTypeType(builder *flatbuffers.Builder, typeType Type) {
+	builder.PrependByteSlot(0, byte(typeType), 0)
 }
 func TensorAddType(builder *flatbuffers.Builder, type_ flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(1, flatbuffers.UOffsetT(type_), 0)

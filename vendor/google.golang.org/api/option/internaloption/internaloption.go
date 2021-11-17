@@ -34,7 +34,19 @@ func (o defaultMTLSEndpointOption) Apply(settings *internal.DialSettings) {
 // WithDefaultMTLSEndpoint is an option that indicates the default mTLS endpoint.
 //
 // It should only be used internally by generated clients.
-//
 func WithDefaultMTLSEndpoint(url string) option.ClientOption {
 	return defaultMTLSEndpointOption(url)
+}
+
+// SkipDialSettingsValidation bypasses validation on ClientOptions.
+//
+// It should only be used internally.
+func SkipDialSettingsValidation() option.ClientOption {
+	return skipDialSettingsValidation{}
+}
+
+type skipDialSettingsValidation struct{}
+
+func (s skipDialSettingsValidation) Apply(settings *internal.DialSettings) {
+	settings.SkipValidation = true
 }

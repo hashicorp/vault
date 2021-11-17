@@ -1,6 +1,9 @@
 // Created by cgo -godefs - DO NOT EDIT
 // cgo -godefs sysconf_defs_netbsd.go
 
+//go:build netbsd
+// +build netbsd
+
 package sysconf
 
 const (

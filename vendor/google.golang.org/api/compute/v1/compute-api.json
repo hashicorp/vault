@@ -29,7 +29,7 @@
   "description": "Creates and runs virtual machines on Google Cloud Platform.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/compute/docs/reference/latest/",
-  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/L9LOTkeGMiZOvax0wDyduhAKK-M\"",
+  "etag": "\"-2NioU2H8y8siEzrBOV_qzRI6kQ/X6Y8lGxo9UpbIUm1urqOSAixTR0\"",
   "icons": {
     "x16": "https://www.google.com/images/icons/product/compute_engine-16.png",
     "x32": "https://www.google.com/images/icons/product/compute_engine-32.png"
@@ -2016,6 +2016,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -5029,6 +5035,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -6570,6 +6582,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -6924,7 +6942,7 @@
           ],
           "parameters": {
             "forceAttach": {
-              "description": "Whether to force attach the disk even if it's currently attached to another instance.",
+              "description": "Whether to force attach the regional disk even if it's currently attached to another instance.",
               "location": "query",
               "type": "boolean"
             },
@@ -7230,6 +7248,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -7273,7 +7297,7 @@
           ],
           "parameters": {
             "instance": {
-              "description": "Name of the instance scoping this request.",
+              "description": "Name of the instance for this request.",
               "location": "path",
               "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?|[1-9][0-9]{0,19}",
               "required": true,
@@ -7296,7 +7320,7 @@
               "type": "string"
             },
             "start": {
-              "description": "Returns output starting from a specific byte position. Use this to page through output when the output is too large to return in a single request. For the initial request, leave this field unspecified. For subsequent calls, this field should be set to the next value returned in the previous call.",
+              "description": "Specifies the starting byte position of the output to return. To start with the first byte of output to the specified port, omit this field or set it to `0`.\n\nIf the output for that byte position is available, this field matches the `start` parameter sent with the request. If the amount of serial console output exceeds the size of the buffer (1 MB), the oldest output is discarded and is no longer available. If the requested start position refers to discarded output, the start position is adjusted to the oldest output still available, and the adjusted start position is returned as the `start` property value.\n\nYou can also provide a negative start position, which translates to the most recent number of bytes written to the serial port. For example, -3 is interpreted as the most recent 3 bytes written to the serial console.",
               "format": "int64",
               "location": "query",
               "type": "string"
@@ -9520,6 +9544,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -10997,6 +11027,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -11543,6 +11579,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -13821,6 +13863,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -17328,6 +17376,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -17752,6 +17806,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -19112,6 +19172,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -19957,6 +20023,12 @@
             "resource"
           ],
           "parameters": {
+            "optionsRequestedPolicyVersion": {
+              "description": "Requested IAM Policy version.",
+              "format": "int32",
+              "location": "query",
+              "type": "integer"
+            },
             "project": {
               "description": "Project ID for this request.",
               "location": "path",
@@ -20327,6 +20399,205 @@
             "https://www.googleapis.com/auth/cloud-platform",
             "https://www.googleapis.com/auth/compute",
             "https://www.googleapis.com/auth/compute.readonly"
+          ]
+        }
+      }
+    },
+    "targetGrpcProxies": {
+      "methods": {
+        "delete": {
+          "description": "Deletes the specified TargetGrpcProxy in the given scope",
+          "httpMethod": "DELETE",
+          "id": "compute.targetGrpcProxies.delete",
+          "parameterOrder": [
+            "project",
+            "targetGrpcProxy"
+          ],
+          "parameters": {
+            "project": {
+              "description": "Project ID for this request.",
+              "location": "path",
+              "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+              "required": true,
+              "type": "string"
+            },
+            "requestId": {
+              "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+              "location": "query",
+              "type": "string"
+            },
+            "targetGrpcProxy": {
+              "description": "Name of the TargetGrpcProxy resource to delete.",
+              "location": "path",
+              "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?|[1-9][0-9]{0,19}",
+              "required": true,
+              "type": "string"
+            }
+          },
+          "path": "{project}/global/targetGrpcProxies/{targetGrpcProxy}",
+          "response": {
+            "$ref": "Operation"
+          },
+          "scopes": [
+            "https://www.googleapis.com/auth/cloud-platform",
+            "https://www.googleapis.com/auth/compute"
+          ]
+        },
+        "get": {
+          "description": "Returns the specified TargetGrpcProxy resource in the given scope.",
+          "httpMethod": "GET",
+          "id": "compute.targetGrpcProxies.get",
+          "parameterOrder": [
+            "project",
+            "targetGrpcProxy"
+          ],
+          "parameters": {
+            "project": {
+              "description": "Project ID for this request.",
+              "location": "path",
+              "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+              "required": true,
+              "type": "string"
+            },
+            "targetGrpcProxy": {
+              "description": "Name of the TargetGrpcProxy resource to return.",
+              "location": "path",
+              "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?|[1-9][0-9]{0,19}",
+              "required": true,
+              "type": "string"
+            }
+          },
+          "path": "{project}/global/targetGrpcProxies/{targetGrpcProxy}",
+          "response": {
+            "$ref": "TargetGrpcProxy"
+          },
+          "scopes": [
+            "https://www.googleapis.com/auth/cloud-platform",
+            "https://www.googleapis.com/auth/compute",
+            "https://www.googleapis.com/auth/compute.readonly"
+          ]
+        },
+        "insert": {
+          "description": "Creates a TargetGrpcProxy in the specified project in the given scope using the parameters that are included in the request.",
+          "httpMethod": "POST",
+          "id": "compute.targetGrpcProxies.insert",
+          "parameterOrder": [
+            "project"
+          ],
+          "parameters": {
+            "project": {
+              "description": "Project ID for this request.",
+              "location": "path",
+              "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+              "required": true,
+              "type": "string"
+            },
+            "requestId": {
+              "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+              "location": "query",
+              "type": "string"
+            }
+          },
+          "path": "{project}/global/targetGrpcProxies",
+          "request": {
+            "$ref": "TargetGrpcProxy"
+          },
+          "response": {
+            "$ref": "Operation"
+          },
+          "scopes": [
+            "https://www.googleapis.com/auth/cloud-platform",
+            "https://www.googleapis.com/auth/compute"
+          ]
+        },
+        "list": {
+          "description": "Lists the TargetGrpcProxies for a project in the given scope.",
+          "httpMethod": "GET",
+          "id": "compute.targetGrpcProxies.list",
+          "parameterOrder": [
+            "project"
+          ],
+          "parameters": {
+            "filter": {
+              "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either `=`, `!=`, `\u003e`, or `\u003c`.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named `example-instance` by specifying `name != example-instance`.\n\nYou can also filter nested fields. For example, you could specify `scheduling.automaticRestart = false` to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example: ``` (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\") ``` By default, each expression is an `AND` expression. However, you can include `AND` and `OR` expressions explicitly. For example: ``` (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true) ```",
+              "location": "query",
+              "type": "string"
+            },
+            "maxResults": {
+              "default": "500",
+              "description": "The maximum number of results per page that should be returned. If the number of available results is larger than `maxResults`, Compute Engine returns a `nextPageToken` that can be used to get the next page of results in subsequent list requests. Acceptable values are `0` to `500`, inclusive. (Default: `500`)",
+              "format": "uint32",
+              "location": "query",
+              "minimum": "0",
+              "type": "integer"
+            },
+            "orderBy": {
+              "description": "Sorts list results by a certain order. By default, results are returned in alphanumerical order based on the resource name.\n\nYou can also sort results in descending order based on the creation timestamp using `orderBy=\"creationTimestamp desc\"`. This sorts results based on the `creationTimestamp` field in reverse chronological order (newest result first). Use this to sort resources like operations so that the newest operation is returned first.\n\nCurrently, only sorting by `name` or `creationTimestamp desc` is supported.",
+              "location": "query",
+              "type": "string"
+            },
+            "pageToken": {
+              "description": "Specifies a page token to use. Set `pageToken` to the `nextPageToken` returned by a previous list request to get the next page of results.",
+              "location": "query",
+              "type": "string"
+            },
+            "project": {
+              "description": "Project ID for this request.",
+              "location": "path",
+              "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+              "required": true,
+              "type": "string"
+            }
+          },
+          "path": "{project}/global/targetGrpcProxies",
+          "response": {
+            "$ref": "TargetGrpcProxyList"
+          },
+          "scopes": [
+            "https://www.googleapis.com/auth/cloud-platform",
+            "https://www.googleapis.com/auth/compute",
+            "https://www.googleapis.com/auth/compute.readonly"
+          ]
+        },
+        "patch": {
+          "description": "Patches the specified TargetGrpcProxy resource with the data included in the request. This method supports PATCH semantics and uses JSON merge patch format and processing rules.",
+          "httpMethod": "PATCH",
+          "id": "compute.targetGrpcProxies.patch",
+          "parameterOrder": [
+            "project",
+            "targetGrpcProxy"
+          ],
+          "parameters": {
+            "project": {
+              "description": "Project ID for this request.",
+              "location": "path",
+              "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+              "required": true,
+              "type": "string"
+            },
+            "requestId": {
+              "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+              "location": "query",
+              "type": "string"
+            },
+            "targetGrpcProxy": {
+              "description": "Name of the TargetGrpcProxy resource to patch.",
+              "location": "path",
+              "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?|[1-9][0-9]{0,19}",
+              "required": true,
+              "type": "string"
+            }
+          },
+          "path": "{project}/global/targetGrpcProxies/{targetGrpcProxy}",
+          "request": {
+            "$ref": "TargetGrpcProxy"
+          },
+          "response": {
+            "$ref": "Operation"
+          },
+          "scopes": [
+            "https://www.googleapis.com/auth/cloud-platform",
+            "https://www.googleapis.com/auth/compute"
           ]
         }
       }
@@ -23813,7 +24084,7 @@
       }
     }
   },
-  "revision": "20200612",
+  "revision": "20200704",
   "rootUrl": "https://compute.googleapis.com/",
   "schemas": {
     "AcceleratorConfig": {
@@ -25559,6 +25830,9 @@
             ""
           ],
           "type": "string"
+        },
+        "scaleInControl": {
+          "$ref": "AutoscalingPolicyScaleInControl"
         }
       },
       "type": "object"
@@ -25613,6 +25887,22 @@
           "description": "Fraction of backend capacity utilization (set in HTTP(S) load balancing configuration) that autoscaler should maintain. Must be a positive float value. If not defined, the default is 0.8.",
           "format": "double",
           "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "AutoscalingPolicyScaleInControl": {
+      "description": "Configuration that allows for slower scale in so that even if Autoscaler recommends an abrupt scale in of a MIG, it will be throttled as specified by the parameters below.",
+      "id": "AutoscalingPolicyScaleInControl",
+      "properties": {
+        "maxScaledInReplicas": {
+          "$ref": "FixedOrPercent",
+          "description": "Maximum allowed number (or %) of VMs that can be deducted from the peak recommendation during the window autoscaler looks at when computing recommendations. Possibly all these VMs can be deleted at once so user service needs to be prepared to lose that many VMs in one step."
+        },
+        "timeWindowSec": {
+          "description": "How long back autoscaling should look when computing recommendations to include directives regarding slower scale in, as described above.",
+          "format": "int32",
+          "type": "integer"
         }
       },
       "type": "object"
@@ -26016,6 +26306,7 @@
         "protocol": {
           "description": "The protocol this BackendService uses to communicate with backends.\n\nPossible values are HTTP, HTTPS, HTTP2, TCP, SSL, or UDP. depending on the chosen load balancer or Traffic Director configuration. Refer to the documentation for the load balancer or for Traffic Director for more information.",
           "enum": [
+            "GRPC",
             "HTTP",
             "HTTP2",
             "HTTPS",
@@ -26024,6 +26315,7 @@
             "UDP"
           ],
           "enumDescriptions": [
+            "",
             "",
             "",
             "",
@@ -27033,11 +27325,13 @@
             "ATTRIBUTION",
             "AUTHORITY",
             "CREDENTIALS_TYPE",
+            "CREDS_ASSERTION",
             "JUSTIFICATION_TYPE",
             "NO_ATTR",
             "SECURITY_REALM"
           ],
           "enumDescriptions": [
+            "",
             "",
             "",
             "",
@@ -28972,6 +29266,18 @@
         "enable": {
           "description": "This field denotes whether to enable logging for a particular firewall rule.",
           "type": "boolean"
+        },
+        "metadata": {
+          "description": "This field can only be specified for a particular firewall rule if logging is enabled for that rule. This field denotes whether to include or exclude metadata for firewall logs.",
+          "enum": [
+            "EXCLUDE_ALL_METADATA",
+            "INCLUDE_ALL_METADATA"
+          ],
+          "enumDescriptions": [
+            "",
+            ""
+          ],
+          "type": "string"
         }
       },
       "type": "object"
@@ -29491,6 +29797,39 @@
       },
       "type": "object"
     },
+    "GRPCHealthCheck": {
+      "id": "GRPCHealthCheck",
+      "properties": {
+        "grpcServiceName": {
+          "description": "The gRPC service name for the health check. This field is optional. The value of grpc_service_name has the following meanings by convention:\n- Empty service_name means the overall status of all services at the backend.\n- Non-empty service_name means the health of that gRPC service, as defined by the owner of the service.\nThe grpc_service_name can only be ASCII.",
+          "type": "string"
+        },
+        "port": {
+          "description": "The port number for the health check request. Must be specified if port_name and port_specification are not set or if port_specification is USE_FIXED_PORT. Valid values are 1 through 65535.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "portName": {
+          "description": "Port name as defined in InstanceGroup#NamedPort#name. If both port and port_name are defined, port takes precedence. The port_name should conform to RFC1035.",
+          "type": "string"
+        },
+        "portSpecification": {
+          "description": "Specifies how port is selected for health checking, can be one of following values:\nUSE_FIXED_PORT: The port number in port is used for health checking.\nUSE_NAMED_PORT: The portName is used for health checking.\nUSE_SERVING_PORT: For NetworkEndpointGroup, the port specified for each network endpoint is used for health checking. For other backends, the port or named port specified in the Backend Service is used for health checking.\n\n\nIf not specified, gRPC health check follows behavior specified in port and portName fields.",
+          "enum": [
+            "USE_FIXED_PORT",
+            "USE_NAMED_PORT",
+            "USE_SERVING_PORT"
+          ],
+          "enumDescriptions": [
+            "",
+            "",
+            ""
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "GlobalNetworkEndpointGroupsAttachEndpointsRequest": {
       "id": "GlobalNetworkEndpointGroupsAttachEndpointsRequest",
       "properties": {
@@ -29810,7 +30149,7 @@
       "type": "object"
     },
     "HealthCheck": {
-      "description": "Represents a Health Check resource.\n\nGoogle Compute Engine has two Health Check resources:\n\n* [Global](/compute/docs/reference/rest/{$api_version}/healthChecks) * [Regional](/compute/docs/reference/rest/{$api_version}/regionHealthChecks)\n\nInternal HTTP(S) load balancers use regional health checks. All other types of GCP load balancers and managed instance group auto-healing use global health checks. For more information, read Health Check Concepts.\n\nTo perform health checks on network load balancers, you must use either httpHealthChecks or httpsHealthChecks.",
+      "description": "Represents a Health Check resource.\n\nGoogle Compute Engine has two Health Check resources:\n\n* [Global](/compute/docs/reference/rest/{$api_version}/healthChecks) * [Regional](/compute/docs/reference/rest/{$api_version}/regionHealthChecks)\n\nInternal HTTP(S) load balancers must use regional health checks. Internal TCP/UDP load balancers can use either regional or global health checks. All other types of GCP load balancers and managed instance group auto-healing must use global health checks. For more information, read Health Check Concepts.\n\nTo perform health checks on network load balancers, you must use either httpHealthChecks or httpsHealthChecks.",
       "id": "HealthCheck",
       "properties": {
         "checkIntervalSec": {
@@ -29825,6 +30164,9 @@
         "description": {
           "description": "An optional description of this resource. Provide this property when you create the resource.",
           "type": "string"
+        },
+        "grpcHealthCheck": {
+          "$ref": "GRPCHealthCheck"
         },
         "healthyThreshold": {
           "description": "A so-far unhealthy instance will be marked healthy after this many consecutive successes. The default value is 2.",
@@ -29849,10 +30191,6 @@
           "default": "compute#healthCheck",
           "description": "Type of the resource.",
           "type": "string"
-        },
-        "logConfig": {
-          "$ref": "HealthCheckLogConfig",
-          "description": "Configure logging on this health check."
         },
         "name": {
           "description": "Name of the resource. Provided by the client when the resource is created. The name must be 1-63 characters long, and comply with RFC1035. Specifically, the name must be 1-63 characters long and match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be a lowercase letter, and all following characters must be a dash, lowercase letter, or digit, except the last character, which cannot be a dash.",
@@ -29881,6 +30219,7 @@
         "type": {
           "description": "Specifies the type of the healthCheck, either TCP, SSL, HTTP, HTTPS or HTTP2. If not specified, the default is TCP. Exactly one of the protocol-specific health check field must be specified, which must match type field.",
           "enum": [
+            "GRPC",
             "HTTP",
             "HTTP2",
             "HTTPS",
@@ -29889,6 +30228,7 @@
             "TCP"
           ],
           "enumDescriptions": [
+            "",
             "",
             "",
             "",
@@ -30014,17 +30354,6 @@
             }
           },
           "type": "object"
-        }
-      },
-      "type": "object"
-    },
-    "HealthCheckLogConfig": {
-      "description": "Configuration of logging on a health check. If logging is enabled, logs will be exported to Stackdriver.",
-      "id": "HealthCheckLogConfig",
-      "properties": {
-        "enable": {
-          "description": "Indicates whether or not to export logs. This is false by default, which means no health check logging will be done.",
-          "type": "boolean"
         }
       },
       "type": "object"
@@ -36431,7 +36760,7 @@
           "type": "string"
         },
         "autoCreateSubnetworks": {
-          "description": "When set to true, the VPC network is created in auto mode. When set to false, the VPC network is created in custom mode.\n\nAn auto mode VPC network starts with one subnet per region. Each subnet has a predetermined range as described in Auto mode VPC network IP ranges.\n\nFor custom mode VPC networks, you can add subnets using the subnetworks insert method.",
+          "description": "Must be set to create a VPC network. If not set, a legacy network is created.\n\nWhen set to true, the VPC network is created in auto mode. When set to false, the VPC network is created in custom mode.\n\nAn auto mode VPC network starts with one subnet per region. Each subnet has a predetermined range as described in Auto mode VPC network IP ranges.\n\nFor custom mode VPC networks, you can add subnets using the subnetworks insert method.",
           "type": "boolean"
         },
         "creationTimestamp": {
@@ -36524,7 +36853,7 @@
       "type": "object"
     },
     "NetworkEndpointGroup": {
-      "description": "Represents a collection of network endpoints.\n\nA network endpoint group (NEG) defines how a set of endpoints should be reached, whether they are reachable, and where they are located. For more information about using NEGs, see  Setting up internet NEGs or  Setting up zonal NEGs. (== resource_for {$api_version}.networkEndpointGroups ==) (== resource_for {$api_version}.globalNetworkEndpointGroups ==)",
+      "description": "Represents a collection of network endpoints.\n\nA network endpoint group (NEG) defines how a set of endpoints should be reached, whether they are reachable, and where they are located. For more information about using NEGs, see  Setting up internet NEGs or  Setting up zonal NEGs. (== resource_for {$api_version}.networkEndpointGroups ==) (== resource_for {$api_version}.globalNetworkEndpointGroups ==) (== resource_for {$api_version}.regionNetworkEndpointGroups ==)",
       "id": "NetworkEndpointGroup",
       "properties": {
         "annotations": {
@@ -40390,6 +40719,7 @@
             "CPUS",
             "CPUS_ALL_REGIONS",
             "DISKS_TOTAL_GB",
+            "EXTERNAL_NETWORK_LB_FORWARDING_RULES",
             "EXTERNAL_VPN_GATEWAYS",
             "FIREWALLS",
             "FORWARDING_RULES",
@@ -40406,6 +40736,7 @@
             "INTERCONNECT_ATTACHMENTS_TOTAL_MBPS",
             "INTERCONNECT_TOTAL_GBPS",
             "INTERNAL_ADDRESSES",
+            "INTERNAL_TRAFFIC_DIRECTOR_FORWARDING_RULES",
             "IN_PLACE_SNAPSHOTS",
             "IN_USE_ADDRESSES",
             "IN_USE_BACKUP_SCHEDULES",
@@ -40471,6 +40802,8 @@
             "VPN_TUNNELS"
           ],
           "enumDescriptions": [
+            "",
+            "",
             "",
             "",
             "",
@@ -44390,7 +44723,7 @@
           "type": "string"
         },
         "next": {
-          "description": "[Output Only] The position of the next byte of content from the serial console output. Use this value in the next request as the start parameter.",
+          "description": "[Output Only] The position of the next byte of content, regardless of whether the content exists, following the output returned in the `contents` property. Use this value in the next request as the start parameter.",
           "format": "int64",
           "type": "string"
         },
@@ -44399,7 +44732,7 @@
           "type": "string"
         },
         "start": {
-          "description": "The starting byte position of the output that was returned. This should match the start parameter sent with the request. If the serial console output exceeds the size of the buffer, older output will be overwritten by newer content and the start values will be mismatched.",
+          "description": "The starting byte position of the output that was returned. This should match the start parameter sent with the request. If the serial console output exceeds the size of the buffer (1 MB), older output is overwritten by newer content. The output start value will indicate the byte position of the output that was returned, which might be different than the `start` value that was specified in the request.",
           "format": "int64",
           "type": "string"
         }
@@ -45585,7 +45918,7 @@
           "type": "string"
         },
         "ipCidrRange": {
-          "description": "The range of internal addresses that are owned by this subnetwork. Provide this property when you create the subnetwork. For example, 10.0.0.0/8 or 192.168.0.0/16. Ranges must be unique and non-overlapping within a network. Only IPv4 is supported. This field is set at resource creation time. The range can be expanded after creation using expandIpCidrRange.",
+          "description": "The range of internal addresses that are owned by this subnetwork. Provide this property when you create the subnetwork. For example, 10.0.0.0/8 or 100.64.0.0/10. Ranges must be unique and non-overlapping within a network. Only IPv4 is supported. This field is set at resource creation time. This may be a RFC 1918 IP range, or a privately routed, non-RFC 1918 IP range, not belonging to Google. The range can be expanded after creation using expandIpCidrRange.",
           "type": "string"
         },
         "ipv6CidrRange": {
@@ -45974,7 +46307,7 @@
       "id": "SubnetworkSecondaryRange",
       "properties": {
         "ipCidrRange": {
-          "description": "The range of IP addresses belonging to this subnetwork secondary range. Provide this property when you create the subnetwork. Ranges must be unique and non-overlapping with all primary and secondary IP ranges within a network. Only IPv4 is supported.",
+          "description": "The range of IP addresses belonging to this subnetwork secondary range. Provide this property when you create the subnetwork. Ranges must be unique and non-overlapping with all primary and secondary IP ranges within a network. Only IPv4 is supported. This may be a RFC 1918 IP range, or a privately, non-RFC 1918 IP range, not belonging to Google.",
           "type": "string"
         },
         "rangeName": {
@@ -46161,6 +46494,173 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "TargetGrpcProxy": {
+      "description": "Represents a Target gRPC Proxy resource.\n\nA target gRPC proxy is a component of load balancers intended for load balancing gRPC traffic. Global forwarding rules reference a target gRPC proxy. The Target gRPC Proxy references a URL map which specifies how traffic routes to gRPC backend services.",
+      "id": "TargetGrpcProxy",
+      "properties": {
+        "creationTimestamp": {
+          "description": "[Output Only] Creation timestamp in RFC3339 text format.",
+          "type": "string"
+        },
+        "description": {
+          "description": "An optional description of this resource. Provide this property when you create the resource.",
+          "type": "string"
+        },
+        "fingerprint": {
+          "description": "Fingerprint of this resource. A hash of the contents stored in this object. This field is used in optimistic locking. This field will be ignored when inserting a TargetGrpcProxy. An up-to-date fingerprint must be provided in order to patch/update the TargetGrpcProxy; otherwise, the request will fail with error 412 conditionNotMet. To see the latest fingerprint, make a get() request to retrieve the TargetGrpcProxy.",
+          "format": "byte",
+          "type": "string"
+        },
+        "id": {
+          "description": "[Output Only] The unique identifier for the resource type. The server generates this identifier.",
+          "format": "uint64",
+          "type": "string"
+        },
+        "kind": {
+          "default": "compute#targetGrpcProxy",
+          "description": "[Output Only] Type of the resource. Always compute#targetGrpcProxy for target grpc proxies.",
+          "type": "string"
+        },
+        "name": {
+          "annotations": {
+            "required": [
+              "compute.targetGrpcProxies.insert"
+            ]
+          },
+          "description": "Name of the resource. Provided by the client when the resource is created. The name must be 1-63 characters long, and comply with RFC1035. Specifically, the name must be 1-63 characters long and match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be a lowercase letter, and all following characters must be a dash, lowercase letter, or digit, except the last character, which cannot be a dash.",
+          "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+          "type": "string"
+        },
+        "selfLink": {
+          "description": "[Output Only] Server-defined URL for the resource.",
+          "type": "string"
+        },
+        "selfLinkWithId": {
+          "description": "[Output Only] Server-defined URL with id for the resource.",
+          "type": "string"
+        },
+        "urlMap": {
+          "description": "URL to the UrlMap resource that defines the mapping from URL to the BackendService. The protocol field in the BackendService must be set to GRPC.",
+          "type": "string"
+        },
+        "validateForProxyless": {
+          "description": "If true, indicates that the BackendServices referenced by the urlMap may be accessed by gRPC applications without using a sidecar proxy. This will enable configuration checks on urlMap and its referenced BackendServices to not allow unsupported features. A gRPC application must use \"xds-experimental:///\" scheme in the target URI of the service it is connecting to. If false, indicates that the BackendServices referenced by the urlMap will be accessed by gRPC applications via a sidecar proxy. In this case, a gRPC application must not use \"xds-experimental:///\" scheme in the target URI of the service it is connecting to",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "TargetGrpcProxyList": {
+      "id": "TargetGrpcProxyList",
+      "properties": {
+        "id": {
+          "description": "[Output Only] Unique identifier for the resource; defined by the server.",
+          "type": "string"
+        },
+        "items": {
+          "description": "A list of TargetGrpcProxy resources.",
+          "items": {
+            "$ref": "TargetGrpcProxy"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "default": "compute#targetGrpcProxyList",
+          "description": "[Output Only] Type of the resource. Always compute#targetGrpcProxy for target grpc proxies.",
+          "type": "string"
+        },
+        "nextPageToken": {
+          "description": "[Output Only] This token allows you to get the next page of results for list requests. If the number of results is larger than maxResults, use the nextPageToken as a value for the query parameter pageToken in the next list request. Subsequent list requests will have their own nextPageToken to continue paging through the results.",
+          "type": "string"
+        },
+        "selfLink": {
+          "description": "[Output Only] Server-defined URL for this resource.",
+          "type": "string"
+        },
+        "warning": {
+          "description": "[Output Only] Informational warning message.",
+          "properties": {
+            "code": {
+              "description": "[Output Only] A warning code, if applicable. For example, Compute Engine returns NO_RESULTS_ON_PAGE if there are no results in the response.",
+              "enum": [
+                "CLEANUP_FAILED",
+                "DEPRECATED_RESOURCE_USED",
+                "DEPRECATED_TYPE_USED",
+                "DISK_SIZE_LARGER_THAN_IMAGE_SIZE",
+                "EXPERIMENTAL_TYPE_USED",
+                "EXTERNAL_API_WARNING",
+                "FIELD_VALUE_OVERRIDEN",
+                "INJECTED_KERNELS_DEPRECATED",
+                "MISSING_TYPE_DEPENDENCY",
+                "NEXT_HOP_ADDRESS_NOT_ASSIGNED",
+                "NEXT_HOP_CANNOT_IP_FORWARD",
+                "NEXT_HOP_INSTANCE_NOT_FOUND",
+                "NEXT_HOP_INSTANCE_NOT_ON_NETWORK",
+                "NEXT_HOP_NOT_RUNNING",
+                "NOT_CRITICAL_ERROR",
+                "NO_RESULTS_ON_PAGE",
+                "REQUIRED_TOS_AGREEMENT",
+                "RESOURCE_IN_USE_BY_OTHER_RESOURCE_WARNING",
+                "RESOURCE_NOT_DELETED",
+                "SCHEMA_VALIDATION_IGNORED",
+                "SINGLE_INSTANCE_PROPERTY_TEMPLATE",
+                "UNDECLARED_PROPERTIES",
+                "UNREACHABLE"
+              ],
+              "enumDescriptions": [
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "type": "string"
+            },
+            "data": {
+              "description": "[Output Only] Metadata about this warning in key: value format. For example:\n\"data\": [ { \"key\": \"scope\", \"value\": \"zones/us-east1-d\" }",
+              "items": {
+                "properties": {
+                  "key": {
+                    "description": "[Output Only] A key that provides more detail on the warning being returned. For example, for warnings where there are no results in a list request for a particular zone, this key might be scope and the key value might be the zone name. Other examples might be a key indicating a deprecated resource and a suggested replacement, or a warning about invalid network settings (for example, if an instance attempts to perform IP forwarding but is not enabled for IP forwarding).",
+                    "type": "string"
+                  },
+                  "value": {
+                    "description": "[Output Only] A warning data value corresponding to the key.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "message": {
+              "description": "[Output Only] A human-readable description of the warning code.",
+              "type": "string"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

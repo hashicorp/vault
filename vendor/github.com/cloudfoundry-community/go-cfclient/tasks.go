@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -50,51 +51,16 @@ type TaskRequest struct {
 	DropletGUID      string `json:"droplet_guid"`
 }
 
-func (c *Client) makeTaskListRequestWithParams(baseUrl string, query url.Values) ([]byte, error) {
-	requestUrl := baseUrl + "?" + query.Encode()
-	req := c.NewRequest("GET", requestUrl)
-	resp, err := c.DoRequest(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error requesting tasks")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, errors.Wrapf(err, "Error requesting tasks: status code not 200, it was %d", resp.StatusCode)
-	}
-	return ioutil.ReadAll(resp.Body)
-}
-
-func parseTaskListRespones(answer []byte) (TaskListResponse, error) {
-	var response TaskListResponse
-	err := json.Unmarshal(answer, &response)
-	if err != nil {
-		return response, errors.Wrap(err, "Error unmarshaling response %v")
-	}
-	return response, nil
-}
-
-func (c *Client) handleTasksApiCall(apiUrl string, query url.Values) ([]Task, error) {
-	body, err := c.makeTaskListRequestWithParams(apiUrl, query)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error requesting tasks")
-	}
-	response, err := parseTaskListRespones(body)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error reading tasks")
-	}
-	return response.Tasks, nil
-}
-
 // ListTasks returns all tasks the user has access to.
 // See http://v3-apidocs.cloudfoundry.org/version/3.12.0/index.html#list-tasks
 func (c *Client) ListTasks() ([]Task, error) {
-	return c.handleTasksApiCall("/v3/tasks", url.Values{})
+	return c.ListTasksByQuery(nil)
 }
 
 // ListTasksByQuery returns all tasks the user has access to, with query parameters.
 // See http://v3-apidocs.cloudfoundry.org/version/3.12.0/index.html#list-tasks
 func (c *Client) ListTasksByQuery(query url.Values) ([]Task, error) {
-	return c.handleTasksApiCall("/v3/tasks", query)
+	return c.taskListHelper("/v3/tasks", query)
 }
 
 // TasksByApp returns task structures which aligned to an app identified by the given guid.
@@ -108,7 +74,45 @@ func (c *Client) TasksByApp(guid string) ([]Task, error) {
 // See: http://v3-apidocs.cloudfoundry.org/version/3.12.0/index.html#list-tasks-for-an-app
 func (c *Client) TasksByAppByQuery(guid string, query url.Values) ([]Task, error) {
 	uri := fmt.Sprintf("/v3/apps/%s/tasks", guid)
-	return c.handleTasksApiCall(uri, query)
+	return c.taskListHelper(uri, query)
+}
+
+func (c *Client) taskListHelper(requestURL string, query url.Values) ([]Task, error) {
+	var tasks []Task
+	if e := query.Encode(); len(e) > 0 {
+		requestURL += "?" + e
+	}
+
+	for {
+		r := c.NewRequest("GET", requestURL)
+		resp, err := c.DoRequest(r)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error requesting v3 tasks")
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("Error listing v3 tasks, response code: %d", resp.StatusCode)
+		}
+
+		var data TaskListResponse
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return nil, errors.Wrap(err, "Error parsing JSON from list v3 tasks")
+		}
+
+		tasks = append(tasks, data.Tasks...)
+
+		requestURL = data.Pagination.Next.Href
+		if requestURL == "" {
+			break
+		}
+		requestURL, err = extractPathFromURL(requestURL)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error parsing the next page request url for v3 tasks")
+		}
+	}
+
+	return tasks, nil
 }
 
 func createReader(tr TaskRequest) (io.Reader, error) {

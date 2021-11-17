@@ -3,8 +3,10 @@ package api
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -25,6 +27,12 @@ var (
 	// client directly before switching to a connection through the Nomad
 	// server.
 	ClientConnTimeout = 1 * time.Second
+)
+
+const (
+	// AllNamespacesNamespace is a sentinel Namespace value to indicate that api should search for
+	// jobs and allocations in all the namespaces the requester can access.
+	AllNamespacesNamespace = "*"
 )
 
 // QueryOptions are used to parametrize a query
@@ -56,6 +64,18 @@ type QueryOptions struct {
 
 	// AuthToken is the secret ID of an ACL token
 	AuthToken string
+
+	// PerPage is the number of entries to be returned in queries that support
+	// paginated lists.
+	PerPage int32
+
+	// NextToken is the token used indicate where to start paging for queries
+	// that support paginated lists.
+	NextToken string
+
+	// ctx is an optional context pass through to the underlying HTTP
+	// request layer. Use Context() and WithContext() to manage this.
+	ctx context.Context
 }
 
 // WriteOptions are used to parametrize a write
@@ -69,6 +89,13 @@ type WriteOptions struct {
 
 	// AuthToken is the secret ID of an ACL token
 	AuthToken string
+
+	// ctx is an optional context pass through to the underlying HTTP
+	// request layer. Use Context() and WithContext() to manage this.
+	ctx context.Context
+
+	// IdempotencyToken can be used to ensure the write is idempotent.
+	IdempotencyToken string
 }
 
 // QueryMeta is used to return meta data about a query
@@ -139,6 +166,8 @@ type Config struct {
 	//
 	// TLSConfig is ignored if HttpClient is set.
 	TLSConfig *TLSConfig
+
+	Headers http.Header
 }
 
 // ClientConfig copies the configuration with a new client address, region, and
@@ -219,6 +248,10 @@ func defaultHttpClient() *http.Client {
 	transport.TLSClientConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
+
+	// Default to http/1: alloc exec/websocket aren't supported in http/2
+	// well yet: https://github.com/gorilla/websocket/issues/417
+	transport.ForceAttemptHTTP2 = false
 
 	return httpClient
 }
@@ -510,6 +543,8 @@ type request struct {
 	token  string
 	body   io.Reader
 	obj    interface{}
+	ctx    context.Context
+	header http.Header
 }
 
 // setQueryOptions is used to annotate the request with
@@ -542,6 +577,7 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	for k, v := range q.Params {
 		r.params.Set(k, v)
 	}
+	r.ctx = q.Context()
 }
 
 // durToMsec converts a duration to a millisecond specified string
@@ -564,6 +600,10 @@ func (r *request) setWriteOptions(q *WriteOptions) {
 	if q.AuthToken != "" {
 		r.token = q.AuthToken
 	}
+	if q.IdempotencyToken != "" {
+		r.params.Set("idempotency_token", q.IdempotencyToken)
+	}
+	r.ctx = q.Context()
 }
 
 // toHTTP converts the request to an HTTP request
@@ -580,11 +620,20 @@ func (r *request) toHTTP() (*http.Request, error) {
 		}
 	}
 
+	ctx := func() context.Context {
+		if r.ctx != nil {
+			return r.ctx
+		}
+		return context.Background()
+	}()
+
 	// Create the HTTP request
-	req, err := http.NewRequest(r.method, r.url.RequestURI(), r.body)
+	req, err := http.NewRequestWithContext(ctx, r.method, r.url.RequestURI(), r.body)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header = r.header
 
 	// Optionally configure HTTP basic authentication
 	if r.url.User != nil {
@@ -623,6 +672,7 @@ func (c *Client) newRequest(method, path string) (*request, error) {
 			Path:    u.Path,
 			RawPath: u.RawPath,
 		},
+		header: make(http.Header),
 		params: make(map[string][]string),
 	}
 	if c.config.Region != "" {
@@ -643,6 +693,10 @@ func (c *Client) newRequest(method, path string) (*request, error) {
 		for _, value := range values {
 			r.params.Add(key, value)
 		}
+	}
+
+	for key, values := range c.config.Headers {
+		r.header[key] = values
 	}
 
 	return r, nil
@@ -676,7 +730,7 @@ func (c *Client) doRequest(r *request) (time.Duration, *http.Response, error) {
 	}
 	start := time.Now()
 	resp, err := c.httpClient.Do(req)
-	diff := time.Now().Sub(start)
+	diff := time.Since(start)
 
 	// If the response is compressed, we swap the body's reader.
 	if resp != nil && resp.Header != nil {
@@ -930,12 +984,27 @@ func parseWriteMeta(resp *http.Response, q *WriteMeta) error {
 
 // decodeBody is used to JSON decode a body
 func decodeBody(resp *http.Response, out interface{}) error {
-	dec := json.NewDecoder(resp.Body)
-	return dec.Decode(out)
+	switch resp.ContentLength {
+	case 0:
+		if out == nil {
+			return nil
+		}
+		return errors.New("Got 0 byte response with non-nil decode object")
+	default:
+		dec := json.NewDecoder(resp.Body)
+		return dec.Decode(out)
+	}
 }
 
-// encodeBody is used to encode a request body
+// encodeBody prepares the reader to serve as the request body.
+//
+// Returns the `obj` input if it is a raw io.Reader object; otherwise
+// returns a reader of the json format of the passed argument.
 func encodeBody(obj interface{}) (io.Reader, error) {
+	if reader, ok := obj.(io.Reader); ok {
+		return reader, nil
+	}
+
 	buf := bytes.NewBuffer(nil)
 	enc := json.NewEncoder(buf)
 	if err := enc.Encode(obj); err != nil {
@@ -959,4 +1028,40 @@ func requireOK(d time.Duration, resp *http.Response, e error) (time.Duration, *h
 		return d, nil, fmt.Errorf("Unexpected response code: %d (%s)", resp.StatusCode, buf.Bytes())
 	}
 	return d, resp, nil
+}
+
+// Context returns the context used for canceling HTTP requests related to this query
+func (o *QueryOptions) Context() context.Context {
+	if o != nil && o.ctx != nil {
+		return o.ctx
+	}
+	return context.Background()
+}
+
+// WithContext creates a copy of the query options using the provided context to cancel related HTTP requests
+func (o *QueryOptions) WithContext(ctx context.Context) *QueryOptions {
+	o2 := new(QueryOptions)
+	if o != nil {
+		*o2 = *o
+	}
+	o2.ctx = ctx
+	return o2
+}
+
+// Context returns the context used for canceling HTTP requests related to this write
+func (o *WriteOptions) Context() context.Context {
+	if o != nil && o.ctx != nil {
+		return o.ctx
+	}
+	return context.Background()
+}
+
+// WithContext creates a copy of the write options using the provided context to cancel related HTTP requests
+func (o *WriteOptions) WithContext(ctx context.Context) *WriteOptions {
+	o2 := new(WriteOptions)
+	if o != nil {
+		*o2 = *o
+	}
+	o2.ctx = ctx
+	return o2
 }

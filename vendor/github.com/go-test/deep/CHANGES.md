@@ -1,5 +1,10 @@
 # go-test/deep Changelog
 
+## v1.0.8 released 2021-10-13
+
+* Updated matrix to go1.15, go1.16, and go1.17
+* Added SECURITY.md and GitHub code analysis
+
 ## v1.0.7 released 2020-07-11
 
 * Fixed issue #39: Confusing diff when comparing distinct types with the same name (PR #44)

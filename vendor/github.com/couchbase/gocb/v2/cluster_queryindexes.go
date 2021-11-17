@@ -1,6 +1,7 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"regexp"
@@ -13,7 +14,8 @@ type QueryIndexManager struct {
 	provider queryIndexQueryProvider
 
 	globalTimeout time.Duration
-	tracer        requestTracer
+	tracer        RequestTracer
+	meter         *meterWrapper
 }
 
 type queryIndexQueryProvider interface {
@@ -32,12 +34,19 @@ func (qm *QueryIndexManager) tryParseErrorMessage(err error) error {
 
 	firstErr := qErr.Errors[0]
 	var innerErr error
-	// The server doesn't return meaningful error codes when it comes to index management so we need to go spelunking.
-	msg := strings.ToLower(firstErr.Message)
-	if match, err := regexp.MatchString(".*?ndex .*? not found.*", msg); err == nil && match {
+	if firstErr.Code == 12016 {
 		innerErr = ErrIndexNotFound
-	} else if match, err := regexp.MatchString(".*?ndex .*? already exists.*", msg); err == nil && match {
+	} else if firstErr.Code == 4300 {
 		innerErr = ErrIndexExists
+	} else {
+		// Older server versions don't return meaningful error codes when it comes to index management
+		// so we need to go spelunking.
+		msg := strings.ToLower(firstErr.Message)
+		if match, err := regexp.MatchString(".*?ndex .*? not found.*", msg); err == nil && match {
+			innerErr = ErrIndexNotFound
+		} else if match, err := regexp.MatchString(".*?ndex .*? already exists.*", msg); err == nil && match {
+			innerErr = ErrIndexExists
+		}
 	}
 
 	if innerErr == nil {
@@ -92,6 +101,7 @@ type jsonQueryIndex struct {
 	Namespace string         `json:"namespace_id"`
 	IndexKey  []string       `json:"index_key"`
 	Condition string         `json:"condition"`
+	Partition string         `json:"partition"`
 }
 
 // QueryIndex represents a Couchbase GSI index.
@@ -104,6 +114,7 @@ type QueryIndex struct {
 	Namespace string
 	IndexKey  []string
 	Condition string
+	Partition string
 }
 
 func (index *QueryIndex) fromData(data jsonQueryIndex) error {
@@ -115,6 +126,7 @@ func (index *QueryIndex) fromData(data jsonQueryIndex) error {
 	index.Namespace = data.Namespace
 	index.IndexKey = data.IndexKey
 	index.Condition = data.Condition
+	index.Partition = data.Partition
 
 	return nil
 }
@@ -128,14 +140,18 @@ type createQueryIndexOptions struct {
 }
 
 func (qm *QueryIndexManager) createIndex(
-	tracectx requestSpanContext,
+	ctx context.Context,
+	parent RequestSpan,
 	bucketName, indexName string,
 	fields []string,
 	opts createQueryIndexOptions,
 ) error {
 	var qs string
 
+	spanName := "manager_query_create_index"
+
 	if len(fields) == 0 {
+		spanName = "manager_query_create_primary_index"
 		qs += "CREATE PRIMARY INDEX"
 	} else {
 		qs += "CREATE INDEX"
@@ -158,10 +174,18 @@ func (qm *QueryIndexManager) createIndex(
 		qs += " WITH {\"defer_build\": true}"
 	}
 
+	start := time.Now()
+	defer qm.meter.ValueRecord(meterValueServiceManagement, spanName, start)
+
+	span := createSpan(qm.tracer, parent, spanName, "management")
+	defer span.End()
+
 	_, err := qm.doQuery(qs, &QueryOptions{
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
-		parentSpan:    tracectx,
+		Adhoc:         true,
+		ParentSpan:    span,
+		Context:       ctx,
 	})
 	if err == nil {
 		return nil
@@ -181,6 +205,12 @@ type CreateQueryIndexOptions struct {
 
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // CreateIndex creates an index over the specified fields.
@@ -200,11 +230,7 @@ func (qm *QueryIndexManager) CreateIndex(bucketName, indexName string, fields []
 		}
 	}
 
-	span := qm.tracer.StartSpan("CreateIndex", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
-
-	return qm.createIndex(span.Context(), bucketName, indexName, fields, createQueryIndexOptions{
+	return qm.createIndex(opts.Context, opts.ParentSpan, bucketName, indexName, fields, createQueryIndexOptions{
 		IgnoreIfExists: opts.IgnoreIfExists,
 		Deferred:       opts.Deferred,
 		Timeout:        opts.Timeout,
@@ -220,6 +246,12 @@ type CreatePrimaryQueryIndexOptions struct {
 
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // CreatePrimaryIndex creates a primary index.  An empty customName uses the default naming.
@@ -228,12 +260,9 @@ func (qm *QueryIndexManager) CreatePrimaryIndex(bucketName string, opts *CreateP
 		opts = &CreatePrimaryQueryIndexOptions{}
 	}
 
-	span := qm.tracer.StartSpan("CreatePrimaryIndex", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
-
 	return qm.createIndex(
-		span.Context(),
+		opts.Context,
+		opts.ParentSpan,
 		bucketName,
 		opts.CustomName,
 		nil,
@@ -253,22 +282,33 @@ type dropQueryIndexOptions struct {
 }
 
 func (qm *QueryIndexManager) dropIndex(
-	tracectx requestSpanContext,
+	ctx context.Context,
+	parent RequestSpan,
 	bucketName, indexName string,
 	opts dropQueryIndexOptions,
 ) error {
 	var qs string
 
+	spanName := "manager_query_drop_index"
 	if indexName == "" {
+		spanName = "manager_query_drop_primary_index"
 		qs += "DROP PRIMARY INDEX ON `" + bucketName + "`"
 	} else {
 		qs += "DROP INDEX `" + bucketName + "`.`" + indexName + "`"
 	}
 
+	start := time.Now()
+	defer qm.meter.ValueRecord(meterValueServiceManagement, spanName, start)
+
+	span := createSpan(qm.tracer, parent, spanName, "management")
+	defer span.End()
+
 	_, err := qm.doQuery(qs, &QueryOptions{
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
-		parentSpan:    tracectx,
+		Adhoc:         true,
+		ParentSpan:    span,
+		Context:       ctx,
 	})
 	if err == nil {
 		return nil
@@ -287,6 +327,12 @@ type DropQueryIndexOptions struct {
 
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropIndex drops a specific index by name.
@@ -301,12 +347,9 @@ func (qm *QueryIndexManager) DropIndex(bucketName, indexName string, opts *DropQ
 		}
 	}
 
-	span := qm.tracer.StartSpan("DropIndex", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
-
 	return qm.dropIndex(
-		span.Context(),
+		opts.Context,
+		opts.ParentSpan,
 		bucketName,
 		indexName,
 		dropQueryIndexOptions{
@@ -323,6 +366,12 @@ type DropPrimaryQueryIndexOptions struct {
 
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropPrimaryIndex drops the primary index.  Pass an empty customName for unnamed primary indexes.
@@ -331,12 +380,9 @@ func (qm *QueryIndexManager) DropPrimaryIndex(bucketName string, opts *DropPrima
 		opts = &DropPrimaryQueryIndexOptions{}
 	}
 
-	span := qm.tracer.StartSpan("DropPrimaryIndex", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
-
 	return qm.dropIndex(
-		span.Context(),
+		opts.Context,
+		opts.ParentSpan,
 		bucketName,
 		opts.CustomName,
 		dropQueryIndexOptions{
@@ -350,6 +396,12 @@ func (qm *QueryIndexManager) DropPrimaryIndex(bucketName string, opts *DropPrima
 type GetAllQueryIndexesOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetAllIndexes returns a list of all currently registered indexes.
@@ -358,25 +410,31 @@ func (qm *QueryIndexManager) GetAllIndexes(bucketName string, opts *GetAllQueryI
 		opts = &GetAllQueryIndexesOptions{}
 	}
 
-	span := qm.tracer.StartSpan("GetAllIndexes", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
+	start := time.Now()
+	defer qm.meter.ValueRecord(meterValueServiceManagement, "manager_query_get_all_indexes", start)
 
-	return qm.getAllIndexes(span.Context(), bucketName, opts)
+	return qm.getAllIndexes(opts.Context, opts.ParentSpan, bucketName, opts)
 }
 
 func (qm *QueryIndexManager) getAllIndexes(
-	tracectx requestSpanContext,
+	ctx context.Context,
+	parent RequestSpan,
 	bucketName string,
 	opts *GetAllQueryIndexesOptions,
 ) ([]QueryIndex, error) {
 	q := "SELECT `indexes`.* FROM system:indexes WHERE keyspace_id=? AND `using`=\"gsi\""
+
+	span := createSpan(qm.tracer, parent, "manager_query_get_all_indexes", "management")
+	defer span.End()
+
 	rows, err := qm.doQuery(q, &QueryOptions{
 		PositionalParameters: []interface{}{bucketName},
 		Readonly:             true,
 		Timeout:              opts.Timeout,
 		RetryStrategy:        opts.RetryStrategy,
-		parentSpan:           tracectx,
+		Adhoc:                true,
+		ParentSpan:           span,
+		Context:              ctx,
 	})
 	if err != nil {
 		return nil, err
@@ -406,6 +464,12 @@ func (qm *QueryIndexManager) getAllIndexes(
 type BuildDeferredQueryIndexOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // BuildDeferredIndexes builds all indexes which are currently in deferred state.
@@ -414,12 +478,15 @@ func (qm *QueryIndexManager) BuildDeferredIndexes(bucketName string, opts *Build
 		opts = &BuildDeferredQueryIndexOptions{}
 	}
 
-	span := qm.tracer.StartSpan("BuildDeferredIndexes", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
+	start := time.Now()
+	defer qm.meter.ValueRecord(meterValueServiceManagement, "manager_query_build_deferred_indexes", start)
+
+	span := createSpan(qm.tracer, opts.ParentSpan, "manager_query_build_deferred_indexes", "management")
+	defer span.End()
 
 	indexList, err := qm.getAllIndexes(
-		span.Context(),
+		opts.Context,
+		span,
 		bucketName,
 		&GetAllQueryIndexesOptions{
 			Timeout:       opts.Timeout,
@@ -455,7 +522,9 @@ func (qm *QueryIndexManager) BuildDeferredIndexes(bucketName string, opts *Build
 	_, err = qm.doQuery(qs, &QueryOptions{
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
-		parentSpan:    span,
+		Adhoc:         true,
+		ParentSpan:    span,
+		Context:       opts.Context,
 	})
 	if err != nil {
 		return nil, err
@@ -494,6 +563,12 @@ type WatchQueryIndexOptions struct {
 	WatchPrimary bool
 
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // WatchIndexes waits for a set of indexes to come online.
@@ -502,9 +577,11 @@ func (qm *QueryIndexManager) WatchIndexes(bucketName string, watchList []string,
 		opts = &WatchQueryIndexOptions{}
 	}
 
-	span := qm.tracer.StartSpan("WatchIndexes", nil).
-		SetTag("couchbase.service", "query")
-	defer span.Finish()
+	start := time.Now()
+	defer qm.meter.ValueRecord(meterValueServiceManagement, "manager_query_watch_indexes", start)
+
+	span := createSpan(qm.tracer, opts.ParentSpan, "manager_query_watch_indexes", "management")
+	defer span.End()
 
 	if opts.WatchPrimary {
 		watchList = append(watchList, "#primary")
@@ -519,7 +596,8 @@ func (qm *QueryIndexManager) WatchIndexes(bucketName string, watchList []string,
 		}
 
 		indexes, err := qm.getAllIndexes(
-			span.Context(),
+			opts.Context,
+			span,
 			bucketName,
 			&GetAllQueryIndexesOptions{
 				Timeout:       time.Until(deadline),

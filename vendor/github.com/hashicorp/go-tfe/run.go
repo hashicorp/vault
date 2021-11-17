@@ -14,7 +14,7 @@ var _ Runs = (*runs)(nil)
 // Runs describes all the run related methods that the Terraform Enterprise
 // API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/run.html
+// TFE API docs: https://www.terraform.io/docs/cloud/api/run.html
 type Runs interface {
 	// List all the runs of the given workspace.
 	List(ctx context.Context, workspaceID string, options RunListOptions) (*RunList, error)
@@ -91,6 +91,7 @@ type RunList struct {
 type Run struct {
 	ID                     string               `jsonapi:"primary,runs"`
 	Actions                *RunActions          `jsonapi:"attr,actions"`
+	AutoApply              bool                 `jsonapi:"attr,auto-apply,omitempty"`
 	CreatedAt              time.Time            `jsonapi:"attr,created-at,iso8601"`
 	ForceCancelAvailableAt time.Time            `jsonapi:"attr,force-cancel-available-at,iso8601"`
 	HasChanges             bool                 `jsonapi:"attr,has-changes"`
@@ -98,6 +99,9 @@ type Run struct {
 	Message                string               `jsonapi:"attr,message"`
 	Permissions            *RunPermissions      `jsonapi:"attr,permissions"`
 	PositionInQueue        int                  `jsonapi:"attr,position-in-queue"`
+	Refresh                bool                 `jsonapi:"attr,refresh"`
+	RefreshOnly            bool                 `jsonapi:"attr,refresh-only"`
+	ReplaceAddrs           []string             `jsonapi:"attr,replace-addrs,omitempty"`
 	Source                 RunSource            `jsonapi:"attr,source"`
 	Status                 RunStatus            `jsonapi:"attr,status"`
 	StatusTimestamps       *RunStatusTimestamps `jsonapi:"attr,status-timestamps"`
@@ -115,33 +119,40 @@ type Run struct {
 
 // RunActions represents the run actions.
 type RunActions struct {
-	IsCancelable      bool `json:"is-cancelable"`
-	IsConfirmable     bool `json:"is-confirmable"`
-	IsDiscardable     bool `json:"is-discardable"`
-	IsForceCancelable bool `json:"is-force-cancelable"`
+	IsCancelable      bool `jsonapi:"attr,is-cancelable"`
+	IsConfirmable     bool `jsonapi:"attr,is-confirmable"`
+	IsDiscardable     bool `jsonapi:"attr,is-discardable"`
+	IsForceCancelable bool `jsonapi:"attr,is-force-cancelable"`
 }
 
 // RunPermissions represents the run permissions.
 type RunPermissions struct {
-	CanApply        bool `json:"can-apply"`
-	CanCancel       bool `json:"can-cancel"`
-	CanDiscard      bool `json:"can-discard"`
-	CanForceCancel  bool `json:"can-force-cancel"`
-	CanForceExecute bool `json:"can-force-execute"`
+	CanApply        bool `jsonapi:"attr,can-apply"`
+	CanCancel       bool `jsonapi:"attr,can-cancel"`
+	CanDiscard      bool `jsonapi:"attr,can-discard"`
+	CanForceCancel  bool `jsonapi:"attr,can-force-cancel"`
+	CanForceExecute bool `jsonapi:"attr,can-force-execute"`
 }
 
 // RunStatusTimestamps holds the timestamps for individual run statuses.
 type RunStatusTimestamps struct {
-	ErroredAt            time.Time `json:"errored-at"`
-	FinishedAt           time.Time `json:"finished-at"`
-	QueuedAt             time.Time `json:"queued-at"`
-	StartedAt            time.Time `json:"started-at"`
-	ApplyingAt           time.Time `json:"applying-at"`
-	AppliedAt            time.Time `json:"applied-at"`
-	PlanningAt           time.Time `json:"planning-at"`
-	PlannedAt            time.Time `json:"planned-at"`
-	PlannedAndFinishedAt time.Time `json:"planned-and-finished-at"`
-	PlanQueuabledAt      time.Time `json:"plan-queueable-at"`
+	AppliedAt            time.Time `jsonapi:"attr,applied-at,rfc3339"`
+	ApplyQueuedAt        time.Time `jsonapi:"attr,apply-queued-at,rfc3339"`
+	ApplyingAt           time.Time `jsonapi:"attr,applying-at,rfc3339"`
+	CanceledAt           time.Time `jsonapi:"attr,canceled-at,rfc3339"`
+	ConfirmedAt          time.Time `jsonapi:"attr,confirmed-at,rfc3339"`
+	CostEstimatedAt      time.Time `jsonapi:"attr,cost-estimated-at,rfc3339"`
+	CostEstimatingAt     time.Time `jsonapi:"attr,cost-estimating-at,rfc3339"`
+	DiscardedAt          time.Time `jsonapi:"attr,discarded-at,rfc3339"`
+	ErroredAt            time.Time `jsonapi:"attr,errored-at,rfc3339"`
+	ForceCanceledAt      time.Time `jsonapi:"attr,force-canceled-at,rfc3339"`
+	PlanQueueableAt      time.Time `jsonapi:"attr,plan-queueable-at,rfc3339"`
+	PlanQueuedAt         time.Time `jsonapi:"attr,plan-queued-at,rfc3339"`
+	PlannedAndFinishedAt time.Time `jsonapi:"attr,planned-and-finished-at,rfc3339"`
+	PlannedAt            time.Time `jsonapi:"attr,planned-at,rfc3339"`
+	PlanningAt           time.Time `jsonapi:"attr,planning-at,rfc3339"`
+	PolicyCheckedAt      time.Time `jsonapi:"attr,policy-checked-at,rfc3339"`
+	PolicySoftFailedAt   time.Time `jsonapi:"attr,policy-soft-failed-at,rfc3339"`
 }
 
 // RunListOptions represents the options for listing runs.
@@ -156,7 +167,7 @@ type RunListOptions struct {
 // List all the runs of the given workspace.
 func (s *runs) List(ctx context.Context, workspaceID string, options RunListOptions) (*RunList, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 
 	u := fmt.Sprintf("workspaces/%s/runs", url.QueryEscape(workspaceID))
@@ -176,12 +187,23 @@ func (s *runs) List(ctx context.Context, workspaceID string, options RunListOpti
 
 // RunCreateOptions represents the options for creating a new run.
 type RunCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,runs"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,runs"`
 
 	// Specifies if this plan is a destroy plan, which will destroy all
 	// provisioned resources.
 	IsDestroy *bool `jsonapi:"attr,is-destroy,omitempty"`
+
+	// Refresh determines if the run should
+	// update the state prior to checking for differences
+	Refresh *bool `jsonapi:"attr,refresh,omitempty"`
+
+	// RefreshOnly determines whether the run should ignore config changes
+	// and refresh the state only
+	RefreshOnly *bool `jsonapi:"attr,refresh-only,omitempty"`
 
 	// Specifies the message to be associated with this run.
 	Message *string `jsonapi:"attr,message,omitempty"`
@@ -206,6 +228,15 @@ type RunCreateOptions struct {
 	// of routine workflow and Terraform will emit warnings reminding about
 	// this whenever this property is set.
 	TargetAddrs []string `jsonapi:"attr,target-addrs,omitempty"`
+
+	// If non-empty, requests that Terraform create a plan that replaces
+	// (destroys and then re-creates) the objects specified by the given
+	// resource addresses.
+	ReplaceAddrs []string `jsonapi:"attr,replace-addrs,omitempty"`
+
+	// AutoApply determines if the run should be applied automatically without
+	// user confirmation. It defaults to the Workspace.AutoApply setting.
+	AutoApply *bool `jsonapi:"attr,auto-apply,omitempty"`
 }
 
 func (o RunCreateOptions) valid() error {
@@ -220,9 +251,6 @@ func (s *runs) Create(ctx context.Context, options RunCreateOptions) (*Run, erro
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	req, err := s.client.newRequest("POST", "runs", &options)
 	if err != nil {
@@ -251,7 +279,7 @@ type RunReadOptions struct {
 // Read a run by its ID with the given options.
 func (s *runs) ReadWithOptions(ctx context.Context, runID string, options *RunReadOptions) (*Run, error) {
 	if !validStringID(&runID) {
-		return nil, errors.New("invalid value for run ID")
+		return nil, ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("runs/%s", url.QueryEscape(runID))
@@ -272,13 +300,13 @@ func (s *runs) ReadWithOptions(ctx context.Context, runID string, options *RunRe
 // RunApplyOptions represents the options for applying a run.
 type RunApplyOptions struct {
 	// An optional comment about the run.
-	Comment *string `json:"comment,omitempty"`
+	Comment *string `jsonapi:"attr,comment,omitempty"`
 }
 
 // Apply a run by its ID.
 func (s *runs) Apply(ctx context.Context, runID string, options RunApplyOptions) error {
 	if !validStringID(&runID) {
-		return errors.New("invalid value for run ID")
+		return ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("runs/%s/actions/apply", url.QueryEscape(runID))
@@ -293,13 +321,13 @@ func (s *runs) Apply(ctx context.Context, runID string, options RunApplyOptions)
 // RunCancelOptions represents the options for canceling a run.
 type RunCancelOptions struct {
 	// An optional explanation for why the run was canceled.
-	Comment *string `json:"comment,omitempty"`
+	Comment *string `jsonapi:"attr,comment,omitempty"`
 }
 
 // Cancel a run by its ID.
 func (s *runs) Cancel(ctx context.Context, runID string, options RunCancelOptions) error {
 	if !validStringID(&runID) {
-		return errors.New("invalid value for run ID")
+		return ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("runs/%s/actions/cancel", url.QueryEscape(runID))
@@ -314,13 +342,13 @@ func (s *runs) Cancel(ctx context.Context, runID string, options RunCancelOption
 // RunForceCancelOptions represents the options for force-canceling a run.
 type RunForceCancelOptions struct {
 	// An optional comment explaining the reason for the force-cancel.
-	Comment *string `json:"comment,omitempty"`
+	Comment *string `jsonapi:"attr,comment,omitempty"`
 }
 
 // ForceCancel is used to forcefully cancel a run by its ID.
 func (s *runs) ForceCancel(ctx context.Context, runID string, options RunForceCancelOptions) error {
 	if !validStringID(&runID) {
-		return errors.New("invalid value for run ID")
+		return ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("runs/%s/actions/force-cancel", url.QueryEscape(runID))
@@ -335,13 +363,13 @@ func (s *runs) ForceCancel(ctx context.Context, runID string, options RunForceCa
 // RunDiscardOptions represents the options for discarding a run.
 type RunDiscardOptions struct {
 	// An optional explanation for why the run was discarded.
-	Comment *string `json:"comment,omitempty"`
+	Comment *string `jsonapi:"attr,comment,omitempty"`
 }
 
 // Discard a run by its ID.
 func (s *runs) Discard(ctx context.Context, runID string, options RunDiscardOptions) error {
 	if !validStringID(&runID) {
-		return errors.New("invalid value for run ID")
+		return ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("runs/%s/actions/discard", url.QueryEscape(runID))

@@ -20,10 +20,11 @@ import (
 	"net/http"
 )
 
-const globalClustersBasePath = "groups/%s/clusters/%s/globalWrites/%s"
+const globalClustersBasePath = "api/atlas/v1.0/groups/%s/clusters/%s/globalWrites/%s"
 
 // GlobalClustersService is an interface for interfacing with the Global Clusters
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/global-clusters/
 type GlobalClustersService interface {
 	Get(context.Context, string, string) (*GlobalCluster, *Response, error)
@@ -34,7 +35,7 @@ type GlobalClustersService interface {
 }
 
 // GlobalClustersServiceOp handles communication with the GlobalClusters related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type GlobalClustersServiceOp service
 
 var _ GlobalClustersService = &GlobalClustersServiceOp{}
@@ -47,9 +48,11 @@ type GlobalCluster struct {
 
 // ManagedNamespace represents the information about managed namespace configuration.
 type ManagedNamespace struct {
-	Db             string `json:"db"` //nolint:stylecheck // not changing this as is a breaking change
-	Collection     string `json:"collection"`
-	CustomShardKey string `json:"customShardKey,omitempty"`
+	Db                     string `json:"db"` //nolint:stylecheck // not changing this as is a breaking change
+	Collection             string `json:"collection"`
+	CustomShardKey         string `json:"customShardKey,omitempty"`
+	IsCustomShardKeyHashed *bool  `json:"isCustomShardKeyHashed,omitempty"` // Flag that specifies whether the custom shard key for the collection is hashed.
+	IsShardKeyUnique       *bool  `json:"isShardKeyUnique,omitempty"`       // Flag that specifies whether the underlying index enforces a unique constraint.
 }
 
 // CustomZoneMappingsRequest represents the request related to add custom zone mappings to a global cluster.
@@ -64,13 +67,14 @@ type CustomZoneMapping struct {
 }
 
 // Get retrieves all managed namespaces and custom zone mappings associated with the specified Global Cluster.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/global-clusters-retrieve-namespaces/
 func (s *GlobalClustersServiceOp) Get(ctx context.Context, groupID, clusterName string) (*GlobalCluster, *Response, error) {
 	if clusterName == "" {
 		return nil, nil, NewArgError("username", "must be set")
 	}
 
-	path := fmt.Sprintf("groups/%s/clusters/%s/globalWrites", groupID, clusterName)
+	path := fmt.Sprintf("api/atlas/v1.0/groups/%s/clusters/%s/globalWrites", groupID, clusterName)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -87,6 +91,7 @@ func (s *GlobalClustersServiceOp) Get(ctx context.Context, groupID, clusterName 
 }
 
 // AddManagedNamespace adds a managed namespace to the specified Global Cluster.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users-create-a-user/
 func (s *GlobalClustersServiceOp) AddManagedNamespace(ctx context.Context, groupID, clusterName string, createRequest *ManagedNamespace) (*GlobalCluster, *Response, error) {
 	if createRequest == nil {
@@ -110,6 +115,7 @@ func (s *GlobalClustersServiceOp) AddManagedNamespace(ctx context.Context, group
 }
 
 // DeleteManagedNamespace deletes the managed namespace configuration of the global cluster given.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/global-clusters-delete-namespace/
 func (s *GlobalClustersServiceOp) DeleteManagedNamespace(ctx context.Context, groupID, clusterName string, deleteRequest *ManagedNamespace) (*GlobalCluster, *Response, error) {
 	if deleteRequest == nil {
@@ -138,6 +144,7 @@ func (s *GlobalClustersServiceOp) DeleteManagedNamespace(ctx context.Context, gr
 }
 
 // AddCustomZoneMappings adds an entry to the list of custom zone mappings for the specified Global Cluster.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/global-clusters-add-customzonemapping/
 func (s *GlobalClustersServiceOp) AddCustomZoneMappings(ctx context.Context, groupID, clusterName string, createRequest *CustomZoneMappingsRequest) (*GlobalCluster, *Response, error) {
 	if createRequest == nil {
@@ -161,6 +168,7 @@ func (s *GlobalClustersServiceOp) AddCustomZoneMappings(ctx context.Context, gro
 }
 
 // DeleteCustomZoneMappings removes all custom zone mappings from the specified Global Cluster.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/global-clusters-delete-namespace/
 func (s *GlobalClustersServiceOp) DeleteCustomZoneMappings(ctx context.Context, groupID, clusterName string) (*GlobalCluster, *Response, error) {
 	path := fmt.Sprintf(globalClustersBasePath, groupID, clusterName, "customZoneMapping")

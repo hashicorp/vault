@@ -1,6 +1,7 @@
 package gocb
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,20 @@ type QueryOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
 
-	parentSpan requestSpanContext
+	// FlexIndex tells the query engine to use a flex index (utilizing the search service).
+	FlexIndex bool
+
+	ParentSpan RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 func (opts *QueryOptions) toMap() (map[string]interface{}, error) {
@@ -138,6 +152,10 @@ func (opts *QueryOptions) toMap() (map[string]interface{}, error) {
 		execOpts["client_context_id"] = uuid.New()
 	} else {
 		execOpts["client_context_id"] = opts.ClientContextID
+	}
+
+	if opts.FlexIndex {
+		execOpts["use_fts"] = true
 	}
 
 	return execOpts, nil

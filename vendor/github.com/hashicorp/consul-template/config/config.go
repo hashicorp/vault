@@ -517,6 +517,7 @@ func (c *Config) Finalize() {
 		c.LogLevel = stringFromEnv([]string{
 			"CT_LOG",
 			"CONSUL_TEMPLATE_LOG",
+			"CONSUL_TEMPLATE_LOG_LEVEL",
 		}, DefaultLogLevel)
 	}
 

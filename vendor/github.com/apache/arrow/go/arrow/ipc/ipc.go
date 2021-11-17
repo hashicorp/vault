@@ -21,6 +21,7 @@ import (
 
 	"github.com/apache/arrow/go/arrow"
 	"github.com/apache/arrow/go/arrow/arrio"
+	"github.com/apache/arrow/go/arrow/internal/flatbuf"
 	"github.com/apache/arrow/go/arrow/memory"
 )
 
@@ -65,11 +66,14 @@ type config struct {
 	footer struct {
 		offset int64
 	}
+	codec      flatbuf.CompressionType
+	compressNP int
 }
 
 func newConfig(opts ...Option) *config {
 	cfg := &config{
 		alloc: memory.NewGoAllocator(),
+		codec: -1, // uncompressed
 	}
 
 	for _, opt := range opts {
@@ -101,6 +105,32 @@ func WithAllocator(mem memory.Allocator) Option {
 func WithSchema(schema *arrow.Schema) Option {
 	return func(cfg *config) {
 		cfg.schema = schema
+	}
+}
+
+// WithLZ4 tells the writer to use LZ4 Frame compression on the data
+// buffers before writing. Requires >= Arrow 1.0.0 to read/decompress
+func WithLZ4() Option {
+	return func(cfg *config) {
+		cfg.codec = flatbuf.CompressionTypeLZ4_FRAME
+	}
+}
+
+// WithZstd tells the writer to use ZSTD compression on the data
+// buffers before writing. Requires >= Arrow 1.0.0 to read/decompress
+func WithZstd() Option {
+	return func(cfg *config) {
+		cfg.codec = flatbuf.CompressionTypeZSTD
+	}
+}
+
+// WithCompressConcurrency specifies a number of goroutines to spin up for
+// concurrent compression of the body buffers when writing compress IPC records.
+// If n <= 1 then compression will be done serially without goroutine
+// parallelization. Default is 0.
+func WithCompressConcurrency(n int) Option {
+	return func(cfg *config) {
+		cfg.compressNP = n
 	}
 }
 

@@ -18,16 +18,30 @@
 
 package flatbuf
 
+import "strconv"
+
 /// ----------------------------------------------------------------------
 /// Endianness of the platform producing the data
-type Endianness = int16
+type Endianness int16
+
 const (
 	EndiannessLittle Endianness = 0
-	EndiannessBig Endianness = 1
+	EndiannessBig    Endianness = 1
 )
 
 var EnumNamesEndianness = map[Endianness]string{
-	EndiannessLittle:"Little",
-	EndiannessBig:"Big",
+	EndiannessLittle: "Little",
+	EndiannessBig:    "Big",
 }
 
+var EnumValuesEndianness = map[string]Endianness{
+	"Little": EndiannessLittle,
+	"Big":    EndiannessBig,
+}
+
+func (v Endianness) String() string {
+	if s, ok := EnumNamesEndianness[v]; ok {
+		return s
+	}
+	return "Endianness(" + strconv.FormatInt(int64(v), 10) + ")"
+}

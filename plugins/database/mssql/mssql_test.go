@@ -42,12 +42,21 @@ func TestInitialize(t *testing.T) {
 				VerifyConnection: true,
 			},
 		},
+		"contained_db set": {
+			dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"contained_db":   "true",
+				},
+				VerifyConnection: true,
+			},
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := new()
-			dbtesting.AssertInitialize(t, db, test.req)
+			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
 			defer dbtesting.AssertClose(t, db)
 
 			if !db.Initialized {
@@ -135,7 +144,7 @@ func TestNewUser(t *testing.T) {
 			}
 
 			db := new()
-			dbtesting.AssertInitialize(t, db, initReq)
+			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
 			createResp, err := db.NewUser(context.Background(), test.req)
@@ -241,7 +250,7 @@ func TestUpdateUser_password(t *testing.T) {
 			}
 
 			db := new()
-			dbtesting.AssertInitialize(t, db, initReq)
+			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
 			createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)
@@ -265,6 +274,26 @@ func TestUpdateUser_password(t *testing.T) {
 			}
 
 			assertCredsExist(t, connURL, dbUser, test.expectedPassword)
+
+			// Delete user at the end of each test
+			deleteReq := dbplugin.DeleteUserRequest{
+				Username: dbUser,
+			}
+
+			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			deleteResp, err := db.DeleteUser(ctx, deleteReq)
+			if err != nil {
+				t.Fatalf("Failed to delete user: %s", err)
+			}
+
+			// Protect against future fields that aren't specified
+			expectedDeleteResp := dbplugin.DeleteUserResponse{}
+			if !reflect.DeepEqual(deleteResp, expectedDeleteResp) {
+				t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
+			}
+
+			assertCredsDoNotExist(t, connURL, dbUser, initPassword)
 		})
 	}
 }
@@ -284,7 +313,8 @@ func TestDeleteUser(t *testing.T) {
 	}
 
 	db := new()
-	dbtesting.AssertInitialize(t, db, initReq)
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 	defer dbtesting.AssertClose(t, db)
 
 	createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)

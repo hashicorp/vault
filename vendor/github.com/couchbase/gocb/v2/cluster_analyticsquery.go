@@ -1,10 +1,12 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 type jsonAnalyticsMetrics struct {
@@ -115,6 +117,32 @@ func (meta *AnalyticsMetaData) fromData(data jsonAnalyticsResponse) error {
 	return nil
 }
 
+// AnalyticsResultRaw provides raw access to analytics query data.
+// VOLATILE: This API is subject to change at any time.
+type AnalyticsResultRaw struct {
+	reader analyticsRowReader
+}
+
+// NextBytes returns the next row as bytes.
+func (arr *AnalyticsResultRaw) NextBytes() []byte {
+	return arr.reader.NextRow()
+}
+
+// Err returns any errors that have occurred on the stream
+func (arr *AnalyticsResultRaw) Err() error {
+	return arr.reader.Err()
+}
+
+// Close marks the results as closed, returning any errors that occurred during reading the results.
+func (arr *AnalyticsResultRaw) Close() error {
+	return arr.reader.Close()
+}
+
+// MetaData returns any meta-data that was available from this query as bytes.
+func (arr *AnalyticsResultRaw) MetaData() ([]byte, error) {
+	return arr.reader.MetaData()
+}
+
 // AnalyticsResult allows access to the results of a query.
 type AnalyticsResult struct {
 	reader analyticsRowReader
@@ -135,8 +163,24 @@ type analyticsRowReader interface {
 	Close() error
 }
 
+// Raw returns a AnalyticsResult which can be used to access the raw byte data from search queries.
+// Calling this function invalidates the underlying AnalyticsResult which will no longer be able to be used.
+// VOLATILE: This API is subject to change at any time.
+func (r *AnalyticsResult) Raw() *AnalyticsResultRaw {
+	vr := &AnalyticsResultRaw{
+		reader: r.reader,
+	}
+
+	r.reader = nil
+	return vr
+}
+
 // Next assigns the next result from the results into the value pointer, returning whether the read was successful.
 func (r *AnalyticsResult) Next() bool {
+	if r.reader == nil {
+		return false
+	}
+
 	rowBytes := r.reader.NextRow()
 	if rowBytes == nil {
 		return false
@@ -148,6 +192,10 @@ func (r *AnalyticsResult) Next() bool {
 
 // Row returns the value of the current row
 func (r *AnalyticsResult) Row(valuePtr interface{}) error {
+	if r.reader == nil {
+		return r.Err()
+	}
+
 	if r.rowBytes == nil {
 		return ErrNoResult
 	}
@@ -162,11 +210,19 @@ func (r *AnalyticsResult) Row(valuePtr interface{}) error {
 
 // Err returns any errors that have occurred on the stream
 func (r *AnalyticsResult) Err() error {
+	if r.reader == nil {
+		return errors.New("result object is no longer valid")
+	}
+
 	return r.reader.Err()
 }
 
 // Close marks the results as closed, returning any errors that occurred during reading the results.
 func (r *AnalyticsResult) Close() error {
+	if r.reader == nil {
+		return r.Err()
+	}
+
 	return r.reader.Close()
 }
 
@@ -175,6 +231,10 @@ func (r *AnalyticsResult) Close() error {
 // results, as such this should only be used for very small resultsets - ideally
 // of, at most, length 1.
 func (r *AnalyticsResult) One(valuePtr interface{}) error {
+	if r.reader == nil {
+		return r.Err()
+	}
+
 	// Read the bytes from the first row
 	valueBytes := r.reader.NextRow()
 	if valueBytes == nil {
@@ -193,6 +253,10 @@ func (r *AnalyticsResult) One(valuePtr interface{}) error {
 // the meta-data will only be available once the object has been closed (either
 // implicitly or explicitly).
 func (r *AnalyticsResult) MetaData() (*AnalyticsMetaData, error) {
+	if r.reader == nil {
+		return nil, r.Err()
+	}
+
 	metaDataBytes, err := r.reader.MetaData()
 	if err != nil {
 		return nil, err
@@ -219,9 +283,12 @@ func (c *Cluster) AnalyticsQuery(statement string, opts *AnalyticsOptions) (*Ana
 		opts = &AnalyticsOptions{}
 	}
 
-	span := c.tracer.StartSpan("Query", opts.parentSpan).
-		SetTag("couchbase.service", "analytics")
-	defer span.Finish()
+	start := time.Now()
+	defer c.meter.ValueRecord(meterValueServiceAnalytics, "analytics", start)
+
+	span := createSpan(c.tracer, opts.ParentSpan, "analytics", "analytics")
+	span.SetAttribute("db.statement", statement)
+	defer span.End()
 
 	timeout := opts.Timeout
 	if opts.Timeout == 0 {
@@ -250,7 +317,16 @@ func (c *Cluster) AnalyticsQuery(statement string, opts *AnalyticsOptions) (*Ana
 
 	queryOpts["statement"] = statement
 
-	return c.execAnalyticsQuery(span, queryOpts, priorityInt, deadline, retryStrategy)
+	provider, err := c.getAnalyticsProvider()
+	if err != nil {
+		return nil, AnalyticsError{
+			InnerError:      wrapError(err, "failed to get query provider"),
+			Statement:       statement,
+			ClientContextID: maybeGetAnalyticsOption(queryOpts, "client_context_id"),
+		}
+	}
+
+	return execAnalyticsQuery(opts.Context, span, queryOpts, priorityInt, deadline, retryStrategy, provider, c.tracer, opts.Internal.User)
 }
 
 func maybeGetAnalyticsOption(options map[string]interface{}, name string) string {
@@ -260,23 +336,20 @@ func maybeGetAnalyticsOption(options map[string]interface{}, name string) string
 	return ""
 }
 
-func (c *Cluster) execAnalyticsQuery(
-	span requestSpan,
+func execAnalyticsQuery(
+	ctx context.Context,
+	span RequestSpan,
 	options map[string]interface{},
 	priority int32,
 	deadline time.Time,
 	retryStrategy *retryStrategyWrapper,
+	provider analyticsProvider,
+	tracer RequestTracer,
+	user string,
 ) (*AnalyticsResult, error) {
-	provider, err := c.getAnalyticsProvider()
-	if err != nil {
-		return nil, AnalyticsError{
-			InnerError:      wrapError(err, "failed to get query provider"),
-			Statement:       maybeGetAnalyticsOption(options, "statement"),
-			ClientContextID: maybeGetAnalyticsOption(options, "client_context_id"),
-		}
-	}
-
+	eSpan := createSpan(tracer, span, "request_encoding", "")
 	reqBytes, err := json.Marshal(options)
+	eSpan.End()
 	if err != nil {
 		return nil, AnalyticsError{
 			InnerError:      wrapError(err, "failed to marshall query body"),
@@ -285,12 +358,13 @@ func (c *Cluster) execAnalyticsQuery(
 		}
 	}
 
-	res, err := provider.AnalyticsQuery(gocbcore.AnalyticsQueryOptions{
+	res, err := provider.AnalyticsQuery(ctx, gocbcore.AnalyticsQueryOptions{
 		Payload:       reqBytes,
 		Priority:      int(priority),
 		RetryStrategy: retryStrategy,
 		Deadline:      deadline,
 		TraceContext:  span.Context(),
+		User:          user,
 	})
 	if err != nil {
 		return nil, maybeEnhanceAnalyticsError(err)

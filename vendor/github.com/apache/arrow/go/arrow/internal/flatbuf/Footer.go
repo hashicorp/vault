@@ -48,13 +48,13 @@ func (rcv *Footer) Table() flatbuffers.Table {
 func (rcv *Footer) Version() MetadataVersion {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return MetadataVersion(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
 func (rcv *Footer) MutateVersion(n MetadataVersion) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 func (rcv *Footer) Schema(obj *Schema) *Schema {
@@ -108,11 +108,33 @@ func (rcv *Footer) RecordBatchesLength() int {
 	return 0
 }
 
-func FooterStart(builder *flatbuffers.Builder) {
-	builder.StartObject(4)
+/// User-defined metadata
+func (rcv *Footer) CustomMetadata(obj *KeyValue, j int) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
+	if o != 0 {
+		x := rcv._tab.Vector(o)
+		x += flatbuffers.UOffsetT(j) * 4
+		x = rcv._tab.Indirect(x)
+		obj.Init(rcv._tab.Bytes, x)
+		return true
+	}
+	return false
 }
-func FooterAddVersion(builder *flatbuffers.Builder, version int16) {
-	builder.PrependInt16Slot(0, version, 0)
+
+func (rcv *Footer) CustomMetadataLength() int {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
+	if o != 0 {
+		return rcv._tab.VectorLen(o)
+	}
+	return 0
+}
+
+/// User-defined metadata
+func FooterStart(builder *flatbuffers.Builder) {
+	builder.StartObject(5)
+}
+func FooterAddVersion(builder *flatbuffers.Builder, version MetadataVersion) {
+	builder.PrependInt16Slot(0, int16(version), 0)
 }
 func FooterAddSchema(builder *flatbuffers.Builder, schema flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(1, flatbuffers.UOffsetT(schema), 0)
@@ -128,6 +150,12 @@ func FooterAddRecordBatches(builder *flatbuffers.Builder, recordBatches flatbuff
 }
 func FooterStartRecordBatchesVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
 	return builder.StartVector(24, numElems, 8)
+}
+func FooterAddCustomMetadata(builder *flatbuffers.Builder, customMetadata flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(4, flatbuffers.UOffsetT(customMetadata), 0)
+}
+func FooterStartCustomMetadataVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
+	return builder.StartVector(4, numElems, 4)
 }
 func FooterEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

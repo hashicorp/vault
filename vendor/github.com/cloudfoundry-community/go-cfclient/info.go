@@ -3,6 +3,7 @@ package cfclient
 import (
 	"encoding/json"
 
+	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
 )
 
@@ -26,6 +27,16 @@ type Info struct {
 	User                     string `json:"user,omitempty"`
 }
 
+type V3Version struct {
+	Links struct {
+		CCV3 struct {
+			Meta struct {
+				Version string `json:"version"`
+			} `json:"meta"`
+		} `json:"cloud_controller_v3"`
+	} `json:"links"`
+}
+
 // GetInfo retrieves Info from the Cloud Controller API
 func (c *Client) GetInfo() (*Info, error) {
 	r := c.NewRequest("GET", "/v2/info")
@@ -40,4 +51,29 @@ func (c *Client) GetInfo() (*Info, error) {
 		return nil, errors.Wrap(err, "Error unmarshalling info")
 	}
 	return &i, nil
+}
+
+func (c *Client) SupportsMetadataAPI() (bool, error) {
+	r := c.NewRequest("GET", "/")
+	resp, err := c.DoRequest(r)
+	if err != nil {
+		return false, errors.Wrap(err, "Error requesting info")
+	}
+	defer resp.Body.Close()
+	var v3 V3Version
+	err = json.NewDecoder(resp.Body).Decode(&v3)
+	if err != nil {
+		return false, errors.Wrap(err, "Error unmarshalling info")
+	}
+
+	minimumSupportedVersion := semver.MustParse("3.66.0")
+	actualVersion, err := semver.NewVersion(v3.Links.CCV3.Meta.Version)
+	if err != nil {
+		return false, errors.Wrap(err, "Error parsing semver")
+	}
+	if !actualVersion.LessThan(minimumSupportedVersion) {
+		return true, nil
+	}
+
+	return false, nil
 }

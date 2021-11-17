@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/auth"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
@@ -34,6 +35,8 @@ type config struct {
 	cs                     connstring.ConnString // This must not be used for any logic in topology.Topology.
 	uri                    string
 	serverSelectionTimeout time.Duration
+	serverMonitor          *event.ServerMonitor
+	loadBalanced           bool
 }
 
 func newConfig(opts ...Option) (*config, error) {
@@ -222,6 +225,17 @@ func WithConnString(fn func(connstring.ConnString) connstring.ConnString) Option
 			}))
 		}
 
+		// LoadBalanced
+		if cs.LoadBalancedSet {
+			c.loadBalanced = cs.LoadBalanced
+			c.serverOpts = append(c.serverOpts, WithServerLoadBalanced(func(bool) bool {
+				return cs.LoadBalanced
+			}))
+			connOpts = append(connOpts, WithConnectionLoadBalanced(func(bool) bool {
+				return cs.LoadBalanced
+			}))
+		}
+
 		if len(connOpts) > 0 {
 			c.serverOpts = append(c.serverOpts, WithConnectionOptions(func(opts ...ConnectionOption) []ConnectionOption {
 				return append(opts, connOpts...)
@@ -270,6 +284,14 @@ func WithServerOptions(fn func(...ServerOption) []ServerOption) Option {
 func WithServerSelectionTimeout(fn func(time.Duration) time.Duration) Option {
 	return func(cfg *config) error {
 		cfg.serverSelectionTimeout = fn(cfg.serverSelectionTimeout)
+		return nil
+	}
+}
+
+// WithTopologyServerMonitor configures the monitor for all SDAM events
+func WithTopologyServerMonitor(fn func(*event.ServerMonitor) *event.ServerMonitor) Option {
+	return func(cfg *config) error {
+		cfg.serverMonitor = fn(cfg.serverMonitor)
 		return nil
 	}
 }
@@ -399,4 +421,12 @@ func addClientCertFromFile(cfg *tls.Config, clientFile, keyPasswd string) (strin
 	}
 
 	return x509CertSubject(crt), nil
+}
+
+// WithLoadBalanced specifies whether or not the cluster is behind a load balancer.
+func WithLoadBalanced(fn func(bool) bool) Option {
+	return func(cfg *config) error {
+		cfg.loadBalanced = fn(cfg.loadBalanced)
+		return nil
+	}
 }

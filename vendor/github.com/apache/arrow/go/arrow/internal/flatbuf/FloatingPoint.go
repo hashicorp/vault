@@ -45,20 +45,20 @@ func (rcv *FloatingPoint) Table() flatbuffers.Table {
 func (rcv *FloatingPoint) Precision() Precision {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return Precision(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
 func (rcv *FloatingPoint) MutatePrecision(n Precision) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 func FloatingPointStart(builder *flatbuffers.Builder) {
 	builder.StartObject(1)
 }
-func FloatingPointAddPrecision(builder *flatbuffers.Builder, precision int16) {
-	builder.PrependInt16Slot(0, precision, 0)
+func FloatingPointAddPrecision(builder *flatbuffers.Builder, precision Precision) {
+	builder.PrependInt16Slot(0, int16(precision), 0)
 }
 func FloatingPointEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

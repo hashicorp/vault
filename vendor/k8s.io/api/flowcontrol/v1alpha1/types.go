@@ -51,40 +51,53 @@ const (
 	FlowSchemaMaxMatchingPrecedence int32 = 10000
 )
 
+// Constants for apiserver response headers.
+const (
+	ResponseHeaderMatchedPriorityLevelConfigurationUID = "X-Kubernetes-PF-PriorityLevel-UID"
+	ResponseHeaderMatchedFlowSchemaUID                 = "X-Kubernetes-PF-FlowSchema-UID"
+)
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.18
+// +k8s:prerelease-lifecycle-gen:deprecated=1.20
+// +k8s:prerelease-lifecycle-gen:removed=1.21
+// +k8s:prerelease-lifecycle-gen:replacement=flowcontrol.apiserver.k8s.io,v1beta1,FlowSchema
 
 // FlowSchema defines the schema of a group of flows. Note that a flow is made up of a set of inbound API requests with
 // similar attributes and is identified by a pair of strings: the name of the FlowSchema and a "flow distinguisher".
 type FlowSchema struct {
 	metav1.TypeMeta `json:",inline"`
 	// `metadata` is the standard object's metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// `spec` is the specification of the desired behavior of a FlowSchema.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +optional
 	Spec FlowSchemaSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// `status` is the current status of a FlowSchema.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +optional
 	Status FlowSchemaStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.18
+// +k8s:prerelease-lifecycle-gen:deprecated=1.20
+// +k8s:prerelease-lifecycle-gen:removed=1.21
+// +k8s:prerelease-lifecycle-gen:replacement=flowcontrol.apiserver.k8s.io,v1beta1,FlowSchemaList
 
 // FlowSchemaList is a list of FlowSchema objects.
 type FlowSchemaList struct {
 	metav1.TypeMeta `json:",inline"`
 	// `metadata` is the standard list metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// `items` is a list of FlowSchemas.
-	// +listType=atomic
 	Items []FlowSchema `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -172,13 +185,17 @@ type PolicyRulesWithSubjects struct {
 // ways of matching an originator; by user, group, or service account.
 // +union
 type Subject struct {
+	// `kind` indicates which one of the other fields is non-empty.
 	// Required
 	// +unionDiscriminator
 	Kind SubjectKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	// `user` matches based on username.
 	// +optional
 	User *UserSubject `json:"user,omitempty" protobuf:"bytes,2,opt,name=user"`
+	// `group` matches based on user group name.
 	// +optional
 	Group *GroupSubject `json:"group,omitempty" protobuf:"bytes,3,opt,name=group"`
+	// `serviceAccount` matches ServiceAccounts.
 	// +optional
 	ServiceAccount *ServiceAccountSubject `json:"serviceAccount,omitempty" protobuf:"bytes,4,opt,name=serviceAccount"`
 }
@@ -322,35 +339,42 @@ type FlowSchemaConditionType string
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.18
+// +k8s:prerelease-lifecycle-gen:deprecated=1.20
+// +k8s:prerelease-lifecycle-gen:removed=1.21
+// +k8s:prerelease-lifecycle-gen:replacement=flowcontrol.apiserver.k8s.io,v1beta1,PriorityLevelConfiguration
 
 // PriorityLevelConfiguration represents the configuration of a priority level.
 type PriorityLevelConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// `metadata` is the standard object's metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// `spec` is the specification of the desired behavior of a "request-priority".
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +optional
 	Spec PriorityLevelConfigurationSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// `status` is the current status of a "request-priority".
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +optional
 	Status PriorityLevelConfigurationStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.18
+// +k8s:prerelease-lifecycle-gen:deprecated=1.20
+// +k8s:prerelease-lifecycle-gen:removed=1.21
+// +k8s:prerelease-lifecycle-gen:replacement=flowcontrol.apiserver.k8s.io,v1beta1,PriorityLevelConfigurationList
 
 // PriorityLevelConfigurationList is a list of PriorityLevelConfiguration objects.
 type PriorityLevelConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
 	// `metadata` is the standard object's metadata.
-	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// `items` is a list of request-priorities.
-	// +listType=atomic
 	Items []PriorityLevelConfiguration `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 

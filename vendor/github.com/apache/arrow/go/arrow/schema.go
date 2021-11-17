@@ -104,6 +104,35 @@ func (md Metadata) clone() Metadata {
 	return o
 }
 
+func (md Metadata) sortedIndices() []int {
+	idxes := make([]int, len(md.keys))
+	for i := range idxes {
+		idxes[i] = i
+	}
+
+	sort.Slice(idxes, func(i, j int) bool {
+		return md.keys[idxes[i]] < md.keys[idxes[j]]
+	})
+	return idxes
+}
+
+func (md Metadata) Equal(rhs Metadata) bool {
+	if md.Len() != rhs.Len() {
+		return false
+	}
+
+	idxes := md.sortedIndices()
+	rhsIdxes := rhs.sortedIndices()
+	for i := range idxes {
+		j := idxes[i]
+		k := rhsIdxes[i]
+		if md.keys[j] != rhs.keys[k] || md.values[j] != rhs.values[k] {
+			return false
+		}
+	}
+	return true
+}
+
 // Schema is a sequence of Field values, describing the columns of a table or
 // a record batch.
 type Schema struct {

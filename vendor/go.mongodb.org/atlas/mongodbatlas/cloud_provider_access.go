@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const cloudProviderAccessPath = "groups/%s/cloudProviderAccess"
+const cloudProviderAccessPath = "api/atlas/v1.0/groups/%s/cloudProviderAccess"
 
 // CloudProviderAccessService provides access to the cloud provider access functions in the Atlas API.
 //
@@ -32,7 +32,7 @@ type CloudProviderAccessService interface {
 	DeauthorizeRole(context.Context, *CloudProviderDeauthorizationRequest) (*Response, error)
 }
 
-// ProjectIPAccessListServiceOp provides an implementation of the CloudProviderAccessService interface
+// CloudProviderAccessServiceOp provides an implementation of the CloudProviderAccessService interface.
 type CloudProviderAccessServiceOp service
 
 var _ CloudProviderAccessService = &CloudProviderAccessServiceOp{}
@@ -42,7 +42,7 @@ type CloudProviderAccessRoles struct {
 	AWSIAMRoles []AWSIAMRole `json:"awsIamRoles,omitempty"` // Unique identifier of AWS security group in this access list entry.
 }
 
-// ProjectIPAccessLists is the response from the ProjectIPAccessListService.List.
+// AWSIAMRole is the response from the CloudProviderAccessService.ListRoles.
 type AWSIAMRole struct {
 	AtlasAWSAccountARN         string          `json:"atlasAWSAccountArn,omitempty"`         // ARN associated with the Atlas AWS account used to assume IAM roles in your AWS account.
 	AtlasAssumedRoleExternalID string          `json:"atlasAssumedRoleExternalId,omitempty"` // Unique external ID Atlas uses when assuming the IAM role in your AWS account.
@@ -54,24 +54,24 @@ type AWSIAMRole struct {
 	RoleID                     string          `json:"roleId,omitempty"`                     // Unique ID of this role.
 }
 
-// FeatureUsage represents where the role sis being used
+// FeatureUsage represents where the role sis being used.
 type FeatureUsage struct {
 	FeatureType string      `json:"featureType,omitempty"`
 	FeatureID   interface{} `json:"featureId,omitempty"`
 }
 
-// CloudProviderAccessRoleRequest represent a new role creation
+// CloudProviderAccessRoleRequest represent a new role creation.
 type CloudProviderAccessRoleRequest struct {
 	ProviderName string `json:"providerName"`
 }
 
-// CloudProviderAuthorizationRequest represents an authorization request
+// CloudProviderAuthorizationRequest represents an authorization request.
 type CloudProviderAuthorizationRequest struct {
 	ProviderName      string `json:"providerName"`
 	IAMAssumedRoleARN string `json:"iamAssumedRoleArn"`
 }
 
-// CloudProviderAuthorizationRequest
+// CloudProviderDeauthorizationRequest represents a request to remove authorization.
 type CloudProviderDeauthorizationRequest struct {
 	ProviderName string
 	GroupID      string
@@ -98,7 +98,7 @@ func (s *CloudProviderAccessServiceOp) ListRoles(ctx context.Context, groupID st
 	return root, resp, nil
 }
 
-// Create creates an AWS IAM role.
+// CreateRole creates an AWS IAM role.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/cloud-provider-access-create-one-role/
 func (s *CloudProviderAccessServiceOp) CreateRole(ctx context.Context, groupID string, request *CloudProviderAccessRoleRequest) (*AWSIAMRole, *Response, error) {

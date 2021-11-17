@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	integrationBasePath = "groups/%s/integrations"
+	integrationBasePath = "api/atlas/v1.0/groups/%s/integrations"
 )
 
 // IntegrationsService is an interface for interfacing with the Third-Party Integrations
@@ -22,12 +22,12 @@ type IntegrationsService interface {
 	List(context.Context, string) (*ThirdPartyIntegrations, *Response, error)
 }
 
-// IntegrationsServiceOp handles communication with the third-party integrations related methods of the MongoDB Atlas API
+// IntegrationsServiceOp handles communication with the third-party integrations related methods of the MongoDB Atlas API.
 type IntegrationsServiceOp service
 
 var _ IntegrationsService = &IntegrationsServiceOp{}
 
-// ThirdPartyIntegration contains parameters for different third-party services
+// ThirdPartyIntegration contains parameters for different third-party services.
 type ThirdPartyIntegration struct {
 	Type        string `json:"type,omitempty"`
 	LicenseKey  string `json:"licenseKey,omitempty"`
@@ -47,7 +47,7 @@ type ThirdPartyIntegration struct {
 	Secret      string `json:"secret,omitempty"`
 }
 
-// ThirdPartyIntegrations contains the response from the endpoint
+// ThirdPartyIntegrations contains the response from the endpoint.
 type ThirdPartyIntegrations struct {
 	Links      []*Link                  `json:"links"`
 	Results    []*ThirdPartyIntegration `json:"results"`

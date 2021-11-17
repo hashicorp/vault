@@ -4,11 +4,19 @@ import { computed } from '@ember/object';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
+import { validator, buildValidations } from 'ember-cp-validations';
 
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-let ModelExport = Model.extend({
+const Validations = buildValidations({
+  path: validator('presence', {
+    presence: true,
+    message: "Path can't be blank.",
+  }),
+});
+
+let ModelExport = Model.extend(Validations, {
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -41,14 +49,25 @@ let ModelExport = Model.extend({
     return this.local ? 'local' : 'replicated';
   }),
 
-  tuneAttrs: computed(function() {
-    return expandAttributeMeta(this, [
-      'description',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-    ]);
+  tuneAttrs: computed('path', function() {
+    let { methodType } = this;
+    let tuneAttrs;
+    // token_type should not be tuneable for the token auth method
+    if (methodType === 'token') {
+      tuneAttrs = [
+        'description',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ];
+    } else {
+      tuneAttrs = [
+        'description',
+        'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      ];
+    }
+    return expandAttributeMeta(this, tuneAttrs);
   }),
 
-  //sys/mounts/auth/[auth-path]/tune.
+  // sys/mounts/auth/[auth-path]/tune.
   tune: memberAction({
     path: 'tune',
     type: 'post',

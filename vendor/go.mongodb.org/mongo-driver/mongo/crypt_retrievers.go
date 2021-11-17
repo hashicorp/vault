@@ -18,6 +18,9 @@ type keyRetriever struct {
 }
 
 func (kr *keyRetriever) cryptKeys(ctx context.Context, filter bsoncore.Document) ([]bsoncore.Document, error) {
+	// Remove the explicit session from the context if one is set.
+	// The explicit session may be from a different client.
+	ctx = NewSessionContext(ctx, nil)
 	cursor, err := kr.coll.Find(ctx, filter)
 	if err != nil {
 		return nil, EncryptionKeyVaultError{Wrapped: err}
@@ -43,6 +46,9 @@ type collInfoRetriever struct {
 }
 
 func (cir *collInfoRetriever) cryptCollInfo(ctx context.Context, db string, filter bsoncore.Document) (bsoncore.Document, error) {
+	// Remove the explicit session from the context if one is set.
+	// The explicit session may be from a different client.
+	ctx = NewSessionContext(ctx, nil)
 	cursor, err := cir.client.Database(db).ListCollections(ctx, filter)
 	if err != nil {
 		return nil, err

@@ -18,19 +18,19 @@ import (
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -392,6 +392,16 @@ func (ts *TokenStore) paths() []*framework.Path {
 				Description: tokenDisallowedPoliciesHelp,
 			},
 
+			"allowed_policies_glob": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenAllowedPoliciesGlobHelp,
+			},
+
+			"disallowed_policies_glob": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: tokenDisallowedPoliciesGlobHelp,
+			},
+
 			"orphan": {
 				Type:        framework.TypeBool,
 				Description: tokenOrphanHelp,
@@ -452,13 +462,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 // is particularly useful to fetch the accessor of the client token and get it
 // populated in the logical request along with the client token. The accessor
 // of the client token can get audit logged.
+//
+// Should be called with read stateLock held.
 func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEntry, error) {
 	if c.Sealed() {
 		return nil, consts.ErrSealed
 	}
-
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 
 	if c.standby && !c.perfStandby {
 		return nil, consts.ErrStandby
@@ -470,6 +479,15 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	}
 
 	return c.tokenStore.Lookup(ctx, token)
+}
+
+// CreateToken creates the given token in the core's token store.
+func (c *Core) CreateToken(ctx context.Context, entry *logical.TokenEntry) error {
+	if c.tokenStore == nil {
+		return errors.New("unable to create token with nil token store")
+	}
+
+	return c.tokenStore.create(ctx, entry)
 }
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -490,8 +508,7 @@ type TokenStore struct {
 	parentBarrierView   *BarrierView
 	rolesBarrierView    *BarrierView
 
-	expiration  *ExpirationManager
-	activityLog *ActivityLog
+	expiration *ExpirationManager
 
 	cubbyholeBackend *CubbyholeBackend
 
@@ -624,6 +641,12 @@ type tsRoleEntry struct {
 	// List of policies to be not allowed during token creation using this role
 	DisallowedPolicies []string `json:"disallowed_policies" mapstructure:"disallowed_policies" structs:"disallowed_policies"`
 
+	// An extension to AllowedPolicies that instead uses glob matching on policy names
+	AllowedPoliciesGlob []string `json:"allowed_policies_glob" mapstructure:"allowed_policies_glob" structs:"allowed_policies_glob"`
+
+	// An extension to DisallowedPolicies that instead uses glob matching on policy names
+	DisallowedPoliciesGlob []string `json:"disallowed_policies_glob" mapstructure:"disallowed_policies_glob" structs:"disallowed_policies_glob"`
+
 	// If true, tokens created using this role will be orphans
 	Orphan bool `json:"orphan" mapstructure:"orphan" structs:"orphan"`
 
@@ -660,12 +683,6 @@ type accessorEntry struct {
 // of tokens and to tidy entries when removed from the token store.
 func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
-}
-
-// SetActivityLog injects the activity log to which all new
-// token creation events are reported.
-func (ts *TokenStore) SetActivityLog(a *ActivityLog) {
-	ts.activityLog = a
 }
 
 // SaltID is used to apply a salt and hash to an ID to make sure its not reversible
@@ -816,6 +833,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		metrics.IncrCounter([]string{"token", "create_root"}, 1)
 	}
 
+	// Validate the inline policy if it's set
+	if entry.InlinePolicy != "" {
+		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy); err != nil {
+			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
+		}
+	}
+
 	switch entry.Type {
 	case logical.TokenTypeDefault, logical.TokenTypeService:
 		// In case it was default, force to service
@@ -879,11 +903,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 
-		// Update the activity log
-		if ts.activityLog != nil {
-			ts.activityLog.HandleTokenCreation(entry)
-		}
-
 		return ts.storeCommon(ctx, entry, true)
 
 	case logical.TokenTypeBatch:
@@ -891,17 +910,20 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		// encrypt, skip persistence
 		entry.ID = ""
 		pEntry := &pb.TokenEntry{
-			Parent:       entry.Parent,
-			Policies:     entry.Policies,
-			Path:         entry.Path,
-			Meta:         entry.Meta,
-			DisplayName:  entry.DisplayName,
-			CreationTime: entry.CreationTime,
-			TTL:          int64(entry.TTL),
-			Role:         entry.Role,
-			EntityID:     entry.EntityID,
-			NamespaceID:  entry.NamespaceID,
-			Type:         uint32(entry.Type),
+			Parent:             entry.Parent,
+			Policies:           entry.Policies,
+			Path:               entry.Path,
+			Meta:               entry.Meta,
+			DisplayName:        entry.DisplayName,
+			CreationTime:       entry.CreationTime,
+			TTL:                int64(entry.TTL),
+			Role:               entry.Role,
+			EntityID:           entry.EntityID,
+			NamespaceID:        entry.NamespaceID,
+			Type:               uint32(entry.Type),
+			InternalMeta:       entry.InternalMeta,
+			InlinePolicy:       entry.InlinePolicy,
+			NoIdentityPolicies: entry.NoIdentityPolicies,
 		}
 
 		boundCIDRs := make([]string, len(entry.BoundCIDRs))
@@ -925,11 +947,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
-		}
-
-		// Update the activity log
-		if ts.activityLog != nil {
-			ts.activityLog.HandleTokenCreation(entry)
 		}
 
 		return nil
@@ -1323,6 +1340,10 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	switch {
 	// It's any kind of expiring token with no lease, immediately delete it
 	case le == nil:
+		if ts.core.perfStandby {
+			return nil, fmt.Errorf("no lease entry found for token that ought to have one, possible eventual consistency issue")
+		}
+
 		tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, ts.core)
 		if err != nil {
 			return nil, err
@@ -1633,6 +1654,9 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 			saltedNS, err = NamespaceByID(ctx, saltedNSID, ts.core)
 			if err != nil {
 				return fmt.Errorf("failed to find namespace for token revocation: %w", err)
+			}
+			if saltedNS == nil {
+				return errors.New("failed to find namespace for token revocation")
 			}
 
 			saltedCtx = namespace.ContextWithNamespace(ctx, saltedNS)
@@ -2472,7 +2496,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	// and shouldn't be added is kept because we want to do subset comparisons
 	// based on adding default when it's correct to do so.
 	switch {
-	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0):
+	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0 ||
+		len(role.AllowedPoliciesGlob) > 0 || len(role.DisallowedPoliciesGlob) > 0):
 		// Holds the final set of policies as they get munged
 		var finalPolicies []string
 
@@ -2484,7 +2509,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// isn't in the disallowed list, add it. This is in line with the idea
 		// that roles, when allowed/disallowed ar set, allow a subset of
 		// policies to be set disjoint from the parent token's policies.
-		if !data.NoDefaultPolicy && !role.TokenNoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
+		if !data.NoDefaultPolicy && !role.TokenNoDefaultPolicy &&
+			!strutil.StrListContains(role.DisallowedPolicies, "default") &&
+			!strutil.StrListContainsGlob(role.DisallowedPoliciesGlob, "default") {
 			localAddDefault = true
 		}
 
@@ -2493,12 +2520,12 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			finalPolicies = policyutil.SanitizePolicies(data.Policies, localAddDefault)
 		}
 
-		var sanitizedRolePolicies []string
+		var sanitizedRolePolicies, sanitizedRolePoliciesGlob []string
 
 		// First check allowed policies; if policies are specified they will be
 		// checked, otherwise if an allowed set exists that will be the set
 		// that is used
-		if len(role.AllowedPolicies) > 0 {
+		if len(role.AllowedPolicies) > 0 || len(role.AllowedPoliciesGlob) > 0 {
 			// Note that if "default" is already in allowed, and also in
 			// disallowed, this will still result in an error later since this
 			// doesn't strip out default
@@ -2507,8 +2534,13 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			if len(finalPolicies) == 0 {
 				finalPolicies = sanitizedRolePolicies
 			} else {
-				if !strutil.StrListSubset(sanitizedRolePolicies, finalPolicies) {
-					return logical.ErrorResponse(fmt.Sprintf("token policies (%q) must be subset of the role's allowed policies (%q)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+				sanitizedRolePoliciesGlob = policyutil.SanitizePolicies(role.AllowedPoliciesGlob, false)
+
+				for _, finalPolicy := range finalPolicies {
+					if !strutil.StrListContains(sanitizedRolePolicies, finalPolicy) &&
+						!strutil.StrListContainsGlob(sanitizedRolePoliciesGlob, finalPolicy) {
+						return logical.ErrorResponse(fmt.Sprintf("token policies (%q) must be subset of the role's allowed policies (%q) or glob policies (%q)", finalPolicies, sanitizedRolePolicies, sanitizedRolePoliciesGlob)), logical.ErrInvalidRequest
+					}
 				}
 			}
 		} else {
@@ -2519,12 +2551,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			}
 		}
 
-		if len(role.DisallowedPolicies) > 0 {
+		if len(role.DisallowedPolicies) > 0 || len(role.DisallowedPoliciesGlob) > 0 {
 			// We don't add the default here because we only want to disallow it if it's explicitly set
 			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies, true)
+			sanitizedRolePoliciesGlob = strutil.RemoveDuplicates(role.DisallowedPoliciesGlob, true)
 
 			for _, finalPolicy := range finalPolicies {
-				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
+				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) ||
+					strutil.StrListContainsGlob(sanitizedRolePoliciesGlob, finalPolicy) {
 					return logical.ErrorResponse(fmt.Sprintf("token policy %q is disallowed by this role", finalPolicy)), logical.ErrInvalidRequest
 				}
 			}
@@ -3013,7 +3047,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	}
 
 	if out.EntityID != "" {
-		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID)
+		_, identityPolicies, err := ts.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, out.EntityID, out.NoIdentityPolicies)
 		if err != nil {
 			return nil, err
 		}
@@ -3180,18 +3214,21 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 	// TODO (1.4): Remove "period" and "explicit_max_ttl" if they're zero
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"period":                 int64(role.Period.Seconds()),
-			"token_period":           int64(role.TokenPeriod.Seconds()),
-			"explicit_max_ttl":       int64(role.ExplicitMaxTTL.Seconds()),
-			"token_explicit_max_ttl": int64(role.TokenExplicitMaxTTL.Seconds()),
-			"disallowed_policies":    role.DisallowedPolicies,
-			"allowed_policies":       role.AllowedPolicies,
-			"name":                   role.Name,
-			"orphan":                 role.Orphan,
-			"path_suffix":            role.PathSuffix,
-			"renewable":              role.Renewable,
-			"token_type":             role.TokenType.String(),
-			"allowed_entity_aliases": role.AllowedEntityAliases,
+			"period":                   int64(role.Period.Seconds()),
+			"token_period":             int64(role.TokenPeriod.Seconds()),
+			"explicit_max_ttl":         int64(role.ExplicitMaxTTL.Seconds()),
+			"token_explicit_max_ttl":   int64(role.TokenExplicitMaxTTL.Seconds()),
+			"disallowed_policies":      role.DisallowedPolicies,
+			"allowed_policies":         role.AllowedPolicies,
+			"disallowed_policies_glob": role.DisallowedPoliciesGlob,
+			"allowed_policies_glob":    role.AllowedPoliciesGlob,
+			"name":                     role.Name,
+			"orphan":                   role.Orphan,
+			"path_suffix":              role.PathSuffix,
+			"renewable":                role.Renewable,
+			"token_type":               role.TokenType.String(),
+			"allowed_entity_aliases":   role.AllowedEntityAliases,
+			"token_no_default_policy":  role.TokenNoDefaultPolicy,
 		},
 	}
 
@@ -3288,6 +3325,20 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
 		} else if req.Operation == logical.CreateOperation {
 			entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+		}
+
+		allowedPoliciesGlobRaw, ok := data.GetOk("allowed_policies_glob")
+		if ok {
+			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlobRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+		} else if req.Operation == logical.CreateOperation {
+			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(data.Get("allowed_policies_glob").([]string), policyutil.DoNotAddDefaultPolicy)
+		}
+
+		disallowedPoliciesGlobRaw, ok := data.GetOk("disallowed_policies_glob")
+		if ok {
+			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlobRaw.([]string), true)
+		} else if req.Operation == logical.CreateOperation {
+			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(data.Get("disallowed_policies_glob").([]string), true)
 		}
 	}
 
@@ -3776,6 +3827,13 @@ calling token's policies. The parameter is a comma-delimited string of
 policy names.`
 	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
 no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
+	tokenAllowedPoliciesGlobHelp = `If set, tokens can be created with any subset of glob matched policies in this
+list, rather than the normal semantics of tokens being a subset of the
+calling token's policies. The parameter is a comma-delimited string of
+policy name globs.`
+	tokenDisallowedPoliciesGlobHelp = `If set, successful token creation via this role will require that
+no requested policies glob match any of policies in this list.
+The parameter is a comma-delimited string of policy name globs.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role

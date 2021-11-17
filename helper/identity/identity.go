@@ -45,6 +45,16 @@ func (e *Entity) Clone() (*Entity, error) {
 	return &clonedEntity, nil
 }
 
+func (e *Entity) UpsertAlias(alias *Alias) {
+	for i, item := range e.Aliases {
+		if item.ID == alias.ID {
+			e.Aliases[i] = alias
+			return
+		}
+	}
+	e.Aliases = append(e.Aliases, alias)
+}
+
 func (p *Alias) Clone() (*Alias, error) {
 	if p == nil {
 		return nil, fmt.Errorf("nil alias")
@@ -75,12 +85,13 @@ func ToSDKAlias(a *Alias) *logical.Alias {
 	}
 
 	return &logical.Alias{
-		Name:          a.Name,
-		ID:            a.ID,
-		MountAccessor: a.MountAccessor,
-		MountType:     a.MountType,
-		Metadata:      metadata,
-		NamespaceID:   a.NamespaceID,
+		Name:           a.Name,
+		ID:             a.ID,
+		MountAccessor:  a.MountAccessor,
+		MountType:      a.MountType,
+		Metadata:       metadata,
+		NamespaceID:    a.NamespaceID,
+		CustomMetadata: a.CustomMetadata,
 	}
 }
 

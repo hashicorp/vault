@@ -4,3 +4,4 @@ dist/
 pkg
 bin
 tmp
+.idea

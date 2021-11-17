@@ -20,17 +20,18 @@ import (
 	"net/http"
 )
 
-const processesDisksPath = "groups/%s/processes/%s:%d/disks"
+const processesDisksPath = "api/atlas/v1.0/groups/%s/processes/%s:%d/disks"
 
 // ProcessDisksService is an interface for interfacing with the Process Measurements
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/process-disks/
 type ProcessDisksService interface {
 	List(context.Context, string, string, int, *ListOptions) (*ProcessDisksResponse, *Response, error)
 }
 
 // ProcessDisksServiceOp handles communication with the process disks related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type ProcessDisksServiceOp service
 
 var _ ProcessDisksService = &ProcessDisksServiceOp{}
@@ -42,13 +43,14 @@ type ProcessDisksResponse struct {
 	TotalCount int            `json:"totalCount"`
 }
 
-// ProcessDisk is the partition information of a process
+// ProcessDisk is the partition information of a process.
 type ProcessDisk struct {
 	Links         []*Link `json:"links"`
 	PartitionName string  `json:"partitionName"`
 }
 
 // List gets partitions for a specific Atlas MongoDB process.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/process-disks/
 func (s *ProcessDisksServiceOp) List(ctx context.Context, groupID, host string, port int, opts *ListOptions) (*ProcessDisksResponse, *Response, error) {
 	if groupID == "" {

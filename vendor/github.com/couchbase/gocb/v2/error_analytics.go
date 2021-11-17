@@ -1,6 +1,9 @@
 package gocb
 
-import gocbcore "github.com/couchbase/gocbcore/v9"
+import (
+	"encoding/json"
+	gocbcore "github.com/couchbase/gocbcore/v10"
+)
 
 // AnalyticsErrorDesc represents a specific error returned from the analytics service.
 type AnalyticsErrorDesc struct {
@@ -31,9 +34,56 @@ type AnalyticsError struct {
 	RetryAttempts   uint32               `json:"retry_attempts,omitempty"`
 }
 
+// MarshalJSON implements the Marshaler interface.
+
+func (e AnalyticsError) MarshalJSON() ([]byte, error) {
+	var innerError string
+	if e.InnerError != nil {
+		innerError = e.InnerError.Error()
+	}
+	return json.Marshal(struct {
+		InnerError      string               `json:"msg,omitempty"`
+		Statement       string               `json:"statement,omitempty"`
+		ClientContextID string               `json:"client_context_id,omitempty"`
+		Errors          []AnalyticsErrorDesc `json:"errors,omitempty"`
+		Endpoint        string               `json:"endpoint,omitempty"`
+		RetryReasons    []RetryReason        `json:"retry_reasons,omitempty"`
+		RetryAttempts   uint32               `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:      innerError,
+		Statement:       e.Statement,
+		ClientContextID: e.ClientContextID,
+		Errors:          e.Errors,
+		Endpoint:        e.Endpoint,
+		RetryReasons:    e.RetryReasons,
+		RetryAttempts:   e.RetryAttempts,
+	})
+}
+
 // Error returns the string representation of this error.
 func (e AnalyticsError) Error() string {
-	return e.InnerError.Error() + " | " + serializeWrappedError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError      error                `json:"-"`
+		Statement       string               `json:"statement,omitempty"`
+		ClientContextID string               `json:"client_context_id,omitempty"`
+		Errors          []AnalyticsErrorDesc `json:"errors,omitempty"`
+		Endpoint        string               `json:"endpoint,omitempty"`
+		RetryReasons    []RetryReason        `json:"retry_reasons,omitempty"`
+		RetryAttempts   uint32               `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:      e.InnerError,
+		Statement:       e.Statement,
+		ClientContextID: e.ClientContextID,
+		Errors:          e.Errors,
+		Endpoint:        e.Endpoint,
+		RetryReasons:    e.RetryReasons,
+		RetryAttempts:   e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying cause for this error.

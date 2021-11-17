@@ -366,16 +366,15 @@ func (client blobClient) changeLeaseResponder(resp pipeline.Response) (pipeline.
 // only succeeds if the resource's lease is active and matches this ID. requestID is provides a client-generated,
 // opaque value with a 1 KB character limit that is recorded in the analytics logs when storage analytics logging is
 // enabled. sourceContentMD5 is specify the md5 calculated for the range of bytes that must be read from the copy
-// source. blobTagsString is optional.  Used to set blob tags in various blob operations. sealBlob is overrides the
-// sealed state of the destination blob.  Service version 2019-12-12 and newer.
-func (client blobClient) CopyFromURL(ctx context.Context, copySource string, timeout *int32, metadata map[string]string, tier AccessTierType, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, leaseID *string, requestID *string, sourceContentMD5 []byte, blobTagsString *string, sealBlob *bool) (*BlobCopyFromURLResponse, error) {
+// source. blobTagsString is optional.  Used to set blob tags in various blob operations.
+func (client blobClient) CopyFromURL(ctx context.Context, copySource string, timeout *int32, metadata map[string]string, tier AccessTierType, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, leaseID *string, requestID *string, sourceContentMD5 []byte, blobTagsString *string) (*BlobCopyFromURLResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.copyFromURLPreparer(copySource, timeout, metadata, tier, sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatch, sourceIfNoneMatch, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, ifTags, leaseID, requestID, sourceContentMD5, blobTagsString, sealBlob)
+	req, err := client.copyFromURLPreparer(copySource, timeout, metadata, tier, sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatch, sourceIfNoneMatch, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, ifTags, leaseID, requestID, sourceContentMD5, blobTagsString)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +386,7 @@ func (client blobClient) CopyFromURL(ctx context.Context, copySource string, tim
 }
 
 // copyFromURLPreparer prepares the CopyFromURL request.
-func (client blobClient) copyFromURLPreparer(copySource string, timeout *int32, metadata map[string]string, tier AccessTierType, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, leaseID *string, requestID *string, sourceContentMD5 []byte, blobTagsString *string, sealBlob *bool) (pipeline.Request, error) {
+func (client blobClient) copyFromURLPreparer(copySource string, timeout *int32, metadata map[string]string, tier AccessTierType, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, leaseID *string, requestID *string, sourceContentMD5 []byte, blobTagsString *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -445,9 +444,6 @@ func (client blobClient) copyFromURLPreparer(copySource string, timeout *int32, 
 	}
 	if blobTagsString != nil {
 		req.Header.Set("x-ms-tags", *blobTagsString)
-	}
-	if sealBlob != nil {
-		req.Header.Set("x-ms-seal-blob", strconv.FormatBool(*sealBlob))
 	}
 	req.Header.Set("x-ms-requires-sync", "true")
 	return req, nil
@@ -599,15 +595,16 @@ func (client blobClient) createSnapshotResponder(resp pipeline.Response) (pipeli
 // blobs with a matching value. ifNoneMatch is specify an ETag value to operate only on blobs without a matching value.
 // ifTags is specify a SQL where clause on blob tags to operate only on blobs with a matching value. requestID is
 // provides a client-generated, opaque value with a 1 KB character limit that is recorded in the analytics logs when
-// storage analytics logging is enabled.
-func (client blobClient) Delete(ctx context.Context, snapshot *string, versionID *string, timeout *int32, leaseID *string, deleteSnapshots DeleteSnapshotsOptionType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, requestID *string) (*BlobDeleteResponse, error) {
+// storage analytics logging is enabled. blobDeleteType is optional.  Only possible value is 'permanent', which
+// specifies to permanently delete a blob if blob soft delete is enabled.
+func (client blobClient) Delete(ctx context.Context, snapshot *string, versionID *string, timeout *int32, leaseID *string, deleteSnapshots DeleteSnapshotsOptionType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, requestID *string, blobDeleteType BlobDeleteType) (*BlobDeleteResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.deletePreparer(snapshot, versionID, timeout, leaseID, deleteSnapshots, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, ifTags, requestID)
+	req, err := client.deletePreparer(snapshot, versionID, timeout, leaseID, deleteSnapshots, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, ifTags, requestID, blobDeleteType)
 	if err != nil {
 		return nil, err
 	}
@@ -619,7 +616,7 @@ func (client blobClient) Delete(ctx context.Context, snapshot *string, versionID
 }
 
 // deletePreparer prepares the Delete request.
-func (client blobClient) deletePreparer(snapshot *string, versionID *string, timeout *int32, leaseID *string, deleteSnapshots DeleteSnapshotsOptionType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, requestID *string) (pipeline.Request, error) {
+func (client blobClient) deletePreparer(snapshot *string, versionID *string, timeout *int32, leaseID *string, deleteSnapshots DeleteSnapshotsOptionType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, requestID *string, blobDeleteType BlobDeleteType) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("DELETE", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -633,6 +630,9 @@ func (client blobClient) deletePreparer(snapshot *string, versionID *string, tim
 	}
 	if timeout != nil {
 		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	if blobDeleteType != BlobDeleteNone {
+		params.Set("deletetype", string(blobDeleteType))
 	}
 	req.URL.RawQuery = params.Encode()
 	if leaseID != nil {
@@ -1020,15 +1020,16 @@ func (client blobClient) getPropertiesResponder(resp pipeline.Response) (pipelin
 // href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
 // a Snapshot of a Blob.</a> versionID is the version id parameter is an opaque DateTime value that, when present,
 // specifies the version of the blob to operate on. It's for service version 2019-10-10 and newer. ifTags is specify a
-// SQL where clause on blob tags to operate only on blobs with a matching value.
-func (client blobClient) GetTags(ctx context.Context, timeout *int32, requestID *string, snapshot *string, versionID *string, ifTags *string) (*BlobTags, error) {
+// SQL where clause on blob tags to operate only on blobs with a matching value. leaseID is if specified, the operation
+// only succeeds if the resource's lease is active and matches this ID.
+func (client blobClient) GetTags(ctx context.Context, timeout *int32, requestID *string, snapshot *string, versionID *string, ifTags *string, leaseID *string) (*BlobTags, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.getTagsPreparer(timeout, requestID, snapshot, versionID, ifTags)
+	req, err := client.getTagsPreparer(timeout, requestID, snapshot, versionID, ifTags, leaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -1040,7 +1041,7 @@ func (client blobClient) GetTags(ctx context.Context, timeout *int32, requestID 
 }
 
 // getTagsPreparer prepares the GetTags request.
-func (client blobClient) getTagsPreparer(timeout *int32, requestID *string, snapshot *string, versionID *string, ifTags *string) (pipeline.Request, error) {
+func (client blobClient) getTagsPreparer(timeout *int32, requestID *string, snapshot *string, versionID *string, ifTags *string, leaseID *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("GET", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1063,6 +1064,9 @@ func (client blobClient) getTagsPreparer(timeout *int32, requestID *string, snap
 	}
 	if ifTags != nil {
 		req.Header.Set("x-ms-if-tags", *ifTags)
+	}
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
 	}
 	return req, nil
 }
@@ -1092,107 +1096,111 @@ func (client blobClient) getTagsResponder(resp pipeline.Response) (pipeline.Resp
 	return result, nil
 }
 
-// TODO funky quick query code
-//// Query the Query operation enables users to select/project on blob data by providing simple query expressions.
-////
-//// snapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the blob snapshot to
-//// retrieve. For more information on working with blob snapshots, see <a
-//// href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
-//// a Snapshot of a Blob.</a> timeout is the timeout parameter is expressed in seconds. For more information, see <a
-//// href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-//// Timeouts for Blob Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
-//// lease is active and matches this ID. encryptionKey is optional. Specifies the encryption key to use to encrypt the
-//// data provided in the request. If not specified, encryption is performed with the root account encryption key.  For
-//// more information, see Encryption at Rest for Azure Storage Services. encryptionKeySha256 is the SHA-256 hash of the
-//// provided encryption key. Must be provided if the x-ms-encryption-key header is provided. encryptionAlgorithm is the
-//// algorithm used to produce the encryption key hash. Currently, the only accepted value is "AES256". Must be provided
-//// if the x-ms-encryption-key header is provided. ifModifiedSince is specify this header value to operate only on a
-//// blob if it has been modified since the specified date/time. ifUnmodifiedSince is specify this header value to
-//// operate only on a blob if it has not been modified since the specified date/time. ifMatch is specify an ETag value
-//// to operate only on blobs with a matching value. ifNoneMatch is specify an ETag value to operate only on blobs
-//// without a matching value. requestID is provides a client-generated, opaque value with a 1 KB character limit that is
-//// recorded in the analytics logs when storage analytics logging is enabled.
-//func (client blobClient) Query(ctx context.Context, snapshot *string, timeout *int32, leaseID *string, encryptionKey *string, encryptionKeySha256 *string, encryptionAlgorithm EncryptionAlgorithmType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, requestID *string) (*QueryResponse, error) {
-//	if err := validate([]validation{
-//		{targetValue: timeout,
-//			constraints: []constraint{{target: "timeout", name: null, rule: false,
-//				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
-//		return nil, err
-//	}
-//	req, err := client.queryPreparer(snapshot, timeout, leaseID, encryptionKey, encryptionKeySha256, encryptionAlgorithm, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, requestID)
-//	if err != nil {
-//		return nil, err
-//	}
-//	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.queryResponder}, req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return resp.(*QueryResponse), err
-//}
+// todo funky quick query code
+// // Query the Query operation enables users to select/project on blob data by providing simple query expressions.
+// //
+// // snapshot is the snapshot parameter is an opaque DateTime value that, when present, specifies the blob snapshot to
+// // retrieve. For more information on working with blob snapshots, see <a
+// // href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+// // a Snapshot of a Blob.</a> timeout is the timeout parameter is expressed in seconds. For more information, see <a
+// // href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+// // Timeouts for Blob Service Operations.</a> leaseID is if specified, the operation only succeeds if the resource's
+// // lease is active and matches this ID. encryptionKey is optional. Specifies the encryption key to use to encrypt the
+// // data provided in the request. If not specified, encryption is performed with the root account encryption key.  For
+// // more information, see Encryption at Rest for Azure Storage Services. encryptionKeySha256 is the SHA-256 hash of the
+// // provided encryption key. Must be provided if the x-ms-encryption-key header is provided. encryptionAlgorithm is the
+// // algorithm used to produce the encryption key hash. Currently, the only accepted value is "AES256". Must be provided
+// // if the x-ms-encryption-key header is provided. ifModifiedSince is specify this header value to operate only on a
+// // blob if it has been modified since the specified date/time. ifUnmodifiedSince is specify this header value to
+// // operate only on a blob if it has not been modified since the specified date/time. ifMatch is specify an ETag value
+// // to operate only on blobs with a matching value. ifNoneMatch is specify an ETag value to operate only on blobs
+// // without a matching value. ifTags is specify a SQL where clause on blob tags to operate only on blobs with a matching
+// // value. requestID is provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+// // analytics logs when storage analytics logging is enabled.
+// func (client blobClient) Query(ctx context.Context, snapshot *string, timeout *int32, leaseID *string, encryptionKey *string, encryptionKeySha256 *string, encryptionAlgorithm EncryptionAlgorithmType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, requestID *string) (*QueryResponse, error) {
+// 	if err := validate([]validation{
+// 		{targetValue: timeout,
+// 			constraints: []constraint{{target: "timeout", name: null, rule: false,
+// 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+// 		return nil, err
+// 	}
+// 	req, err := client.queryPreparer(snapshot, timeout, leaseID, encryptionKey, encryptionKeySha256, encryptionAlgorithm, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, ifTags, requestID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.queryResponder}, req)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return resp.(*QueryResponse), err
+// }
 //
-//// queryPreparer prepares the Query request.
-//func (client blobClient) queryPreparer(snapshot *string, timeout *int32, leaseID *string, encryptionKey *string, encryptionKeySha256 *string, encryptionAlgorithm EncryptionAlgorithmType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, requestID *string) (pipeline.Request, error) {
-//	req, err := pipeline.NewRequest("POST", client.url, nil)
-//	if err != nil {
-//		return req, pipeline.NewError(err, "failed to create request")
-//	}
-//	params := req.URL.Query()
-//	if snapshot != nil && len(*snapshot) > 0 {
-//		params.Set("snapshot", *snapshot)
-//	}
-//	if timeout != nil {
-//		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
-//	}
-//	params.Set("comp", "query")
-//	req.URL.RawQuery = params.Encode()
-//	if leaseID != nil {
-//		req.Header.Set("x-ms-lease-id", *leaseID)
-//	}
-//	if encryptionKey != nil {
-//		req.Header.Set("x-ms-encryption-key", *encryptionKey)
-//	}
-//	if encryptionKeySha256 != nil {
-//		req.Header.Set("x-ms-encryption-key-sha256", *encryptionKeySha256)
-//	}
-//	if encryptionAlgorithm != EncryptionAlgorithmNone {
-//		req.Header.Set("x-ms-encryption-algorithm", string(encryptionAlgorithm))
-//	}
-//	if ifModifiedSince != nil {
-//		req.Header.Set("If-Modified-Since", (*ifModifiedSince).In(gmt).Format(time.RFC1123))
-//	}
-//	if ifUnmodifiedSince != nil {
-//		req.Header.Set("If-Unmodified-Since", (*ifUnmodifiedSince).In(gmt).Format(time.RFC1123))
-//	}
-//	if ifMatch != nil {
-//		req.Header.Set("If-Match", string(*ifMatch))
-//	}
-//	if ifNoneMatch != nil {
-//		req.Header.Set("If-None-Match", string(*ifNoneMatch))
-//	}
-//	req.Header.Set("x-ms-version", ServiceVersion)
-//	if requestID != nil {
-//		req.Header.Set("x-ms-client-request-id", *requestID)
-//	}
-//	b, err := xml.Marshal(queryRequest)
-//	if err != nil {
-//		return req, pipeline.NewError(err, "failed to marshal request body")
-//	}
-//	req.Header.Set("Content-Type", "application/xml")
-//	err = req.SetBody(bytes.NewReader(b))
-//	if err != nil {
-//		return req, pipeline.NewError(err, "failed to set request body")
-//	}
-//	return req, nil
-//}
+// // queryPreparer prepares the Query request.
+// func (client blobClient) queryPreparer(snapshot *string, timeout *int32, leaseID *string, encryptionKey *string, encryptionKeySha256 *string, encryptionAlgorithm EncryptionAlgorithmType, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, ifTags *string, requestID *string) (pipeline.Request, error) {
+// 	req, err := pipeline.NewRequest("POST", client.url, nil)
+// 	if err != nil {
+// 		return req, pipeline.NewError(err, "failed to create request")
+// 	}
+// 	params := req.URL.Query()
+// 	if snapshot != nil && len(*snapshot) > 0 {
+// 		params.Set("snapshot", *snapshot)
+// 	}
+// 	if timeout != nil {
+// 		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+// 	}
+// 	params.Set("comp", "query")
+// 	req.URL.RawQuery = params.Encode()
+// 	if leaseID != nil {
+// 		req.Header.Set("x-ms-lease-id", *leaseID)
+// 	}
+// 	if encryptionKey != nil {
+// 		req.Header.Set("x-ms-encryption-key", *encryptionKey)
+// 	}
+// 	if encryptionKeySha256 != nil {
+// 		req.Header.Set("x-ms-encryption-key-sha256", *encryptionKeySha256)
+// 	}
+// 	if encryptionAlgorithm != EncryptionAlgorithmNone {
+// 		req.Header.Set("x-ms-encryption-algorithm", string(encryptionAlgorithm))
+// 	}
+// 	if ifModifiedSince != nil {
+// 		req.Header.Set("If-Modified-Since", (*ifModifiedSince).In(gmt).Format(time.RFC1123))
+// 	}
+// 	if ifUnmodifiedSince != nil {
+// 		req.Header.Set("If-Unmodified-Since", (*ifUnmodifiedSince).In(gmt).Format(time.RFC1123))
+// 	}
+// 	if ifMatch != nil {
+// 		req.Header.Set("If-Match", string(*ifMatch))
+// 	}
+// 	if ifNoneMatch != nil {
+// 		req.Header.Set("If-None-Match", string(*ifNoneMatch))
+// 	}
+// 	if ifTags != nil {
+// 		req.Header.Set("x-ms-if-tags", *ifTags)
+// 	}
+// 	req.Header.Set("x-ms-version", ServiceVersion)
+// 	if requestID != nil {
+// 		req.Header.Set("x-ms-client-request-id", *requestID)
+// 	}
+// 	b, err := xml.Marshal(queryRequest)
+// 	if err != nil {
+// 		return req, pipeline.NewError(err, "failed to marshal request body")
+// 	}
+// 	req.Header.Set("Content-Type", "application/xml")
+// 	err = req.SetBody(bytes.NewReader(b))
+// 	if err != nil {
+// 		return req, pipeline.NewError(err, "failed to set request body")
+// 	}
+// 	return req, nil
+// }
 //
-//// queryResponder handles the response to the Query request.
-//func (client blobClient) queryResponder(resp pipeline.Response) (pipeline.Response, error) {
-//	err := validateResponse(resp, http.StatusOK, http.StatusPartialContent)
-//	if resp == nil {
-//		return nil, err
-//	}
-//	return &QueryResponse{rawResponse: resp.Response()}, err
-//}
+// // queryResponder handles the response to the Query request.
+// func (client blobClient) queryResponder(resp pipeline.Response) (pipeline.Response, error) {
+// 	err := validateResponse(resp, http.StatusOK, http.StatusPartialContent)
+// 	if resp == nil {
+// 		return nil, err
+// 	}
+// 	return &QueryResponse{rawResponse: resp.Response()}, err
+// }
 
 // ReleaseLease [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete
 // operations
@@ -1272,146 +1280,145 @@ func (client blobClient) releaseLeaseResponder(resp pipeline.Response) (pipeline
 	return &BlobReleaseLeaseResponse{rawResponse: resp.Response()}, err
 }
 
-// TODO funky rename API
-//// Rename rename a blob/file.  By default, the destination is overwritten and if the destination already exists and has
-//// a lease the lease is broken.  This operation supports conditional HTTP requests.  For more information, see
-//// [Specifying Conditional Headers for Blob Service
-//// Operations](https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations).
-//// To fail if the destination already exists, use a conditional request with If-None-Match: "*".
-////
-//// renameSource is the file or directory to be renamed. The value must have the following format:
-//// "/{filesysystem}/{path}".  If "x-ms-properties" is specified, the properties will overwrite the existing properties;
-//// otherwise, the existing properties will be preserved. timeout is the timeout parameter is expressed in seconds. For
-//// more information, see <a
-//// href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-//// Timeouts for Blob Service Operations.</a> directoryProperties is optional.  User-defined properties to be stored
-//// with the file or directory, in the format of a comma-separated list of name and value pairs "n1=v1, n2=v2, ...",
-//// where each value is base64 encoded. posixPermissions is optional and only valid if Hierarchical Namespace is enabled
-//// for the account. Sets POSIX access permissions for the file owner, the file owning group, and others. Each class may
-//// be granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic (rwxrw-rw-) and
-//// 4-digit octal notation (e.g. 0766) are supported. posixUmask is only valid if Hierarchical Namespace is enabled for
-//// the account. This umask restricts permission settings for file and directory, and will only be applied when default
-//// Acl does not exist in parent directory. If the umask bit has set, it means that the corresponding permission will be
-//// disabled. Otherwise the corresponding permission will be determined by the permission. A 4-digit octal notation
-//// (e.g. 0022) is supported here. If no umask was specified, a default umask - 0027 will be used. cacheControl is cache
-//// control for given resource contentType is content type for given resource contentEncoding is content encoding for
-//// given resource contentLanguage is content language for given resource contentDisposition is content disposition for
-//// given resource leaseID is if specified, the operation only succeeds if the resource's lease is active and matches
-//// this ID. sourceLeaseID is a lease ID for the source path. If specified, the source path must have an active lease
-//// and the lease ID must match. ifModifiedSince is specify this header value to operate only on a blob if it has been
-//// modified since the specified date/time. ifUnmodifiedSince is specify this header value to operate only on a blob if
-//// it has not been modified since the specified date/time. ifMatch is specify an ETag value to operate only on blobs
-//// with a matching value. ifNoneMatch is specify an ETag value to operate only on blobs without a matching value.
-//// sourceIfModifiedSince is specify this header value to operate only on a blob if it has been modified since the
-//// specified date/time. sourceIfUnmodifiedSince is specify this header value to operate only on a blob if it has not
-//// been modified since the specified date/time. sourceIfMatch is specify an ETag value to operate only on blobs with a
-//// matching value. sourceIfNoneMatch is specify an ETag value to operate only on blobs without a matching value.
-//// requestID is provides a client-generated, opaque value with a 1 KB character limit that is recorded in the analytics
-//// logs when storage analytics logging is enabled.
-//func (client blobClient) Rename(ctx context.Context, renameSource string, timeout *int32, directoryProperties *string, posixPermissions *string, posixUmask *string, cacheControl *string, contentType *string, contentEncoding *string, contentLanguage *string, contentDisposition *string, leaseID *string, sourceLeaseID *string, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, requestID *string) (*BlobRenameResponse, error) {
-//	if err := validate([]validation{
-//		{targetValue: timeout,
-//			constraints: []constraint{{target: "timeout", name: null, rule: false,
-//				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
-//		return nil, err
-//	}
-//	req, err := client.renamePreparer(renameSource, timeout, directoryProperties, posixPermissions, posixUmask, cacheControl, contentType, contentEncoding, contentLanguage, contentDisposition, leaseID, sourceLeaseID, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatch, sourceIfNoneMatch, requestID)
-//	if err != nil {
-//		return nil, err
-//	}
-//	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.renameResponder}, req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return resp.(*BlobRenameResponse), err
-//}
+// Rename rename a blob/file.  By default, the destination is overwritten and if the destination already exists and has
+// a lease the lease is broken.  This operation supports conditional HTTP requests.  For more information, see
+// [Specifying Conditional Headers for Blob Service
+// Operations](https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations).
+// To fail if the destination already exists, use a conditional request with If-None-Match: "*".
 //
-//// renamePreparer prepares the Rename request.
-//func (client blobClient) renamePreparer(renameSource string, timeout *int32, directoryProperties *string, posixPermissions *string, posixUmask *string, cacheControl *string, contentType *string, contentEncoding *string, contentLanguage *string, contentDisposition *string, leaseID *string, sourceLeaseID *string, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, requestID *string) (pipeline.Request, error) {
-//	req, err := pipeline.NewRequest("PUT", client.url, nil)
-//	if err != nil {
-//		return req, pipeline.NewError(err, "failed to create request")
-//	}
-//	params := req.URL.Query()
-//	if timeout != nil {
-//		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
-//	}
-//	if pathRenameMode != PathRenameModeNone {
-//		params.Set("mode", string(client.PathRenameMode))
-//	}
-//	req.URL.RawQuery = params.Encode()
-//	req.Header.Set("x-ms-rename-source", renameSource)
-//	if directoryProperties != nil {
-//		req.Header.Set("x-ms-properties", *directoryProperties)
-//	}
-//	if posixPermissions != nil {
-//		req.Header.Set("x-ms-permissions", *posixPermissions)
-//	}
-//	if posixUmask != nil {
-//		req.Header.Set("x-ms-umask", *posixUmask)
-//	}
-//	if cacheControl != nil {
-//		req.Header.Set("x-ms-cache-control", *cacheControl)
-//	}
-//	if contentType != nil {
-//		req.Header.Set("x-ms-content-type", *contentType)
-//	}
-//	if contentEncoding != nil {
-//		req.Header.Set("x-ms-content-encoding", *contentEncoding)
-//	}
-//	if contentLanguage != nil {
-//		req.Header.Set("x-ms-content-language", *contentLanguage)
-//	}
-//	if contentDisposition != nil {
-//		req.Header.Set("x-ms-content-disposition", *contentDisposition)
-//	}
-//	if leaseID != nil {
-//		req.Header.Set("x-ms-lease-id", *leaseID)
-//	}
-//	if sourceLeaseID != nil {
-//		req.Header.Set("x-ms-source-lease-id", *sourceLeaseID)
-//	}
-//	if ifModifiedSince != nil {
-//		req.Header.Set("If-Modified-Since", (*ifModifiedSince).In(gmt).Format(time.RFC1123))
-//	}
-//	if ifUnmodifiedSince != nil {
-//		req.Header.Set("If-Unmodified-Since", (*ifUnmodifiedSince).In(gmt).Format(time.RFC1123))
-//	}
-//	if ifMatch != nil {
-//		req.Header.Set("If-Match", string(*ifMatch))
-//	}
-//	if ifNoneMatch != nil {
-//		req.Header.Set("If-None-Match", string(*ifNoneMatch))
-//	}
-//	if sourceIfModifiedSince != nil {
-//		req.Header.Set("x-ms-source-if-modified-since", (*sourceIfModifiedSince).In(gmt).Format(time.RFC1123))
-//	}
-//	if sourceIfUnmodifiedSince != nil {
-//		req.Header.Set("x-ms-source-if-unmodified-since", (*sourceIfUnmodifiedSince).In(gmt).Format(time.RFC1123))
-//	}
-//	if sourceIfMatch != nil {
-//		req.Header.Set("x-ms-source-if-match", string(*sourceIfMatch))
-//	}
-//	if sourceIfNoneMatch != nil {
-//		req.Header.Set("x-ms-source-if-none-match", string(*sourceIfNoneMatch))
-//	}
-//	req.Header.Set("x-ms-version", ServiceVersion)
-//	if requestID != nil {
-//		req.Header.Set("x-ms-client-request-id", *requestID)
-//	}
-//	return req, nil
-//}
-//
-//// renameResponder handles the response to the Rename request.
-//func (client blobClient) renameResponder(resp pipeline.Response) (pipeline.Response, error) {
-//	err := validateResponse(resp, http.StatusOK, http.StatusCreated)
-//	if resp == nil {
-//		return nil, err
-//	}
-//	io.Copy(ioutil.Discard, resp.Response().Body)
-//	resp.Response().Body.Close()
-//	return &BlobRenameResponse{rawResponse: resp.Response()}, err
-//}
+// renameSource is the file or directory to be renamed. The value must have the following format:
+// "/{filesysystem}/{path}".  If "x-ms-properties" is specified, the properties will overwrite the existing properties;
+// otherwise, the existing properties will be preserved. timeout is the timeout parameter is expressed in seconds. For
+// more information, see <a
+// href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+// Timeouts for Blob Service Operations.</a> directoryProperties is optional.  User-defined properties to be stored
+// with the file or directory, in the format of a comma-separated list of name and value pairs "n1=v1, n2=v2, ...",
+// where each value is base64 encoded. posixPermissions is optional and only valid if Hierarchical Namespace is enabled
+// for the account. Sets POSIX access permissions for the file owner, the file owning group, and others. Each class may
+// be granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic (rwxrw-rw-) and
+// 4-digit octal notation (e.g. 0766) are supported. posixUmask is only valid if Hierarchical Namespace is enabled for
+// the account. This umask restricts permission settings for file and directory, and will only be applied when default
+// Acl does not exist in parent directory. If the umask bit has set, it means that the corresponding permission will be
+// disabled. Otherwise the corresponding permission will be determined by the permission. A 4-digit octal notation
+// (e.g. 0022) is supported here. If no umask was specified, a default umask - 0027 will be used. cacheControl is cache
+// control for given resource contentType is content type for given resource contentEncoding is content encoding for
+// given resource contentLanguage is content language for given resource contentDisposition is content disposition for
+// given resource leaseID is if specified, the operation only succeeds if the resource's lease is active and matches
+// this ID. sourceLeaseID is a lease ID for the source path. If specified, the source path must have an active lease
+// and the lease ID must match. ifModifiedSince is specify this header value to operate only on a blob if it has been
+// modified since the specified date/time. ifUnmodifiedSince is specify this header value to operate only on a blob if
+// it has not been modified since the specified date/time. ifMatch is specify an ETag value to operate only on blobs
+// with a matching value. ifNoneMatch is specify an ETag value to operate only on blobs without a matching value.
+// sourceIfModifiedSince is specify this header value to operate only on a blob if it has been modified since the
+// specified date/time. sourceIfUnmodifiedSince is specify this header value to operate only on a blob if it has not
+// been modified since the specified date/time. sourceIfMatch is specify an ETag value to operate only on blobs with a
+// matching value. sourceIfNoneMatch is specify an ETag value to operate only on blobs without a matching value.
+// requestID is provides a client-generated, opaque value with a 1 KB character limit that is recorded in the analytics
+// logs when storage analytics logging is enabled.
+func (client blobClient) Rename(ctx context.Context, renameSource string, timeout *int32, directoryProperties *string, posixPermissions *string, posixUmask *string, cacheControl *string, contentType *string, contentEncoding *string, contentLanguage *string, contentDisposition *string, leaseID *string, sourceLeaseID *string, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, requestID *string) (*BlobRenameResponse, error) {
+	if err := validate([]validation{
+		{targetValue: timeout,
+			constraints: []constraint{{target: "timeout", name: null, rule: false,
+				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
+		return nil, err
+	}
+	req, err := client.renamePreparer(renameSource, timeout, directoryProperties, posixPermissions, posixUmask, cacheControl, contentType, contentEncoding, contentLanguage, contentDisposition, leaseID, sourceLeaseID, ifModifiedSince, ifUnmodifiedSince, ifMatch, ifNoneMatch, sourceIfModifiedSince, sourceIfUnmodifiedSince, sourceIfMatch, sourceIfNoneMatch, requestID)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Pipeline().Do(ctx, responderPolicyFactory{responder: client.renameResponder}, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*BlobRenameResponse), err
+}
+
+// renamePreparer prepares the Rename request.
+func (client blobClient) renamePreparer(renameSource string, timeout *int32, directoryProperties *string, posixPermissions *string, posixUmask *string, cacheControl *string, contentType *string, contentEncoding *string, contentLanguage *string, contentDisposition *string, leaseID *string, sourceLeaseID *string, ifModifiedSince *time.Time, ifUnmodifiedSince *time.Time, ifMatch *ETag, ifNoneMatch *ETag, sourceIfModifiedSince *time.Time, sourceIfUnmodifiedSince *time.Time, sourceIfMatch *ETag, sourceIfNoneMatch *ETag, requestID *string) (pipeline.Request, error) {
+	req, err := pipeline.NewRequest("PUT", client.url, nil)
+	if err != nil {
+		return req, pipeline.NewError(err, "failed to create request")
+	}
+	params := req.URL.Query()
+	if timeout != nil {
+		params.Set("timeout", strconv.FormatInt(int64(*timeout), 10))
+	}
+	// if pathRenameMode != PathRenameModeNone {
+	// 	params.Set("mode", string(client.PathRenameMode))
+	// }
+	req.URL.RawQuery = params.Encode()
+	req.Header.Set("x-ms-rename-source", renameSource)
+	if directoryProperties != nil {
+		req.Header.Set("x-ms-properties", *directoryProperties)
+	}
+	if posixPermissions != nil {
+		req.Header.Set("x-ms-permissions", *posixPermissions)
+	}
+	if posixUmask != nil {
+		req.Header.Set("x-ms-umask", *posixUmask)
+	}
+	if cacheControl != nil {
+		req.Header.Set("x-ms-cache-control", *cacheControl)
+	}
+	if contentType != nil {
+		req.Header.Set("x-ms-content-type", *contentType)
+	}
+	if contentEncoding != nil {
+		req.Header.Set("x-ms-content-encoding", *contentEncoding)
+	}
+	if contentLanguage != nil {
+		req.Header.Set("x-ms-content-language", *contentLanguage)
+	}
+	if contentDisposition != nil {
+		req.Header.Set("x-ms-content-disposition", *contentDisposition)
+	}
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
+	if sourceLeaseID != nil {
+		req.Header.Set("x-ms-source-lease-id", *sourceLeaseID)
+	}
+	if ifModifiedSince != nil {
+		req.Header.Set("If-Modified-Since", (*ifModifiedSince).In(gmt).Format(time.RFC1123))
+	}
+	if ifUnmodifiedSince != nil {
+		req.Header.Set("If-Unmodified-Since", (*ifUnmodifiedSince).In(gmt).Format(time.RFC1123))
+	}
+	if ifMatch != nil {
+		req.Header.Set("If-Match", string(*ifMatch))
+	}
+	if ifNoneMatch != nil {
+		req.Header.Set("If-None-Match", string(*ifNoneMatch))
+	}
+	if sourceIfModifiedSince != nil {
+		req.Header.Set("x-ms-source-if-modified-since", (*sourceIfModifiedSince).In(gmt).Format(time.RFC1123))
+	}
+	if sourceIfUnmodifiedSince != nil {
+		req.Header.Set("x-ms-source-if-unmodified-since", (*sourceIfUnmodifiedSince).In(gmt).Format(time.RFC1123))
+	}
+	if sourceIfMatch != nil {
+		req.Header.Set("x-ms-source-if-match", string(*sourceIfMatch))
+	}
+	if sourceIfNoneMatch != nil {
+		req.Header.Set("x-ms-source-if-none-match", string(*sourceIfNoneMatch))
+	}
+	req.Header.Set("x-ms-version", ServiceVersion)
+	if requestID != nil {
+		req.Header.Set("x-ms-client-request-id", *requestID)
+	}
+	return req, nil
+}
+
+// renameResponder handles the response to the Rename request.
+func (client blobClient) renameResponder(resp pipeline.Response) (pipeline.Response, error) {
+	err := validateResponse(resp, http.StatusOK, http.StatusCreated)
+	if resp == nil {
+		return nil, err
+	}
+	io.Copy(ioutil.Discard, resp.Response().Body)
+	resp.Response().Body.Close()
+	return &BlobRenameResponse{rawResponse: resp.Response()}, err
+}
 
 // RenewLease [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete
 // operations
@@ -1866,15 +1873,16 @@ func (client blobClient) setMetadataResponder(resp pipeline.Response) (pipeline.
 // transactionalContentCrc64 is specify the transactional crc64 for the body, to be validated by the service. requestID
 // is provides a client-generated, opaque value with a 1 KB character limit that is recorded in the analytics logs when
 // storage analytics logging is enabled. ifTags is specify a SQL where clause on blob tags to operate only on blobs
-// with a matching value. tags is blob tags
-func (client blobClient) SetTags(ctx context.Context, timeout *int32, versionID *string, transactionalContentMD5 []byte, transactionalContentCrc64 []byte, requestID *string, ifTags *string, tags *BlobTags) (*BlobSetTagsResponse, error) {
+// with a matching value. leaseID is if specified, the operation only succeeds if the resource's lease is active and
+// matches this ID. tags is blob tags
+func (client blobClient) SetTags(ctx context.Context, timeout *int32, versionID *string, transactionalContentMD5 []byte, transactionalContentCrc64 []byte, requestID *string, ifTags *string, leaseID *string, tags *BlobTags) (*BlobSetTagsResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setTagsPreparer(timeout, versionID, transactionalContentMD5, transactionalContentCrc64, requestID, ifTags, tags)
+	req, err := client.setTagsPreparer(timeout, versionID, transactionalContentMD5, transactionalContentCrc64, requestID, ifTags, leaseID, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1886,7 +1894,7 @@ func (client blobClient) SetTags(ctx context.Context, timeout *int32, versionID 
 }
 
 // setTagsPreparer prepares the SetTags request.
-func (client blobClient) setTagsPreparer(timeout *int32, versionID *string, transactionalContentMD5 []byte, transactionalContentCrc64 []byte, requestID *string, ifTags *string, tags *BlobTags) (pipeline.Request, error) {
+func (client blobClient) setTagsPreparer(timeout *int32, versionID *string, transactionalContentMD5 []byte, transactionalContentCrc64 []byte, requestID *string, ifTags *string, leaseID *string, tags *BlobTags) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1912,6 +1920,9 @@ func (client blobClient) setTagsPreparer(timeout *int32, versionID *string, tran
 	}
 	if ifTags != nil {
 		req.Header.Set("x-ms-if-tags", *ifTags)
+	}
+	if leaseID != nil {
+		req.Header.Set("x-ms-lease-id", *leaseID)
 	}
 	b, err := xml.Marshal(tags)
 	if err != nil {
@@ -1952,15 +1963,16 @@ func (client blobClient) setTagsResponder(resp pipeline.Response) (pipeline.Resp
 // Timeouts for Blob Service Operations.</a> rehydratePriority is optional: Indicates the priority with which to
 // rehydrate an archived blob. requestID is provides a client-generated, opaque value with a 1 KB character limit that
 // is recorded in the analytics logs when storage analytics logging is enabled. leaseID is if specified, the operation
-// only succeeds if the resource's lease is active and matches this ID.
-func (client blobClient) SetTier(ctx context.Context, tier AccessTierType, snapshot *string, versionID *string, timeout *int32, rehydratePriority RehydratePriorityType, requestID *string, leaseID *string) (*BlobSetTierResponse, error) {
+// only succeeds if the resource's lease is active and matches this ID. ifTags is specify a SQL where clause on blob
+// tags to operate only on blobs with a matching value.
+func (client blobClient) SetTier(ctx context.Context, tier AccessTierType, snapshot *string, versionID *string, timeout *int32, rehydratePriority RehydratePriorityType, requestID *string, leaseID *string, ifTags *string) (*BlobSetTierResponse, error) {
 	if err := validate([]validation{
 		{targetValue: timeout,
 			constraints: []constraint{{target: "timeout", name: null, rule: false,
 				chain: []constraint{{target: "timeout", name: inclusiveMinimum, rule: 0, chain: nil}}}}}}); err != nil {
 		return nil, err
 	}
-	req, err := client.setTierPreparer(tier, snapshot, versionID, timeout, rehydratePriority, requestID, leaseID)
+	req, err := client.setTierPreparer(tier, snapshot, versionID, timeout, rehydratePriority, requestID, leaseID, ifTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1972,7 +1984,7 @@ func (client blobClient) SetTier(ctx context.Context, tier AccessTierType, snaps
 }
 
 // setTierPreparer prepares the SetTier request.
-func (client blobClient) setTierPreparer(tier AccessTierType, snapshot *string, versionID *string, timeout *int32, rehydratePriority RehydratePriorityType, requestID *string, leaseID *string) (pipeline.Request, error) {
+func (client blobClient) setTierPreparer(tier AccessTierType, snapshot *string, versionID *string, timeout *int32, rehydratePriority RehydratePriorityType, requestID *string, leaseID *string, ifTags *string) (pipeline.Request, error) {
 	req, err := pipeline.NewRequest("PUT", client.url, nil)
 	if err != nil {
 		return req, pipeline.NewError(err, "failed to create request")
@@ -1999,6 +2011,9 @@ func (client blobClient) setTierPreparer(tier AccessTierType, snapshot *string, 
 	}
 	if leaseID != nil {
 		req.Header.Set("x-ms-lease-id", *leaseID)
+	}
+	if ifTags != nil {
+		req.Header.Set("x-ms-if-tags", *ifTags)
 	}
 	return req, nil
 }

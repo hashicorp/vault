@@ -1,7 +1,6 @@
 package messages
 
 import (
-	"crypto/rand"
 	"fmt"
 	"log"
 	"time"
@@ -60,13 +59,11 @@ func NewTicket(cname types.PrincipalName, crealm string, sname types.PrincipalNa
 	if err != nil {
 		return Ticket{}, types.EncryptionKey{}, krberror.Errorf(err, krberror.EncryptingError, "error getting etype for new ticket")
 	}
-	ks := etype.GetKeyByteSize()
-	kv := make([]byte, ks, ks)
-	rand.Read(kv)
-	sessionKey := types.EncryptionKey{
-		KeyType:  eTypeID,
-		KeyValue: kv,
+	sessionKey, err := types.GenerateEncryptionKey(etype)
+	if err != nil {
+		return Ticket{}, types.EncryptionKey{}, krberror.Errorf(err, krberror.EncryptingError, "error generating session key")
 	}
+
 	etp := EncTicketPart{
 		Flags:     flags,
 		Key:       sessionKey,

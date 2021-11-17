@@ -34,6 +34,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+var newKeyManagementClientHook clientHook
+
 // KeyManagementCallOptions contains the retry settings for each method of KeyManagementClient.
 type KeyManagementCallOptions struct {
 	ListKeyRings                  []gax.CallOption
@@ -386,7 +388,17 @@ type KeyManagementClient struct {
 // If you are using manual gRPC libraries, see
 // Using gRPC with Cloud KMS (at https://cloud.google.com/kms/docs/grpc).
 func NewKeyManagementClient(ctx context.Context, opts ...option.ClientOption) (*KeyManagementClient, error) {
-	connPool, err := gtransport.DialPool(ctx, append(defaultKeyManagementClientOptions(), opts...)...)
+	clientOpts := defaultKeyManagementClientOptions()
+
+	if newKeyManagementClientHook != nil {
+		hookOpts, err := newKeyManagementClientHook(ctx, clientHookParams{})
+		if err != nil {
+			return nil, err
+		}
+		clientOpts = append(clientOpts, hookOpts...)
+	}
+
+	connPool, err := gtransport.DialPool(ctx, append(clientOpts, opts...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +460,7 @@ func (c *KeyManagementClient) ListKeyRings(ctx context.Context, req *kmspb.ListK
 		}
 
 		it.Response = resp
-		return resp.KeyRings, resp.NextPageToken, nil
+		return resp.GetKeyRings(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -459,8 +471,8 @@ func (c *KeyManagementClient) ListKeyRings(ctx context.Context, req *kmspb.ListK
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
@@ -489,7 +501,7 @@ func (c *KeyManagementClient) ListCryptoKeys(ctx context.Context, req *kmspb.Lis
 		}
 
 		it.Response = resp
-		return resp.CryptoKeys, resp.NextPageToken, nil
+		return resp.GetCryptoKeys(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -500,8 +512,8 @@ func (c *KeyManagementClient) ListCryptoKeys(ctx context.Context, req *kmspb.Lis
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
@@ -530,7 +542,7 @@ func (c *KeyManagementClient) ListCryptoKeyVersions(ctx context.Context, req *km
 		}
 
 		it.Response = resp
-		return resp.CryptoKeyVersions, resp.NextPageToken, nil
+		return resp.GetCryptoKeyVersions(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -541,8 +553,8 @@ func (c *KeyManagementClient) ListCryptoKeyVersions(ctx context.Context, req *km
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 
@@ -571,7 +583,7 @@ func (c *KeyManagementClient) ListImportJobs(ctx context.Context, req *kmspb.Lis
 		}
 
 		it.Response = resp
-		return resp.ImportJobs, resp.NextPageToken, nil
+		return resp.GetImportJobs(), resp.GetNextPageToken(), nil
 	}
 	fetch := func(pageSize int, pageToken string) (string, error) {
 		items, nextPageToken, err := it.InternalFetch(pageSize, pageToken)
@@ -582,8 +594,8 @@ func (c *KeyManagementClient) ListImportJobs(ctx context.Context, req *kmspb.Lis
 		return nextPageToken, nil
 	}
 	it.pageInfo, it.nextFunc = iterator.NewPageInfo(fetch, it.bufLen, it.takeBuf)
-	it.pageInfo.MaxSize = int(req.PageSize)
-	it.pageInfo.Token = req.PageToken
+	it.pageInfo.MaxSize = int(req.GetPageSize())
+	it.pageInfo.Token = req.GetPageToken()
 	return it
 }
 

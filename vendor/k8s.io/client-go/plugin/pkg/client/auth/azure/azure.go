@@ -28,7 +28,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"k8s.io/apimachinery/pkg/util/net"
 	restclient "k8s.io/client-go/rest"
@@ -84,7 +84,16 @@ func (c *azureTokenCache) setToken(tokenKey string, token *azureToken) {
 	c.cache[tokenKey] = token
 }
 
+var warnOnce sync.Once
+
 func newAzureAuthProvider(_ string, cfg map[string]string, persister restclient.AuthProviderConfigPersister) (restclient.AuthProvider, error) {
+	// deprecated in v1.22, remove in v1.25
+	// this should be updated to use klog.Warningf in v1.24 to more actively warn consumers
+	warnOnce.Do(func() {
+		klog.V(1).Infof(`WARNING: the azure auth plugin is deprecated in v1.22+, unavailable in v1.25+; use https://github.com/Azure/kubelogin instead.
+To learn more, consult https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`)
+	})
+
 	var (
 		ts          tokenSource
 		environment azure.Environment
@@ -180,6 +189,7 @@ type azureToken struct {
 
 type tokenSource interface {
 	Token() (*azureToken, error)
+	Refresh(*azureToken) (*azureToken, error)
 }
 
 type azureTokenSource struct {
@@ -210,33 +220,66 @@ func (ts *azureTokenSource) Token() (*azureToken, error) {
 
 	var err error
 	token := ts.cache.getToken(azureTokenKey)
+
+	if token != nil && !token.token.IsExpired() {
+		return token, nil
+	}
+
+	// retrieve from config if no cache
 	if token == nil {
-		token, err = ts.retrieveTokenFromCfg()
-		if err != nil {
-			token, err = ts.source.Token()
-			if err != nil {
-				return nil, fmt.Errorf("acquiring a new fresh token: %v", err)
-			}
+		tokenFromCfg, err := ts.retrieveTokenFromCfg()
+
+		if err == nil {
+			token = tokenFromCfg
 		}
+	}
+
+	if token != nil {
+		// cache and return if the token is as good
+		// avoids frequent persistor calls
 		if !token.token.IsExpired() {
 			ts.cache.setToken(azureTokenKey, token)
-			err = ts.storeTokenInCfg(token)
-			if err != nil {
-				return nil, fmt.Errorf("storing the token in configuration: %v", err)
-			}
+			return token, nil
+		}
+
+		klog.V(4).Info("Refreshing token.")
+		tokenFromRefresh, err := ts.Refresh(token)
+		switch {
+		case err == nil:
+			token = tokenFromRefresh
+		case autorest.IsTokenRefreshError(err):
+			klog.V(4).Infof("Failed to refresh expired token, proceed to auth: %v", err)
+			// reset token to nil so that the token source will be used to acquire new
+			token = nil
+		default:
+			return nil, fmt.Errorf("unexpected error when refreshing token: %v", err)
 		}
 	}
+
+	if token == nil {
+		tokenFromSource, err := ts.source.Token()
+		if err != nil {
+			return nil, fmt.Errorf("failed acquiring new token: %v", err)
+		}
+		token = tokenFromSource
+	}
+
+	// sanity check
+	if token == nil {
+		return nil, fmt.Errorf("unable to acquire token")
+	}
+
+	// corner condition, newly got token is valid but expired
 	if token.token.IsExpired() {
-		token, err = ts.refreshToken(token)
-		if err != nil {
-			return nil, fmt.Errorf("refreshing the expired token: %v", err)
-		}
-		ts.cache.setToken(azureTokenKey, token)
-		err = ts.storeTokenInCfg(token)
-		if err != nil {
-			return nil, fmt.Errorf("storing the refreshed token in configuration: %v", err)
-		}
+		return nil, fmt.Errorf("newly acquired token is expired")
 	}
+
+	err = ts.storeTokenInCfg(token)
+	if err != nil {
+		return nil, fmt.Errorf("storing the refreshed token in configuration: %v", err)
+	}
+	ts.cache.setToken(azureTokenKey, token)
+
 	return token, nil
 }
 
@@ -315,7 +358,12 @@ func (ts *azureTokenSource) storeTokenInCfg(token *azureToken) error {
 	return nil
 }
 
-func (ts *azureTokenSource) refreshToken(token *azureToken) (*azureToken, error) {
+func (ts *azureTokenSource) Refresh(token *azureToken) (*azureToken, error) {
+	return ts.source.Refresh(token)
+}
+
+// refresh outdated token with adal.
+func (ts *azureTokenSourceDeviceCode) Refresh(token *azureToken) (*azureToken, error) {
 	env, err := azure.EnvironmentFromName(token.environment)
 	if err != nil {
 		return nil, err
@@ -348,7 +396,8 @@ func (ts *azureTokenSource) refreshToken(token *azureToken) (*azureToken, error)
 	}
 
 	if err := spt.Refresh(); err != nil {
-		return nil, fmt.Errorf("refreshing token: %v", err)
+		// Caller expects IsTokenRefreshError(err) to trigger prompt.
+		return nil, fmt.Errorf("refreshing token: %w", err)
 	}
 
 	return &azureToken{

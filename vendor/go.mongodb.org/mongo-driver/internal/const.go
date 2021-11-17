@@ -8,3 +8,8 @@ package internal // import "go.mongodb.org/mongo-driver/internal"
 
 // Version is the current version of the driver.
 var Version = "local build"
+
+// SetMockServiceID enables a mode in which the driver mocks server support for returning a "serviceId" field in "hello"
+// command responses by using the value of "topologyVersion.processId".  This is used for testing load balancer support
+// until an upstream service can support running behind a load balancer.
+var SetMockServiceID = false

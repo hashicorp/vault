@@ -1,8 +1,10 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -100,7 +102,8 @@ type ViewIndexManager struct {
 	mgmtProvider mgmtProvider
 	bucketName   string
 
-	tracer requestTracer
+	tracer RequestTracer
+	meter  *meterWrapper
 }
 
 func (vm *ViewIndexManager) tryParseErrorMessage(req mgmtRequest, resp *mgmtResponse) error {
@@ -141,8 +144,8 @@ func (vm *ViewIndexManager) tryParseErrorMessage(req mgmtRequest, resp *mgmtResp
 	return makeGenericMgmtError(bodyErr, &req, resp)
 }
 
-func (vm *ViewIndexManager) doMgmtRequest(req mgmtRequest) (*mgmtResponse, error) {
-	resp, err := vm.mgmtProvider.executeMgmtRequest(req)
+func (vm *ViewIndexManager) doMgmtRequest(ctx context.Context, req mgmtRequest) (*mgmtResponse, error) {
+	resp, err := vm.mgmtProvider.executeMgmtRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +157,12 @@ func (vm *ViewIndexManager) doMgmtRequest(req mgmtRequest) (*mgmtResponse, error
 type GetDesignDocumentOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 func (vm *ViewIndexManager) ddocName(name string, namespace DesignDocumentNamespace) string {
@@ -176,16 +185,21 @@ func (vm *ViewIndexManager) GetDesignDocument(name string, namespace DesignDocum
 		opts = &GetDesignDocumentOptions{}
 	}
 
-	span := vm.tracer.StartSpan("GetDesignDocument", nil).SetTag("couchbase.service", "view")
-	defer span.Finish()
+	start := time.Now()
+	defer vm.meter.ValueRecord(meterValueServiceManagement, "manager_views_get_design_document", start)
 
-	return vm.getDesignDocument(span.Context(), name, namespace, time.Now(), opts)
+	return vm.getDesignDocument(name, namespace, time.Now(), opts)
 }
 
-func (vm *ViewIndexManager) getDesignDocument(tracectx requestSpanContext, name string, namespace DesignDocumentNamespace,
+func (vm *ViewIndexManager) getDesignDocument(name string, namespace DesignDocumentNamespace,
 	startTime time.Time, opts *GetDesignDocumentOptions) (*DesignDocument, error) {
 
 	name = vm.ddocName(name, namespace)
+
+	span := createSpan(vm.tracer, opts.ParentSpan, "manager_views_get_design_document", "management")
+	span.SetAttribute("db.operation", "GET "+fmt.Sprintf("/_design/%s", name))
+	span.SetAttribute("db.name", vm.bucketName)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeViews,
@@ -194,9 +208,10 @@ func (vm *ViewIndexManager) getDesignDocument(tracectx requestSpanContext, name 
 		IsIdempotent:  true,
 		RetryStrategy: opts.RetryStrategy,
 		Timeout:       opts.Timeout,
-		parentSpan:    tracectx,
+		parentSpanCtx: span.Context(),
+		UniqueID:      uuid.New().String(),
 	}
-	resp, err := vm.doMgmtRequest(req)
+	resp, err := vm.doMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +248,12 @@ func (vm *ViewIndexManager) getDesignDocument(tracectx requestSpanContext, name 
 type GetAllDesignDocumentsOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetAllDesignDocuments will retrieve all design documents for the given bucket.
@@ -241,19 +262,26 @@ func (vm *ViewIndexManager) GetAllDesignDocuments(namespace DesignDocumentNamesp
 		opts = &GetAllDesignDocumentsOptions{}
 	}
 
-	span := vm.tracer.StartSpan("GetAllDesignDocuments", nil).SetTag("couchbase.service", "view")
-	defer span.Finish()
+	start := time.Now()
+	defer vm.meter.ValueRecord(meterValueServiceManagement, "manager_views_get_all_design_documents", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/ddocs", vm.bucketName)
+	span := createSpan(vm.tracer, opts.ParentSpan, "manager_views_get_all_design_documents", "management")
+	span.SetAttribute("db.operation", "GET "+path)
+	span.SetAttribute("db.name", vm.bucketName)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/ddocs", vm.bucketName),
+		Path:          path,
 		Method:        "GET",
 		IsIdempotent:  true,
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
+		UniqueID:      uuid.New().String(),
 	}
-	resp, err := vm.doMgmtRequest(req)
+	resp, err := vm.doMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, err
 	}
@@ -284,14 +312,35 @@ func (vm *ViewIndexManager) GetAllDesignDocuments(namespace DesignDocumentNamesp
 		return nil, err
 	}
 
-	ddocs := make([]DesignDocument, len(ddocsResp.Rows))
-	for ddocIdx, ddocData := range ddocsResp.Rows {
-		ddocName := strings.TrimPrefix(ddocData.Doc.Meta.ID[8:], "dev_")
+	var ddocs []DesignDocument
+	for _, ddocData := range ddocsResp.Rows {
+		if len(ddocData.Doc.Meta.ID) <= 8 {
+			logErrorf("Design document name was less than 9 characters long: %s", ddocData.Doc.Meta.ID)
+			continue
+		}
+		ddocName := ddocData.Doc.Meta.ID[8:]
+		isDevDoc := strings.HasPrefix(ddocName, "dev_")
+		switch namespace {
+		case DesignDocumentNamespaceProduction:
+			if isDevDoc {
+				continue
+			}
+		case DesignDocumentNamespaceDevelopment:
+			if !isDevDoc {
+				continue
+			}
 
-		err := ddocs[ddocIdx].fromData(ddocData.Doc.JSON, ddocName)
+			ddocName = strings.TrimPrefix(ddocName, "dev_")
+		default:
+			return nil, makeInvalidArgumentsError("design document namespace unknown")
+		}
+
+		var ddoc DesignDocument
+		err := ddoc.fromData(ddocData.Doc.JSON, ddocName)
 		if err != nil {
 			return nil, err
 		}
+		ddocs = append(ddocs, ddoc)
 	}
 
 	return ddocs, nil
@@ -301,6 +350,12 @@ func (vm *ViewIndexManager) GetAllDesignDocuments(namespace DesignDocumentNamesp
 type UpsertDesignDocumentOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // UpsertDesignDocument will insert a design document to the given bucket, or update
@@ -310,14 +365,13 @@ func (vm *ViewIndexManager) UpsertDesignDocument(ddoc DesignDocument, namespace 
 		opts = &UpsertDesignDocumentOptions{}
 	}
 
-	span := vm.tracer.StartSpan("UpsertDesignDocument", nil).SetTag("couchbase.service", "view")
-	defer span.Finish()
+	start := time.Now()
+	defer vm.meter.ValueRecord(meterValueServiceManagement, "manager_views_upsert_design_document", start)
 
-	return vm.upsertDesignDocument(span.Context(), ddoc, namespace, time.Now(), opts)
+	return vm.upsertDesignDocument(ddoc, namespace, time.Now(), opts)
 }
 
 func (vm *ViewIndexManager) upsertDesignDocument(
-	tracectx requestSpanContext,
 	ddoc DesignDocument,
 	namespace DesignDocumentNamespace,
 	startTime time.Time,
@@ -328,14 +382,19 @@ func (vm *ViewIndexManager) upsertDesignDocument(
 		return err
 	}
 
-	espan := vm.tracer.StartSpan("encode", tracectx)
+	ddocName = vm.ddocName(ddocName, namespace)
+
+	span := createSpan(vm.tracer, opts.ParentSpan, "manager_views_upsert_design_document", "management")
+	span.SetAttribute("db.operation", "PUT "+fmt.Sprintf("/_design/%s", ddocName))
+	span.SetAttribute("db.name", vm.bucketName)
+	defer span.End()
+
+	espan := createSpan(vm.tracer, span, "request_encoding", "")
 	data, err := json.Marshal(&ddocData)
-	espan.Finish()
+	espan.End()
 	if err != nil {
 		return err
 	}
-
-	ddocName = vm.ddocName(ddocName, namespace)
 
 	req := mgmtRequest{
 		Service:       ServiceTypeViews,
@@ -344,9 +403,10 @@ func (vm *ViewIndexManager) upsertDesignDocument(
 		Body:          data,
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
-		parentSpan:    tracectx,
+		parentSpanCtx: span.Context(),
+		UniqueID:      uuid.New().String(),
 	}
-	resp, err := vm.doMgmtRequest(req)
+	resp, err := vm.doMgmtRequest(opts.Context, req)
 	if err != nil {
 		return err
 	}
@@ -368,6 +428,12 @@ func (vm *ViewIndexManager) upsertDesignDocument(
 type DropDesignDocumentOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropDesignDocument will remove a design document from the given bucket.
@@ -376,13 +442,18 @@ func (vm *ViewIndexManager) DropDesignDocument(name string, namespace DesignDocu
 		opts = &DropDesignDocumentOptions{}
 	}
 
-	span := vm.tracer.StartSpan("DropDesignDocument", nil).SetTag("couchbase.service", "view")
-	defer span.Finish()
+	start := time.Now()
+	defer vm.meter.ValueRecord(meterValueServiceManagement, "manager_views_drop_design_document", start)
+
+	span := createSpan(vm.tracer, opts.ParentSpan, "manager_views_drop_design_document", "management")
+	span.SetAttribute("db.operation", "DELETE "+fmt.Sprintf("/_design/%s", name))
+	span.SetAttribute("db.name", vm.bucketName)
+	defer span.End()
 
 	return vm.dropDesignDocument(span.Context(), name, namespace, time.Now(), opts)
 }
 
-func (vm *ViewIndexManager) dropDesignDocument(tracectx requestSpanContext, name string, namespace DesignDocumentNamespace,
+func (vm *ViewIndexManager) dropDesignDocument(tracectx RequestSpanContext, name string, namespace DesignDocumentNamespace,
 	startTime time.Time, opts *DropDesignDocumentOptions) error {
 
 	name = vm.ddocName(name, namespace)
@@ -393,9 +464,10 @@ func (vm *ViewIndexManager) dropDesignDocument(tracectx requestSpanContext, name
 		Method:        "DELETE",
 		Timeout:       opts.Timeout,
 		RetryStrategy: opts.RetryStrategy,
-		parentSpan:    tracectx,
+		parentSpanCtx: tracectx,
+		UniqueID:      uuid.New().String(),
 	}
-	resp, err := vm.doMgmtRequest(req)
+	resp, err := vm.doMgmtRequest(opts.Context, req)
 	if err != nil {
 		return err
 	}
@@ -417,6 +489,12 @@ func (vm *ViewIndexManager) dropDesignDocument(tracectx requestSpanContext, name
 type PublishDesignDocumentOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // PublishDesignDocument publishes a design document to the given bucket.
@@ -426,31 +504,36 @@ func (vm *ViewIndexManager) PublishDesignDocument(name string, opts *PublishDesi
 		opts = &PublishDesignDocumentOptions{}
 	}
 
-	span := vm.tracer.StartSpan("PublishDesignDocument", nil).
-		SetTag("couchbase.service", "view")
-	defer span.Finish()
+	start := time.Now()
+	defer vm.meter.ValueRecord(meterValueServiceManagement, "manager_views_publish_design_document", start)
+
+	span := createSpan(vm.tracer, opts.ParentSpan, "manager_views_publish_design_document", "management")
+	span.SetAttribute("db.name", vm.bucketName)
+	defer span.End()
 
 	devdoc, err := vm.getDesignDocument(
-		span.Context(),
 		name,
 		DesignDocumentNamespaceDevelopment,
 		startTime,
 		&GetDesignDocumentOptions{
 			RetryStrategy: opts.RetryStrategy,
 			Timeout:       opts.Timeout,
+			ParentSpan:    span,
+			Context:       opts.Context,
 		})
 	if err != nil {
 		return err
 	}
 
 	err = vm.upsertDesignDocument(
-		span.Context(),
 		*devdoc,
 		DesignDocumentNamespaceProduction,
 		startTime,
 		&UpsertDesignDocumentOptions{
 			RetryStrategy: opts.RetryStrategy,
 			Timeout:       opts.Timeout,
+			ParentSpan:    span,
+			Context:       opts.Context,
 		})
 	if err != nil {
 		return err

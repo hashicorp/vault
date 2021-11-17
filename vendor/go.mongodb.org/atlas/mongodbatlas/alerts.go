@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const alertPath = "groups/%s/alerts"
+const alertPath = "api/atlas/v1.0/groups/%s/alerts"
 
 // AlertsService is an interface for interfacing with the Alerts
 // endpoints of the MongoDB Atlas API.
@@ -32,7 +32,7 @@ type AlertsService interface {
 	Acknowledge(context.Context, string, string, *AcknowledgeRequest) (*Alert, *Response, error)
 }
 
-// AlertsServiceOp provides an implementation of AlertsService
+// AlertsServiceOp provides an implementation of AlertsService.
 type AlertsServiceOp service
 
 var _ AlertsService = &AlertsServiceOp{}
@@ -62,7 +62,7 @@ type Alert struct {
 	Notifications          []Notification   `json:"notifications,omitempty"`          // Notifications are sending when an alert condition is detected.
 }
 
-// AcknowledgeRequest contains the request Body Parameters
+// AcknowledgeRequest contains the request Body Parameters.
 type AcknowledgeRequest struct {
 	AcknowledgedUntil      *string `json:"acknowledgedUntil,omitempty"`      // The date through which the alert has been acknowledged. Will not be present if the alert has never been acknowledged.
 	AcknowledgementComment string  `json:"acknowledgementComment,omitempty"` // The comment left by the user who acknowledged the alert. Will not be present if the alert has never been acknowledged.

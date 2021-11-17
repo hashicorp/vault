@@ -70,6 +70,8 @@ type ConnString struct {
 	Hosts                              []string
 	J                                  bool
 	JSet                               bool
+	LoadBalanced                       bool
+	LoadBalancedSet                    bool
 	LocalThreshold                     time.Duration
 	LocalThresholdSet                  bool
 	MaxConnIdleTime                    time.Duration
@@ -115,6 +117,7 @@ type ConnString struct {
 	WNumber                            int
 	WNumberSet                         bool
 	Username                           string
+	UsernameSet                        bool
 	ZlibLevel                          int
 	ZlibLevelSet                       bool
 	ZstdLevel                          int
@@ -137,7 +140,7 @@ func (u *ConnString) String() string {
 func (u *ConnString) HasAuthParameters() bool {
 	// Check all auth parameters except for AuthSource because an auth source without other credentials is semantically
 	// valid and must not be interpreted as a request for authentication.
-	return u.AuthMechanism != "" || u.AuthMechanismProperties != nil || u.Username != "" || u.PasswordSet
+	return u.AuthMechanism != "" || u.AuthMechanismProperties != nil || u.UsernameSet || u.PasswordSet
 }
 
 // Validate checks that the Auth and SSL parameters are valid values.
@@ -224,6 +227,7 @@ func (p *parser) parse(original string) error {
 		if err != nil {
 			return internal.WrapErrorf(err, "invalid username")
 		}
+		p.UsernameSet = true
 
 		// Validate and process the password.
 		if strings.Contains(password, ":") {
@@ -336,12 +340,31 @@ func (p *parser) validate() error {
 		if p.Scheme == SchemeMongoDBSRV {
 			return errors.New("a direct connection cannot be made if an SRV URI is used")
 		}
+		if p.LoadBalancedSet && p.LoadBalanced {
+			return internal.ErrLoadBalancedWithDirectConnection
+		}
+	}
+
+	// Validation for load-balanced mode.
+	if p.LoadBalancedSet && p.LoadBalanced {
+		if len(p.Hosts) > 1 {
+			return internal.ErrLoadBalancedWithMultipleHosts
+		}
+		if p.ReplicaSet != "" {
+			return internal.ErrLoadBalancedWithReplicaSet
+		}
 	}
 
 	return nil
 }
 
 func (p *parser) setDefaultAuthParams(dbName string) error {
+	// We do this check here rather than in validateAuth because this function is called as part of parsing and sets
+	// the value of AuthSource if authentication is enabled.
+	if p.AuthSourceSet && p.AuthSource == "" {
+		return errors.New("authSource must be non-empty when supplied in a URI")
+	}
+
 	switch strings.ToLower(p.AuthMechanism) {
 	case "plain":
 		if p.AuthSource == "" {
@@ -466,6 +489,9 @@ func (p *parser) validateAuth() error {
 			return fmt.Errorf("SCRAM-SHA-256 cannot have mechanism properties")
 		}
 	case "":
+		if p.UsernameSet && p.Username == "" {
+			return fmt.Errorf("username required if URI contains user info")
+		}
 	default:
 		return fmt.Errorf("invalid auth mechanism")
 	}
@@ -632,6 +658,17 @@ func (p *parser) addOption(pair string) error {
 		}
 
 		p.JSet = true
+	case "loadbalanced":
+		switch value {
+		case "true":
+			p.LoadBalanced = true
+		case "false":
+			p.LoadBalanced = false
+		default:
+			return fmt.Errorf("invalid value for %s: %s", key, value)
+		}
+
+		p.LoadBalancedSet = true
 	case "localthresholdms":
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 0 {

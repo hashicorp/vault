@@ -3,6 +3,7 @@ package kubeauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -12,8 +13,20 @@ import (
 )
 
 const (
-	configPath string = "config"
-	rolePrefix string = "role/"
+	configPath = "config"
+	rolePrefix = "role/"
+
+	// aliasNameSourceUnset provides backwards compatibility with preexisting roles.
+	aliasNameSourceUnset   = ""
+	aliasNameSourceSAUid   = "serviceaccount_uid"
+	aliasNameSourceSAName  = "serviceaccount_name"
+	aliasNameSourceDefault = aliasNameSourceSAUid
+)
+
+var (
+	// when adding new alias name sources make sure to update the corresponding FieldSchema description in path_role.go
+	aliasNameSources          = []string{aliasNameSourceSAUid, aliasNameSourceSAName}
+	errInvalidAliasNameSource = fmt.Errorf(`invalid alias_name_source, must be one of: %s`, strings.Join(aliasNameSources, ", "))
 )
 
 // kubeAuthBackend implements logical.Backend
@@ -94,6 +107,17 @@ func (b *kubeAuthBackend) config(ctx context.Context, s logical.Storage) (*kubeC
 	return conf, nil
 }
 
+func (b *kubeAuthBackend) loadConfig(ctx context.Context, s logical.Storage) (*kubeConfig, error) {
+	config, err := b.config(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+	if config == nil {
+		return nil, errors.New("could not load backend configuration")
+	}
+	return config, nil
+}
+
 // role takes a storage backend and the name and returns the role's storage
 // entry
 func (b *kubeAuthBackend) role(ctx context.Context, s logical.Storage, name string) (*roleStorageEntry, error) {
@@ -130,6 +154,15 @@ func (b *kubeAuthBackend) role(ctx context.Context, s logical.Storage, name stri
 	}
 
 	return role, nil
+}
+
+func validateAliasNameSource(source string) error {
+	for _, s := range aliasNameSources {
+		if s == source {
+			return nil
+		}
+	}
+	return errInvalidAliasNameSource
 }
 
 var backendHelp string = `

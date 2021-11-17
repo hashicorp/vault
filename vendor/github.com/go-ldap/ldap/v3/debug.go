@@ -25,6 +25,6 @@ func (debug debugging) Printf(format string, args ...interface{}) {
 // PrintPacket dumps a packet.
 func (debug debugging) PrintPacket(packet *ber.Packet) {
 	if debug {
-		ber.PrintPacket(packet)
+		ber.WritePacket(log.Writer(), packet)
 	}
 }

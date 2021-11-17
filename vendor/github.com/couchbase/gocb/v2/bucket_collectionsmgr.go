@@ -1,6 +1,7 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 )
 
 // CollectionSpec describes the specification of a collection.
@@ -47,7 +48,8 @@ type jsonManifestCollection struct {
 type CollectionManager struct {
 	mgmtProvider mgmtProvider
 	bucketName   string
-	tracer       requestTracer
+	tracer       RequestTracer
+	meter        *meterWrapper
 }
 
 func (cm *CollectionManager) tryParseErrorMessage(req *mgmtRequest, resp *mgmtResponse) error {
@@ -59,12 +61,10 @@ func (cm *CollectionManager) tryParseErrorMessage(req *mgmtRequest, resp *mgmtRe
 
 	errText := strings.ToLower(string(b))
 
-	if resp.StatusCode == 404 {
-		if strings.Contains(errText, "not found") && strings.Contains(errText, "scope") {
-			return makeGenericMgmtError(ErrScopeNotFound, req, resp)
-		} else if strings.Contains(errText, "not found") && strings.Contains(errText, "scope") {
-			return makeGenericMgmtError(ErrScopeNotFound, req, resp)
-		}
+	if strings.Contains(errText, "not found") && strings.Contains(errText, "collection") {
+		return makeGenericMgmtError(ErrCollectionNotFound, req, resp)
+	} else if strings.Contains(errText, "not found") && strings.Contains(errText, "scope") {
+		return makeGenericMgmtError(ErrScopeNotFound, req, resp)
 	}
 
 	if strings.Contains(errText, "already exists") && strings.Contains(errText, "collection") {
@@ -80,6 +80,12 @@ func (cm *CollectionManager) tryParseErrorMessage(req *mgmtRequest, resp *mgmtRe
 type GetAllScopesOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetAllScopes gets all scopes from the bucket.
@@ -88,32 +94,37 @@ func (cm *CollectionManager) GetAllScopes(opts *GetAllScopesOptions) ([]ScopeSpe
 		opts = &GetAllScopesOptions{}
 	}
 
-	span := cm.tracer.StartSpan("GetAllScopes", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer cm.meter.ValueRecord(meterValueServiceManagement, "manager_collections_get_all_scopes", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/scopes", cm.bucketName)
+	span := createSpan(cm.tracer, opts.ParentSpan, "manager_collections_get_all_scopes", "management")
+	span.SetAttribute("db.name", cm.bucketName)
+	span.SetAttribute("db.operation", "GET "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/collections", cm.bucketName),
+		Path:          path,
 		Method:        "GET",
 		RetryStrategy: opts.RetryStrategy,
 		IsIdempotent:  true,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := cm.mgmtProvider.executeMgmtRequest(req)
+	resp, err := cm.mgmtProvider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
-		colErr := cm.tryParseErrorMessage(&req, resp)
-		if colErr != nil {
-			return nil, colErr
-		}
 		return nil, makeMgmtBadStatusError("failed to get all scopes", &req, resp)
 	}
 	defer ensureBodyClosed(resp.Body)
 
 	if resp.StatusCode != 200 {
+		colErr := cm.tryParseErrorMessage(&req, resp)
+		if colErr != nil {
+			return nil, colErr
+		}
 		return nil, makeMgmtBadStatusError("failed to get all scopes", &req, resp)
 	}
 
@@ -128,6 +139,7 @@ func (cm *CollectionManager) GetAllScopes(opts *GetAllScopesOptions) ([]ScopeSpe
 				collections = append(collections, CollectionSpec{
 					Name:      col.Name,
 					ScopeName: scope.Name,
+					MaxExpiry: time.Duration(col.MaxTTL) * time.Second,
 				})
 			}
 			scopes = append(scopes, ScopeSpec{
@@ -166,6 +178,12 @@ func (cm *CollectionManager) GetAllScopes(opts *GetAllScopesOptions) ([]ScopeSpe
 type CreateCollectionOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // CreateCollection creates a new collection on the bucket.
@@ -182,9 +200,16 @@ func (cm *CollectionManager) CreateCollection(spec CollectionSpec, opts *CreateC
 		opts = &CreateCollectionOptions{}
 	}
 
-	span := cm.tracer.StartSpan("CreateCollection", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer cm.meter.ValueRecord(meterValueServiceManagement, "manager_collections_create_collection", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/scopes/%s/collections", cm.bucketName, spec.ScopeName)
+	span := createSpan(cm.tracer, opts.ParentSpan, "manager_collections_create_collection", "management")
+	span.SetAttribute("db.name", cm.bucketName)
+	span.SetAttribute("db.couchbase.scope", spec.ScopeName)
+	span.SetAttribute("db.couchbase.collection", spec.Name)
+	span.SetAttribute("db.operation", "POST "+path)
+	defer span.End()
 
 	posts := url.Values{}
 	posts.Add("name", spec.Name)
@@ -193,19 +218,23 @@ func (cm *CollectionManager) CreateCollection(spec CollectionSpec, opts *CreateC
 		posts.Add("maxTTL", fmt.Sprintf("%d", int(spec.MaxExpiry.Seconds())))
 	}
 
+	eSpan := createSpan(cm.tracer, span, "request_encoding", "")
+	encoded := posts.Encode()
+	eSpan.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/collections/%s", cm.bucketName, spec.ScopeName),
+		Path:          path,
 		Method:        "POST",
-		Body:          []byte(posts.Encode()),
+		Body:          []byte(encoded),
 		ContentType:   "application/x-www-form-urlencoded",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := cm.mgmtProvider.executeMgmtRequest(req)
+	resp, err := cm.mgmtProvider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -231,6 +260,12 @@ func (cm *CollectionManager) CreateCollection(spec CollectionSpec, opts *CreateC
 type DropCollectionOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropCollection removes a collection.
@@ -247,21 +282,28 @@ func (cm *CollectionManager) DropCollection(spec CollectionSpec, opts *DropColle
 		opts = &DropCollectionOptions{}
 	}
 
-	span := cm.tracer.StartSpan("DropCollection", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer cm.meter.ValueRecord(meterValueServiceManagement, "manager_collections_drop_collection", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/scopes/%s/collections/%s", cm.bucketName, spec.ScopeName, spec.Name)
+	span := createSpan(cm.tracer, opts.ParentSpan, "manager_collections_drop_collection", "management")
+	span.SetAttribute("db.name", cm.bucketName)
+	span.SetAttribute("db.couchbase.scope", spec.ScopeName)
+	span.SetAttribute("db.couchbase.collection", spec.Name)
+	span.SetAttribute("db.operation", "DELETE "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/collections/%s/%s", cm.bucketName, spec.ScopeName, spec.Name),
+		Path:          path,
 		Method:        "DELETE",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := cm.mgmtProvider.executeMgmtRequest(req)
+	resp, err := cm.mgmtProvider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -287,6 +329,12 @@ func (cm *CollectionManager) DropCollection(spec CollectionSpec, opts *DropColle
 type CreateScopeOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // CreateScope creates a new scope on the bucket.
@@ -299,28 +347,38 @@ func (cm *CollectionManager) CreateScope(scopeName string, opts *CreateScopeOpti
 		opts = &CreateScopeOptions{}
 	}
 
-	span := cm.tracer.StartSpan("CreateScope", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer cm.meter.ValueRecord(meterValueServiceManagement, "manager_collections_create_scope", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/scopes", cm.bucketName)
+	span := createSpan(cm.tracer, opts.ParentSpan, "manager_collections_create_scope", "management")
+	span.SetAttribute("db.name", cm.bucketName)
+	span.SetAttribute("db.couchbase.scope", scopeName)
+	span.SetAttribute("db.operation", "POST "+path)
+	defer span.End()
 
 	posts := url.Values{}
 	posts.Add("name", scopeName)
 
+	eSpan := createSpan(cm.tracer, span, "request_encoding", "")
+	encoded := posts.Encode()
+	eSpan.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/collections", cm.bucketName),
+		Path:          path,
 		Method:        "POST",
-		Body:          []byte(posts.Encode()),
+		Body:          []byte(encoded),
 		ContentType:   "application/x-www-form-urlencoded",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := cm.mgmtProvider.executeMgmtRequest(req)
+	resp, err := cm.mgmtProvider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
-		return err
+		return makeGenericMgmtError(err, &req, resp)
 	}
 	defer ensureBodyClosed(resp.Body)
 
@@ -344,6 +402,12 @@ func (cm *CollectionManager) CreateScope(scopeName string, opts *CreateScopeOpti
 type DropScopeOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropScope removes a scope.
@@ -352,21 +416,27 @@ func (cm *CollectionManager) DropScope(scopeName string, opts *DropScopeOptions)
 		opts = &DropScopeOptions{}
 	}
 
-	span := cm.tracer.StartSpan("DropScope", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer cm.meter.ValueRecord(meterValueServiceManagement, "manager_collections_drop_scope", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/scopes/%s", cm.bucketName, scopeName)
+	span := createSpan(cm.tracer, opts.ParentSpan, "manager_collections_drop_scope", "management")
+	span.SetAttribute("db.name", cm.bucketName)
+	span.SetAttribute("db.couchbase.scope", scopeName)
+	span.SetAttribute("db.operation", "DELETE "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/collections/%s", cm.bucketName, scopeName),
+		Path:          path,
 		Method:        "DELETE",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := cm.mgmtProvider.executeMgmtRequest(req)
+	resp, err := cm.mgmtProvider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}

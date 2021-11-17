@@ -1,11 +1,15 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	mathrand "math/rand"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
@@ -16,7 +20,14 @@ import (
 
 // barrierTypeUpgradeCheck checks for backwards compat on barrier type, not
 // applicable in the OSS side
-var barrierTypeUpgradeCheck = func(_ string, _ *SealConfig) {}
+var (
+	barrierTypeUpgradeCheck     = func(_ string, _ *SealConfig) {}
+	autoSealUnavailableDuration = []string{"seal", "unreachable", "time"}
+	// vars for unit testings
+	sealHealthTestIntervalNominal   = 10 * time.Minute
+	sealHealthTestIntervalUnhealthy = 1 * time.Minute
+	sealHealthTestTimeout           = 1 * time.Minute
+)
 
 // autoSeal is a Seal implementation that contains logic for encrypting and
 // decrypting stored keys via an underlying AutoSealAccess implementation, as
@@ -28,6 +39,9 @@ type autoSeal struct {
 	recoveryConfig atomic.Value
 	core           *Core
 	logger         log.Logger
+
+	hcLock          sync.Mutex
+	healthCheckStop chan struct{}
 }
 
 // Ensure we are implementing the Seal interface
@@ -498,4 +512,83 @@ func (d *autoSeal) migrateRecoveryConfig(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// StartHealthCheck starts a goroutine that tests the health of the auto-unseal backend once every 10 minutes.
+// If unhealthy, logs a warning on the condition and begins testing every one minute until healthy again.
+func (d *autoSeal) StartHealthCheck() {
+	d.StopHealthCheck()
+	d.hcLock.Lock()
+	defer d.hcLock.Unlock()
+
+	healthCheck := time.NewTicker(sealHealthTestIntervalNominal)
+	d.healthCheckStop = make(chan struct{})
+	healthCheckStop := d.healthCheckStop
+	ctx := d.core.activeContext
+
+	go func() {
+		lastTestOk := true
+		lastSeenOk := time.Now()
+
+		fail := func(msg string, args ...interface{}) {
+			d.logger.Warn(msg, args...)
+			if lastTestOk {
+				healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+			}
+			lastTestOk = false
+			d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Milliseconds()))
+		}
+		for {
+			select {
+			case <-healthCheckStop:
+				if healthCheck != nil {
+					healthCheck.Stop()
+				}
+				healthCheckStop = nil
+				return
+			case t := <-healthCheck.C:
+				func() {
+					ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+					defer cancel()
+
+					testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
+					ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
+
+					if err != nil {
+						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
+					} else {
+						func() {
+							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+							defer cancel()
+							plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
+							if err != nil {
+								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
+							}
+							if !bytes.Equal([]byte(testVal), plaintext) {
+								fail("seal health test value failed to decrypt to expected value")
+							} else {
+								d.logger.Debug("seal health test passed")
+								if !lastTestOk {
+									d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
+									healthCheck.Reset(sealHealthTestIntervalNominal)
+								}
+								lastTestOk = true
+								lastSeenOk = t
+								d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
+							}
+						}()
+					}
+				}()
+			}
+		}
+	}()
+}
+
+func (d *autoSeal) StopHealthCheck() {
+	d.hcLock.Lock()
+	defer d.hcLock.Unlock()
+	if d.healthCheckStop != nil {
+		close(d.healthCheckStop)
+		d.healthCheckStop = nil
+	}
 }

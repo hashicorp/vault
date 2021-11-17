@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Snowflake Computing Inc. All right reserved.
+// Copyright (c) 2017-2021 Snowflake Computing Inc. All right reserved.
 
 package gosnowflake
 
@@ -9,8 +9,10 @@ import (
 	"fmt"
 )
 
+type snowflakeType int
+
 const (
-	fixedType byte = iota
+	fixedType snowflakeType = iota
 	realType
 	textType
 	dateType
@@ -23,58 +25,86 @@ const (
 	binaryType
 	timeType
 	booleanType
+	// the following are not snowflake types per se but internal types
+	nullType
+	sliceType
+	changeType
+	unSupportedType
 )
+
+var snowflakeTypes = [...]string{"FIXED", "REAL", "TEXT", "DATE", "VARIANT",
+	"TIMESTAMP_LTZ", "TIMESTAMP_NTZ", "TIMESTAMP_TZ", "OBJECT", "ARRAY",
+	"BINARY", "TIME", "BOOLEAN", "NULL", "SLICE", "CHANGE_TYPE", "NOT_SUPPORTED"}
+
+func (st snowflakeType) String() string {
+	return snowflakeTypes[st]
+}
+
+func (st snowflakeType) Byte() byte {
+	return byte(st)
+}
+
+func getSnowflakeType(typ string) snowflakeType {
+	for i, sft := range snowflakeTypes {
+		if sft == typ {
+			return snowflakeType(i)
+		} else if snowflakeType(i) == nullType {
+			break
+		}
+	}
+	return nullType
+}
 
 var (
 	// DataTypeFixed is a FIXED datatype.
-	DataTypeFixed = []byte{fixedType}
+	DataTypeFixed = []byte{fixedType.Byte()}
 	// DataTypeReal is a REAL datatype.
-	DataTypeReal = []byte{realType}
+	DataTypeReal = []byte{realType.Byte()}
 	// DataTypeText is a TEXT datatype.
-	DataTypeText = []byte{textType}
+	DataTypeText = []byte{textType.Byte()}
 	// DataTypeDate is a Date datatype.
-	DataTypeDate = []byte{dateType}
+	DataTypeDate = []byte{dateType.Byte()}
 	// DataTypeVariant is a TEXT datatype.
-	DataTypeVariant = []byte{variantType}
+	DataTypeVariant = []byte{variantType.Byte()}
 	// DataTypeTimestampLtz is a TIMESTAMP_LTZ datatype.
-	DataTypeTimestampLtz = []byte{timestampLtzType}
+	DataTypeTimestampLtz = []byte{timestampLtzType.Byte()}
 	// DataTypeTimestampNtz is a TIMESTAMP_NTZ datatype.
-	DataTypeTimestampNtz = []byte{timestampNtzType}
+	DataTypeTimestampNtz = []byte{timestampNtzType.Byte()}
 	// DataTypeTimestampTz is a TIMESTAMP_TZ datatype.
-	DataTypeTimestampTz = []byte{timestampTzType}
+	DataTypeTimestampTz = []byte{timestampTzType.Byte()}
 	// DataTypeObject is a OBJECT datatype.
-	DataTypeObject = []byte{objectType}
+	DataTypeObject = []byte{objectType.Byte()}
 	// DataTypeArray is a ARRAY datatype.
-	DataTypeArray = []byte{arrayType}
+	DataTypeArray = []byte{arrayType.Byte()}
 	// DataTypeBinary is a BINARY datatype.
-	DataTypeBinary = []byte{binaryType}
+	DataTypeBinary = []byte{binaryType.Byte()}
 	// DataTypeTime is a TIME datatype.
-	DataTypeTime = []byte{timeType}
+	DataTypeTime = []byte{timeType.Byte()}
 	// DataTypeBoolean is a BOOLEAN datatype.
-	DataTypeBoolean = []byte{booleanType}
+	DataTypeBoolean = []byte{booleanType.Byte()}
 )
 
 // dataTypeMode returns the subsequent data type in a string representation.
-func dataTypeMode(v driver.Value) (tsmode string, err error) {
+func dataTypeMode(v driver.Value) (tsmode snowflakeType, err error) {
 	if bd, ok := v.([]byte); ok {
 		switch {
 		case bytes.Equal(bd, DataTypeDate):
-			tsmode = "DATE"
+			tsmode = dateType
 		case bytes.Equal(bd, DataTypeTime):
-			tsmode = "TIME"
+			tsmode = timeType
 		case bytes.Equal(bd, DataTypeTimestampLtz):
-			tsmode = "TIMESTAMP_LTZ"
+			tsmode = timestampLtzType
 		case bytes.Equal(bd, DataTypeTimestampNtz):
-			tsmode = "TIMESTAMP_NTZ"
+			tsmode = timestampNtzType
 		case bytes.Equal(bd, DataTypeTimestampTz):
-			tsmode = "TIMESTAMP_TZ"
+			tsmode = timestampTzType
 		case bytes.Equal(bd, DataTypeBinary):
-			tsmode = "BINARY"
+			tsmode = binaryType
 		default:
-			return "", fmt.Errorf(errMsgInvalidByteArray, v)
+			return nullType, fmt.Errorf(errMsgInvalidByteArray, v)
 		}
 	} else {
-		return "", fmt.Errorf(errMsgInvalidByteArray, v)
+		return nullType, fmt.Errorf(errMsgInvalidByteArray, v)
 	}
 	return tsmode, nil
 }

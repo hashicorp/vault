@@ -19,7 +19,8 @@ var DefaultCausalConsistency = true
 
 // SessionOptions represents options that can be used to configure a Session.
 type SessionOptions struct {
-	// If true, causal consistency will be enabled for the session. The default value is true. See
+	// If true, causal consistency will be enabled for the session. This option cannot be set to true if Snapshot is
+	// set to true. The default value is true unless Snapshot is set to true. See
 	// https://docs.mongodb.com/manual/core/read-isolation-consistency-recency/#sessions for more information.
 	CausalConsistency *bool
 
@@ -38,13 +39,16 @@ type SessionOptions struct {
 	// The default maximum amount of time that a CommitTransaction operation executed in the session can run on the
 	// server. The default value is nil, which means that that there is no time limit for execution.
 	DefaultMaxCommitTime *time.Duration
+
+	// If true, all read operations performed with this session will be read from the same snapshot. This option cannot
+	// be set to true if CausalConsistency is set to true. Transactions and write operations are not allowed on
+	// snapshot sessions and will error. The default value is false.
+	Snapshot *bool
 }
 
 // Session creates a new SessionOptions instance.
 func Session() *SessionOptions {
-	return &SessionOptions{
-		CausalConsistency: &DefaultCausalConsistency,
-	}
+	return &SessionOptions{}
 }
 
 // SetCausalConsistency sets the value for the CausalConsistency field.
@@ -77,6 +81,12 @@ func (s *SessionOptions) SetDefaultMaxCommitTime(mct *time.Duration) *SessionOpt
 	return s
 }
 
+// SetSnapshot sets the value for the Snapshot field.
+func (s *SessionOptions) SetSnapshot(b bool) *SessionOptions {
+	s.Snapshot = &b
+	return s
+}
+
 // MergeSessionOptions combines the given SessionOptions instances into a single SessionOptions in a last-one-wins
 // fashion.
 func MergeSessionOptions(opts ...*SessionOptions) *SessionOptions {
@@ -100,6 +110,12 @@ func MergeSessionOptions(opts ...*SessionOptions) *SessionOptions {
 		if opt.DefaultMaxCommitTime != nil {
 			s.DefaultMaxCommitTime = opt.DefaultMaxCommitTime
 		}
+		if opt.Snapshot != nil {
+			s.Snapshot = opt.Snapshot
+		}
+	}
+	if s.CausalConsistency == nil && (s.Snapshot == nil || !*s.Snapshot) {
+		s.CausalConsistency = &DefaultCausalConsistency
 	}
 
 	return s

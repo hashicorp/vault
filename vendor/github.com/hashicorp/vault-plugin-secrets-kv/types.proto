@@ -1,4 +1,7 @@
 syntax = "proto3";
+
+option go_package = "github.com/hashicorp/kv";
+
 package kv;
 
 import "google/protobuf/timestamp.proto";
@@ -59,6 +62,10 @@ message KeyMetadata {
 	// empty value, defaults to the configured delete_version_after for the
 	// mount.
 	google.protobuf.Duration delete_version_after = 9;
+
+    // CustomMetadata is a map of string key-value pairs used to store
+    // user-provided information about the secret.
+	map<string, string> custom_metadata = 10;
 }
 
 

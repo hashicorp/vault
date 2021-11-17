@@ -13,7 +13,7 @@ var _ Teams = (*teams)(nil)
 // Teams describes all the team related methods that the Terraform
 // Enterprise API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/teams.html
+// TFE API docs: https://www.terraform.io/docs/cloud/api/teams.html
 type Teams interface {
 	// List all the teams of the given organization.
 	List(ctx context.Context, organization string, options TeamListOptions) (*TeamList, error)
@@ -58,15 +58,16 @@ type Team struct {
 
 // OrganizationAccess represents the team's permissions on its organization
 type OrganizationAccess struct {
-	ManagePolicies    bool `json:"manage-policies"`
-	ManageWorkspaces  bool `json:"manage-workspaces"`
-	ManageVCSSettings bool `json:"manage-vcs-settings"`
+	ManagePolicies        bool `jsonapi:"attr,manage-policies"`
+	ManagePolicyOverrides bool `jsonapi:"attr,manage-policy-overrides"`
+	ManageWorkspaces      bool `jsonapi:"attr,manage-workspaces"`
+	ManageVCSSettings     bool `jsonapi:"attr,manage-vcs-settings"`
 }
 
 // TeamPermissions represents the current user's permissions on the team.
 type TeamPermissions struct {
-	CanDestroy          bool `json:"can-destroy"`
-	CanUpdateMembership bool `json:"can-update-membership"`
+	CanDestroy          bool `jsonapi:"attr,can-destroy"`
+	CanUpdateMembership bool `jsonapi:"attr,can-update-membership"`
 }
 
 // TeamListOptions represents the options for listing teams.
@@ -79,7 +80,7 @@ type TeamListOptions struct {
 // List all the teams of the given organization.
 func (s *teams) List(ctx context.Context, organization string, options TeamListOptions) (*TeamList, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/teams", url.QueryEscape(organization))
@@ -99,8 +100,11 @@ func (s *teams) List(ctx context.Context, organization string, options TeamListO
 
 // TeamCreateOptions represents the options for creating a team.
 type TeamCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,teams"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,teams"`
 
 	// Name of the team.
 	Name *string `jsonapi:"attr,name"`
@@ -114,14 +118,15 @@ type TeamCreateOptions struct {
 
 // OrganizationAccessOptions represents the organization access options of a team.
 type OrganizationAccessOptions struct {
-	ManagePolicies    *bool `json:"manage-policies,omitempty"`
-	ManageWorkspaces  *bool `json:"manage-workspaces,omitempty"`
-	ManageVCSSettings *bool `json:"manage-vcs-settings,omitempty"`
+	ManagePolicies        *bool `json:"manage-policies,omitempty"`
+	ManagePolicyOverrides *bool `json:"manage-policy-overrides,omitempty"`
+	ManageWorkspaces      *bool `json:"manage-workspaces,omitempty"`
+	ManageVCSSettings     *bool `json:"manage-vcs-settings,omitempty"`
 }
 
 func (o TeamCreateOptions) valid() error {
 	if !validString(o.Name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 	return nil
 }
@@ -129,14 +134,11 @@ func (o TeamCreateOptions) valid() error {
 // Create a new team with the given options.
 func (s *teams) Create(ctx context.Context, organization string, options TeamCreateOptions) (*Team, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("organizations/%s/teams", url.QueryEscape(organization))
 	req, err := s.client.newRequest("POST", u, &options)
@@ -176,8 +178,11 @@ func (s *teams) Read(ctx context.Context, teamID string) (*Team, error) {
 
 // TeamUpdateOptions represents the options for updating a team.
 type TeamUpdateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,teams"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,teams"`
 
 	// New name for the team
 	Name *string `jsonapi:"attr,name,omitempty"`
@@ -194,9 +199,6 @@ func (s *teams) Update(ctx context.Context, teamID string, options TeamUpdateOpt
 	if !validStringID(&teamID) {
 		return nil, errors.New("invalid value for team ID")
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("teams/%s", url.QueryEscape(teamID))
 	req, err := s.client.newRequest("PATCH", u, &options)

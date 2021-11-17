@@ -40,6 +40,7 @@ func newBackend(client secretsClient, passwordGenerator passwordGenerator) *back
 			adBackend.pathRoles(),
 			adBackend.pathListRoles(),
 			adBackend.pathCreds(),
+			adBackend.pathRotateRootCredentials(),
 			adBackend.pathRotateCredentials(),
 
 			// The following paths are for AD credential checkout.
@@ -61,6 +62,8 @@ func newBackend(client secretsClient, passwordGenerator passwordGenerator) *back
 		Secrets: []*framework.Secret{
 			adBackend.secretAccessKeys(),
 		},
+		WALRollback:       adBackend.walRollback,
+		WALRollbackMinAge: 1 * time.Minute,
 	}
 	return adBackend
 }

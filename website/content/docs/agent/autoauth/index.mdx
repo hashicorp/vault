@@ -105,6 +105,12 @@ The top level `auto_auth` block has two configuration entries:
 
 ### Configuration (Method)
 
+~> Auto-auth does not support using tokens with a limited number of uses. Vault
+Agent does not track the number of uses remaining, and may allow the token to
+expire before attempting to renew it. For example, if using AppRole auto-auth,
+you must use 0 (meaning unlimited) as the value for
+[`token_num_uses`](https://www.vaultproject.io/api-docs/auth/approle#token_num_uses).
+
 These are common configuration values that live within the `method` block:
 
 - `type` `(string: required)` - The type of the method to use, e.g. `aws`,

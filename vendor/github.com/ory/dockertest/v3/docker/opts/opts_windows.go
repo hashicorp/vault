@@ -1,12 +1,5 @@
 package opts
 
-import (
-	"fmt"
-	"strings"
-
-	"github.com/pkg/errors"
-)
-
 // TODO Windows. Identify bug in GOLang 1.5.1+ and/or Windows Server 2016 TP5.
 // @jhowardmsft, @swernli.
 //
@@ -61,12 +54,3 @@ import (
 
 // DefaultHTTPHost Default HTTP Host used if only port is provided to -H flag e.g. dockerd -H tcp://:8080
 const DefaultHTTPHost = "127.0.0.1"
-
-// MountParser parses mount path.
-func MountParser(mount string) (source, destination string, err error) {
-	sd := strings.Split(mount, ":")
-	if len(sd) == 3 {
-		return sd[0] + sd[1], sd[2], nil
-	}
-	return "", "", errors.Wrap(fmt.Errorf("invalid mount format: got %s, expected <drive>:<src>:<dst>", mount), "")
-}

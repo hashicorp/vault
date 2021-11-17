@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"errors"
 	"log"
 
 	ber "github.com/go-asn1-ber/asn1-ber"
@@ -129,4 +130,48 @@ func (l *Conn) Modify(modifyRequest *ModifyRequest) error {
 		log.Printf("Unexpected Response: %d", packet.Children[1].Tag)
 	}
 	return nil
+}
+
+// ModifyResult holds the server's response to a modify request
+type ModifyResult struct {
+	// Controls are the returned controls
+	Controls []Control
+}
+
+// ModifyWithResult performs the ModifyRequest and returns the result
+func (l *Conn) ModifyWithResult(modifyRequest *ModifyRequest) (*ModifyResult, error) {
+	msgCtx, err := l.doRequest(modifyRequest)
+	if err != nil {
+		return nil, err
+	}
+	defer l.finishMessage(msgCtx)
+
+	result := &ModifyResult{
+		Controls: make([]Control, 0),
+	}
+
+	l.Debug.Printf("%d: waiting for response", msgCtx.id)
+	packet, err := l.readPacket(msgCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	switch packet.Children[1].Tag {
+	case ApplicationModifyResponse:
+		err := GetLDAPError(packet)
+		if err != nil {
+			return nil, err
+		}
+		if len(packet.Children) == 3 {
+			for _, child := range packet.Children[2].Children {
+				decodedChild, err := DecodeControl(child)
+				if err != nil {
+					return nil, errors.New("failed to decode child control: " + err.Error())
+				}
+				result.Controls = append(result.Controls, decodedChild)
+			}
+		}
+	}
+	l.Debug.Printf("%d: returning", msgCtx.id)
+	return result, nil
 }

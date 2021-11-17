@@ -21,7 +21,7 @@ import (
 	"net/url"
 )
 
-const peersPath = "groups/%s/peers"
+const peersPath = "api/atlas/v1.0/groups/%s/peers"
 
 // PeersService is an interface for interfacing with the Peers
 // endpoints of the MongoDB Atlas API.
@@ -36,7 +36,7 @@ type PeersService interface {
 }
 
 // PeersServiceOp handles communication with the Network Peering Connection related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type PeersServiceOp service
 
 var _ PeersService = &PeersServiceOp{}

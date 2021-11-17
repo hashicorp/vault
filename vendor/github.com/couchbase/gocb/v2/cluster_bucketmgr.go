@@ -1,6 +1,7 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -48,11 +49,9 @@ const (
 	EvictionPolicyTypeValueOnly EvictionPolicyType = "valueOnly"
 
 	// EvictionPolicyTypeNotRecentlyUsed specifies to use not recently used (nru) eviction for an ephemeral bucket.
-	// UNCOMMITTED: This API may change in the future.
 	EvictionPolicyTypeNotRecentlyUsed EvictionPolicyType = "nruEviction"
 
 	// EvictionPolicyTypeNRU specifies to use no eviction for an ephemeral bucket.
-	// UNCOMMITTED: This API may change in the future.
 	EvictionPolicyTypeNoEviction EvictionPolicyType = "noEviction"
 )
 
@@ -86,6 +85,7 @@ type jsonBucketSettings struct {
 	EvictionPolicy         string `json:"evictionPolicy"`
 	MaxTTL                 uint32 `json:"maxTTL"`
 	CompressionMode        string `json:"compressionMode"`
+	MinimumDurabilityLevel string `json:"durabilityMinLevel"`
 }
 
 // BucketSettings holds information about the settings for a bucket.
@@ -97,8 +97,11 @@ type BucketSettings struct {
 	NumReplicas          uint32     // NOTE: If not set this will set 0 replicas.
 	BucketType           BucketType // Defaults to CouchbaseBucketType.
 	EvictionPolicy       EvictionPolicyType
-	MaxTTL               time.Duration
-	CompressionMode      CompressionMode
+	// Deprecated: Use MaxExpiry instead.
+	MaxTTL                 time.Duration
+	MaxExpiry              time.Duration
+	CompressionMode        CompressionMode
+	MinimumDurabilityLevel DurabilityLevel
 }
 
 func (bs *BucketSettings) fromData(data jsonBucketSettings) error {
@@ -109,7 +112,9 @@ func (bs *BucketSettings) fromData(data jsonBucketSettings) error {
 	bs.NumReplicas = data.ReplicaNumber
 	bs.EvictionPolicy = EvictionPolicyType(data.EvictionPolicy)
 	bs.MaxTTL = time.Duration(data.MaxTTL) * time.Second
+	bs.MaxExpiry = time.Duration(data.MaxTTL) * time.Second
 	bs.CompressionMode = CompressionMode(data.CompressionMode)
+	bs.MinimumDurabilityLevel = durabilityLevelFromManagementAPI(data.MinimumDurabilityLevel)
 
 	switch data.BucketType {
 	case "membase":
@@ -176,6 +181,15 @@ func (bm *BucketManager) tryParseFlushErrorMessage(req *mgmtRequest, resp *mgmtR
 		return makeMgmtBadStatusError("failed to flush bucket", req, resp)
 	}
 
+	if resp.StatusCode == 404 {
+		// If it was a 404 then there's no chance of the response body containing any structure
+		if strings.Contains(strings.ToLower(string(b)), "resource not found") {
+			return makeGenericMgmtError(ErrBucketNotFound, req, resp)
+		}
+
+		return makeGenericMgmtError(errors.New(string(b)), req, resp)
+	}
+
 	var bodyErrMsgs map[string]string
 	err = json.Unmarshal(b, &bodyErrMsgs)
 	if err != nil {
@@ -195,13 +209,20 @@ func (bm *BucketManager) tryParseFlushErrorMessage(req *mgmtRequest, resp *mgmtR
 // See BucketManager for methods that allow creating and removing buckets themselves.
 type BucketManager struct {
 	provider mgmtProvider
-	tracer   requestTracer
+	tracer   RequestTracer
+	meter    *meterWrapper
 }
 
 // GetBucketOptions is the set of options available to the bucket manager GetBucket operation.
 type GetBucketOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetBucket returns settings for a bucket on the cluster.
@@ -210,28 +231,33 @@ func (bm *BucketManager) GetBucket(bucketName string, opts *GetBucketOptions) (*
 		opts = &GetBucketOptions{}
 	}
 
-	span := bm.tracer.StartSpan("GetBucket", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer bm.meter.ValueRecord(meterValueServiceManagement, "manager_bucket_get_bucket", start)
 
-	return bm.get(span.Context(), bucketName, opts.RetryStrategy, opts.Timeout)
+	path := fmt.Sprintf("/pools/default/buckets/%s", bucketName)
+	span := createSpan(bm.tracer, opts.ParentSpan, "manager_bucket_create_bucket", "management")
+	span.SetAttribute("db.name", bucketName)
+	span.SetAttribute("db.operation", "GET "+path)
+	defer span.End()
+
+	return bm.get(opts.Context, span.Context(), path, opts.RetryStrategy, opts.Timeout)
 }
 
-func (bm *BucketManager) get(tracectx requestSpanContext, bucketName string,
+func (bm *BucketManager) get(ctx context.Context, tracectx RequestSpanContext, path string,
 	strategy RetryStrategy, timeout time.Duration) (*BucketSettings, error) {
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s", bucketName),
+		Path:          path,
 		Method:        "GET",
 		IsIdempotent:  true,
 		RetryStrategy: strategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       timeout,
-		parentSpan:    tracectx,
+		parentSpanCtx: tracectx,
 	}
 
-	resp, err := bm.provider.executeMgmtRequest(req)
+	resp, err := bm.provider.executeMgmtRequest(ctx, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -266,6 +292,12 @@ func (bm *BucketManager) get(tracectx requestSpanContext, bucketName string,
 type GetAllBucketsOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // GetAllBuckets returns a list of all active buckets on the cluster.
@@ -274,9 +306,12 @@ func (bm *BucketManager) GetAllBuckets(opts *GetAllBucketsOptions) (map[string]B
 		opts = &GetAllBucketsOptions{}
 	}
 
-	span := bm.tracer.StartSpan("GetAllBuckets", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer bm.meter.ValueRecord(meterValueServiceManagement, "manager_bucket_get_all_buckets", start)
+
+	span := createSpan(bm.tracer, opts.ParentSpan, "manager_bucket_get_all_buckets", "management")
+	span.SetAttribute("db.operation", "GET /pools/default/buckets")
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
@@ -286,10 +321,10 @@ func (bm *BucketManager) GetAllBuckets(opts *GetAllBucketsOptions) (map[string]B
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := bm.provider.executeMgmtRequest(req)
+	resp, err := bm.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return nil, makeGenericMgmtError(err, &req, resp)
 	}
@@ -335,6 +370,12 @@ type CreateBucketSettings struct {
 type CreateBucketOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // CreateBucket creates a bucket on the cluster.
@@ -343,9 +384,13 @@ func (bm *BucketManager) CreateBucket(settings CreateBucketSettings, opts *Creat
 		opts = &CreateBucketOptions{}
 	}
 
-	span := bm.tracer.StartSpan("CreateBucket", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer bm.meter.ValueRecord(meterValueServiceManagement, "manager_bucket_create_bucket", start)
+
+	span := createSpan(bm.tracer, opts.ParentSpan, "manager_bucket_create_bucket", "management")
+	span.SetAttribute("db.name", settings.Name)
+	span.SetAttribute("db.operation", "POST /pools/default/buckets")
+	defer span.End()
 
 	posts, err := bm.settingsToPostData(&settings.BucketSettings)
 	if err != nil {
@@ -356,19 +401,23 @@ func (bm *BucketManager) CreateBucket(settings CreateBucketSettings, opts *Creat
 		posts.Add("conflictResolutionType", string(settings.ConflictResolutionType))
 	}
 
+	eSpan := createSpan(bm.tracer, span, "request_encoding", "")
+	d := posts.Encode()
+	eSpan.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
 		Path:          "/pools/default/buckets",
 		Method:        "POST",
-		Body:          []byte(posts.Encode()),
+		Body:          []byte(d),
 		ContentType:   "application/x-www-form-urlencoded",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := bm.provider.executeMgmtRequest(req)
+	resp, err := bm.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -390,6 +439,12 @@ func (bm *BucketManager) CreateBucket(settings CreateBucketSettings, opts *Creat
 type UpdateBucketOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // UpdateBucket updates a bucket on the cluster.
@@ -398,28 +453,37 @@ func (bm *BucketManager) UpdateBucket(settings BucketSettings, opts *UpdateBucke
 		opts = &UpdateBucketOptions{}
 	}
 
-	span := bm.tracer.StartSpan("UpdateBucket", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer bm.meter.ValueRecord(meterValueServiceManagement, "manager_bucket_update_bucket", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s", settings.Name)
+	span := createSpan(bm.tracer, opts.ParentSpan, "manager_bucket_update_bucket", "management")
+	span.SetAttribute("db.name", settings.Name)
+	span.SetAttribute("db.operation", "POST "+path)
+	defer span.End()
 
 	posts, err := bm.settingsToPostData(&settings)
 	if err != nil {
 		return err
 	}
 
+	eSpan := createSpan(bm.tracer, span, "request_encoding", "")
+	d := posts.Encode()
+	eSpan.End()
+
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s", settings.Name),
+		Path:          path,
 		Method:        "POST",
-		Body:          []byte(posts.Encode()),
+		Body:          []byte(d),
 		ContentType:   "application/x-www-form-urlencoded",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := bm.provider.executeMgmtRequest(req)
+	resp, err := bm.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -441,6 +505,12 @@ func (bm *BucketManager) UpdateBucket(settings BucketSettings, opts *UpdateBucke
 type DropBucketOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // DropBucket will delete a bucket from the cluster by name.
@@ -449,21 +519,26 @@ func (bm *BucketManager) DropBucket(name string, opts *DropBucketOptions) error 
 		opts = &DropBucketOptions{}
 	}
 
-	span := bm.tracer.StartSpan("DropBucket", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer bm.meter.ValueRecord(meterValueServiceManagement, "manager_bucket_drop_bucket", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s", name)
+	span := createSpan(bm.tracer, opts.ParentSpan, "manager_bucket_drop_bucket", "management")
+	span.SetAttribute("db.name", name)
+	span.SetAttribute("db.operation", "DELETE "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s", name),
+		Path:          path,
 		Method:        "DELETE",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := bm.provider.executeMgmtRequest(req)
+	resp, err := bm.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -485,6 +560,12 @@ func (bm *BucketManager) DropBucket(name string, opts *DropBucketOptions) error 
 type FlushBucketOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 }
 
 // FlushBucket will delete all the of the data from a bucket.
@@ -494,21 +575,26 @@ func (bm *BucketManager) FlushBucket(name string, opts *FlushBucketOptions) erro
 		opts = &FlushBucketOptions{}
 	}
 
-	span := bm.tracer.StartSpan("FlushBucket", nil).
-		SetTag("couchbase.service", "mgmt")
-	defer span.Finish()
+	start := time.Now()
+	defer bm.meter.ValueRecord(meterValueServiceManagement, "manager_bucket_flush_bucket", start)
+
+	path := fmt.Sprintf("/pools/default/buckets/%s/controller/doFlush", name)
+	span := createSpan(bm.tracer, opts.ParentSpan, "manager_bucket_flush_bucket", "management")
+	span.SetAttribute("db.name", name)
+	span.SetAttribute("db.operation", "POST "+path)
+	defer span.End()
 
 	req := mgmtRequest{
 		Service:       ServiceTypeManagement,
-		Path:          fmt.Sprintf("/pools/default/buckets/%s/controller/doFlush", name),
+		Path:          path,
 		Method:        "POST",
 		RetryStrategy: opts.RetryStrategy,
 		UniqueID:      uuid.New().String(),
 		Timeout:       opts.Timeout,
-		parentSpan:    span.Context(),
+		parentSpanCtx: span.Context(),
 	}
 
-	resp, err := bm.provider.executeMgmtRequest(req)
+	resp, err := bm.provider.executeMgmtRequest(opts.Context, req)
 	if err != nil {
 		return makeGenericMgmtError(err, &req, resp)
 	}
@@ -532,8 +618,8 @@ func (bm *BucketManager) settingsToPostData(settings *BucketSettings) (url.Value
 		return nil, makeInvalidArgumentsError("Memory quota invalid, must be greater than 100MB")
 	}
 
-	if settings.MaxTTL > 0 && settings.BucketType == MemcachedBucketType {
-		return nil, makeInvalidArgumentsError("maxTTL is not supported for memcached buckets")
+	if (settings.MaxTTL > 0 || settings.MaxExpiry > 0) && settings.BucketType == MemcachedBucketType {
+		return nil, makeInvalidArgumentsError("maxExpiry is not supported for memcached buckets")
 	}
 
 	posts.Add("name", settings.Name)
@@ -592,8 +678,20 @@ func (bm *BucketManager) settingsToPostData(settings *BucketSettings) (url.Value
 		posts.Add("maxTTL", fmt.Sprintf("%d", settings.MaxTTL/time.Second))
 	}
 
+	if settings.MaxExpiry > 0 {
+		posts.Add("maxTTL", fmt.Sprintf("%d", settings.MaxExpiry/time.Second))
+	}
+
 	if settings.CompressionMode != "" {
 		posts.Add("compressionMode", string(settings.CompressionMode))
+	}
+
+	if settings.MinimumDurabilityLevel != DurabilityLevelNone {
+		level, err := settings.MinimumDurabilityLevel.toManagementAPI()
+		if err != nil {
+			return nil, err
+		}
+		posts.Add("durabilityMinLevel", level)
 	}
 
 	return posts, nil

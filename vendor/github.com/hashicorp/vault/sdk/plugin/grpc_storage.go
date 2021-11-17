@@ -76,6 +76,7 @@ func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
 
 // StorageServer is a net/rpc compatible structure for serving
 type GRPCStorageServer struct {
+	pb.UnimplementedStorageServer
 	impl logical.Storage
 }
 

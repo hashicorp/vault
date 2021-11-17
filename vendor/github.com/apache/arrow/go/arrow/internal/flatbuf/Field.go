@@ -69,16 +69,16 @@ func (rcv *Field) MutateNullable(n bool) bool {
 	return rcv._tab.MutateBoolSlot(6, n)
 }
 
-func (rcv *Field) TypeType() byte {
+func (rcv *Field) TypeType() Type {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(8))
 	if o != 0 {
-		return rcv._tab.GetByte(o + rcv._tab.Pos)
+		return Type(rcv._tab.GetByte(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
-func (rcv *Field) MutateTypeType(n byte) bool {
-	return rcv._tab.MutateByteSlot(8, n)
+func (rcv *Field) MutateTypeType(n Type) bool {
+	return rcv._tab.MutateByteSlot(8, byte(n))
 }
 
 /// This is the type of the decoded value if the field is dictionary encoded.
@@ -162,8 +162,8 @@ func FieldAddName(builder *flatbuffers.Builder, name flatbuffers.UOffsetT) {
 func FieldAddNullable(builder *flatbuffers.Builder, nullable bool) {
 	builder.PrependBoolSlot(1, nullable, false)
 }
-func FieldAddTypeType(builder *flatbuffers.Builder, typeType byte) {
-	builder.PrependByteSlot(2, typeType, 0)
+func FieldAddTypeType(builder *flatbuffers.Builder, typeType Type) {
+	builder.PrependByteSlot(2, byte(typeType), 0)
 }
 func FieldAddType(builder *flatbuffers.Builder, type_ flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(3, flatbuffers.UOffsetT(type_), 0)

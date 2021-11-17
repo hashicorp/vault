@@ -93,7 +93,7 @@ func (op *Operator) AreaCreate(area *Area, q *WriteOptions) (string, *WriteMeta,
 	if err != nil {
 		return "", nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt
@@ -114,7 +114,7 @@ func (op *Operator) AreaUpdate(areaID string, area *Area, q *WriteOptions) (stri
 	if err != nil {
 		return "", nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt
@@ -154,7 +154,7 @@ func (op *Operator) AreaDelete(areaID string, q *WriteOptions) (*WriteMeta, erro
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt
@@ -171,7 +171,7 @@ func (op *Operator) AreaJoin(areaID string, addresses []string, q *WriteOptions)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt

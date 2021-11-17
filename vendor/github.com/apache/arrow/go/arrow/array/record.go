@@ -273,7 +273,7 @@ func NewRecordBuilder(mem memory.Allocator, schema *arrow.Schema) *RecordBuilder
 	}
 
 	for i, f := range schema.Fields() {
-		b.fields[i] = newBuilder(b.mem, f.Type)
+		b.fields[i] = NewBuilder(b.mem, f.Type)
 	}
 
 	return b

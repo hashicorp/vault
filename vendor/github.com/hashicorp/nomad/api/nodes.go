@@ -14,10 +14,14 @@ const (
 	NodeStatusDown  = "down"
 
 	// NodeSchedulingEligible and Ineligible marks the node as eligible or not,
-	// respectively, for receiving allocations. This is orthoginal to the node
+	// respectively, for receiving allocations. This is orthogonal to the node
 	// status being ready.
 	NodeSchedulingEligible   = "eligible"
 	NodeSchedulingIneligible = "ineligible"
+
+	DrainStatusDraining DrainStatus = "draining"
+	DrainStatusComplete DrainStatus = "complete"
+	DrainStatusCanceled DrainStatus = "canceled"
 )
 
 // Nodes is used to query node-related API endpoints
@@ -67,6 +71,9 @@ type NodeUpdateDrainRequest struct {
 	// MarkEligible marks the node as eligible for scheduling if removing
 	// the drain strategy.
 	MarkEligible bool
+
+	// Meta allows operators to specify metadata related to the drain operation
+	Meta map[string]string
 }
 
 // NodeDrainUpdateResponse is used to respond to a node drain update
@@ -77,14 +84,45 @@ type NodeDrainUpdateResponse struct {
 	WriteMeta
 }
 
+// DrainOptions is used to pass through node drain parameters
+type DrainOptions struct {
+	// DrainSpec contains the drain specification for the node. If non-nil,
+	// the node will be marked ineligible and begin/continue draining according
+	// to the provided drain spec.
+	// If nil, any existing drain operation will be canceled.
+	DrainSpec *DrainSpec
+
+	// MarkEligible indicates whether the node should be marked as eligible when
+	// canceling a drain operation.
+	MarkEligible bool
+
+	// Meta is metadata that is persisted in Node.LastDrain about this
+	// drain update.
+	Meta map[string]string
+}
+
 // UpdateDrain is used to update the drain strategy for a given node. If
 // markEligible is true and the drain is being removed, the node will be marked
 // as having its scheduling being eligible
 func (n *Nodes) UpdateDrain(nodeID string, spec *DrainSpec, markEligible bool, q *WriteOptions) (*NodeDrainUpdateResponse, error) {
-	req := &NodeUpdateDrainRequest{
-		NodeID:       nodeID,
+	resp, err := n.UpdateDrainOpts(nodeID, &DrainOptions{
 		DrainSpec:    spec,
 		MarkEligible: markEligible,
+		Meta:         nil,
+	}, q)
+	return resp, err
+}
+
+// UpdateDrainWithMeta is used to update the drain strategy for a given node. If
+// markEligible is true and the drain is being removed, the node will be marked
+// as having its scheduling being eligible
+func (n *Nodes) UpdateDrainOpts(nodeID string, opts *DrainOptions, q *WriteOptions) (*NodeDrainUpdateResponse,
+	error) {
+	req := &NodeUpdateDrainRequest{
+		NodeID:       nodeID,
+		DrainSpec:    opts.DrainSpec,
+		MarkEligible: opts.MarkEligible,
+		Meta:         opts.Meta,
 	}
 
 	var resp NodeDrainUpdateResponse
@@ -224,8 +262,7 @@ func (n *Nodes) monitorDrainNode(ctx context.Context, nodeID string,
 		}
 
 		if node.DrainStrategy == nil {
-			var msg *MonitorMessage
-			msg = Messagef(MonitorMsgLevelInfo, "Drain complete for node %s", nodeID)
+			msg := Messagef(MonitorMsgLevelInfo, "Drain complete for node %s", nodeID)
 			select {
 			case nodeCh <- msg:
 			case <-ctx.Done():
@@ -392,6 +429,16 @@ func (n *Nodes) Allocations(nodeID string, q *QueryOptions) ([]*Allocation, *Que
 	return resp, qm, nil
 }
 
+func (n *Nodes) CSIVolumes(nodeID string, q *QueryOptions) ([]*CSIVolumeListStub, error) {
+	var resp []*CSIVolumeListStub
+	path := fmt.Sprintf("/v1/volumes?type=csi&node_id=%s", nodeID)
+	if _, err := n.client.query(path, &resp, q); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 // ForceEvaluate is used to force-evaluate an existing node.
 func (n *Nodes) ForceEvaluate(nodeID string, q *WriteOptions) (string, *WriteMeta, error) {
 	var resp nodeEvalResponse
@@ -413,18 +460,35 @@ func (n *Nodes) Stats(nodeID string, q *QueryOptions) (*HostStats, error) {
 }
 
 func (n *Nodes) GC(nodeID string, q *QueryOptions) error {
-	var resp struct{}
 	path := fmt.Sprintf("/v1/client/gc?node_id=%s", nodeID)
-	_, err := n.client.query(path, &resp, q)
+	_, err := n.client.query(path, nil, q)
 	return err
 }
 
 // TODO Add tests
 func (n *Nodes) GcAlloc(allocID string, q *QueryOptions) error {
-	var resp struct{}
 	path := fmt.Sprintf("/v1/client/allocation/%s/gc", allocID)
-	_, err := n.client.query(path, &resp, q)
+	_, err := n.client.query(path, nil, q)
 	return err
+}
+
+// Purge removes a node from the system. Nodes can still re-join the cluster if
+// they are alive.
+func (n *Nodes) Purge(nodeID string, q *QueryOptions) (*NodePurgeResponse, *QueryMeta, error) {
+	var resp NodePurgeResponse
+	path := fmt.Sprintf("/v1/node/%s/purge", nodeID)
+	qm, err := n.client.putQuery(path, nil, &resp, q)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &resp, qm, nil
+}
+
+// NodePurgeResponse is used to deserialize a Purge response.
+type NodePurgeResponse struct {
+	EvalIDs         []string
+	EvalCreateIndex uint64
+	NodeModifyIndex uint64
 }
 
 // DriverInfo is used to deserialize a DriverInfo entry
@@ -440,6 +504,17 @@ type DriverInfo struct {
 type HostVolumeInfo struct {
 	Path     string
 	ReadOnly bool
+}
+
+type DrainStatus string
+
+// DrainMetadata contains information about the most recent drain operation for a given Node.
+type DrainMetadata struct {
+	StartedAt  time.Time
+	UpdatedAt  time.Time
+	Status     DrainStatus
+	AccessorID string
+	Meta       map[string]string
 }
 
 // Node is used to deserialize a node entry.
@@ -466,6 +541,9 @@ type Node struct {
 	Events                []*NodeEvent
 	Drivers               map[string]*DriverInfo
 	HostVolumes           map[string]*HostVolumeInfo
+	CSIControllerPlugins  map[string]*CSIInfo
+	CSINodePlugins        map[string]*CSIInfo
+	LastDrain             *DrainMetadata
 	CreateIndex           uint64
 	ModifyIndex           uint64
 }
@@ -479,7 +557,9 @@ type NodeResources struct {
 }
 
 type NodeCpuResources struct {
-	CpuShares int64
+	CpuShares          int64
+	TotalCpuCores      uint16
+	ReservableCpuCores []uint16
 }
 
 type NodeMemoryResources struct {
@@ -511,6 +591,42 @@ type NodeReservedDiskResources struct {
 
 type NodeReservedNetworkResources struct {
 	ReservedHostPorts string
+}
+
+type CSITopology struct {
+	Segments map[string]string
+}
+
+// CSINodeInfo is the fingerprinted data from a CSI Plugin that is specific to
+// the Node API.
+type CSINodeInfo struct {
+	ID                      string
+	MaxVolumes              int64
+	AccessibleTopology      *CSITopology
+	RequiresNodeStageVolume bool
+}
+
+// CSIControllerInfo is the fingerprinted data from a CSI Plugin that is specific to
+// the Controller API.
+type CSIControllerInfo struct {
+	SupportsReadOnlyAttach           bool
+	SupportsAttachDetach             bool
+	SupportsListVolumes              bool
+	SupportsListVolumesAttachedNodes bool
+}
+
+// CSIInfo is the current state of a single CSI Plugin. This is updated regularly
+// as plugin health changes on the node.
+type CSIInfo struct {
+	PluginID                 string
+	AllocID                  string
+	Healthy                  bool
+	HealthDescription        string
+	UpdateTime               time.Time
+	RequiresControllerPlugin bool
+	RequiresTopologies       bool
+	ControllerInfo           *CSIControllerInfo `json:",omitempty"`
+	NodeInfo                 *CSINodeInfo       `json:",omitempty"`
 }
 
 // DrainStrategy describes a Node's drain behavior.
@@ -676,6 +792,8 @@ type StatValue struct {
 
 func (v *StatValue) String() string {
 	switch {
+	case v == nil:
+		return "<none>"
 	case v.BoolVal != nil:
 		return strconv.FormatBool(*v.BoolVal)
 	case v.StringVal != nil:
@@ -719,6 +837,9 @@ type NodeListStub struct {
 	Status                string
 	StatusDescription     string
 	Drivers               map[string]*DriverInfo
+	NodeResources         *NodeResources         `json:",omitempty"`
+	ReservedResources     *NodeReservedResources `json:",omitempty"`
+	LastDrain             *DrainMetadata
 	CreateIndex           uint64
 	ModifyIndex           uint64
 }

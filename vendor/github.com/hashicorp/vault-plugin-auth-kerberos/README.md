@@ -1,9 +1,5 @@
 # Vault Plugin: Kerberos Auth Backend
 
-## This Plugin is in Beta
-
-This plugin is currently being incorporated into Vault and documentation is in the process of being written. Beta usage is welcome. Please report any issues you encounter. Thank you!
-
 ## Details
 
 This is a standalone backend plugin for use with [Hashicorp Vault](https://www.github.com/hashicorp/vault).

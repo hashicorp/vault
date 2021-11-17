@@ -31,14 +31,14 @@ type DefaultMongoDBMajorVersionService interface {
 	Get(context.Context) (string, *Response, error)
 }
 
-// DefaultMongoDBMajorVersionServiceOp is an implementation of DefaultMongoDBMajorVersionService
+// DefaultMongoDBMajorVersionServiceOp is an implementation of DefaultMongoDBMajorVersionService.
 type DefaultMongoDBMajorVersionServiceOp struct {
 	Client PlainRequestDoer
 }
 
 var _ DefaultMongoDBMajorVersionService = &DefaultMongoDBMajorVersionServiceOp{}
 
-// Get gets the current major MongoDB version in Atlas
+// Get gets the current major MongoDB version in Atlas.
 func (s *DefaultMongoDBMajorVersionServiceOp) Get(ctx context.Context) (string, *Response, error) {
 	req, err := s.Client.NewPlainRequest(ctx, http.MethodGet, defaultMongoDBMajorVersionPath)
 	if err != nil {

@@ -35,6 +35,11 @@ type RegistryModules interface {
 
 	// Delete a specific registry module version
 	DeleteVersion(ctx context.Context, organization string, name string, provider string, version string) error
+
+	// Upload Terraform configuration files for the provided registry module version. It
+	// requires a path to the configuration files on disk, which will be packaged by
+	// hashicorp/go-slug before being uploaded.
+	Upload(ctx context.Context, rmv RegistryModuleVersion, path string) error
 }
 
 // registryModules implements RegistryModules.
@@ -94,24 +99,52 @@ type RegistryModuleVersion struct {
 
 	// Relations
 	RegistryModule *RegistryModule `jsonapi:"relation,registry-module"`
+
+	// Links
+	Links map[string]interface{} `jsonapi:"links,omitempty"`
+}
+
+// Upload uploads Terraform configuration files for the provided registry module version. It
+// requires a path to the configuration files on disk, which will be packaged by
+// hashicorp/go-slug before being uploaded.
+func (r *registryModules) Upload(ctx context.Context, rmv RegistryModuleVersion, path string) error {
+	uploadURL, ok := rmv.Links["upload"].(string)
+	if !ok {
+		return fmt.Errorf("provided RegistryModuleVersion does not contain an upload link")
+	}
+
+	body, err := packContents(path)
+	if err != nil {
+		return err
+	}
+
+	req, err := r.client.newRequest("PUT", uploadURL, body)
+	if err != nil {
+		return err
+	}
+
+	return r.client.do(ctx, req, nil)
 }
 
 type RegistryModulePermissions struct {
-	CanDelete bool `json:"can-delete"`
-	CanResync bool `json:"can-resync"`
-	CanRetry  bool `json:"can-retry"`
+	CanDelete bool `jsonapi:"attr,can-delete"`
+	CanResync bool `jsonapi:"attr,can-resync"`
+	CanRetry  bool `jsonapi:"attr,can-retry"`
 }
 
 type RegistryModuleVersionStatuses struct {
-	Version string                      `json:"version"`
-	Status  RegistryModuleVersionStatus `json:"status"`
-	Error   string                      `json:"error"`
+	Version string                      `jsonapi:"attr,version"`
+	Status  RegistryModuleVersionStatus `jsonapi:"attr,status"`
+	Error   string                      `jsonapi:"attr,error"`
 }
 
 // RegistryModuleCreateOptions is used when creating a registry module without a VCS repo
 type RegistryModuleCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,registry-modules"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,registry-modules"`
 
 	Name     *string `jsonapi:"attr,name"`
 	Provider *string `jsonapi:"attr,provider"`
@@ -119,10 +152,10 @@ type RegistryModuleCreateOptions struct {
 
 func (o RegistryModuleCreateOptions) valid() error {
 	if !validString(o.Name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 	if !validStringID(o.Name) {
-		return errors.New("invalid value for name")
+		return ErrInvalidName
 	}
 	if !validString(o.Provider) {
 		return errors.New("provider is required")
@@ -136,14 +169,11 @@ func (o RegistryModuleCreateOptions) valid() error {
 // Create a new registry module without a VCS repo
 func (r *registryModules) Create(ctx context.Context, organization string, options RegistryModuleCreateOptions) (*RegistryModule, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf(
 		"organizations/%s/registry-modules",
@@ -165,8 +195,11 @@ func (r *registryModules) Create(ctx context.Context, organization string, optio
 
 // RegistryModuleCreateVersionOptions is used when creating a registry module version
 type RegistryModuleCreateVersionOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,registry-module-versions"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,registry-module-versions"`
 
 	Version *string `jsonapi:"attr,version"`
 }
@@ -184,13 +217,13 @@ func (o RegistryModuleCreateVersionOptions) valid() error {
 // Create a new registry module version
 func (r *registryModules) CreateVersion(ctx context.Context, organization string, name string, provider string, options RegistryModuleCreateVersionOptions) (*RegistryModuleVersion, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 	if !validString(&name) {
-		return nil, errors.New("name is required")
+		return nil, ErrRequiredName
 	}
 	if !validStringID(&name) {
-		return nil, errors.New("invalid value for name")
+		return nil, ErrInvalidName
 	}
 	if !validString(&provider) {
 		return nil, errors.New("provider is required")
@@ -201,9 +234,6 @@ func (r *registryModules) CreateVersion(ctx context.Context, organization string
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf(
 		"registry-modules/%s/%s/%s/versions",
@@ -227,7 +257,7 @@ func (r *registryModules) CreateVersion(ctx context.Context, organization string
 
 // RegistryModuleCreateWithVCSConnectionOptions is used when creating a registry module with a VCS repo
 type RegistryModuleCreateWithVCSConnectionOptions struct {
-        ID string `jsonapi:"primary,registry-modules"`
+	ID string `jsonapi:"primary,registry-modules"`
 
 	// VCS repository information
 	VCSRepo *RegistryModuleVCSRepoOptions `jsonapi:"attr,vcs-repo"`
@@ -265,8 +295,8 @@ func (r *registryModules) CreateWithVCSConnection(ctx context.Context, options R
 		return nil, err
 	}
 
-        // Make sure we don't send a user provided ID.
-        options.ID = ""
+	// Make sure we don't send a user provided ID.
+	options.ID = ""
 
 	req, err := r.client.newRequest("POST", "registry-modules", &options)
 	if err != nil {
@@ -285,13 +315,13 @@ func (r *registryModules) CreateWithVCSConnection(ctx context.Context, options R
 // Read a specific registry module
 func (r *registryModules) Read(ctx context.Context, organization string, name string, provider string) (*RegistryModule, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 	if !validString(&name) {
-		return nil, errors.New("name is required")
+		return nil, ErrRequiredName
 	}
 	if !validStringID(&name) {
-		return nil, errors.New("invalid value for name")
+		return nil, ErrInvalidName
 	}
 	if !validString(&provider) {
 		return nil, errors.New("provider is required")
@@ -323,13 +353,13 @@ func (r *registryModules) Read(ctx context.Context, organization string, name st
 // Delete is used to delete the entire registry module
 func (r *registryModules) Delete(ctx context.Context, organization string, name string) error {
 	if !validStringID(&organization) {
-		return errors.New("invalid value for organization")
+		return ErrInvalidOrg
 	}
 	if !validString(&name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 	if !validStringID(&name) {
-		return errors.New("invalid value for name")
+		return ErrInvalidName
 	}
 
 	u := fmt.Sprintf(
@@ -348,13 +378,13 @@ func (r *registryModules) Delete(ctx context.Context, organization string, name 
 // DeleteProvider is used to delete the specific registry module provider
 func (r *registryModules) DeleteProvider(ctx context.Context, organization string, name string, provider string) error {
 	if !validStringID(&organization) {
-		return errors.New("invalid value for organization")
+		return ErrInvalidOrg
 	}
 	if !validString(&name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 	if !validStringID(&name) {
-		return errors.New("invalid value for name")
+		return ErrInvalidName
 	}
 	if !validString(&provider) {
 		return errors.New("provider is required")
@@ -380,13 +410,13 @@ func (r *registryModules) DeleteProvider(ctx context.Context, organization strin
 // DeleteVersion is used to delete the specific registry module version
 func (r *registryModules) DeleteVersion(ctx context.Context, organization string, name string, provider string, version string) error {
 	if !validStringID(&organization) {
-		return errors.New("invalid value for organization")
+		return ErrInvalidOrg
 	}
 	if !validString(&name) {
-		return errors.New("name is required")
+		return ErrRequiredName
 	}
 	if !validStringID(&name) {
-		return errors.New("invalid value for name")
+		return ErrInvalidName
 	}
 	if !validString(&provider) {
 		return errors.New("provider is required")

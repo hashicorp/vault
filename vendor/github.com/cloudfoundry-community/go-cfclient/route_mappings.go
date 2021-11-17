@@ -52,6 +52,7 @@ func (c *Client) MappingAppAndRoute(req RouteMappingRequest) (*RouteMapping, err
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -74,6 +75,7 @@ func (c *Client) ListRouteMappingsByQuery(query url.Values) ([]*RouteMapping, er
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting route mappings")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading route mappings request:")
@@ -130,6 +132,7 @@ func (c *Client) DeleteRouteMapping(guid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error deleting route mapping %s, response code %d", guid, resp.StatusCode)
 	}

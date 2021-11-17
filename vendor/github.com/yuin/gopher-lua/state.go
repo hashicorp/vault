@@ -982,26 +982,30 @@ func (ls *LState) initCallFrame(cf *callFrame) { // +inline-start
 		proto := cf.Fn.Proto
 		nargs := cf.NArgs
 		np := int(proto.NumParameters)
-		newSize := cf.LocalBase + np
-		// this section is inlined by go-inline
-		// source function is 'func (rg *registry) checkSize(requiredSize int) ' in '_state.go'
-		{
-			rg := ls.reg
-			requiredSize := newSize
-			if requiredSize > cap(rg.array) {
-				rg.resize(requiredSize)
+		if nargs < np {
+			// default any missing arguments to nil
+			newSize := cf.LocalBase + np
+			// this section is inlined by go-inline
+			// source function is 'func (rg *registry) checkSize(requiredSize int) ' in '_state.go'
+			{
+				rg := ls.reg
+				requiredSize := newSize
+				if requiredSize > cap(rg.array) {
+					rg.resize(requiredSize)
+				}
 			}
-		}
-		for i := nargs; i < np; i++ {
-			ls.reg.array[cf.LocalBase+i] = LNil
+			for i := nargs; i < np; i++ {
+				ls.reg.array[cf.LocalBase+i] = LNil
+			}
 			nargs = np
+			ls.reg.top = newSize
 		}
 
 		if (proto.IsVarArg & VarArgIsVarArg) == 0 {
 			if nargs < int(proto.NumUsedRegisters) {
 				nargs = int(proto.NumUsedRegisters)
 			}
-			newSize = cf.LocalBase + nargs
+			newSize := cf.LocalBase + nargs
 			// this section is inlined by go-inline
 			// source function is 'func (rg *registry) checkSize(requiredSize int) ' in '_state.go'
 			{
@@ -1090,26 +1094,30 @@ func (ls *LState) pushCallFrame(cf callFrame, fn LValue, meta bool) { // +inline
 			proto := cf.Fn.Proto
 			nargs := cf.NArgs
 			np := int(proto.NumParameters)
-			newSize := cf.LocalBase + np
-			// this section is inlined by go-inline
-			// source function is 'func (rg *registry) checkSize(requiredSize int) ' in '_state.go'
-			{
-				rg := ls.reg
-				requiredSize := newSize
-				if requiredSize > cap(rg.array) {
-					rg.resize(requiredSize)
+			if nargs < np {
+				// default any missing arguments to nil
+				newSize := cf.LocalBase + np
+				// this section is inlined by go-inline
+				// source function is 'func (rg *registry) checkSize(requiredSize int) ' in '_state.go'
+				{
+					rg := ls.reg
+					requiredSize := newSize
+					if requiredSize > cap(rg.array) {
+						rg.resize(requiredSize)
+					}
 				}
-			}
-			for i := nargs; i < np; i++ {
-				ls.reg.array[cf.LocalBase+i] = LNil
+				for i := nargs; i < np; i++ {
+					ls.reg.array[cf.LocalBase+i] = LNil
+				}
 				nargs = np
+				ls.reg.top = newSize
 			}
 
 			if (proto.IsVarArg & VarArgIsVarArg) == 0 {
 				if nargs < int(proto.NumUsedRegisters) {
 					nargs = int(proto.NumUsedRegisters)
 				}
-				newSize = cf.LocalBase + nargs
+				newSize := cf.LocalBase + nargs
 				// this section is inlined by go-inline
 				// source function is 'func (rg *registry) checkSize(requiredSize int) ' in '_state.go'
 				{

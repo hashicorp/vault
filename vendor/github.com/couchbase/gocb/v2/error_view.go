@@ -1,6 +1,9 @@
 package gocb
 
-import gocbcore "github.com/couchbase/gocbcore/v9"
+import (
+	"encoding/json"
+	gocbcore "github.com/couchbase/gocbcore/v10"
+)
 
 // ViewErrorDesc represents a specific error returned from the views service.
 type ViewErrorDesc struct {
@@ -31,9 +34,51 @@ type ViewError struct {
 	RetryAttempts      uint32          `json:"retry_attempts,omitempty"`
 }
 
+// MarshalJSON implements the Marshaler interface.
+func (e ViewError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		InnerError         string          `json:"msg,omitempty"`
+		DesignDocumentName string          `json:"design_document_name,omitempty"`
+		ViewName           string          `json:"view_name,omitempty"`
+		Errors             []ViewErrorDesc `json:"errors,omitempty"`
+		Endpoint           string          `json:"endpoint,omitempty"`
+		RetryReasons       []RetryReason   `json:"retry_reasons,omitempty"`
+		RetryAttempts      uint32          `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:         e.InnerError.Error(),
+		DesignDocumentName: e.DesignDocumentName,
+		ViewName:           e.ViewName,
+		Errors:             e.Errors,
+		Endpoint:           e.Endpoint,
+		RetryReasons:       e.RetryReasons,
+		RetryAttempts:      e.RetryAttempts,
+	})
+}
+
 // Error returns the string representation of this error.
 func (e ViewError) Error() string {
-	return e.InnerError.Error() + " | " + serializeWrappedError(e)
+	errBytes, serErr := json.Marshal(struct {
+		InnerError         error           `json:"-"`
+		DesignDocumentName string          `json:"design_document_name,omitempty"`
+		ViewName           string          `json:"view_name,omitempty"`
+		Errors             []ViewErrorDesc `json:"errors,omitempty"`
+		Endpoint           string          `json:"endpoint,omitempty"`
+		RetryReasons       []RetryReason   `json:"retry_reasons,omitempty"`
+		RetryAttempts      uint32          `json:"retry_attempts,omitempty"`
+	}{
+		InnerError:         e.InnerError,
+		DesignDocumentName: e.DesignDocumentName,
+		ViewName:           e.ViewName,
+		Errors:             e.Errors,
+		Endpoint:           e.Endpoint,
+		RetryReasons:       e.RetryReasons,
+		RetryAttempts:      e.RetryAttempts,
+	})
+	if serErr != nil {
+		logErrorf("failed to serialize error to json: %s", serErr.Error())
+	}
+
+	return e.InnerError.Error() + " | " + string(errBytes)
 }
 
 // Unwrap returns the underlying cause for this error.

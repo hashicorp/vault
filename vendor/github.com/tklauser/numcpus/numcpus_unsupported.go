@@ -17,6 +17,10 @@
 
 package numcpus
 
+func getConfigured() (int, error) {
+	return 0, ErrNotSupported
+}
+
 func getKernelMax() (int, error) {
 	return 0, ErrNotSupported
 }

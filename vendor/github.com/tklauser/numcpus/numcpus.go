@@ -30,6 +30,13 @@ import "errors"
 // ErrNotSupported is the error returned when the function is not supported.
 var ErrNotSupported = errors.New("function not supported")
 
+// GetConfigured returns the number of CPUs configured on the system. This
+// function should return the same value as `getconf _SC_NPROCESSORS_CONF` on a
+// unix system.
+func GetConfigured() (int, error) {
+	return getConfigured()
+}
+
 // GetKernelMax returns the maximum number of CPUs allowed by the kernel
 // configuration. This function is only supported on Linux systems.
 func GetKernelMax() (int, error) {

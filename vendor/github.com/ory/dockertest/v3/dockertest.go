@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	dc "github.com/ory/dockertest/v3/docker"
 	options "github.com/ory/dockertest/v3/docker/opts"
 	"github.com/pkg/errors"
@@ -300,12 +300,15 @@ type RunOptions struct {
 	Auth         dc.AuthConfiguration
 	PortBindings map[dc.Port][]dc.PortBinding
 	Privileged   bool
+	User         string
+	Tty          bool
 }
 
 // BuildOptions is used to pass in optional parameters when building a container
 type BuildOptions struct {
 	Dockerfile string
 	ContextDir string
+	BuildArgs  []dc.BuildArg
 }
 
 // BuildAndRunWithBuildOptions builds and starts a docker container.
@@ -316,6 +319,7 @@ func (d *Pool) BuildAndRunWithBuildOptions(buildOpts *BuildOptions, runOpts *Run
 		Dockerfile:   buildOpts.Dockerfile,
 		OutputStream: ioutil.Discard,
 		ContextDir:   buildOpts.ContextDir,
+		BuildArgs:    buildOpts.BuildArgs,
 	})
 
 	if err != nil {
@@ -431,6 +435,8 @@ func (d *Pool) RunWithOptions(opts *RunOptions, hcOpts ...func(*dc.HostConfig)) 
 			WorkingDir:   wd,
 			Labels:       opts.Labels,
 			StopSignal:   "SIGWINCH", // to support timeouts
+			User:         opts.User,
+			Tty:          opts.Tty,
 		},
 		HostConfig:       &hostConfig,
 		NetworkingConfig: &networkingConfig,
@@ -541,7 +547,15 @@ func (d *Pool) Retry(op func() error) error {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxInterval = time.Second * 5
 	bo.MaxElapsedTime = d.MaxWait
-	return backoff.Retry(op, bo)
+	if err := backoff.Retry(op, bo); err != nil {
+		if bo.NextBackOff() == backoff.Stop {
+			return fmt.Errorf("reached retry deadline")
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 // CurrentContainer returns current container descriptor if this function called within running container.

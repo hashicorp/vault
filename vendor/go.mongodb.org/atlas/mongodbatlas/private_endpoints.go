@@ -22,14 +22,14 @@ import (
 )
 
 const (
-	privateEndpointsPath = "groups/%s/privateEndpoint"
+	privateEndpointsPath = "api/atlas/v1.0/groups/%s/privateEndpoint"
 	regionalModePath     = privateEndpointsPath + "/regionalMode"
 )
 
 // PrivateEndpointsService is an interface for interfacing with the Private Endpoints
 // of the MongoDB Atlas API.
 //
-// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoint/
+// See more: https://docs.atlas.mongodb.com/reference/api/private-endpoints/
 type PrivateEndpointsService interface {
 	Create(context.Context, string, *PrivateEndpointConnection) (*PrivateEndpointConnection, *Response, error)
 	Get(context.Context, string, string, string) (*PrivateEndpointConnection, *Response, error)
@@ -43,7 +43,7 @@ type PrivateEndpointsService interface {
 }
 
 // PrivateEndpointsServiceOp handles communication with the PrivateEndpoints related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type PrivateEndpointsServiceOp service
 
 var _ PrivateEndpointsService = &PrivateEndpointsServiceOp{}
@@ -71,7 +71,8 @@ type InterfaceEndpointConnection struct {
 	PrivateEndpointResourceID     string `json:"privateEndpointResourceId,omitempty"`     // Unique identifier of the private endpoint.
 	DeleteRequested               *bool  `json:"deleteRequested,omitempty"`               // Indicates if Atlas received a request to remove the interface endpoint from the private endpoint connection.
 	ErrorMessage                  string `json:"errorMessage,omitempty"`                  // Error message pertaining to the interface endpoint. Returns null if there are no errors.
-	ConnectionStatus              string `json:"connectionStatus,omitempty"`              // Status of the interface endpoint: NONE, PENDING_ACCEPTANCE, PENDING, AVAILABLE, REJECTED, DELETING.
+	AWSConnectionStatus           string `json:"connectionStatus,omitempty"`              // Status of the interface endpoint: NONE, PENDING_ACCEPTANCE, PENDING, AVAILABLE, REJECTED, DELETING.
+	AzureStatus                   string `json:"status,omitempty"`                        // Status of the interface endpoint AZURE: INITIATING, AVAILABLE, FAILED, DELETING.
 }
 
 // RegionalizedPrivateEndpointSetting represents MongoDB Regionalized private Endpoint Setting.

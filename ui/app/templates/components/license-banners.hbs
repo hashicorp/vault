@@ -14,7 +14,7 @@
     <AlertBanner
       @type="warning"
       @title="Vault license expiring"
-      @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format @expiry "hh:mm:ss a"}} on {{date-format @expiry "MMM d, yyyy"}}. Add a new license to your configuration."
+      @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format @expiry "hh:mm:ss a"}} on {{date-format @expiry "MMM d, yyyy"}}. {{if @autoloaded 'Add a new license to your configuration.' 'Keep in mind that your next license will need to be autoloaded'}}"
       @marginless={{true}}
     >
       <a href="https://learn.hashicorp.com/tutorials/nomad/hashicorp-enterprise-license" target="_blank" rel="noreferrer noopener">Read documentation</a>

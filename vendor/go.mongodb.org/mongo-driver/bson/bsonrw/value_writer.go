@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -46,11 +47,9 @@ func NewBSONValueWriterPool() *BSONValueWriterPool {
 // Get retrieves a BSON ValueWriter from the pool and resets it to use w as the destination.
 func (bvwp *BSONValueWriterPool) Get(w io.Writer) ValueWriter {
 	vw := bvwp.pool.Get().(*valueWriter)
-	if writer, ok := w.(*SliceWriter); ok {
-		vw.reset(*writer)
-		vw.w = writer
-		return vw
-	}
+
+	// TODO: Having to call reset here with the same buffer doesn't really make sense.
+	vw.reset(vw.buf)
 	vw.buf = vw.buf[:0]
 	vw.w = w
 	return vw
@@ -70,11 +69,6 @@ func (bvwp *BSONValueWriterPool) Put(vw ValueWriter) (ok bool) {
 	if !ok {
 		return false
 	}
-
-	if _, ok := bvw.w.(*SliceWriter); ok {
-		bvw.buf = nil
-	}
-	bvw.w = nil
 
 	bvwp.pool.Put(bvw)
 	return true
@@ -247,7 +241,12 @@ func (vw *valueWriter) invalidTransitionError(destination mode, name string, mod
 func (vw *valueWriter) writeElementHeader(t bsontype.Type, destination mode, callerName string, addmodes ...mode) error {
 	switch vw.stack[vw.frame].mode {
 	case mElement:
-		vw.buf = bsoncore.AppendHeader(vw.buf, t, vw.stack[vw.frame].key)
+		key := vw.stack[vw.frame].key
+		if !isValidCString(key) {
+			return errors.New("BSON element key cannot contain null bytes")
+		}
+
+		vw.buf = bsoncore.AppendHeader(vw.buf, t, key)
 	case mValue:
 		// TODO: Do this with a cache of the first 1000 or so array keys.
 		vw.buf = bsoncore.AppendHeader(vw.buf, t, strconv.Itoa(vw.stack[vw.frame].arrkey))
@@ -430,6 +429,9 @@ func (vw *valueWriter) WriteObjectID(oid primitive.ObjectID) error {
 }
 
 func (vw *valueWriter) WriteRegex(pattern string, options string) error {
+	if !isValidCString(pattern) || !isValidCString(options) {
+		return errors.New("BSON regex values cannot contain null bytes")
+	}
 	if err := vw.writeElementHeader(bsontype.Regex, mode(0), "WriteRegex"); err != nil {
 		return err
 	}
@@ -540,10 +542,6 @@ func (vw *valueWriter) Flush() error {
 		return nil
 	}
 
-	if sw, ok := vw.w.(*SliceWriter); ok {
-		*sw = vw.buf
-		return nil
-	}
 	if _, err := vw.w.Write(vw.buf); err != nil {
 		return err
 	}
@@ -601,4 +599,8 @@ func (vw *valueWriter) writeLength() error {
 	vw.buf[start+2] = byte(length >> 16)
 	vw.buf[start+3] = byte(length >> 24)
 	return nil
+}
+
+func isValidCString(cs string) bool {
+	return !strings.ContainsRune(cs, '\x00')
 }

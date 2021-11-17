@@ -6,7 +6,7 @@ If you are planning to run the full suite of tests or work on policy sets or reg
 
 Your policy set repository will need the following: 
 1. A policy set stored in a subdirectory `policy-sets/foo`
-1. A branch other than master named `policies`
+1. A branch other than `main` named `policies`
 
 Your registry module repository will need to be a [valid module](https://www.terraform.io/docs/cloud/registry/publish.html#preparing-a-module-repository).
 It will need the following: 
@@ -25,6 +25,8 @@ Tests are run against an actual backend so they require a valid backend address 
 1. `GITHUB_TOKEN` - [GitHub personal access token](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line). Required for running any tests that use VCS (OAuth clients, policy sets, etc).
 1. `GITHUB_POLICY_SET_IDENTIFIER` - GitHub policy set repository identifier in the format `username/repository`. Required for running policy set tests.
 1. `GITHUB_REGISTRY_MODULE_IDENTIFIER` - GitHub registry module repository identifier in the format `username/repository`. Required for running registry module tests.
+1. `ENABLE_TFE` - Some tests are only applicable to Terraform Enterprise or Terraform Cloud. By setting `ENABLE_TFE=1` you will enable enterprise only tests and disable cloud only tests. In CI `ENABLE_TFE` is not set so if you are writing enterprise only features you should manually test with `ENABLE_TFE=1` against a Terraform Enterprise instance.
+1. `SKIP_PAID` - Some tests depend on paid only features. By setting `SKIP_PAID=1`, you will skip tests that access paid features.
 
 You can set your environment variables up however you prefer. The following are instructions for setting up environment variables using [envchain](https://github.com/sorah/envchain).
    1. Make sure you have envchain installed. [Instructions for this can be found in the envchain README](https://github.com/sorah/envchain#installation).
@@ -53,24 +55,25 @@ command (as the default timeout is 10m).
 
 ##### With envchain:
 ```sh
-$ envchain YOUR_NAMESPACE_HERE go test ./... -timeout=30m
+$ envchain YOUR_NAMESPACE_HERE go test ./... -timeout=30m -tags=integration
 ```
 
 ##### Without envchain:
 ```sh
-$ go test ./... -timeout=30m
+$ TFE_TOKEN=xyz TFE_ADDRESS=xyz ENABLE_TFE=1 go test ./... -timeout=30m -tags=integration
 ```
+
 #### Running specific tests
 
 The commands below use notification configurations as an example.
 
 ##### With envchain:
 ```sh
-$ envchain YOUR_NAMESPACE_HERE go test -run TestNotificationConfiguration -v ./...
+$ envchain YOUR_NAMESPACE_HERE go test -run TestNotificationConfiguration -v ./... -tags=integration
 ```
 
 ##### Without envchain:
 ```sh
-$ go test -run TestNotificationConfiguration -v ./...
+$ TFE_TOKEN=xyz TFE_ADDRESS=xyz ENABLE_TFE=1 go test -run TestNotificationConfiguration -v ./... -tags=integration
 ```   
 

@@ -33,8 +33,8 @@ func NewTermFacet(field string, size uint64) *TermFacet {
 
 type numericFacetRange struct {
 	Name  string  `json:"name,omitempty"`
-	Start float64 `json:"start,omitempty"`
-	End   float64 `json:"end,omitempty"`
+	Start float64 `json:"min,omitempty"`
+	End   float64 `json:"max,omitempty"`
 }
 type numericFacetData struct {
 	Field         string              `json:"field,omitempty"`

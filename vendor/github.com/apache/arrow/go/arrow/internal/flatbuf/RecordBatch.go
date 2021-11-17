@@ -113,8 +113,23 @@ func (rcv *RecordBatch) BuffersLength() int {
 /// example, most primitive arrays will have 2 buffers, 1 for the validity
 /// bitmap and 1 for the values. For struct arrays, there will only be a
 /// single buffer for the validity (nulls) bitmap
+/// Optional compression of the message body
+func (rcv *RecordBatch) Compression(obj *BodyCompression) *BodyCompression {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
+	if o != 0 {
+		x := rcv._tab.Indirect(o + rcv._tab.Pos)
+		if obj == nil {
+			obj = new(BodyCompression)
+		}
+		obj.Init(rcv._tab.Bytes, x)
+		return obj
+	}
+	return nil
+}
+
+/// Optional compression of the message body
 func RecordBatchStart(builder *flatbuffers.Builder) {
-	builder.StartObject(3)
+	builder.StartObject(4)
 }
 func RecordBatchAddLength(builder *flatbuffers.Builder, length int64) {
 	builder.PrependInt64Slot(0, length, 0)
@@ -130,6 +145,9 @@ func RecordBatchAddBuffers(builder *flatbuffers.Builder, buffers flatbuffers.UOf
 }
 func RecordBatchStartBuffersVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
 	return builder.StartVector(16, numElems, 8)
+}
+func RecordBatchAddCompression(builder *flatbuffers.Builder, compression flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(3, flatbuffers.UOffsetT(compression), 0)
 }
 func RecordBatchEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

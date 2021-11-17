@@ -42,16 +42,16 @@ func (rcv *SparseTensor) Table() flatbuffers.Table {
 	return rcv._tab
 }
 
-func (rcv *SparseTensor) TypeType() byte {
+func (rcv *SparseTensor) TypeType() Type {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetByte(o + rcv._tab.Pos)
+		return Type(rcv._tab.GetByte(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
-func (rcv *SparseTensor) MutateTypeType(n byte) bool {
-	return rcv._tab.MutateByteSlot(4, n)
+func (rcv *SparseTensor) MutateTypeType(n Type) bool {
+	return rcv._tab.MutateByteSlot(4, byte(n))
 }
 
 /// The type of data contained in a value cell.
@@ -105,16 +105,16 @@ func (rcv *SparseTensor) MutateNonZeroLength(n int64) bool {
 	return rcv._tab.MutateInt64Slot(10, n)
 }
 
-func (rcv *SparseTensor) SparseIndexType() byte {
+func (rcv *SparseTensor) SparseIndexType() SparseTensorIndex {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(12))
 	if o != 0 {
-		return rcv._tab.GetByte(o + rcv._tab.Pos)
+		return SparseTensorIndex(rcv._tab.GetByte(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
-func (rcv *SparseTensor) MutateSparseIndexType(n byte) bool {
-	return rcv._tab.MutateByteSlot(12, n)
+func (rcv *SparseTensor) MutateSparseIndexType(n SparseTensorIndex) bool {
+	return rcv._tab.MutateByteSlot(12, byte(n))
 }
 
 /// Sparse tensor index
@@ -146,8 +146,8 @@ func (rcv *SparseTensor) Data(obj *Buffer) *Buffer {
 func SparseTensorStart(builder *flatbuffers.Builder) {
 	builder.StartObject(7)
 }
-func SparseTensorAddTypeType(builder *flatbuffers.Builder, typeType byte) {
-	builder.PrependByteSlot(0, typeType, 0)
+func SparseTensorAddTypeType(builder *flatbuffers.Builder, typeType Type) {
+	builder.PrependByteSlot(0, byte(typeType), 0)
 }
 func SparseTensorAddType(builder *flatbuffers.Builder, type_ flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(1, flatbuffers.UOffsetT(type_), 0)
@@ -161,8 +161,8 @@ func SparseTensorStartShapeVector(builder *flatbuffers.Builder, numElems int) fl
 func SparseTensorAddNonZeroLength(builder *flatbuffers.Builder, nonZeroLength int64) {
 	builder.PrependInt64Slot(3, nonZeroLength, 0)
 }
-func SparseTensorAddSparseIndexType(builder *flatbuffers.Builder, sparseIndexType byte) {
-	builder.PrependByteSlot(4, sparseIndexType, 0)
+func SparseTensorAddSparseIndexType(builder *flatbuffers.Builder, sparseIndexType SparseTensorIndex) {
+	builder.PrependByteSlot(4, byte(sparseIndexType), 0)
 }
 func SparseTensorAddSparseIndex(builder *flatbuffers.Builder, sparseIndex flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(5, flatbuffers.UOffsetT(sparseIndex), 0)

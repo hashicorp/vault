@@ -140,10 +140,16 @@ of the configured redirected URIs. These same "localhost" URIs must be added to 
 **Vault UI**
 
 Logging in via the Vault UI requires a redirect URI of the form:
+
 `https://{host:port}/ui/vault/auth/{path}/oidc/callback`
 
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
+
+If the [oidc_response_mode](/api-docs/auth/jwt#oidc_response_mode) is set to `form_post`, then
+logging in via the Vault UI requires a redirect URI of the form:
+
+`https://{host:port}/v1/auth/{path}/oidc/callback`
 
 Prior to Vault 1.6, if [namespaces](/docs/enterprise/namespaces) are in use,
 they must be added as query parameters, for example:
@@ -176,6 +182,8 @@ Complete the login via your OIDC provider. Launching browser to:
 
 The browser will open to the generated URL to complete the provider's login. The
 URL may be entered manually if the browser cannot be automatically opened.
+
+- `skip_browser` (default: "false"). Toggle the automatic launching of the default browser to the login URL.
 
 The callback listener may be customized with the following optional parameters. These are typically
 not required to be set:

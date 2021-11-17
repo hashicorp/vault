@@ -2152,9 +2152,19 @@ func (s *SetIamPolicyRequest) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// SignBlobRequest: The service account sign blob request.
+// SignBlobRequest: Deprecated. [Migrate to Service Account
+// Credentials
+// API](https://cloud.google.com/iam/help/credentials/migrate
+// -api).
+//
+// The service account sign blob request.
 type SignBlobRequest struct {
-	// BytesToSign: Required. The bytes to sign.
+	// BytesToSign: Required. Deprecated. [Migrate to Service Account
+	// Credentials
+	// API](https://cloud.google.com/iam/help/credentials/migrate
+	// -api).
+	//
+	// The bytes to sign.
 	BytesToSign string `json:"bytesToSign,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "BytesToSign") to
@@ -2180,12 +2190,27 @@ func (s *SignBlobRequest) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// SignBlobResponse: The service account sign blob response.
+// SignBlobResponse: Deprecated. [Migrate to Service Account
+// Credentials
+// API](https://cloud.google.com/iam/help/credentials/migrate
+// -api).
+//
+// The service account sign blob response.
 type SignBlobResponse struct {
-	// KeyId: The id of the key used to sign the blob.
+	// KeyId: Deprecated. [Migrate to Service Account
+	// Credentials
+	// API](https://cloud.google.com/iam/help/credentials/migrate
+	// -api).
+	//
+	// The id of the key used to sign the blob.
 	KeyId string `json:"keyId,omitempty"`
 
-	// Signature: The signed blob.
+	// Signature: Deprecated. [Migrate to Service Account
+	// Credentials
+	// API](https://cloud.google.com/iam/help/credentials/migrate
+	// -api).
+	//
+	// The signed blob.
 	Signature string `json:"signature,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -2215,10 +2240,20 @@ func (s *SignBlobResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// SignJwtRequest: The service account sign JWT request.
+// SignJwtRequest: Deprecated. [Migrate to Service Account
+// Credentials
+// API](https://cloud.google.com/iam/help/credentials/migrate
+// -api).
+//
+// The service account sign JWT request.
 type SignJwtRequest struct {
-	// Payload: Required. The JWT payload to sign. Must be a serialized JSON
-	// object that contains a
+	// Payload: Required. Deprecated. [Migrate to Service Account
+	// Credentials
+	// API](https://cloud.google.com/iam/help/credentials/migrate
+	// -api).
+	//
+	// The JWT payload to sign. Must be a serialized JSON object that
+	// contains a
 	// JWT Claims Set. For example: `{"sub": "user@example.com", "iat":
 	// 313435}`
 	//
@@ -2258,12 +2293,27 @@ func (s *SignJwtRequest) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// SignJwtResponse: The service account sign JWT response.
+// SignJwtResponse: Deprecated. [Migrate to Service Account
+// Credentials
+// API](https://cloud.google.com/iam/help/credentials/migrate
+// -api).
+//
+// The service account sign JWT response.
 type SignJwtResponse struct {
-	// KeyId: The id of the key used to sign the JWT.
+	// KeyId: Deprecated. [Migrate to Service Account
+	// Credentials
+	// API](https://cloud.google.com/iam/help/credentials/migrate
+	// -api).
+	//
+	// The id of the key used to sign the JWT.
 	KeyId string `json:"keyId,omitempty"`
 
-	// SignedJwt: The signed JWT.
+	// SignedJwt: Deprecated. [Migrate to Service Account
+	// Credentials
+	// API](https://cloud.google.com/iam/help/credentials/migrate
+	// -api).
+	//
+	// The signed JWT.
 	SignedJwt string `json:"signedJwt,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -2513,7 +2563,7 @@ func (c *IamPoliciesLintPolicyCall) Header() http.Header {
 
 func (c *IamPoliciesLintPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2644,7 +2694,7 @@ func (c *IamPoliciesQueryAuditableServicesCall) Header() http.Header {
 
 func (c *IamPoliciesQueryAuditableServicesCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2771,7 +2821,7 @@ func (c *OrganizationsRolesCreateCall) Header() http.Header {
 
 func (c *OrganizationsRolesCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2937,7 +2987,7 @@ func (c *OrganizationsRolesDeleteCall) Header() http.Header {
 
 func (c *OrganizationsRolesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3084,7 +3134,7 @@ func (c *OrganizationsRolesGetCall) Header() http.Header {
 
 func (c *OrganizationsRolesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3269,7 +3319,7 @@ func (c *OrganizationsRolesListCall) Header() http.Header {
 
 func (c *OrganizationsRolesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3457,7 +3507,7 @@ func (c *OrganizationsRolesPatchCall) Header() http.Header {
 
 func (c *OrganizationsRolesPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3603,7 +3653,7 @@ func (c *OrganizationsRolesUndeleteCall) Header() http.Header {
 
 func (c *OrganizationsRolesUndeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3745,7 +3795,7 @@ func (c *PermissionsQueryTestablePermissionsCall) Header() http.Header {
 
 func (c *PermissionsQueryTestablePermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3893,7 +3943,7 @@ func (c *ProjectsRolesCreateCall) Header() http.Header {
 
 func (c *ProjectsRolesCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4059,7 +4109,7 @@ func (c *ProjectsRolesDeleteCall) Header() http.Header {
 
 func (c *ProjectsRolesDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4206,7 +4256,7 @@ func (c *ProjectsRolesGetCall) Header() http.Header {
 
 func (c *ProjectsRolesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4391,7 +4441,7 @@ func (c *ProjectsRolesListCall) Header() http.Header {
 
 func (c *ProjectsRolesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4579,7 +4629,7 @@ func (c *ProjectsRolesPatchCall) Header() http.Header {
 
 func (c *ProjectsRolesPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4725,7 +4775,7 @@ func (c *ProjectsRolesUndeleteCall) Header() http.Header {
 
 func (c *ProjectsRolesUndeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4865,7 +4915,7 @@ func (c *ProjectsServiceAccountsCreateCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5026,7 +5076,7 @@ func (c *ProjectsServiceAccountsDeleteCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5182,7 +5232,7 @@ func (c *ProjectsServiceAccountsDisableCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsDisableCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5333,7 +5383,7 @@ func (c *ProjectsServiceAccountsEnableCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsEnableCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5482,7 +5532,7 @@ func (c *ProjectsServiceAccountsGetCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5656,7 +5706,7 @@ func (c *ProjectsServiceAccountsGetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsGetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5825,7 +5875,7 @@ func (c *ProjectsServiceAccountsListCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5992,7 +6042,7 @@ func (c *ProjectsServiceAccountsPatchCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6158,7 +6208,7 @@ func (c *ProjectsServiceAccountsSetIamPolicyCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsSetIamPolicyCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6263,12 +6313,19 @@ type ProjectsServiceAccountsSignBlobCall struct {
 	header_         http.Header
 }
 
-// SignBlob: **Note:** We are in the process of deprecating this method.
+// SignBlob: **Note:** This method is deprecated and will stop working
+// on July 1, 2021.
 // Use
 // the
 // [`signBlob`](https://cloud.google.com/iam/help/rest-credentials/v1
 // /projects.serviceAccounts/signBlob)
-// method in the IAM Service Account Credentials API instead.
+// method in the IAM Service Account Credentials API instead. If you
+// currently
+// use this method, see the
+// [migration
+// guide](https://cloud.google.com/iam/help/credentials/migrat
+// e-api) for
+// instructions.
 //
 // Signs a blob using the system-managed private key for a
 // ServiceAccount.
@@ -6306,7 +6363,7 @@ func (c *ProjectsServiceAccountsSignBlobCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsSignBlobCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6370,7 +6427,7 @@ func (c *ProjectsServiceAccountsSignBlobCall) Do(opts ...googleapi.CallOption) (
 	}
 	return ret, nil
 	// {
-	//   "description": "**Note:** We are in the process of deprecating this method. Use the\n[`signBlob`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signBlob)\nmethod in the IAM Service Account Credentials API instead.\n\nSigns a blob using the system-managed private key for a ServiceAccount.",
+	//   "description": "**Note:** This method is deprecated and will stop working on July 1, 2021.\nUse the\n[`signBlob`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signBlob)\nmethod in the IAM Service Account Credentials API instead. If you currently\nuse this method, see the [migration\nguide](https://cloud.google.com/iam/help/credentials/migrate-api) for\ninstructions.\n\nSigns a blob using the system-managed private key for a ServiceAccount.",
 	//   "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}:signBlob",
 	//   "httpMethod": "POST",
 	//   "id": "iam.projects.serviceAccounts.signBlob",
@@ -6379,7 +6436,7 @@ func (c *ProjectsServiceAccountsSignBlobCall) Do(opts ...googleapi.CallOption) (
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "Required. The resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
+	//       "description": "Required. Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+/serviceAccounts/[^/]+$",
 	//       "required": true,
@@ -6411,12 +6468,19 @@ type ProjectsServiceAccountsSignJwtCall struct {
 	header_        http.Header
 }
 
-// SignJwt: **Note:** We are in the process of deprecating this method.
+// SignJwt: **Note:** This method is deprecated and will stop working on
+// July 1, 2021.
 // Use
 // the
 // [`signJwt`](https://cloud.google.com/iam/help/rest-credentials/v1/
 // projects.serviceAccounts/signJwt)
-// method in the IAM Service Account Credentials API instead.
+// method in the IAM Service Account Credentials API instead. If you
+// currently
+// use this method, see the
+// [migration
+// guide](https://cloud.google.com/iam/help/credentials/migrat
+// e-api) for
+// instructions.
 //
 // Signs a JSON Web Token (JWT) using the system-managed private key for
 // a
@@ -6455,7 +6519,7 @@ func (c *ProjectsServiceAccountsSignJwtCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsSignJwtCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6519,7 +6583,7 @@ func (c *ProjectsServiceAccountsSignJwtCall) Do(opts ...googleapi.CallOption) (*
 	}
 	return ret, nil
 	// {
-	//   "description": "**Note:** We are in the process of deprecating this method. Use the\n[`signJwt`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signJwt)\nmethod in the IAM Service Account Credentials API instead.\n\nSigns a JSON Web Token (JWT) using the system-managed private key for a\nServiceAccount.",
+	//   "description": "**Note:** This method is deprecated and will stop working on July 1, 2021.\nUse the\n[`signJwt`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signJwt)\nmethod in the IAM Service Account Credentials API instead. If you currently\nuse this method, see the [migration\nguide](https://cloud.google.com/iam/help/credentials/migrate-api) for\ninstructions.\n\nSigns a JSON Web Token (JWT) using the system-managed private key for a\nServiceAccount.",
 	//   "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}:signJwt",
 	//   "httpMethod": "POST",
 	//   "id": "iam.projects.serviceAccounts.signJwt",
@@ -6528,7 +6592,7 @@ func (c *ProjectsServiceAccountsSignJwtCall) Do(opts ...googleapi.CallOption) (*
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "Required. The resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
+	//       "description": "Required. Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+/serviceAccounts/[^/]+$",
 	//       "required": true,
@@ -6597,7 +6661,7 @@ func (c *ProjectsServiceAccountsTestIamPermissionsCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6747,7 +6811,7 @@ func (c *ProjectsServiceAccountsUndeleteCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsUndeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6893,7 +6957,7 @@ func (c *ProjectsServiceAccountsUpdateCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7033,7 +7097,7 @@ func (c *ProjectsServiceAccountsKeysCreateCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsKeysCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7171,7 +7235,7 @@ func (c *ProjectsServiceAccountsKeysDeleteCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsKeysDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7325,7 +7389,7 @@ func (c *ProjectsServiceAccountsKeysGetCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsKeysGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7493,7 +7557,7 @@ func (c *ProjectsServiceAccountsKeysListCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsKeysListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7640,7 +7704,7 @@ func (c *ProjectsServiceAccountsKeysUploadCall) Header() http.Header {
 
 func (c *ProjectsServiceAccountsKeysUploadCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7789,7 +7853,7 @@ func (c *RolesGetCall) Header() http.Header {
 
 func (c *RolesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8019,7 +8083,7 @@ func (c *RolesListCall) Header() http.Header {
 
 func (c *RolesListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8195,7 +8259,7 @@ func (c *RolesQueryGrantableRolesCall) Header() http.Header {
 
 func (c *RolesQueryGrantableRolesCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200707")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200728")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

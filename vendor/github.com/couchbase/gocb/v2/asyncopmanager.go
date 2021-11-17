@@ -1,13 +1,15 @@
 package gocb
 
 import (
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	"context"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 type asyncOpManager struct {
 	signal chan struct{}
 
 	wasResolved bool
+	ctx         context.Context
 }
 
 func (m *asyncOpManager) Reject() {
@@ -24,13 +26,23 @@ func (m *asyncOpManager) Wait(op gocbcore.PendingOp, err error) error {
 		return err
 	}
 
-	<-m.signal
+	select {
+	case <-m.signal:
+		// Good to go
+	case <-m.ctx.Done():
+		op.Cancel()
+		<-m.signal
+	}
 
 	return nil
 }
 
-func newAsyncOpManager() *asyncOpManager {
+func newAsyncOpManager(ctx context.Context) *asyncOpManager {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	return &asyncOpManager{
 		signal: make(chan struct{}, 1),
+		ctx:    ctx,
 	}
 }

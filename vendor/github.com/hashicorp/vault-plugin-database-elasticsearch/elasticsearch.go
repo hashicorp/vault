@@ -9,9 +9,14 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
+)
+
+const (
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | truncate 100 }}`
 )
 
 var _ dbplugin.Database = (*Elasticsearch)(nil)
@@ -31,6 +36,8 @@ type Elasticsearch struct {
 
 	// The root credential config.
 	config map[string]interface{}
+
+	usernameProducer template.StringTemplate
 }
 
 // Type returns the TypeName for this backend
@@ -65,6 +72,23 @@ func (es *Elasticsearch) SecretValues() map[string]string {
 // Initialize is called on `$ vault write database/config/:db-name`,
 // or when you do a creds call after Vault's been restarted.
 func (es *Elasticsearch) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+
+	_, err = up.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
 
 	// Validate the config to provide immediate feedback to the user.
 	// Ensure required string fields are provided in the expected format.
@@ -115,6 +139,7 @@ func (es *Elasticsearch) Initialize(ctx context.Context, req dbplugin.Initialize
 	// Everything's working, write the new config to memory and storage.
 	es.mux.Lock()
 	defer es.mux.Unlock()
+	es.usernameProducer = up
 	es.config = req.Config
 	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
@@ -126,14 +151,9 @@ func (es *Elasticsearch) Initialize(ctx context.Context, req dbplugin.Initialize
 // and it's the first time anything is touched from `$ vault write database/roles/:role-name`.
 // This is likely to be the highest-throughput method for this plugin.
 func (es *Elasticsearch) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 15),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
-		credsutil.MaxLength(100),
-		credsutil.Separator("-"),
-	)
+	username, err := es.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
-		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to generate username for %q: %w", req.UsernameConfig, err)
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	stmt, err := newCreationStatement(req.Statements)
@@ -204,7 +224,6 @@ func (es *Elasticsearch) DeleteUser(ctx context.Context, req dbplugin.DeleteUser
 // UpdateUser doesn't require any statements from the user because it's not configurable in any
 // way. We simply generate a new password and hit a pre-defined Elasticsearch REST API to rotate them.
 func (es *Elasticsearch) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
-
 	// Don't let anyone read or write the config while we're in the process of rotating the password.
 	es.mux.Lock()
 	defer es.mux.Unlock()
@@ -255,7 +274,6 @@ type creationStatement struct {
 // buildClient is a helper method for building a client from the present config,
 // which is done often.
 func buildClient(config map[string]interface{}) (*Client, error) {
-
 	// We can presume these required fields are provided by strings
 	// because they're validated in Init.
 	clientConfig := &ClientConfig{

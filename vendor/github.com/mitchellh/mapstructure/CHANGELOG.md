@@ -1,3 +1,21 @@
+## 1.4.2
+
+* Custom name matchers to support any sort of casing, formatting, etc. for
+  field names. [GH-250]
+* Fix possible panic in ComposeDecodeHookFunc [GH-251]
+
+## 1.4.1
+
+* Fix regression where `*time.Time` value would be set to empty and not be sent
+  to decode hooks properly [GH-232]
+
+## 1.4.0
+
+* A new decode hook type `DecodeHookFuncValue` has been added that has
+  access to the full values. [GH-183]
+* Squash is now supported with embedded fields that are struct pointers [GH-205]
+* Empty strings will convert to 0 for all numeric types when weakly decoding [GH-206]
+
 ## 1.3.3
 
 * Decoding maps from maps creates a settable value for decode hooks [GH-203]
