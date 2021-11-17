@@ -23,6 +23,7 @@
   border: 0;
   cursor: pointer;
   padding: 96px 32px;
+  min-height: 300px;
 
   @media (--medium-up) {
     grid-column: 1 / 7;
