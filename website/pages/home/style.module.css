@@ -71,8 +71,8 @@
   --minCol: 300px;
 
   list-style: none;
-  margin: 0;
-  padding: 0;
+  margin: -4px;
+  padding: 4px;
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
@@ -81,6 +81,58 @@
   @media (--medium-up) {
     --columns: 3;
     --minCol: 0;
+
+    margin: 0;
+    padding: 0;
+    overflow-x: unset;
+  }
+
+  & > li {
+    display: flex;
+  }
+}
+
+/*
+ * Use cases
+ */
+
+.useCases {
+  margin-bottom: 128px;
+}
+
+.useCasesHeader {
+  margin-bottom: 48px;
+  text-align: center;
+}
+
+.useCasesHeading {
+  margin: 0;
+  composes: g-type-display-2 from global;
+}
+
+.useCasesCards {
+  --columns: 8;
+  --minCol: 300px;
+
+  list-style: none;
+  margin: -4px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
+  gap: 32px;
+  overflow-x: auto;
+
+  @media (--medium-up) {
+    --columns: 3;
+    --minCol: 0;
+
+    margin: 0;
+    padding: 0;
+    overflow-x: unset;
+  }
+
+  @media (--large) {
+    --columns: 4;
   }
 
   & > li {
