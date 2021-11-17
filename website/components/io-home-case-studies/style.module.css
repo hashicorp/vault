@@ -48,7 +48,7 @@
   color: var(--white);
   transition: ease-in-out 0.2s;
   transition-property: box-shadow;
-  min-height: 330px;
+  min-height: 300px;
 
   &::before {
     content: '';
