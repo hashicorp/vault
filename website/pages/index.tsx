@@ -1,3 +1,2 @@
-import Homepage, { getStaticProps } from './home'
-export { getStaticProps }
+import Homepage from './home'
 export default Homepage
