@@ -2,6 +2,7 @@ import IoHomeHero from 'components/io-home-hero'
 import IoHomeVideoCallout from 'components/io-home-video-callout'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
+import s from './style.module.css'
 
 export default function Homepage({ content }) {
   return (
@@ -44,7 +45,7 @@ export default function Homepage({ content }) {
         ]}
       />
 
-      <div className="g-grid-container">
+      <div className={s.intro}>
         <IoHomeVideoCallout
           heading="How Vault works"
           description="Vault tightly controls access to secrets and encryption keys by authenticating against trusted sources of identity such as Active Directory, LDAP, Kubernetes, CloudFoundry, and cloud platforms."

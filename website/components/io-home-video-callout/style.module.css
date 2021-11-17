@@ -56,12 +56,12 @@
       rgba(0, 0, 0, 0.5),
       rgba(0, 0, 0, 0.5)
     );
-    opacity: 0.5;
+    opacity: 0.45;
     transition: opacity ease-in-out 0.2s;
   }
 
   &:hover::after {
-    opacity: 0.75;
+    opacity: 0.2;
   }
 }
 
