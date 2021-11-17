@@ -3,6 +3,7 @@ const redirects = require('./redirects.next')
 
 module.exports = withHashicorp({
   nextOptimizedImages: true,
+  transpileModules: ['@hashicorp/flight-icons'],
 })({
   svgo: { plugins: [{ removeViewBox: false }] },
   rewrites: () => [
