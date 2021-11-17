@@ -2,11 +2,10 @@ package lz4
 
 import (
 	"fmt"
-	"reflect"
-	"runtime"
-
 	"github.com/pierrec/lz4/v4/internal/lz4block"
 	"github.com/pierrec/lz4/v4/internal/lz4errors"
+	"reflect"
+	"runtime"
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=BlockSize,CompressionLevel -output options_gen.go
@@ -82,7 +81,7 @@ func ChecksumOption(flag bool) Option {
 	return func(a applier) error {
 		switch w := a.(type) {
 		case nil:
-			s := fmt.Sprintf("BlockChecksumOption(%v)", flag)
+			s := fmt.Sprintf("ChecksumOption(%v)", flag)
 			return lz4errors.Error(s)
 		case *Writer:
 			w.frame.Descriptor.Flags.ContentChecksumSet(flag)
@@ -112,16 +111,19 @@ func SizeOption(size uint64) Option {
 // ConcurrencyOption sets the number of go routines used for compression.
 // If n <= 0, then the output of runtime.GOMAXPROCS(0) is used.
 func ConcurrencyOption(n int) Option {
+	if n <= 0 {
+		n = runtime.GOMAXPROCS(0)
+	}
 	return func(a applier) error {
-		switch w := a.(type) {
+		switch rw := a.(type) {
 		case nil:
 			s := fmt.Sprintf("ConcurrencyOption(%d)", n)
 			return lz4errors.Error(s)
 		case *Writer:
-			if n <= 0 {
-				n = runtime.GOMAXPROCS(0)
-			}
-			w.num = n
+			rw.num = n
+			return nil
+		case *Reader:
+			rw.num = n
 			return nil
 		}
 		return lz4errors.ErrOptionNotApplicable
@@ -179,9 +181,33 @@ func OnBlockDoneOption(handler func(size int)) Option {
 			return lz4errors.Error(s)
 		case *Writer:
 			rw.handler = handler
+			return nil
 		case *Reader:
 			rw.handler = handler
+			return nil
 		}
-		return nil
+		return lz4errors.ErrOptionNotApplicable
+	}
+}
+
+// LegacyOption provides support for writing LZ4 frames in the legacy format.
+//
+// See https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md#legacy-frame.
+//
+// NB. compressed Linux kernel images use a tweaked LZ4 legacy format where
+// the compressed stream is followed by the original (uncompressed) size of
+// the kernel (https://events.static.linuxfound.org/sites/events/files/lcjpcojp13_klee.pdf).
+// This is also supported as a special case.
+func LegacyOption(legacy bool) Option {
+	return func(a applier) error {
+		switch rw := a.(type) {
+		case nil:
+			s := fmt.Sprintf("LegacyOption(%v)", legacy)
+			return lz4errors.Error(s)
+		case *Writer:
+			rw.legacy = legacy
+			return nil
+		}
+		return lz4errors.ErrOptionNotApplicable
 	}
 }

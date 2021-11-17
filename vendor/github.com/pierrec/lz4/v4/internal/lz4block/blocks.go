@@ -8,6 +8,8 @@ const (
 	Block256Kb
 	Block1Mb
 	Block4Mb
+	Block8Mb        = 2 * Block4Mb
+	legacyBlockSize = Block8Mb + Block8Mb/255 + 16 // CompressBound(Block8Mb)
 )
 
 var (
@@ -15,6 +17,7 @@ var (
 	BlockPool256K = sync.Pool{New: func() interface{} { return make([]byte, Block256Kb) }}
 	BlockPool1M   = sync.Pool{New: func() interface{} { return make([]byte, Block1Mb) }}
 	BlockPool4M   = sync.Pool{New: func() interface{} { return make([]byte, Block4Mb) }}
+	BlockPool8M   = sync.Pool{New: func() interface{} { return make([]byte, legacyBlockSize) }}
 )
 
 func Index(b uint32) BlockSizeIndex {
@@ -27,6 +30,8 @@ func Index(b uint32) BlockSizeIndex {
 		return 6
 	case Block4Mb:
 		return 7
+	case Block8Mb: // only valid in legacy mode
+		return 3
 	}
 	return 0
 }
@@ -56,29 +61,25 @@ func (b BlockSizeIndex) Get() []byte {
 		buf = BlockPool1M.Get()
 	case 7:
 		buf = BlockPool4M.Get()
+	case 3:
+		buf = BlockPool8M.Get()
 	}
 	return buf.([]byte)
 }
 
-func (b BlockSizeIndex) Put(buf []byte) {
+func Put(buf []byte) {
 	// Safeguard: do not allow invalid buffers.
-	switch c := uint32(cap(buf)); b {
-	case 4:
-		if c == Block64Kb {
-			BlockPool64K.Put(buf[:c])
-		}
-	case 5:
-		if c == Block256Kb {
-			BlockPool256K.Put(buf[:c])
-		}
-	case 6:
-		if c == Block1Mb {
-			BlockPool1M.Put(buf[:c])
-		}
-	case 7:
-		if c == Block4Mb {
-			BlockPool4M.Put(buf[:c])
-		}
+	switch c := cap(buf); uint32(c) {
+	case Block64Kb:
+		BlockPool64K.Put(buf[:c])
+	case Block256Kb:
+		BlockPool256K.Put(buf[:c])
+	case Block1Mb:
+		BlockPool1M.Put(buf[:c])
+	case Block4Mb:
+		BlockPool4M.Put(buf[:c])
+	case legacyBlockSize:
+		BlockPool8M.Put(buf[:c])
 	}
 }
 
