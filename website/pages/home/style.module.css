@@ -1,3 +1,80 @@
+.container {
+  composes: g-grid-container from global;
+}
+
+/*
+ * Intro
+ */
+
 .intro {
   padding-bottom: 128px;
+}
+
+/*
+ * In practice
+ */
+
+.inPractice {
+  margin: 0 auto 128px;
+  max-width: 1600px;
+  width: calc(100% - 24px);
+  background-color: var(--black);
+  border-radius: 6px;
+}
+
+.inPracticeHeader {
+  padding-top: 64px;
+  padding-bottom: 64px;
+  margin-right: auto;
+  margin-left: auto;
+  text-align: center;
+
+  @media (--medium-up) {
+    max-width: calc(100% * 4 / 12);
+  }
+}
+
+.inPracticeHeading {
+  margin: 0;
+  composes: g-type-display-2 from global;
+  color: var(--white);
+}
+
+.inPracticeDescription {
+  margin: 16px 0 0;
+  composes: g-type-body from global;
+  color: var(--gray-5);
+}
+
+/*
+ * Case studies
+ */
+
+.caseStudies {
+  margin: 0 auto 128px;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  max-width: 1600px;
+  width: calc(100% - 24px);
+  background-color: var(--vault-accent);
+  border-radius: 6px;
+}
+
+.caseStudiesHeader {
+  margin-bottom: 32px;
+
+  @media (--medium-up) {
+    max-width: calc(100% * 5 / 12);
+  }
+}
+
+.caseStudiesHeading {
+  margin: 0;
+  composes: g-type-display-3 from global;
+}
+
+.caseStudiesDescription {
+  margin: 8px 0 0;
+  composes: g-type-body from global;
+  color: var(--gray-3);
 }
