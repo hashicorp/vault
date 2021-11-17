@@ -380,7 +380,7 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if reflect.DeepEqual(core0Peers, core1Peers) && reflect.DeepEqual(core1Peers, core2Peers) {
+		if len(core0Peers) == 3 && reflect.DeepEqual(core0Peers, core1Peers) && reflect.DeepEqual(core1Peers, core2Peers) {
 			break
 		}
 		time.Sleep(time.Second)

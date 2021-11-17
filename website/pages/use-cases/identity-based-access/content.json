@@ -18,21 +18,42 @@
         "content": "Improve the extensibility of Vault with pluggable identity backends."
       },
       "logoGrid": [
-        "aws",
-        "microsoft-azure",
-        "google",
-        "kubernetes",
         {
-          "url": "https://www.datocms-assets.com/2885/1619808232-nomad-logomark-color.svg"
+          "url": "https://www.datocms-assets.com/2885/1566919170-aws.svg",
+          "alt": "AWS"
         },
         {
-          "url": "https://www.datocms-assets.com/2885/1556657783-oktalogo.svg"
+          "url": "https://www.datocms-assets.com/2885/1539799149-azure-stacked-color.svg",
+          "alt": "Microsoft Azure"
         },
         {
-          "url": "https://www.datocms-assets.com/2885/1608658344-pivotalcf.png"
+          "url": "https://www.datocms-assets.com/2885/1513617132-google-cloud.svg",
+          "alt": "Google Cloud"
         },
-        { "url": "https://www.datocms-assets.com/2885/1506540149-black.svg" },
-        { "url": "https://www.datocms-assets.com/2885/1608143270-ellipsis.png" }
+        {
+          "url": "https://www.datocms-assets.com/2885/1540418681-kubernetes.png",
+          "alt": "Kubernetes"
+        },
+        {
+          "url": "https://www.datocms-assets.com/2885/1619808232-nomad-logomark-color.svg",
+          "alt": "Nomad"
+        },
+        {
+          "url": "https://www.datocms-assets.com/2885/1556657783-oktalogo.svg",
+          "alt": "Okta"
+        },
+        {
+          "url": "https://www.datocms-assets.com/2885/1608658344-pivotalcf.png",
+          "alt": "PivotalCF"
+        },
+        {
+          "url": "https://www.datocms-assets.com/2885/1506540149-black.svg",
+          "alt": "SSH"
+        },
+        {
+          "url": "https://www.datocms-assets.com/2885/1608143270-ellipsis.png",
+          "alt": "ellipsis icon"
+        }
       ]
     },
     {

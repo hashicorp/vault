@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
@@ -285,7 +284,7 @@ func parseFlagFile(raw string) (string, error) {
 	if len(raw) > 0 && raw[0] == '@' {
 		contents, err := ioutil.ReadFile(raw[1:])
 		if err != nil {
-			return "", errwrap.Wrapf("error reading file: {{err}}", err)
+			return "", fmt.Errorf("error reading file: %w", err)
 		}
 
 		return string(contents), nil

@@ -207,6 +207,13 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.TokenType = tokenType
 	}
 
+	if tokenNumUses, ok := d.GetOk("token_num_uses"); ok {
+		t.TokenNumUses = tokenNumUses.(int)
+	}
+	if t.TokenNumUses < 0 {
+		return errors.New("'token_num_uses' cannot be negative")
+	}
+
 	if t.TokenType == logical.TokenTypeBatch || t.TokenType == logical.TokenTypeDefaultBatch {
 		if t.TokenPeriod != 0 {
 			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate periodic tokens")
@@ -224,13 +231,6 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	}
 	if t.TokenTTL > 0 && t.TokenMaxTTL > 0 && t.TokenTTL > t.TokenMaxTTL {
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
-	}
-
-	if tokenNumUses, ok := d.GetOk("token_num_uses"); ok {
-		t.TokenNumUses = tokenNumUses.(int)
-	}
-	if t.TokenNumUses < 0 {
-		return errors.New("'token_num_uses' cannot be negative")
 	}
 
 	return nil

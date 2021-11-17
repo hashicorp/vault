@@ -7,12 +7,13 @@
   }}
     <div class="columns is-mobile">
       <div class="column is-10">
-        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" policyName}} class="is-block has-text-black has-text-weight-semibold"><span class="is-underline">{{policyName}}</span>
+        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" policyName}} class="is-block has-text-black has-text-weight-semibold">
+          <span class="is-underline">{{policyName}}</span>
         </LinkTo>
       </div>
       <div class="column has-text-right">
-        {{#if model.canEdit}}
-          <Identity::PopupPolicy @params={{array model policyName}} />
+        {{#if @model.canEdit}}
+          <Identity::PopupPolicy @params={{array @model policyName}} />
         {{/if}}
       </div>
     </div>

@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	"github.com/hashicorp/vault/vault"
 )
 
 const minVersionError = "'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]"
@@ -122,11 +121,4 @@ func TLSFileChecks(certFilePath, keyFilePath string) error {
 	}
 
 	return nil
-}
-
-// ServerListenerActiveProbe attempts to use TLS information to set up a TLS server with each listener
-// and generate a successful request through to the server.
-// TODO
-func ServerListenerActiveProbe(core *vault.Core) error {
-	return fmt.Errorf("Method not implemented")
 }

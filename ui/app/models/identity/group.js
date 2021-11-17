@@ -64,8 +64,8 @@ export default IdentityModel.extend({
     'memberGroupIds.[]',
     function() {
       let { memberEntityIds, memberGroupIds } = this;
-      let numEntities = (memberEntityIds && memberEntityIds.get('length')) || 0;
-      let numGroups = (memberGroupIds && memberGroupIds.get('length')) || 0;
+      let numEntities = (memberEntityIds && memberEntityIds.length) || 0;
+      let numGroups = (memberGroupIds && memberGroupIds.length) || 0;
       return numEntities + numGroups > 0;
     }
   ),

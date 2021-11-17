@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
@@ -279,10 +278,10 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	// can't drop if not all database users are dropped
 	if rows.Err() != nil {
-		return errwrap.Wrapf("could not generate sql statements for all rows: {{err}}", rows.Err())
+		return fmt.Errorf("could not generate sql statements for all rows: %w", rows.Err())
 	}
 	if lastStmtError != nil {
-		return errwrap.Wrapf("could not perform all sql statements: {{err}}", lastStmtError)
+		return fmt.Errorf("could not perform all sql statements: %w", lastStmtError)
 	}
 
 	// Drop this login

@@ -24,7 +24,7 @@ const (
 	deleteOp               string = "delete"
 )
 
-var goodEntry physical.Entry = physical.Entry{Key: secretKey, Value: []byte(secretVal)}
+var goodEntry physical.Entry = physical.Entry{Key: "diagnose", Value: []byte(secretVal)}
 var badEntry physical.Entry = physical.Entry{}
 
 type mockStorageBackend struct {
@@ -34,7 +34,7 @@ type mockStorageBackend struct {
 func (m mockStorageBackend) storageLogicGeneralInternal(op string) error {
 	if (m.callType == timeoutCallRead && op == readOp) || (m.callType == timeoutCallWrite && op == writeOp) ||
 		(m.callType == timeoutCallDelete && op == deleteOp) {
-		time.Sleep(25 * time.Second)
+		time.Sleep(2 * time.Second)
 	} else if m.callType == errCallWrite && op == writeOp {
 		return fmt.Errorf(storageErrStringWrite)
 	} else if m.callType == errCallDelete && op == deleteOp {
@@ -53,7 +53,10 @@ func (m mockStorageBackend) Put(ctx context.Context, entry *physical.Entry) erro
 
 // Get is used to fetch an entry
 func (m mockStorageBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	if m.callType == errCallRead || m.callType == timeoutCallRead {
+	if m.callType == timeoutCallRead {
+		return &goodEntry, m.storageLogicGeneralInternal(readOp)
+	}
+	if m.callType == errCallRead {
 		return nil, m.storageLogicGeneralInternal(readOp)
 	}
 	if m.callType == badReadCall {
@@ -72,4 +75,17 @@ func (m mockStorageBackend) Delete(ctx context.Context, key string) error {
 // List is not used in a mock.
 func (m mockStorageBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	return nil, fmt.Errorf("method not implemented")
+}
+
+func callTypeToOp(ctype string) string {
+	if ctype == timeoutCallRead || ctype == errCallRead || ctype == badReadCall {
+		return readOp
+	}
+	if ctype == errCallWrite || ctype == storageErrStringWrite || ctype == timeoutCallWrite {
+		return writeOp
+	}
+	if ctype == errCallDelete || ctype == timeoutCallDelete || ctype == storageErrStringDelete {
+		return deleteOp
+	}
+	return ""
 }

@@ -1577,7 +1577,7 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 	}
 
 	lastMonth := intent.PreviousMonth
-	a.logger.Info("computing queries", "month", lastMonth)
+	a.logger.Info("computing queries", "month", time.Unix(lastMonth, 0).UTC())
 
 	times, err := a.getMostRecentActivityLogSegment(ctx)
 	if err != nil {

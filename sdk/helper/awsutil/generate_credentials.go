@@ -1,7 +1,10 @@
 package awsutil
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -10,11 +13,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/go-hclog"
 	"github.com/pkg/errors"
 )
+
+const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"
 
 type CredentialsConfig struct {
 	// The access key if static credentials are being used
@@ -131,4 +137,88 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	}
 
 	return creds, nil
+}
+
+func RetrieveCreds(accessKey, secretKey, sessionToken string, logger hclog.Logger) (*credentials.Credentials, error) {
+	credConfig := CredentialsConfig{
+		AccessKey:    accessKey,
+		SecretKey:    secretKey,
+		SessionToken: sessionToken,
+		Logger:       logger,
+	}
+	creds, err := credConfig.GenerateCredentialChain()
+	if err != nil {
+		return nil, err
+	}
+	if creds == nil {
+		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
+	}
+
+	_, err = creds.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %w", err)
+	}
+	return creds, nil
+}
+
+// GenerateLoginData populates the necessary data to send to the Vault server for generating a token
+// This is useful for other API clients to use
+func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRegion string, logger hclog.Logger) (map[string]interface{}, error) {
+	loginData := make(map[string]interface{})
+
+	// Use the credentials we've found to construct an STS session
+	region, err := GetRegion(configuredRegion)
+	if err != nil {
+		logger.Warn(fmt.Sprintf("defaulting region to %q due to %s", DefaultRegion, err.Error()))
+		region = DefaultRegion
+	}
+	stsSession, err := session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Credentials:      creds,
+			Region:           &region,
+			EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var params *sts.GetCallerIdentityInput
+	svc := sts.New(stsSession)
+	stsRequest, _ := svc.GetCallerIdentityRequest(params)
+
+	// Inject the required auth header value, if supplied, and then sign the request including that header
+	if headerValue != "" {
+		stsRequest.HTTPRequest.Header.Add(iamServerIdHeader, headerValue)
+	}
+	stsRequest.Sign()
+
+	// Now extract out the relevant parts of the request
+	headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
+	if err != nil {
+		return nil, err
+	}
+	requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
+	if err != nil {
+		return nil, err
+	}
+	loginData["iam_http_request_method"] = stsRequest.HTTPRequest.Method
+	loginData["iam_request_url"] = base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String()))
+	loginData["iam_request_headers"] = base64.StdEncoding.EncodeToString(headersJson)
+	loginData["iam_request_body"] = base64.StdEncoding.EncodeToString(requestBody)
+
+	return loginData, nil
+}
+
+// STS is a really weird service that used to only have global endpoints but now has regional endpoints as well.
+// For backwards compatibility, even if you request a region other than us-east-1, it'll still sign for us-east-1.
+// See, e.g., https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html#id_credentials_temp_enable-regions_writing_code
+// So we have to shim in this EndpointResolver to force it to sign for the right region
+func stsSigningResolver(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+	defaultEndpoint, err := endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+	if err != nil {
+		return defaultEndpoint, err
+	}
+	defaultEndpoint.SigningRegion = region
+	return defaultEndpoint, nil
 }

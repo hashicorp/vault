@@ -69,11 +69,13 @@ export default Model.extend({
   }),
   creation_statement: attr('string', {
     editType: 'json',
+    allowReset: true,
     theme: 'hashi short',
     defaultShown: 'Default',
   }),
   revocation_statement: attr('string', {
     editType: 'json',
+    allowReset: true,
     theme: 'hashi short',
     defaultShown: 'Default',
   }),

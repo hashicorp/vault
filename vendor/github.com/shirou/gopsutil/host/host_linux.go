@@ -281,7 +281,7 @@ func PlatformInformationWithContext(ctx context.Context) (platform string, famil
 		family = "fedora"
 	case "oracle", "centos", "redhat", "scientific", "enterpriseenterprise", "amazon", "xenserver", "cloudlinux", "ibm_powerkvm":
 		family = "rhel"
-	case "suse", "opensuse", "sles":
+	case "suse", "opensuse", "opensuse-leap", "opensuse-tumbleweed", "opensuse-tumbleweed-kubic", "sles", "sled", "caasp":
 		family = "suse"
 	case "gentoo":
 		family = "gentoo"

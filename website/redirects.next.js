@@ -1,5 +1,10 @@
 module.exports = [
   {
+    source: '/trial',
+    destination: 'https://www.hashicorp.com/products/vault/trial',
+    permanent: true,
+  },
+  {
     source: '/intro',
     destination: '/intro/getting-started',
     permanent: false,
