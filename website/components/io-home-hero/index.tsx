@@ -38,9 +38,10 @@ export default function IoHomeHero({
           <p className={s.description}>{description}</p>
           {ctas && (
             <div className={s.ctas}>
-              {ctas.map((cta) => {
+              {ctas.map((cta, index) => {
                 return (
                   <Button
+                    key={index}
                     title={cta.title}
                     url={cta.url}
                     linkType="inbound"
