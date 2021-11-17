@@ -1,0 +1,51 @@
+import * as React from 'react'
+import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
+import s from './style.module.css'
+
+export default function IoHomePreFooter({ brand, heading, description, ctas }) {
+  return (
+    <div className={s.preFooter}>
+      <div className={s.container}>
+        <div className={s.content}>
+          <h2 className={s.heading}>{heading}</h2>
+          <p className={s.description}>{description}</p>
+        </div>
+        <div className={s.cards}>
+          {ctas.map((cta, index) => {
+            return (
+              <IoHomePreFooterCard
+                key={index}
+                brand={brand}
+                link={cta.link}
+                heading={cta.heading}
+                description={cta.description}
+                cta={cta.label}
+              />
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IoHomePreFooterCard({ brand, link, heading, description, cta }) {
+  return (
+    <a
+      href={link}
+      className={s.card}
+      style={
+        {
+          '--primary': `var(--${brand})`,
+          '--secondary': `var(--${brand}-secondary)`,
+        } as React.CSSProperties
+      }
+    >
+      <h3 className={s.cardHeading}>{heading}</h3>
+      <p className={s.cardDescription}>{description}</p>
+      <span className={s.cardCta}>
+        {cta} <IconArrowRight16 />
+      </span>
+    </a>
+  )
+}
