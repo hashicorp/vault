@@ -22,9 +22,9 @@ export default function IoHomeCaseStudies({
   return (
     <div className={s.caseStudies}>
       <ul className={s.primary}>
-        {primary.map((item) => {
+        {primary.map((item, index) => {
           return (
-            <li className={s.primaryItem}>
+            <li key={index} className={s.primaryItem}>
               <a className={s.card} href={item.link}>
                 <h3 className={s.cardHeading}>{item.heading}</h3>
                 <Image
@@ -40,9 +40,9 @@ export default function IoHomeCaseStudies({
       </ul>
 
       <ul className={s.secondary}>
-        {secondary.map((item) => {
+        {secondary.map((item, index) => {
           return (
-            <li className={s.secondaryItem}>
+            <li key={index} className={s.secondaryItem}>
               <a className={s.link} href={item.link}>
                 <span className={s.linkInner}>
                   <h3 className={s.linkHeading}>{item.heading}</h3>
