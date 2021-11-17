@@ -1,6 +1,7 @@
 .videoCallout {
   --columns: 1;
 
+  margin: 0;
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   gap: 32px;

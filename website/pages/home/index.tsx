@@ -1,5 +1,6 @@
 import IoHomeHero from 'components/io-home-hero'
 import IoHomeVideoCallout from 'components/io-home-video-callout'
+import IoHomeCaseStudies from 'components/io-home-case-studies'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
 import s from './style.module.css'
@@ -46,16 +47,18 @@ export default function Homepage({ content }) {
       />
 
       <div className={s.intro}>
-        <IoHomeVideoCallout
-          heading="How Vault works"
-          description="Vault tightly controls access to secrets and encryption keys by authenticating against trusted sources of identity such as Active Directory, LDAP, Kubernetes, CloudFoundry, and cloud platforms."
-          thumbnail="/img/TEMP-thumbnail.png"
-          person={{
-            name: 'Armon Dadgar',
-            description: 'Co-founder & CTO',
-            thumbnail: '/img/TEMP-thumbnail.png',
-          }}
-        />
+        <div className={s.container}>
+          <IoHomeVideoCallout
+            heading="How Vault works"
+            description="Vault tightly controls access to secrets and encryption keys by authenticating against trusted sources of identity such as Active Directory, LDAP, Kubernetes, CloudFoundry, and cloud platforms."
+            thumbnail="/img/TEMP-thumbnail.png"
+            person={{
+              name: 'Armon Dadgar',
+              description: 'Co-founder & CTO',
+              thumbnail: '/img/TEMP-thumbnail.png',
+            }}
+          />
+        </div>
       </div>
 
       <div className={s.inPractice}>
@@ -79,6 +82,41 @@ export default function Homepage({ content }) {
               innovative companies.
             </p>
           </header>
+          <IoHomeCaseStudies
+            primary={[
+              {
+                link: '',
+                thumbnail: '/img/TEMP-thumbnail.png',
+                alt: 'Sample alt text',
+                heading: 'Accelerating the path to modern banking',
+              },
+              {
+                link: '',
+                thumbnail: '/img/TEMP-thumbnail.png',
+                alt: 'Sample alt text',
+                heading: 'A unified plan for secrets',
+              },
+            ]}
+            secondary={[
+              {
+                link: '',
+                heading:
+                  'Uber Hadoop Cluster Process Secured with HashiCorp Vault',
+              },
+              {
+                link: '',
+                heading: 'Terraform for the lean engineering team at Compile ',
+              },
+              {
+                link: '',
+                heading: 'Seeding HashiCorp Vault with Terraform at Form3',
+              },
+              {
+                link: '',
+                heading: 'A G-Research story: 1 to 1000 Vault namespaces',
+              },
+            ]}
+          />
         </div>
       </div>
 

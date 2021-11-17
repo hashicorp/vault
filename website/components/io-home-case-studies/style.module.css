@@ -1,0 +1,127 @@
+.caseStudies {
+  --columns: 1;
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 32px;
+
+  @media (--medium-up) {
+    --columns: 12;
+  }
+}
+
+.primary {
+  --columns: 1;
+
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 32px;
+
+  @media (--medium-up) {
+    --columns: 2;
+  }
+
+  @media (--large) {
+    grid-column: 1 / 9;
+  }
+}
+
+.primaryItem {
+  display: flex;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  justify-content: flex-end;
+  padding: 32px;
+  box-shadow: 0 8px 16px -10px rgba(101, 106, 118, 0.2);
+  background-color: #000;
+  border-radius: 6px;
+  color: var(--white);
+  transition: ease-in-out 0.2s;
+  transition-property: box-shadow;
+  min-height: 330px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.45)
+    );
+    transition: opacity ease-in-out 0.2s;
+  }
+
+  &:hover {
+    box-shadow: 0 2px 3px rgba(101, 106, 118, 0.15),
+      0 16px 16px -10px rgba(101, 106, 118, 0.2);
+
+    &::before {
+      opacity: 0.75;
+    }
+  }
+}
+
+.cardHeading {
+  margin: 0;
+  composes: g-type-display-4 from global;
+  z-index: 10;
+}
+
+.secondary {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  @media (--large) {
+    margin-top: -32px;
+    grid-column: 9 / -1;
+  }
+}
+
+.secondaryItem {
+  border-bottom: 1px solid var(--gray-5);
+}
+
+.link {
+  display: flex;
+  width: 100%;
+  color: var(--black);
+}
+
+.linkInner {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding-top: 32px;
+  padding-bottom: 32px;
+  transition: transform ease-in-out 0.2s;
+
+  @nest .link:hover & {
+    transform: translateX(4px);
+  }
+
+  & svg {
+    flex-shrink: 0;
+  }
+}
+
+.linkHeading {
+  margin: 0 32px 0 0;
+  composes: g-type-display-6 from global;
+}
