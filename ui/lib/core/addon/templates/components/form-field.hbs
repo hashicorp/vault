@@ -135,7 +135,7 @@
         @helperTextEnabled={{or attr.options.helperTextEnabled "Lease will expire after"}}
         @description={{attr.helpText}}
         @initialValue={{initialValue}}
-        @initialEnabled={{initialValue}}
+        @initialEnabled={{if (eq initialValue "0s") false initialValue}}
       />
     {{/let}}
   </div>
