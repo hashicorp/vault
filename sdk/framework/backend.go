@@ -296,7 +296,10 @@ func HandlePatchOperation(input *FieldData, resource map[string]interface{}, pre
 
 	// Parse all fields to ensure data types are handled properly according to the FieldSchema
 	for key := range input.Raw {
-		val, ok := input.GetOk(key)
+		val, ok, err := input.GetOkErr(key)
+		if err != nil {
+			return nil, err
+		}
 
 		// Only accept fields in the schema
 		if ok {
