@@ -1,6 +1,7 @@
 package tfe
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,13 +16,16 @@ var _ Plans = (*plans)(nil)
 // Plans describes all the plan related methods that the Terraform Enterprise
 // API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/plan.html
+// TFE API docs: https://www.terraform.io/docs/cloud/api/plan.html
 type Plans interface {
 	// Read a plan by its ID.
 	Read(ctx context.Context, planID string) (*Plan, error)
 
 	// Logs retrieves the logs of a plan.
 	Logs(ctx context.Context, planID string) (io.Reader, error)
+
+	// Retrieve the JSON execution plan
+	JSONOutput(ctx context.Context, planID string) ([]byte, error)
 }
 
 // plans implements Plans.
@@ -62,12 +66,12 @@ type Plan struct {
 
 // PlanStatusTimestamps holds the timestamps for individual plan statuses.
 type PlanStatusTimestamps struct {
-	CanceledAt      time.Time `json:"canceled-at"`
-	ErroredAt       time.Time `json:"errored-at"`
-	FinishedAt      time.Time `json:"finished-at"`
-	ForceCanceledAt time.Time `json:"force-canceled-at"`
-	QueuedAt        time.Time `json:"queued-at"`
-	StartedAt       time.Time `json:"started-at"`
+	CanceledAt      time.Time `jsonapi:"attr,canceled-at,rfc3339"`
+	ErroredAt       time.Time `jsonapi:"attr,errored-at,rfc3339"`
+	FinishedAt      time.Time `jsonapi:"attr,finished-at,rfc3339"`
+	ForceCanceledAt time.Time `jsonapi:"attr,force-canceled-at,rfc3339"`
+	QueuedAt        time.Time `jsonapi:"attr,queued-at,rfc3339"`
+	StartedAt       time.Time `jsonapi:"attr,started-at,rfc3339"`
 }
 
 // Read a plan by its ID.
@@ -133,4 +137,25 @@ func (s *plans) Logs(ctx context.Context, planID string) (io.Reader, error) {
 		done:   done,
 		logURL: u,
 	}, nil
+}
+
+// Retrieve the JSON execution plan
+func (s *plans) JSONOutput(ctx context.Context, planID string) ([]byte, error) {
+	if !validStringID(&planID) {
+		return nil, errors.New("invalid value for plan ID")
+	}
+
+	u := fmt.Sprintf("plans/%s/json-output", url.QueryEscape(planID))
+	req, err := s.client.newRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	err = s.client.do(ctx, req, &buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

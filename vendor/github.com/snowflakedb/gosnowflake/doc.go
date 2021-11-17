@@ -10,7 +10,7 @@ Clients can use the database/sql package directly. For example:
 	)
 
 	func main() {
-		db, err := sql.Open("snowflake", "user:password@myaccount/mydb")
+		db, err := sql.Open("snowflake", "user:password@my_organization-my_account/mydb")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -26,17 +26,22 @@ Use the Open() function to create a database handle with connection parameters:
 
 The Go Snowflake Driver supports the following connection syntaxes (or data source name (DSN) formats):
 
-	* username[:password]@accountname/dbname/schemaname[?param1=value&...&paramN=valueN
-	* username[:password]@accountname/dbname[?param1=value&...&paramN=valueN
-	* username[:password]@hostname:port/dbname/schemaname?account=<your_account>[&param1=value&...&paramN=valueN]
+	* username[:password]@<account_identifier>/dbname/schemaname[?param1=value&...&paramN=valueN]
+	* username[:password]@<account_identifier>/dbname[?param1=value&...&paramN=valueN]
+	* username[:password]@hostname:port/dbname/schemaname?account=<account_identifier>[&param1=value&...&paramN=valueN]
 
-where all parameters must be escaped or use `Config` and `DSN` to construct a DSN string.
+where all parameters must be escaped or use Config and DSN to construct a DSN string.
+
+For information about account identifiers, see the Snowflake documentation
+(https://docs.snowflake.com/en/user-guide/admin-account-identifier.html).
 
 The following example opens a database handle with the Snowflake account
-myaccount where the username is jsmith, password is mypassword, database is
-mydb, schema is testschema, and warehouse is mywh:
+named "my_account" under the organization named "my_organization",
+where the username is "jsmith", password is "mypassword", database is "mydb",
+schema is "testschema", and warehouse is "mywh":
 
-	db, err := sql.Open("snowflake", "jsmith:mypassword@myaccount/mydb/testschema?warehouse=mywh")
+	db, err := sql.Open("snowflake", "jsmith:mypassword@my_organization-my_account/mydb/testschema?warehouse=mywh")
+
 
 Connection Parameters
 
@@ -45,22 +50,20 @@ The connection string (DSN) can contain both connection parameters (described be
 
 The following connection parameters are supported:
 
-	* account <string>: Specifies the name of your Snowflake account, where string is the name
-		assigned to your account by Snowflake. In the URL you received from
-		Snowflake, your account name is the first segment in the domain (e.g.
-		abc123 in https://abc123.snowflakecomputing.com). This parameter is
-		optional if your account is specified after the @ character. If you
-		are not on us-west-2 region or AWS deployment, then append the region
-		after the account name, e.g. “<account>.<region>”. If you are not on
-		AWS deployment, then append not only the region, but also the platform,
-		e.g., “<account>.<region>.<platform>”. Account, region, and platform
-		should be separated by a period (“.”), as shown above. If you are using
-        a global url, then append connection group and "global",
-        e.g., "account-<connection_group>.global". Account and connection group are
-        separated by a dash ("-"), as shown above.
+	* account <string>: Specifies your Snowflake account, where "<string>" is the account
+		identifier assigned to your account by Snowflake.
+		For information about account identifiers, see the Snowflake documentation
+		(https://docs.snowflake.com/en/user-guide/admin-account-identifier.html).
+
+		If you are using a global URL, then append the connection group and ".global"
+		(e.g. "<account_identifier>-<connection_group>.global"). The account identifier and the
+		connection group are separated by a dash ("-"), as shown above.
+
+		This parameter is optional if your account identifier is specified after the "@" character
+		in the connection string.
 
 	* region <string>: DEPRECATED. You may specify a region, such as
-		“eu-central-1”, with this parameter. However, since this parameter
+		"eu-central-1", with this parameter. However, since this parameter
 		is deprecated, it is best to specify the region as part of the
 		account parameter. For details, see the description of the account
 		parameter.
@@ -79,9 +82,8 @@ The following connection parameters are supported:
 
 	* passcode: Specifies the passcode provided by Duo when using multi-factor authentication (MFA) for login.
 
-	* passcodeInPassword: false by default. Set to true if the MFA passcode is
-		embedded in the login password. Appends the MFA passcode to the end of the
-		password.
+	* passcodeInPassword: false by default. Set to true if the MFA passcode is embedded
+		in the login password. Appends the MFA passcode to the end of the password.
 
 	* loginTimeout: Specifies the timeout, in seconds, for login. The default
 		is 60 seconds. The login request gives up after the timeout length if the
@@ -125,11 +127,13 @@ A complete connection string looks similar to the following:
 Session-level parameters can also be set by using the SQL command "ALTER SESSION"
 (https://docs.snowflake.com/en/sql-reference/sql/alter-session.html).
 
+Alternatively, use OpenWithConfig() function to create a database handle with the specified Config.
+
 Proxy
 
 The Go Snowflake Driver honors the environment variables HTTP_PROXY, HTTPS_PROXY and NO_PROXY for the forward proxy setting.
 
-NO_PROXY specifies which hostname endings should be allowed to bypass the proxy server, e.g. :code:`no_proxy=.amazonaws.com` means that AWS S3 access does not need to go through the proxy.
+NO_PROXY specifies which hostname endings should be allowed to bypass the proxy server, e.g. no_proxy=.amazonaws.com means that Amazon S3 access does not need to go through the proxy.
 
 NO_PROXY does not support wildcards. Each value specified should be one of the following:
 
@@ -144,62 +148,27 @@ If more than one value is specified, values should be separated by commas, for e
 
 Logging
 
-By default, the driver's builtin logger is NOP; no output is generated. This is
-intentional for those applications that use the same set of logger parameters
-not to conflict with glog, which is incorporated in the driver logging
-framework.
+By default, the driver's builtin logger is exposing logrus's FieldLogger and default at INFO level.
+Users can use SetLogger in driver.go to set a customized logger for gosnowflake package.
 
-In order to enable debug logging for the driver, add a build tag sfdebug to the
-go tool command lines, for example:
+In order to enable debug logging for the driver, user could use SetLogLevel("debug") in SFLogger interface
+as shown in demo code at cmd/logger.go. To redirect the logs SFlogger.SetOutput method could do the work.
 
-	go build -tags=sfdebug
 
-In your application, you will need to import the "flag" module, and include code
-to enable the logging. For example:
+Query request ID
 
-        if !flag.Parsed() {
-                // enable glog for Go Snowflake Driver
-                flag.Parse()
-        }
+A specific query request ID can be set in the context and will be passed through
+in place of the default randomized request ID. For example:
 
-For tests, run the test command with the tag along with glog parameters. For
-example, the following command will generate all activity logs in the standard
-error.
-
-	go test -tags=sfdebug -v . -vmodule=*=2 -stderrthreshold=INFO
-
-Likewise, if you build your application with the tag, you may specify the same
-set of glog parameters.
-
-	your_go_program -vmodule=*=2 -stderrthreshold=INFO
-
-Using the -stderrthreshold option will result in logging being shown in the STDERR
-of the executing shell. If you wish to have the logging in a file, then you may use
-the -log_dir option, and give it a path to a directory where log files will be made.
-
-	your_go_program -vmodule=*=2 -log_dir=/path/to/logs
-
-The -stderrthreshold option and the -log_dir option may also be used at the same time,
-and the log data will be put in both places.
-
-	your_go_program -vmodule=*=2 -stderrthreshold=INFO -log_dir=/path/to/logs
-
-To get the logs for a specific module, use the -vmodule option. For example, to
-retrieve the driver.go and connection.go module logs:
-
-	your_go_program -vmodule=driver=2,connection=2 -stderrthreshold=INFO
-
-Note: If your request retrieves no logs, call db.Close() or glog.flush() to flush the glog buffer.
-
-Note: The logger may be changed in the future for better logging. Currently if
-the applications use the same parameters as glog, you cannot collect both
-application and driver logs at the same time.
+	requestID := uuid.MustParse("6ba7b812-9dad-11d1-80b4-00c04fd430c8")
+	ctxWithID := WithRequestID(ctx, requestID)
+	rows, err := db.QueryContext(ctxWithID, query)
 
 Canceling Query by CtrlC
 
 From 0.5.0, a signal handling responsibility has moved to the applications. If you want to cancel a
-query/command by Ctrl+C, add a os.Interrupt trap in context to execute methods that can take the context parameter,
-e.g., QueryContext, ExecContext.
+query/command by Ctrl+C, add a os.Interrupt trap in context to execute methods that can take the context parameter
+(e.g. QueryContext, ExecContext).
 
 	// handle interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
@@ -224,56 +193,210 @@ See cmd/selectmany.go for the full example.
 
 Supported Data Types
 
-Queries return SQL column type information in the ColumnType type. The
-DatabaseTypeName method returns strings representing Snowflake data types.
-The following table shows those strings, the corresponding Snowflake data
-type, and the corresponding Golang native data type. The columns are:
+The Go Snowflake Driver now supports the Arrow data format for data transfers
+between Snowflake and the Golang client. The Arrow data format avoids extra
+conversions between binary and textual representations of the data. The Arrow
+data format can improve performance and reduce memory consumption in clients.
 
-   1. The string representation of the data type.
-   2. The SQL data type.
-   3. The default Golang data type that is returned when you use snowflakeRows.Scan() to read data from
-      JSON data format via an interface{}. (All returned values are JSON strings.)
-   4. The standard Golang data type that is returned when you use snowflakeRows.Scan() to read data from
+Snowflake continues to support the JSON data format.
+
+The data format is controlled by the session-level parameter
+GO_QUERY_RESULT_FORMAT. To use JSON format, execute:
+
+	ALTER SESSION SET GO_QUERY_RESULT_FORMAT = 'JSON';
+
+The valid values for the parameter are:
+
+	* ARROW (default)
+	* JSON
+
+If the user attempts to set the parameter to an invalid value, an error is
+returned.
+
+The parameter name and the parameter value are case-insensitive.
+
+This parameter can be set only at the session level.
+
+Usage notes:
+
+	* The Arrow data format reduces rounding errors in floating point numbers. You might see slightly
+	  different values for floating point numbers when using Arrow format than when using JSON format.
+	  In order to take advantage of the increased precision, you must pass in the context.Context object
+	  provided by the WithHigherPrecision function when querying.
+
+	* Traditionally, the rows.Scan() method returned a string when a variable of types interface was passed
+	  in. Turning on the flag ENABLE_HIGHER_PRECISION via WithHigherPrecision will return the natural,
+	  expected data type as well.
+
+	* For some numeric data types, the driver can retrieve larger values when using the Arrow format than
+	  when using the JSON format. For example, using Arrow format allows the full range of SQL NUMERIC(38,0)
+	  values to be retrieved, while using JSON format allows only values in the range supported by the
+	  Golang int64 data type.
+
+	  Users should ensure that Golang variables are declared using the appropriate data type for the full
+	  range of values contained in the column. For an example, see below.
+
+When using the Arrow format, the driver supports more Golang data types and
+more ways to convert SQL values to those Golang data types. The table below
+lists the supported Snowflake SQL data types and the corresponding Golang
+data types. The columns are:
+
+   1. The SQL data type.
+   2. The default Golang data type that is returned when you use snowflakeRows.Scan() to read data from
+      Arrow data format via an interface{}.
+   3. The possible Golang data types that can be returned when you use snowflakeRows.Scan() to read data
+      from Arrow data format directly.
+   4. The default Golang data type that is returned when you use snowflakeRows.Scan() to read data from
+      JSON data format via an interface{}. (All returned values are strings.)
+   5. The standard Golang data type that is returned when you use snowflakeRows.Scan() to read data from
       JSON data format directly.
-   5. Footnotes numbers.
 
-This table shows the data types:
+  Go Data Types for Scan()
+  ===================================================================================================================
+                         |                    ARROW                    |                    JSON
+  ===================================================================================================================
+  SQL Data Type          | Default Go Data Type   | Supported Go Data  | Default Go Data Type   | Supported Go Data
+                         | for Scan() interface{} | Types for Scan()   | for Scan() interface{} | Types for Scan()
+  ===================================================================================================================
+    BOOLEAN              | bool                                        | string                 | bool
+  -------------------------------------------------------------------------------------------------------------------
+    VARCHAR              | string                                      | string
+  -------------------------------------------------------------------------------------------------------------------
+    DOUBLE               | float32, float64                  [1] , [2] | string                 | float32, float64
+  -------------------------------------------------------------------------------------------------------------------
+    INTEGER that         | int, int8, int16, int32, int64              | string                 | int, int8, int16,
+    fits in int64        |                                   [1] , [2] |                        | int32, int64
+  -------------------------------------------------------------------------------------------------------------------
+    INTEGER that doesn't | int, int8, int16, int32, int64,  *big.Int   | string                 | error
+    fit in int64         |                       [1] , [2] , [3] , [4] |
+  -------------------------------------------------------------------------------------------------------------------
+    NUMBER(P, S)         | float32, float64,  *big.Float               | string                 | float32, float64
+    where S > 0          |                       [1] , [2] , [3] , [5] |
+  -------------------------------------------------------------------------------------------------------------------
+    DATE                 | time.Time                                   | string                 | time.Time
+  -------------------------------------------------------------------------------------------------------------------
+    TIME                 | time.Time                                   | string                 | time.Time
+  -------------------------------------------------------------------------------------------------------------------
+    TIMESTAMP_LTZ        | time.Time                                   | string                 | time.Time
+  -------------------------------------------------------------------------------------------------------------------
+    TIMESTAMP_NTZ        | time.Time                                   | string                 | time.Time
+  -------------------------------------------------------------------------------------------------------------------
+    TIMESTAMP_TZ         | time.Time                                   | string                 | time.Time
+  -------------------------------------------------------------------------------------------------------------------
+    BINARY               | []byte                                      | string                 | []byte
+  -------------------------------------------------------------------------------------------------------------------
+    ARRAY                | string                                      | string
+  -------------------------------------------------------------------------------------------------------------------
+    OBJECT               | string                                      | string
+  -------------------------------------------------------------------------------------------------------------------
+    VARIANT              | string                                      | string
 
-  =============================================================================================
-                 |                                    | Default Go  | Supported  |
-  String         |                                    | Data Type   | Go Data    |
-  Representation | Snowflake Data Type                | for Scan()  | Types for  | Footnotes
-                 |                                    | interface{} | Scan()     |
-                 |                                    | (JSON)      | (JSON)     |
-  ==============================================================================================
-  BOOLEAN        | BOOLEAN                            | string      | bool       |
-  TEXT           | VARCHAR/STRING                     | string      | string     |
-  REAL           | REAL/DOUBLE                        | string      | float64    | [1]  [2]
-  FIXED          | INTEGER that fits in int64         | string      | int64      | [1]  [2]
-  FIXED          | NUMBER(P, S) where S > 0           | string      |            | [1]  [3]
-  DATE           | DATE                               | string      | time.Time  |
-  TIME           | TIME                               | string      | time.Time  |
-  TIMESTAMP_LTZ  | TIMESTAMP_LTZ                      | string      | time.Time  |
-  TIMESTAMP_NTZ  | TIMESTAMP_NTZ                      | string      | time.Time  |
-  TIMESTAMP_TZ   | TIMESTAMP_TZ                       | string      | time.Time  |
-  BINARY         | BINARY                             | string      | []byte     |
-  ARRAY          | ARRAY                              | string      | string     |
-  OBJECT         | OBJECT                             | string      | string     |
-  VARIANT        | VARIANT                            | string      | string     |
+  [1] Converting from a higher precision data type to a lower precision data type via the snowflakeRows.Scan()
+      method can lose low bits (lose precision), lose high bits (completely change the value), or result in error.
 
-Footnotes:
+  [2] Attempting to convert from a higher precision data type to a lower precision data type via interface{}
+      causes an error.
 
-  [1] Converting from a higher precision data type to a lower precision data type via the snowflakeRows.Scan() method can lose low bits (lose precision), lose high bits (completely change the value), or result in error.
+  [3] Higher precision data types like *big.Int and *big.Float can be accessed by querying with a context
+      returned by WithHigherPrecision().
 
-  [2] Attempting to convert from a higher precision data type to a lower precision data type via interface{} causes an error.
+  [4] You cannot directly Scan() into the alternative data types via snowflakeRows.Scan(), but can convert to
+      those data types by using .Int64()/.String()/.Uint64() methods. For an example, see below.
 
-  [3] If the value in Snowflake is too large to fit into the corresponding Golang data type, then conversion can return either an int64 with the high bits truncated or an error.
+  [5] You cannot directly Scan() into the alternative data types via snowflakeRows.Scan(), but can convert to
+      those data types by using .Float32()/.String()/.Float64() methods. For an example, see below.
 
 Note: SQL NULL values are converted to Golang nil values, and vice-versa.
 
-Binding Parameters to Array Variables For Batch Inserts
+The following example shows how to retrieve very large values using the math/big
+package. This example retrieves a large INTEGER value to an interface and then
+extracts a big.Int value from that interface. If the value fits into an int64,
+then the code also copies the value to a variable of type int64. Note that a
+context that enables higher precision must be passed in with the query.
 
-Version 1.3.9 (and later) of the Go Snowflake Driver supports the ability to bind an array variable to a parameter in an SQL
+       import "context"
+       import "math/big"
+
+       ...
+
+       var my_interface interface{}
+       var my_big_int_pointer *big.Int
+       var my_int64 int64
+       var rows snowflakeRows
+
+       ...
+       rows = db.QueryContext(WithHigherPrecision(context.Background), <query>)
+       rows.Scan(&my_interface)
+       my_big_int_pointer, ok = my_interface.(*big.Int)
+       if my_big_int_pointer.IsInt64() {
+           my_int64 = my_big_int_pointer.Int64()
+       }
+
+If the variable named "rows" is known to contain a big.Int, then you can use the following instead of scanning into an interface
+and then converting to a big.Int:
+
+       rows.Scan(&my_big_int_pointer)
+
+If the variable named "rows" contains a big.Int, then each of the following fails:
+
+       rows.Scan(&my_int64)
+
+       my_int64, _ = my_interface.(int64)
+
+Similar code and rules also apply to big.Float values.
+
+If you are not sure what data type will be returned, you can use code similar to the following to check the data type
+of the returned value:
+
+    // Create variables into which you can scan the returned values.
+    var i64 int64
+    var bigIntPtr *big.Int
+
+    for rows.Next() {
+        // Get the data type info.
+        column_types, err := rows.ColumnTypes()
+        if err != nil {
+            log.Fatalf("ERROR: ColumnTypes() failed. err: %v", err)
+        }
+        // The data type of the zeroeth column in the row.
+        column_type := column_types[0].ScanType()
+        // Choose the appropriate variable based on the data type.
+        switch column_type {
+            case reflect.TypeOf(i64):
+                err = rows.Scan(&i64)
+                fmt.Println("INFO: retrieved int64 value:")
+                fmt.Println(i64)
+            case reflect.TypeOf(bigIntPtr):
+                err = rows.Scan(&bigIntPtr)
+                fmt.Println("INFO: retrieved bigIntPtr value:")
+                fmt.Println(bigIntPtr)
+        }
+    }
+
+
+Binding Parameters
+
+Binding allows a SQL statement to use a value that is stored in a Golang variable.
+
+Without binding, a SQL statement specifies values by specifying literals inside the statement.
+For example, the following statement uses the literal value ``42`` in an UPDATE statement:
+
+	_, err = db.Exec("UPDATE table1 SET integer_column = 42 WHERE ID = 1000")
+
+With binding, you can execute a SQL statement that uses a value that is inside a variable. For example:
+
+	var my_integer_variable int = 42
+	_, err = db.Exec("UPDATE table1 SET integer_column = ? WHERE ID = 1000", my_integer_variable)
+
+The ``?`` inside the ``VALUES`` clause specifies that the SQL statement uses the value from a variable.
+
+Binding data that involves time zones can require special handling. For details, see the section
+titled "Timestamps with Time Zones".
+
+
+Binding Parameters to Array Variables
+
+Version 1.3.9 (and later) of the Go Snowflake Driver supports the ability to bind an array variable to a parameter in a SQL
 INSERT statement. You can use this technique to insert multiple rows in a single batch.
 
 As an example, the following code inserts rows into a table that contains integer, float, boolean, and string columns. The example
@@ -288,15 +411,39 @@ binds arrays to the parameters in the INSERT statement.
 	boolArray := []bool{true, false, true}
 	strArray := []string{"test1", "test2", "test3"}
 	...
-	// Insert the data from the arrays into the table.
-	_, err = db.Exec("insert into my_table values (?, ?, ?, ?)", intArray, fltArray, boolArray, strArray)
+	// Insert the data from the arrays and wrap in an Array() function into the table.
+	_, err = db.Exec("insert into my_table values (?, ?, ?, ?)", Array(&intArray), Array(&fltArray), Array(&boolArray), Array(&strArray))
 
 Note: For alternative ways to load data into the Snowflake database (including bulk loading using the COPY command), see
-Loading Data Into Snowflake (https://docs.snowflake.com/en/user-guide-data-load.html).
+Loading Data into Snowflake (https://docs.snowflake.com/en/user-guide-data-load.html).
+
+
+Batch Inserts and Binding Parameters
+
+When you use array binding to insert a large number of values, the driver can
+improve performance by streaming the data (without creating files on the local
+machine) to a temporary stage for ingestion. The driver automatically does this
+when the number of values exceeds a threshold (no changes are needed to user code).
+
+In order for the driver to send the data to a temporary stage, the user must have the following privilege on the schema:
+
+    CREATE STAGE
+
+If the user does not have this privilege, the driver falls back to sending the data with the query to the Snowflake database.
+
+In addition, the current database and schema for the session must be set. If these are not set,
+the CREATE TEMPORARY STAGE command executed by the driver can fail with the following error:
+
+	CREATE TEMPORARY STAGE SYSTEM$BIND file_format=(type=csv field_optionally_enclosed_by='"')
+	Cannot perform CREATE STAGE. This session does not have a current schema. Call 'USE SCHEMA', or use a qualified name.
+
+For alternative ways to load data into the Snowflake database (including bulk loading using the COPY command),
+see Loading Data into Snowflake (https://docs.snowflake.com/en/user-guide-data-load.html).
+
 
 Binding a Parameter to a Time Type
 
-Go's database/sql package supports the ability to bind a parameter in an SQL statement to a time.Time variable.
+Go's database/sql package supports the ability to bind a parameter in a SQL statement to a time.Time variable.
 However, when the client binds data to send to the server, the driver cannot determine the correct Snowflake date/timestamp data
 type to associate with the binding parameter. For example:
 
@@ -332,8 +479,7 @@ use in a geographical area, such as CET (Central European Time) or UTC
 cached when a Go Snowflake Driver application starts, and if the given offset
 is not in the cache, it is generated dynamically.
 
-Currently, Snowflake doesn't support the name-based Location types, e.g.,
-"America/Los_Angeles".
+Currently, Snowflake does not support the name-based Location types (e.g. "America/Los_Angeles").
 
 For more information about Location types, see the Go documentation for https://golang.org/pkg/time/#Location.
 
@@ -346,14 +492,14 @@ example, sf is an alias for the gosnowflake package:
 	var b = []byte{0x01, 0x02, 0x03}
 	_, err = stmt.Exec(sf.DataTypeBinary, b)
 
-Maximum number of Result Set Chunk Downloader
+Maximum Number of Result Set Chunk Downloader
 
 The driver directly downloads a result set from the cloud storage if the size is large. It is
 required to shift workloads from the Snowflake database to the clients for scale. The download takes place by goroutine
 named "Chunk Downloader" asynchronously so that the driver can fetch the next result set while the application can
 consume the current result set.
 
-The application may change the number of result set chunk downloader if required. Note this doesn't help reduce
+The application may change the number of result set chunk downloader if required. Note this does not help reduce
 memory footprint by itself. Consider Custom JSON Decoder.
 
 	import (
@@ -362,7 +508,7 @@ memory footprint by itself. Consider Custom JSON Decoder.
 	sf.MaxChunkDownloadWorkers = 2
 
 
-Experimental: Custom JSON Decoder for parsing Result Set
+Custom JSON Decoder for Parsing Result Set (Experimental)
 
 The application may have the driver use a custom JSON decoder that incrementally parses the result set as follows.
 
@@ -437,10 +583,8 @@ The Go Snowflake Driver provides two functions that can execute multiple SQL sta
 To compose a multi-statement query, simply create a string that contains all the queries, separated by semicolons,
 in the order in which the statements should be executed.
 
-
 To protect against SQL Injection attacks while using the multi-statement feature, pass a Context that specifies
 the number of statements in the string. For example:
-
 
 	import (
 		"context"
@@ -453,14 +597,12 @@ the number of statements in the string. For example:
 	multi_statement_context, _ := WithMultiStatement(blank_context, number_of_statements)
 	rows, err := db.QueryContext(multi_statement_context, multi_statement_query)
 
-
 When multiple queries are executed by a single call to QueryContext(), multiple result sets are returned. After
 you process the first result set, get the next result set (for the next SQL statement) by calling NextResultSet().
 
 The following pseudo-code shows how to process multiple result sets:
 
 	Execute the statement and get the result set(s):
-
 
 		rows, err := db.QueryContext(ctx, multiStmtQuery)
 
@@ -484,9 +626,10 @@ The following pseudo-code shows how to process multiple result sets:
 
 		}
 
-The function db.execContext() returns a single result, which is the sum of the results of the individual statements.
-For example, if your multi-statement query executed two UPDATE statements, each of which updated 10 rows,
-then the result returned would be 20. Individual results for individual statements are not available.
+The function db.ExecContext() returns a single result, which is the sum of the number of rows changed by each
+individual statement. For example, if your multi-statement query executed two UPDATE statements, each of which
+updated 10 rows, then the result returned would be 20. Individual row counts for individual statements are not
+available.
 
 The following code shows how to retrieve the result of a multi-statement query executed through db.ExecContext():
 
@@ -519,8 +662,11 @@ If you want to execute a mix of query and non-query statements (e.g. a mix of SE
 multi-statement query, use QueryContext(). You can retrieve the result sets for the queries,
 and you can retrieve or ignore the row counts for the non-query statements.
 
+Note: PUT statements are not supported for multi-statement queries.
 
-If any of the SQL statements fail to compile or execute, execution is aborted. Any previous statements that ran before are unaffected.
+
+If a SQL statement passed to ExecQuery() or QueryContext() fails to compile or execute, that statement is
+aborted, and subsequent statements are not executed. Any statements prior to the aborted statement are unaffected.
 
 For example, if the statements below are run as one multi-statement query, the multi-statement query fails on the
 third statement, and an exception is thrown.
@@ -544,8 +690,167 @@ example:
 Preparing statements and using bind variables are also not supported for multi-statement queries.
 
 
-Limitations
+Asynchronous Queries
 
-GET and PUT operations are unsupported.
+The Go Snowflake Driver supports asynchronous execution of SQL statements.
+Asynchronous execution allows you to start executing a statement and then
+retrieve the result later without being blocked while waiting. While waiting
+for the result of a SQL statement, you can perform other tasks, including
+executing other SQL statements.
+
+Most of the steps to execute an asynchronous query are the same as the
+steps to execute a synchronous query. However, there is an additional step,
+which is that you must call the WithAsyncMode() function to update
+your Context object to specify that asynchronous mode is enabled.
+
+In the code below, the call to "WithAsyncMode()" is specific
+to asynchronous mode. The rest of the code is compatible with both
+asynchronous mode and synchronous mode.
+
+	...
+
+	// Update your Context object to specify asynchronous mode:
+	ctx := WithAsyncMode(context.Background())
+
+	// Execute your query as usual by calling:
+	rows, _ := db.QueryContext(ctx, query_string)
+
+	// Retrieve the results as usual by calling:
+	for rows.Next()  {
+		err := rows.Scan(...)
+		...
+	}
+
+The function db.QueryContext() returns an object of type snowflakeRows
+regardless of whether the query is synchronous or asynchronous. However:
+
+	* If the query is synchronous, then db.QueryContext() does not return until
+		the query has finished and the result set has been loaded into the
+		snowflakeRows object.
+	* If the query is asynchronous, then db.QueryContext() returns a
+		potentially incomplete snowflakeRows object that is filled in later
+		in the background.
+
+The call to the Next() function of snowflakeRows is always synchronous (i.e. blocking).
+If the query has not yet completed and the snowflakeRows object (named "rows" in this
+example) has not been filled in yet, then rows.Next() waits until the result set has been filled in.
+
+More generally, calls to any Golang SQL API function implemented in snowflakeRows or
+snowflakeResult are blocking calls, and wait if results are not yet available.
+(Examples of other synchronous calls include: snowflakeRows.Err(), snowflakeRows.Columns(),
+snowflakeRows.columnTypes(), snowflakeRows.Scan(), and snowflakeResult.RowsAffected().)
+
+Because the example code above executes only one query and no other activity, there is
+no significant difference in behavior between asynchronous and synchronous behavior.
+The differences become significant if, for example, you want to perform some other
+activity after the query starts and before it completes. The example code below starts
+multiple queries, which run in the background, and then retrieves the results later.
+
+This example uses small SELECT statements that do not retrieve enough data to require
+asynchronous handling. However, the technique works for larger data sets, and for
+situations where the programmer might want to do other work after starting the queries
+and before retrieving the results.
+
+	package gosnowflake
+
+	import  (
+		"context"
+		"database/sql"
+		"database/sql/driver"
+		"fmt"
+		"log"
+		"os"
+		sf "github.com/snowflakedb/gosnowflake"
+    )
+
+	...
+
+	func DemonstrateAsyncMode(db *sql.DB) {
+		// Enable asynchronous mode.
+		ctx := WithAsyncMode(context.Background())
+		// Establish connection
+		conn, _ := db.Conn(ctx)
+
+		// Unwrap connection
+		err = conn.Raw(func(x interface{}) error {
+			// Execute asynchronous query
+			rows, _ := x.(driver.QueryerContext).QueryContext(ctx, "select 1", nil)
+			defer rows.Close()
+
+			// Retrieve and check results of the query after casting the result
+			status := rows.(SnowflakeResult).GetStatus()
+			if status == QueryStatusComplete {
+				// do something
+			} else if status == QueryStatusInProgress {
+				// do something
+			} else if status == QueryFailed {
+				// do something
+			}
+			return nil
+		})
+	}
+
+
+Support For PUT and GET
+
+The Go Snowflake Driver supports the PUT and GET commands.
+
+The PUT command copies a file from a local computer (the computer where the
+Golang client is running) to a stage on the cloud platform. The GET command
+copies data files from a stage on the cloud platform to a local computer.
+
+See the following for information on the syntax and supported parameters:
+
+  * PUT: https://docs.snowflake.com/en/sql-reference/sql/put.html
+  * GET: https://docs.snowflake.com/en/sql-reference/sql/get.html
+
+Using PUT
+
+The following example shows how to run a PUT command by passing a string to the
+db.Query() function:
+
+  db.Query("PUT file://<local_file> <stage_identifier> <optional_parameters>")
+
+"<local_file>" should include the file path as well as the name. Snowflake recommends
+using an absolute path rather than a relative path. For example:
+
+	db.Query("PUT file:///tmp/my_data_file @~ auto_compress=false overwrite=false")
+
+Different client platforms (e.g. linux, Windows) have different path name
+conventions. Ensure that you specify path names appropriately. This is
+particularly important on Windows, which uses the backslash character as
+both an escape character and as a separator in path names.
+
+To send information from a stream (rather than a file) use code similar to the code below.
+(The ReplaceAll() function is needed on Windows to handle backslashes in the path to the file.)
+
+	fileStream, _ := os.OpenFile(fname, os.O_RDONLY, os.ModePerm)
+	defer func() {
+		if fileStream != nil {
+			fileStream.Close()
+		}
+	} ()
+
+	sql := "put 'file://%v' @%%%v auto_compress=true parallel=30"
+	sqlText := fmt.Sprintf(sql,
+		strings.ReplaceAll(fname, "\\", "\\\\"),
+		tableName)
+	dbt.mustExecContext(WithFileStream(context.Background(), fileStream),
+		sqlText)
+
+Note: PUT statements are not supported for multi-statement queries.
+
+Using GET
+
+The following example shows how to run a GET command by passing a string to the
+db.Query() function:
+
+  db.Query("GET file://<local_file> <stage_identifier> <optional_parameters>")
+
+"<local_file>" should include the file path as well as the name. Snowflake recommends using
+an absolute path rather than a relative path. For example:
+
+  db.Query("GET file:///tmp/my_data_file @~ auto_compress=false overwrite=false")
+
 */
 package gosnowflake

@@ -18,14 +18,28 @@
 
 package flatbuf
 
-type UnionMode = int16
+import "strconv"
+
+type UnionMode int16
+
 const (
 	UnionModeSparse UnionMode = 0
-	UnionModeDense UnionMode = 1
+	UnionModeDense  UnionMode = 1
 )
 
 var EnumNamesUnionMode = map[UnionMode]string{
-	UnionModeSparse:"Sparse",
-	UnionModeDense:"Dense",
+	UnionModeSparse: "Sparse",
+	UnionModeDense:  "Dense",
 }
 
+var EnumValuesUnionMode = map[string]UnionMode{
+	"Sparse": UnionModeSparse,
+	"Dense":  UnionModeDense,
+}
+
+func (v UnionMode) String() string {
+	if s, ok := EnumNamesUnionMode[v]; ok {
+		return s
+	}
+	return "UnionMode(" + strconv.FormatInt(int64(v), 10) + ")"
+}

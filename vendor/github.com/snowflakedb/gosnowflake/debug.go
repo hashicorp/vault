@@ -1,3 +1,4 @@
+//go:build sfdebug
 // +build sfdebug
 
 package gosnowflake

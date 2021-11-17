@@ -27,6 +27,9 @@ const (
 	// DefaultVaultRetryMaxAttempts is the default maximum number of attempts to
 	// retry before quitting.
 	DefaultVaultRetryMaxAttempts = 5
+
+	// DefaultVaultLeaseDuration is the default lease duration in seconds.
+	DefaultVaultLeaseDuration = 5 * time.Minute
 )
 
 // VaultConfig is the configuration for connecting to a vault server.
@@ -67,6 +70,10 @@ type VaultConfig struct {
 
 	// UnwrapToken unwraps the provided Vault token as a wrapped token.
 	UnwrapToken *bool `mapstructure:"unwrap_token"`
+
+	// DefaultLeaseDuration configures the default lease duration when not explicitly
+	// set by vault
+	DefaultLeaseDuration *time.Duration `mapstructure:"default_lease_duration"`
 }
 
 // DefaultVaultConfig returns a configuration that is populated with the
@@ -116,6 +123,8 @@ func (c *VaultConfig) Copy() *VaultConfig {
 	}
 
 	o.UnwrapToken = c.UnwrapToken
+
+	o.DefaultLeaseDuration = c.DefaultLeaseDuration
 
 	return &o
 }
@@ -176,6 +185,10 @@ func (c *VaultConfig) Merge(o *VaultConfig) *VaultConfig {
 
 	if o.UnwrapToken != nil {
 		r.UnwrapToken = o.UnwrapToken
+	}
+
+	if o.DefaultLeaseDuration != nil {
+		r.DefaultLeaseDuration = o.DefaultLeaseDuration
 	}
 
 	return r
@@ -275,6 +288,10 @@ func (c *VaultConfig) Finalize() {
 	if c.Enabled == nil {
 		c.Enabled = Bool(StringPresent(c.Address))
 	}
+
+	if c.DefaultLeaseDuration == nil {
+		c.DefaultLeaseDuration = TimeDuration(DefaultVaultLeaseDuration)
+	}
 }
 
 // GoString defines the printable version of this struct.
@@ -294,6 +311,7 @@ func (c *VaultConfig) GoString() string {
 		"VaultAgentTokenFile:%t, "+
 		"Transport:%#v, "+
 		"UnwrapToken:%s"+
+		"DefaultLeaseDuration:%s, "+
 		"}",
 		StringGoString(c.Address),
 		BoolGoString(c.Enabled),
@@ -305,5 +323,6 @@ func (c *VaultConfig) GoString() string {
 		StringPresent(c.VaultAgentTokenFile),
 		c.Transport,
 		BoolGoString(c.UnwrapToken),
+		TimeDurationGoString(c.DefaultLeaseDuration),
 	)
 }

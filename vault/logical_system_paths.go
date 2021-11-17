@@ -928,7 +928,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    pathInternalUINamespacesRead(b),
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -939,7 +939,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalUIResultantACL,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -950,7 +950,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersRequests,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -961,7 +961,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersTokens,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -972,7 +972,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersEntities,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
@@ -1253,7 +1253,7 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "leases(/)?$",
+			Pattern: "leases$",
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -1826,6 +1826,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadMount,
+					Summary:  "Read the configuration of the secret engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
 					Summary:  "Enable a new secrets engine at the given path.",

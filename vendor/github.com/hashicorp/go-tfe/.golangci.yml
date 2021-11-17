@@ -1,0 +1,36 @@
+run:
+  timeout: 5m
+linters:
+# This set of linters are enabled by default: deadcode, errcheck, gosimple, govet, ineffasign, staticcheck, struccheck, typecheck, unused, varcheck
+  enable:
+  # List of all linters: https://golangci-lint.run/usage/linters/
+    - whitespace #https://github.com/ultraware/whitespace
+    # - noctx #https://github.com/sonatard/noctx
+    - nilerr #https://github.com/gostaticanalysis/nilerr
+    - nestif #https://github.com/nakabonne/nestif
+    - exportloopref #https://github.com/kyoh86/exportloopref
+    - bodyclose #https://github.com/timakin/bodyclose
+    - errcheck #https://github.com/kisielk/errcheck
+    - stylecheck #https://github.com/dominikh/go-tools/tree/master/stylecheck
+    - revive #golint is deprecated and golangci-lint recommends to use revive instead https://github.com/mgechev/revive
+    #other deprecated lint libraries: maligned, scopelint, interfacer
+issues:
+  exclude-rules:
+  - path: _test\.go
+    linters:
+    - unused
+    - deadcode
+linters-settings:
+  errcheck:
+    # https://github.com/kisielk/errcheck#excluding-functions
+    check-type-assertions: true
+    check-blank: true  
+  revive:
+    # see https://github.com/mgechev/revive#available-rules for details.
+    ignore-generated-header: false #recommended in their configuration
+    severity: warning
+    rules:
+      - name: indent-error-flow #Prevents redundant else statements
+        severity: warning
+      - name: useless-break
+        severity: warning

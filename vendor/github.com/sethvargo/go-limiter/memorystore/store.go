@@ -2,10 +2,10 @@
 package memorystore
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/internal/fasttime"
@@ -16,7 +16,6 @@ var _ limiter.Store = (*store)(nil)
 type store struct {
 	tokens   uint64
 	interval time.Duration
-	rate     float64
 
 	sweepInterval time.Duration
 	sweepMinTTL   uint64
@@ -96,7 +95,6 @@ func New(c *Config) (limiter.Store, error) {
 	s := &store{
 		tokens:   tokens,
 		interval: interval,
-		rate:     float64(interval) / float64(tokens),
 
 		sweepInterval: sweepInterval,
 		sweepMinTTL:   uint64(sweepMinTTL),
@@ -111,10 +109,10 @@ func New(c *Config) (limiter.Store, error) {
 // Take attempts to remove a token from the named key. If the take is
 // successful, it returns true, otherwise false. It also returns the configured
 // limit, remaining tokens, and reset time.
-func (s *store) Take(key string) (uint64, uint64, uint64, bool) {
+func (s *store) Take(ctx context.Context, key string) (uint64, uint64, uint64, bool, error) {
 	// If the store is stopped, all requests are rejected.
 	if atomic.LoadUint32(&s.stopped) == 1 {
-		return 0, 0, 0, false
+		return 0, 0, 0, false, limiter.ErrStopped
 	}
 
 	// Acquire a read lock first - this allows other to concurrently check limits
@@ -137,7 +135,7 @@ func (s *store) Take(key string) (uint64, uint64, uint64, bool) {
 
 	// This is the first time we've seen this entry (or it's been garbage
 	// collected), so create the bucket and take an initial request.
-	b := newBucket(s.tokens, s.interval, s.rate)
+	b := newBucket(s.tokens, s.interval)
 
 	// Add it to the map and take.
 	s.data[key] = b
@@ -145,10 +143,56 @@ func (s *store) Take(key string) (uint64, uint64, uint64, bool) {
 	return b.take()
 }
 
-// Close stops the memory limiter and cleans up any outstanding sessions. You
-// should absolutely always call Close() as it releases the memory consumed by
-// the map AND releases the tickers.
-func (s *store) Close() error {
+// Get retrieves the information about the key, if any exists.
+func (s *store) Get(ctx context.Context, key string) (uint64, uint64, error) {
+	// If the store is stopped, all requests are rejected.
+	if atomic.LoadUint32(&s.stopped) == 1 {
+		return 0, 0, limiter.ErrStopped
+	}
+
+	// Acquire a read lock first - this allows other to concurrently check limits
+	// without taking a full lock.
+	s.dataLock.RLock()
+	if b, ok := s.data[key]; ok {
+		s.dataLock.RUnlock()
+		return b.get()
+	}
+	s.dataLock.RUnlock()
+
+	return 0, 0, nil
+}
+
+// Set configures the bucket-specific tokens and interval.
+func (s *store) Set(ctx context.Context, key string, tokens uint64, interval time.Duration) error {
+	s.dataLock.Lock()
+	b := newBucket(tokens, interval)
+	s.data[key] = b
+	s.dataLock.Unlock()
+	return nil
+}
+
+// Burst adds the provided value to the bucket's currently available tokens.
+func (s *store) Burst(ctx context.Context, key string, tokens uint64) error {
+	s.dataLock.Lock()
+	if b, ok := s.data[key]; ok {
+		b.lock.Lock()
+		s.dataLock.Unlock()
+		b.availableTokens = b.availableTokens + tokens
+		b.lock.Unlock()
+		return nil
+	}
+
+	// If we got this far, there's no current record for the key.
+	b := newBucket(s.tokens+tokens, s.interval)
+	s.data[key] = b
+	s.dataLock.Unlock()
+	return nil
+}
+
+// Close stops the memory limiter and cleans up any outstanding
+// sessions. You should always call Close() as it releases the memory consumed
+// by the map AND releases the tickers.
+func (s *store) Close(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&s.stopped, 0, 1) {
 		return nil
 	}
@@ -184,8 +228,9 @@ func (s *store) purge() {
 		s.dataLock.Lock()
 		now := fasttime.Now()
 		for k, b := range s.data {
-			lastTick := (*bucketState)(atomic.LoadPointer(&b.bucketState)).lastTick
-			lastTime := b.startTime + (lastTick * uint64(b.interval))
+			b.lock.Lock()
+			lastTime := b.startTime + (b.lastTick * uint64(b.interval))
+			b.lock.Unlock()
 
 			if now-lastTime > s.sweepMinTTL {
 				delete(s.data, k)
@@ -208,88 +253,70 @@ type bucket struct {
 	// interval is the time at which ticking should occur.
 	interval time.Duration
 
-	// bucketState is the mutable internal state of the event. It includes the
-	// current number of available tokens and the last time the clock ticked. It
-	// should always be loaded with atomic as it is not concurrent safe.
-	bucketState unsafe.Pointer
-
 	// fillRate is the number of tokens to add per nanosecond. It is calculated
 	// based on the provided maxTokens and interval.
 	fillRate float64
-}
 
-// bucketState represents the internal bucket state.
-type bucketState struct {
 	// availableTokens is the current point-in-time number of tokens remaining.
-	// This value changes frequently and must be guarded by an atomic read/write.
 	availableTokens uint64
 
 	// lastTick is the last clock tick, used to re-calculate the number of tokens
 	// on the bucket.
 	lastTick uint64
+
+	// lock guards the mutable fields.
+	lock sync.Mutex
 }
 
 // newBucket creates a new bucket from the given tokens and interval.
-func newBucket(tokens uint64, interval time.Duration, rate float64) *bucket {
+func newBucket(tokens uint64, interval time.Duration) *bucket {
 	b := &bucket{
-		startTime: fasttime.Now(),
-		maxTokens: tokens,
-		interval:  interval,
-		fillRate:  rate,
-
-		bucketState: unsafe.Pointer(&bucketState{
-			availableTokens: tokens,
-		}),
+		startTime:       fasttime.Now(),
+		maxTokens:       tokens,
+		availableTokens: tokens,
+		interval:        interval,
+		fillRate:        float64(interval) / float64(tokens),
 	}
 	return b
+}
+
+// get returns information about the bucket.
+func (b *bucket) get() (tokens uint64, remaining uint64, retErr error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	tokens = b.maxTokens
+	remaining = b.availableTokens
+	return
 }
 
 // take attempts to remove a token from the bucket. If there are no tokens
 // available and the clock has ticked forward, it recalculates the number of
 // tokens and retries. It returns the limit, remaining tokens, time until
 // refresh, and whether the take was successful.
-func (b *bucket) take() (uint64, uint64, uint64, bool) {
+func (b *bucket) take() (tokens uint64, remaining uint64, reset uint64, ok bool, retErr error) {
 	// Capture the current request time, current tick, and amount of time until
 	// the bucket resets.
 	now := fasttime.Now()
 	currTick := tick(b.startTime, now, b.interval)
-	next := b.startTime + ((currTick + 1) * uint64(b.interval))
 
-	for {
-		curr := atomic.LoadPointer(&b.bucketState)
-		currState := (*bucketState)(curr)
-		lastTick := currState.lastTick
-		tokens := currState.availableTokens
+	tokens = b.maxTokens
+	reset = b.startTime + ((currTick + 1) * uint64(b.interval))
 
-		if lastTick < currTick {
-			tokens = availableTokens(currState.lastTick, currTick, b.maxTokens, b.fillRate)
-			lastTick = currTick
-
-			if !atomic.CompareAndSwapPointer(&b.bucketState, curr, unsafe.Pointer(&bucketState{
-				availableTokens: tokens,
-				lastTick:        lastTick,
-			})) {
-				// Someone else modified the value
-				continue
-			}
-		}
-
-		if tokens > 0 {
-			tokens--
-			if !atomic.CompareAndSwapPointer(&b.bucketState, curr, unsafe.Pointer(&bucketState{
-				availableTokens: tokens,
-				lastTick:        lastTick,
-			})) {
-				// There were tokens left, but someone took them :(
-				continue
-			}
-
-			return b.maxTokens, tokens, next, true
-		}
-
-		// Returning the TTL until next tick.
-		return b.maxTokens, 0, next, false
+	b.lock.Lock()
+	if b.lastTick < currTick {
+		b.availableTokens = availableTokens(b.lastTick, currTick, b.maxTokens, b.fillRate)
+		b.lastTick = currTick
 	}
+
+	if b.availableTokens > 0 {
+		b.availableTokens--
+		ok = true
+		remaining = b.availableTokens
+	}
+	b.lock.Unlock()
+
+	return
 }
 
 // availableTokens returns the number of available tokens, up to max, between

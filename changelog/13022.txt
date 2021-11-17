@@ -1,0 +1,3 @@
+```release-note:improvement
+implements Login method in Go client libraries for GCP and Azure auth methods
+```

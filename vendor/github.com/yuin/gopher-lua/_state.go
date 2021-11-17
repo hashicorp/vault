@@ -936,18 +936,22 @@ func (ls *LState) initCallFrame(cf *callFrame) { // +inline-start
 		proto := cf.Fn.Proto
 		nargs := cf.NArgs
 		np := int(proto.NumParameters)
-		newSize := cf.LocalBase + np
-		// +inline-call ls.reg.checkSize newSize
-		for i := nargs; i < np; i++ {
-			ls.reg.array[cf.LocalBase+i] = LNil
+		if nargs < np {
+			// default any missing arguments to nil
+			newSize := cf.LocalBase + np
+			// +inline-call ls.reg.checkSize newSize
+			for i := nargs; i < np; i++ {
+				ls.reg.array[cf.LocalBase+i] = LNil
+			}
 			nargs = np
+			ls.reg.top = newSize
 		}
 
 		if (proto.IsVarArg & VarArgIsVarArg) == 0 {
 			if nargs < int(proto.NumUsedRegisters) {
 				nargs = int(proto.NumUsedRegisters)
 			}
-			newSize = cf.LocalBase + nargs
+			newSize := cf.LocalBase + nargs
 			// +inline-call ls.reg.checkSize newSize
 			for i := np; i < nargs; i++ {
 				ls.reg.array[cf.LocalBase+i] = LNil

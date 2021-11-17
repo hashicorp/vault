@@ -1,6 +1,8 @@
 package gocb
 
-import "time"
+import (
+	"time"
+)
 
 type kvTimeoutsConfig struct {
 	KVTimeout        time.Duration
@@ -17,7 +19,8 @@ type Collection struct {
 
 	transcoder           Transcoder
 	retryStrategyWrapper *retryStrategyWrapper
-	tracer               requestTracer
+	tracer               RequestTracer
+	meter                *meterWrapper
 
 	useMutationTokens bool
 
@@ -30,11 +33,15 @@ func newCollection(scope *Scope, collectionName string) *Collection {
 		scope:          scope.Name(),
 		bucket:         scope.bucket,
 
-		timeoutsConfig: scope.timeoutsConfig,
+		timeoutsConfig: kvTimeoutsConfig{
+			KVTimeout:        scope.timeoutsConfig.KVTimeout,
+			KVDurableTimeout: scope.timeoutsConfig.KVDurableTimeout,
+		},
 
 		transcoder:           scope.transcoder,
 		retryStrategyWrapper: scope.retryStrategyWrapper,
 		tracer:               scope.tracer,
+		meter:                scope.meter,
 
 		useMutationTokens: scope.useMutationTokens,
 
@@ -47,7 +54,6 @@ func (c *Collection) name() string {
 }
 
 // ScopeName returns the name of the scope to which this collection belongs.
-// UNCOMMITTED: This API may change in the future.
 func (c *Collection) ScopeName() string {
 	return c.scope
 }
@@ -63,11 +69,18 @@ func (c *Collection) Name() string {
 	return c.collectionName
 }
 
-func (c *Collection) startKvOpTrace(operationName string, tracectx requestSpanContext) requestSpan {
-	return c.tracer.StartSpan(operationName, tracectx).
-		SetTag("couchbase.bucket", c.bucket).
-		SetTag("couchbase.collection", c.collectionName).
-		SetTag("couchbase.service", "kv")
+func (c *Collection) startKvOpTrace(operationName string, tracectx RequestSpanContext, noAttributes bool) RequestSpan {
+	span := c.tracer.RequestSpan(tracectx, operationName)
+	if !noAttributes {
+		span.SetAttribute(spanAttribDBNameKey, c.bucket.Name())
+		span.SetAttribute(spanAttribDBCollectionNameKey, c.Name())
+		span.SetAttribute(spanAttribDBScopeNameKey, c.ScopeName())
+		span.SetAttribute(spanAttribServiceKey, "kv")
+		span.SetAttribute(spanAttribOperationKey, operationName)
+	}
+	span.SetAttribute(spanAttribDBSystemKey, spanAttribDBSystemValue)
+
+	return span
 }
 
 func (c *Collection) bucketName() string {

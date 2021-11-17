@@ -1,3 +1,3 @@
 module github.com/go-test/deep
 
-go 1.13
+go 1.16

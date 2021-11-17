@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -12,7 +13,8 @@ import (
 
 var (
 	// VaultDefaultLeaseDuration is the default lease duration in seconds.
-	VaultDefaultLeaseDuration = 5 * time.Minute
+	VaultDefaultLeaseDuration     time.Duration
+	onceVaultDefaultLeaseDuration sync.Once
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -340,4 +342,12 @@ func isKVv2(client *api.Client, path string) (string, bool, error) {
 	}
 
 	return mountPath, false, nil
+}
+
+// Make sure to only set VaultDefaultLeaseDuration once
+func SetVaultDefaultLeaseDuration(t time.Duration) {
+	set := func() {
+		VaultDefaultLeaseDuration = t
+	}
+	onceVaultDefaultLeaseDuration.Do(set)
 }

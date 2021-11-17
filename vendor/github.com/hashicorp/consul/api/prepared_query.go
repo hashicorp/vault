@@ -158,7 +158,7 @@ func (c *PreparedQuery) Create(query *PreparedQueryDefinition, q *WriteOptions) 
 	if err != nil {
 		return "", nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt
@@ -204,7 +204,7 @@ func (c *PreparedQuery) Delete(queryID string, q *WriteOptions) (*WriteMeta, err
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt

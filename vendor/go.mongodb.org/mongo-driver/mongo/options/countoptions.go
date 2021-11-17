@@ -16,7 +16,8 @@ type CountOptions struct {
 	Collation *Collation
 
 	// The index to use for the aggregation. This should either be the index name as a string or the index specification
-	// as a document. The default value is nil, which means that no hint will be sent.
+	// as a document. The driver will return an error if the hint parameter is a multi-key map. The default value is nil,
+	// which means that no hint will be sent.
 	Hint interface{}
 
 	// The maximum number of documents to count. The default value is 0, which means that there is no limit and all

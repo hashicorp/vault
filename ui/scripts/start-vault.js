@@ -23,7 +23,7 @@ function run(command, args = [], shareStd = true) {
 }
 
 var output = '';
-var unseal, root, written;
+var unseal, root, written, initError;
 
 async function processLines(input, eachLine = () => {}) {
   const rl = readline.createInterface({
@@ -49,7 +49,6 @@ async function processLines(input, eachLine = () => {}) {
       ],
       false
     );
-
     processLines(vault.stdout, function(line) {
       if (written) {
         output = null;
@@ -64,6 +63,10 @@ async function processLines(input, eachLine = () => {}) {
       if (rootMatch && !root) {
         root = rootMatch[1];
       }
+      var errorMatch = output.match(/Error initializing core: (.*)$/m);
+      if (errorMatch) {
+        initError = errorMatch[1];
+      }
       if (root && unseal && !written) {
         fs.writeFile(
           path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
@@ -74,6 +77,12 @@ async function processLines(input, eachLine = () => {}) {
         );
         written = true;
         console.log('VAULT SERVER READY');
+      } else if (initError) {
+        console.log('VAULT SERVER START FAILED');
+        console.log(
+          'If this is happening, run `export VAULT_LICENSE_PATH=/Users/username/license.hclic` to your valid local vault license filepath, or use OSS Vault'
+        );
+        process.exit(1);
       }
     });
     try {

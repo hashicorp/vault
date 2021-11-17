@@ -69,7 +69,7 @@ func (k *KV) Get(key string, q *QueryOptions) (*KVPair, *QueryMeta, error) {
 	if resp == nil {
 		return nil, qm, nil
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	var entries []*KVPair
 	if err := decodeBody(resp, &entries); err != nil {
@@ -90,7 +90,7 @@ func (k *KV) List(prefix string, q *QueryOptions) (KVPairs, *QueryMeta, error) {
 	if resp == nil {
 		return nil, qm, nil
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	var entries []*KVPair
 	if err := decodeBody(resp, &entries); err != nil {
@@ -113,7 +113,7 @@ func (k *KV) Keys(prefix, separator string, q *QueryOptions) ([]string, *QueryMe
 	if resp == nil {
 		return nil, qm, nil
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	var entries []string
 	if err := decodeBody(resp, &entries); err != nil {
@@ -138,10 +138,10 @@ func (k *KV) getInternal(key string, params map[string]string, q *QueryOptions) 
 	qm.RequestTime = rtt
 
 	if resp.StatusCode == 404 {
-		resp.Body.Close()
+		closeResponseBody(resp)
 		return nil, qm, nil
 	} else if resp.StatusCode != 200 {
-		resp.Body.Close()
+		closeResponseBody(resp)
 		return nil, nil, fmt.Errorf("Unexpected response code: %d", resp.StatusCode)
 	}
 	return resp, qm, nil
@@ -205,11 +205,12 @@ func (k *KV) put(key string, params map[string]string, body []byte, q *WriteOpti
 		r.params.Set(param, val)
 	}
 	r.body = bytes.NewReader(body)
+	r.header.Set("Content-Type", "application/octet-stream")
 	rtt, resp, err := requireOK(k.c.doRequest(r))
 	if err != nil {
 		return false, nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	qm := &WriteMeta{}
 	qm.RequestTime = rtt
@@ -253,7 +254,7 @@ func (k *KV) deleteInternal(key string, params map[string]string, q *WriteOption
 	if err != nil {
 		return false, nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	qm := &WriteMeta{}
 	qm.RequestTime = rtt

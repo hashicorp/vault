@@ -14,6 +14,8 @@ import (
 var _ proto.DatabaseServer = gRPCServer{}
 
 type gRPCServer struct {
+	proto.UnimplementedDatabaseServer
+
 	impl Database
 }
 

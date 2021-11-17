@@ -2,7 +2,6 @@ package tfe
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 )
@@ -24,16 +23,16 @@ type stateVersionOutputs struct {
 }
 
 type StateVersionOutput struct {
-	ID        string `jsonapi:"primary,state-version-outputs"`
-	Name      string `jsonapi:"attr,name"`
-	Sensitive bool   `jsonapi:"attr,sensitive"`
-	Type      string `jsonapi:"attr,type"`
-	Value     string `jsonapi:"attr,value"`
+	ID        string      `jsonapi:"primary,state-version-outputs"`
+	Name      string      `jsonapi:"attr,name"`
+	Sensitive bool        `jsonapi:"attr,sensitive"`
+	Type      string      `jsonapi:"attr,type"`
+	Value     interface{} `jsonapi:"attr,value"`
 }
 
 func (s *stateVersionOutputs) Read(ctx context.Context, outputID string) (*StateVersionOutput, error) {
 	if !validStringID(&outputID) {
-		return nil, errors.New("invalid value for run ID")
+		return nil, ErrInvalidRunID
 	}
 
 	u := fmt.Sprintf("state-version-outputs/%s", url.QueryEscape(outputID))

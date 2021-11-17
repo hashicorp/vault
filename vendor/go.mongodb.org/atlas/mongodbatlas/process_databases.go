@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const processesDatabasesPath = "groups/%s/processes/%s:%d/databases"
+const processesDatabasesPath = "api/atlas/v1.0/groups/%s/processes/%s:%d/databases"
 
 // ProcessDatabasesService is an interface for interfacing with the Process Measurements
 // endpoints of the MongoDB Atlas API.
@@ -31,7 +31,7 @@ type ProcessDatabasesService interface {
 }
 
 // ProcessDatabasesServiceOp handles communication with the process disks related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type ProcessDatabasesServiceOp service
 
 var _ ProcessDatabasesService = &ProcessDatabasesServiceOp{}
@@ -43,7 +43,7 @@ type ProcessDatabasesResponse struct {
 	TotalCount int                `json:"totalCount"`
 }
 
-// ProcessDatabase is the database information of a process
+// ProcessDatabase is the database information of a process.
 type ProcessDatabase struct {
 	Links        []*Link `json:"links"`
 	DatabaseName string  `json:"databaseName"`

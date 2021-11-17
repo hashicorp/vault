@@ -1,6 +1,6 @@
 # go-slug
 
-[![Build Status](https://travis-ci.org/hashicorp/go-slug.svg?branch=master)](https://travis-ci.org/hashicorp/go-slug)
+[![Build Status](https://circleci.com/gh/hashicorp/go-slug.svg?style=shield)](https://app.circleci.com/pipelines/github/hashicorp/go-slug)
 [![GitHub license](https://img.shields.io/github/license/hashicorp/go-slug.svg)](https://github.com/hashicorp/go-slug/blob/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/hashicorp/go-slug?status.svg)](https://godoc.org/github.com/hashicorp/go-slug)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hashicorp/go-slug)](https://goreportcard.com/report/github.com/hashicorp/go-slug)

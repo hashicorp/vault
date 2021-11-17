@@ -51,13 +51,13 @@ func (rcv *Timestamp) Table() flatbuffers.Table {
 func (rcv *Timestamp) Unit() TimeUnit {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return TimeUnit(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
 func (rcv *Timestamp) MutateUnit(n TimeUnit) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 /// The time zone is a string indicating the name of a time zone, one of:
@@ -111,8 +111,8 @@ func (rcv *Timestamp) Timezone() []byte {
 func TimestampStart(builder *flatbuffers.Builder) {
 	builder.StartObject(2)
 }
-func TimestampAddUnit(builder *flatbuffers.Builder, unit int16) {
-	builder.PrependInt16Slot(0, unit, 0)
+func TimestampAddUnit(builder *flatbuffers.Builder, unit TimeUnit) {
+	builder.PrependInt16Slot(0, int16(unit), 0)
 }
 func TimestampAddTimezone(builder *flatbuffers.Builder, timezone flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(1, flatbuffers.UOffsetT(timezone), 0)

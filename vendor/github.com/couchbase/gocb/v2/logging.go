@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 // LogLevel specifies the severity of a log message.

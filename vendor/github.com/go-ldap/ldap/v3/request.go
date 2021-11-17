@@ -9,6 +9,7 @@ import (
 var (
 	errRespChanClosed = errors.New("ldap: response channel closed")
 	errCouldNotRetMsg = errors.New("ldap: could not retrieve message")
+	ErrNilConnection  = errors.New("ldap: conn is nil, expected net.Conn")
 )
 
 type request interface {
@@ -22,6 +23,10 @@ func (f requestFunc) appendTo(p *ber.Packet) error {
 }
 
 func (l *Conn) doRequest(req request) (*messageContext, error) {
+	if l == nil || l.conn == nil {
+		return nil, ErrNilConnection
+	}
+
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
 	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	if err := req.appendTo(packet); err != nil {

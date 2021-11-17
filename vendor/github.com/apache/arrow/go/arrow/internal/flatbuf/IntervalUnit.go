@@ -18,14 +18,28 @@
 
 package flatbuf
 
-type IntervalUnit = int16
+import "strconv"
+
+type IntervalUnit int16
+
 const (
 	IntervalUnitYEAR_MONTH IntervalUnit = 0
-	IntervalUnitDAY_TIME IntervalUnit = 1
+	IntervalUnitDAY_TIME   IntervalUnit = 1
 )
 
 var EnumNamesIntervalUnit = map[IntervalUnit]string{
-	IntervalUnitYEAR_MONTH:"YEAR_MONTH",
-	IntervalUnitDAY_TIME:"DAY_TIME",
+	IntervalUnitYEAR_MONTH: "YEAR_MONTH",
+	IntervalUnitDAY_TIME:   "DAY_TIME",
 }
 
+var EnumValuesIntervalUnit = map[string]IntervalUnit{
+	"YEAR_MONTH": IntervalUnitYEAR_MONTH,
+	"DAY_TIME":   IntervalUnitDAY_TIME,
+}
+
+func (v IntervalUnit) String() string {
+	if s, ok := EnumNamesIntervalUnit[v]; ok {
+		return s
+	}
+	return "IntervalUnit(" + strconv.FormatInt(int64(v), 10) + ")"
+}

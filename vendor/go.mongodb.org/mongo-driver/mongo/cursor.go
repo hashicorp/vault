@@ -21,7 +21,8 @@ import (
 )
 
 // Cursor is used to iterate over a stream of documents. Each document can be decoded into a Go type via the Decode
-// method or accessed as raw BSON via the Current field.
+// method or accessed as raw BSON via the Current field. This type is not goroutine safe and must not be used
+// concurrently by multiple goroutines.
 type Cursor struct {
 	// Current contains the BSON bytes of the current change document. This property is only valid until the next call
 	// to Next or TryNext. If continued access is required, a copy must be made.

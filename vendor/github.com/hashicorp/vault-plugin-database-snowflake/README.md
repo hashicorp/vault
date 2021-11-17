@@ -11,8 +11,8 @@ Bugs should be filed under the Issues section of this repo.
 Feature requests can be submitted in the Issues section as well.
 
 ## Quick Links
- * Database Secrets Engine for Snowflake - Docs
- * Database Secrets Engine for Snowflake - API Docs
+ * [Database Secrets Engine for Snowflake - Docs](https://www.vaultproject.io/docs/secrets/databases/snowflake)
+ * [Database Secrets Engine for Snowflake - API Docs](https://www.vaultproject.io/api-docs/secret/databases/snowflake)
  * [Snowflake Website](https://www.snowflake.com/)
  * [Vault Website](https://www.vaultproject.io)
  

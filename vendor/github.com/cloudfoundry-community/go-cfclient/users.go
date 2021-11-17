@@ -56,8 +56,9 @@ func (c *Client) GetUserByGUID(guid string) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
-	body, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return User{}, err
 	}
@@ -84,7 +85,7 @@ func (c *Client) ListUsersByQuery(query url.Values) (Users, error) {
 			users = append(users, user.Entity)
 		}
 		requestUrl = userResp.NextUrl
-		if requestUrl == "" {
+		if requestUrl == "" || query.Get("page") != "" {
 			break
 		}
 	}
@@ -96,15 +97,15 @@ func (c *Client) ListUsers() (Users, error) {
 }
 
 func (c *Client) ListUserSpaces(userGuid string) ([]Space, error) {
-	return c.fetchSpaces(fmt.Sprintf("/v2/users/%s/spaces", userGuid))
+	return c.fetchSpaces(fmt.Sprintf("/v2/users/%s/spaces", userGuid), url.Values{})
 }
 
 func (c *Client) ListUserAuditedSpaces(userGuid string) ([]Space, error) {
-	return c.fetchSpaces(fmt.Sprintf("/v2/users/%s/audited_spaces", userGuid))
+	return c.fetchSpaces(fmt.Sprintf("/v2/users/%s/audited_spaces", userGuid), url.Values{})
 }
 
 func (c *Client) ListUserManagedSpaces(userGuid string) ([]Space, error) {
-	return c.fetchSpaces(fmt.Sprintf("/v2/users/%s/managed_spaces", userGuid))
+	return c.fetchSpaces(fmt.Sprintf("/v2/users/%s/managed_spaces", userGuid), url.Values{})
 }
 
 func (c *Client) ListUserOrgs(userGuid string) ([]Org, error) {
@@ -134,11 +135,12 @@ func (c *Client) CreateUser(req UserRequest) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return User{}, errors.Wrapf(err, "Error creating user, response code: %d", resp.StatusCode)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
+
 	if err != nil {
 		return User{}, err
 	}
@@ -158,6 +160,7 @@ func (c *Client) DeleteUser(userGuid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error deleting user %s, response code: %d", userGuid, resp.StatusCode)
 	}
@@ -180,8 +183,9 @@ func (c *Client) getUserResponse(requestUrl string) (UserResponse, error) {
 	if err != nil {
 		return UserResponse{}, errors.Wrap(err, "Error requesting users")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
+
 	if err != nil {
 		return UserResponse{}, errors.Wrap(err, "Error reading user request")
 	}

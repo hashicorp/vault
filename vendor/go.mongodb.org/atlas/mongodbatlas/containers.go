@@ -21,7 +21,7 @@ import (
 	"net/url"
 )
 
-const containersPath = "groups/%s/containers"
+const containersPath = "api/atlas/v1.0/groups/%s/containers"
 
 // ContainersService provides access to the network peering containers related functions in the Atlas API.
 //
@@ -36,12 +36,12 @@ type ContainersService interface {
 }
 
 // ContainersServiceOp handles communication with the Network Peering Container related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type ContainersServiceOp service
 
 var _ ContainersService = &ContainersServiceOp{}
 
-// ContainersListOptions filtering options for containers
+// ContainersListOptions filtering options for containers.
 type ContainersListOptions struct {
 	ProviderName string `url:"providerName,omitempty"`
 	ListOptions
@@ -49,17 +49,18 @@ type ContainersListOptions struct {
 
 // Container represents MongoDB network peering containter.
 type Container struct {
-	AtlasCIDRBlock      string `json:"atlasCidrBlock,omitempty"`
-	AzureSubscriptionID string `json:"azureSubscriptionId,omitempty"`
-	GCPProjectID        string `json:"gcpProjectId,omitempty"`
-	ID                  string `json:"id,omitempty"`
-	NetworkName         string `json:"networkName,omitempty"`
-	ProviderName        string `json:"providerName,omitempty"`
-	Provisioned         *bool  `json:"provisioned,omitempty"`
-	Region              string `json:"region,omitempty"`
-	RegionName          string `json:"regionName,omitempty"`
-	VNetName            string `json:"vnetName,omitempty"`
-	VPCID               string `json:"vpcId,omitempty"`
+	AtlasCIDRBlock      string   `json:"atlasCidrBlock,omitempty"`
+	AzureSubscriptionID string   `json:"azureSubscriptionId,omitempty"`
+	GCPProjectID        string   `json:"gcpProjectId,omitempty"`
+	ID                  string   `json:"id,omitempty"`
+	NetworkName         string   `json:"networkName,omitempty"`
+	ProviderName        string   `json:"providerName,omitempty"`
+	Provisioned         *bool    `json:"provisioned,omitempty"`
+	Region              string   `json:"region,omitempty"`     // Region is available for AZURE
+	Regions             []string `json:"regions,omitempty"`    // Regions are available for GCP
+	RegionName          string   `json:"regionName,omitempty"` // RegionName is available for AWS
+	VNetName            string   `json:"vnetName,omitempty"`
+	VPCID               string   `json:"vpcId,omitempty"`
 }
 
 // containersResponse is the response from the ContainersService.List.

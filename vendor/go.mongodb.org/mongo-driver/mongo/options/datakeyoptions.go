@@ -19,10 +19,37 @@ func DataKey() *DataKeyOptions {
 
 // SetMasterKey specifies a KMS-specific key used to encrypt the new data key.
 //
-// If being used with the AWS KMS provider, this option is required and must be a document with the following format:
-// {region: string, key: string}.
-//
 // If being used with a local KMS provider, this option is not applicable and should not be specified.
+//
+// For the AWS, Azure, and GCP KMS providers, this option is required and must be a document. For each, the value of the
+// "endpoint" or "keyVaultEndpoint" must be a host name with an optional port number (e.g. "foo.com" or "foo.com:443").
+//
+// When using AWS, the document must have the format:
+// {
+//   region: <string>,
+//   key: <string>,             // The Amazon Resource Name (ARN) to the AWS customer master key (CMK).
+//   endpoint: Optional<string> // An alternate host identifier to send KMS requests to.
+// }
+// If unset, the "endpoint" defaults to "kms.<region>.amazonaws.com".
+//
+// When using Azure, the document must have the format:
+// {
+//   keyVaultEndpoint: <string>,  // A host identifier to send KMS requests to.
+//   keyName: <string>,
+//   keyVersion: Optional<string> // A specific version of the named key.
+// }
+// If unset, "keyVersion" defaults to the key's primary version.
+//
+// When using GCP, the document must have the format:
+// {
+//   projectId: <string>,
+//   location: <string>,
+//   keyRing: <string>,
+//   keyName: <string>,
+//   keyVersion: Optional<string>, // A specific version of the named key.
+//   endpoint: Optional<string>    // An alternate host identifier to send KMS requests to.
+// }
+// If unset, "keyVersion" defaults to the key's primary version and "endpoint" defaults to "cloudkms.googleapis.com".
 func (dk *DataKeyOptions) SetMasterKey(masterKey interface{}) *DataKeyOptions {
 	dk.MasterKey = masterKey
 	return dk

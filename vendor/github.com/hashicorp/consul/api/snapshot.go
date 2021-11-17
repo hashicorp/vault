@@ -38,6 +38,7 @@ func (s *Snapshot) Save(q *QueryOptions) (io.ReadCloser, *QueryMeta, error) {
 func (s *Snapshot) Restore(q *WriteOptions, in io.Reader) error {
 	r := s.c.newRequest("PUT", "/v1/snapshot")
 	r.body = in
+	r.header.Set("Content-Type", "application/octet-stream")
 	r.setWriteOptions(q)
 	_, _, err := requireOK(s.c.doRequest(r))
 	if err != nil {

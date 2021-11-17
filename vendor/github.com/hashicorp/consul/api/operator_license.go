@@ -36,6 +36,9 @@ type License struct {
 	// License Specific Flags
 	Flags map[string]interface{} `json:"flags"`
 
+	// Modules is a list of the licensed enterprise modules
+	Modules []string `json:"modules"`
+
 	// List of features enabled by the license
 	Features []string `json:"features"`
 }
@@ -63,7 +66,7 @@ func (op *Operator) LicenseGetSigned(q *QueryOptions) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -75,6 +78,9 @@ func (op *Operator) LicenseGetSigned(q *QueryOptions) (string, error) {
 
 // LicenseReset will reset the license to the builtin one if it is still valid.
 // If the builtin license is invalid, the current license stays active.
+//
+// DEPRECATED: Consul 1.10 removes the corresponding HTTP endpoint as licenses
+// are now set via agent configuration instead of through the API
 func (op *Operator) LicenseReset(opts *WriteOptions) (*LicenseReply, error) {
 	var reply LicenseReply
 	r := op.c.newRequest("DELETE", "/v1/operator/license")
@@ -84,14 +90,16 @@ func (op *Operator) LicenseReset(opts *WriteOptions) (*LicenseReply, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	if err := decodeBody(resp, &reply); err != nil {
 		return nil, err
 	}
-
 	return &reply, nil
 }
 
+// LicensePut will configure the Consul Enterprise license for the target datacenter
+//
+// DEPRECATED: Consul 1.10 removes the corresponding HTTP endpoint as licenses
+// are now set via agent configuration instead of through the API
 func (op *Operator) LicensePut(license string, opts *WriteOptions) (*LicenseReply, error) {
 	var reply LicenseReply
 	r := op.c.newRequest("PUT", "/v1/operator/license")

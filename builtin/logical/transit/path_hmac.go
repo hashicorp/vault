@@ -96,7 +96,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -224,7 +224,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())

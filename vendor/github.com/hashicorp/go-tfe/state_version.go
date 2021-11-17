@@ -16,7 +16,7 @@ var _ StateVersions = (*stateVersions)(nil)
 // the Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/state-versions.html
+// https://www.terraform.io/docs/cloud/api/state-versions.html
 type StateVersions interface {
 	// List all the state versions for a given workspace.
 	List(ctx context.Context, options StateVersionListOptions) (*StateVersionList, error)
@@ -38,6 +38,9 @@ type StateVersions interface {
 
 	// Download retrieves the actual stored state of a state version
 	Download(ctx context.Context, url string) ([]byte, error)
+
+	// Outputs retrieves all the outputs of a state version by its ID.
+	Outputs(ctx context.Context, svID string, options StateVersionOutputsListOptions) ([]*StateVersionOutput, error)
 }
 
 // stateVersions implements StateVersions.
@@ -104,8 +107,11 @@ func (s *stateVersions) List(ctx context.Context, options StateVersionListOption
 
 // StateVersionCreateOptions represents the options for creating a state version.
 type StateVersionCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,state-versions"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,state-versions"`
 
 	// The lineage of the state.
 	Lineage *string `jsonapi:"attr,lineage,omitempty"`
@@ -143,14 +149,11 @@ func (o StateVersionCreateOptions) valid() error {
 // Create a new state version for the given workspace.
 func (s *stateVersions) Create(ctx context.Context, workspaceID string, options StateVersionCreateOptions) (*StateVersion, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 	if err := options.valid(); err != nil {
 		return nil, err
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("workspaces/%s/state-versions", url.QueryEscape(workspaceID))
 	req, err := s.client.newRequest("POST", u, &options)
@@ -206,7 +209,7 @@ type StateVersionCurrentOptions struct {
 // CurrentWithOptions reads the latest available state from the given workspace using the options supplied.
 func (s *stateVersions) CurrentWithOptions(ctx context.Context, workspaceID string, options *StateVersionCurrentOptions) (*StateVersion, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 
 	u := fmt.Sprintf("workspaces/%s/current-state-version", url.QueryEscape(workspaceID))
@@ -244,4 +247,37 @@ func (s *stateVersions) Download(ctx context.Context, url string) ([]byte, error
 	}
 
 	return buf.Bytes(), nil
+}
+
+// StateVersionOutputsList represents a list of StateVersionOutput items.
+type StateVersionOutputsList struct {
+	*Pagination
+	Items []*StateVersionOutput
+}
+
+// StateVersionOutputsListOptions represents the options for listing state
+// version outputs.
+type StateVersionOutputsListOptions struct {
+	ListOptions
+}
+
+// Outputs retrieves all the outputs of a state version by its ID.
+func (s *stateVersions) Outputs(ctx context.Context, svID string, options StateVersionOutputsListOptions) ([]*StateVersionOutput, error) {
+	if !validStringID(&svID) {
+		return nil, errors.New("invalid value for state version ID")
+	}
+
+	u := fmt.Sprintf("state-versions/%s/outputs", url.QueryEscape(svID))
+	req, err := s.client.newRequest("GET", u, options)
+	if err != nil {
+		return nil, err
+	}
+
+	sv := &StateVersionOutputsList{}
+	err = s.client.do(ctx, req, sv)
+	if err != nil {
+		return nil, err
+	}
+
+	return sv.Items, nil
 }

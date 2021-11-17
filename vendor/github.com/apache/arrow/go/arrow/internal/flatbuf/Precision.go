@@ -18,16 +18,31 @@
 
 package flatbuf
 
-type Precision = int16
+import "strconv"
+
+type Precision int16
+
 const (
-	PrecisionHALF Precision = 0
+	PrecisionHALF   Precision = 0
 	PrecisionSINGLE Precision = 1
 	PrecisionDOUBLE Precision = 2
 )
 
 var EnumNamesPrecision = map[Precision]string{
-	PrecisionHALF:"HALF",
-	PrecisionSINGLE:"SINGLE",
-	PrecisionDOUBLE:"DOUBLE",
+	PrecisionHALF:   "HALF",
+	PrecisionSINGLE: "SINGLE",
+	PrecisionDOUBLE: "DOUBLE",
 }
 
+var EnumValuesPrecision = map[string]Precision{
+	"HALF":   PrecisionHALF,
+	"SINGLE": PrecisionSINGLE,
+	"DOUBLE": PrecisionDOUBLE,
+}
+
+func (v Precision) String() string {
+	if s, ok := EnumNamesPrecision[v]; ok {
+		return s
+	}
+	return "Precision(" + strconv.FormatInt(int64(v), 10) + ")"
+}

@@ -72,12 +72,13 @@ type AppCreateRequest struct {
 	// Endpoint to check if an app is healthy
 	HealthCheckHttpEndpoint string `json:"health_check_http_endpoint,omitempty"`
 	// How to check if an app is healthy. Defaults to HEALTH_PORT if not specified
-	HealthCheckType   HealthCheckType        `json:"health_check_type,omitempty"`
-	Diego             bool                   `json:"diego,omitempty"`
-	EnableSSH         bool                   `json:"enable_ssh,omitempty"`
-	DockerImage       string                 `json:"docker_image,omitempty"`
-	DockerCredentials DockerCredentials      `json:"docker_credentials,omitempty"`
-	Environment       map[string]interface{} `json:"environment_json,omitempty"`
+	HealthCheckType    HealthCheckType        `json:"health_check_type,omitempty"`
+	HealthCheckTimeout int                    `json:"health_check_timeout,omitempty"`
+	Diego              bool                   `json:"diego,omitempty"`
+	EnableSSH          bool                   `json:"enable_ssh,omitempty"`
+	DockerImage        string                 `json:"docker_image,omitempty"`
+	DockerCredentials  DockerCredentials      `json:"docker_credentials,omitempty"`
+	Environment        map[string]interface{} `json:"environment_json,omitempty"`
 }
 
 type App struct {
@@ -103,7 +104,8 @@ type App struct {
 	EnableSSH                bool                   `json:"enable_ssh"`
 	DetectedStartCommand     string                 `json:"detected_start_command"`
 	DockerImage              string                 `json:"docker_image"`
-	DockerCredentials        map[string]interface{} `json:"docker_credentials_json"`
+	DockerCredentialsJSON    map[string]interface{} `json:"docker_credentials_json"`
+	DockerCredentials        DockerCredentials      `json:"docker_credentials"`
 	Environment              map[string]interface{} `json:"environment_json"`
 	StagingFailedReason      string                 `json:"staging_failed_reason"`
 	StagingFailedDescription string                 `json:"staging_failed_description"`
@@ -252,8 +254,8 @@ func (a *App) Summary() (AppSummary, error) {
 	if err != nil {
 		return AppSummary{}, errors.Wrap(err, "Error requesting app summary")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return AppSummary{}, errors.Wrap(err, "Error reading app summary body")
 	}
@@ -268,11 +270,11 @@ func (a *App) Summary() (AppSummary, error) {
 // less and equal than 0, it queries all app info
 // When there are no more than totalPages apps on server side, all apps info will be returned
 func (c *Client) ListAppsByQueryWithLimits(query url.Values, totalPages int) ([]App, error) {
-	return c.listApps("/v2/apps?"+query.Encode(), totalPages)
+	return c.listApps("/v2/apps", query, totalPages)
 }
 
 func (c *Client) ListAppsByQuery(query url.Values) ([]App, error) {
-	return c.listApps("/v2/apps?"+query.Encode(), -1)
+	return c.listApps("/v2/apps", query, -1)
 }
 
 // GetAppByGuidNoInlineCall will fetch app info including space and orgs information
@@ -301,16 +303,15 @@ func (c *Client) GetAppByGuidNoInlineCall(guid string) (App, error) {
 		//Getting Spaces Resource
 		space, err := app.Space()
 		if err != nil {
-			errors.Wrap(err, "Unable to get the Space for the apps "+app.Name)
+			return App{}, errors.Wrap(err, "Unable to get the Space for the app "+app.Name)
 		} else {
 			app.SpaceData.Entity = space
-
 		}
 
 		//Getting orgResource
 		org, err := app.SpaceData.Entity.Org()
 		if err != nil {
-			errors.Wrap(err, "Unable to get the Org for the apps "+app.Name)
+			return App{}, errors.Wrap(err, "Unable to get the Org for the app "+app.Name)
 		} else {
 			app.SpaceData.Entity.OrgData.Entity = org
 		}
@@ -326,10 +327,15 @@ func (c *Client) ListApps() ([]App, error) {
 }
 
 func (c *Client) ListAppsByRoute(routeGuid string) ([]App, error) {
-	return c.listApps(fmt.Sprintf("/v2/routes/%s/apps", routeGuid), -1)
+	return c.listApps(fmt.Sprintf("/v2/routes/%s/apps", routeGuid), url.Values{}, -1)
 }
 
-func (c *Client) listApps(requestUrl string, totalPages int) ([]App, error) {
+func (c *Client) ListAppsBySpaceGuid(spaceGuid string) ([]App, error) {
+	return c.listApps(fmt.Sprintf("/v2/spaces/%s/apps", spaceGuid), url.Values{}, -1)
+}
+
+func (c *Client) listApps(path string, query url.Values, totalPages int) ([]App, error) {
+	requestUrl := path + "?" + query.Encode()
 	pages := 0
 	apps := []App{}
 	for {
@@ -355,7 +361,7 @@ func (c *Client) listApps(requestUrl string, totalPages int) ([]App, error) {
 		}
 
 		requestUrl = appResp.NextUrl
-		if requestUrl == "" {
+		if requestUrl == "" || query.Get("page") != "" {
 			break
 		}
 
@@ -495,6 +501,9 @@ func (c *Client) AppByName(appName, spaceGuid, orgGuid string) (app App, err err
 // UploadAppBits uploads the application's contents
 func (c *Client) UploadAppBits(file io.Reader, appGUID string) error {
 	requestFile, err := ioutil.TempFile("", "requests")
+	if err != nil {
+		return errors.Wrap(err, "Could not create temp file for app bits")
+	}
 
 	defer func() {
 		requestFile.Close()
@@ -522,7 +531,10 @@ func (c *Client) UploadAppBits(file io.Reader, appGUID string) error {
 		return errors.Wrapf(err, "Error uploading app %s bits, failed to close multipart writer", appGUID)
 	}
 
-	requestFile.Seek(0, 0)
+	_, err = requestFile.Seek(0, 0)
+	if err != nil {
+		return errors.Wrapf(err, "Error uploading app %s bits, failed to seek beginning of file", appGUID)
+	}
 	fileStats, err := requestFile.Stat()
 	if err != nil {
 		return errors.Wrapf(err, "Error uploading app %s bits, failed to get temp file stats", appGUID)
@@ -543,6 +555,7 @@ func (c *Client) UploadAppBits(file io.Reader, appGUID string) error {
 	if err != nil {
 		return errors.Wrapf(err, "Error uploading app %s bits", appGUID)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return errors.Wrapf(err, "Error uploading app %s bits, response code: %d", appGUID, resp.StatusCode)
 	}
@@ -558,6 +571,7 @@ func (c *Client) GetAppBits(guid string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error downloading app %s bits, API request failed", guid)
 	}
+	defer resp.Body.Close()
 	if isResponseRedirect(resp) {
 		// directly download the bits from blobstore using a non cloud controller transport
 		// some blobstores will return a 400 if an Authorization header is sent
@@ -576,6 +590,104 @@ func (c *Client) GetAppBits(guid string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
+// GetDropletBits downloads the application's droplet bits as a tar file
+func (c *Client) GetDropletBits(guid string) (io.ReadCloser, error) {
+	requestURL := fmt.Sprintf("/v2/apps/%s/droplet/download", guid)
+	req := c.NewRequest("GET", requestURL)
+	resp, err := c.DoRequestWithoutRedirects(req)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error downloading droplet %s bits, API request failed", guid)
+	}
+	defer resp.Body.Close()
+	if isResponseRedirect(resp) {
+		// directly download the bits from blobstore using a non cloud controller transport
+		// some blobstores will return a 400 if an Authorization header is sent
+		blobStoreLocation := resp.Header.Get("Location")
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: c.Config.SkipSslValidation},
+		}
+		client := &http.Client{Transport: tr}
+		resp, err = client.Get(blobStoreLocation)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Error downloading droplet %s bits from blobstore", guid)
+		}
+	} else {
+		return nil, errors.Wrapf(err, "Error downloading droplet %s bits, expected redirect to blobstore", guid)
+	}
+	return resp.Body, nil
+}
+
+// GetDropletBits downloads the application's droplet bits as a tar file
+// Returns the  GUID, job URL for monitoring, and an error
+func (c *Client) UploadDropletBits(dropletReader io.Reader, appGUID string) (string, error) {
+	dropletFile, err := ioutil.TempFile("", "droplet")
+	if err != nil {
+		return "", errors.Wrap(err, "Could not create temp file for droplet bits")
+	}
+
+	defer func() {
+		dropletFile.Close()
+		os.Remove(dropletFile.Name())
+	}()
+
+	writer := multipart.NewWriter(dropletFile)
+	part, err := writer.CreateFormFile("droplet", "droplet.tgz")
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet", appGUID)
+	}
+
+	_, err = io.Copy(part, dropletReader)
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet, failed to copy all bytes", appGUID)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet, failed to close multipart writer", appGUID)
+	}
+
+	_, err = dropletFile.Seek(0, 0)
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet, failed to seek beginning of file", appGUID)
+	}
+	fileStats, err := dropletFile.Stat()
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet, failed to get temp file stats", appGUID)
+	}
+
+	requestURL := fmt.Sprintf("/v2/apps/%s/droplet/upload", appGUID)
+	r := c.NewRequestWithBody("PUT", requestURL, dropletFile)
+	req, err := r.toHTTP()
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet", appGUID)
+	}
+
+	req.ContentLength = fileStats.Size()
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet", appGUID)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		return "", errors.Wrapf(err, "Error uploading app %s droplet, response code: %d", appGUID, resp.StatusCode)
+	}
+
+	var respObj struct {
+		Metadata struct {
+			GUID string `json:"guid"`
+			URL  string `json:"url"`
+		} `json:"metadata"`
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&respObj); err != nil {
+		return "", errors.Wrapf(err, "Error parsing response")
+	}
+
+	return respObj.Metadata.URL, nil
+}
+
 // CreateApp creates a new empty application that still needs it's
 // app bit uploaded and to be started
 func (c *Client) CreateApp(req AppCreateRequest) (App, error) {
@@ -590,11 +702,11 @@ func (c *Client) CreateApp(req AppCreateRequest) (App, error) {
 	if err != nil {
 		return App{}, errors.Wrapf(err, "Error creating app %s", req.Name)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return App{}, errors.Wrapf(err, "Error creating app %s, response code: %d", req.Name, resp.StatusCode)
 	}
 	resBody, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return App{}, errors.Wrapf(err, "Error reading app %s http response body", req.Name)
 	}
@@ -611,6 +723,7 @@ func (c *Client) StartApp(guid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error starting app %s, response code: %d", guid, resp.StatusCode)
 	}
@@ -634,9 +747,25 @@ func (c *Client) DeleteApp(guid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error deleting app %s, response code: %d", guid, resp.StatusCode)
 	}
+	return nil
+}
+
+func (c *Client) RestartApp(guid string) error {
+	var err error
+	err = c.StopApp(guid)
+	if err != nil {
+		return err
+	}
+
+	err = c.StartApp(guid)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

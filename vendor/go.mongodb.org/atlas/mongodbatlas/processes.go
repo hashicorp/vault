@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const processesPath = "groups/%s/processes"
+const processesPath = "api/atlas/v1.0/groups/%s/processes"
 
 // ProcessesService provides access to the alert processes related functions in the Atlas API.
 //
@@ -58,10 +58,10 @@ type processesResponse struct {
 	TotalCount int        `json:"totalCount,omitempty"`
 }
 
-// ProcessesListOptions filter options for the processes API
+// ProcessesListOptions filter options for the processes API.
 type ProcessesListOptions struct {
 	ListOptions
-	ClusterID string `url:"clusterId,omitempty"`
+	ClusterID string `url:"clusterId,omitempty"` // ClusterID is only available for Ops Manager and CLoud Manager.
 }
 
 // List lists all processes in the project associated to {GROUP-ID}.

@@ -25,7 +25,7 @@ import (
 /// A union is a complex type with children in Field
 /// By default ids in the type vector refer to the offsets in the children
 /// optionally typeIds provides an indirection between the child offset and the type id
-/// for each child typeIds[offset] is the id used in the type vector
+/// for each child `typeIds[offset]` is the id used in the type vector
 type Union struct {
 	_tab flatbuffers.Table
 }
@@ -49,13 +49,13 @@ func (rcv *Union) Table() flatbuffers.Table {
 func (rcv *Union) Mode() UnionMode {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return UnionMode(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
 func (rcv *Union) MutateMode(n UnionMode) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 func (rcv *Union) TypeIds(j int) int32 {
@@ -87,8 +87,8 @@ func (rcv *Union) MutateTypeIds(j int, n int32) bool {
 func UnionStart(builder *flatbuffers.Builder) {
 	builder.StartObject(2)
 }
-func UnionAddMode(builder *flatbuffers.Builder, mode int16) {
-	builder.PrependInt16Slot(0, mode, 0)
+func UnionAddMode(builder *flatbuffers.Builder, mode UnionMode) {
+	builder.PrependInt16Slot(0, int16(mode), 0)
 }
 func UnionAddTypeIds(builder *flatbuffers.Builder, typeIds flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(1, flatbuffers.UOffsetT(typeIds), 0)

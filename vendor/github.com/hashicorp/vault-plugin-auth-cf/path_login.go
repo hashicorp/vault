@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-community/go-cfclient"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault-plugin-auth-cf/models"
 	"github.com/hashicorp/vault-plugin-auth-cf/signatures"
 	"github.com/hashicorp/vault-plugin-auth-cf/util"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/pkg/errors"
 )
@@ -351,36 +351,30 @@ func (b *backend) validate(client *cfclient.Client, role *models.RoleEntry, cfCe
 }
 
 func (b *backend) getOrgName(client *cfclient.Client, cfCert *models.CFCertificate) (string, error) {
-
 	org, err := client.GetOrgByGuid(cfCert.OrgID)
 	if err != nil {
 		return "", err
 	}
 
 	return org.Name, nil
-
 }
 
 func (b *backend) getAppName(client *cfclient.Client, cfCert *models.CFCertificate) (string, error) {
-
 	app, err := client.AppByGuid(cfCert.AppID)
 	if err != nil {
 		return "", err
 	}
 
 	return app.Name, nil
-
 }
 
 func (b *backend) getSpaceName(client *cfclient.Client, cfCert *models.CFCertificate) (string, error) {
-
 	space, err := client.GetSpaceByGuid(cfCert.SpaceID)
 	if err != nil {
 		return "", err
 	}
 
 	return space.Name, nil
-
 }
 
 func meetsBoundConstraints(certValue string, constraints []string) bool {

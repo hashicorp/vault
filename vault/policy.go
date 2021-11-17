@@ -7,13 +7,13 @@ import (
 	"time"
 
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -26,6 +26,7 @@ const (
 	ListCapability   = "list"
 	SudoCapability   = "sudo"
 	RootCapability   = "root"
+	PatchCapability  = "patch"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -42,6 +43,14 @@ const (
 	DeleteCapabilityInt
 	ListCapabilityInt
 	SudoCapabilityInt
+	PatchCapabilityInt
+)
+
+// Error constants for testing
+const (
+	// ControlledCapabilityPolicySubsetError is thrown when a control group's controlled capabilities
+	// are not a subset of the policy's capabilities.
+	ControlledCapabilityPolicySubsetError = "control group factor capabilities must be a subset of the policy's capabilities"
 )
 
 type PolicyType uint32
@@ -76,6 +85,7 @@ var cap2Int = map[string]uint32{
 	DeleteCapability: DeleteCapabilityInt,
 	ListCapability:   ListCapabilityInt,
 	SudoCapability:   SudoCapabilityInt,
+	PatchCapability:  PatchCapabilityInt,
 }
 
 type egpPath struct {
@@ -139,8 +149,9 @@ type ControlGroup struct {
 }
 
 type ControlGroupFactor struct {
-	Name     string
-	Identity *IdentityFactor `hcl:"identity"`
+	Name                   string
+	Identity               *IdentityFactor `hcl:"identity"`
+	ControlledCapabilities []string        `hcl:"controlled_capabilities"`
 }
 
 type IdentityFactor struct {
@@ -382,7 +393,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
@@ -431,7 +442,6 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				}
 				pc.Permissions.ControlGroup.TTL = dur
 			}
-
 			var factors []*ControlGroupFactor
 			if pc.ControlGroupHCL.Factors != nil {
 				for key, factor := range pc.ControlGroupHCL.Factors {
@@ -446,9 +456,27 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 						return errors.New("must provide more than one identity group and approvals > 0")
 					}
 
+					// Ensure that configured ControlledCapabilities for factor are a subset of the
+					// Capabilities of the policy.
+					if len(factor.ControlledCapabilities) > 0 {
+						var found bool
+						for _, controlledCapability := range factor.ControlledCapabilities {
+							found = false
+							for _, policyCap := range pc.Capabilities {
+								if controlledCapability == policyCap {
+									found = true
+								}
+							}
+							if !found {
+								return errors.New(ControlledCapabilityPolicySubsetError)
+							}
+						}
+					}
+
 					factors = append(factors, &ControlGroupFactor{
-						Name:     key,
-						Identity: factor.Identity,
+						Name:                   key,
+						Identity:               factor.Identity,
+						ControlledCapabilities: factor.ControlledCapabilities,
 					})
 				}
 			}

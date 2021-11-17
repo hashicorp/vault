@@ -2,7 +2,6 @@ package tfe
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -15,7 +14,7 @@ var _ OrganizationTokens = (*organizationTokens)(nil)
 // that the Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/organization-tokens.html
+// https://www.terraform.io/docs/cloud/api/organization-tokens.html
 type OrganizationTokens interface {
 	// Generate a new organization token, replacing any existing token.
 	Generate(ctx context.Context, organization string) (*OrganizationToken, error)
@@ -44,7 +43,7 @@ type OrganizationToken struct {
 // Generate a new organization token, replacing any existing token.
 func (s *organizationTokens) Generate(ctx context.Context, organization string) (*OrganizationToken, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/authentication-token", url.QueryEscape(organization))
@@ -65,7 +64,7 @@ func (s *organizationTokens) Generate(ctx context.Context, organization string) 
 // Read an organization token.
 func (s *organizationTokens) Read(ctx context.Context, organization string) (*OrganizationToken, error) {
 	if !validStringID(&organization) {
-		return nil, errors.New("invalid value for organization")
+		return nil, ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/authentication-token", url.QueryEscape(organization))
@@ -86,7 +85,7 @@ func (s *organizationTokens) Read(ctx context.Context, organization string) (*Or
 // Delete an organization token.
 func (s *organizationTokens) Delete(ctx context.Context, organization string) error {
 	if !validStringID(&organization) {
-		return errors.New("invalid value for organization")
+		return ErrInvalidOrg
 	}
 
 	u := fmt.Sprintf("organizations/%s/authentication-token", url.QueryEscape(organization))

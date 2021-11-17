@@ -250,7 +250,7 @@ func (v Value) String() string {
 		if !ok {
 			return ""
 		}
-		return docAsArray(arr, false)
+		return arr.String()
 	case bsontype.Binary:
 		subtype, data, ok := v.BinaryOK()
 		if !ok {
@@ -366,7 +366,7 @@ func (v Value) DebugString() string {
 		if !ok {
 			return "<malformed>"
 		}
-		return docAsArray(arr, true)
+		return arr.DebugString()
 	case bsontype.CodeWithScope:
 		code, scope, ok := v.CodeWithScopeOK()
 		if !ok {
@@ -464,7 +464,7 @@ func (v Value) DocumentOK() (Document, bool) {
 
 // Array returns the BSON array the Value represents as an Array. It panics if the
 // value is a BSON type other than array.
-func (v Value) Array() Document {
+func (v Value) Array() Array {
 	if v.Type != bsontype.Array {
 		panic(ElementTypeError{"bsoncore.Value.Array", v.Type})
 	}
@@ -477,7 +477,7 @@ func (v Value) Array() Document {
 
 // ArrayOK is the same as Array, except it returns a boolean instead
 // of panicking.
-func (v Value) ArrayOK() (Document, bool) {
+func (v Value) ArrayOK() (Array, bool) {
 	if v.Type != bsontype.Array {
 		return nil, false
 	}
@@ -977,39 +977,4 @@ func sortStringAlphebeticAscending(s string) string {
 	ss := sortableString([]rune(s))
 	sort.Sort(ss)
 	return string([]rune(ss))
-}
-
-func docAsArray(d Document, debug bool) string {
-	if len(d) < 5 {
-		return ""
-	}
-	var buf bytes.Buffer
-	buf.WriteByte('[')
-
-	length, rem, _ := ReadLength(d) // We know we have enough bytes to read the length
-
-	length -= 4
-
-	var elem Element
-	var ok bool
-	first := true
-	for length > 1 {
-		if !first {
-			buf.WriteByte(',')
-		}
-		elem, rem, ok = ReadElement(rem)
-		length -= int32(len(elem))
-		if !ok {
-			return ""
-		}
-		if debug {
-			fmt.Fprintf(&buf, "%s ", elem.Value().DebugString())
-		} else {
-			fmt.Fprintf(&buf, "%s", elem.Value())
-		}
-		first = false
-	}
-	buf.WriteByte(']')
-
-	return buf.String()
 }

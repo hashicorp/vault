@@ -1,34 +1,38 @@
 package gocb
 
 import (
+	"context"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
+// NOTE: context in these provider functions can be passed as a nil value.
+// The async op manager will check for a nil context.Context, the context values should never be assumed to be non-nil.
+
 type httpProvider interface {
-	DoHTTPRequest(req *gocbcore.HTTPRequest) (*gocbcore.HTTPResponse, error)
+	DoHTTPRequest(ctx context.Context, req *gocbcore.HTTPRequest) (*gocbcore.HTTPResponse, error)
 }
 
 type viewProvider interface {
-	ViewQuery(opts gocbcore.ViewQueryOptions) (viewRowReader, error)
+	ViewQuery(ctx context.Context, opts gocbcore.ViewQueryOptions) (viewRowReader, error)
 }
 
 type queryProvider interface {
-	N1QLQuery(opts gocbcore.N1QLQueryOptions) (queryRowReader, error)
-	PreparedN1QLQuery(opts gocbcore.N1QLQueryOptions) (queryRowReader, error)
+	N1QLQuery(ctx context.Context, opts gocbcore.N1QLQueryOptions) (queryRowReader, error)
+	PreparedN1QLQuery(ctx context.Context, opts gocbcore.N1QLQueryOptions) (queryRowReader, error)
 }
 
 type analyticsProvider interface {
-	AnalyticsQuery(opts gocbcore.AnalyticsQueryOptions) (analyticsRowReader, error)
+	AnalyticsQuery(ctx context.Context, opts gocbcore.AnalyticsQueryOptions) (analyticsRowReader, error)
 }
 
 type searchProvider interface {
-	SearchQuery(opts gocbcore.SearchQueryOptions) (searchRowReader, error)
+	SearchQuery(ctx context.Context, opts gocbcore.SearchQueryOptions) (searchRowReader, error)
 }
 
 type waitUntilReadyProvider interface {
-	WaitUntilReady(deadline time.Time, opts gocbcore.WaitUntilReadyOptions) error
+	WaitUntilReady(ctx context.Context, deadline time.Time, opts gocbcore.WaitUntilReadyOptions) error
 }
 
 type gocbcoreWaitUntilReadyProvider interface {
@@ -38,7 +42,7 @@ type gocbcoreWaitUntilReadyProvider interface {
 
 type diagnosticsProvider interface {
 	Diagnostics(opts gocbcore.DiagnosticsOptions) (*gocbcore.DiagnosticInfo, error)
-	Ping(opts gocbcore.PingOptions) (*gocbcore.PingResult, error)
+	Ping(ctx context.Context, opts gocbcore.PingOptions) (*gocbcore.PingResult, error)
 }
 
 type gocbcoreDiagnosticsProvider interface {
@@ -46,12 +50,17 @@ type gocbcoreDiagnosticsProvider interface {
 	Ping(opts gocbcore.PingOptions, cb gocbcore.PingCallback) (gocbcore.PendingOp, error)
 }
 
+type gocbcoreHTTPProvider interface {
+	DoHTTPRequest(req *gocbcore.HTTPRequest, cb gocbcore.DoHTTPRequestCallback) (gocbcore.PendingOp, error)
+}
+
 type waitUntilReadyProviderWrapper struct {
 	provider gocbcoreWaitUntilReadyProvider
 }
 
-func (wpw *waitUntilReadyProviderWrapper) WaitUntilReady(deadline time.Time, opts gocbcore.WaitUntilReadyOptions) (errOut error) {
-	opm := newAsyncOpManager()
+func (wpw *waitUntilReadyProviderWrapper) WaitUntilReady(ctx context.Context, deadline time.Time,
+	opts gocbcore.WaitUntilReadyOptions) (errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(wpw.provider.WaitUntilReady(deadline, opts, func(res *gocbcore.WaitUntilReadyResult, err error) {
 		if err != nil {
 			errOut = err
@@ -63,6 +72,7 @@ func (wpw *waitUntilReadyProviderWrapper) WaitUntilReady(deadline time.Time, opt
 	}))
 	if err != nil {
 		errOut = err
+		return
 	}
 
 	return
@@ -76,8 +86,8 @@ func (dpw *diagnosticsProviderWrapper) Diagnostics(opts gocbcore.DiagnosticsOpti
 	return dpw.provider.Diagnostics(opts)
 }
 
-func (dpw *diagnosticsProviderWrapper) Ping(opts gocbcore.PingOptions) (pOut *gocbcore.PingResult, errOut error) {
-	opm := newAsyncOpManager()
+func (dpw *diagnosticsProviderWrapper) Ping(ctx context.Context, opts gocbcore.PingOptions) (pOut *gocbcore.PingResult, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(dpw.provider.Ping(opts, func(res *gocbcore.PingResult, err error) {
 		if err != nil {
 			errOut = err
@@ -96,11 +106,11 @@ func (dpw *diagnosticsProviderWrapper) Ping(opts gocbcore.PingOptions) (pOut *go
 }
 
 type httpProviderWrapper struct {
-	provider *gocbcore.AgentGroup
+	provider gocbcoreHTTPProvider
 }
 
-func (hpw *httpProviderWrapper) DoHTTPRequest(req *gocbcore.HTTPRequest) (respOut *gocbcore.HTTPResponse, errOut error) {
-	opm := newAsyncOpManager()
+func (hpw *httpProviderWrapper) DoHTTPRequest(ctx context.Context, req *gocbcore.HTTPRequest) (respOut *gocbcore.HTTPResponse, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(hpw.provider.DoHTTPRequest(req, func(res *gocbcore.HTTPResponse, err error) {
 		if err != nil {
 			errOut = err
@@ -122,8 +132,8 @@ type analyticsProviderWrapper struct {
 	provider *gocbcore.AgentGroup
 }
 
-func (apw *analyticsProviderWrapper) AnalyticsQuery(opts gocbcore.AnalyticsQueryOptions) (aOut analyticsRowReader, errOut error) {
-	opm := newAsyncOpManager()
+func (apw *analyticsProviderWrapper) AnalyticsQuery(ctx context.Context, opts gocbcore.AnalyticsQueryOptions) (aOut analyticsRowReader, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(apw.provider.AnalyticsQuery(opts, func(reader *gocbcore.AnalyticsRowReader, err error) {
 		if err != nil {
 			errOut = err
@@ -145,8 +155,8 @@ type queryProviderWrapper struct {
 	provider *gocbcore.AgentGroup
 }
 
-func (apw *queryProviderWrapper) N1QLQuery(opts gocbcore.N1QLQueryOptions) (qOut queryRowReader, errOut error) {
-	opm := newAsyncOpManager()
+func (apw *queryProviderWrapper) N1QLQuery(ctx context.Context, opts gocbcore.N1QLQueryOptions) (qOut queryRowReader, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(apw.provider.N1QLQuery(opts, func(reader *gocbcore.N1QLRowReader, err error) {
 		if err != nil {
 			errOut = err
@@ -164,8 +174,8 @@ func (apw *queryProviderWrapper) N1QLQuery(opts gocbcore.N1QLQueryOptions) (qOut
 	return
 }
 
-func (apw *queryProviderWrapper) PreparedN1QLQuery(opts gocbcore.N1QLQueryOptions) (qOut queryRowReader, errOut error) {
-	opm := newAsyncOpManager()
+func (apw *queryProviderWrapper) PreparedN1QLQuery(ctx context.Context, opts gocbcore.N1QLQueryOptions) (qOut queryRowReader, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(apw.provider.PreparedN1QLQuery(opts, func(reader *gocbcore.N1QLRowReader, err error) {
 		if err != nil {
 			errOut = err
@@ -187,8 +197,8 @@ type searchProviderWrapper struct {
 	provider *gocbcore.AgentGroup
 }
 
-func (apw *searchProviderWrapper) SearchQuery(opts gocbcore.SearchQueryOptions) (sOut searchRowReader, errOut error) {
-	opm := newAsyncOpManager()
+func (apw *searchProviderWrapper) SearchQuery(ctx context.Context, opts gocbcore.SearchQueryOptions) (sOut searchRowReader, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(apw.provider.SearchQuery(opts, func(reader *gocbcore.SearchRowReader, err error) {
 		if err != nil {
 			errOut = err
@@ -207,11 +217,11 @@ func (apw *searchProviderWrapper) SearchQuery(opts gocbcore.SearchQueryOptions) 
 }
 
 type viewProviderWrapper struct {
-	provider *gocbcore.AgentGroup
+	provider *gocbcore.Agent
 }
 
-func (apw *viewProviderWrapper) ViewQuery(opts gocbcore.ViewQueryOptions) (vOut viewRowReader, errOut error) {
-	opm := newAsyncOpManager()
+func (apw *viewProviderWrapper) ViewQuery(ctx context.Context, opts gocbcore.ViewQueryOptions) (vOut viewRowReader, errOut error) {
+	opm := newAsyncOpManager(ctx)
 	err := opm.Wait(apw.provider.ViewQuery(opts, func(reader *gocbcore.ViewQueryRowReader, err error) {
 		if err != nil {
 			errOut = err

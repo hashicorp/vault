@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 type wrappedError struct {
@@ -251,6 +251,9 @@ var (
 
 	// ErrLinkNotFound occurs when the analytics link requested could not be found.
 	ErrLinkNotFound = gocbcore.ErrLinkNotFound
+
+	// ErrAnalyticsLinkExists occurs when the analytics link already exists.
+	ErrAnalyticsLinkExists = errors.New("analytics clink already exists")
 )
 
 // Search Error Definitions RFC#58@15
@@ -287,6 +290,24 @@ var (
 
 	// ErrBucketNotFlushable occurs when a bucket could not be flushed because flushing is not enabled.
 	ErrBucketNotFlushable = gocbcore.ErrBucketNotFlushable
+
+	// ErrEventingFunctionNotFound occurs when the eventing function requested could not be found.
+	ErrEventingFunctionNotFound = gocbcore.ErrEventingFunctionNotFound
+
+	// ErrEventingFunctionNotDeployed occurs when the eventing function requested is not deployed.
+	ErrEventingFunctionNotDeployed = gocbcore.ErrEventingFunctionNotDeployed
+
+	// ErrEventingFunctionCompilationFailure occurs when the eventing function requested could not be compiled.
+	ErrEventingFunctionCompilationFailure = gocbcore.ErrEventingFunctionCompilationFailure
+
+	// ErrEventingFunctionIdenticalKeyspace occurs when the eventing function requested uses the same keyspace for source and metadata.
+	ErrEventingFunctionIdenticalKeyspace = gocbcore.ErrEventingFunctionIdenticalKeyspace
+
+	// ErrEventingFunctionNotBootstrapped occurs when the eventing function requested is not bootstrapped.
+	ErrEventingFunctionNotBootstrapped = gocbcore.ErrEventingFunctionNotBootstrapped
+
+	// ErrEventingFunctionDeployed occurs when the eventing function requested is not undeployed.
+	ErrEventingFunctionDeployed = gocbcore.ErrEventingFunctionNotUndeployed
 )
 
 // SDK specific error definitions

@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mongodb-forks/digest"
 	"go.mongodb.org/atlas/mongodbatlas"
 )
 
@@ -41,7 +41,6 @@ func (b *Backend) clientMongo(ctx context.Context, s logical.Storage) (*mongodba
 }
 
 func nonCachedClient(ctx context.Context, s logical.Storage) (*mongodbatlas.Client, error) {
-
 	config, err := getRootConfig(ctx, s)
 	if err != nil {
 		return nil, err
@@ -58,7 +57,6 @@ func nonCachedClient(ctx context.Context, s logical.Storage) (*mongodbatlas.Clie
 }
 
 func getRootConfig(ctx context.Context, s logical.Storage) (*config, error) {
-
 	entry, err := s.Get(ctx, "config")
 	if err != nil {
 		return nil, err

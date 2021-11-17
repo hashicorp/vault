@@ -6,7 +6,17 @@ freebsd_12_task:
     image_family: freebsd-12-2
   install_script: |
     pkg install -y git go
-    GOBIN=$PWD/bin go get golang.org/dl/go1.16.2
-    bin/go1.16.2 download
-  build_script: bin/go1.16.2 build -v ./...
-  test_script: bin/go1.16.2 test -race ./...
+    GOBIN=$PWD/bin go get golang.org/dl/go1.17
+    bin/go1.17 download
+  build_script: bin/go1.17 build -v ./...
+  test_script: bin/go1.17 test -race ./...
+
+freebsd_13_task:
+  freebsd_instance:
+    image_family: freebsd-13-0
+  install_script: |
+    pkg install -y git go
+    GOBIN=$PWD/bin go get golang.org/dl/go1.17
+    bin/go1.17 download
+  build_script: bin/go1.17 build -v ./...
+  test_script: bin/go1.17 test -race ./...

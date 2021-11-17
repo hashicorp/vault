@@ -2,7 +2,6 @@ package tfe
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -53,7 +52,7 @@ type AgentToken struct {
 // List all the agent tokens of the given agent pool.
 func (s *agentTokens) List(ctx context.Context, agentPoolID string) (*AgentTokenList, error) {
 	if !validStringID(&agentPoolID) {
-		return nil, errors.New("invalid value for agent pool ID")
+		return nil, ErrInvalidAgentPoolID
 	}
 
 	u := fmt.Sprintf("agent-pools/%s/authentication-tokens", url.QueryEscape(agentPoolID))
@@ -73,8 +72,11 @@ func (s *agentTokens) List(ctx context.Context, agentPoolID string) (*AgentToken
 
 // AgentTokenGenerateOptions represents the options for creating an agent token.
 type AgentTokenGenerateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,agent-tokens"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,agent-tokens"`
 
 	// Description of the token
 	Description *string `jsonapi:"attr,description"`
@@ -83,15 +85,12 @@ type AgentTokenGenerateOptions struct {
 // Generate a new agent token with the given options.
 func (s *agentTokens) Generate(ctx context.Context, agentPoolID string, options AgentTokenGenerateOptions) (*AgentToken, error) {
 	if !validStringID(&agentPoolID) {
-		return nil, errors.New("invalid value for agent pool ID")
+		return nil, ErrInvalidAgentPoolID
 	}
 
 	if !validString(options.Description) {
-		return nil, errors.New("agent token description can't be blank")
+		return nil, ErrAgentTokenDescription
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("agent-pools/%s/authentication-tokens", url.QueryEscape(agentPoolID))
 	req, err := s.client.newRequest("POST", u, &options)
@@ -111,7 +110,7 @@ func (s *agentTokens) Generate(ctx context.Context, agentPoolID string, options 
 // Read an agent token by its ID.
 func (s *agentTokens) Read(ctx context.Context, agentTokenID string) (*AgentToken, error) {
 	if !validStringID(&agentTokenID) {
-		return nil, errors.New("invalid value for agent token ID")
+		return nil, ErrInvalidAgentTokenID
 	}
 
 	u := fmt.Sprintf("authentication-tokens/%s", url.QueryEscape(agentTokenID))
@@ -132,7 +131,7 @@ func (s *agentTokens) Read(ctx context.Context, agentTokenID string) (*AgentToke
 // Delete an agent token by its ID.
 func (s *agentTokens) Delete(ctx context.Context, agentTokenID string) error {
 	if !validStringID(&agentTokenID) {
-		return errors.New("invalid value for agent token ID")
+		return ErrInvalidAgentTokenID
 	}
 
 	u := fmt.Sprintf("authentication-tokens/%s", url.QueryEscape(agentTokenID))

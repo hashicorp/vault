@@ -118,7 +118,7 @@ func GetFloat64(buf []byte) float64 {
 
 // GetUOffsetT decodes a little-endian UOffsetT from a byte slice.
 func GetUOffsetT(buf []byte) UOffsetT {
-	return UOffsetT(GetInt32(buf))
+	return UOffsetT(GetUint32(buf))
 }
 
 // GetSOffsetT decodes a little-endian SOffsetT from a byte slice.

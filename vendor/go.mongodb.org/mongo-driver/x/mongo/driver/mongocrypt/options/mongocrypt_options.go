@@ -12,9 +12,8 @@ import (
 
 // MongoCryptOptions specifies options to configure a MongoCrypt instance.
 type MongoCryptOptions struct {
-	AwsProviderOpts   *AwsKmsProviderOptions
-	LocalProviderOpts *LocalKmsProviderOptions
-	LocalSchemaMap    map[string]bsoncore.Document
+	KmsProviders   bsoncore.Document
+	LocalSchemaMap map[string]bsoncore.Document
 }
 
 // MongoCrypt creates a new MongoCryptOptions instance.
@@ -22,15 +21,9 @@ func MongoCrypt() *MongoCryptOptions {
 	return &MongoCryptOptions{}
 }
 
-// SetAwsProviderOptions specifies AWS KMS provider options.
-func (mo *MongoCryptOptions) SetAwsProviderOptions(awsOpts *AwsKmsProviderOptions) *MongoCryptOptions {
-	mo.AwsProviderOpts = awsOpts
-	return mo
-}
-
-// SetLocalProviderOptions specifies local KMS provider options.
-func (mo *MongoCryptOptions) SetLocalProviderOptions(localOpts *LocalKmsProviderOptions) *MongoCryptOptions {
-	mo.LocalProviderOpts = localOpts
+// SetKmsProviders specifies the KMS providers map.
+func (mo *MongoCryptOptions) SetKmsProviders(kmsProviders bsoncore.Document) *MongoCryptOptions {
+	mo.KmsProviders = kmsProviders
 	return mo
 }
 

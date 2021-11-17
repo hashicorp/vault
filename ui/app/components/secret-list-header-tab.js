@@ -40,7 +40,10 @@ export default class SecretListHeaderTab extends Component {
       let array = [];
       // we only want to look at the canList, canCreate and canUpdate on the capabilities record
       capabilitiesArray.forEach(item => {
-        array.push(object[item]);
+        // object is sometimes null
+        if (object) {
+          array.push(object[item]);
+        }
       });
       return array;
     };

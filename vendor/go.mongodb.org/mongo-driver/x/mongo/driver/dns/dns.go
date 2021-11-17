@@ -120,8 +120,9 @@ func validateSRVResult(recordFromSRV, inputHostName string) error {
 }
 
 var allowedTXTOptions = map[string]struct{}{
-	"authsource": {},
-	"replicaset": {},
+	"authsource":   {},
+	"replicaset":   {},
+	"loadbalanced": {},
 }
 
 func validateTXTResult(paramsFromTXT []string) error {

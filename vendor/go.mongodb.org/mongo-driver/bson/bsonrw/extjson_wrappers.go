@@ -46,12 +46,6 @@ func wrapperKeyBSONType(key string) bsontype.Type {
 		return bsontype.DBPointer
 	case "$date":
 		return bsontype.DateTime
-	case "$ref":
-		fallthrough
-	case "$id":
-		fallthrough
-	case "$db":
-		return bsontype.EmbeddedDocument // dbrefs aren't bson types
 	case "$minKey":
 		return bsontype.MinKey
 	case "$maxKey":

@@ -11,21 +11,6 @@ import (
 	"github.com/jcmturner/gokrb5/v8/types"
 )
 
-/*
-AP-REP          ::= [APPLICATION 15] SEQUENCE {
-pvno            [0] INTEGER (5),
-msg-type        [1] INTEGER (15),
-enc-part        [2] EncryptedData -- EncAPRepPart
-}
-
-EncAPRepPart    ::= [APPLICATION 27] SEQUENCE {
-        ctime           [0] KerberosTime,
-        cusec           [1] Microseconds,
-        subkey          [2] EncryptionKey OPTIONAL,
-        seq-number      [3] UInt32 OPTIONAL
-}
-*/
-
 // APRep implements RFC 4120 KRB_AP_REP: https://tools.ietf.org/html/rfc4120#section-5.5.2.
 type APRep struct {
 	PVNO    int                 `asn1:"explicit,tag:0"`

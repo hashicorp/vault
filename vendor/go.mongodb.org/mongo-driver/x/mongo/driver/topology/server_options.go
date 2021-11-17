@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/x/mongo/driver"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -27,9 +28,12 @@ type serverConfig struct {
 	maxConns                  uint64
 	minConns                  uint64
 	poolMonitor               *event.PoolMonitor
+	serverMonitor             *event.ServerMonitor
 	connectionPoolMaxIdleTime time.Duration
 	registry                  *bsoncodec.Registry
 	monitoringDisabled        bool
+	serverAPI                 *driver.ServerAPIOptions
+	loadBalanced              bool
 }
 
 func newServerConfig(opts ...ServerOption) (*serverConfig, error) {
@@ -138,6 +142,14 @@ func WithConnectionPoolMonitor(fn func(*event.PoolMonitor) *event.PoolMonitor) S
 	}
 }
 
+// WithServerMonitor configures the monitor for all SDAM events for a server
+func WithServerMonitor(fn func(*event.ServerMonitor) *event.ServerMonitor) ServerOption {
+	return func(cfg *serverConfig) error {
+		cfg.serverMonitor = fn(cfg.serverMonitor)
+		return nil
+	}
+}
+
 // WithClock configures the ClusterClock for the server to use.
 func WithClock(fn func(clock *session.ClusterClock) *session.ClusterClock) ServerOption {
 	return func(cfg *serverConfig) error {
@@ -151,6 +163,22 @@ func WithClock(fn func(clock *session.ClusterClock) *session.ClusterClock) Serve
 func WithRegistry(fn func(*bsoncodec.Registry) *bsoncodec.Registry) ServerOption {
 	return func(cfg *serverConfig) error {
 		cfg.registry = fn(cfg.registry)
+		return nil
+	}
+}
+
+// WithServerAPI configures the server API options for the server to use.
+func WithServerAPI(fn func(serverAPI *driver.ServerAPIOptions) *driver.ServerAPIOptions) ServerOption {
+	return func(cfg *serverConfig) error {
+		cfg.serverAPI = fn(cfg.serverAPI)
+		return nil
+	}
+}
+
+// WithServerLoadBalanced specifies whether or not the server is behind a load balancer.
+func WithServerLoadBalanced(fn func(bool) bool) ServerOption {
+	return func(cfg *serverConfig) error {
+		cfg.loadBalanced = fn(cfg.loadBalanced)
 		return nil
 	}
 }

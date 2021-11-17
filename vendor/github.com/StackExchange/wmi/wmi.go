@@ -68,7 +68,8 @@ func QueryNamespace(query string, dst interface{}, namespace string) error {
 //
 // By default, the local machine and default namespace are used. These can be
 // changed using connectServerArgs. See
-// http://msdn.microsoft.com/en-us/library/aa393720.aspx for details.
+// https://docs.microsoft.com/en-us/windows/desktop/WmiSdk/swbemlocator-connectserver
+// for details.
 //
 // Query is a wrapper around DefaultClient.Query.
 func Query(query string, dst interface{}, connectServerArgs ...interface{}) error {
@@ -76,6 +77,14 @@ func Query(query string, dst interface{}, connectServerArgs ...interface{}) erro
 		return DefaultClient.Query(query, dst, connectServerArgs...)
 	}
 	return DefaultClient.SWbemServicesClient.Query(query, dst, connectServerArgs...)
+}
+
+// CallMethod calls a method named methodName on an instance of the class named
+// className, with the given params.
+//
+// CallMethod is a wrapper around DefaultClient.CallMethod.
+func CallMethod(connectServerArgs []interface{}, className, methodName string, params []interface{}) (int32, error) {
+	return DefaultClient.CallMethod(connectServerArgs, className, methodName, params)
 }
 
 // A Client is an WMI query client.
@@ -109,8 +118,102 @@ type Client struct {
 	SWbemServicesClient *SWbemServices
 }
 
-// DefaultClient is the default Client and is used by Query, QueryNamespace
+// DefaultClient is the default Client and is used by Query, QueryNamespace, and CallMethod.
 var DefaultClient = &Client{}
+
+// coinitService coinitializes WMI service. If no error is returned, a cleanup function
+// is returned which must be executed (usually deferred) to clean up allocated resources.
+func (c *Client) coinitService(connectServerArgs ...interface{}) (*ole.IDispatch, func(), error) {
+	var unknown *ole.IUnknown
+	var wmi *ole.IDispatch
+	var serviceRaw *ole.VARIANT
+
+	// be sure teardown happens in the reverse
+	// order from that which they were created
+	deferFn := func() {
+		if serviceRaw != nil {
+			serviceRaw.Clear()
+		}
+		if wmi != nil {
+			wmi.Release()
+		}
+		if unknown != nil {
+			unknown.Release()
+		}
+		ole.CoUninitialize()
+	}
+
+	// if we error'ed here, clean up immediately
+	var err error
+	defer func() {
+		if err != nil {
+			deferFn()
+		}
+	}()
+
+	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	if err != nil {
+		oleCode := err.(*ole.OleError).Code()
+		if oleCode != ole.S_OK && oleCode != S_FALSE {
+			return nil, nil, err
+		}
+	}
+
+	unknown, err = oleutil.CreateObject("WbemScripting.SWbemLocator")
+	if err != nil {
+		return nil, nil, err
+	} else if unknown == nil {
+		return nil, nil, ErrNilCreateObject
+	}
+
+	wmi, err = unknown.QueryInterface(ole.IID_IDispatch)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// service is a SWbemServices
+	serviceRaw, err = oleutil.CallMethod(wmi, "ConnectServer", connectServerArgs...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return serviceRaw.ToIDispatch(), deferFn, nil
+}
+
+// CallMethod calls a WMI method named methodName on an instance
+// of the class named className. It passes in the arguments given
+// in params. Use connectServerArgs to customize the machine and
+// namespace; by default, the local machine and default namespace
+// are used. See
+// https://docs.microsoft.com/en-us/windows/desktop/WmiSdk/swbemlocator-connectserver
+// for details.
+func (c *Client) CallMethod(connectServerArgs []interface{}, className, methodName string, params []interface{}) (int32, error) {
+	service, cleanup, err := c.coinitService(connectServerArgs...)
+	if err != nil {
+		return 0, fmt.Errorf("coinit: %v", err)
+	}
+	defer cleanup()
+
+	// Get class
+	classRaw, err := oleutil.CallMethod(service, "Get", className)
+	if err != nil {
+		return 0, fmt.Errorf("CallMethod Get class %s: %v", className, err)
+	}
+	class := classRaw.ToIDispatch()
+	defer classRaw.Clear()
+
+	// Run method
+	resultRaw, err := oleutil.CallMethod(class, methodName, params...)
+	if err != nil {
+		return 0, fmt.Errorf("CallMethod %s.%s: %v", className, methodName, err)
+	}
+	resultInt, ok := resultRaw.Value().(int32)
+	if !ok {
+		return 0, fmt.Errorf("return value was not an int32: %v (%T)", resultRaw, resultRaw)
+	}
+
+	return resultInt, nil
+}
 
 // Query runs the WQL query and appends the values to dst.
 //
@@ -121,7 +224,8 @@ var DefaultClient = &Client{}
 //
 // By default, the local machine and default namespace are used. These can be
 // changed using connectServerArgs. See
-// http://msdn.microsoft.com/en-us/library/aa393720.aspx for details.
+// https://docs.microsoft.com/en-us/windows/desktop/WmiSdk/swbemlocator-connectserver
+// for details.
 func (c *Client) Query(query string, dst interface{}, connectServerArgs ...interface{}) error {
 	dv := reflect.ValueOf(dst)
 	if dv.Kind() != reflect.Ptr || dv.IsNil() {
@@ -138,36 +242,11 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
-		oleCode := err.(*ole.OleError).Code()
-		if oleCode != ole.S_OK && oleCode != S_FALSE {
-			return err
-		}
-	}
-	defer ole.CoUninitialize()
-
-	unknown, err := oleutil.CreateObject("WbemScripting.SWbemLocator")
-	if err != nil {
-		return err
-	} else if unknown == nil {
-		return ErrNilCreateObject
-	}
-	defer unknown.Release()
-
-	wmi, err := unknown.QueryInterface(ole.IID_IDispatch)
+	service, cleanup, err := c.coinitService(connectServerArgs...)
 	if err != nil {
 		return err
 	}
-	defer wmi.Release()
-
-	// service is a SWbemServices
-	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", connectServerArgs...)
-	if err != nil {
-		return err
-	}
-	service := serviceRaw.ToIDispatch()
-	defer serviceRaw.Clear()
+	defer cleanup()
 
 	// result is a SWBemObjectSet
 	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", query)
@@ -265,6 +344,9 @@ func (c *Client) loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismat
 			f = f.Elem()
 		}
 		n := v.Type().Field(i).Name
+		if n[0] < 'A' || n[0] > 'Z' {
+			continue
+		}
 		if !f.CanSet() {
 			return &ErrFieldMismatch{
 				StructType: of.Type(),
@@ -478,7 +560,10 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 // CreateQuery returns a WQL query string that queries all columns of src. where
 // is an optional string that is appended to the query, to be used with WHERE
 // clauses. In such a case, the "WHERE" string should appear at the beginning.
-func CreateQuery(src interface{}, where string) string {
+// The wmi class is obtained by the name of the type. You can pass a optional
+// class throught the variadic class parameter which is useful for anonymous
+// structs.
+func CreateQuery(src interface{}, where string, class ...string) string {
 	var b bytes.Buffer
 	b.WriteString("SELECT ")
 	s := reflect.Indirect(reflect.ValueOf(src))
@@ -495,7 +580,11 @@ func CreateQuery(src interface{}, where string) string {
 	}
 	b.WriteString(strings.Join(fields, ", "))
 	b.WriteString(" FROM ")
-	b.WriteString(t.Name())
+	if len(class) > 0 {
+		b.WriteString(class[0])
+	} else {
+		b.WriteString(t.Name())
+	}
 	b.WriteString(" " + where)
 	return b.String()
 }

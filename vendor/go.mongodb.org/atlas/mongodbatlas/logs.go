@@ -21,7 +21,7 @@ import (
 	"net/http"
 )
 
-const logsPath = "groups/%s/clusters/%s/logs/%s"
+const logsPath = "api/atlas/v1.0/groups/%s/clusters/%s/logs/%s"
 
 // LogsService is an interface for interfacing with the Logs
 // endpoints of the MongoDB Atlas API.
@@ -31,7 +31,7 @@ type LogsService interface {
 }
 
 // LogsServiceOp handles communication with the Logs related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type LogsServiceOp struct {
 	Client GZipRequestDoer
 }
@@ -44,6 +44,7 @@ type DateRangetOptions struct {
 
 // Get gets a compressed (.gz) log file that contains a range of log messages for a particular host.
 // Note: The input parameter out (io.Writer) is not closed by this function.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/logs/
 func (s *LogsServiceOp) Get(ctx context.Context, groupID, hostName, logName string, out io.Writer, opts *DateRangetOptions) (*Response, error) {
 	if groupID == "" {

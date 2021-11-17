@@ -1,6 +1,6 @@
 package gocb
 
-import "github.com/couchbase/gocbcore/v9/memd"
+import "github.com/couchbase/gocbcore/v10/memd"
 
 // LookupInSpec is the representation of an operation available when calling LookupIn
 type LookupInSpec struct {

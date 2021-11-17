@@ -1,11 +1,12 @@
 package gocb
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 type kvProvider interface {
@@ -43,6 +44,17 @@ type InsertOptions struct {
 	Transcoder      Transcoder
 	Timeout         time.Duration
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Insert creates a new document in the Collection.
@@ -51,8 +63,8 @@ func (c *Collection) Insert(id string, val interface{}, opts *InsertOptions) (mu
 		opts = &InsertOptions{}
 	}
 
-	opm := c.newKvOpManager("Insert", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("insert", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
@@ -60,6 +72,8 @@ func (c *Collection) Insert(id string, val interface{}, opts *InsertOptions) (mu
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -79,8 +93,9 @@ func (c *Collection) Insert(id string, val interface{}, opts *InsertOptions) (mu
 		DurabilityLevel:        opm.DurabilityLevel(),
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.StoreResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -109,6 +124,18 @@ type UpsertOptions struct {
 	Transcoder      Transcoder
 	Timeout         time.Duration
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+	PreserveExpiry  bool
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Upsert creates a new document in the Collection if it does not exist, if it does exist then it updates it.
@@ -117,8 +144,8 @@ func (c *Collection) Upsert(id string, val interface{}, opts *UpsertOptions) (mu
 		opts = &UpsertOptions{}
 	}
 
-	opm := c.newKvOpManager("Upsert", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("upsert", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
@@ -126,6 +153,9 @@ func (c *Collection) Upsert(id string, val interface{}, opts *UpsertOptions) (mu
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
+	opm.SetPreserveExpiry(opts.PreserveExpiry)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -145,8 +175,10 @@ func (c *Collection) Upsert(id string, val interface{}, opts *UpsertOptions) (mu
 		DurabilityLevel:        opm.DurabilityLevel(),
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
+		PreserveExpiry:         opm.PreserveExpiry(),
 	}, func(res *gocbcore.StoreResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -176,6 +208,18 @@ type ReplaceOptions struct {
 	Transcoder      Transcoder
 	Timeout         time.Duration
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+	PreserveExpiry  bool
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Replace updates a document in the collection.
@@ -184,8 +228,12 @@ func (c *Collection) Replace(id string, val interface{}, opts *ReplaceOptions) (
 		opts = &ReplaceOptions{}
 	}
 
-	opm := c.newKvOpManager("Replace", nil)
-	defer opm.Finish()
+	if opts.Expiry > 0 && opts.PreserveExpiry {
+		return nil, makeInvalidArgumentsError("cannot use expiry and preserve ttl together for replace")
+	}
+
+	opm := c.newKvOpManager("replace", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
@@ -193,6 +241,9 @@ func (c *Collection) Replace(id string, val interface{}, opts *ReplaceOptions) (
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
+	opm.SetPreserveExpiry(opts.PreserveExpiry)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -213,8 +264,10 @@ func (c *Collection) Replace(id string, val interface{}, opts *ReplaceOptions) (
 		DurabilityLevel:        opm.DurabilityLevel(),
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
+		PreserveExpiry:         opm.PreserveExpiry(),
 	}, func(res *gocbcore.StoreResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -244,6 +297,17 @@ type GetOptions struct {
 	Transcoder    Transcoder
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Get performs a fetch operation against the collection. This can take 3 paths, a standard full document
@@ -266,13 +330,15 @@ func (c *Collection) getDirect(id string, opts *GetOptions) (docOut *GetResult, 
 		opts = &GetOptions{}
 	}
 
-	opm := c.newKvOpManager("Get", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("get", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -287,8 +353,9 @@ func (c *Collection) getDirect(id string, opts *GetOptions) (docOut *GetResult, 
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.GetResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -320,24 +387,27 @@ func (c *Collection) getProjected(id string, opts *GetOptions) (docOut *GetResul
 		opts = &GetOptions{}
 	}
 
-	opm := c.newKvOpManager("Get", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("get", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
-
-	if opts.Transcoder != nil {
-		return nil, errors.New("Cannot specify custom transcoder for projected gets")
-	}
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
 	}
 
+	var withFlags bool
 	numProjects := len(opts.Project)
 	if opts.WithExpiry {
+		if numProjects == 0 {
+			// This must be a full get with expiry
+			withFlags = true
+		}
 		numProjects = 1 + numProjects
 	}
 
@@ -350,6 +420,12 @@ func (c *Collection) getProjected(id string, opts *GetOptions) (docOut *GetResul
 
 	if opts.WithExpiry {
 		ops = append(ops, GetSpec("$document.exptime", &GetSpecOptions{IsXattr: true}))
+
+		if withFlags {
+			// We also need to fetch the flags, we need them for transcoding and they aren't included in a lookupin
+			// response. We only need these when doing a full get with expiry.
+			ops = append(ops, GetSpec("$document.flags", &GetSpecOptions{IsXattr: true}))
+		}
 	}
 
 	if len(projections) == 0 {
@@ -360,7 +436,11 @@ func (c *Collection) getProjected(id string, opts *GetOptions) (docOut *GetResul
 		}
 	}
 
-	result, err := c.internalLookupIn(opm, ops, false)
+	result, err := c.LookupIn(id, ops, &LookupInOptions{
+		ParentSpan: opm.TraceSpan(),
+		noMetrics:  true,
+		Context:    opts.Context,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -368,12 +448,30 @@ func (c *Collection) getProjected(id string, opts *GetOptions) (docOut *GetResul
 	doc := &GetResult{}
 	if opts.WithExpiry {
 		// if expiration was requested then extract and remove it from the results
-		err = result.ContentAt(0, &doc.expiry)
+		var expires int64
+		err = result.ContentAt(0, &expires)
 		if err != nil {
 			return nil, err
 		}
+
+		expiryTime := time.Unix(expires, 0)
+		doc.expiryTime = &expiryTime
+
 		ops = ops[1:]
 		result.contents = result.contents[1:]
+
+		if withFlags {
+			var flags uint32
+			err = result.ContentAt(0, &flags)
+			if err != nil {
+				return nil, err
+			}
+
+			doc.flags = flags
+
+			ops = ops[1:]
+			result.contents = result.contents[1:]
+		}
 	}
 
 	doc.transcoder = opm.Transcoder()
@@ -397,6 +495,17 @@ func (c *Collection) getProjected(id string, opts *GetOptions) (docOut *GetResul
 type ExistsOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Exists checks if a document exists for the given id.
@@ -405,12 +514,14 @@ func (c *Collection) Exists(id string, opts *ExistsOptions) (docOut *ExistsResul
 		opts = &ExistsOptions{}
 	}
 
-	opm := c.newKvOpManager("Exists", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("exists", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -425,8 +536,9 @@ func (c *Collection) Exists(id string, opts *ExistsOptions) (docOut *ExistsResul
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan,
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.GetMetaResult, err error) {
 		if errors.Is(err, ErrDocumentNotFound) {
 			docOut = &ExistsResult{
@@ -463,22 +575,26 @@ func (c *Collection) Exists(id string, opts *ExistsOptions) (docOut *ExistsResul
 }
 
 func (c *Collection) getOneReplica(
-	span requestSpanContext,
+	ctx context.Context,
+	span RequestSpan,
 	id string,
 	replicaIdx int,
 	transcoder Transcoder,
 	retryStrategy RetryStrategy,
 	cancelCh chan struct{},
 	timeout time.Duration,
+	user string,
 ) (docOut *GetReplicaResult, errOut error) {
-	opm := c.newKvOpManager("getOneReplica", span)
-	defer opm.Finish()
+	opm := c.newKvOpManager("get_replica", span)
+	defer opm.Finish(true)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(transcoder)
 	opm.SetRetryStrategy(retryStrategy)
 	opm.SetTimeout(timeout)
 	opm.SetCancelCh(cancelCh)
+	opm.SetImpersonate(user)
+	opm.SetContext(ctx)
 
 	agent, err := c.getKvProvider()
 	if err != nil {
@@ -490,8 +606,9 @@ func (c *Collection) getOneReplica(
 			CollectionName: opm.CollectionName(),
 			ScopeName:      opm.ScopeName(),
 			RetryStrategy:  opm.RetryStrategy(),
-			TraceContext:   opm.TraceSpan(),
+			TraceContext:   opm.TraceSpanContext(),
 			Deadline:       opm.Deadline(),
+			User:           opm.Impersonate(),
 		}, func(res *gocbcore.GetResult, err error) {
 			if err != nil {
 				errOut = opm.EnhanceErr(err)
@@ -520,8 +637,9 @@ func (c *Collection) getOneReplica(
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.GetReplicaResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -549,15 +667,44 @@ type GetAllReplicaOptions struct {
 	Transcoder    Transcoder
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
+
+	noMetrics bool
 }
 
 // GetAllReplicasResult represents the results of a GetAllReplicas operation.
 type GetAllReplicasResult struct {
-	lock          sync.Mutex
-	totalRequests uint32
-	totalResults  uint32
-	resCh         chan *GetReplicaResult
-	cancelCh      chan struct{}
+	lock                sync.Mutex
+	totalRequests       uint32
+	successResults      uint32
+	totalResults        uint32
+	resCh               chan *GetReplicaResult
+	cancelCh            chan struct{}
+	span                RequestSpan
+	childReqsCompleteCh chan struct{}
+	valueRecorder       ValueRecorder
+	startedTime         time.Time
+}
+
+func (r *GetAllReplicasResult) addFailed() {
+	r.lock.Lock()
+
+	r.totalResults++
+	if r.totalResults == r.totalRequests {
+		close(r.childReqsCompleteCh)
+	}
+
+	r.lock.Unlock()
 }
 
 func (r *GetAllReplicasResult) addResult(res *GetReplicaResult) {
@@ -566,8 +713,8 @@ func (r *GetAllReplicasResult) addResult(res *GetReplicaResult) {
 	// closed.  IE: T1-Incr, T2-Incr, T2-Send, T2-Close, T1-Send[PANIC]
 	r.lock.Lock()
 
-	r.totalResults++
-	resultCount := r.totalResults
+	r.successResults++
+	resultCount := r.successResults
 
 	if resultCount <= r.totalRequests {
 		r.resCh <- res
@@ -576,6 +723,16 @@ func (r *GetAllReplicasResult) addResult(res *GetReplicaResult) {
 	if resultCount == r.totalRequests {
 		close(r.cancelCh)
 		close(r.resCh)
+
+		r.span.End()
+		if r.valueRecorder != nil {
+			r.valueRecorder.RecordValue(uint64(time.Since(r.startedTime).Microseconds()))
+		}
+	}
+
+	r.totalResults++
+	if r.totalResults == r.totalRequests {
+		close(r.childReqsCompleteCh)
 	}
 
 	r.lock.Unlock()
@@ -594,17 +751,26 @@ func (r *GetAllReplicasResult) Close() error {
 	// Note that this number increment must be high enough to be clear that
 	// the result set was closed, but low enough that it won't overflow if
 	// additional result objects are processed after the close.
-	prevResultCount := r.totalResults
-	r.totalResults += 100000
+	prevResultCount := r.successResults
+	r.successResults += 100000
 
 	// We only have to close everything if the addResult method didn't already
 	// close them due to already having completed every request
+	var weClosed bool
 	if prevResultCount < r.totalRequests {
 		close(r.cancelCh)
 		close(r.resCh)
+
+		weClosed = true
 	}
 
 	r.lock.Unlock()
+
+	if weClosed {
+		// We need to wait for the child requests spans to be completed.
+		<-r.childReqsCompleteCh
+		r.span.End()
+	}
 
 	return nil
 }
@@ -616,8 +782,17 @@ func (c *Collection) GetAllReplicas(id string, opts *GetAllReplicaOptions) (docO
 		opts = &GetAllReplicaOptions{}
 	}
 
-	span := c.startKvOpTrace("GetAllReplicas", nil)
-	defer span.Finish()
+	var tracectx RequestSpanContext
+	if opts.ParentSpan != nil {
+		tracectx = opts.ParentSpan.Context()
+	}
+
+	ctx := opts.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	span := c.startKvOpTrace("get_all_replicas", tracectx, false)
 
 	// Timeout needs to be adjusted here, since we use it at the bottom of this
 	// function, but the remaining options are all passed downwards and get handled
@@ -650,10 +825,22 @@ func (c *Collection) GetAllReplicas(id string, opts *GetAllReplicaOptions) (docO
 	outCh := make(chan *GetReplicaResult, numServers)
 	cancelCh := make(chan struct{})
 
+	var recorder ValueRecorder
+	if !opts.noMetrics {
+		recorder, err = c.meter.ValueRecorder(meterValueServiceKV, "get_all_replicas")
+		if err != nil {
+			logDebugf("Failed to create value recorder: %v", err)
+		}
+	}
+
 	repRes := &GetAllReplicasResult{
-		totalRequests: uint32(numServers),
-		resCh:         outCh,
-		cancelCh:      cancelCh,
+		totalRequests:       uint32(numServers),
+		resCh:               outCh,
+		cancelCh:            cancelCh,
+		span:                span,
+		childReqsCompleteCh: make(chan struct{}),
+		valueRecorder:       recorder,
+		startedTime:         time.Now(),
 	}
 
 	// Loop all the servers and populate the result object
@@ -662,8 +849,10 @@ func (c *Collection) GetAllReplicas(id string, opts *GetAllReplicaOptions) (docO
 			// This timeout value will cause the getOneReplica operation to timeout after our deadline has expired,
 			// as the deadline has already begun. getOneReplica timing out before our deadline would cause inconsistent
 			// behaviour.
-			res, err := c.getOneReplica(span, id, replicaIdx, transcoder, retryStrategy, cancelCh, timeout)
+			res, err := c.getOneReplica(context.Background(), span, id, replicaIdx, transcoder, retryStrategy, cancelCh,
+				timeout, opts.Internal.User)
 			if err != nil {
+				repRes.addFailed()
 				logDebugf("Failed to fetch replica from replica %d: %s", replicaIdx, err)
 			} else {
 				repRes.addResult(res)
@@ -680,10 +869,13 @@ func (c *Collection) GetAllReplicas(id string, opts *GetAllReplicaOptions) (docO
 			if err != nil {
 				logDebugf("failed to close GetAllReplicas response: %s", err)
 			}
-			return
 		case <-cancelCh:
-			// If the cancel channel closes, we are done
-			return
+		// If the cancel channel closes, we are done
+		case <-ctx.Done():
+			err := repRes.Close()
+			if err != nil {
+				logDebugf("failed to close GetAllReplicas response: %s", err)
+			}
 		}
 	}()
 
@@ -695,6 +887,17 @@ type GetAnyReplicaOptions struct {
 	Transcoder    Transcoder
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // GetAnyReplica returns the value of a particular document from a replica server.
@@ -703,13 +906,25 @@ func (c *Collection) GetAnyReplica(id string, opts *GetAnyReplicaOptions) (docOu
 		opts = &GetAnyReplicaOptions{}
 	}
 
-	span := c.startKvOpTrace("GetAnyReplica", nil)
-	defer span.Finish()
+	start := time.Now()
+	defer c.meter.ValueRecord("kv", "get_any_replica", start)
+
+	var tracectx RequestSpanContext
+	if opts.ParentSpan != nil {
+		tracectx = opts.ParentSpan.Context()
+	}
+
+	span := c.startKvOpTrace("get_any_replica", tracectx, false)
+	defer span.End()
 
 	repRes, err := c.GetAllReplicas(id, &GetAllReplicaOptions{
 		Timeout:       opts.Timeout,
 		Transcoder:    opts.Transcoder,
 		RetryStrategy: opts.RetryStrategy,
+		Internal:      opts.Internal,
+		ParentSpan:    span,
+		noMetrics:     true,
+		Context:       opts.Context,
 	})
 	if err != nil {
 		return nil, err
@@ -744,6 +959,17 @@ type RemoveOptions struct {
 	DurabilityLevel DurabilityLevel
 	Timeout         time.Duration
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Remove removes a document from the collection.
@@ -752,13 +978,15 @@ func (c *Collection) Remove(id string, opts *RemoveOptions) (mutOut *MutationRes
 		opts = &RemoveOptions{}
 	}
 
-	opm := c.newKvOpManager("Remove", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("remove", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetDuraOptions(opts.PersistTo, opts.ReplicateTo, opts.DurabilityLevel)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -776,8 +1004,9 @@ func (c *Collection) Remove(id string, opts *RemoveOptions) (mutOut *MutationRes
 		DurabilityLevel:        opm.DurabilityLevel(),
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
 	}, func(res *gocbcore.DeleteResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -802,6 +1031,17 @@ type GetAndTouchOptions struct {
 	Transcoder    Transcoder
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // GetAndTouch retrieves a document and simultaneously updates its expiry time.
@@ -810,13 +1050,15 @@ func (c *Collection) GetAndTouch(id string, expiry time.Duration, opts *GetAndTo
 		opts = &GetAndTouchOptions{}
 	}
 
-	opm := c.newKvOpManager("GetAndTouch", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("get_and_touch", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -832,8 +1074,9 @@ func (c *Collection) GetAndTouch(id string, expiry time.Duration, opts *GetAndTo
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.GetAndTouchResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -867,6 +1110,17 @@ type GetAndLockOptions struct {
 	Transcoder    Transcoder
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // GetAndLock locks a document for a period of time, providing exclusive RW access to it.
@@ -877,13 +1131,15 @@ func (c *Collection) GetAndLock(id string, lockTime time.Duration, opts *GetAndL
 		opts = &GetAndLockOptions{}
 	}
 
-	opm := c.newKvOpManager("GetAndLock", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("get_and_lock", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetTranscoder(opts.Transcoder)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -899,8 +1155,9 @@ func (c *Collection) GetAndLock(id string, lockTime time.Duration, opts *GetAndL
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.GetAndLockResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -933,6 +1190,17 @@ func (c *Collection) GetAndLock(id string, lockTime time.Duration, opts *GetAndL
 type UnlockOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Unlock unlocks a document which was locked with GetAndLock.
@@ -941,12 +1209,14 @@ func (c *Collection) Unlock(id string, cas Cas, opts *UnlockOptions) (errOut err
 		opts = &UnlockOptions{}
 	}
 
-	opm := c.newKvOpManager("Unlock", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("unlock", nil)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return err
@@ -962,8 +1232,9 @@ func (c *Collection) Unlock(id string, cas Cas, opts *UnlockOptions) (errOut err
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.UnlockResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)
@@ -984,6 +1255,17 @@ func (c *Collection) Unlock(id string, cas Cas, opts *UnlockOptions) (errOut err
 type TouchOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
+
+	// Internal: This should never be used and is not supported.
+	Internal struct {
+		User string
+	}
 }
 
 // Touch touches a document, specifying a new expiry time for it.
@@ -992,12 +1274,14 @@ func (c *Collection) Touch(id string, expiry time.Duration, opts *TouchOptions) 
 		opts = &TouchOptions{}
 	}
 
-	opm := c.newKvOpManager("Touch", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("touch", nil)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
@@ -1013,8 +1297,9 @@ func (c *Collection) Touch(id string, expiry time.Duration, opts *TouchOptions) 
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.TouchResult, err error) {
 		if err != nil {
 			errOut = opm.EnhanceErr(err)

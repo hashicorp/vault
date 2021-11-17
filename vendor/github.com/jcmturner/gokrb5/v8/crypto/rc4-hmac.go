@@ -14,9 +14,7 @@ import (
 	"golang.org/x/crypto/md4"
 )
 
-//http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8u40-b25/sun/security/krb5/internal/crypto/dk/ArcFourCrypto.java#ArcFourCrypto.encrypt%28byte%5B%5D%2Cint%2Cbyte%5B%5D%2Cbyte%5B%5D%2Cbyte%5B%5D%2Cint%2Cint%29
-
-// RC4HMAC implements Kerberos encryption type aes256-cts-hmac-sha1-96
+// RC4HMAC implements Kerberos encryption type rc4-hmac
 type RC4HMAC struct {
 }
 

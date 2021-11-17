@@ -48,13 +48,13 @@ func (rcv *Time) Table() flatbuffers.Table {
 func (rcv *Time) Unit() TimeUnit {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return TimeUnit(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 1
 }
 
 func (rcv *Time) MutateUnit(n TimeUnit) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 func (rcv *Time) BitWidth() int32 {
@@ -72,8 +72,8 @@ func (rcv *Time) MutateBitWidth(n int32) bool {
 func TimeStart(builder *flatbuffers.Builder) {
 	builder.StartObject(2)
 }
-func TimeAddUnit(builder *flatbuffers.Builder, unit int16) {
-	builder.PrependInt16Slot(0, unit, 1)
+func TimeAddUnit(builder *flatbuffers.Builder, unit TimeUnit) {
+	builder.PrependInt16Slot(0, int16(unit), 1)
 }
 func TimeAddBitWidth(builder *flatbuffers.Builder, bitWidth int32) {
 	builder.PrependInt32Slot(1, bitWidth, 32)

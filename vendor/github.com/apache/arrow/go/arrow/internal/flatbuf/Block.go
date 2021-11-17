@@ -54,12 +54,12 @@ func (rcv *Block) MutateMetaDataLength(n int32) bool {
 }
 
 /// Length of the data (this is aligned so there can be a gap between this and
-/// the metatdata).
+/// the metadata).
 func (rcv *Block) BodyLength() int64 {
 	return rcv._tab.GetInt64(rcv._tab.Pos + flatbuffers.UOffsetT(16))
 }
 /// Length of the data (this is aligned so there can be a gap between this and
-/// the metatdata).
+/// the metadata).
 func (rcv *Block) MutateBodyLength(n int64) bool {
 	return rcv._tab.MutateInt64(rcv._tab.Pos+flatbuffers.UOffsetT(16), n)
 }

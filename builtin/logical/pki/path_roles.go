@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -193,8 +193,8 @@ protection use. Defaults to false.`,
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
-and "ec" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec"},
+"ec" and "ed25519" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
 			},
 
 			"key_bits": {
@@ -205,7 +205,16 @@ certainly want to change this if you adjust
 the key_type.`,
 			},
 
-			"key_usage": {
+			"signature_bits": &framework.FieldSchema{
+				Type:    framework.TypeInt,
+				Default: 0,
+				Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+			},
+
+			"key_usage": &framework.FieldSchema{
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 				Description: `A comma-separated string or list of key usages (not extended
@@ -368,6 +377,11 @@ for "generate_lease".`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: 30,
 				},
+			},
+			"not_after": {
+				Type: framework.TypeString,
+				Description: `Set the not after field of the certificate with specified date value.
+                              The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 			},
 		},
 
@@ -559,6 +573,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		EmailProtectionFlag:           data.Get("email_protection_flag").(bool),
 		KeyType:                       data.Get("key_type").(string),
 		KeyBits:                       data.Get("key_bits").(int),
+		SignatureBits:                 data.Get("signature_bits").(int),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
@@ -578,6 +593,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		NotAfter:                      data.Get("not_after").(string),
 	}
 
 	allowedOtherSANs := data.Get("allowed_other_sans").([]string)
@@ -609,7 +625,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		), nil
 	}
 
-	if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
+	if err := certutil.ValidateKeyTypeSignatureLength(entry.KeyType, entry.KeyBits, &entry.SignatureBits); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -750,6 +766,7 @@ type roleEntry struct {
 	UseCSRSANs                    bool          `json:"use_csr_sans" mapstructure:"use_csr_sans"`
 	KeyType                       string        `json:"key_type" mapstructure:"key_type"`
 	KeyBits                       int           `json:"key_bits" mapstructure:"key_bits"`
+	SignatureBits                 int           `json:"signature_bits" mapstructure:"signature_bits"`
 	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
 	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
@@ -773,7 +790,7 @@ type roleEntry struct {
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
-
+	NotAfter                      string        `json:"not_after" mapstructure:"not_after"`
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
 }
@@ -800,6 +817,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"use_csr_sans":                       r.UseCSRSANs,
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
+		"signature_bits":                     r.SignatureBits,
 		"key_usage":                          r.KeyUsage,
 		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
@@ -818,6 +836,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
+		"not_after":                          r.NotAfter,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

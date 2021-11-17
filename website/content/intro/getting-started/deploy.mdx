@@ -128,7 +128,7 @@ distribute the key shares printed above. When the Vault is re-sealed,
 restarted, or stopped, you must supply at least 3 of these keys to unseal it
 before it can start servicing requests.
 
-Vault does not store the generated master key. Without at least 3 key to
+Vault does not store the generated master key. Without at least 3 keys to
 reconstruct the master key, Vault will remain permanently sealed!
 
 It is possible to generate new unseal keys, provided you have a quorum of
@@ -145,7 +145,7 @@ somewhere, and continue. In a real deployment scenario, you would never
 save these keys together. Instead, you would likely use Vault's PGP and
 Keybase.io support to encrypt each of these keys with the users' PGP keys.
 This prevents one single person from having all the unseal keys. Please
-see the documentation on [using PGP, GPG, and Keybase](/docs/concepts/pgp-gpg-keybase)
+see the documentation on [using PGP, GnuPG, and Keybase](/docs/concepts/pgp-gpg-keybase)
 for more information.
 
 ## Seal/Unseal

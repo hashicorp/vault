@@ -10,6 +10,9 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/address"
+	"go.mongodb.org/mongo-driver/mongo/description"
 )
 
 // CommandStartedEvent represents an event generated when a command is sent to a server.
@@ -19,6 +22,9 @@ type CommandStartedEvent struct {
 	CommandName  string
 	RequestID    int64
 	ConnectionID string
+	// ServiceID contains the ID of the server to which the command was sent if it is running behind a load balancer.
+	// Otherwise, it is unset.
+	ServiceID *primitive.ObjectID
 }
 
 // CommandFinishedEvent represents a generic command finishing.
@@ -27,6 +33,9 @@ type CommandFinishedEvent struct {
 	CommandName   string
 	RequestID     int64
 	ConnectionID  string
+	// ServiceID contains the ID of the server to which the command was sent if it is running behind a load balancer.
+	// Otherwise, it is unset.
+	ServiceID *primitive.ObjectID
 }
 
 // CommandSucceededEvent represents an event generated when a command's execution succeeds.
@@ -62,6 +71,7 @@ const (
 	ConnectionClosed   = "ConnectionClosed"
 	PoolCreated        = "ConnectionPoolCreated"
 	ConnectionCreated  = "ConnectionCreated"
+	ConnectionReady    = "ConnectionReady"
 	GetFailed          = "ConnectionCheckOutFailed"
 	GetSucceeded       = "ConnectionCheckedOut"
 	ConnectionReturned = "ConnectionCheckedIn"
@@ -83,9 +93,89 @@ type PoolEvent struct {
 	ConnectionID uint64              `json:"connectionId"`
 	PoolOptions  *MonitorPoolOptions `json:"options"`
 	Reason       string              `json:"reason"`
+	// ServiceID is only set if the Type is PoolCleared and the server is deployed behind a load balancer. This field
+	// can be used to distinguish between individual servers in a load balanced deployment.
+	ServiceID *primitive.ObjectID `json:"serviceId"`
 }
 
 // PoolMonitor is a function that allows the user to gain access to events occurring in the pool
 type PoolMonitor struct {
 	Event func(*PoolEvent)
+}
+
+// ServerDescriptionChangedEvent represents a server description change.
+type ServerDescriptionChangedEvent struct {
+	Address             address.Address
+	TopologyID          primitive.ObjectID // A unique identifier for the topology this server is a part of
+	PreviousDescription description.Server
+	NewDescription      description.Server
+}
+
+// ServerOpeningEvent is an event generated when the server is initialized.
+type ServerOpeningEvent struct {
+	Address    address.Address
+	TopologyID primitive.ObjectID // A unique identifier for the topology this server is a part of
+}
+
+// ServerClosedEvent is an event generated when the server is closed.
+type ServerClosedEvent struct {
+	Address    address.Address
+	TopologyID primitive.ObjectID // A unique identifier for the topology this server is a part of
+}
+
+// TopologyDescriptionChangedEvent represents a topology description change.
+type TopologyDescriptionChangedEvent struct {
+	TopologyID          primitive.ObjectID // A unique identifier for the topology this server is a part of
+	PreviousDescription description.Topology
+	NewDescription      description.Topology
+}
+
+// TopologyOpeningEvent is an event generated when the topology is initialized.
+type TopologyOpeningEvent struct {
+	TopologyID primitive.ObjectID // A unique identifier for the topology this server is a part of
+}
+
+// TopologyClosedEvent is an event generated when the topology is closed.
+type TopologyClosedEvent struct {
+	TopologyID primitive.ObjectID // A unique identifier for the topology this server is a part of
+}
+
+// ServerHeartbeatStartedEvent is an event generated when the heartbeat is started.
+type ServerHeartbeatStartedEvent struct {
+	ConnectionID string // The address this heartbeat was sent to with a unique identifier
+	Awaited      bool   // If this heartbeat was awaitable
+}
+
+// ServerHeartbeatSucceededEvent is an event generated when the heartbeat succeeds.
+type ServerHeartbeatSucceededEvent struct {
+	DurationNanos int64
+	Reply         description.Server
+	ConnectionID  string // The address this heartbeat was sent to with a unique identifier
+	Awaited       bool   // If this heartbeat was awaitable
+}
+
+// ServerHeartbeatFailedEvent is an event generated when the heartbeat fails.
+type ServerHeartbeatFailedEvent struct {
+	DurationNanos int64
+	Failure       error
+	ConnectionID  string // The address this heartbeat was sent to with a unique identifier
+	Awaited       bool   // If this heartbeat was awaitable
+}
+
+// ServerMonitor represents a monitor that is triggered for different server events. The client
+// will monitor changes on the MongoDB deployment it is connected to, and this monitor reports
+// the changes in the client's representation of the deployment. The topology represents the
+// overall deployment, and heartbeats are sent to individual servers to check their current status.
+type ServerMonitor struct {
+	ServerDescriptionChanged func(*ServerDescriptionChangedEvent)
+	ServerOpening            func(*ServerOpeningEvent)
+	ServerClosed             func(*ServerClosedEvent)
+	// TopologyDescriptionChanged is called when the topology is locked, so the callback should
+	// not attempt any operation that requires server selection on the same client.
+	TopologyDescriptionChanged func(*TopologyDescriptionChangedEvent)
+	TopologyOpening            func(*TopologyOpeningEvent)
+	TopologyClosed             func(*TopologyClosedEvent)
+	ServerHeartbeatStarted     func(*ServerHeartbeatStartedEvent)
+	ServerHeartbeatSucceeded   func(*ServerHeartbeatSucceededEvent)
+	ServerHeartbeatFailed      func(*ServerHeartbeatFailedEvent)
 }

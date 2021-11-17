@@ -8,8 +8,8 @@ matrix:
     - go: tip
 
 go:
-- '1.11.x'
-- '1.12.x'
+- '1.14.x'
+- '1.15.x'
 - tip
 
 go_import_path: gopkg.in/square/go-jose.v2

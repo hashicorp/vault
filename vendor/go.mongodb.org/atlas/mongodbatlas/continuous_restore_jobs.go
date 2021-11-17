@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-const continuousRestoreJobsPath = "groups/%s/clusters/%s/restoreJobs"
+const continuousRestoreJobsPath = "api/atlas/v1.0/groups/%s/clusters/%s/restoreJobs"
 
 // ContinuousRestoreJobsService provides access to the restore jobs related functions in the Atlas API.
 //
@@ -32,7 +32,7 @@ type ContinuousRestoreJobsService interface {
 }
 
 // ContinuousRestoreJobsServiceOp handles communication with the Continuous Backup Restore Jobs related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type ContinuousRestoreJobsServiceOp service
 
 var _ ContinuousRestoreJobsService = &ContinuousRestoreJobsServiceOp{}

@@ -38,6 +38,7 @@ type DialSettings struct {
 	TelemetryDisabled   bool
 	ClientCertSource    func(*tls.CertificateRequestInfo) (*tls.Certificate, error)
 	CustomClaims        map[string]interface{}
+	SkipValidation      bool
 
 	// Google API system parameters. For more information please read:
 	// https://cloud.google.com/apis/docs/system-parameters
@@ -47,6 +48,9 @@ type DialSettings struct {
 
 // Validate reports an error if ds is invalid.
 func (ds *DialSettings) Validate() error {
+	if ds.SkipValidation {
+		return nil
+	}
 	hasCreds := ds.APIKey != "" || ds.TokenSource != nil || ds.CredentialsFile != "" || ds.Credentials != nil
 	if ds.NoAuth && hasCreds {
 		return errors.New("options.WithoutAuthentication is incompatible with any option that provides credentials")

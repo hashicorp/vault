@@ -234,7 +234,8 @@ type GridFSFindOptions struct {
 	// The number of documents to skip before adding documents to the result. The default value is 0.
 	Skip *int32
 
-	// A document specifying the order in which documents should be returned.
+	// A document specifying the order in which documents should be returned.  The driver will return an error if the
+	// sort parameter is a multi-key map.
 	Sort interface{}
 }
 

@@ -51,6 +51,7 @@ version matches the version specified in the cas parameter.`,
 			logical.CreateOperation: b.upgradeCheck(b.pathDataWrite()),
 			logical.ReadOperation:   b.upgradeCheck(b.pathDataRead()),
 			logical.DeleteOperation: b.upgradeCheck(b.pathDataDelete()),
+			logical.PatchOperation:  b.upgradeCheck(b.pathDataPatch()),
 		},
 
 		ExistenceCheck: b.dataExistenceCheck(),
@@ -113,10 +114,11 @@ func (b *versionedKVBackend) pathDataRead() framework.OperationFunc {
 			Data: map[string]interface{}{
 				"data": nil,
 				"metadata": map[string]interface{}{
-					"version":       verNum,
-					"created_time":  ptypesTimestampToString(vm.CreatedTime),
-					"deletion_time": ptypesTimestampToString(vm.DeletionTime),
-					"destroyed":     vm.Destroyed,
+					"version":         verNum,
+					"created_time":    ptypesTimestampToString(vm.CreatedTime),
+					"deletion_time":   ptypesTimestampToString(vm.DeletionTime),
+					"destroyed":       vm.Destroyed,
+					"custom_metadata": meta.CustomMetadata,
 				},
 			},
 		}
@@ -169,6 +171,79 @@ func (b *versionedKVBackend) pathDataRead() framework.OperationFunc {
 	}
 }
 
+// validateCheckAndSetOption will validate the cas flag from the options map
+// provided. The cas flag must be provided if required based on the engine's
+// config or the secret's key metadata. If provided, the cas value must match
+// the current version of the secret as denoted by its key metadata entry.
+func validateCheckAndSetOption(data *framework.FieldData, config *Configuration, meta *KeyMetadata) error {
+	var casRaw interface{}
+	var casOk bool
+	optionsRaw, ok := data.GetOk("options")
+	if ok {
+		options := optionsRaw.(map[string]interface{})
+
+		// Verify the CAS parameter is valid.
+		casRaw, casOk = options["cas"]
+	}
+
+	if casOk {
+		var cas int
+		if err := mapstructure.WeakDecode(casRaw, &cas); err != nil {
+			return errors.New("error parsing check-and-set parameter")
+		}
+		if uint64(cas) != meta.CurrentVersion {
+			return errors.New("check-and-set parameter did not match the current version")
+		}
+	} else if config.CasRequired || meta.CasRequired {
+		return errors.New("check-and-set parameter required for this call")
+	}
+
+	return nil
+}
+
+// cleanupOldVersions is responsible for cleaning up old versions. Once a key
+// has more than the configured allowed versions the oldest version will be
+// permanently deleted. A list of version keys to delete will be created.
+// Indices will be ordered such that the oldest version is at the end of the
+// list. Deletes will be performed back-to-front. If there is an error deleting
+// one of the keys, the remaining keys will be deleted on the next go around.
+func (b *versionedKVBackend) cleanupOldVersions(ctx context.Context, storage logical.Storage, key string, versionToDelete uint64) string {
+	warningFormat := "error occurred when cleaning up old versions, these will be cleaned up on next write: %s"
+
+	var versionKeysToDelete []string
+
+	for i := versionToDelete; i > 0; i-- {
+		versionKey, err := b.getVersionKey(ctx, key, i, storage)
+		if err != nil {
+			return fmt.Sprintf(warningFormat, err)
+		}
+
+		v, err := storage.Get(ctx, versionKey)
+		if err != nil {
+			return fmt.Sprintf(warningFormat, err)
+		}
+
+		if v == nil {
+			break
+		}
+
+		// append to the end of the list
+		versionKeysToDelete = append(versionKeysToDelete, versionKey)
+	}
+
+	// Walk the list backwards deleting the oldest versions first. This
+	// allows us to continue the cleanup on next write if an error
+	// occurs during one of the deletes.
+	for i := len(versionKeysToDelete) - 1; i >= 0; i-- {
+		err := storage.Delete(ctx, versionKeysToDelete[i])
+		if err != nil {
+			return fmt.Sprintf(warningFormat, err)
+		}
+	}
+
+	return ""
+}
+
 // pathDataWrite handles create and update commands to a kv entry
 func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -211,30 +286,9 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 			}
 		}
 
-		// Parse options
-		{
-			var casRaw interface{}
-			var casOk bool
-			optionsRaw, ok := data.GetOk("options")
-			if ok {
-				options := optionsRaw.(map[string]interface{})
-
-				// Verify the CAS parameter is valid.
-				casRaw, casOk = options["cas"]
-			}
-
-			switch {
-			case casOk:
-				var cas int
-				if err := mapstructure.WeakDecode(casRaw, &cas); err != nil {
-					return logical.ErrorResponse("error parsing check-and-set parameter"), logical.ErrInvalidRequest
-				}
-				if uint64(cas) != meta.CurrentVersion {
-					return logical.ErrorResponse("check-and-set parameter did not match the current version"), logical.ErrInvalidRequest
-				}
-			case config.CasRequired, meta.CasRequired:
-				return logical.ErrorResponse("check-and-set parameter required for this call"), logical.ErrInvalidRequest
-			}
+		err = validateCheckAndSetOption(data, config, meta)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
 
 		// Create a version key for the new version
@@ -275,65 +329,228 @@ func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 			return nil, err
 		}
 
+		// Add version to the key metadata and calculate version to delete
+		// based on the max_versions specified by either the secret's key
+		// metadata or the engine's config
 		vm, versionToDelete := meta.AddVersion(version.CreatedTime, version.DeletionTime, config.MaxVersions)
+
 		err = b.writeKeyMetadata(ctx, req.Storage, meta)
 		if err != nil {
 			return nil, err
 		}
 
-		// We create the response here so we can add warnings to it below.
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"version":       meta.CurrentVersion,
-				"created_time":  ptypesTimestampToString(vm.CreatedTime),
-				"deletion_time": ptypesTimestampToString(vm.DeletionTime),
-				"destroyed":     vm.Destroyed,
+				"version":         meta.CurrentVersion,
+				"created_time":    ptypesTimestampToString(vm.CreatedTime),
+				"deletion_time":   ptypesTimestampToString(vm.DeletionTime),
+				"destroyed":       vm.Destroyed,
+				"custom_metadata": meta.CustomMetadata,
 			},
 		}
 
-		// Cleanup the version data that is past max version.
-		if versionToDelete > 0 {
+		warning := b.cleanupOldVersions(ctx, req.Storage, key, versionToDelete)
+		if warning != "" {
+			// A failed attempt to clean up old versions will be retried on
+			// next write attempt, prefer a warning over an error resp
+			resp.AddWarning(warning)
+		}
 
-			// Create a list of version keys to delete. We will delete from the
-			// back of the array so we can delete the oldest versions
-			// first. If there is an error deleting one of the keys we can
-			// ensure the rest will be deleted on the next go around.
-			var versionKeysToDelete []string
+		return resp, nil
+	}
+}
 
-			for i := versionToDelete; i > 0; i-- {
-				versionKey, err := b.getVersionKey(ctx, key, i, req.Storage)
-				if err != nil {
-					resp.AddWarning(fmt.Sprintf("Error occured when cleaning up old versions, these will be cleaned up on next write: %s", err))
-					return resp, nil
-				}
+// patchPreprocessor is passed to framework.HandlePatchOperation within the
+// pathDataPatch handler. The framework.HandlePatchOperation abstraction
+// expects only the resource data to be provided. The "data" key must be lifted
+// from the request data to the pathDataPatch handler since it also accepts an
+// options map.
+func patchPreprocessor() framework.PatchPreprocessorFunc {
+	return func(input map[string]interface{}) (map[string]interface{}, error) {
+		data, ok := input["data"]
 
-				// We intentionally do not return these errors here. If the get
-				// or delete fail they will be cleaned up on the next write.
-				v, err := req.Storage.Get(ctx, versionKey)
-				if err != nil {
-					resp.AddWarning(fmt.Sprintf("Error occured when cleaning up old versions, these will be cleaned up on next write: %s", err))
-					return resp, nil
-				}
+		if !ok {
+			return nil, errors.New("no data provided")
+		}
 
-				if v == nil {
-					break
-				}
+		return data.(map[string]interface{}), nil
+	}
+}
 
-				// append to the end of the list
-				versionKeysToDelete = append(versionKeysToDelete, versionKey)
+// pathDataPatch handles the patch command to a kv entry. A PatchOperation must
+// be performed on an existing entry specified by the provided path. This
+// handler supports the "cas" flag and is required if cas_required is set to true
+// on either the secret or the engine's config. In order for a patch to be
+// successful, cas must be set to the current version of the secret. The contents
+// of the data map under the "data" key will be applied as a partial update to
+// the existing entry via a JSON merge patch to the existing entry using the
+// framework.HandlePatchOperation abstraction.
+func (b *versionedKVBackend) pathDataPatch() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		key := data.Get("path").(string)
+
+		// Only validate that data is present to provide error response since
+		// HandlePatchOperation and patchPreprocessor will ultimately
+		// properly parse the field
+		_, ok := data.GetOk("data")
+		if !ok {
+			return logical.ErrorResponse("no data provided"), logical.ErrInvalidRequest
+		}
+
+		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
+		if err != nil {
+			return nil, err
+		}
+
+		// Returning a nil logical.Response and error will ultimately
+		// result in a 404 HTTP response status
+		if meta == nil {
+			return nil, nil
+		}
+
+		config, err := b.config(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		err = validateCheckAndSetOption(data, config, meta)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+
+		lock := locksutil.LockForKey(b.locks, key)
+		lock.Lock()
+		defer lock.Unlock()
+
+		currentVersion := meta.CurrentVersion
+
+		versionMetadata := meta.Versions[currentVersion]
+
+		if versionMetadata == nil {
+			return nil, nil
+		}
+
+		// Like the read handler, initialize a resp with the version metadata
+		// to be used in a 404 response when the entry has either been deleted
+		// or destroyed
+		notFoundResp := &logical.Response{
+			Data: map[string]interface{}{
+				"version":         currentVersion,
+				"created_time":    ptypesTimestampToString(versionMetadata.CreatedTime),
+				"deletion_time":   ptypesTimestampToString(versionMetadata.DeletionTime),
+				"destroyed":       versionMetadata.Destroyed,
+				"custom_metadata": meta.CustomMetadata,
+			},
+		}
+
+		if versionMetadata.DeletionTime != nil {
+			deletionTime, err := ptypes.Timestamp(versionMetadata.DeletionTime)
+			if err != nil {
+				return nil, err
 			}
 
-			// Walk the list backwards deleting the oldest versions first. This
-			// allows us to continue the cleanup on next write if an error
-			// occurs during one of the deletes.
-			for i := len(versionKeysToDelete) - 1; i >= 0; i-- {
-				err := req.Storage.Delete(ctx, versionKeysToDelete[i])
-				if err != nil {
-					resp.AddWarning(fmt.Sprintf("Error occured when cleaning up old versions, these will be cleaned up on next write: %s", err))
-					break
-				}
+			if deletionTime.Before(time.Now()) {
+				return logical.RespondWithStatusCode(notFoundResp, req, http.StatusNotFound)
 			}
+		}
 
+		if versionMetadata.Destroyed {
+			return logical.RespondWithStatusCode(notFoundResp, req, http.StatusNotFound)
+		}
+
+		currentVersionKey, err := b.getVersionKey(ctx, key, currentVersion, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		raw, err := req.Storage.Get(ctx, currentVersionKey)
+		if err != nil {
+			return nil, err
+		}
+		if raw == nil {
+			return nil, errors.New("could not find version data")
+		}
+
+		existingVersion := &Version{}
+
+		if err := proto.Unmarshal(raw.Value, existingVersion); err != nil {
+			return nil, err
+		}
+
+		var versionData map[string]interface{}
+		if err := json.Unmarshal(existingVersion.Data, &versionData); err != nil {
+			return nil, err
+		}
+
+		patchedBytes, err := framework.HandlePatchOperation(data, versionData, patchPreprocessor())
+		if err != nil {
+			return nil, err
+		}
+
+		newVersion := &Version{
+			Data:        patchedBytes,
+			CreatedTime: ptypes.TimestampNow(),
+		}
+
+		ctime, err := ptypes.Timestamp(newVersion.CreatedTime)
+		if err != nil {
+			return logical.ErrorResponse("unexpected error converting %T(%v) to time.Time: %v", newVersion.CreatedTime, newVersion.CreatedTime, err), logical.ErrInvalidRequest
+		}
+
+		// Set the deletion_time for the new version based on delete_version_after value if set
+		// on either the secret's key metadata or the engine's config
+		if !config.IsDeleteVersionAfterDisabled() {
+			if dtime, ok := deletionTime(ctime, deleteVersionAfter(config), deleteVersionAfter(meta)); ok {
+				dt, err := ptypes.TimestampProto(dtime)
+				if err != nil {
+					return logical.ErrorResponse("error setting deletion_time: converting %v to protobuf: %v", dtime, err), logical.ErrInvalidRequest
+				}
+				newVersion.DeletionTime = dt
+			}
+		}
+
+		buf, err := proto.Marshal(newVersion)
+		if err != nil {
+			return nil, err
+		}
+
+		newVersionKey, err := b.getVersionKey(ctx, key, meta.CurrentVersion+1, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := req.Storage.Put(ctx, &logical.StorageEntry{
+			Key:   newVersionKey,
+			Value: buf,
+		}); err != nil {
+			return nil, err
+		}
+
+		// Add version to the key metadata and calculate version to delete
+		// based on the max_versions specified by either the secret's key
+		// metadata or the engine's config
+		newVersionMetadata, versionToDelete := meta.AddVersion(newVersion.CreatedTime, newVersion.DeletionTime, config.MaxVersions)
+
+		err = b.writeKeyMetadata(ctx, req.Storage, meta)
+		if err != nil {
+			return nil, err
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"version":         meta.CurrentVersion,
+				"created_time":    ptypesTimestampToString(newVersionMetadata.CreatedTime),
+				"deletion_time":   ptypesTimestampToString(newVersionMetadata.DeletionTime),
+				"destroyed":       newVersionMetadata.Destroyed,
+				"custom_metadata": meta.CustomMetadata,
+			},
+		}
+
+		warning := b.cleanupOldVersions(ctx, req.Storage, key, versionToDelete)
+		if warning != "" {
+			// A failed attempt to clean up old versions will be retried on
+			// next patch attempt, prefer a warning over an error resp
+			resp.AddWarning(warning)
 		}
 
 		return resp, nil
@@ -437,9 +654,9 @@ func max(a, b uint32) uint32 {
 	return a
 }
 
-const dataHelpSyn = `Write, Read, and Delete data in the Key-Value Store.`
+const dataHelpSyn = `Write, Patch, Read, and Delete data in the Key-Value Store.`
 const dataHelpDesc = `
-This path takes a key name and based on the opperation stores, retreives or
+This path takes a key name and based on the operation stores, retrieves or
 deletes versions of data.
 
 If a write operation is used the endpoint takes an options object and a data
@@ -447,6 +664,12 @@ object. The options object is used to pass some options to the write command and
 the data object is encrypted and stored in the storage backend. Each write
 operation for a key creates a new version and does not overwrite the previous
 data.
+
+A patch operation must be performed on an existing secret. The secret must neither
+be deleted nor destroyed. Like a write operation, patch operations accept an
+options object and data object. The options object is used to pass some options to
+the patch command and the data object is used to perform a partial update on the
+current version of the secret and store the encrypted result in the storage backend. 
 
 A read operation will return the latest version for a key unless the "version"
 parameter is set, then it returns the version at that number.

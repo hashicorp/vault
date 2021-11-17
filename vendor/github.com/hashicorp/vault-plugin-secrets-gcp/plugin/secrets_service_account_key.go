@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iam/v1"
@@ -16,6 +17,13 @@ const (
 	keyAlgorithmRSA2k  = "KEY_ALG_RSA_2048"
 	privateKeyTypeJson = "TYPE_GOOGLE_CREDENTIALS_FILE"
 )
+
+type secretKeyParams struct {
+	keyType           string
+	keyAlgorithm      string
+	ttl               int
+	extraInternalData map[string]interface{}
+}
 
 func secretServiceAccountKey(b *backend) *framework.Secret {
 	return &framework.Secret{
@@ -34,64 +42,9 @@ func secretServiceAccountKey(b *backend) *framework.Secret {
 				Description: "Type of the private key (i.e. whether it is JSON or P12). Valid values are GCP enum(ServiceAccountPrivateKeyType)",
 			},
 		},
-
 		Renew:  b.secretKeyRenew,
 		Revoke: b.secretKeyRevoke,
 	}
-}
-
-func pathSecretServiceAccountKey(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: fmt.Sprintf("key/%s", framework.GenericNameRegex("roleset")),
-		Fields: map[string]*framework.FieldSchema{
-			"roleset": {
-				Type:        framework.TypeString,
-				Description: "Required. Name of the role set.",
-			},
-			"key_algorithm": {
-				Type:        framework.TypeString,
-				Description: fmt.Sprintf(`Private key algorithm for service account key - defaults to %s"`, keyAlgorithmRSA2k),
-				Default:     keyAlgorithmRSA2k,
-			},
-			"key_type": {
-				Type:        framework.TypeString,
-				Description: fmt.Sprintf(`Private key type for service account key - defaults to %s"`, privateKeyTypeJson),
-				Default:     privateKeyTypeJson,
-			},
-			"ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "Lifetime of the service account key",
-			},
-		},
-		ExistenceCheck: b.pathRoleSetExistenceCheck("roleset"),
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation:   &framework.PathOperation{Callback: b.pathServiceAccountKey},
-			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathServiceAccountKey},
-		},
-		HelpSynopsis:    pathServiceAccountKeySyn,
-		HelpDescription: pathServiceAccountKeyDesc,
-	}
-}
-
-func (b *backend) pathServiceAccountKey(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	rsName := d.Get("roleset").(string)
-	keyType := d.Get("key_type").(string)
-	keyAlg := d.Get("key_algorithm").(string)
-	ttl := d.Get("ttl").(int)
-
-	rs, err := getRoleSet(rsName, ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if rs == nil {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%s' does not exist", rsName)), nil
-	}
-
-	if rs.SecretType != SecretTypeKey {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%s' cannot generate service account keys (has secret type %s)", rsName, rs.SecretType)), nil
-	}
-
-	return b.getSecretKey(ctx, req.Storage, rs, keyType, keyAlg, ttl)
 }
 
 func (b *backend) secretKeyRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -116,31 +69,54 @@ func (b *backend) secretKeyRenew(ctx context.Context, req *logical.Request, d *f
 	return resp, nil
 }
 
+func (b *backend) verifyBindingsNotUpdatedForSecret(ctx context.Context, req *logical.Request) error {
+	if v, ok := req.Secret.InternalData["role_set"]; ok {
+		bindingSum, ok := req.Secret.InternalData["role_set_bindings"]
+		if !ok {
+			return fmt.Errorf("invalid secret, internal data is missing role set bindings checksum")
+		}
+
+		// Verify role set was not deleted.
+		rs, err := getRoleSet(v.(string), ctx, req.Storage)
+		if err != nil {
+			return fmt.Errorf("could not find role set %q to verify secret", v)
+		}
+
+		// Verify role set bindings have not changed since secret was generated.
+		if rs.bindingHash() != bindingSum.(string) {
+			return fmt.Errorf("role set '%v' bindings were updated since secret was generated, cannot renew", v)
+		}
+	} else if v, ok := req.Secret.InternalData["static_account"]; ok {
+		bindingSum, ok := req.Secret.InternalData["static_account_bindings"]
+		if !ok {
+			return fmt.Errorf("invalid secret, internal data is missing static account bindings checksum")
+		}
+
+		// Verify static account was not deleted.
+		sa, err := b.getStaticAccount(v.(string), ctx, req.Storage)
+		if err != nil {
+			return fmt.Errorf("could not find static account %q to verify secret", v)
+		}
+
+		// Verify static account bindings have not changed since secret was generated.
+		if sa.bindingHash() != bindingSum.(string) {
+			return fmt.Errorf("static account '%v' bindings were updated since secret was generated, cannot renew", v)
+		}
+	} else {
+		return fmt.Errorf("invalid secret, internal data is missing role set or static account name")
+	}
+
+	return nil
+}
+
 func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	keyName, ok := req.Secret.InternalData["key_name"]
 	if !ok {
 		return nil, fmt.Errorf("invalid secret, internal data is missing key name")
 	}
 
-	rsName, ok := req.Secret.InternalData["role_set"]
-	if !ok {
-		return nil, fmt.Errorf("invalid secret, internal data is missing role set name")
-	}
-
-	bindingSum, ok := req.Secret.InternalData["role_set_bindings"]
-	if !ok {
-		return nil, fmt.Errorf("invalid secret, internal data is missing role set checksum")
-	}
-
-	// Verify role set was not deleted.
-	rs, err := getRoleSet(rsName.(string), ctx, req.Storage)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not find role set '%v' for secret", rsName)), nil
-	}
-
-	// Verify role set bindings have not changed since secret was generated.
-	if rs.bindingHash() != bindingSum.(string) {
-		return logical.ErrorResponse(fmt.Sprintf("role set '%v' bindings were updated since secret was generated, cannot renew", rsName)), nil
+	if err := b.verifyBindingsNotUpdatedForSecret(ctx, req); err != nil {
+		return logical.ErrorResponse(err.Error()), err
 	}
 
 	// Verify service account key still exists.
@@ -148,9 +124,11 @@ func (b *backend) verifySecretServiceKeyExists(ctx context.Context, req *logical
 	if err != nil {
 		return logical.ErrorResponse("could not confirm key still exists in GCP"), nil
 	}
+
 	if k, err := iamAdmin.Projects.ServiceAccounts.Keys.Get(keyName.(string)).Do(); err != nil || k == nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not confirm key still exists in GCP: %v", err)), nil
+		return logical.ErrorResponse("could not confirm key still exists in GCP: %v", err), nil
 	}
+
 	return nil, nil
 }
 
@@ -165,24 +143,21 @@ func (b *backend) secretKeyRevoke(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	_, err = iamAdmin.Projects.ServiceAccounts.Keys.Delete(keyNameRaw.(string)).Do()
+	_, err = iamAdmin.Projects.ServiceAccounts.Keys.Delete(keyNameRaw.(string)).Context(ctx).Do()
 	if err != nil && !isGoogleAccountKeyNotFoundErr(err) {
-		return logical.ErrorResponse(fmt.Sprintf("unable to delete service account key: %v", err)), nil
+		return logical.ErrorResponse("unable to delete service account key: %v", err), nil
 	}
 
 	return nil, nil
 }
 
-func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleSet, keyType, keyAlgorithm string, ttl int) (*logical.Response, error) {
+func (b *backend) createServiceAccountKeySecret(ctx context.Context, s logical.Storage, id *gcputil.ServiceAccountId, params secretKeyParams) (*logical.Response, error) {
 	cfg, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not read backend config: {{err}}", err)
 	}
 	if cfg == nil {
 		cfg = &config{}
-	}
-	if rs.AccountId == nil {
-		return nil, fmt.Errorf("unable to create secret (service account key), roleset has nil account ID")
 	}
 
 	iamC, err := b.IAMAdminClient(s)
@@ -191,9 +166,9 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	}
 
 	key, err := iamC.Projects.ServiceAccounts.Keys.Create(
-		rs.AccountId.ResourceName(), &iam.CreateServiceAccountKeyRequest{
-			KeyAlgorithm:   keyAlgorithm,
-			PrivateKeyType: keyType,
+		id.ResourceName(), &iam.CreateServiceAccountKeyRequest{
+			KeyAlgorithm:   params.keyAlgorithm,
+			PrivateKeyType: params.keyType,
 		}).Do()
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -205,9 +180,11 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 		"key_type":         key.PrivateKeyType,
 	}
 	internalD := map[string]interface{}{
-		"key_name":          key.Name,
-		"role_set":          rs.Name,
-		"role_set_bindings": rs.bindingHash(),
+		"key_name": key.Name,
+	}
+
+	for k, v := range params.extraInternalData {
+		internalD[k] = v
 	}
 
 	resp := b.Secret(SecretTypeKey).Response(secretD, internalD)
@@ -217,20 +194,20 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	resp.Secret.TTL = cfg.TTL
 
 	// If the request came with a TTL value, overwrite the config default
-	if ttl > 0 {
-		resp.Secret.TTL = time.Duration(ttl) * time.Second
+	if params.ttl > 0 {
+		resp.Secret.TTL = time.Duration(params.ttl) * time.Second
 	}
 
 	return resp, nil
 }
 
-const pathServiceAccountKeySyn = `Generate an service account private key under a specific role set.`
+const pathServiceAccountKeySyn = `Generate a service account private key secret.`
 const pathServiceAccountKeyDesc = `
-This path will generate a new service account private key for accessing GCP APIs.
-A role set, binding IAM roles to specific GCP resources, will be specified
-by name - for example, if this backend is mounted at "gcp", then "gcp/key/deploy"
-would generate service account keys for the "deploy" role set.
+This path will generate a new service account key for accessing GCP APIs.
 
-On the backend, each roleset is associated with a service account under
-which secrets/keys are created.
+Either specify "roleset/my-roleset" or "static/my-account" to generate a key corresponding
+to a roleset or static account respectively.
+
+Please see backend documentation for more information:
+https://www.vaultproject.io/docs/secrets/gcp/index.html
 `

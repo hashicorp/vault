@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
-const dbUsersBasePath = "groups/%s/databaseUsers"
+const dbUsersBasePath = "api/atlas/v1.0/groups/%s/databaseUsers"
 
 var adminX509Type = map[string]struct{}{
 	"MANAGED":  {},
@@ -34,6 +35,7 @@ var awsIAMType = map[string]struct{}{
 
 // DatabaseUsersService is an interface for interfacing with the Database Users
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users/index.html
 type DatabaseUsersService interface {
 	List(context.Context, string, *ListOptions) ([]DatabaseUser, *Response, error)
@@ -44,7 +46,7 @@ type DatabaseUsersService interface {
 }
 
 // DatabaseUsersServiceOp handles communication with the DatabaseUsers related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type DatabaseUsersServiceOp service
 
 var _ DatabaseUsersService = &DatabaseUsersServiceOp{}
@@ -74,14 +76,15 @@ type DatabaseUser struct {
 
 // GetAuthDB determines the authentication database based on the type of user.
 // LDAP, X509 and AWSIAM should all use $external.
-// SCRAM-SHA should use admin
+// SCRAM-SHA should use admin.
 func (user *DatabaseUser) GetAuthDB() (name string) {
 	// base documentation https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/resources/database_user
 	name = "admin"
 	_, isX509 := adminX509Type[user.X509Type]
 	_, isIAM := awsIAMType[user.AWSIAMType]
 
-	isLDAP := len(user.LDAPAuthType) > 0 && user.LDAPAuthType != "NONE"
+	// just USER is external
+	isLDAP := len(user.LDAPAuthType) > 0 && user.LDAPAuthType == "USER"
 
 	if isX509 || isIAM || isLDAP {
 		name = "$external"
@@ -91,13 +94,13 @@ func (user *DatabaseUser) GetAuthDB() (name string) {
 }
 
 // Scope if presents a database user only have access to the indicated resource
-// if none is given then it has access to all
+// if none is given then it has access to all.
 type Scope struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-// Label containing key-value pairs that tag and categorize the database user
+// Label containing key-value pairs that tag and categorize the database user.
 type Label struct {
 	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
@@ -111,8 +114,12 @@ type databaseUsers struct {
 }
 
 // List gets all users in the project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users-get-all-users/
 func (s *DatabaseUsersServiceOp) List(ctx context.Context, groupID string, listOptions *ListOptions) ([]DatabaseUser, *Response, error) {
+	if groupID == "" {
+		return nil, nil, NewArgError("groupID", "must be set")
+	}
 	path := fmt.Sprintf(dbUsersBasePath, groupID)
 
 	// Add query params from listOptions
@@ -140,6 +147,7 @@ func (s *DatabaseUsersServiceOp) List(ctx context.Context, groupID string, listO
 }
 
 // Get gets a single user in the project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users-get-single-user/
 func (s *DatabaseUsersServiceOp) Get(ctx context.Context, databaseName, groupID, username string) (*DatabaseUser, *Response, error) {
 	if databaseName == "" {
@@ -153,7 +161,8 @@ func (s *DatabaseUsersServiceOp) Get(ctx context.Context, databaseName, groupID,
 	}
 
 	basePath := fmt.Sprintf(dbUsersBasePath, groupID)
-	path := fmt.Sprintf("%s/%s/%s", basePath, databaseName, username)
+	escapedEntry := url.PathEscape(username)
+	path := fmt.Sprintf("%s/%s/%s", basePath, databaseName, escapedEntry)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
@@ -170,8 +179,12 @@ func (s *DatabaseUsersServiceOp) Get(ctx context.Context, databaseName, groupID,
 }
 
 // Create creates a user for the project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users-create-a-user/
 func (s *DatabaseUsersServiceOp) Create(ctx context.Context, groupID string, createRequest *DatabaseUser) (*DatabaseUser, *Response, error) {
+	if groupID == "" {
+		return nil, nil, NewArgError("groupID", "must be set")
+	}
 	if createRequest == nil {
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
@@ -193,15 +206,24 @@ func (s *DatabaseUsersServiceOp) Create(ctx context.Context, groupID string, cre
 }
 
 // Update updates a user for the project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users-update-a-user/
 func (s *DatabaseUsersServiceOp) Update(ctx context.Context, groupID, username string, updateRequest *DatabaseUser) (*DatabaseUser, *Response, error) {
+	if groupID == "" {
+		return nil, nil, NewArgError("groupID", "must be set")
+	}
+	if username == "" {
+		return nil, nil, NewArgError("username", "must be set")
+	}
 	if updateRequest == nil {
 		return nil, nil, NewArgError("updateRequest", "cannot be nil")
 	}
 
 	basePath := fmt.Sprintf(dbUsersBasePath, groupID)
 
-	path := fmt.Sprintf("%s/%s/%s", basePath, updateRequest.GetAuthDB(), username)
+	escapedEntry := url.PathEscape(username)
+
+	path := fmt.Sprintf("%s/%s/%s", basePath, updateRequest.GetAuthDB(), escapedEntry)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodPatch, path, updateRequest)
 	if err != nil {
@@ -218,6 +240,7 @@ func (s *DatabaseUsersServiceOp) Update(ctx context.Context, groupID, username s
 }
 
 // Delete deletes a user for the project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/database-users-delete-a-user/
 func (s *DatabaseUsersServiceOp) Delete(ctx context.Context, databaseName, groupID, username string) (*Response, error) {
 	if databaseName == "" {
@@ -231,7 +254,8 @@ func (s *DatabaseUsersServiceOp) Delete(ctx context.Context, databaseName, group
 	}
 
 	basePath := fmt.Sprintf(dbUsersBasePath, groupID)
-	path := fmt.Sprintf("%s/%s/%s", basePath, databaseName, username)
+	escapedEntry := url.PathEscape(username)
+	path := fmt.Sprintf("%s/%s/%s", basePath, databaseName, escapedEntry)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {

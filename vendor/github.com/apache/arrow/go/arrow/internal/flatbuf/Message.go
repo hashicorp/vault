@@ -45,25 +45,25 @@ func (rcv *Message) Table() flatbuffers.Table {
 func (rcv *Message) Version() MetadataVersion {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return MetadataVersion(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
 func (rcv *Message) MutateVersion(n MetadataVersion) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
-func (rcv *Message) HeaderType() byte {
+func (rcv *Message) HeaderType() MessageHeader {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(6))
 	if o != 0 {
-		return rcv._tab.GetByte(o + rcv._tab.Pos)
+		return MessageHeader(rcv._tab.GetByte(o + rcv._tab.Pos))
 	}
 	return 0
 }
 
-func (rcv *Message) MutateHeaderType(n byte) bool {
-	return rcv._tab.MutateByteSlot(6, n)
+func (rcv *Message) MutateHeaderType(n MessageHeader) bool {
+	return rcv._tab.MutateByteSlot(6, byte(n))
 }
 
 func (rcv *Message) Header(obj *flatbuffers.Table) bool {
@@ -110,11 +110,11 @@ func (rcv *Message) CustomMetadataLength() int {
 func MessageStart(builder *flatbuffers.Builder) {
 	builder.StartObject(5)
 }
-func MessageAddVersion(builder *flatbuffers.Builder, version int16) {
-	builder.PrependInt16Slot(0, version, 0)
+func MessageAddVersion(builder *flatbuffers.Builder, version MetadataVersion) {
+	builder.PrependInt16Slot(0, int16(version), 0)
 }
-func MessageAddHeaderType(builder *flatbuffers.Builder, headerType byte) {
-	builder.PrependByteSlot(1, headerType, 0)
+func MessageAddHeaderType(builder *flatbuffers.Builder, headerType MessageHeader) {
+	builder.PrependByteSlot(1, byte(headerType), 0)
 }
 func MessageAddHeader(builder *flatbuffers.Builder, header flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(2, flatbuffers.UOffsetT(header), 0)

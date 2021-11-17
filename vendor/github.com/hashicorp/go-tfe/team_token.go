@@ -15,7 +15,7 @@ var _ TeamTokens = (*teamTokens)(nil)
 // Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/team-tokens.html
+// https://www.terraform.io/docs/cloud/api/team-tokens.html
 type TeamTokens interface {
 	// Generate a new team token, replacing any existing token.
 	Generate(ctx context.Context, teamID string) (*TeamToken, error)

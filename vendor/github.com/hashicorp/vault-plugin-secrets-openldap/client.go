@@ -62,7 +62,10 @@ func (c *Client) UpdatePassword(conf *client.Config, dn string, newPassword stri
 
 func (c *Client) UpdateRootPassword(conf *client.Config, newPassword string) error {
 	filters := map[*client.Field][]string{client.FieldRegistry.ObjectClass: {"*"}}
-	newValues := map[*client.Field][]string{client.FieldRegistry.UserPassword: {newPassword}}
+	newValues, err := client.GetSchemaFieldRegistry(conf.Schema, newPassword)
+	if err != nil {
+		return fmt.Errorf("error updating password: %s", err)
+	}
 
 	return c.ldap.UpdatePassword(conf, conf.BindDN, newValues, filters)
 }

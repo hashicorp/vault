@@ -20,9 +20,7 @@ import (
 	"net/http"
 )
 
-const (
-	dataLakesBasePath = "groups"
-)
+const dataLakesBasePath = "api/atlas/v1.0/groups"
 
 // DataLakeService is an interface for interfacing with the Data Lake endpoints of the MongoDB Atlas API.
 //
@@ -36,10 +34,10 @@ type DataLakeService interface {
 }
 
 // DataLakeServiceOp handles communication with the DataLakeService related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type DataLakeServiceOp service
 
-// AwsCloudProviderConfig is the data lake configuration for AWS
+// AwsCloudProviderConfig is the data lake configuration for AWS.
 type AwsCloudProviderConfig struct {
 	ExternalID        string `json:"externalId,omitempty"`
 	IAMAssumedRoleARN string `json:"iamAssumedRoleARN,omitempty"`
@@ -48,56 +46,58 @@ type AwsCloudProviderConfig struct {
 	TestS3Bucket      string `json:"testS3Bucket,omitempty"`
 }
 
-// CloudProviderConfig represents the configuration for all supported cloud providers
+// CloudProviderConfig represents the configuration for all supported cloud providers.
 type CloudProviderConfig struct {
 	AWSConfig AwsCloudProviderConfig `json:"aws,omitempty"`
 }
 
-// DataProcessRegion represents the region where a data lake is processed
+// DataProcessRegion represents the region where a data lake is processed.
 type DataProcessRegion struct {
 	CloudProvider string `json:"cloudProvider,omitempty"`
 	Region        string `json:"region,omitempty"`
 }
 
-// DataLakeStore represents a store of data lake data
+// DataLakeStore represents a store of data lake data. Docs: https://docs.mongodb.com/datalake/reference/format/data-lake-configuration/#stores
 type DataLakeStore struct {
-	Name        string `json:"name,omitempty"`
-	Provider    string `json:"provider,omitempty"`
-	Region      string `json:"region,omitempty"`
-	Bucket      string `json:"bucket,omitempty"`
-	Prefix      string `json:"prefix,omitempty"`
-	Delimiter   string `json:"delimiter,omitempty"`
-	IncludeTags *bool  `json:"includeTags,omitempty"`
+	Name                     string   `json:"name,omitempty"`
+	Provider                 string   `json:"provider,omitempty"`
+	Region                   string   `json:"region,omitempty"`
+	Bucket                   string   `json:"bucket,omitempty"`
+	Prefix                   string   `json:"prefix,omitempty"`
+	Delimiter                string   `json:"delimiter,omitempty"`
+	IncludeTags              *bool    `json:"includeTags,omitempty"`
+	AdditionalStorageClasses []string `json:"additionalStorageClasses,omitempty"`
 }
 
-// DataLakeDataSource represents the data source of a data lake
+// DataLakeDataSource represents the data source of a data lake.
 type DataLakeDataSource struct {
 	StoreName     string `json:"storeName,omitempty"`
 	DefaultFormat string `json:"defaultFormat,omitempty"`
 	Path          string `json:"path,omitempty"`
 }
 
-// DataLakeCollection represents collections under a DataLakeDatabase
+// DataLakeCollection represents collections under a DataLakeDatabase.
 type DataLakeCollection struct {
 	Name        string               `json:"name,omitempty"`
 	DataSources []DataLakeDataSource `json:"dataSources,omitempty"`
 }
 
-// DataLakeDatabaseView represents any view under a DataLakeDatabase
+// DataLakeDatabaseView represents any view under a DataLakeDatabase.
 type DataLakeDatabaseView struct {
 	Name     string `json:"name,omitempty"`
 	Source   string `json:"source,omitempty"`
 	Pipeline string `json:"pipeline,omitempty"`
 }
 
-// DataLakeDatabase represents the mapping of a data lake to a database
+// DataLakeDatabase represents the mapping of a data lake to a database. Docs: https://docs.mongodb.com/datalake/reference/format/data-lake-configuration/#databases
 type DataLakeDatabase struct {
-	Name        string                 `json:"name,omitempty"`
-	Collections []DataLakeCollection   `json:"collections,omitempty"`
-	Views       []DataLakeDatabaseView `json:"views,omitempty"`
+	Name                   string                 `json:"name,omitempty"`
+	Collections            []DataLakeCollection   `json:"collections,omitempty"`
+	Views                  []DataLakeDatabaseView `json:"views,omitempty"`
+	MaxWildcardCollections *int64                 `json:"maxWildcardCollections,omitempty"`
 }
 
-// Storage represents the storage configuration for a data lake
+// Storage represents the storage configuration for a data lake.
 type Storage struct {
 	Databases []DataLakeDatabase `json:"databases,omitempty"`
 	Stores    []DataLakeStore    `json:"stores,omitempty"`
@@ -114,13 +114,13 @@ type DataLake struct {
 	Storage             Storage             `json:"storage,omitempty"`             // Configuration for each data store and its mapping to MongoDB collections / databases.
 }
 
-// DataLakeUpdateRequest represents all possible fields that can be updated in a data lake
+// DataLakeUpdateRequest represents all possible fields that can be updated in a data lake.
 type DataLakeUpdateRequest struct {
 	CloudProviderConfig *CloudProviderConfig `json:"cloudProviderConfig,omitempty"`
 	DataProcessRegion   *DataProcessRegion   `json:"dataProcessRegion,omitempty"`
 }
 
-// DataLakeCreateRequest represents the required fields to create a new data lake
+// DataLakeCreateRequest represents the required fields to create a new data lake.
 type DataLakeCreateRequest struct {
 	Name                string               `json:"name,omitempty"`
 	CloudProviderConfig *CloudProviderConfig `json:"cloudProviderConfig,omitempty"`

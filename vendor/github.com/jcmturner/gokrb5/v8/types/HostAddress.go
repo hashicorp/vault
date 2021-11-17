@@ -12,30 +12,6 @@ import (
 	"github.com/jcmturner/gokrb5/v8/iana/addrtype"
 )
 
-/*
-HostAddress and HostAddresses
-
-HostAddress     ::= SEQUENCE  {
-	addr-type       [0] Int32,
-	address         [1] OCTET STRING
-}
-
--- NOTE: HostAddresses is always used as an OPTIONAL field and
--- should not be empty.
-HostAddresses   -- NOTE: subtly different from rfc1510,
-		-- but has a value mapping and encodes the same
-	::= SEQUENCE OF HostAddress
-
-The host address encodings consist of two fields:
-
-addr-type
-	This field specifies the type of address that follows.  Pre-
-	defined values for this field are specified in Section 7.5.3.
-
-address
-	This field encodes a single address of type addr-type.
-*/
-
 // HostAddresses implements RFC 4120 type: https://tools.ietf.org/html/rfc4120#section-5.2.5
 type HostAddresses []HostAddress
 

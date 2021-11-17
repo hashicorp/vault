@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
@@ -220,7 +220,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
 		if role.AllowedUsersTemplate {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`^{{.+?}}$`, principal)
+			matched, _ := regexp.MatchString(`{{.+?}}`, principal)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve principal based on template + entityID from request.
@@ -362,19 +362,21 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 
 	if len(unparsedExtensions) > 0 {
 		extensions := convertMapToStringValue(unparsedExtensions)
-		if role.AllowedExtensions != "" {
-			notAllowed := []string{}
-			allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		if role.AllowedExtensions == "*" {
+			// Allowed extensions was configured to allow all
+			return extensions, nil
+		}
 
-			for extensionKey, _ := range extensions {
-				if !strutil.StrListContains(allowedExtensions, extensionKey) {
-					notAllowed = append(notAllowed, extensionKey)
-				}
+		notAllowed := []string{}
+		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
+		for extensionKey, _ := range extensions {
+			if !strutil.StrListContains(allowedExtensions, extensionKey) {
+				notAllowed = append(notAllowed, extensionKey)
 			}
+		}
 
-			if len(notAllowed) != 0 {
-				return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
-			}
+		if len(notAllowed) != 0 {
+			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 		}
 		return extensions, nil
 	}

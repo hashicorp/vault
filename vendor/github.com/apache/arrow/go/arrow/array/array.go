@@ -197,8 +197,8 @@ func init() {
 		arrow.STRUCT:            func(data *Data) Interface { return NewStructData(data) },
 		arrow.UNION:             unsupportedArrayType,
 		arrow.DICTIONARY:        unsupportedArrayType,
-		arrow.MAP:               unsupportedArrayType,
-		arrow.EXTENSION:         unsupportedArrayType,
+		arrow.MAP:               func(data *Data) Interface { return NewMapData(data) },
+		arrow.EXTENSION:         func(data *Data) Interface { return NewExtensionData(data) },
 		arrow.FIXED_SIZE_LIST:   func(data *Data) Interface { return NewFixedSizeListData(data) },
 		arrow.DURATION:          func(data *Data) Interface { return NewDurationData(data) },
 

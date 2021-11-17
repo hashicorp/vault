@@ -10,7 +10,7 @@ import (
 //
 // See FetchTestAccountDetails for more information.
 type TestAccountDetails struct {
-	ID       string `json:"id" jsonapi:"primary,users"`
+	ID       string `jsonapi:"primary,users"`
 	Username string `jsonapi:"attr,username"`
 	Email    string `jsonapi:"attr,email"`
 }

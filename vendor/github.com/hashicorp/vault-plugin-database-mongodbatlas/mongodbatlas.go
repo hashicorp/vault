@@ -3,23 +3,28 @@ package mongodbatlas
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/mitchellh/mapstructure"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"go.mongodb.org/atlas/mongodbatlas"
 )
 
-const mongoDBAtlasTypeName = "mongodbatlas"
+const (
+	mongoDBAtlasTypeName = "mongodbatlas"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s" (.RoleName | truncate 15) (random 20) | truncate 20 }}`
+)
 
 // Verify interface is implemented
 var _ dbplugin.Database = (*MongoDBAtlas)(nil)
 
 type MongoDBAtlas struct {
 	*mongoDBAtlasConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func New() (interface{}, error) {
@@ -39,32 +44,33 @@ func new() *MongoDBAtlas {
 }
 
 func (m *MongoDBAtlas) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
-	m.Lock()
-	defer m.Unlock()
-
-	m.RawConfig = req.Config
-
-	err := mapstructure.WeakDecode(req.Config, m.mongoDBAtlasConnectionProducer)
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
 	if err != nil {
-		return dbplugin.InitializeResponse{}, err
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
 	}
 
-	if len(m.PublicKey) == 0 {
-		return dbplugin.InitializeResponse{}, errors.New("public Key is not set")
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	m.usernameProducer = up
+
+	_, err = m.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
-	if len(m.PrivateKey) == 0 {
-		return dbplugin.InitializeResponse{}, errors.New("private Key is not set")
+	err = m.mongoDBAtlasConnectionProducer.Initialize(ctx, req)
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to initialize: %w", err)
 	}
-
-	// Set initialized to true at this point since all fields are set,
-	// and the connection can be established at a later time.
-	m.Initialized = true
 
 	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
-
 	return resp, nil
 }
 
@@ -86,12 +92,7 @@ func (m *MongoDBAtlas) NewUser(ctx context.Context, req dbplugin.NewUserRequest)
 		return dbplugin.NewUserResponse{}, err
 	}
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName("", credsutil.NoneLength),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 15),
-		credsutil.MaxLength(20),
-		credsutil.Separator("-"),
-	)
+	username, err := m.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}

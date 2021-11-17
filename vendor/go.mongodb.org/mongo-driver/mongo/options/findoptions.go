@@ -39,7 +39,8 @@ type FindOptions struct {
 	CursorType *CursorType
 
 	// The index to use for the operation. This should either be the index name as a string or the index specification
-	// as a document. The default value is nil, which means that no hint will be sent.
+	// as a document. The driver will return an error if the hint parameter is a multi-key map. The default value is nil,
+	// which means that no hint will be sent.
 	Hint interface{}
 
 	// The maximum number of documents to return. The default value is 0, which means that all documents matching the
@@ -95,7 +96,8 @@ type FindOptions struct {
 	// Deprecated: This option has been deprecated in MongoDB version 3.6 and removed in MongoDB version 4.0.
 	Snapshot *bool
 
-	// A document specifying the order in which documents should be returned.
+	// A document specifying the order in which documents should be returned.  The driver will return an error if the
+	// sort parameter is a multi-key map.
 	Sort interface{}
 }
 
@@ -307,6 +309,8 @@ type FindOneOptions struct {
 	AllowPartialResults *bool
 
 	// The maximum number of documents to be included in each batch returned by the server.
+	//
+	// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 	BatchSize *int32
 
 	// Specifies a collation to use for string comparisons during the operation. This option is only valid for MongoDB
@@ -320,10 +324,13 @@ type FindOneOptions struct {
 
 	// Specifies the type of cursor that should be created for the operation. The default is NonTailable, which means
 	// that the cursor will be closed by the server when the last batch of documents is retrieved.
+	//
+	// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 	CursorType *CursorType
 
 	// The index to use for the aggregation. This should either be the index name as a string or the index specification
-	// as a document. The default value is nil, which means that no hint will be sent.
+	// as a document. The driver will return an error if the hint parameter is a multi-key map. The default value is nil,
+	// which means that no hint will be sent.
 	Hint interface{}
 
 	// A document specifying the exclusive upper bound for a specific index. The default value is nil, which means that
@@ -333,6 +340,8 @@ type FindOneOptions struct {
 	// The maximum amount of time that the server should wait for new documents to satisfy a tailable cursor query.
 	// This option is only valid for tailable await cursors (see the CursorType option for more information) and
 	// MongoDB versions >= 3.2. For other cursor types or previous server versions, this option is ignored.
+	//
+	// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 	MaxAwaitTime *time.Duration
 
 	// The maximum amount of time that the query can run on the server. The default value is nil, meaning that there
@@ -345,9 +354,14 @@ type FindOneOptions struct {
 
 	// If true, the cursor created by the operation will not timeout after a period of inactivity. The default value
 	// is false.
+	//
+	// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 	NoCursorTimeout *bool
 
 	// This option is for internal replication use only and should not be set.
+	//
+	// Deprecated: This option has been deprecated in MongoDB version 4.4 and will be ignored by the server if it is
+	// set.
 	OplogReplay *bool
 
 	// A document describing which fields will be included in the document returned by the operation. The default value
@@ -372,7 +386,7 @@ type FindOneOptions struct {
 	Snapshot *bool
 
 	// A document specifying the sort order to apply to the query. The first document in the sorted order will be
-	// returned.
+	// returned. The driver will return an error if the sort parameter is a multi-key map.
 	Sort interface{}
 }
 
@@ -388,6 +402,8 @@ func (f *FindOneOptions) SetAllowPartialResults(b bool) *FindOneOptions {
 }
 
 // SetBatchSize sets the value for the BatchSize field.
+//
+// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 func (f *FindOneOptions) SetBatchSize(i int32) *FindOneOptions {
 	f.BatchSize = &i
 	return f
@@ -406,6 +422,8 @@ func (f *FindOneOptions) SetComment(comment string) *FindOneOptions {
 }
 
 // SetCursorType sets the value for the CursorType field.
+//
+// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 func (f *FindOneOptions) SetCursorType(ct CursorType) *FindOneOptions {
 	f.CursorType = &ct
 	return f
@@ -424,6 +442,8 @@ func (f *FindOneOptions) SetMax(max interface{}) *FindOneOptions {
 }
 
 // SetMaxAwaitTime sets the value for the MaxAwaitTime field.
+//
+// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 func (f *FindOneOptions) SetMaxAwaitTime(d time.Duration) *FindOneOptions {
 	f.MaxAwaitTime = &d
 	return f
@@ -442,12 +462,17 @@ func (f *FindOneOptions) SetMin(min interface{}) *FindOneOptions {
 }
 
 // SetNoCursorTimeout sets the value for the NoCursorTimeout field.
+//
+// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 func (f *FindOneOptions) SetNoCursorTimeout(b bool) *FindOneOptions {
 	f.NoCursorTimeout = &b
 	return f
 }
 
 // SetOplogReplay sets the value for the OplogReplay field.
+//
+// Deprecated: This option has been deprecated in MongoDB version 4.4 and will be ignored by the server if it is
+// set.
 func (f *FindOneOptions) SetOplogReplay(b bool) *FindOneOptions {
 	f.OplogReplay = &b
 	return f
@@ -584,8 +609,8 @@ type FindOneAndReplaceOptions struct {
 	ReturnDocument *ReturnDocument
 
 	// A document specifying which document should be replaced if the filter used by the operation matches multiple
-	// documents in the collection. If set, the first document in the sorted order will be replaced.
-	// The default value is nil.
+	// documents in the collection. If set, the first document in the sorted order will be replaced. The driver will
+	// return an error if the sort parameter is a multi-key map. The default value is nil.
 	Sort interface{}
 
 	// If true, a new document will be inserted if the filter does not match any documents in the collection. The
@@ -595,8 +620,9 @@ type FindOneAndReplaceOptions struct {
 	// The index to use for the operation. This should either be the index name as a string or the index specification
 	// as a document. This option is only valid for MongoDB versions >= 4.4. MongoDB version 4.2 will report an error if
 	// this option is specified. For server versions < 4.2, the driver will return an error if this option is specified.
-	// The driver will return an error if this option is used with during an unacknowledged write operation. The default
-	// value is nil, which means that no hint will be sent.
+	// The driver will return an error if this option is used with during an unacknowledged write operation. The driver
+	// will return an error if the hint parameter is a multi-key map. The default value is nil, which means that no hint
+	// will be sent.
 	Hint interface{}
 }
 
@@ -721,8 +747,8 @@ type FindOneAndUpdateOptions struct {
 	ReturnDocument *ReturnDocument
 
 	// A document specifying which document should be updated if the filter used by the operation matches multiple
-	// documents in the collection. If set, the first document in the sorted order will be updated.
-	// The default value is nil.
+	// documents in the collection. If set, the first document in the sorted order will be updated. The driver will
+	// return an error if the sort parameter is a multi-key map. The default value is nil.
 	Sort interface{}
 
 	// If true, a new document will be inserted if the filter does not match any documents in the collection. The
@@ -732,8 +758,9 @@ type FindOneAndUpdateOptions struct {
 	// The index to use for the operation. This should either be the index name as a string or the index specification
 	// as a document. This option is only valid for MongoDB versions >= 4.4. MongoDB version 4.2 will report an error if
 	// this option is specified. For server versions < 4.2, the driver will return an error if this option is specified.
-	// The driver will return an error if this option is used with during an unacknowledged write operation. The default
-	// value is nil, which means that no hint will be sent.
+	// The driver will return an error if this option is used with during an unacknowledged write operation. The driver
+	// will return an error if the hint parameter is a multi-key map. The default value is nil, which means that no hint
+	// will be sent.
 	Hint interface{}
 }
 
@@ -853,14 +880,15 @@ type FindOneAndDeleteOptions struct {
 
 	// A document specifying which document should be replaced if the filter used by the operation matches multiple
 	// documents in the collection. If set, the first document in the sorted order will be selected for replacement.
-	// The default value is nil.
+	// The driver will return an error if the sort parameter is a multi-key map. The default value is nil.
 	Sort interface{}
 
 	// The index to use for the operation. This should either be the index name as a string or the index specification
 	// as a document. This option is only valid for MongoDB versions >= 4.4. MongoDB version 4.2 will report an error if
 	// this option is specified. For server versions < 4.2, the driver will return an error if this option is specified.
-	// The driver will return an error if this option is used with during an unacknowledged write operation. The default
-	// value is nil, which means that no hint will be sent.
+	// The driver will return an error if this option is used with during an unacknowledged write operation. The driver
+	// will return an error if the hint parameter is a multi-key map. The default value is nil, which means that no hint
+	// will be sent.
 	Hint interface{}
 }
 

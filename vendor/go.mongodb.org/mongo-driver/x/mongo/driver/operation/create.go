@@ -13,10 +13,10 @@ import (
 	"errors"
 
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -42,6 +42,9 @@ type Create struct {
 	deployment          driver.Deployment
 	selector            description.ServerSelector
 	writeConcern        *writeconcern.WriteConcern
+	serverAPI           *driver.ServerAPIOptions
+	expireAfterSeconds  *int64
+	timeSeries          bsoncore.Document
 }
 
 // NewCreate constructs and returns a new Create.
@@ -51,7 +54,7 @@ func NewCreate(collectionName string) *Create {
 	}
 }
 
-func (c *Create) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (c *Create) processResponse(driver.ResponseInfo) error {
 	var err error
 	return err
 }
@@ -73,6 +76,7 @@ func (c *Create) Execute(ctx context.Context) error {
 		Deployment:        c.deployment,
 		Selector:          c.selector,
 		WriteConcern:      c.writeConcern,
+		ServerAPI:         c.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -116,6 +120,12 @@ func (c *Create) command(dst []byte, desc description.SelectedServer) ([]byte, e
 	}
 	if c.viewOn != nil {
 		dst = bsoncore.AppendStringElement(dst, "viewOn", *c.viewOn)
+	}
+	if c.expireAfterSeconds != nil {
+		dst = bsoncore.AppendInt64Element(dst, "expireAfterSeconds", *c.expireAfterSeconds)
+	}
+	if c.timeSeries != nil {
+		dst = bsoncore.AppendDocumentElement(dst, "timeseries", c.timeSeries)
 	}
 	return dst, nil
 }
@@ -317,5 +327,35 @@ func (c *Create) WriteConcern(writeConcern *writeconcern.WriteConcern) *Create {
 	}
 
 	c.writeConcern = writeConcern
+	return c
+}
+
+// ServerAPI sets the server API version for this operation.
+func (c *Create) ServerAPI(serverAPI *driver.ServerAPIOptions) *Create {
+	if c == nil {
+		c = new(Create)
+	}
+
+	c.serverAPI = serverAPI
+	return c
+}
+
+// ExpireAfterSeconds sets the seconds to wait before deleting old time-series data.
+func (c *Create) ExpireAfterSeconds(eas int64) *Create {
+	if c == nil {
+		c = new(Create)
+	}
+
+	c.expireAfterSeconds = &eas
+	return c
+}
+
+// TimeSeries sets the time series options for this operation.
+func (c *Create) TimeSeries(timeSeries bsoncore.Document) *Create {
+	if c == nil {
+		c = new(Create)
+	}
+
+	c.timeSeries = timeSeries
 	return c
 }

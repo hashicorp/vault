@@ -9,10 +9,9 @@ import (
 
 	"github.com/couchbase/gocb/v2"
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
@@ -21,12 +20,10 @@ const (
 	defaultCouchbaseUserRole = `{"Roles": [{"role":"ro_admin"}]}`
 	defaultTimeout           = 20000 * time.Millisecond
 
-	defaultUserNameTemplate = `V_{{.DisplayName | uppercase | truncate 64}}_{{.RoleName | uppercase | truncate 64}}_{{random 20 | uppercase}}_{{unix_time}}`
+	defaultUserNameTemplate = `{{printf "V_%s_%s_%s_%s" (printf "%s" .DisplayName | uppercase | truncate 64) (printf "%s" .RoleName | uppercase | truncate 64) (random 20 | uppercase) (unix_time) | truncate 128}}`
 )
 
-var (
-	_ dbplugin.Database = &CouchbaseDB{}
-)
+var _ dbplugin.Database = &CouchbaseDB{}
 
 // Type that combines the custom plugins Couchbase database connection configuration options and the Vault CredentialsProducer
 // used for generating user information for the Couchbase database.
@@ -89,9 +86,9 @@ func (c *CouchbaseDB) Initialize(ctx context.Context, req dbplugin.InitializeReq
 }
 
 func (c *CouchbaseDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
-	// Grab the lock
-	c.Lock()
-	defer c.Unlock()
+	// Don't let anyone write the config while we're using it
+	c.RLock()
+	defer c.RUnlock()
 
 	username, err := c.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
@@ -125,21 +122,14 @@ func (c *CouchbaseDB) UpdateUser(ctx context.Context, req dbplugin.UpdateUserReq
 }
 
 func (c *CouchbaseDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
-	c.Lock()
-	defer c.Unlock()
+	// Don't let anyone write the config while we're using it
+	c.RLock()
+	defer c.RUnlock()
 
 	db, err := c.getConnection(ctx)
 	if err != nil {
 		return dbplugin.DeleteUserResponse{}, fmt.Errorf("failed to make connection: %w", err)
 	}
-
-	// Close the database connection to ensure no new connections come in
-	defer func() {
-		if err := c.close(); err != nil {
-			logger := hclog.New(&hclog.LoggerOptions{})
-			logger.Error("defer close failed", "error", err)
-		}
-	}()
 
 	// Get the UserManager
 	mgr := db.Users()
@@ -193,26 +183,18 @@ func newUser(ctx context.Context, db *gocb.Cluster, username string, req dbplugi
 }
 
 func (c *CouchbaseDB) changeUserPassword(ctx context.Context, username, password string) error {
-	c.Lock()
-	defer c.Unlock()
+	// Don't let anyone write the config while we're using it
+	c.RLock()
+	defer c.RUnlock()
 
 	db, err := c.getConnection(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Close the database connection to ensure no new connections come in
-	defer func() {
-		if err := c.close(); err != nil {
-			logger := hclog.New(&hclog.LoggerOptions{})
-			logger.Error("defer close failed", "error", err)
-		}
-	}()
-
 	// Get the UserManager
 	mgr := db.Users()
 	user, err := mgr.GetUser(username, nil)
-
 	if err != nil {
 		return fmt.Errorf("unable to retrieve user %s: %w", username, err)
 	}

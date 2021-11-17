@@ -24,13 +24,14 @@ const processDatabaseMeasurementsPath = processesDatabasesPath + "/%s/measuremen
 
 // ProcessDatabaseMeasurementsService is an interface for interfacing with the process database measurements
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/process-databases-measurements/
 type ProcessDatabaseMeasurementsService interface {
 	List(context.Context, string, string, int, string, *ProcessMeasurementListOptions) (*ProcessDatabaseMeasurements, *Response, error)
 }
 
 // ProcessDatabaseMeasurementsServiceOp handles communication with the process database measurements related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type ProcessDatabaseMeasurementsServiceOp service
 
 // ProcessDatabaseMeasurements represents a MongoDB process database measurements.
@@ -42,6 +43,7 @@ type ProcessDatabaseMeasurements struct {
 var _ ProcessDatabaseMeasurementsService = &ProcessDatabaseMeasurementsServiceOp{}
 
 // List list measurements for a specific Atlas MongoDB database.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/process-databases-measurements/
 func (s *ProcessDatabaseMeasurementsServiceOp) List(ctx context.Context, groupID, hostName string, port int, databaseName string, opts *ProcessMeasurementListOptions) (*ProcessDatabaseMeasurements, *Response, error) {
 	if groupID == "" {

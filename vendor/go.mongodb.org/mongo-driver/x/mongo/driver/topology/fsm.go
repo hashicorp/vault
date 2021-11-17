@@ -12,16 +12,22 @@ import (
 	"sync/atomic"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/address"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
+	"go.mongodb.org/mongo-driver/mongo/address"
+	"go.mongodb.org/mongo-driver/mongo/description"
 )
 
-var supportedWireVersions = description.NewVersionRange(2, 9)
-var minSupportedMongoDBVersion = "2.6"
+var (
+	// SupportedWireVersions is the range of wire versions supported by the driver.
+	SupportedWireVersions = description.NewVersionRange(2, 13)
+)
+
+const (
+	// MinSupportedMongoDBVersion is the version string for the lowest MongoDB version supported by the driver.
+	MinSupportedMongoDBVersion = "2.6"
+)
 
 type fsm struct {
 	description.Topology
-	SetName          string
 	maxElectionID    primitive.ObjectID
 	maxSetVersion    uint32
 	compatible       atomic.Value
@@ -48,6 +54,7 @@ func (f *fsm) apply(s description.Server) (description.Topology, description.Ser
 	f.Topology = description.Topology{
 		Kind:    f.Kind,
 		Servers: newServers,
+		SetName: f.SetName,
 	}
 
 	// For data bearing servers, set SessionTimeoutMinutes to the lowest among them
@@ -89,28 +96,30 @@ func (f *fsm) apply(s description.Server) (description.Topology, description.Ser
 
 	for _, server := range f.Servers {
 		if server.WireVersion != nil {
-			if server.WireVersion.Max < supportedWireVersions.Min {
+			if server.WireVersion.Max < SupportedWireVersions.Min {
 				f.compatible.Store(false)
 				f.compatibilityErr = fmt.Errorf(
 					"server at %s reports wire version %d, but this version of the Go driver requires "+
 						"at least %d (MongoDB %s)",
 					server.Addr.String(),
 					server.WireVersion.Max,
-					supportedWireVersions.Min,
-					minSupportedMongoDBVersion,
+					SupportedWireVersions.Min,
+					MinSupportedMongoDBVersion,
 				)
-				return description.Topology{}, s, f.compatibilityErr
+				f.Topology.CompatibilityErr = f.compatibilityErr
+				return f.Topology, s, nil
 			}
 
-			if server.WireVersion.Min > supportedWireVersions.Max {
+			if server.WireVersion.Min > SupportedWireVersions.Max {
 				f.compatible.Store(false)
 				f.compatibilityErr = fmt.Errorf(
 					"server at %s requires wire version %d, but this version of the Go driver only supports up to %d",
 					server.Addr.String(),
 					server.WireVersion.Min,
-					supportedWireVersions.Max,
+					SupportedWireVersions.Max,
 				)
-				return description.Topology{}, s, f.compatibilityErr
+				f.Topology.CompatibilityErr = f.compatibilityErr
+				return f.Topology, s, nil
 			}
 		}
 	}

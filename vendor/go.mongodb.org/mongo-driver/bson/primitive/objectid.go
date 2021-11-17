@@ -73,19 +73,25 @@ func (id ObjectID) IsZero() bool {
 // ObjectIDFromHex creates a new ObjectID from a hex string. It returns an error if the hex string is not a
 // valid ObjectID.
 func ObjectIDFromHex(s string) (ObjectID, error) {
+	if len(s) != 24 {
+		return NilObjectID, ErrInvalidHex
+	}
+
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		return NilObjectID, err
-	}
-
-	if len(b) != 12 {
-		return NilObjectID, ErrInvalidHex
 	}
 
 	var oid [12]byte
 	copy(oid[:], b[:])
 
 	return oid, nil
+}
+
+// IsValidObjectID returns true if the provided hex string represents a valid ObjectID and false if not.
+func IsValidObjectID(s string) bool {
+	_, err := ObjectIDFromHex(s)
+	return err == nil
 }
 
 // MarshalJSON returns the ObjectID as a string

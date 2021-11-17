@@ -21,22 +21,23 @@ import (
 )
 
 const (
-	searchBasePath = "groups/%s/clusters/%s/fts"
+	searchBasePath = "api/atlas/v1.0/groups/%s/clusters/%s/fts"
 )
 
 // SearchService provides access to the search related functions in the Atlas API.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/atlas-search/
 type SearchService interface {
-	ListIndexes(context.Context, string, string, string, string, *ListOptions) ([]*SearchIndex, *Response, error)
-	GetIndex(context.Context, string, string, string) (*SearchIndex, *Response, error)
-	CreateIndex(context.Context, string, string, *SearchIndex) (*SearchIndex, *Response, error)
-	UpdateIndex(context.Context, string, string, string, *SearchIndex) (*SearchIndex, *Response, error)
-	DeleteIndex(context.Context, string, string, string) (*Response, error)
-	ListAnalyzers(context.Context, string, string, *ListOptions) ([]*SearchAnalyzer, *Response, error)
+	ListIndexes(ctx context.Context, groupID string, clusterName string, databaseName string, collectionName string, opts *ListOptions) ([]*SearchIndex, *Response, error)
+	GetIndex(ctx context.Context, groupID, clusterName, indexID string) (*SearchIndex, *Response, error)
+	CreateIndex(ctx context.Context, projectID, clusterName string, r *SearchIndex) (*SearchIndex, *Response, error)
+	UpdateIndex(ctx context.Context, projectID, clusterName, indexID string, r *SearchIndex) (*SearchIndex, *Response, error)
+	DeleteIndex(ctx context.Context, projectID, clusterName, indexID string) (*Response, error)
+	ListAnalyzers(ctx context.Context, groupID, clusterName string, listOptions *ListOptions) ([]*SearchAnalyzer, *Response, error)
+	UpdateAllAnalyzers(ctx context.Context, groupID, clusterName string, analyzers []*SearchAnalyzer) ([]*SearchAnalyzer, *Response, error)
 }
 
-// SearchServiceOp provides an implementation of the SearchService interface
+// SearchServiceOp provides an implementation of the SearchService interface.
 type SearchServiceOp service
 
 var _ SearchService = &SearchServiceOp{}
@@ -214,48 +215,56 @@ func (s *SearchServiceOp) ListAnalyzers(ctx context.Context, groupID, clusterNam
 	return root, resp, err
 }
 
+// UpdateAllAnalyzers Update All User-Defined Analyzers for a specific Cluster.
+//
+// See more: https://docs.atlas.mongodb.com/reference/api/fts-analyzers-update-all//
+func (s *SearchServiceOp) UpdateAllAnalyzers(ctx context.Context, groupID, clusterName string, analyzers []*SearchAnalyzer) ([]*SearchAnalyzer, *Response, error) {
+	if groupID == "" {
+		return nil, nil, NewArgError("groupID", "must be set")
+	}
+	if clusterName == "" {
+		return nil, nil, NewArgError("clusterName", "must be set")
+	}
+
+	path := fmt.Sprintf(searchBasePath, groupID, clusterName)
+	path = fmt.Sprintf("%s/analyzers", path)
+
+	req, err := s.Client.NewRequest(ctx, http.MethodPut, path, analyzers)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var root []*SearchAnalyzer
+	resp, err := s.Client.Do(ctx, req, &root)
+
+	return root, resp, err
+}
+
 // SearchIndex index definition.
 type SearchIndex struct {
-	Analyzer       string        `json:"analyzer,omitempty"`
-	CollectionName string        `json:"collectionName"`
-	Database       string        `json:"database"`
-	IndexID        string        `json:"indexID,omitempty"`
-	Mappings       *IndexMapping `json:"mappings,omitempty"`
-	Name           string        `json:"name"`
-	SearchAnalyzer string        `json:"searchAnalyzer,omitempty"`
+	Analyzer       string                   `json:"analyzer,omitempty"`
+	Analyzers      []map[string]interface{} `json:"analyzers,omitempty"` // Custom analyzers
+	CollectionName string                   `json:"collectionName"`
+	Database       string                   `json:"database"`
+	IndexID        string                   `json:"indexID,omitempty"`
+	Mappings       *IndexMapping            `json:"mappings,omitempty"`
+	Name           string                   `json:"name"`
+	SearchAnalyzer string                   `json:"searchAnalyzer,omitempty"`
+	Status         string                   `json:"status,omitempty"`
+	Synonyms       []map[string]interface{} `json:"synonyms,omitempty"`
 }
 
 // IndexMapping containing index specifications for the collection fields.
 type IndexMapping struct {
-	Dynamic bool                   `json:"dynamic"`
-	Fields  *map[string]IndexField `json:"fields,omitempty"`
+	Dynamic bool                    `json:"dynamic"`
+	Fields  *map[string]interface{} `json:"fields,omitempty"`
 }
 
-// IndexField field specifications.
-type IndexField struct {
-	Analyzer       string                 `json:"analyzer,omitempty"`
-	Type           string                 `json:"type"`
-	Tokenization   string                 `json:"tokenization,omitempty"` // edgeGram|nGram
-	MinGrams       *int                   `json:"minGrams,omitempty"`
-	MaxGrams       *int                   `json:"maxGrams,omitempty"`
-	FoldDiacritics *bool                  `json:"foldDiacritics,omitempty"`
-	Fields         *map[string]IndexField `json:"fields,omitempty"`
-	SearchAnalyzer string                 `json:"searchAnalyzer,omitempty"`
-	IndexOptions   string                 `json:"indexOptions,omitempty"` // docs|freqs|positions
-	Store          *bool                  `json:"store,omitempty"`
-	IgnoreAbove    *int                   `json:"ignoreAbove,omitempty"`
-	Norms          string                 `json:"norms,omitempty"` // include|omit
-	Dynamic        *bool                  `json:"dynamic,omitempty"`
-	Representation string                 `json:"representation,omitempty"`
-	IndexIntegers  *bool                  `json:"indexIntegers,omitempty"`
-	IndexDoubles   *bool                  `json:"indexDoubles,omitempty"`
-	IndexShapes    *bool                  `json:"indexShapes,omitempty"`
-}
-
-// SearchAnalyzer custom analyzer definition.
+// SearchAnalyzer search analyzer definition.
 type SearchAnalyzer struct {
 	BaseAnalyzer     string   `json:"baseAnalyzer"`
-	MaxTokenLength   *float64 `json:"maxTokenLength,omitempty"`
+	MaxTokenLength   *int     `json:"maxTokenLength,omitempty"`
+	IgnoreCase       *bool    `json:"ignoreCase,omitempty"`
 	Name             string   `json:"name"`
 	StemExclusionSet []string `json:"stemExclusionSet,omitempty"`
 	Stopwords        []string `json:"stopwords,omitempty"`

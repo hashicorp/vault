@@ -45,12 +45,13 @@ func (e *Event) Fire(params *UserEvent, q *WriteOptions) (string, *WriteMeta, er
 	if params.Payload != nil {
 		r.body = bytes.NewReader(params.Payload)
 	}
+	r.header.Set("Content-Type", "application/octet-stream")
 
 	rtt, resp, err := requireOK(e.c.doRequest(r))
 	if err != nil {
 		return "", nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{RequestTime: rtt}
 	var out UserEvent
@@ -74,7 +75,7 @@ func (e *Event) List(name string, q *QueryOptions) ([]*UserEvent, *QueryMeta, er
 	if err != nil {
 		return nil, nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	qm := &QueryMeta{}
 	parseQueryMeta(resp, qm)

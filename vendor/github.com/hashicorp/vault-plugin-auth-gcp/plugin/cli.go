@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-gcp-common/gcputil"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"golang.org/x/oauth2"
-	"google.golang.org/api/iam/v1"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-gcp-common/gcputil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/api"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/iamcredentials/v1"
 )
 
 type CLIHandler struct{}
@@ -20,7 +21,7 @@ type CLIHandler struct{}
 func getSignedJwt(role string, m map[string]string) (string, error) {
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultClient())
 
-	credentials, tokenSource, err := gcputil.FindCredentials(m["credentials"], ctx, iam.CloudPlatformScope)
+	credentials, tokenSource, err := gcputil.FindCredentials(m["credentials"], ctx, iamcredentials.CloudPlatformScope)
 	if err != nil {
 		return "", fmt.Errorf("could not obtain credentials: %v", err)
 	}
@@ -35,16 +36,7 @@ func getSignedJwt(role string, m map[string]string) (string, error) {
 		return "", errors.New("could not obtain service account from credentials (are you using Application Default Credentials?). You must provide a service account to authenticate as")
 	}
 
-	project, ok := m["project"]
-	if !ok {
-		if credentials != nil {
-			project = credentials.ProjectId
-		} else {
-			project = "-"
-		}
-	}
-
-	var ttl = time.Duration(defaultIamMaxJwtExpMinutes) * time.Minute
+	ttl := time.Duration(defaultIamMaxJwtExpMinutes) * time.Minute
 	jwtExpStr, ok := m["jwt_exp"]
 	if ok {
 		ttl, err = parseutil.ParseDurationSecond(jwtExpStr)
@@ -63,16 +55,16 @@ func getSignedJwt(role string, m map[string]string) (string, error) {
 		return "", fmt.Errorf("could not convert JWT payload to JSON string: %v", err)
 	}
 
-	jwtReq := &iam.SignJwtRequest{
+	jwtReq := &iamcredentials.SignJwtRequest{
 		Payload: string(payloadBytes),
 	}
 
-	iamClient, err := iam.New(httpClient)
+	iamClient, err := iamcredentials.New(httpClient)
 	if err != nil {
 		return "", fmt.Errorf("could not create IAM client: %v", err)
 	}
 
-	resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
+	resourceName := fmt.Sprintf(gcputil.ServiceAccountCredentialsTemplate, serviceAccount)
 	resp, err := iamClient.Projects.ServiceAccounts.SignJwt(resourceName, jwtReq).Do()
 	if err != nil {
 		return "", fmt.Errorf("unable to sign JWT for %s using given Vault credentials: %v", resourceName, err)
@@ -104,7 +96,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 			"role": role,
 			"jwt":  loginToken,
 		})
-
 	if err != nil {
 		return nil, err
 	}
@@ -161,10 +152,6 @@ Configuration:
 	"client_email" if "credentials" specified and this value is not. 
 	The actual credential must have the "iam.serviceAccounts.signJWT" 
 	permissions on this service account. 
-  
-  project=<string>                                
-	Project for the service account who will be authenticating to Vault.
-    Defaults to the credential's "project_id" (if credentials are specified)."
 `
 
 	return strings.TrimSpace(help)

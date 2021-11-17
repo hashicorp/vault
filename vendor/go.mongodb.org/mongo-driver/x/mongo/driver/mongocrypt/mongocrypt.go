@@ -15,23 +15,13 @@ package mongocrypt
 // #include <stdlib.h>
 import "C"
 import (
+	"errors"
 	"unsafe"
 
-	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/mongocrypt/options"
 )
 
-// These constants reprsent valid values for KmsProvider.
-const (
-	AwsProvider   = "aws"
-	LocalProvider = "local"
-)
-
-// ErrInvalidProvider is returned when an invalid KMS provider is given.
-var ErrInvalidProvider = errors.New("invalid KMS provider")
-
-// MongoCrypt represents a mongocrypt_t handle.
 type MongoCrypt struct {
 	wrapped *C.mongocrypt_t
 }
@@ -48,10 +38,7 @@ func NewMongoCrypt(opts *options.MongoCryptOptions) (*MongoCrypt, error) {
 	}
 
 	// set options in mongocrypt
-	if err := crypt.setLocalProviderOpts(opts.LocalProviderOpts); err != nil {
-		return nil, err
-	}
-	if err := crypt.setAwsProviderOpts(opts.AwsProviderOpts); err != nil {
+	if err := crypt.setProviderOptions(opts.KmsProviders); err != nil {
 		return nil, err
 	}
 	if err := crypt.setLocalSchemaMap(opts.LocalSchemaMap); err != nil {
@@ -128,33 +115,23 @@ func (m *MongoCrypt) CreateDataKeyContext(kmsProvider string, opts *options.Data
 		return nil, m.createErrorFromStatus()
 	}
 
-	var ok bool
-	switch kmsProvider {
-	case AwsProvider:
-		// set region and key (required fields)
-		region := C.CString(lookupString(opts.MasterKey, "region"))
-		key := C.CString(lookupString(opts.MasterKey, "key"))
-		defer C.free(unsafe.Pointer(region))
-		defer C.free(unsafe.Pointer(key))
-		ok = bool(C.mongocrypt_ctx_setopt_masterkey_aws(ctx.wrapped, region, -1, key, -1))
-		if !ok {
-			break
-		}
-
-		// set endpoint (not a required field)
-		endpoint := lookupString(opts.MasterKey, "endpoint")
-		if endpoint == "" {
-			break
-		}
-		endpointCStr := C.CString(endpoint)
-		defer C.free(unsafe.Pointer(endpointCStr))
-		ok = bool(C.mongocrypt_ctx_setopt_masterkey_aws_endpoint(ctx.wrapped, endpointCStr, -1))
-	case LocalProvider:
-		ok = bool(C.mongocrypt_ctx_setopt_masterkey_local(ctx.wrapped))
+	// Create a masterKey document of the form { "provider": <provider string>, other options... }.
+	var masterKey bsoncore.Document
+	switch {
+	case opts.MasterKey != nil:
+		// The original key passed into the top-level API was already transformed into a raw BSON document and passed
+		// down to here, so we can modify it without copying. Remove the terminating byte to add the "provider" field.
+		masterKey = opts.MasterKey[:len(opts.MasterKey)-1]
+		masterKey = bsoncore.AppendStringElement(masterKey, "provider", kmsProvider)
+		masterKey, _ = bsoncore.AppendDocumentEnd(masterKey, 0)
 	default:
-		return nil, ErrInvalidProvider
+		masterKey = bsoncore.NewDocumentBuilder().AppendString("provider", kmsProvider).Build()
 	}
-	if !ok {
+
+	masterKeyBinary := newBinaryFromBytes(masterKey)
+	defer masterKeyBinary.close()
+
+	if ok := C.mongocrypt_ctx_setopt_key_encryption_key(ctx.wrapped, masterKeyBinary.wrapped); !ok {
 		return nil, ctx.createErrorFromStatus()
 	}
 
@@ -228,34 +205,11 @@ func (m *MongoCrypt) Close() {
 	C.mongocrypt_destroy(m.wrapped)
 }
 
-// setLocalProviderOpts sets options for the local KMS provider in mongocrypt.
-func (m *MongoCrypt) setLocalProviderOpts(opts *options.LocalKmsProviderOptions) error {
-	if opts == nil {
-		return nil
-	}
+func (m *MongoCrypt) setProviderOptions(kmsProviders bsoncore.Document) error {
+	providersBinary := newBinaryFromBytes(kmsProviders)
+	defer providersBinary.close()
 
-	keyBinary := newBinaryFromBytes(opts.MasterKey)
-	defer keyBinary.close()
-
-	if ok := C.mongocrypt_setopt_kms_provider_local(m.wrapped, keyBinary.wrapped); !ok {
-		return m.createErrorFromStatus()
-	}
-	return nil
-}
-
-// setAwsProviderOpts sets options for the AWS KMS provider in mongocrypt.
-func (m *MongoCrypt) setAwsProviderOpts(opts *options.AwsKmsProviderOptions) error {
-	if opts == nil {
-		return nil
-	}
-
-	// create C strings for function params
-	accessKeyID := C.CString(opts.AccessKeyID)
-	secretAccessKey := C.CString(opts.SecretAccessKey)
-	defer C.free(unsafe.Pointer(accessKeyID))
-	defer C.free(unsafe.Pointer(secretAccessKey))
-
-	if ok := C.mongocrypt_setopt_kms_provider_aws(m.wrapped, accessKeyID, C.int32_t(-1), secretAccessKey, C.int32_t(-1)); !ok {
+	if ok := C.mongocrypt_setopt_kms_providers(m.wrapped, providersBinary.wrapped); !ok {
 		return m.createErrorFromStatus()
 	}
 	return nil

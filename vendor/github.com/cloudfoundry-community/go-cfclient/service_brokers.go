@@ -47,7 +47,6 @@ type ServiceBroker struct {
 	Username  string `json:"auth_username"`
 	Password  string `json:"auth_password"`
 	SpaceGUID string `json:"space_guid,omitempty"`
-	c         *Client
 }
 
 func (c *Client) DeleteServiceBroker(guid string) error {
@@ -57,6 +56,7 @@ func (c *Client) DeleteServiceBroker(guid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error deleteing service broker %s, response code: %d", guid, resp.StatusCode)
 	}
@@ -77,12 +77,12 @@ func (c *Client) UpdateServiceBroker(guid string, usb UpdateServiceBrokerRequest
 	if err != nil {
 		return ServiceBroker{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return ServiceBroker{}, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return ServiceBroker{}, err
 	}
@@ -107,12 +107,12 @@ func (c *Client) CreateServiceBroker(csb CreateServiceBrokerRequest) (ServiceBro
 	if err != nil {
 		return ServiceBroker{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return ServiceBroker{}, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
 	if err != nil {
 		return ServiceBroker{}, err
 	}

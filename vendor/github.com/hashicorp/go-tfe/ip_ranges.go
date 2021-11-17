@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/hashicorp/go-retryablehttp"
 )
 
@@ -37,8 +38,7 @@ type IPRange struct {
 }
 
 func (i *ipRanges) Read(ctx context.Context, modifiedSince string) (*IPRange, error) {
-	i.client.baseURL.Path = "/api/"
-	req, err := i.client.newRequest("GET", "meta/ip-ranges", nil)
+	req, err := i.client.newRequest("GET", "/api/meta/ip-ranges", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (i *ipRanges) customDo(ctx context.Context, req *retryablehttp.Request, ir 
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 && resp.StatusCode >= 400 {
-		return fmt.Errorf("Error HTTP response while retrieving IP ranges: %d", resp.StatusCode)
+		return fmt.Errorf("error HTTP response while retrieving IP ranges: %d", resp.StatusCode)
 	} else if resp.StatusCode == 304 {
 		return nil
 	}

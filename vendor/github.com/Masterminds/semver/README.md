@@ -11,6 +11,9 @@ The `semver` package provides the ability to work with [Semantic Versions](http:
 Active](https://masterminds.github.io/stability/active.svg)](https://masterminds.github.io/stability/active.html)
 [![Build Status](https://travis-ci.org/Masterminds/semver.svg)](https://travis-ci.org/Masterminds/semver) [![Build status](https://ci.appveyor.com/api/projects/status/jfk66lib7hb985k8/branch/master?svg=true&passingText=windows%20build%20passing&failingText=windows%20build%20failing)](https://ci.appveyor.com/project/mattfarina/semver/branch/master) [![GoDoc](https://godoc.org/github.com/Masterminds/semver?status.svg)](https://godoc.org/github.com/Masterminds/semver) [![Go Report Card](https://goreportcard.com/badge/github.com/Masterminds/semver)](https://goreportcard.com/report/github.com/Masterminds/semver)
 
+If you are looking for a command line tool for version comparisons please see
+[vert](https://github.com/Masterminds/vert) which uses this library.
+
 ## Parsing Semantic Versions
 
 To parse a semantic version use the `NewVersion` function. For example,
@@ -80,14 +83,32 @@ The basic comparisons are:
 * `>=`: greater than or equal to
 * `<=`: less than or equal to
 
-_Note, according to the Semantic Version specification pre-releases may not be
-API compliant with their release counterpart. It says,_
+## Working With Pre-release Versions
 
-> _A pre-release version indicates that the version is unstable and might not satisfy the intended compatibility requirements as denoted by its associated normal version._
+Pre-releases, for those not familiar with them, are used for software releases
+prior to stable or generally available releases. Examples of pre-releases include
+development, alpha, beta, and release candidate releases. A pre-release may be
+a version such as `1.2.3-beta.1` while the stable release would be `1.2.3`. In the
+order of precidence, pre-releases come before their associated releases. In this
+example `1.2.3-beta.1 < 1.2.3`.
 
-_SemVer comparisons without a pre-release value will skip pre-release versions.
-For example, `>1.2.3` will skip pre-releases when looking at a list of values
-while `>1.2.3-alpha.1` will evaluate pre-releases._
+According to the Semantic Version specification pre-releases may not be
+API compliant with their release counterpart. It says,
+
+> A pre-release version indicates that the version is unstable and might not satisfy the intended compatibility requirements as denoted by its associated normal version.
+
+SemVer comparisons without a pre-release comparator will skip pre-release versions.
+For example, `>=1.2.3` will skip pre-releases when looking at a list of releases
+while `>=1.2.3-0` will evaluate and find pre-releases.
+
+The reason for the `0` as a pre-release version in the example comparison is
+because pre-releases can only contain ASCII alphanumerics and hyphens (along with
+`.` separators), per the spec. Sorting happens in ASCII sort order, again per the spec. The lowest character is a `0` in ASCII sort order (see an [ASCII Table](http://www.asciitable.com/))
+
+Understanding ASCII sort ordering is important because A-Z comes before a-z. That
+means `>=1.2.3-BETA` will return `1.2.3-alpha`. What you might expect from case
+sensitivity doesn't apply here. This is due to ASCII sort ordering which is what
+the spec specifies.
 
 ## Hyphen Range Comparisons
 
@@ -105,7 +126,7 @@ back to the pack level comparison (see tilde below). For example,
 
 * `1.2.x` is equivalent to `>= 1.2.0, < 1.3.0`
 * `>= 1.2.x` is equivalent to `>= 1.2.0`
-* `<= 2.x` is equivalent to `<= 3`
+* `<= 2.x` is equivalent to `< 3`
 * `*` is equivalent to `>= 0.0.0`
 
 ## Tilde Range Comparisons (Patch)
@@ -126,6 +147,7 @@ The caret (`^`) comparison operator is for major level changes. This is useful
 when comparisons of API versions as a major change is API breaking. For example,
 
 * `^1.2.3` is equivalent to `>= 1.2.3, < 2.0.0`
+* `^0.0.1` is equivalent to `>= 0.0.1, < 1.0.0`
 * `^1.2.x` is equivalent to `>= 1.2.0, < 2.0.0`
 * `^2.3` is equivalent to `>= 2.3, < 3`
 * `^2.x` is equivalent to `>= 2.0.0, < 3`
@@ -158,6 +180,13 @@ version didn't meet the constraint is returned. For example,
         // "1.3 is less than 1.4"
     }
 ```
+
+# Fuzzing
+
+ [dvyukov/go-fuzz](https://github.com/dvyukov/go-fuzz) is used for fuzzing.
+
+1. `go-fuzz-build`
+2. `go-fuzz -workdir=fuzz`
 
 # Contribute
 

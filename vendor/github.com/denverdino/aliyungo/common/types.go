@@ -36,6 +36,23 @@ type DescribeEndpointResponse struct {
 	EndpointItem
 }
 
+type DescribeEndpointsArgs struct {
+	Id          Region
+	ServiceCode string
+	Type        string
+}
+
+type DescribeEndpointsResponse struct {
+	Response
+	Endpoints APIEndpoints
+	RequestId string
+	Success   bool
+}
+
+type APIEndpoints struct {
+	Endpoint []EndpointItem
+}
+
 type NetType string
 
 const (
@@ -48,6 +65,7 @@ type TimeType string
 const (
 	Hour  = TimeType("Hour")
 	Day   = TimeType("Day")
+	Week  = TimeType("Week")
 	Month = TimeType("Month")
 	Year  = TimeType("Year")
 )

@@ -26,6 +26,11 @@ const (
 	_SC_NPROCESSORS_MAX  = 516
 )
 
+func getConfigured() (int, error) {
+	n, err := unix.Sysconf(_SC_NPROCESSORS_CONF)
+	return int(n), err
+}
+
 func getKernelMax() (int, error) {
 	n, err := unix.Sysconf(_SC_NPROCESSORS_MAX)
 	return int(n), err

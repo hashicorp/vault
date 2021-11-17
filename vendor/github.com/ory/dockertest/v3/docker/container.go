@@ -824,9 +824,9 @@ func (c *Client) StartContainerWithContext(id string, hostConfig *HostConfig, ct
 
 func (c *Client) startContainer(id string, hostConfig *HostConfig, opts doOptions) error {
 	path := "/containers/" + id + "/start"
-	if c.serverAPIVersion == nil {
-		c.checkAPIVersion()
-	}
+
+	c.checkAPIVersion()
+
 	if c.serverAPIVersion != nil && c.serverAPIVersion.LessThan(apiVersion124) {
 		opts.data = hostConfig
 		opts.forceJSON = true

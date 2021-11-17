@@ -34,14 +34,14 @@ type PolicyDelta struct {
 }
 
 func (p *Policy) AddBindings(toAdd *PolicyDelta) (changed bool, updated *Policy) {
-	return p.ChangedBindings(toAdd, nil)
+	return p.ChangeBindings(toAdd, nil)
 }
 
 func (p *Policy) RemoveBindings(toRemove *PolicyDelta) (changed bool, updated *Policy) {
-	return p.ChangedBindings(nil, toRemove)
+	return p.ChangeBindings(nil, toRemove)
 }
 
-func (p *Policy) ChangedBindings(toAdd *PolicyDelta, toRemove *PolicyDelta) (changed bool, updated *Policy) {
+func (p *Policy) ChangeBindings(toAdd *PolicyDelta, toRemove *PolicyDelta) (changed bool, updated *Policy) {
 	if toAdd == nil && toRemove == nil {
 		return false, p
 	}

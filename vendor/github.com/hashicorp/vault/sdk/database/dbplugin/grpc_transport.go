@@ -22,6 +22,8 @@ var (
 // ---- gRPC Server domain ----
 
 type gRPCServer struct {
+	UnimplementedDatabaseServer
+
 	impl Database
 }
 

@@ -13,17 +13,22 @@ type FilterIterator struct {
 	iter ResultIterator
 }
 
-func NewFilterIterator(wrap ResultIterator, filter FilterFunc) *FilterIterator {
+// NewFilterIterator wraps a ResultIterator. The filter function is applied
+// to each value returned by a call to iter.Next.
+//
+// See the documentation for ResultIterator to understand the behaviour of the
+// returned FilterIterator.
+func NewFilterIterator(iter ResultIterator, filter FilterFunc) *FilterIterator {
 	return &FilterIterator{
 		filter: filter,
-		iter:   wrap,
+		iter:   iter,
 	}
 }
 
 // WatchCh returns the watch channel of the wrapped iterator.
 func (f *FilterIterator) WatchCh() <-chan struct{} { return f.iter.WatchCh() }
 
-// Next returns the next non-filtered result from the wrapped iterator
+// Next returns the next non-filtered result from the wrapped iterator.
 func (f *FilterIterator) Next() interface{} {
 	for {
 		if value := f.iter.Next(); value == nil || !f.filter(value) {

@@ -185,11 +185,11 @@ func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d
 	}
 
 	// Try to clean up resources.
-	if cleanupErr := b.tryDeleteRoleSetResources(ctx, req, resources, walIds); cleanupErr != nil {
-		b.Logger().Warn(
-			"unable to clean up unused GCP resources from deleted roleset. WALs exist to clean up but ignoring error",
-			"roleset", rsName, "errors", cleanupErr)
-		return &logical.Response{Warnings: []string{cleanupErr.Error()}}, nil
+	if warnings := b.tryDeleteRoleSetResources(ctx, req, resources, walIds); len(warnings) > 0 {
+		b.Logger().Debug(
+			"unable to delete GCP resources for deleted roleset but WALs exist to clean up, ignoring errors",
+			"roleset", rsName, "errors", warnings)
+		return &logical.Response{Warnings: warnings}, nil
 	}
 
 	b.Logger().Debug("successfully deleted roleset and GCP resources", "name", rsName)

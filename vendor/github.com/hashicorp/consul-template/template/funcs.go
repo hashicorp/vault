@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -20,9 +22,11 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	spewLib "github.com/davecgh/go-spew/spew"
 	dep "github.com/hashicorp/consul-template/dependency"
 	"github.com/hashicorp/consul/api"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
+	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -77,6 +81,28 @@ func envFunc(env []string) func(string) (string, error) {
 			}
 		}
 		return os.Getenv(s), nil
+	}
+}
+
+// envWithDefaultFunc returns a function which checks the value of an environment variable.
+// Invokers can specify their own environment, which takes precedences over any
+// real environment variables.
+// If an environment variable is found, the value of that variable will be used. This includes empty values.
+// Otherwise, the default will be used instead.
+func envWithDefaultFunc(env []string) func(string, string) (string, error) {
+	return func(s string, def string) (string, error) {
+		for _, e := range env {
+			split := strings.SplitN(e, "=", 2)
+			k, v := split[0], split[1]
+			if k == s {
+				return v, nil
+			}
+		}
+		val, isPresent := os.LookupEnv(s)
+		if isPresent {
+			return val, nil
+		}
+		return def, nil
 	}
 }
 
@@ -714,6 +740,19 @@ func containsSomeFunc(retTrue, invert bool) func([]interface{}, interface{}) (bo
 	}
 }
 
+// mergeMap is used to merge two maps
+func mergeMap(dstMap map[string]interface{}, srcMap map[string]interface{}, args ...func(*mergo.Config)) (map[string]interface{}, error) {
+	if err := mergo.Map(&dstMap, srcMap, args...); err != nil {
+		return nil, err
+	}
+	return dstMap, nil
+}
+
+// mergeMapWithOverride is used to merge two maps with dstMap overriding vaules in srcMap
+func mergeMapWithOverride(dstMap map[string]interface{}, srcMap map[string]interface{}) (map[string]interface{}, error) {
+	return mergeMap(dstMap, srcMap, mergo.WithOverride)
+}
+
 // explode is used to expand a list of keypairs into a deeply-nested hash.
 func explode(pairs []*dep.KeyPair) (map[string]interface{}, error) {
 	m := make(map[string]interface{})
@@ -1119,6 +1158,30 @@ func toJSONPretty(m map[string]interface{}) (string, error) {
 		return "", errors.Wrap(err, "toJSONPretty")
 	}
 	return string(bytes.TrimSpace(result)), err
+}
+
+// toUnescapedJSON converts the given structure into a deeply nested JSON string without HTML escaping.
+func toUnescapedJSON(i interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(i); err != nil {
+		return "", errors.Wrap(err, "toUnescapedJSON")
+	}
+	return strings.TrimRight(buf.String(), "\r\n"), nil
+}
+
+// toUnescapedJSONPretty converts the given structure into a deeply nested pretty JSON
+// string without HTML escaping.
+func toUnescapedJSONPretty(m map[string]interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(m); err != nil {
+		return "", errors.Wrap(err, "toUnescapedJSONPretty")
+	}
+	return strings.TrimRight(buf.String(), "\r\n"), nil
 }
 
 // toTitle converts the given string (usually by a pipe) to titlecase.
@@ -1541,4 +1604,98 @@ func sha256Hex(item string) (string, error) {
 	h.Write([]byte(item))
 	output := hex.EncodeToString(h.Sum(nil))
 	return output, nil
+}
+
+// md5sum returns the md5 hash of a string
+func md5sum(item string) (string, error) {
+	return fmt.Sprintf("%x", md5.Sum([]byte(item))), nil
+}
+
+// writeToFile writes the content to a file with username, group name, permissions and optional
+// flags to select appending mode or add a newline.
+//
+// For example:
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "my-user" "my-group" "0644"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "my-user" "my-group" "0644" "append"
+//   key "my/key/path" | writeToFile "/my/file/path.txt" "my-user" "my-group" "0644" "append,newline"
+//
+func writeToFile(path, username, groupName, permissions string, args ...string) (string, error) {
+	// Parse arguments
+	flags := ""
+	if len(args) == 2 {
+		flags = args[0]
+	}
+	content := args[len(args)-1]
+
+	p_u, err := strconv.ParseUint(permissions, 8, 32)
+	if err != nil {
+		return "", err
+	}
+	perm := os.FileMode(p_u)
+
+	// Write to file
+	var f *os.File
+	shouldAppend := strings.Contains(flags, "append")
+	if shouldAppend {
+		f, err = os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, perm)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		f, err = os.Create(path)
+		if err != nil {
+			return "", err
+		}
+	}
+	defer f.Close()
+
+	writingContent := []byte(content)
+	shouldAddNewLine := strings.Contains(flags, "newline")
+	if shouldAddNewLine {
+		writingContent = append(writingContent, []byte("\n")...)
+	}
+	if _, err = f.Write(writingContent); err != nil {
+		return "", err
+	}
+
+	// Change ownership and permissions
+	u, err := user.Lookup(username)
+	if err != nil {
+		return "", err
+	}
+	g, err := user.LookupGroup(groupName)
+	if err != nil {
+		return "", err
+	}
+	uid, _ := strconv.Atoi(u.Uid)
+	gid, _ := strconv.Atoi(g.Gid)
+	err = os.Chown(path, uid, gid)
+	if err != nil {
+		return "", err
+	}
+
+	err = os.Chmod(path, perm)
+	if err != nil {
+		return "", err
+	}
+
+	return "", nil
+}
+
+func spewSdump(args ...interface{}) (string, error) {
+	return spewLib.Sdump(args...), nil
+}
+
+func spewSprintf(format string, args ...interface{}) (string, error) {
+	return spewLib.Sprintf(format, args...), nil
+}
+
+func spewDump(args ...interface{}) (string, error) {
+	spewLib.Dump(args...)
+	return "", nil
+}
+
+func spewPrintf(format string, args ...interface{}) (string, error) {
+	spewLib.Printf(format, args...)
+	return "", nil
 }

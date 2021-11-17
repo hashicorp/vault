@@ -13,11 +13,11 @@ import (
 	"errors"
 
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -39,6 +39,7 @@ type Distinct struct {
 	selector       description.ServerSelector
 	retry          *driver.RetryMode
 	result         DistinctResult
+	serverAPI      *driver.ServerAPIOptions
 }
 
 type DistinctResult struct {
@@ -72,9 +73,9 @@ func NewDistinct(key string, query bsoncore.Document) *Distinct {
 // Result returns the result of executing this operation.
 func (d *Distinct) Result() DistinctResult { return d.result }
 
-func (d *Distinct) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (d *Distinct) processResponse(info driver.ResponseInfo) error {
 	var err error
-	d.result, err = buildDistinctResult(response, srvr)
+	d.result, err = buildDistinctResult(info.ServerResponse, info.Server)
 	return err
 }
 
@@ -98,6 +99,7 @@ func (d *Distinct) Execute(ctx context.Context) error {
 		ReadConcern:       d.readConcern,
 		ReadPreference:    d.readPreference,
 		Selector:          d.selector,
+		ServerAPI:         d.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -270,5 +272,15 @@ func (d *Distinct) Retry(retry driver.RetryMode) *Distinct {
 	}
 
 	d.retry = &retry
+	return d
+}
+
+// ServerAPI sets the server API version for this operation.
+func (d *Distinct) ServerAPI(serverAPI *driver.ServerAPIOptions) *Distinct {
+	if d == nil {
+		d = new(Distinct)
+	}
+
+	d.serverAPI = serverAPI
 	return d
 }

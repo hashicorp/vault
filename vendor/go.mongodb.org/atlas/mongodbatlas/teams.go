@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	teamsBasePath = "orgs/%s/teams"
+	teamsOrgBasePath  = "api/atlas/v1.0/orgs/%s/teams"
+	teamsProjBasePath = "api/atlas/v1.0/groups/%s/teams/%s"
 )
 
 // TeamsService is an interface for interfacing with the Teams
@@ -43,19 +44,19 @@ type TeamsService interface {
 }
 
 // TeamsServiceOp handles communication with the Teams related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type TeamsServiceOp service
 
 var _ TeamsService = &TeamsServiceOp{}
 
-// TeamsResponse represents a array of project
+// TeamsResponse represents a array of project.
 type TeamsResponse struct {
 	Links      []*Link `json:"links"`
 	Results    []Team  `json:"results"`
 	TotalCount int     `json:"totalCount"`
 }
 
-// Team defines an Atlas team structure
+// Team defines an Atlas team structure.
 type Team struct {
 	ID        string   `json:"id,omitempty"`
 	Name      string   `json:"name"`
@@ -69,19 +70,19 @@ type AtlasUserAssigned struct {
 	TotalCount int         `json:"totalCount"`
 }
 
-// TeamUpdateRoles update request body
+// TeamUpdateRoles update request body.
 type TeamUpdateRoles struct {
 	RoleNames []string `json:"roleNames"`
 }
 
-// TeamUpdateRolesResponse update roles response
+// TeamUpdateRolesResponse update roles response.
 type TeamUpdateRolesResponse struct {
 	Links      []*Link     `json:"links"`
 	Results    []TeamRoles `json:"results"`
 	TotalCount int         `json:"totalCount"`
 }
 
-// TeamRoles List of roles for a team
+// TeamRoles List of roles for a team.
 type TeamRoles struct {
 	Links     []*Link  `json:"links"`
 	RoleNames []string `json:"roleNames"`
@@ -92,7 +93,7 @@ type TeamRoles struct {
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/project-get-all/
 func (s *TeamsServiceOp) List(ctx context.Context, orgID string, listOptions *ListOptions) ([]Team, *Response, error) {
-	path := fmt.Sprintf(teamsBasePath, orgID)
+	path := fmt.Sprintf(teamsOrgBasePath, orgID)
 
 	// Add query params from listOptions
 	path, err := setListOptions(path, listOptions)
@@ -122,11 +123,14 @@ func (s *TeamsServiceOp) List(ctx context.Context, orgID string, listOptions *Li
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-get-one-by-id/
 func (s *TeamsServiceOp) Get(ctx context.Context, orgID, teamID string) (*Team, *Response, error) {
+	if orgID == "" {
+		return nil, nil, NewArgError("orgID", "must be set")
+	}
 	if teamID == "" {
 		return nil, nil, NewArgError("teamID", "must be set")
 	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/%s", basePath, teamID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -147,11 +151,14 @@ func (s *TeamsServiceOp) Get(ctx context.Context, orgID, teamID string) (*Team, 
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/project-get-one-by-name/
 func (s *TeamsServiceOp) GetOneTeamByName(ctx context.Context, orgID, teamName string) (*Team, *Response, error) {
+	if orgID == "" {
+		return nil, nil, NewArgError("orgID", "must be set")
+	}
 	if teamName == "" {
 		return nil, nil, NewArgError("teamName", "must be set")
 	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/byName/%s", basePath, teamName)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -175,8 +182,11 @@ func (s *TeamsServiceOp) GetTeamUsersAssigned(ctx context.Context, orgID, teamID
 	if orgID == "" {
 		return nil, nil, NewArgError("orgID", "must be set")
 	}
+	if teamID == "" {
+		return nil, nil, NewArgError("teamID", "must be set")
+	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/%s/users", basePath, teamID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodGet, path, nil)
@@ -201,11 +211,14 @@ func (s *TeamsServiceOp) GetTeamUsersAssigned(ctx context.Context, orgID, teamID
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-create-one/
 func (s *TeamsServiceOp) Create(ctx context.Context, orgID string, createRequest *Team) (*Team, *Response, error) {
+	if orgID == "" {
+		return nil, nil, NewArgError("orgID", "must be set")
+	}
 	if createRequest == nil {
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
 
-	req, err := s.Client.NewRequest(ctx, http.MethodPost, fmt.Sprintf(teamsBasePath, orgID), createRequest)
+	req, err := s.Client.NewRequest(ctx, http.MethodPost, fmt.Sprintf(teamsOrgBasePath, orgID), createRequest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -223,11 +236,17 @@ func (s *TeamsServiceOp) Create(ctx context.Context, orgID string, createRequest
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-rename-one/
 func (s *TeamsServiceOp) Rename(ctx context.Context, orgID, teamID, teamName string) (*Team, *Response, error) {
+	if orgID == "" {
+		return nil, nil, NewArgError("orgID", "must be set")
+	}
+	if teamID == "" {
+		return nil, nil, NewArgError("teamID", "must be set")
+	}
 	if teamName == "" {
 		return nil, nil, NewArgError("teamName", "cannot be nil")
 	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/%s", basePath, teamID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodPatch, path, map[string]interface{}{
@@ -250,11 +269,17 @@ func (s *TeamsServiceOp) Rename(ctx context.Context, orgID, teamID, teamName str
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-update-roles/
 func (s *TeamsServiceOp) UpdateTeamRoles(ctx context.Context, orgID, teamID string, updateTeamRolesRequest *TeamUpdateRoles) ([]TeamRoles, *Response, error) {
+	if orgID == "" {
+		return nil, nil, NewArgError("orgID", "must be set")
+	}
+	if teamID == "" {
+		return nil, nil, NewArgError("teamID", "must be set")
+	}
 	if updateTeamRolesRequest == nil {
 		return nil, nil, NewArgError("updateTeamRolesRequest", "cannot be nil")
 	}
 
-	path := fmt.Sprintf("groups/%s/teams/%s", orgID, teamID)
+	path := fmt.Sprintf(teamsProjBasePath, orgID, teamID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodPatch, path, updateTeamRolesRequest)
 	if err != nil {
@@ -278,11 +303,17 @@ func (s *TeamsServiceOp) UpdateTeamRoles(ctx context.Context, orgID, teamID stri
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-add-user/
 func (s *TeamsServiceOp) AddUsersToTeam(ctx context.Context, orgID, teamID string, usersID []string) ([]AtlasUser, *Response, error) {
+	if orgID == "" {
+		return nil, nil, NewArgError("orgID", "must be set")
+	}
+	if teamID == "" {
+		return nil, nil, NewArgError("teamID", "must be set")
+	}
 	if len(usersID) < 1 {
 		return nil, nil, NewArgError("usersID", "cannot empty at leas one userID must be set")
 	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/%s/users", basePath, teamID)
 
 	users := make([]map[string]interface{}, len(usersID))
@@ -313,11 +344,17 @@ func (s *TeamsServiceOp) AddUsersToTeam(ctx context.Context, orgID, teamID strin
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-remove-user/
 func (s *TeamsServiceOp) RemoveUserToTeam(ctx context.Context, orgID, teamID, userID string) (*Response, error) {
+	if orgID == "" {
+		return nil, NewArgError("orgID", "must be set")
+	}
+	if teamID == "" {
+		return nil, NewArgError("teamID", "must be set")
+	}
 	if userID == "" {
 		return nil, NewArgError("userID", "cannot be nil")
 	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/%s/users/%s", basePath, teamID, userID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -337,11 +374,14 @@ func (s *TeamsServiceOp) RemoveUserToTeam(ctx context.Context, orgID, teamID, us
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-delete-one/
 func (s *TeamsServiceOp) RemoveTeamFromOrganization(ctx context.Context, orgID, teamID string) (*Response, error) {
+	if orgID == "" {
+		return nil, NewArgError("orgID", "must be set")
+	}
 	if teamID == "" {
 		return nil, NewArgError("teamID", "cannot be nil")
 	}
 
-	basePath := fmt.Sprintf(teamsBasePath, orgID)
+	basePath := fmt.Sprintf(teamsOrgBasePath, orgID)
 	path := fmt.Sprintf("%s/%s", basePath, teamID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
@@ -361,11 +401,14 @@ func (s *TeamsServiceOp) RemoveTeamFromOrganization(ctx context.Context, orgID, 
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/teams-remove-from-project/
 func (s *TeamsServiceOp) RemoveTeamFromProject(ctx context.Context, groupID, teamID string) (*Response, error) {
+	if groupID == "" {
+		return nil, NewArgError("groupID", "must be set")
+	}
 	if teamID == "" {
 		return nil, NewArgError("teamID", "cannot be nil")
 	}
 
-	path := fmt.Sprintf("groups/%s/teams/%s", groupID, teamID)
+	path := fmt.Sprintf(teamsProjBasePath, groupID, teamID)
 
 	req, err := s.Client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {

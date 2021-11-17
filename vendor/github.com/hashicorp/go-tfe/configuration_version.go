@@ -3,7 +3,6 @@ package tfe
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -30,6 +29,9 @@ type ConfigurationVersions interface {
 
 	// Read a configuration version by its ID.
 	Read(ctx context.Context, cvID string) (*ConfigurationVersion, error)
+
+	// ReadWithOptions reads a configuration version by its ID using the options supplied
+	ReadWithOptions(ctx context.Context, cvID string, options *ConfigurationVersionReadOptions) (*ConfigurationVersion, error)
 
 	// Upload packages and uploads Terraform configuration files. It requires
 	// the upload URL from a configuration version and the full path to the
@@ -83,26 +85,63 @@ type ConfigurationVersion struct {
 	Status           ConfigurationStatus `jsonapi:"attr,status"`
 	StatusTimestamps *CVStatusTimestamps `jsonapi:"attr,status-timestamps"`
 	UploadURL        string              `jsonapi:"attr,upload-url"`
+
+	// Relations
+	IngressAttributes *IngressAttributes `jsonapi:"relation,ingress-attributes"`
 }
 
 // CVStatusTimestamps holds the timestamps for individual configuration version
 // statuses.
 type CVStatusTimestamps struct {
-	FinishedAt time.Time `json:"finished-at"`
-	QueuedAt   time.Time `json:"queued-at"`
-	StartedAt  time.Time `json:"started-at"`
+	FinishedAt time.Time `jsonapi:"attr,finished-at,rfc3339"`
+	QueuedAt   time.Time `jsonapi:"attr,queued-at,rfc3339"`
+	StartedAt  time.Time `jsonapi:"attr,started-at,rfc3339"`
+}
+
+// ConfigurationVersionReadOptions represents the options for reading a configuration version.
+type ConfigurationVersionReadOptions struct {
+	Include string `url:"include"`
 }
 
 // ConfigurationVersionListOptions represents the options for listing
 // configuration versions.
 type ConfigurationVersionListOptions struct {
 	ListOptions
+
+	// A list of relations to include. See available resources:
+	// https://www.terraform.io/docs/cloud/api/configuration-versions.html#available-related-resources
+	Include *string `url:"include"`
+}
+
+// IngressAttributes include commit information associated with configuration versions sourced from VCS.
+type IngressAttributes struct {
+	ID                string `jsonapi:"primary,ingress-attributes"`
+	Branch            string `jsonapi:"attr,branch"`
+	CloneURL          string `jsonapi:"attr,clone-url"`
+	CommitMessage     string `jsonapi:"attr,commit-message"`
+	CommitSHA         string `jsonapi:"attr,commit-sha"`
+	CommitURL         string `jsonapi:"attr,commit-url"`
+	CompareURL        string `jsonapi:"attr,compare-url"`
+	Identifier        string `jsonapi:"attr,identifier"`
+	IsPullRequest     bool   `jsonapi:"attr,is-pull-request"`
+	OnDefaultBranch   bool   `jsonapi:"attr,on-default-branch"`
+	PullRequestNumber int    `jsonapi:"attr,pull-request-number"`
+	PullRequestURL    string `jsonapi:"attr,pull-request-url"`
+	PullRequestTitle  string `jsonapi:"attr,pull-request-title"`
+	PullRequestBody   string `jsonapi:"attr,pull-request-body"`
+	Tag               string `jsonapi:"attr,tag"`
+	SenderUsername    string `jsonapi:"attr,sender-username"`
+	SenderAvatarURL   string `jsonapi:"attr,sender-avatar-url"`
+	SenderHTMLURL     string `jsonapi:"attr,sender-html-url"`
+
+	// Links
+	Links map[string]interface{} `jsonapi:"links,omitempty"`
 }
 
 // List returns all configuration versions of a workspace.
 func (s *configurationVersions) List(ctx context.Context, workspaceID string, options ConfigurationVersionListOptions) (*ConfigurationVersionList, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
 
 	u := fmt.Sprintf("workspaces/%s/configuration-versions", url.QueryEscape(workspaceID))
@@ -123,8 +162,11 @@ func (s *configurationVersions) List(ctx context.Context, workspaceID string, op
 // ConfigurationVersionCreateOptions represents the options for creating a
 // configuration version.
 type ConfigurationVersionCreateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,configuration-versions"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,configuration-versions"`
 
 	// When true, runs are queued automatically when the configuration version
 	// is uploaded.
@@ -138,11 +180,8 @@ type ConfigurationVersionCreateOptions struct {
 // configuration version will be usable once data is uploaded to it.
 func (s *configurationVersions) Create(ctx context.Context, workspaceID string, options ConfigurationVersionCreateOptions) (*ConfigurationVersion, error) {
 	if !validStringID(&workspaceID) {
-		return nil, errors.New("invalid value for workspace ID")
+		return nil, ErrInvalidWorkspaceID
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("workspaces/%s/configuration-versions", url.QueryEscape(workspaceID))
 	req, err := s.client.newRequest("POST", u, &options)
@@ -161,12 +200,17 @@ func (s *configurationVersions) Create(ctx context.Context, workspaceID string, 
 
 // Read a configuration version by its ID.
 func (s *configurationVersions) Read(ctx context.Context, cvID string) (*ConfigurationVersion, error) {
+	return s.ReadWithOptions(ctx, cvID, nil)
+}
+
+// Read a configuration version by its ID with the given options.
+func (s *configurationVersions) ReadWithOptions(ctx context.Context, cvID string, options *ConfigurationVersionReadOptions) (*ConfigurationVersion, error) {
 	if !validStringID(&cvID) {
-		return nil, errors.New("invalid value for configuration version ID")
+		return nil, ErrInvalidConfigVersionID
 	}
 
 	u := fmt.Sprintf("configuration-versions/%s", url.QueryEscape(cvID))
-	req, err := s.client.newRequest("GET", u, nil)
+	req, err := s.client.newRequest("GET", u, options)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +233,7 @@ func (s *configurationVersions) Upload(ctx context.Context, url, path string) er
 		return err
 	}
 	if !file.Mode().IsDir() {
-		return errors.New("path needs to be an existing directory")
+		return ErrMissingDirectory
 	}
 
 	body := bytes.NewBuffer(nil)

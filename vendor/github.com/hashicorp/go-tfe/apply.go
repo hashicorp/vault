@@ -2,7 +2,6 @@ package tfe
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,7 +14,7 @@ var _ Applies = (*applies)(nil)
 // Applies describes all the apply related methods that the Terraform
 // Enterprise API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/apply.html
+// TFE API docs: https://www.terraform.io/docs/cloud/api/applies.html
 type Applies interface {
 	// Read an apply by its ID.
 	Read(ctx context.Context, applyID string) (*Apply, error)
@@ -58,18 +57,18 @@ type Apply struct {
 
 // ApplyStatusTimestamps holds the timestamps for individual apply statuses.
 type ApplyStatusTimestamps struct {
-	CanceledAt      time.Time `json:"canceled-at"`
-	ErroredAt       time.Time `json:"errored-at"`
-	FinishedAt      time.Time `json:"finished-at"`
-	ForceCanceledAt time.Time `json:"force-canceled-at"`
-	QueuedAt        time.Time `json:"queued-at"`
-	StartedAt       time.Time `json:"started-at"`
+	CanceledAt      time.Time `jsonapi:"attr,canceled-at,rfc3339"`
+	ErroredAt       time.Time `jsonapi:"attr,errored-at,rfc3339"`
+	FinishedAt      time.Time `jsonapi:"attr,finished-at,rfc3339"`
+	ForceCanceledAt time.Time `jsonapi:"attr,force-canceled-at,rfc3339"`
+	QueuedAt        time.Time `jsonapi:"attr,queued-at,rfc3339"`
+	StartedAt       time.Time `jsonapi:"attr,started-at,rfc3339"`
 }
 
 // Read an apply by its ID.
 func (s *applies) Read(ctx context.Context, applyID string) (*Apply, error) {
 	if !validStringID(&applyID) {
-		return nil, errors.New("invalid value for apply ID")
+		return nil, ErrInvalidApplyID
 	}
 
 	u := fmt.Sprintf("applies/%s", url.QueryEscape(applyID))
@@ -90,7 +89,7 @@ func (s *applies) Read(ctx context.Context, applyID string) (*Apply, error) {
 // Logs retrieves the logs of an apply.
 func (s *applies) Logs(ctx context.Context, applyID string) (io.Reader, error) {
 	if !validStringID(&applyID) {
-		return nil, errors.New("invalid value for apply ID")
+		return nil, ErrInvalidApplyID
 	}
 
 	// Get the apply to make sure it exists.

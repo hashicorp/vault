@@ -78,7 +78,7 @@ func (client *Client) DescribeSnatTableEntries(args *DescribeSnatTableEntriesArg
 	return response.SnatTableEntries.SnatTableEntry, &response.PaginationResult, nil
 }
 
-func (client *Client) DescribeSnatTableEntriesWithRaw(args *DescribeSnatTableEntriesArgs) ( response *DescribeSnatTableEntriesResponse, err error) {
+func (client *Client) DescribeSnatTableEntriesWithRaw(args *DescribeSnatTableEntriesArgs) (response *DescribeSnatTableEntriesResponse, err error) {
 	args.Validate()
 	response = &DescribeSnatTableEntriesResponse{}
 

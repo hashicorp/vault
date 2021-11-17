@@ -47,8 +47,12 @@ func (b *backend) pathCreds() *framework.Path {
 				Description: "Name of the role",
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.credReadOperation,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:                    b.credReadOperation,
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
 		},
 		HelpSynopsis:    credHelpSynopsis,
 		HelpDescription: credHelpDescription,
@@ -154,7 +158,34 @@ func (b *backend) generateAndReturnCreds(ctx context.Context, engineConf *config
 		return nil, err
 	}
 
-	if err := b.client.UpdatePassword(engineConf.ADConf, role.ServiceAccountName, newPassword); err != nil {
+	var currentPassword, lastPassword string
+	if previousCred != nil {
+		if val, ok := previousCred["current_password"].(string); ok {
+			currentPassword = val
+		}
+
+		if val, ok := previousCred["last_password"].(string); ok {
+			lastPassword = val
+		}
+	}
+
+	wal := rotateCredentialEntry{
+		CurrentPassword:    currentPassword,
+		LastPassword:       lastPassword,
+		RoleName:           roleName,
+		TTL:                role.TTL,
+		ServiceAccountName: role.ServiceAccountName,
+		LastVaultRotation:  role.LastVaultRotation,
+	}
+
+	// Bail if we can't persist the WAL
+	walID, err := framework.PutWAL(ctx, storage, rotateCredentialWAL, wal)
+	if err != nil {
+		return nil, fmt.Errorf("could not persist WAL before rotation: %s", err)
+	}
+
+	err = b.client.UpdatePassword(engineConf.ADConf, role.ServiceAccountName, newPassword)
+	if err != nil {
 		return nil, err
 	}
 
@@ -169,23 +200,22 @@ func (b *backend) generateAndReturnCreds(ctx context.Context, engineConf *config
 	// Although a service account name is typically my_app@example.com,
 	// the username it uses is just my_app, or everything before the @.
 	var username string
-	fields := strings.Split(role.ServiceAccountName, "@")
-	if len(fields) > 0 {
-		username = fields[0]
-	} else {
-		return nil, fmt.Errorf("unable to infer username from service account name: %s", role.ServiceAccountName)
+	if username, err = getUsername(role.ServiceAccountName); err != nil {
+		return nil, err
 	}
 
 	cred := map[string]interface{}{
 		"username":         username,
 		"current_password": newPassword,
 	}
-	if previousCred["current_password"] != nil {
+
+	if previousCred != nil && previousCred["current_password"] != nil {
 		cred["last_password"] = previousCred["current_password"]
 	}
 
 	// Cache and save the cred.
-	entry, err := logical.StorageEntryJSON(storageKey+"/"+roleName, cred)
+	path := fmt.Sprintf("%s/%s", storageKey, roleName)
+	entry, err := logical.StorageEntryJSON(path, cred)
 	if err != nil {
 		return nil, err
 	}
@@ -194,9 +224,27 @@ func (b *backend) generateAndReturnCreds(ctx context.Context, engineConf *config
 	}
 	b.credCache.SetDefault(roleName, cred)
 
+	// Delete the WAL entry
+	if err := framework.DeleteWAL(ctx, storage, walID); err != nil {
+		// The rotation was successful, so don't return the error.
+		// The WAL will eventually be discarded by the rollback handler.
+		b.Logger().Warn("failed to delete password rotation WAL", "error", err.Error())
+	}
+
 	return &logical.Response{
 		Data: cred,
 	}, nil
+}
+
+// getUsername extracts the username from a service account name by
+// splitting on @. For example, if vault@hashicorp.com is the service
+// account, vault is the username.
+func getUsername(serviceAccount string) (string, error) {
+	fields := strings.Split(serviceAccount, "@")
+	if len(fields) > 0 {
+		return fields[0], nil
+	}
+	return "", fmt.Errorf("unable to infer username from service account name: %s", serviceAccount)
 }
 
 const (

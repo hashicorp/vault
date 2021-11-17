@@ -30,7 +30,7 @@ type couchbaseDBConnectionProducer struct {
 	rawConfig   map[string]interface{}
 	Type        string
 	cluster     *gocb.Cluster
-	sync.Mutex
+	sync.RWMutex
 }
 
 func (c *couchbaseDBConnectionProducer) secretValues() map[string]string {
@@ -41,7 +41,7 @@ func (c *couchbaseDBConnectionProducer) secretValues() map[string]string {
 }
 
 func (c *couchbaseDBConnectionProducer) Init(ctx context.Context, initConfig map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error) {
-
+	// Don't let anyone read or write the config while we're using it
 	c.Lock()
 	defer c.Unlock()
 
@@ -98,9 +98,10 @@ func (c *couchbaseDBConnectionProducer) Initialize(ctx context.Context, config m
 	_, err := c.Init(ctx, config, verifyConnection)
 	return err
 }
+
 func (c *couchbaseDBConnectionProducer) Connection(ctx context.Context) (interface{}, error) {
-	// This is intentionally not grabbing the lock since the calling functions (e.g. CreateUser)
-	// are claiming it. (The locking patterns could be refactored to be more consistent/clear.)
+	// This is intentionally not grabbing the lock since the calling functions
+	// (e.g. CreateUser) are claiming it.
 
 	if !c.Initialized {
 		return nil, connutil.ErrNotInitialized
@@ -163,7 +164,6 @@ func (c *couchbaseDBConnectionProducer) Connection(ctx context.Context) (interfa
 
 // close terminates the database connection without locking
 func (c *couchbaseDBConnectionProducer) close() error {
-
 	if c.cluster != nil {
 		if err := c.cluster.Close(&gocb.ClusterCloseOptions{}); err != nil {
 			return err
@@ -176,6 +176,7 @@ func (c *couchbaseDBConnectionProducer) close() error {
 
 // Close terminates the database connection with locking
 func (c *couchbaseDBConnectionProducer) Close() error {
+	// Don't let anyone read or write the config while we're using it
 	c.Lock()
 	defer c.Unlock()
 

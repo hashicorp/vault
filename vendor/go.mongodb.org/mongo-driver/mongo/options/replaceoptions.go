@@ -23,7 +23,8 @@ type ReplaceOptions struct {
 	// as a document. This option is only valid for MongoDB versions >= 4.2. Server versions >= 3.4 will return an error
 	// if this option is specified. For server versions < 3.4, the driver will return a client-side error if this option
 	// is specified. The driver will return an error if this option is specified during an unacknowledged write
-	// operation. The default value is nil, which means that no hint will be sent.
+	// operation. The driver will return an error if the hint parameter is a multi-key map. The default value is nil,
+	// which means that no hint will be sent.
 	Hint interface{}
 
 	// If true, a new document will be inserted if the filter does not match any documents in the collection. The

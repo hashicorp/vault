@@ -24,6 +24,8 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.13
+// +k8s:prerelease-lifecycle-gen:deprecated=1.22
 
 // RuntimeClass defines a class of container runtime supported in the cluster.
 // The RuntimeClass is used to determine which container runtime is used to run
@@ -31,7 +33,7 @@ import (
 // user or cluster provisioner, and referenced in the PodSpec. The Kubelet is
 // responsible for resolving the RuntimeClassName reference before running the
 // pod.  For more details, see
-// https://git.k8s.io/enhancements/keps/sig-node/runtime-class.md
+// https://git.k8s.io/enhancements/keps/sig-node/585-runtime-class
 type RuntimeClass struct {
 	metav1.TypeMeta `json:",inline"`
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
@@ -46,14 +48,14 @@ type RuntimeClass struct {
 	// For example, a handler called "runc" might specify that the runc OCI
 	// runtime (using native Linux containers) will be used to run the containers
 	// in a pod.
-	// The Handler must conform to the DNS Label (RFC 1123) requirements, and is
-	// immutable.
+	// The Handler must be lowercase, conform to the DNS Label (RFC 1123) requirements,
+	// and is immutable.
 	Handler string `json:"handler" protobuf:"bytes,2,opt,name=handler"`
 
 	// Overhead represents the resource overhead associated with running a pod for a
 	// given RuntimeClass. For more details, see
-	// https://git.k8s.io/enhancements/keps/sig-node/20190226-pod-overhead.md
-	// This field is alpha-level as of Kubernetes v1.15, and is only honored by servers that enable the PodOverhead feature.
+	// https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README.md
+	// This field is beta-level as of Kubernetes v1.18, and is only honored by servers that enable the PodOverhead feature.
 	// +optional
 	Overhead *Overhead `json:"overhead,omitempty" protobuf:"bytes,3,opt,name=overhead"`
 
@@ -81,6 +83,7 @@ type Scheduling struct {
 	// with a pod's existing nodeSelector. Any conflicts will cause the pod to
 	// be rejected in admission.
 	// +optional
+	// +mapType=atomic
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" protobuf:"bytes,1,opt,name=nodeSelector"`
 
 	// tolerations are appended (excluding duplicates) to pods running with this
@@ -92,6 +95,8 @@ type Scheduling struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:prerelease-lifecycle-gen:introduced=1.13
+// +k8s:prerelease-lifecycle-gen:deprecated=1.22
 
 // RuntimeClassList is a list of RuntimeClass objects.
 type RuntimeClassList struct {

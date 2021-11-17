@@ -14,7 +14,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 )
 
 // These constants contain the accepted env vars; the Vault one is for backwards compat
@@ -34,12 +34,18 @@ const (
 // Wrapper represents credentials and Key information for the KMS Key used to
 // encryption and decryption
 type Wrapper struct {
-	accessKey    string
-	secretKey    string
-	sessionToken string
-	region       string
-	keyID        string
-	endpoint     string
+	accessKey            string
+	secretKey            string
+	sessionToken         string
+	region               string
+	keyID                string
+	endpoint             string
+	filename             string
+	profile              string
+	roleArn              string
+	roleSessionName      string
+	webIdentityTokenFile string
+	keyNotRequired       bool
 
 	currentKeyID *atomic.Value
 
@@ -57,8 +63,9 @@ func NewWrapper(opts *wrapping.WrapperOptions) *Wrapper {
 		opts = new(wrapping.WrapperOptions)
 	}
 	k := &Wrapper{
-		currentKeyID: new(atomic.Value),
-		logger:       opts.Logger,
+		currentKeyID:   new(atomic.Value),
+		logger:         opts.Logger,
+		keyNotRequired: opts.KeyNotRequired,
 	}
 	k.currentKeyID.Store("")
 	return k
@@ -85,6 +92,8 @@ func (k *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 		k.keyID = os.Getenv(EnvVaultAWSKMSSealKeyID)
 	case config["kms_key_id"] != "":
 		k.keyID = config["kms_key_id"]
+	case k.keyNotRequired:
+		// key not required to set config
 	default:
 		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS wrapper configuration")
 	}
@@ -100,6 +109,11 @@ func (k *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 	k.accessKey = config["access_key"]
 	k.secretKey = config["secret_key"]
 	k.sessionToken = config["session_token"]
+	k.filename = config["shared_creds_filename"]
+	k.profile = config["shared_creds_profile"]
+	k.webIdentityTokenFile = config["web_identity_token_file"]
+	k.roleSessionName = config["role_session_name"]
+	k.roleArn = config["role_arn"]
 
 	k.endpoint = os.Getenv("AWS_KMS_ENDPOINT")
 	if k.endpoint == "" {
@@ -115,17 +129,19 @@ func (k *Wrapper) SetConfig(config map[string]string) (map[string]string, error)
 			return nil, fmt.Errorf("error initializing AWS KMS wrapping client: %w", err)
 		}
 
-		// Test the client connection using provided key ID
-		keyInfo, err := client.DescribeKey(&kms.DescribeKeyInput{
-			KeyId: aws.String(k.keyID),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error fetching AWS KMS wrapping key information: %w", err)
+		if !k.keyNotRequired {
+			// Test the client connection using provided key ID
+			keyInfo, err := client.DescribeKey(&kms.DescribeKeyInput{
+				KeyId: aws.String(k.keyID),
+			})
+			if err != nil {
+				return nil, fmt.Errorf("error fetching AWS KMS wrapping key information: %w", err)
+			}
+			if keyInfo == nil || keyInfo.KeyMetadata == nil || keyInfo.KeyMetadata.KeyId == nil {
+				return nil, errors.New("no key information returned")
+			}
+			k.currentKeyID.Store(aws.StringValue(keyInfo.KeyMetadata.KeyId))
 		}
-		if keyInfo == nil || keyInfo.KeyMetadata == nil || keyInfo.KeyMetadata.KeyId == nil {
-			return nil, errors.New("no key information returned")
-		}
-		k.currentKeyID.Store(aws.StringValue(keyInfo.KeyMetadata.KeyId))
 
 		k.client = client
 	}
@@ -272,6 +288,11 @@ func (k *Wrapper) Decrypt(_ context.Context, in *wrapping.EncryptedBlobInfo, aad
 	return plaintext, nil
 }
 
+// Client returns the AWS KMS client used by the wrapper.
+func (k *Wrapper) Client() kmsiface.KMSAPI {
+	return k.client
+}
+
 // GetAWSKMSClient returns an instance of the KMS client.
 func (k *Wrapper) GetAWSKMSClient() (*kms.KMS, error) {
 	credsConfig := &awsutil.CredentialsConfig{}
@@ -279,6 +300,11 @@ func (k *Wrapper) GetAWSKMSClient() (*kms.KMS, error) {
 	credsConfig.AccessKey = k.accessKey
 	credsConfig.SecretKey = k.secretKey
 	credsConfig.SessionToken = k.sessionToken
+	credsConfig.Filename = k.filename
+	credsConfig.Profile = k.profile
+	credsConfig.RoleARN = k.roleArn
+	credsConfig.RoleSessionName = k.roleSessionName
+	credsConfig.WebIdentityTokenFile = k.webIdentityTokenFile
 	credsConfig.Region = k.region
 	credsConfig.Logger = k.logger
 

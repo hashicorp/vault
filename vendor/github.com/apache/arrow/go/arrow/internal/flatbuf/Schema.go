@@ -50,7 +50,7 @@ func (rcv *Schema) Table() flatbuffers.Table {
 func (rcv *Schema) Endianness() Endianness {
 	o := flatbuffers.UOffsetT(rcv._tab.Offset(4))
 	if o != 0 {
-		return rcv._tab.GetInt16(o + rcv._tab.Pos)
+		return Endianness(rcv._tab.GetInt16(o + rcv._tab.Pos))
 	}
 	return 0
 }
@@ -59,7 +59,7 @@ func (rcv *Schema) Endianness() Endianness {
 /// it is Little Endian by default
 /// if endianness doesn't match the underlying system then the vectors need to be converted
 func (rcv *Schema) MutateEndianness(n Endianness) bool {
-	return rcv._tab.MutateInt16Slot(4, n)
+	return rcv._tab.MutateInt16Slot(4, int16(n))
 }
 
 func (rcv *Schema) Fields(obj *Field, j int) bool {
@@ -102,11 +102,39 @@ func (rcv *Schema) CustomMetadataLength() int {
 	return 0
 }
 
-func SchemaStart(builder *flatbuffers.Builder) {
-	builder.StartObject(3)
+/// Features used in the stream/file.
+func (rcv *Schema) Features(j int) Feature {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
+	if o != 0 {
+		a := rcv._tab.Vector(o)
+		return Feature(rcv._tab.GetInt64(a + flatbuffers.UOffsetT(j*8)))
+	}
+	return 0
 }
-func SchemaAddEndianness(builder *flatbuffers.Builder, endianness int16) {
-	builder.PrependInt16Slot(0, endianness, 0)
+
+func (rcv *Schema) FeaturesLength() int {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
+	if o != 0 {
+		return rcv._tab.VectorLen(o)
+	}
+	return 0
+}
+
+/// Features used in the stream/file.
+func (rcv *Schema) MutateFeatures(j int, n Feature) bool {
+	o := flatbuffers.UOffsetT(rcv._tab.Offset(10))
+	if o != 0 {
+		a := rcv._tab.Vector(o)
+		return rcv._tab.MutateInt64(a+flatbuffers.UOffsetT(j*8), int64(n))
+	}
+	return false
+}
+
+func SchemaStart(builder *flatbuffers.Builder) {
+	builder.StartObject(4)
+}
+func SchemaAddEndianness(builder *flatbuffers.Builder, endianness Endianness) {
+	builder.PrependInt16Slot(0, int16(endianness), 0)
 }
 func SchemaAddFields(builder *flatbuffers.Builder, fields flatbuffers.UOffsetT) {
 	builder.PrependUOffsetTSlot(1, flatbuffers.UOffsetT(fields), 0)
@@ -119,6 +147,12 @@ func SchemaAddCustomMetadata(builder *flatbuffers.Builder, customMetadata flatbu
 }
 func SchemaStartCustomMetadataVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
 	return builder.StartVector(4, numElems, 4)
+}
+func SchemaAddFeatures(builder *flatbuffers.Builder, features flatbuffers.UOffsetT) {
+	builder.PrependUOffsetTSlot(3, flatbuffers.UOffsetT(features), 0)
+}
+func SchemaStartFeaturesVector(builder *flatbuffers.Builder, numElems int) flatbuffers.UOffsetT {
+	return builder.StartVector(8, numElems, 8)
 }
 func SchemaEnd(builder *flatbuffers.Builder) flatbuffers.UOffsetT {
 	return builder.EndObject()

@@ -1,20 +1,22 @@
 package gocb
 
 // Scope represents a single scope within a bucket.
-// VOLATILE: This API is subject to change at any time.
 type Scope struct {
 	scopeName string
 	bucket    *Bucket
 
-	timeoutsConfig kvTimeoutsConfig
+	timeoutsConfig TimeoutsConfig
 
 	transcoder           Transcoder
 	retryStrategyWrapper *retryStrategyWrapper
-	tracer               requestTracer
+	tracer               RequestTracer
+	meter                *meterWrapper
 
 	useMutationTokens bool
 
-	getKvProvider func() (kvProvider, error)
+	getKvProvider        func() (kvProvider, error)
+	getQueryProvider     func() (queryProvider, error)
+	getAnalyticsProvider func() (analyticsProvider, error)
 }
 
 func newScope(bucket *Bucket, scopeName string) *Scope {
@@ -22,18 +24,18 @@ func newScope(bucket *Bucket, scopeName string) *Scope {
 		scopeName: scopeName,
 		bucket:    bucket,
 
-		timeoutsConfig: kvTimeoutsConfig{
-			KVTimeout:        bucket.timeoutsConfig.KVTimeout,
-			KVDurableTimeout: bucket.timeoutsConfig.KVDurableTimeout,
-		},
+		timeoutsConfig: bucket.timeoutsConfig,
 
 		transcoder:           bucket.transcoder,
 		retryStrategyWrapper: bucket.retryStrategyWrapper,
 		tracer:               bucket.tracer,
+		meter:                bucket.meter,
 
 		useMutationTokens: bucket.useMutationTokens,
 
-		getKvProvider: bucket.getKvProvider,
+		getKvProvider:        bucket.getKvProvider,
+		getQueryProvider:     bucket.getQueryProvider,
+		getAnalyticsProvider: bucket.getAnalyticsProvider,
 	}
 }
 
@@ -49,7 +51,6 @@ func (s *Scope) BucketName() string {
 }
 
 // Collection returns an instance of a collection.
-// VOLATILE: This API is subject to change at any time.
 func (s *Scope) Collection(collectionName string) *Collection {
 	return newCollection(s, collectionName)
 }

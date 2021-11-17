@@ -152,9 +152,9 @@ func (f *FileReader) readSchema() error {
 		if err != nil {
 			return err
 		}
-		defer msg.Release()
 
 		id, dict, err := readDictionary(msg.meta, f.fields, f.r)
+		msg.Release()
 		if err != nil {
 			return xerrors.Errorf("arrow/ipc: could not read dictionary %d from file: %w", i, err)
 		}
@@ -244,6 +244,23 @@ func (f *FileReader) Close() error {
 // The returned value is valid until the next call to Record.
 // Users need to call Retain on that Record to keep it valid for longer.
 func (f *FileReader) Record(i int) (array.Record, error) {
+	record, err := f.RecordAt(i)
+	if err != nil {
+		return nil, err
+	}
+
+	if f.record != nil {
+		f.record.Release()
+	}
+
+	f.record = record
+	return record, nil
+}
+
+// Record returns the i-th record from the file. Ownership is transferred to the
+// caller and must call Release() to free the memory. This method is safe to
+// call concurrently.
+func (f *FileReader) RecordAt(i int) (array.Record, error) {
 	if i < 0 || i > f.NumRecords() {
 		panic("arrow/ipc: record index out of bounds")
 	}
@@ -271,12 +288,7 @@ func (f *FileReader) Record(i int) (array.Record, error) {
 		return nil, xerrors.Errorf("arrow/ipc: message %d is not a Record", i)
 	}
 
-	if f.record != nil {
-		f.record.Release()
-	}
-
-	f.record = newRecord(f.schema, msg.meta, bytes.NewReader(msg.body.Bytes()))
-	return f.record, nil
+	return newRecord(f.schema, msg.meta, bytes.NewReader(msg.body.Bytes())), nil
 }
 
 // Read reads the current record from the underlying stream and an error, if any.
@@ -300,16 +312,23 @@ func (f *FileReader) ReadAt(i int64) (array.Record, error) {
 
 func newRecord(schema *arrow.Schema, meta *memory.Buffer, body ReadAtSeeker) array.Record {
 	var (
-		msg = flatbuf.GetRootAsMessage(meta.Bytes(), 0)
-		md  flatbuf.RecordBatch
+		msg   = flatbuf.GetRootAsMessage(meta.Bytes(), 0)
+		md    flatbuf.RecordBatch
+		codec decompressor
 	)
 	initFB(&md, msg.Header)
 	rows := md.Length()
 
+	bodyCompress := md.Compression(nil)
+	if bodyCompress != nil {
+		codec = getDecompressor(bodyCompress.Codec())
+	}
+
 	ctx := &arrayLoaderContext{
 		src: ipcSource{
-			meta: &md,
-			r:    body,
+			meta:  &md,
+			r:     body,
+			codec: codec,
 		},
 		max: kMaxNestingDepth,
 	}
@@ -323,8 +342,9 @@ func newRecord(schema *arrow.Schema, meta *memory.Buffer, body ReadAtSeeker) arr
 }
 
 type ipcSource struct {
-	meta *flatbuf.RecordBatch
-	r    ReadAtSeeker
+	meta  *flatbuf.RecordBatch
+	r     ReadAtSeeker
+	codec decompressor
 }
 
 func (src *ipcSource) buffer(i int) *memory.Buffer {
@@ -336,10 +356,35 @@ func (src *ipcSource) buffer(i int) *memory.Buffer {
 		return memory.NewBufferBytes(nil)
 	}
 
-	raw := make([]byte, buf.Length())
-	_, err := src.r.ReadAt(raw, buf.Offset())
-	if err != nil {
-		panic(err)
+	var raw []byte
+	if src.codec == nil {
+		raw = make([]byte, buf.Length())
+		_, err := src.r.ReadAt(raw, buf.Offset())
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		sr := io.NewSectionReader(src.r, buf.Offset(), buf.Length())
+		var uncompressedSize uint64
+
+		err := binary.Read(sr, binary.LittleEndian, &uncompressedSize)
+		if err != nil {
+			panic(err)
+		}
+
+		var r io.Reader = sr
+		// check for an uncompressed buffer
+		if int64(uncompressedSize) != -1 {
+			raw = make([]byte, uncompressedSize)
+			src.codec.Reset(sr)
+			r = src.codec
+		} else {
+			raw = make([]byte, buf.Length())
+		}
+
+		if _, err = io.ReadFull(r, raw); err != nil {
+			panic(err)
+		}
 	}
 
 	return memory.NewBufferBytes(raw)
@@ -403,6 +448,14 @@ func (ctx *arrayLoaderContext) loadArray(dt arrow.DataType) array.Interface {
 
 	case *arrow.StructType:
 		return ctx.loadStruct(dt)
+
+	case *arrow.MapType:
+		return ctx.loadMap(dt)
+
+	case arrow.ExtensionType:
+		storage := ctx.loadArray(dt.StorageType())
+		defer storage.Release()
+		return array.NewExtensionArrayWithStorage(dt, storage)
 
 	default:
 		panic(xerrors.Errorf("array type %T not handled yet", dt))
@@ -478,6 +531,19 @@ func (ctx *arrayLoaderContext) loadFixedSizeBinary(dt *arrow.FixedSizeBinaryType
 	defer data.Release()
 
 	return array.MakeFromData(data)
+}
+
+func (ctx *arrayLoaderContext) loadMap(dt *arrow.MapType) array.Interface {
+	field, buffers := ctx.loadCommon(2)
+	buffers = append(buffers, ctx.buffer())
+
+	sub := ctx.loadChild(dt.ValueType())
+	defer sub.Release()
+
+	data := array.NewData(dt, int(field.Length()), buffers, []*array.Data{sub.Data()}, int(field.NullCount()), 0)
+	defer data.Release()
+
+	return array.NewMapData(data)
 }
 
 func (ctx *arrayLoaderContext) loadList(dt *arrow.ListType) array.Interface {

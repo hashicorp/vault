@@ -64,10 +64,10 @@ func (c *Client) ListSecGroups() (secGroups []SecGroup, err error) {
 		var secGroupResp SecGroupResponse
 		r := c.NewRequest("GET", requestURL)
 		resp, err := c.DoRequest(r)
-
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting sec groups")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading sec group response body")
@@ -92,18 +92,14 @@ func (c *Client) ListSecGroups() (secGroups []SecGroup, err error) {
 				if err != nil {
 					return nil, err
 				}
-				for _, space := range spaces {
-					secGroup.Entity.SpacesData = append(secGroup.Entity.SpacesData, space)
-				}
+				secGroup.Entity.SpacesData = append(secGroup.Entity.SpacesData, spaces...)
 			}
 			if len(secGroup.Entity.StagingSpacesData) == 0 {
 				spaces, err := secGroup.Entity.ListStagingSpaceResources()
 				if err != nil {
 					return nil, err
 				}
-				for _, space := range spaces {
-					secGroup.Entity.StagingSpacesData = append(secGroup.Entity.SpacesData, space)
-				}
+				secGroup.Entity.StagingSpacesData = append(secGroup.Entity.SpacesData, spaces...)
 			}
 			secGroups = append(secGroups, secGroup.Entity)
 		}
@@ -125,6 +121,7 @@ func (c *Client) ListRunningSecGroups() ([]SecGroup, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting sec groups")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading sec group response body")
@@ -161,6 +158,7 @@ func (c *Client) ListStagingSecGroups() ([]SecGroup, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting sec groups")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading sec group response body")
@@ -195,6 +193,7 @@ func (c *Client) GetSecGroupByName(name string) (secGroup SecGroup, err error) {
 	if err != nil {
 		return secGroup, errors.Wrap(err, "Error requesting sec groups")
 	}
+	defer resp.Body.Close()
 	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return secGroup, errors.Wrap(err, "Error reading sec group response body")
@@ -314,6 +313,7 @@ func (c *Client) DeleteSecGroup(guid string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 204 { //204 No Content
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -330,6 +330,7 @@ func (c *Client) GetSecGroup(guid string) (*SecGroup, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -348,6 +349,7 @@ func (c *Client) BindSecGroup(secGUID, spaceGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 201 { //201 Created
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -365,6 +367,7 @@ func (c *Client) BindStagingSecGroupToSpace(secGUID, spaceGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 201 { //201 Created
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -381,6 +384,7 @@ func (c *Client) BindRunningSecGroup(secGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 { //200
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -397,6 +401,7 @@ func (c *Client) UnbindRunningSecGroup(secGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent { //204
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -413,6 +418,7 @@ func (c *Client) BindStagingSecGroup(secGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 { //200
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -429,6 +435,7 @@ func (c *Client) UnbindStagingSecGroup(secGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent { //204
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -446,6 +453,7 @@ func (c *Client) UnbindSecGroup(secGUID, spaceGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 204 { //204 No Content
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}

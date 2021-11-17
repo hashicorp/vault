@@ -16,6 +16,10 @@
 
 package decimal128 // import "github.com/apache/arrow/go/arrow/decimal128"
 
+import (
+	"math/big"
+)
+
 var (
 	MaxDecimal128 = New(542101086242752217, 687399551400673280-1)
 )
@@ -54,6 +58,43 @@ func FromI64(v int64) Num {
 	}
 }
 
+// FromBigInt will convert a big.Int to a Num, if the value in v has a
+// BitLen > 128, this will panic.
+func FromBigInt(v *big.Int) (n Num) {
+	bitlen := v.BitLen()
+	if bitlen > 128 {
+		panic("arrow/decimal128: cannot represent value larger than 128bits")
+	} else if bitlen == 0 {
+		// if bitlen is 0, then the value is 0 so return the default zeroed
+		// out n
+		return
+	}
+
+	// if the value is negative, then get the high and low bytes from
+	// v, and then negate it. this is because Num uses a two's compliment
+	// representation of values and big.Int stores the value as a bool for
+	// the sign and the absolute value of the integer. This means that the
+	// raw bytes are *always* the absolute value.
+	b := v.Bits()
+	n.lo = uint64(b[0])
+	if len(b) > 1 {
+		n.hi = int64(b[1])
+	}
+	if v.Sign() < 0 {
+		return n.negated()
+	}
+	return
+}
+
+func (n Num) negated() Num {
+	n.lo = ^n.lo + 1
+	n.hi = ^n.hi
+	if n.lo == 0 {
+		n.hi += 1
+	}
+	return n
+}
+
 // LowBits returns the low bits of the two's complement representation of the number.
 func (n Num) LowBits() uint64 { return n.lo }
 
@@ -70,4 +111,19 @@ func (n Num) Sign() int {
 		return 0
 	}
 	return int(1 | (n.hi >> 63))
+}
+
+func toBigIntPositive(n Num) *big.Int {
+	return (&big.Int{}).SetBits([]big.Word{big.Word(n.lo), big.Word(n.hi)})
+}
+
+// while the code would be simpler to just do lsh/rsh and add
+// it turns out from benchmarking that calling SetBits passing
+// in the words and negating ends up being >2x faster
+func (n Num) BigInt() *big.Int {
+	if n.Sign() < 0 {
+		b := toBigIntPositive(n.negated())
+		return b.Neg(b)
+	}
+	return toBigIntPositive(n)
 }

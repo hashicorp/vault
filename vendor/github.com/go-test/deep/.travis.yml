@@ -1,13 +1,13 @@
 language: go
 
 go:
-  - "1.12"
-  - "1.13"
-  - "1.14"
+  - "1.15"
+  - "1.16"
+  - "1.17"
 
 before_install:
   - go get github.com/mattn/goveralls
   - go get golang.org/x/tools/cover
 
 script:
-  - $HOME/gopath/bin/goveralls -service=travis-ci -package github.com/go-test/deep
+  - $HOME/gopath/bin/goveralls -service=travis-pro -package github.com/go-test/deep

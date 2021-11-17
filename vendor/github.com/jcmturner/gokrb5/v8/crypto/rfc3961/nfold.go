@@ -1,27 +1,6 @@
 package rfc3961
 
-/*
-Implementation of the n-fold algorithm as defined in RFC 3961.
-
-n-fold is an algorithm that takes m input bits and "stretches" them
-to form n output bits with equal contribution from each input bit to
-the output, as described in [Blumenthal96]:
-
-We first define a primitive called n-folding, which takes a
-variable-length input block and produces a fixed-length output
-sequence.  The intent is to give each input bit approximately
-equal weight in determining the value of each output bit.  Note
-that whenever we need to treat a string of octets as a number, the
-assumed representation is Big-Endian -- Most Significant Byte
-first.
-
-To n-fold a number X, replicate the input value to a length that
-is the least common multiple of n and the length of X.  Before
-each repetition, the input is rotated to the right by 13 bit
-positions.  The successive n-bit chunks are added together using
-1's-complement addition (that is, with end-around carry) to yield
-a n-bit result....
-*/
+// Implementation of the n-fold algorithm as defined in RFC 3961.
 
 /* Credits
 This golang implementation of nfold used the following project for help with implementation detail.

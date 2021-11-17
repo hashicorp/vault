@@ -59,6 +59,12 @@ type PutObjectRequest struct {
 	// The content encoding of the object.
 	ContentEncoding *string `mandatory:"false" contributesTo:"header" name:"Content-Encoding"`
 
+	// The Content-Disposition header value to be returned in GetObjectReponse.
+	ContentDisposition *string `mandatory:"false" contributesTo:"header" name:"Content-Disposition"`
+
+	// The cache-control header value to be returned in GetObjectReponse.
+	CacheControl *string `mandatory:"false" contributesTo:"header" name:"Cache-Control"`
+
 	// Optional user-defined metadata key and value.
 	OpcMeta map[string]string `mandatory:"false" contributesTo:"header-collection" prefix:"opc-meta-"`
 

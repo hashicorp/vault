@@ -4,7 +4,7 @@
 // not use this file except in compliance with the License. You may obtain
 // a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
-// Package primitive contains types similar to Go primitives for BSON types can do not have direct
+// Package primitive contains types similar to Go primitives for BSON types that do not have direct
 // Go primitive representations.
 package primitive // import "go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -21,7 +21,7 @@ type Binary struct {
 	Data    []byte
 }
 
-// Equal compares bp to bp2 and returns true is the are equal.
+// Equal compares bp to bp2 and returns true if they are equal.
 func (bp Binary) Equal(bp2 Binary) bool {
 	if bp.Subtype != bp2.Subtype {
 		return false
@@ -29,7 +29,7 @@ func (bp Binary) Equal(bp2 Binary) bool {
 	return bytes.Equal(bp.Data, bp2.Data)
 }
 
-// IsZero returns if bp is the empty Binary
+// IsZero returns if bp is the empty Binary.
 func (bp Binary) IsZero() bool {
 	return bp.Subtype == 0 && len(bp.Data) == 0
 }
@@ -43,7 +43,7 @@ type DateTime int64
 var _ json.Marshaler = DateTime(0)
 var _ json.Unmarshaler = (*DateTime)(nil)
 
-// MarshalJSON marshal to time type
+// MarshalJSON marshal to time type.
 func (d DateTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.Time())
 }
@@ -89,12 +89,12 @@ func (rp Regex) String() string {
 	return fmt.Sprintf(`{"pattern": "%s", "options": "%s"}`, rp.Pattern, rp.Options)
 }
 
-// Equal compares rp to rp2 and returns true is the are equal.
+// Equal compares rp to rp2 and returns true if they are equal.
 func (rp Regex) Equal(rp2 Regex) bool {
 	return rp.Pattern == rp2.Pattern && rp.Options == rp2.Options
 }
 
-// IsZero returns if rp is the empty Regex
+// IsZero returns if rp is the empty Regex.
 func (rp Regex) IsZero() bool {
 	return rp.Pattern == "" && rp.Options == ""
 }
@@ -109,12 +109,12 @@ func (d DBPointer) String() string {
 	return fmt.Sprintf(`{"db": "%s", "pointer": "%s"}`, d.DB, d.Pointer)
 }
 
-// Equal compares d to d2 and returns true is the are equal.
+// Equal compares d to d2 and returns true if they are equal.
 func (d DBPointer) Equal(d2 DBPointer) bool {
 	return d.DB == d2.DB && bytes.Equal(d.Pointer[:], d2.Pointer[:])
 }
 
-// IsZero returns if d is the empty DBPointer
+// IsZero returns if d is the empty DBPointer.
 func (d DBPointer) IsZero() bool {
 	return d.DB == "" && d.Pointer.IsZero()
 }
@@ -141,12 +141,12 @@ type Timestamp struct {
 	I uint32
 }
 
-// Equal compares tp to tp2 and returns true is the are equal.
+// Equal compares tp to tp2 and returns true if they are equal.
 func (tp Timestamp) Equal(tp2 Timestamp) bool {
 	return tp.T == tp2.T && tp.I == tp2.I
 }
 
-// IsZero returns if tp is the zero Timestamp
+// IsZero returns if tp is the zero Timestamp.
 func (tp Timestamp) IsZero() bool {
 	return tp.T == 0 && tp.I == 0
 }
@@ -206,7 +206,7 @@ type E struct {
 //
 // Example usage:
 //
-// 		bson.M{"foo": "bar", "hello": "world", "pi": 3.14159}.
+// 		bson.M{"foo": "bar", "hello": "world", "pi": 3.14159}
 type M map[string]interface{}
 
 // An A is an ordered representation of a BSON array.

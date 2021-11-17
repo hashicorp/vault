@@ -15,10 +15,10 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -40,6 +40,7 @@ type Update struct {
 	retry                    *driver.RetryMode
 	result                   UpdateResult
 	crypt                    *driver.Crypt
+	serverAPI                *driver.ServerAPIOptions
 }
 
 // Upsert contains the information for an upsert in an Update operation.
@@ -121,14 +122,14 @@ func NewUpdate(updates ...bsoncore.Document) *Update {
 // Result returns the result of executing this operation.
 func (u *Update) Result() UpdateResult { return u.result }
 
-func (u *Update) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, currIndex int) error {
-	ur, err := buildUpdateResult(response, srvr)
+func (u *Update) processResponse(info driver.ResponseInfo) error {
+	ur, err := buildUpdateResult(info.ServerResponse, info.Server)
 
 	u.result.N += ur.N
 	u.result.NModified += ur.NModified
-	if currIndex > 0 {
+	if info.CurrentIndex > 0 {
 		for ind := range ur.Upserted {
-			ur.Upserted[ind].Index += int64(currIndex)
+			ur.Upserted[ind].Index += int64(info.CurrentIndex)
 		}
 	}
 	u.result.Upserted = append(u.result.Upserted, ur.Upserted...)
@@ -161,6 +162,7 @@ func (u *Update) Execute(ctx context.Context) error {
 		Selector:          u.selector,
 		WriteConcern:      u.writeConcern,
 		Crypt:             u.crypt,
+		ServerAPI:         u.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -350,5 +352,15 @@ func (u *Update) Crypt(crypt *driver.Crypt) *Update {
 	}
 
 	u.crypt = crypt
+	return u
+}
+
+// ServerAPI sets the server API version for this operation.
+func (u *Update) ServerAPI(serverAPI *driver.ServerAPIOptions) *Update {
+	if u == nil {
+		u = new(Update)
+	}
+
+	u.serverAPI = serverAPI
 	return u
 }

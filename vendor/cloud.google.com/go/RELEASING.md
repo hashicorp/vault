@@ -10,51 +10,14 @@
 1. Sign one of the
 [contributor license agreements](#contributor-license-agreements) below.
 
-1. Run `go get golang.org/x/review/git-codereview && go install golang.org/x/review/git-codereview`
-to install the code reviewing tool.
+1. Clone the repo:
+    `git clone https://github.com/googleapis/google-cloud-go`
 
-    1. Ensure it's working by running `git codereview` (check your `PATH` if
-    not).
+1. Change into the checked out source:
+    `cd google-cloud-go`
 
-    1. If you would like, you may want to set up aliases for `git-codereview`,
-    such that `git codereview change` becomes `git change`. See the
-    [godoc](https://pkg.go.dev/golang.org/x/review/git-codereview) for details.
-
-        * Should you run into issues with the `git-codereview` tool, please note
-        that all error messages will assume that you have set up these aliases.
-
-1. Change to a directory of your choosing and clone the repo.
-
-    ```
-    cd ~/code
-    git clone https://code.googlesource.com/gocloud
-    ```
-
-    * If you have already checked out the source, make sure that the remote
-    `git` `origin` is https://code.googlesource.com/gocloud:
-
-        ```
-        git remote -v
-        # ...
-        git remote set-url origin https://code.googlesource.com/gocloud
-        ```
-
-    * The project uses [Go Modules](https://blog.golang.org/using-go-modules)
-    for dependency management See
-    [`gopls`](https://github.com/golang/go/wiki/gopls) for making your editor
-    work with modules.
-
-1. Change to the project directory and add the github remote:
-
-    ```
-    cd ~/code/gocloud
-    git remote add github https://github.com/googleapis/google-cloud-go
-    ```
-
-1. Make sure your `git` auth is configured correctly by visiting
-https://code.googlesource.com, clicking "Generate Password" at the top-right,
-and following the directions. Otherwise, `git codereview mail` in the next step
-will fail.
+1. Fork the repo and add your fork as a secondary remote (this is necessary in
+   order to create PRs).
 
 # Which module to release?
 
@@ -90,8 +53,17 @@ of the `cloud.google.com/go` repository root module. Note: releasing
 `cloud.google.com/go` has no impact on any of the submodules, and vice-versa.
 They are released entirely independently.
 
+# Test failures
+
+If there are any test failures in the Kokoro build, releases are blocked until
+the failures have been resolved.
+
 # How to release `cloud.google.com/go`
 
+1. Check for failures in the
+   [continuous Kokoro build](http://go/google-cloud-go-continuous). If there are any
+   failures in the most recent build, address them before proceeding with the
+   release.
 1. Navigate to `~/code/gocloud/` and switch to master.
 1. `git pull`
 1. Run `git tag -l | grep -v beta | grep -v alpha` to see all existing releases.
@@ -105,16 +77,15 @@ They are released entirely independently.
    to be part of your release).
 1. Edit `CHANGES.md` to include a summary of the changes.
 1. `cd internal/version && go generate && cd -`
-1. Mail the CL: `git add -A && git change <branch name> && git mail`
-1. Wait for the CL to be submitted. Once it's submitted, and without submitting
-   any other CLs in the meantime:
+1. Commit the changes, push to your fork, and create a PR.
+1. Wait for the PR to be reviewed and merged. Once it's merged, and without
+   merging any other PRs in the meantime:
    a. Switch to master.
    b. `git pull`
    c. Tag the repo with the next version: `git tag $NV`.
-   d. Push the tag to both remotes:
+   d. Push the tag to origin:
       `git push origin $NV`
-      `git push github $NV`
-1. Update [the releases page](https://github.com/googleapis/google-cloud-go/releases)
+2. Update [the releases page](https://github.com/googleapis/google-cloud-go/releases)
    with the new release, copying the contents of `CHANGES.md`.
 
 # How to release a submodule
@@ -126,6 +97,11 @@ To release a submodule:
 
 (these instructions assume we're releasing `cloud.google.com/go/datastore` - adjust accordingly)
 
+1. Check for failures in the
+   [continuous Kokoro build](http://go/google-cloud-go-continuous). If there are any
+   failures in the most recent build, address them before proceeding with the
+   release. (This applies even if the failures are in a different submodule from the one
+   being released.)
 1. Navigate to `~/code/gocloud/` and switch to master.
 1. `git pull`
 1. Run `git tag -l | grep datastore | grep -v beta | grep -v alpha` to see all
@@ -136,15 +112,14 @@ To release a submodule:
    submodule directory since the last release.
 1. Edit `datastore/CHANGES.md` to include a summary of the changes.
 1. `cd internal/version && go generate && cd -`
-1. Mail the CL: `git add -A && git change <branch name> && git mail`
-1. Wait for the CL to be submitted. Once it's submitted, and without submitting
-   any other CLs in the meantime:
+1. Commit the changes, push to your fork, and create a PR.
+1. Wait for the PR to be reviewed and merged. Once it's merged, and without
+   merging any other PRs in the meantime:
    a. Switch to master.
    b. `git pull`
    c. Tag the repo with the next version: `git tag $NV`.
-   d. Push the tag to both remotes:
+   d. Push the tag to origin:
       `git push origin $NV`
-      `git push github $NV`
 1. Update [the releases page](https://github.com/googleapis/google-cloud-go/releases)
    with the new release, copying the contents of `datastore/CHANGES.md`.
 

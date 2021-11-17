@@ -137,8 +137,14 @@ func ParseSignedAndEncrypted(s string) (*NestedJSONWebToken, error) {
 }
 
 func tryJWKS(headers []jose.Header, key interface{}) interface{} {
-	jwks, ok := key.(*jose.JSONWebKeySet)
-	if !ok {
+	var jwks jose.JSONWebKeySet
+
+	switch jwksType := key.(type) {
+	case *jose.JSONWebKeySet:
+		jwks = *jwksType
+	case jose.JSONWebKeySet:
+		jwks = jwksType
+	default:
 		return key
 	}
 

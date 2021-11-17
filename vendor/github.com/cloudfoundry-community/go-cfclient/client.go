@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -25,10 +26,12 @@ type Client struct {
 }
 
 type Endpoint struct {
-	DopplerEndpoint string `json:"doppler_logging_endpoint"`
-	LoggingEndpoint string `json:"logging_endpoint"`
-	AuthEndpoint    string `json:"authorization_endpoint"`
-	TokenEndpoint   string `json:"token_endpoint"`
+	DopplerEndpoint   string `json:"doppler_logging_endpoint"`
+	LoggingEndpoint   string `json:"logging_endpoint"`
+	AuthEndpoint      string `json:"authorization_endpoint"`
+	TokenEndpoint     string `json:"token_endpoint"`
+	AppSSHEndpoint    string `json:"app_ssh_endpoint"`
+	AppSSHOauthClient string `json:"app_ssh_oauth_client"`
 }
 
 //Config is used to configure the creation of a client
@@ -44,6 +47,11 @@ type Config struct {
 	TokenSource         oauth2.TokenSource
 	tokenSourceDeadline *time.Time
 	UserAgent           string `json:"user_agent"`
+	Origin              string `json:"-"`
+}
+
+type LoginHint struct {
+	Origin string `json:"origin"`
 }
 
 // Request is used to help build up a request
@@ -160,6 +168,16 @@ func getUserAuth(ctx context.Context, config Config, endpoint *Endpoint) (Config
 			AuthURL:  endpoint.AuthEndpoint + "/oauth/auth",
 			TokenURL: endpoint.TokenEndpoint + "/oauth/token",
 		},
+	}
+	if config.Origin != "" {
+		loginHint := LoginHint{config.Origin}
+		origin, err := json.Marshal(loginHint)
+		if err != nil {
+			return config, errors.Wrap(err, "Error creating login_hint")
+		}
+		val := url.Values{}
+		val.Set("login_hint", string(origin))
+		authConfig.Endpoint.TokenURL = fmt.Sprintf("%s?%s", authConfig.Endpoint.TokenURL, val.Encode())
 	}
 
 	token, err := authConfig.PasswordCredentialsToken(ctx, config.Username, config.Password)
@@ -404,4 +422,67 @@ func (c *Client) GetToken() (string, error) {
 		return "", errors.Wrap(err, "Error getting bearer token")
 	}
 	return "bearer " + token.AccessToken, nil
+}
+
+var ErrPreventRedirect = errors.New("prevent-redirect")
+
+func (c *Client) GetSSHCode() (string, error) {
+	authorizeUrl, err := url.Parse(c.Endpoint.TokenEndpoint)
+	if err != nil {
+		return "", err
+	}
+
+	values := url.Values{}
+	values.Set("response_type", "code")
+	values.Set("grant_type", "authorization_code")
+	values.Set("client_id", c.Endpoint.AppSSHOauthClient) // client_id，used by cf server
+
+	authorizeUrl.Path = "/oauth/authorize"
+	authorizeUrl.RawQuery = values.Encode()
+
+	req, err := http.NewRequest("GET", authorizeUrl.String(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	token, err := c.GetToken()
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Add("authorization", token)
+	httpClient := &http.Client{
+		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+			return ErrPreventRedirect
+		},
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			DisableKeepAlives: true,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: c.Config.SkipSslValidation,
+			},
+			Proxy:               http.ProxyFromEnvironment,
+			TLSHandshakeTimeout: 10 * time.Second,
+		},
+	}
+
+	resp, err := httpClient.Do(req)
+	if err == nil {
+		return "", errors.New("authorization server did not redirect with one time code")
+	}
+	if netErr, ok := err.(*url.Error); !ok || netErr.Err != ErrPreventRedirect {
+		return "", errors.New(fmt.Sprintf("error requesting one time code from server: %s", err.Error()))
+	}
+
+	loc, err := resp.Location()
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("error getting the redirected location:  %s", err.Error()))
+	}
+
+	codes := loc.Query()["code"]
+	if len(codes) != 1 {
+		return "", errors.New("unable to acquire one time code from authorization response")
+	}
+
+	return codes[0], nil
 }

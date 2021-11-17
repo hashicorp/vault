@@ -18,6 +18,8 @@
 
 package flatbuf
 
+import "strconv"
+
 /// ----------------------------------------------------------------------
 /// The root Message type
 /// This union enables us to easily send different message types without
@@ -26,22 +28,38 @@ package flatbuf
 /// Arrow implementations do not need to implement all of the message types,
 /// which may include experimental metadata types. For maximum compatibility,
 /// it is best to send data using RecordBatch
-type MessageHeader = byte
+type MessageHeader byte
+
 const (
-	MessageHeaderNONE MessageHeader = 0
-	MessageHeaderSchema MessageHeader = 1
+	MessageHeaderNONE            MessageHeader = 0
+	MessageHeaderSchema          MessageHeader = 1
 	MessageHeaderDictionaryBatch MessageHeader = 2
-	MessageHeaderRecordBatch MessageHeader = 3
-	MessageHeaderTensor MessageHeader = 4
-	MessageHeaderSparseTensor MessageHeader = 5
+	MessageHeaderRecordBatch     MessageHeader = 3
+	MessageHeaderTensor          MessageHeader = 4
+	MessageHeaderSparseTensor    MessageHeader = 5
 )
 
 var EnumNamesMessageHeader = map[MessageHeader]string{
-	MessageHeaderNONE:"NONE",
-	MessageHeaderSchema:"Schema",
-	MessageHeaderDictionaryBatch:"DictionaryBatch",
-	MessageHeaderRecordBatch:"RecordBatch",
-	MessageHeaderTensor:"Tensor",
-	MessageHeaderSparseTensor:"SparseTensor",
+	MessageHeaderNONE:            "NONE",
+	MessageHeaderSchema:          "Schema",
+	MessageHeaderDictionaryBatch: "DictionaryBatch",
+	MessageHeaderRecordBatch:     "RecordBatch",
+	MessageHeaderTensor:          "Tensor",
+	MessageHeaderSparseTensor:    "SparseTensor",
 }
 
+var EnumValuesMessageHeader = map[string]MessageHeader{
+	"NONE":            MessageHeaderNONE,
+	"Schema":          MessageHeaderSchema,
+	"DictionaryBatch": MessageHeaderDictionaryBatch,
+	"RecordBatch":     MessageHeaderRecordBatch,
+	"Tensor":          MessageHeaderTensor,
+	"SparseTensor":    MessageHeaderSparseTensor,
+}
+
+func (v MessageHeader) String() string {
+	if s, ok := EnumNamesMessageHeader[v]; ok {
+		return s
+	}
+	return "MessageHeader(" + strconv.FormatInt(int64(v), 10) + ")"
+}

@@ -61,6 +61,7 @@ func (c *Client) CreateBuildpack(bpr *BuildpackRequest) (*Buildpack, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating buildpack:")
 	}
+	defer resp.Body.Close()
 	bp, err := c.handleBuildpackResp(resp)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating buildpack:")
@@ -92,6 +93,7 @@ func (c *Client) DeleteBuildpack(guid string, async bool) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if (async && (resp.StatusCode != http.StatusAccepted)) || (!async && (resp.StatusCode != http.StatusNoContent)) {
 		return errors.Wrapf(err, "Error deleting buildpack %s, response code: %d", guid, resp.StatusCode)
 	}
@@ -105,8 +107,8 @@ func (c *Client) getBuildpackResponse(requestUrl string) (BuildpackResponse, err
 	if err != nil {
 		return BuildpackResponse{}, errors.Wrap(err, "Error requesting buildpacks")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return BuildpackResponse{}, errors.Wrap(err, "Error reading buildpack request")
 	}
@@ -132,6 +134,7 @@ func (c *Client) GetBuildpackByGuid(buildpackGUID string) (Buildpack, error) {
 	if err != nil {
 		return Buildpack{}, errors.Wrap(err, "Error requesting buildpack info")
 	}
+
 	return c.handleBuildpackResp(resp)
 }
 
@@ -176,7 +179,10 @@ func (b *Buildpack) Upload(file io.Reader, fileName string) error {
 			return
 		}
 
-		requestFile.Seek(0, 0)
+		_, err = requestFile.Seek(0, 0)
+		if err != nil {
+			capturedErr = fmt.Errorf("Error seeking beginning of file: %s", err)
+		}
 		fileStats, err := requestFile.Stat()
 		if err != nil {
 			capturedErr = fmt.Errorf("Error getting file info: %s", err)
@@ -210,6 +216,7 @@ func (b *Buildpack) Update(bpr *BuildpackRequest) error {
 	if err != nil {
 		return errors.Wrap(err, "Error updating buildpack:")
 	}
+	defer resp.Body.Close()
 	newBp, err := b.c.handleBuildpackResp(resp)
 	if err != nil {
 		return errors.Wrap(err, "Error updating buildpack:")

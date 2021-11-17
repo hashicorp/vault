@@ -121,23 +121,22 @@ func (r *LogReader) read(l []byte) (int, error) {
 	// Check if we need to continue the loop and wait 500 miliseconds
 	// before checking if there is a new chunk available or that the
 	// run is finished and we are done reading all chunks.
-	if written == 0 {
-		if (r.startOfText && r.endOfText) || // The logstream finished without issues.
-			(r.startOfText && r.reads%10 == 0) || // The logstream terminated unexpectedly.
-			(!r.startOfText && r.reads > 1) { // The logstream doesn't support STX/ETX.
-			done, err := r.done()
-			if err != nil {
-				return 0, err
-			}
-			if done {
-				return 0, io.EOF
-			}
-		}
-		return 0, io.ErrNoProgress
+	if written != 0 {
+		// Update the offset for the next read.
+		r.offset += int64(written)
+		return written, nil
 	}
 
-	// Update the offset for the next read.
-	r.offset += int64(written)
-
-	return written, nil
+	if (r.startOfText && r.endOfText) || // The logstream finished without issues.
+		(r.startOfText && r.reads%10 == 0) || // The logstream terminated unexpectedly.
+		(!r.startOfText && r.reads > 1) { // The logstream doesn't support STX/ETX.
+		done, err := r.done()
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			return 0, io.EOF
+		}
+	}
+	return 0, io.ErrNoProgress
 }

@@ -102,8 +102,9 @@ func (c *Client) getSpaceQuotasResponse(requestUrl string) (SpaceQuotasResponse,
 	if err != nil {
 		return SpaceQuotasResponse{}, errors.Wrap(err, "Error requesting space quotas")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
+
 	if err != nil {
 		return SpaceQuotasResponse{}, errors.Wrap(err, "Error reading space quotas body")
 	}
@@ -120,6 +121,7 @@ func (c *Client) AssignSpaceQuota(quotaGUID, spaceGUID string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated { //201
 		return fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -137,6 +139,7 @@ func (c *Client) CreateSpaceQuota(spaceQuote SpaceQuotaRequest) (*SpaceQuota, er
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -154,6 +157,7 @@ func (c *Client) UpdateSpaceQuota(spaceQuotaGUID string, spaceQuote SpaceQuotaRe
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}

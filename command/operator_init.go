@@ -124,7 +124,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
 		Completion: complete.PredictAnything,
 		Usage: "Comma-separated list of paths to files on disk containing " +
-			"public GPG keys OR a comma-separated list of Keybase usernames using " +
+			"public PGP keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
 			"specified in this list. The number of entries must match -key-shares, " +
@@ -136,7 +136,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFileFlag)(&c.flagRootTokenPGPKey),
 		Completion: complete.PredictAnything,
 		Usage: "Path to a file on disk containing a binary or base64-encoded " +
-			"public GPG key. This can also be specified as a Keybase username " +
+			"public PGP key. This can also be specified as a Keybase username " +
 			"using the format \"keybase:<username>\". When supplied, the generated " +
 			"root token will be encrypted and base64-encoded with the given public " +
 			"key.",
@@ -448,7 +448,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"Vault does not store the generated master key. Without at least %d "+
-				"key to reconstruct the master key, Vault will remain permanently "+
+				"keys to reconstruct the master key, Vault will remain permanently "+
 				"sealed!",
 			req.SecretThreshold)))
 

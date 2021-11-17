@@ -47,7 +47,7 @@ export default function HomepageHero({
       />
       {/* A hack to inject a third link styled in tertiary style
            this is very much a non-ideal way to handle this. */}
-      <div className={classNames('g-container', styles.thirdLinkWrapper)}>
+      <div className={classNames('g-grid-container', styles.thirdLinkWrapper)}>
         {buttons[2] && (
           <div className="third-link">
             <Button

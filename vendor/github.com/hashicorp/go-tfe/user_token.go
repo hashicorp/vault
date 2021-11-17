@@ -15,7 +15,7 @@ var _ UserTokens = (*userTokens)(nil)
 // Terraform Cloud/Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/user-tokens.html
+// https://www.terraform.io/docs/cloud/api/user-tokens.html
 type UserTokens interface {
 	// List all the tokens of the given user ID.
 	List(ctx context.Context, userID string) (*UserTokenList, error)

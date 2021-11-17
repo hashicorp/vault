@@ -15,41 +15,6 @@ import (
 
 //RFC: 3961 Section 6.3
 
-/*
-                 des3-cbc-hmac-sha1-kd, hmac-sha1-des3-kd
-              ------------------------------------------------
-              protocol key format     24 bytes, parity in low
-                                      bit of each
-
-              key-generation seed     21 bytes
-              length
-
-              hash function           SHA-1
-
-              HMAC output size        160 bits
-
-              message block size      8 bytes
-
-              default string-to-key   empty string
-              params
-
-              encryption and          triple-DES encrypt and
-              decryption functions    decrypt, in outer-CBC
-                                      mode (cipher block size
-                                      8 octets)
-
-              key generation functions:
-
-              random-to-key           DES3random-to-key (see
-                                      below)
-
-              string-to-key           DES3string-to-key (see
-                                      below)
-
-   The des3-cbc-hmac-sha1-kd encryption type is assigned the value
-   sixteen (16).  The hmac-sha1-des3-kd checksum algorithm is assigned a
-   checksum type number of twelve (12)*/
-
 // Des3CbcSha1Kd implements Kerberos encryption type des3-cbc-hmac-sha1-kd
 type Des3CbcSha1Kd struct {
 }

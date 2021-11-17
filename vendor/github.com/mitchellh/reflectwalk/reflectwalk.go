@@ -69,6 +69,13 @@ type PointerWalker interface {
 	PointerExit(bool) error
 }
 
+// PointerValueWalker implementations are notified with the value of
+// a particular pointer when a pointer is walked. Pointer is called
+// right before PointerEnter.
+type PointerValueWalker interface {
+	Pointer(reflect.Value) error
+}
+
 // SkipEntry can be returned from walk functions to skip walking
 // the value of this field. This is only valid in the following functions:
 //
@@ -130,6 +137,17 @@ func walk(v reflect.Value, w interface{}) (err error) {
 		}
 
 		if pointerV.Kind() == reflect.Ptr {
+			if pw, ok := w.(PointerValueWalker); ok {
+				if err = pw.Pointer(pointerV); err != nil {
+					if err == SkipEntry {
+						// Skip the rest of this entry but clear the error
+						return nil
+					}
+
+					return
+				}
+			}
+
 			pointer = true
 			v = reflect.Indirect(pointerV)
 		}

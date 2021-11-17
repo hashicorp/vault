@@ -21,7 +21,7 @@ The following software packages are required to use the Go Snowflake Driver.
 Go
 ----------------------------------------------------------------------
 
-The latest driver requires the `Go language <https://golang.org/>`_ 1.14 or higher. The supported operating systems are Linux, Mac OS, and Windows, but you may run the driver on other platforms if the Go language works correctly on those platforms.
+The latest driver requires the `Go language <https://golang.org/>`_ 1.16 or higher. The supported operating systems are Linux, Mac OS, and Windows, but you may run the driver on other platforms if the Go language works correctly on those platforms.
 
 
 Installation

@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -144,9 +145,11 @@ type Client struct {
 	TLSConfig              *tls.Config
 	Dialer                 Dialer
 
-	endpoint            string
-	endpointURL         *url.URL
-	eventMonitor        *eventMonitoringState
+	endpoint     string
+	endpointURL  *url.URL
+	eventMonitor *eventMonitoringState
+
+	apiVersionMutex     sync.RWMutex
 	requestedAPIVersion APIVersion
 	serverAPIVersion    APIVersion
 	expectedAPIVersion  APIVersion
@@ -359,19 +362,26 @@ func (c *Client) SetTimeout(t time.Duration) {
 }
 
 func (c *Client) checkAPIVersion() error {
-	serverAPIVersionString, err := c.getServerAPIVersionString()
-	if err != nil {
-		return err
+	c.apiVersionMutex.Lock()
+	defer c.apiVersionMutex.Unlock()
+
+	if c.serverAPIVersion == nil {
+		serverAPIVersionString, err := c.getServerAPIVersionString()
+		if err != nil {
+			return err
+		}
+		c.serverAPIVersion, err = NewAPIVersion(serverAPIVersionString)
+		if err != nil {
+			return err
+		}
 	}
-	c.serverAPIVersion, err = NewAPIVersion(serverAPIVersionString)
-	if err != nil {
-		return err
-	}
+
 	if c.requestedAPIVersion == nil {
 		c.expectedAPIVersion = c.serverAPIVersion
 	} else {
 		c.expectedAPIVersion = c.requestedAPIVersion
 	}
+
 	return nil
 }
 

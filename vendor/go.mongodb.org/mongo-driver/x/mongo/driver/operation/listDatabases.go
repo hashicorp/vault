@@ -15,10 +15,10 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -36,6 +36,7 @@ type ListDatabases struct {
 	retry               *driver.RetryMode
 	selector            description.ServerSelector
 	crypt               *driver.Crypt
+	serverAPI           *driver.ServerAPIOptions
 
 	result ListDatabasesResult
 }
@@ -143,10 +144,10 @@ func NewListDatabases(filter bsoncore.Document) *ListDatabases {
 // Result returns the result of executing this operation.
 func (ld *ListDatabases) Result() ListDatabasesResult { return ld.result }
 
-func (ld *ListDatabases) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (ld *ListDatabases) processResponse(info driver.ResponseInfo) error {
 	var err error
 
-	ld.result, err = buildListDatabasesResult(response, srvr)
+	ld.result, err = buildListDatabasesResult(info.ServerResponse, info.Server)
 	return err
 
 }
@@ -171,6 +172,7 @@ func (ld *ListDatabases) Execute(ctx context.Context) error {
 		Type:           driver.Read,
 		Selector:       ld.selector,
 		Crypt:          ld.crypt,
+		ServerAPI:      ld.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -311,5 +313,15 @@ func (ld *ListDatabases) Crypt(crypt *driver.Crypt) *ListDatabases {
 	}
 
 	ld.crypt = crypt
+	return ld
+}
+
+// ServerAPI sets the server API version for this operation.
+func (ld *ListDatabases) ServerAPI(serverAPI *driver.ServerAPIOptions) *ListDatabases {
+	if ld == nil {
+		ld = new(ListDatabases)
+	}
+
+	ld.serverAPI = serverAPI
 	return ld
 }

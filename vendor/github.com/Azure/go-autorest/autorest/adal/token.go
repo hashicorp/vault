@@ -800,13 +800,13 @@ func newServicePrincipalTokenFromMSI(msiEndpoint, resource, userAssignedID, iden
 	}
 	msiType, endpoint, err := getMSIType()
 	if err != nil {
-		logger.Instance.Writef(logger.LogError, "Error determining managed identity environment: %v", err)
+		logger.Instance.Writef(logger.LogError, "Error determining managed identity environment: %v\n", err)
 		return nil, err
 	}
-	logger.Instance.Writef(logger.LogInfo, "Managed identity environment is %s, endpoint is %s", msiType, endpoint)
+	logger.Instance.Writef(logger.LogInfo, "Managed identity environment is %s, endpoint is %s\n", msiType, endpoint)
 	if msiEndpoint != "" {
 		endpoint = msiEndpoint
-		logger.Instance.Writef(logger.LogInfo, "Managed identity custom endpoint is %s", endpoint)
+		logger.Instance.Writef(logger.LogInfo, "Managed identity custom endpoint is %s\n", endpoint)
 	}
 	msiEndpointURL, err := url.Parse(endpoint)
 	if err != nil {
@@ -966,6 +966,12 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 	req.Header.Add("User-Agent", UserAgent())
 	req = req.WithContext(ctx)
 	var resp *http.Response
+	authBodyFilter := func(b []byte) []byte {
+		if logger.Level() != logger.LogAuth {
+			return []byte("**REDACTED** authentication body")
+		}
+		return b
+	}
 	if msiSecret, ok := spt.inner.Secret.(*ServicePrincipalMSISecret); ok {
 		switch msiSecret.msiType {
 		case msiTypeAppServiceV20170901:
@@ -989,6 +995,7 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 			req.Header.Set("Metadata", "true")
 			break
 		}
+		logger.Instance.WriteRequest(req, logger.Filter{Body: authBodyFilter})
 		resp, err = retryForIMDS(spt.sender, req, spt.MaxMSIRefreshAttempts)
 	} else {
 		v := url.Values{}
@@ -1019,14 +1026,18 @@ func (spt *ServicePrincipalToken) refreshInternal(ctx context.Context, resource 
 		req.ContentLength = int64(len(s))
 		req.Header.Set(contentType, mimeTypeFormPost)
 		req.Body = body
+		logger.Instance.WriteRequest(req, logger.Filter{Body: authBodyFilter})
 		resp, err = spt.sender.Do(req)
 	}
 
+	// don't return a TokenRefreshError here; this will allow retry logic to apply
 	if err != nil {
-		// don't return a TokenRefreshError here; this will allow retry logic to apply
 		return fmt.Errorf("adal: Failed to execute the refresh request. Error = '%v'", err)
+	} else if resp == nil {
+		return fmt.Errorf("adal: received nil response and error")
 	}
 
+	logger.Instance.WriteResponse(resp, logger.Filter{Body: authBodyFilter})
 	defer resp.Body.Close()
 	rb, err := ioutil.ReadAll(resp.Body)
 

@@ -14,10 +14,10 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -33,6 +33,7 @@ type DropCollection struct {
 	selector     description.ServerSelector
 	writeConcern *writeconcern.WriteConcern
 	result       DropCollectionResult
+	serverAPI    *driver.ServerAPIOptions
 }
 
 type DropCollectionResult struct {
@@ -75,9 +76,9 @@ func NewDropCollection() *DropCollection {
 // Result returns the result of executing this operation.
 func (dc *DropCollection) Result() DropCollectionResult { return dc.result }
 
-func (dc *DropCollection) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, _ int) error {
+func (dc *DropCollection) processResponse(info driver.ResponseInfo) error {
 	var err error
-	dc.result, err = buildDropCollectionResult(response, srvr)
+	dc.result, err = buildDropCollectionResult(info.ServerResponse, info.Server)
 	return err
 }
 
@@ -98,6 +99,7 @@ func (dc *DropCollection) Execute(ctx context.Context) error {
 		Deployment:        dc.deployment,
 		Selector:          dc.selector,
 		WriteConcern:      dc.writeConcern,
+		ServerAPI:         dc.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -194,5 +196,15 @@ func (dc *DropCollection) WriteConcern(writeConcern *writeconcern.WriteConcern) 
 	}
 
 	dc.writeConcern = writeConcern
+	return dc
+}
+
+// ServerAPI sets the server API version for this operation.
+func (dc *DropCollection) ServerAPI(serverAPI *driver.ServerAPIOptions) *DropCollection {
+	if dc == nil {
+		dc = new(DropCollection)
+	}
+
+	dc.serverAPI = serverAPI
 	return dc
 }

@@ -7,8 +7,8 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -32,7 +32,6 @@ func (b *Backend) pathCredentials() *framework.Path {
 		HelpSynopsis:    pathCredentialsHelpSyn,
 		HelpDescription: pathCredentialsHelpDesc,
 	}
-
 }
 
 func (b *Backend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -48,7 +47,6 @@ func (b *Backend) pathCredentialsRead(ctx context.Context, req *logical.Request,
 	}
 
 	return b.programmaticAPIKeyCreate(ctx, req.Storage, role, cred)
-
 }
 
 type walEntry struct {
@@ -59,7 +57,6 @@ type walEntry struct {
 }
 
 func genAPIKeyDescription(displayName string) (string, error) {
-
 	midString := displayNameRegex.ReplaceAllString(displayName, "_")
 
 	id, err := base62.Random(20)
@@ -73,6 +70,7 @@ func genAPIKeyDescription(displayName string) (string, error) {
 const pathCredentialsHelpSyn = `
 Generate MongoDB Atlas Programmatic API from a specific Vault role.
 `
+
 const pathCredentialsHelpDesc = `
 This path reads generates MongoDB Atlas Programmatic API Keys for
 a particular role. Atlas Programmatic API Keys will be

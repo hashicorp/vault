@@ -205,3 +205,66 @@ func (r *RelativeDN) hasAllAttributes(attrs []*AttributeTypeAndValue) bool {
 func (a *AttributeTypeAndValue) Equal(other *AttributeTypeAndValue) bool {
 	return strings.EqualFold(a.Type, other.Type) && a.Value == other.Value
 }
+
+// Equal returns true if the DNs are equal as defined by rfc4517 4.2.15 (distinguishedNameMatch).
+// Returns true if they have the same number of relative distinguished names
+// and corresponding relative distinguished names (by position) are the same.
+// Case of the attribute type and value is not significant
+func (d *DN) EqualFold(other *DN) bool {
+	if len(d.RDNs) != len(other.RDNs) {
+		return false
+	}
+	for i := range d.RDNs {
+		if !d.RDNs[i].EqualFold(other.RDNs[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// AncestorOfFold returns true if the other DN consists of at least one RDN followed by all the RDNs of the current DN.
+// Case of the attribute type and value is not significant
+func (d *DN) AncestorOfFold(other *DN) bool {
+	if len(d.RDNs) >= len(other.RDNs) {
+		return false
+	}
+	// Take the last `len(d.RDNs)` RDNs from the other DN to compare against
+	otherRDNs := other.RDNs[len(other.RDNs)-len(d.RDNs):]
+	for i := range d.RDNs {
+		if !d.RDNs[i].EqualFold(otherRDNs[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equal returns true if the RelativeDNs are equal as defined by rfc4517 4.2.15 (distinguishedNameMatch).
+// Case of the attribute type is not significant
+func (r *RelativeDN) EqualFold(other *RelativeDN) bool {
+	if len(r.Attributes) != len(other.Attributes) {
+		return false
+	}
+	return r.hasAllAttributesFold(other.Attributes) && other.hasAllAttributesFold(r.Attributes)
+}
+
+func (r *RelativeDN) hasAllAttributesFold(attrs []*AttributeTypeAndValue) bool {
+	for _, attr := range attrs {
+		found := false
+		for _, myattr := range r.Attributes {
+			if myattr.EqualFold(attr) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// EqualFold returns true if the AttributeTypeAndValue is equivalent to the specified AttributeTypeAndValue
+// Case of the attribute type and value is not significant
+func (a *AttributeTypeAndValue) EqualFold(other *AttributeTypeAndValue) bool {
+	return strings.EqualFold(a.Type, other.Type) && strings.EqualFold(a.Value, other.Value)
+}

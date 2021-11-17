@@ -9,21 +9,17 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	_ "github.com/snowflakedb/gosnowflake"
 )
 
 const (
 	snowflakeSQLTypeName     = "snowflake"
-	maxIdentifierLength      = 255
-	maxUsernameChunkLen      = 32 // arbitrarily chosen
-	maxRolenameChunkLen      = 32 // arbitrarily chosen
 	defaultSnowflakeRenewSQL = `
 alter user {{name}} set DAYS_TO_EXPIRY = {{expiration}};
 `
@@ -33,11 +29,10 @@ alter user {{name}} set PASSWORD = '{{password}}';
 	defaultSnowflakeDeleteSQL = `
 drop user {{name}};
 `
+	defaultUserNameTemplate = `{{ printf "v_%s_%s_%s_%s" (.DisplayName | truncate 32) (.RoleName | truncate 32) (random 20) (unix_time) | truncate 255 | replace "-" "_" }}`
 )
 
-var (
-	_ dbplugin.Database = (*SnowflakeSQL)(nil)
-)
+var _ dbplugin.Database = (*SnowflakeSQL)(nil)
 
 func New() (interface{}, error) {
 	db := new()
@@ -65,6 +60,8 @@ func new() *SnowflakeSQL {
 
 type SnowflakeSQL struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func (s *SnowflakeSQL) Type() (string, error) {
@@ -86,10 +83,28 @@ func (s *SnowflakeSQL) Initialize(ctx context.Context, req dbplugin.InitializeRe
 		return dbplugin.InitializeResponse{}, err
 	}
 
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	s.usernameProducer = up
+
+	_, err = s.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
 	resp := dbplugin.InitializeResponse{
 		Config: req.Config,
 	}
-
 	return resp, nil
 }
 
@@ -155,12 +170,7 @@ func (s *SnowflakeSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest)
 }
 
 func (s *SnowflakeSQL) generateUsername(req dbplugin.NewUserRequest) (string, error) {
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, maxUsernameChunkLen),
-		credsutil.RoleName(req.UsernameConfig.RoleName, maxRolenameChunkLen),
-		credsutil.MaxLength(maxIdentifierLength),
-	)
-	username = strings.ReplaceAll(username, "-", "_")
+	username, err := s.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return "", errwrap.Wrapf("error generating username: {{err}}", err)
 	}

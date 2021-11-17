@@ -1,24 +1,34 @@
 package gocb
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"time"
 
-	"github.com/couchbase/gocbcore/v9/memd"
+	"github.com/couchbase/gocbcore/v10/memd"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 )
 
 // LookupInOptions are the set of options available to LookupIn.
 type LookupInOptions struct {
 	Timeout       time.Duration
 	RetryStrategy RetryStrategy
+	ParentSpan    RequestSpan
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 
 	// Internal: This should never be used and is not supported.
 	Internal struct {
-		AccessDeleted bool
+		DocFlags SubdocDocFlag
+		User     string
 	}
+
+	noMetrics bool
 }
 
 // LookupIn performs a set of subdocument lookup operations on the document identified by id.
@@ -27,24 +37,26 @@ func (c *Collection) LookupIn(id string, ops []LookupInSpec, opts *LookupInOptio
 		opts = &LookupInOptions{}
 	}
 
-	opm := c.newKvOpManager("LookupIn", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("lookup_in", opts.ParentSpan)
+	defer opm.Finish(opts.noMetrics)
 
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
 	}
 
-	return c.internalLookupIn(opm, ops, opts.Internal.AccessDeleted)
+	return c.internalLookupIn(opm, ops, memd.SubdocDocFlag(opts.Internal.DocFlags))
 }
 
 func (c *Collection) internalLookupIn(
 	opm *kvOpManager,
 	ops []LookupInSpec,
-	accessDeleted bool,
+	flags memd.SubdocDocFlag,
 ) (docOut *LookupInResult, errOut error) {
 	var subdocs []gocbcore.SubDocOp
 	for _, op := range ops {
@@ -82,11 +94,6 @@ func (c *Collection) internalLookupIn(
 		})
 	}
 
-	var flags memd.SubdocDocFlag
-	if accessDeleted {
-		flags = memd.SubdocDocFlagAccessDeleted
-	}
-
 	agent, err := c.getKvProvider()
 	if err != nil {
 		return nil, err
@@ -98,9 +105,10 @@ func (c *Collection) internalLookupIn(
 		CollectionName: opm.CollectionName(),
 		ScopeName:      opm.ScopeName(),
 		RetryStrategy:  opm.RetryStrategy(),
-		TraceContext:   opm.TraceSpan(),
+		TraceContext:   opm.TraceSpanContext(),
 		Deadline:       opm.Deadline(),
 		Flags:          flags,
+		User:           opm.Impersonate(),
 	}, func(res *gocbcore.LookupInResult, err error) {
 		if err != nil && res == nil {
 			errOut = opm.EnhanceErr(err)
@@ -153,10 +161,18 @@ type MutateInOptions struct {
 	StoreSemantic   StoreSemantics
 	Timeout         time.Duration
 	RetryStrategy   RetryStrategy
+	ParentSpan      RequestSpan
+	PreserveExpiry  bool
+
+	// Using a deadlined Context alongside a Timeout will cause the shorter of the two to cause cancellation, this
+	// also applies to global level timeouts.
+	// UNCOMMITTED: This API may change in the future.
+	Context context.Context
 
 	// Internal: This should never be used and is not supported.
 	Internal struct {
-		AccessDeleted bool
+		DocFlags SubdocDocFlag
+		User     string
 	}
 }
 
@@ -166,18 +182,21 @@ func (c *Collection) MutateIn(id string, ops []MutateInSpec, opts *MutateInOptio
 		opts = &MutateInOptions{}
 	}
 
-	opm := c.newKvOpManager("MutateIn", nil)
-	defer opm.Finish()
+	opm := c.newKvOpManager("mutate_in", opts.ParentSpan)
+	defer opm.Finish(false)
 
 	opm.SetDocumentID(id)
 	opm.SetRetryStrategy(opts.RetryStrategy)
 	opm.SetTimeout(opts.Timeout)
+	opm.SetImpersonate(opts.Internal.User)
+	opm.SetContext(opts.Context)
+	opm.SetPreserveExpiry(opts.PreserveExpiry)
 
 	if err := opm.CheckReadyForOp(); err != nil {
 		return nil, err
 	}
 
-	return c.internalMutateIn(opm, opts.StoreSemantic, opts.Expiry, opts.Cas, ops, opts.Internal.AccessDeleted)
+	return c.internalMutateIn(opm, opts.StoreSemantic, opts.Expiry, opts.Cas, ops, memd.SubdocDocFlag(opts.Internal.DocFlags))
 }
 
 func jsonMarshalMultiArray(in interface{}) ([]byte, error) {
@@ -197,6 +216,20 @@ func jsonMarshalMultiArray(in interface{}) ([]byte, error) {
 
 func jsonMarshalMutateSpec(op MutateInSpec) ([]byte, memd.SubdocFlag, error) {
 	if op.value == nil {
+		// If the mutation is to write, then this is a json `null` value
+		switch op.op {
+		case memd.SubDocOpDictAdd,
+			memd.SubDocOpDictSet,
+			memd.SubDocOpReplace,
+			memd.SubDocOpArrayPushLast,
+			memd.SubDocOpArrayPushFirst,
+			memd.SubDocOpArrayInsert,
+			memd.SubDocOpArrayAddUnique,
+			memd.SubDocOpSetDoc,
+			memd.SubDocOpAddDoc:
+			return []byte("null"), memd.SubdocFlagNone, nil
+		}
+
 		return nil, memd.SubdocFlagNone, nil
 	}
 
@@ -219,21 +252,23 @@ func (c *Collection) internalMutateIn(
 	expiry time.Duration,
 	cas Cas,
 	ops []MutateInSpec,
-	accessDeleted bool,
+	docFlags memd.SubdocDocFlag,
 ) (mutOut *MutateInResult, errOut error) {
-	var docFlags memd.SubdocDocFlag
+	preserveTTL := opm.PreserveExpiry()
 	if action == StoreSemanticsReplace {
 		// this is the default behaviour
+		if expiry > 0 && preserveTTL {
+			return nil, makeInvalidArgumentsError("cannot use preserve ttl with expiry for replace store semantics")
+		}
 	} else if action == StoreSemanticsUpsert {
 		docFlags |= memd.SubdocDocFlagMkDoc
 	} else if action == StoreSemanticsInsert {
+		if preserveTTL {
+			return nil, makeInvalidArgumentsError("cannot use preserve ttl with insert store semantics")
+		}
 		docFlags |= memd.SubdocDocFlagAddDoc
 	} else {
 		return nil, makeInvalidArgumentsError("invalid StoreSemantics value provided")
-	}
-
-	if accessDeleted {
-		docFlags |= memd.SubdocDocFlagAccessDeleted
 	}
 
 	var subdocs []gocbcore.SubDocOp
@@ -245,16 +280,16 @@ func (c *Collection) internalMutateIn(
 			case memd.SubDocOpDictSet:
 				return nil, makeInvalidArgumentsError("cannot specify a blank path with UpsertSpec")
 			case memd.SubDocOpDelete:
-				return nil, makeInvalidArgumentsError("cannot specify a blank path with DeleteSpec")
+				op.op = memd.SubDocOpDeleteDoc
 			case memd.SubDocOpReplace:
 				op.op = memd.SubDocOpSetDoc
 			default:
 			}
 		}
 
-		etrace := c.startKvOpTrace("encode", opm.TraceSpan())
+		etrace := c.startKvOpTrace("request_encoding", opm.TraceSpanContext(), true)
 		bytes, flags, err := jsonMarshalMutateSpec(op)
-		etrace.Finish()
+		etrace.End()
 		if err != nil {
 			return nil, err
 		}
@@ -290,10 +325,18 @@ func (c *Collection) internalMutateIn(
 		DurabilityLevel:        opm.DurabilityLevel(),
 		DurabilityLevelTimeout: opm.DurabilityTimeout(),
 		RetryStrategy:          opm.RetryStrategy(),
-		TraceContext:           opm.TraceSpan(),
+		TraceContext:           opm.TraceSpanContext(),
 		Deadline:               opm.Deadline(),
+		User:                   opm.Impersonate(),
+		PreserveExpiry:         preserveTTL,
 	}, func(res *gocbcore.MutateInResult, err error) {
 		if err != nil {
+			// GOCBC-1019: Due to a previous bug in gocbcore we need to convert cas mismatch back to exists.
+			if kvErr, ok := err.(*gocbcore.KeyValueError); ok {
+				if errors.Is(kvErr.InnerError, ErrCasMismatch) {
+					kvErr.InnerError = ErrDocumentExists
+				}
+			}
 			errOut = opm.EnhanceErr(err)
 			opm.Reject()
 			return

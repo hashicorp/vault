@@ -44,7 +44,7 @@ func (op *Operator) RaftGetConfiguration(q *QueryOptions) (*RaftConfiguration, e
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	var out RaftConfiguration
 	if err := decodeBody(resp, &out); err != nil {
@@ -60,14 +60,14 @@ func (op *Operator) RaftRemovePeerByAddress(address string, q *WriteOptions) err
 	r := op.c.newRequest("DELETE", "/v1/operator/raft/peer")
 	r.setWriteOptions(q)
 
-	r.params.Set("address", string(address))
+	r.params.Set("address", address)
 
 	_, resp, err := requireOK(op.c.doRequest(r))
 	if err != nil {
 		return err
 	}
 
-	resp.Body.Close()
+	closeResponseBody(resp)
 	return nil
 }
 
@@ -77,13 +77,13 @@ func (op *Operator) RaftRemovePeerByID(id string, q *WriteOptions) error {
 	r := op.c.newRequest("DELETE", "/v1/operator/raft/peer")
 	r.setWriteOptions(q)
 
-	r.params.Set("id", string(id))
+	r.params.Set("id", id)
 
 	_, resp, err := requireOK(op.c.doRequest(r))
 	if err != nil {
 		return err
 	}
 
-	resp.Body.Close()
+	closeResponseBody(resp)
 	return nil
 }

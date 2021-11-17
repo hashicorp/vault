@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -48,6 +48,16 @@ are allowed.`,
 				"audience": {
 					Type:        framework.TypeString,
 					Description: "Optional Audience claim to verify in the jwt.",
+				},
+				"alias_name_source": {
+					Type: framework.TypeString,
+					Description: fmt.Sprintf(`Source to use when deriving the Alias name.
+valid choices:
+	%q : <token.uid> e.g. 474b11b5-0f20-4f9d-8ca5-65715ab325e0 (most secure choice)
+	%q : <namespace>/<serviceaccount> e.g. vault/vault-agent
+default: %q
+`, aliasNameSourceSAUid, aliasNameSourceSAName, aliasNameSourceDefault),
+					Default: aliasNameSourceDefault,
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -173,6 +183,8 @@ func (b *kubeAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		d["num_uses"] = role.NumUses
 	}
 
+	d["alias_name_source"] = role.AliasNameSource
+
 	return &logical.Response{
 		Data: d,
 	}, nil
@@ -276,11 +288,11 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	}
 	// Verify names was not empty
 	if len(role.ServiceAccountNames) == 0 {
-		return logical.ErrorResponse("\"bound_service_account_names\" can not be empty"), nil
+		return logical.ErrorResponse("%q can not be empty", "bound_service_account_names"), nil
 	}
 	// Verify * was not set with other data
 	if len(role.ServiceAccountNames) > 1 && strutil.StrListContains(role.ServiceAccountNames, "*") {
-		return logical.ErrorResponse("can not mix \"*\" with values"), nil
+		return logical.ErrorResponse("can not mix %q with values", "*"), nil
 	}
 
 	if namespaces, ok := data.GetOk("bound_service_account_namespaces"); ok {
@@ -290,16 +302,25 @@ func (b *kubeAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	}
 	// Verify namespaces is not empty
 	if len(role.ServiceAccountNamespaces) == 0 {
-		return logical.ErrorResponse("\"bound_service_account_namespaces\" can not be empty"), nil
+		return logical.ErrorResponse("%q can not be empty", "bound_service_account_namespaces"), nil
 	}
 	// Verify * was not set with other data
 	if len(role.ServiceAccountNamespaces) > 1 && strutil.StrListContains(role.ServiceAccountNamespaces, "*") {
-		return logical.ErrorResponse("can not mix \"*\" with values"), nil
+		return logical.ErrorResponse("can not mix %q with values", "*"), nil
 	}
 
 	// optional audience field
 	if audience, ok := data.GetOk("audience"); ok {
 		role.Audience = audience.(string)
+	}
+
+	if source, ok := data.GetOk("alias_name_source"); ok {
+		if err := validateAliasNameSource(source.(string)); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		role.AliasNameSource = source.(string)
+	} else if role.AliasNameSource == aliasNameSourceUnset {
+		role.AliasNameSource = data.Get("alias_name_source").(string)
 	}
 
 	// Store the entry.
@@ -331,6 +352,9 @@ type roleStorageEntry struct {
 
 	// Audience is an optional jwt claim to verify
 	Audience string `json:"audience" mapstructure:"audience" structs: "audience"`
+
+	// AliasNameSource used when deriving the Alias' name.
+	AliasNameSource string `json:"alias_name_source" mapstructure:"alias_name_source" structs:"alias_name_source"`
 
 	// Deprecated by TokenParams
 	Policies   []string      `json:"policies" structs:"policies" mapstructure:"policies"`

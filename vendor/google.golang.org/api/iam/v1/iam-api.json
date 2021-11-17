@@ -833,7 +833,7 @@
               ]
             },
             "signBlob": {
-              "description": "**Note:** We are in the process of deprecating this method. Use the\n[`signBlob`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signBlob)\nmethod in the IAM Service Account Credentials API instead.\n\nSigns a blob using the system-managed private key for a ServiceAccount.",
+              "description": "**Note:** This method is deprecated and will stop working on July 1, 2021.\nUse the\n[`signBlob`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signBlob)\nmethod in the IAM Service Account Credentials API instead. If you currently\nuse this method, see the [migration\nguide](https://cloud.google.com/iam/help/credentials/migrate-api) for\ninstructions.\n\nSigns a blob using the system-managed private key for a ServiceAccount.",
               "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}:signBlob",
               "httpMethod": "POST",
               "id": "iam.projects.serviceAccounts.signBlob",
@@ -842,7 +842,7 @@
               ],
               "parameters": {
                 "name": {
-                  "description": "Required. The resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
+                  "description": "Required. Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
                   "location": "path",
                   "pattern": "^projects/[^/]+/serviceAccounts/[^/]+$",
                   "required": true,
@@ -861,7 +861,7 @@
               ]
             },
             "signJwt": {
-              "description": "**Note:** We are in the process of deprecating this method. Use the\n[`signJwt`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signJwt)\nmethod in the IAM Service Account Credentials API instead.\n\nSigns a JSON Web Token (JWT) using the system-managed private key for a\nServiceAccount.",
+              "description": "**Note:** This method is deprecated and will stop working on July 1, 2021.\nUse the\n[`signJwt`](https://cloud.google.com/iam/help/rest-credentials/v1/projects.serviceAccounts/signJwt)\nmethod in the IAM Service Account Credentials API instead. If you currently\nuse this method, see the [migration\nguide](https://cloud.google.com/iam/help/credentials/migrate-api) for\ninstructions.\n\nSigns a JSON Web Token (JWT) using the system-managed private key for a\nServiceAccount.",
               "flatPath": "v1/projects/{projectsId}/serviceAccounts/{serviceAccountsId}:signJwt",
               "httpMethod": "POST",
               "id": "iam.projects.serviceAccounts.signJwt",
@@ -870,7 +870,7 @@
               ],
               "parameters": {
                 "name": {
-                  "description": "Required. The resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
+                  "description": "Required. Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe resource name of the service account in the following format:\n`projects/{PROJECT_ID}/serviceAccounts/{ACCOUNT}`.\nUsing `-` as a wildcard for the `PROJECT_ID` will infer the project from\nthe account. The `ACCOUNT` value can be the `email` address or the\n`unique_id` of the service account.",
                   "location": "path",
                   "pattern": "^projects/[^/]+/serviceAccounts/[^/]+$",
                   "required": true,
@@ -1228,7 +1228,7 @@
       }
     }
   },
-  "revision": "20200611",
+  "revision": "20200709",
   "rootUrl": "https://iam.googleapis.com/",
   "schemas": {
     "AdminAuditData": {
@@ -2063,11 +2063,11 @@
       "type": "object"
     },
     "SignBlobRequest": {
-      "description": "The service account sign blob request.",
+      "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe service account sign blob request.",
       "id": "SignBlobRequest",
       "properties": {
         "bytesToSign": {
-          "description": "Required. The bytes to sign.",
+          "description": "Required. Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe bytes to sign.",
           "format": "byte",
           "type": "string"
         }
@@ -2075,15 +2075,15 @@
       "type": "object"
     },
     "SignBlobResponse": {
-      "description": "The service account sign blob response.",
+      "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe service account sign blob response.",
       "id": "SignBlobResponse",
       "properties": {
         "keyId": {
-          "description": "The id of the key used to sign the blob.",
+          "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe id of the key used to sign the blob.",
           "type": "string"
         },
         "signature": {
-          "description": "The signed blob.",
+          "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe signed blob.",
           "format": "byte",
           "type": "string"
         }
@@ -2091,26 +2091,26 @@
       "type": "object"
     },
     "SignJwtRequest": {
-      "description": "The service account sign JWT request.",
+      "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe service account sign JWT request.",
       "id": "SignJwtRequest",
       "properties": {
         "payload": {
-          "description": "Required. The JWT payload to sign. Must be a serialized JSON object that contains a\nJWT Claims Set. For example: `{\"sub\": \"user@example.com\", \"iat\": 313435}`\n\nIf the JWT Claims Set contains an expiration time (`exp`) claim, it must be\nan integer timestamp that is not in the past and no more than 1 hour in the\nfuture.\n\nIf the JWT Claims Set does not contain an expiration time (`exp`) claim,\nthis claim is added automatically, with a timestamp that is 1 hour in the\nfuture.",
+          "description": "Required. Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe JWT payload to sign. Must be a serialized JSON object that contains a\nJWT Claims Set. For example: `{\"sub\": \"user@example.com\", \"iat\": 313435}`\n\nIf the JWT Claims Set contains an expiration time (`exp`) claim, it must be\nan integer timestamp that is not in the past and no more than 1 hour in the\nfuture.\n\nIf the JWT Claims Set does not contain an expiration time (`exp`) claim,\nthis claim is added automatically, with a timestamp that is 1 hour in the\nfuture.",
           "type": "string"
         }
       },
       "type": "object"
     },
     "SignJwtResponse": {
-      "description": "The service account sign JWT response.",
+      "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe service account sign JWT response.",
       "id": "SignJwtResponse",
       "properties": {
         "keyId": {
-          "description": "The id of the key used to sign the JWT.",
+          "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe id of the key used to sign the JWT.",
           "type": "string"
         },
         "signedJwt": {
-          "description": "The signed JWT.",
+          "description": "Deprecated. [Migrate to Service Account Credentials\nAPI](https://cloud.google.com/iam/help/credentials/migrate-api).\n\nThe signed JWT.",
           "type": "string"
         }
       },

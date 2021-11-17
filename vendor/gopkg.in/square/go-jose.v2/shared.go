@@ -183,7 +183,7 @@ type Header struct {
 	// Unverified certificate chain parsed from x5c header.
 	certificates []*x509.Certificate
 
-	// Any headers not recognised above get unmarshaled
+	// Any headers not recognised above get unmarshalled
 	// from JSON in a generic manner and placed in this map.
 	ExtraHeaders map[HeaderKey]interface{}
 }
@@ -295,12 +295,12 @@ func (parsed rawHeader) getAPV() (*byteBuffer, error) {
 	return parsed.getByteBuffer(headerAPV)
 }
 
-// getIV extracts parsed "iv" frpom the raw JSON.
+// getIV extracts parsed "iv" from the raw JSON.
 func (parsed rawHeader) getIV() (*byteBuffer, error) {
 	return parsed.getByteBuffer(headerIV)
 }
 
-// getTag extracts parsed "tag" frpom the raw JSON.
+// getTag extracts parsed "tag" from the raw JSON.
 func (parsed rawHeader) getTag() (*byteBuffer, error) {
 	return parsed.getByteBuffer(headerTag)
 }

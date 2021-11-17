@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // Package fasttime gets wallclock time, but super fast.
@@ -8,12 +9,12 @@ import (
 )
 
 //go:noescape
-//go:linkname walltime runtime.walltime
-func walltime() (int64, int32)
+//go:linkname now time.now
+func now() (sec int64, nsec int32, mono int64)
 
 // Now returns a monotonic clock value. The actual value will differ across
 // systems, but that's okay because we generally only care about the deltas.
 func Now() uint64 {
-	x, y := walltime()
-	return uint64(x)*1e9 + uint64(y)
+	sec, nsec, _ := now()
+	return uint64(sec)*1e9 + uint64(nsec)
 }

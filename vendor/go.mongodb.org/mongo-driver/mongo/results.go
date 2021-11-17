@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/operation"
 )
 
@@ -140,5 +141,106 @@ func (result *UpdateResult) UnmarshalBSON(b []byte) error {
 		}
 	}
 
+	return nil
+}
+
+// IndexSpecification represents an index in a database. This type is returned by the IndexView.ListSpecifications
+// function and is also used in the CollectionSpecification type.
+type IndexSpecification struct {
+	// The index name.
+	Name string
+
+	// The namespace for the index. This is a string in the format "databaseName.collectionName".
+	Namespace string
+
+	// The keys specification document for the index.
+	KeysDocument bson.Raw
+
+	// The index version.
+	Version int32
+}
+
+var _ bson.Unmarshaler = (*IndexSpecification)(nil)
+
+type unmarshalIndexSpecification struct {
+	Name         string   `bson:"name"`
+	Namespace    string   `bson:"ns"`
+	KeysDocument bson.Raw `bson:"key"`
+	Version      int32    `bson:"v"`
+}
+
+// UnmarshalBSON implements the bson.Unmarshaler interface.
+func (i *IndexSpecification) UnmarshalBSON(data []byte) error {
+	var temp unmarshalIndexSpecification
+	if err := bson.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	i.Name = temp.Name
+	i.Namespace = temp.Namespace
+	i.KeysDocument = temp.KeysDocument
+	i.Version = temp.Version
+	return nil
+}
+
+// CollectionSpecification represents a collection in a database. This type is returned by the
+// Database.ListCollectionSpecifications function.
+type CollectionSpecification struct {
+	// The collection name.
+	Name string
+
+	// The type of the collection. This will either be "collection" or "view".
+	Type string
+
+	// Whether or not the collection is readOnly. This will be false for MongoDB versions < 3.4.
+	ReadOnly bool
+
+	// The collection UUID. This field will be nil for MongoDB versions < 3.6. For versions 3.6 and higher, this will
+	// be a primitive.Binary with Subtype 4.
+	UUID *primitive.Binary
+
+	// A document containing the options used to construct the collection.
+	Options bson.Raw
+
+	// An IndexSpecification instance with details about the collection's _id index. This will be nil if the NameOnly
+	// option is used and for MongoDB versions < 3.4.
+	IDIndex *IndexSpecification
+}
+
+var _ bson.Unmarshaler = (*CollectionSpecification)(nil)
+
+// unmarshalCollectionSpecification is used to unmarshal BSON bytes from a listCollections command into a
+// CollectionSpecification.
+type unmarshalCollectionSpecification struct {
+	Name string `bson:"name"`
+	Type string `bson:"type"`
+	Info *struct {
+		ReadOnly bool              `bson:"readOnly"`
+		UUID     *primitive.Binary `bson:"uuid"`
+	} `bson:"info"`
+	Options bson.Raw            `bson:"options"`
+	IDIndex *IndexSpecification `bson:"idIndex"`
+}
+
+// UnmarshalBSON implements the bson.Unmarshaler interface.
+func (cs *CollectionSpecification) UnmarshalBSON(data []byte) error {
+	var temp unmarshalCollectionSpecification
+	if err := bson.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	cs.Name = temp.Name
+	cs.Type = temp.Type
+	if cs.Type == "" {
+		// The "type" field is only present on 3.4+ because views were introduced in 3.4, so we implicitly set the
+		// value to "collection" if it's empty.
+		cs.Type = "collection"
+	}
+	if temp.Info != nil {
+		cs.ReadOnly = temp.Info.ReadOnly
+		cs.UUID = temp.Info.UUID
+	}
+	cs.Options = temp.Options
+	cs.IDIndex = temp.IDIndex
 	return nil
 }

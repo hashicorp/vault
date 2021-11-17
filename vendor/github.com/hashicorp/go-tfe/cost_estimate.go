@@ -3,7 +3,6 @@ package tfe
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -16,7 +15,7 @@ var _ CostEstimates = (*costEstimates)(nil)
 // CostEstimates describes all the costEstimate related methods that
 // the Terraform Enterprise API supports.
 //
-// TFE API docs: https://www.terraform.io/docs/enterprise/api/ (TBD)
+// TFE API docs: https://www.terraform.io/docs/cloud/api/cost-estimates.html
 type CostEstimates interface {
 	// Read a costEstimate by its ID.
 	Read(ctx context.Context, costEstimateID string) (*CostEstimate, error)
@@ -59,18 +58,18 @@ type CostEstimate struct {
 
 // CostEstimateStatusTimestamps holds the timestamps for individual costEstimate statuses.
 type CostEstimateStatusTimestamps struct {
-	CanceledAt              time.Time `json:"canceled-at"`
-	ErroredAt               time.Time `json:"errored-at"`
-	FinishedAt              time.Time `json:"finished-at"`
-	PendingAt               time.Time `json:"pending-at"`
-	QueuedAt                time.Time `json:"queued-at"`
-	SkippedDueToTargetingAt time.Time `json:"skipped-due-to-targeting-at"`
+	CanceledAt              time.Time `jsonapi:"attr,canceled-at,rfc3339"`
+	ErroredAt               time.Time `jsonapi:"attr,errored-at,rfc3339"`
+	FinishedAt              time.Time `jsonapi:"attr,finished-at,rfc3339"`
+	PendingAt               time.Time `jsonapi:"attr,pending-at,rfc3339"`
+	QueuedAt                time.Time `jsonapi:"attr,queued-at,rfc3339"`
+	SkippedDueToTargetingAt time.Time `jsonapi:"attr,skipped-due-to-targeting-at,rfc3339"`
 }
 
 // Read a costEstimate by its ID.
 func (s *costEstimates) Read(ctx context.Context, costEstimateID string) (*CostEstimate, error) {
 	if !validStringID(&costEstimateID) {
-		return nil, errors.New("invalid value for cost estimate ID")
+		return nil, ErrInvalidCostEstimateID
 	}
 
 	u := fmt.Sprintf("cost-estimates/%s", url.QueryEscape(costEstimateID))
@@ -91,7 +90,7 @@ func (s *costEstimates) Read(ctx context.Context, costEstimateID string) (*CostE
 // Logs retrieves the logs of a costEstimate.
 func (s *costEstimates) Logs(ctx context.Context, costEstimateID string) (io.Reader, error) {
 	if !validStringID(&costEstimateID) {
-		return nil, errors.New("invalid value for cost estimate ID")
+		return nil, ErrInvalidCostEstimateID
 	}
 
 	// Loop until the context is canceled or the cost estimate is finished

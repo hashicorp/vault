@@ -56,6 +56,8 @@ type RetryReaderOptions struct {
 	// from the same "thread" (goroutine) as Read.  Concurrent Close calls from other goroutines may instead produce network errors
 	// which will be retried.
 	TreatEarlyCloseAsError bool
+
+	ClientProvidedKeyOptions ClientProvidedKeyOptions
 }
 
 // retryReader implements io.ReaderCloser methods.

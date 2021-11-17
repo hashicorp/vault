@@ -21,17 +21,17 @@ import (
 )
 
 const (
-	// GroupOwner - Project Owner
+	// GroupOwner - Project Owner.
 	GroupOwner = "GROUP_OWNER"
-	// GroupReadOnly - Project Read Only
+	// GroupReadOnly - Project Read Only.
 	GroupReadOnly = "GROUP_READ_ONLY"
-	// GroupDataAccessAdmin - Project Data Access Admin
+	// GroupDataAccessAdmin - Project Data Access Admin.
 	GroupDataAccessAdmin = "GROUP_DATA_ACCESS_ADMIN"
-	// GroupDataAccessReadWrite - Project Data Access Read/Write
+	// GroupDataAccessReadWrite - Project Data Access Read/Write.
 	GroupDataAccessReadWrite = "GROUP_DATA_ACCESS_READ_WRITE"
-	// GroupDataAccessReadOnly - Project Data Access Read Only
+	// GroupDataAccessReadOnly - Project Data Access Read Only.
 	GroupDataAccessReadOnly = "GROUP_DATA_ACCESS_READ_ONLY"
-	projectBasePath         = "groups"
+	projectBasePath         = "api/atlas/v1.0/groups"
 )
 
 // ProjectsService is an interface for interfacing with the Projects
@@ -42,44 +42,51 @@ type ProjectsService interface {
 	GetAllProjects(context.Context, *ListOptions) (*Projects, *Response, error)
 	GetOneProject(context.Context, string) (*Project, *Response, error)
 	GetOneProjectByName(context.Context, string) (*Project, *Response, error)
-	Create(context.Context, *Project) (*Project, *Response, error)
+	Create(context.Context, *Project, *CreateProjectOptions) (*Project, *Response, error)
 	Delete(context.Context, string) (*Response, error)
 	GetProjectTeamsAssigned(context.Context, string) (*TeamsAssigned, *Response, error)
 	AddTeamsToProject(context.Context, string, []*ProjectTeam) (*TeamsAssigned, *Response, error)
 	RemoveUserFromProject(context.Context, string, string) (*Response, error)
+	Invitations(context.Context, string, *InvitationOptions) ([]*Invitation, *Response, error)
+	Invitation(context.Context, string, string) (*Invitation, *Response, error)
+	InviteUser(context.Context, string, *Invitation) (*Invitation, *Response, error)
+	UpdateInvitation(context.Context, string, *Invitation) (*Invitation, *Response, error)
+	UpdateInvitationByID(context.Context, string, string, *Invitation) (*Invitation, *Response, error)
+	DeleteInvitation(context.Context, string, string) (*Response, error)
 }
 
 // ProjectsServiceOp handles communication with the Projects related methods of the
-// MongoDB Atlas API
+// MongoDB Atlas API.
 type ProjectsServiceOp service
 
 var _ ProjectsService = &ProjectsServiceOp{}
 
 // Project represents the structure of a project.
 type Project struct {
-	ID           string  `json:"id,omitempty"`
-	OrgID        string  `json:"orgId,omitempty"`
-	Name         string  `json:"name,omitempty"`
-	ClusterCount int     `json:"clusterCount,omitempty"`
-	Created      string  `json:"created,omitempty"`
-	Links        []*Link `json:"links,omitempty"`
+	ID                      string  `json:"id,omitempty"`
+	OrgID                   string  `json:"orgId,omitempty"`
+	Name                    string  `json:"name,omitempty"`
+	ClusterCount            int     `json:"clusterCount,omitempty"`
+	Created                 string  `json:"created,omitempty"`
+	RegionUsageRestrictions string  `json:"regionUsageRestrictions,omitempty"` // RegionUsageRestrictions for cloud.mongodbgov.com, valid values are GOV_REGIONS_ONLY, COMMERCIAL_FEDRAMP_REGIONS_ONLY, NONE
+	Links                   []*Link `json:"links,omitempty"`
 }
 
-// Projects represents a array of project
+// Projects represents a array of project.
 type Projects struct {
 	Links      []*Link    `json:"links"`
 	Results    []*Project `json:"results"`
 	TotalCount int        `json:"totalCount"`
 }
 
-// Result is part og TeamsAssigned structure
+// Result is part og TeamsAssigned structure.
 type Result struct {
 	Links     []*Link  `json:"links"`
 	RoleNames []string `json:"roleNames"`
 	TeamID    string   `json:"teamId"`
 }
 
-// ProjectTeam reperesents the kind of role that has the team
+// ProjectTeam reperesents the kind of role that has the team.
 type ProjectTeam struct {
 	TeamID    string   `json:"teamId,omitempty"`
 	RoleNames []string `json:"roleNames,omitempty"`
@@ -90,6 +97,10 @@ type TeamsAssigned struct {
 	Links      []*Link   `json:"links"`
 	Results    []*Result `json:"results"`
 	TotalCount int       `json:"totalCount"`
+}
+
+type CreateProjectOptions struct {
+	ProjectOwnerID string `url:"projectOwnerId,omitempty"` // Unique 24-hexadecimal digit string that identifies the Atlas user account to be granted the Project Owner role on the specified project.
 }
 
 // GetAllProjects gets all project.
@@ -170,12 +181,17 @@ func (s *ProjectsServiceOp) GetOneProjectByName(ctx context.Context, projectName
 // Create creates a project.
 //
 // See more: https://docs.atlas.mongodb.com/reference/api/project-create-one/
-func (s *ProjectsServiceOp) Create(ctx context.Context, createRequest *Project) (*Project, *Response, error) {
+func (s *ProjectsServiceOp) Create(ctx context.Context, createRequest *Project, opts *CreateProjectOptions) (*Project, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
 
-	req, err := s.Client.NewRequest(ctx, http.MethodPost, projectBasePath, createRequest)
+	path, err := setListOptions(projectBasePath, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.Client.NewRequest(ctx, http.MethodPost, path, createRequest)
 	if err != nil {
 		return nil, nil, err
 	}

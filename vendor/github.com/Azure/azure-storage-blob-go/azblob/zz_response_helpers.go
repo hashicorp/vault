@@ -45,7 +45,7 @@ func (dr downloadResponse) NewHTTPHeaders() BlobHTTPHeaders {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// DownloadResponse wraps AutoRest generated DownloadResponse and helps to provide info for retry.
+// downloadResponse wraps AutoRest generated downloadResponse and helps to provide info for retry.
 type DownloadResponse struct {
 	r       *downloadResponse
 	ctx     context.Context
@@ -63,11 +63,9 @@ func (r *DownloadResponse) Body(o RetryReaderOptions) io.ReadCloser {
 	}
 	return NewRetryReader(r.ctx, r.Response(), r.getInfo, o,
 		func(ctx context.Context, getInfo HTTPGetterInfo) (*http.Response, error) {
-			resp, err := r.b.Download(ctx, getInfo.Offset, getInfo.Count,
-				BlobAccessConditions{
-					ModifiedAccessConditions: ModifiedAccessConditions{IfMatch: getInfo.ETag},
-				},
-				false)
+			resp, err := r.b.Download(ctx, getInfo.Offset, getInfo.Count, BlobAccessConditions{
+				ModifiedAccessConditions: ModifiedAccessConditions{IfMatch: getInfo.ETag},
+			}, false, o.ClientProvidedKeyOptions)
 			if err != nil {
 				return nil, err
 			}

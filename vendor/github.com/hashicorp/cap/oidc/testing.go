@@ -35,8 +35,10 @@ func TestGenerateKeys(t *testing.T) (crypto.PublicKey, crypto.PrivateKey) {
 }
 
 // TestSignJWT will bundle the provided claims into a test signed JWT.
-func TestSignJWT(t *testing.T, key crypto.PrivateKey, alg string, claims interface{}, keyID []byte) string {
-	t.Helper()
+func TestSignJWT(t TestingT, key crypto.PrivateKey, alg string, claims interface{}, keyID []byte) string {
+	if v, ok := interface{}(t).(interface{ Helper() }); ok {
+		v.Helper()
+	}
 	require := require.New(t)
 
 	hdr := map[jose.HeaderKey]interface{}{}

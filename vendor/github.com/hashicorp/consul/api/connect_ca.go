@@ -23,6 +23,14 @@ type CAConfig struct {
 	// configuration is an error.
 	State map[string]string
 
+	// ForceWithoutCrossSigning indicates that the CA reconfiguration should go
+	// ahead even if the current CA is unable to cross sign certificates. This
+	// risks temporary connection failures during the rollout as new leafs will be
+	// rejected by proxies that have not yet observed the new root cert but is the
+	// only option if a CA that doesn't support cross signing needs to be
+	// reconfigured or mirated away from.
+	ForceWithoutCrossSigning bool
+
 	CreateIndex uint64
 	ModifyIndex uint64
 }
@@ -41,7 +49,6 @@ type ConsulCAProviderConfig struct {
 
 	PrivateKey          string
 	RootCert            string
-	RotationPeriod      time.Duration
 	IntermediateCertTTL time.Duration
 }
 
@@ -130,7 +137,7 @@ func (h *Connect) CARoots(q *QueryOptions) (*CARootList, *QueryMeta, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	qm := &QueryMeta{}
 	parseQueryMeta(resp, qm)
@@ -151,7 +158,7 @@ func (h *Connect) CAGetConfig(q *QueryOptions) (*CAConfig, *QueryMeta, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	qm := &QueryMeta{}
 	parseQueryMeta(resp, qm)
@@ -173,7 +180,7 @@ func (h *Connect) CASetConfig(conf *CAConfig, q *WriteOptions) (*WriteMeta, erro
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer closeResponseBody(resp)
 
 	wm := &WriteMeta{}
 	wm.RequestTime = rtt

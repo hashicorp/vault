@@ -99,10 +99,16 @@ type ListMeta struct {
 	RemainingItemCount *int64 `json:"remainingItemCount,omitempty" protobuf:"bytes,4,opt,name=remainingItemCount"`
 }
 
+// Field path constants that are specific to the internal API
+// representation.
+const (
+	ObjectNameField = "metadata.name"
+)
+
 // These are internal finalizer values for Kubernetes-like APIs, must be qualified name unless defined here
 const (
-	FinalizerOrphanDependents string = "orphan"
-	FinalizerDeleteDependents string = "foregroundDeletion"
+	FinalizerOrphanDependents = "orphan"
+	FinalizerDeleteDependents = "foregroundDeletion"
 )
 
 // ObjectMeta is metadata that all persisted resources must have, which includes all objects
@@ -135,7 +141,7 @@ type ObjectMeta struct {
 	// +optional
 	GenerateName string `json:"generateName,omitempty" protobuf:"bytes,2,opt,name=generateName"`
 
-	// Namespace defines the space within each name must be unique. An empty namespace is
+	// Namespace defines the space within which each name must be unique. An empty namespace is
 	// equivalent to the "default" namespace, but "default" is the canonical representation.
 	// Not all objects are required to be scoped to a namespace - the value of this field for
 	// those objects will be empty.
@@ -283,20 +289,21 @@ type ObjectMeta struct {
 
 const (
 	// NamespaceDefault means the object is in the default namespace which is applied when not specified by clients
-	NamespaceDefault string = "default"
+	NamespaceDefault = "default"
 	// NamespaceAll is the default argument to specify on a context when you want to list or filter resources across all namespaces
-	NamespaceAll string = ""
+	NamespaceAll = ""
 	// NamespaceNone is the argument for a context when there is no namespace.
-	NamespaceNone string = ""
+	NamespaceNone = ""
 	// NamespaceSystem is the system namespace where we place system components.
-	NamespaceSystem string = "kube-system"
+	NamespaceSystem = "kube-system"
 	// NamespacePublic is the namespace where we place public info (ConfigMaps)
-	NamespacePublic string = "kube-public"
+	NamespacePublic = "kube-public"
 )
 
 // OwnerReference contains enough information to let you identify an owning
 // object. An owning object must be in the same namespace as the dependent, or
 // be cluster-scoped, so there is no namespace field.
+// +structType=atomic
 type OwnerReference struct {
 	// API version of the referent.
 	APIVersion string `json:"apiVersion" protobuf:"bytes,5,opt,name=apiVersion"`
@@ -350,19 +357,26 @@ type ListOptions struct {
 	// assume bookmarks are returned at any specific interval, nor may they
 	// assume the server will send any BOOKMARK event during a session.
 	// If this is not a watch, this field is ignored.
-	// If the feature gate WatchBookmarks is not enabled in apiserver,
-	// this field is ignored.
 	// +optional
 	AllowWatchBookmarks bool `json:"allowWatchBookmarks,omitempty" protobuf:"varint,9,opt,name=allowWatchBookmarks"`
 
-	// When specified with a watch call, shows changes that occur after that particular version of a resource.
-	// Defaults to changes from the beginning of history.
-	// When specified for list:
-	// - if unset, then the result is returned from remote storage based on quorum-read flag;
-	// - if it's 0, then we simply return what we currently have in cache, no guarantee;
-	// - if set to non zero, then the result is at least as fresh as given rv.
+	// resourceVersion sets a constraint on what resource versions a request may be served from.
+	// See https://kubernetes.io/docs/reference/using-api/api-concepts/#resource-versions for
+	// details.
+	//
+	// Defaults to unset
 	// +optional
 	ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,4,opt,name=resourceVersion"`
+
+	// resourceVersionMatch determines how resourceVersion is applied to list calls.
+	// It is highly recommended that resourceVersionMatch be set for list calls where
+	// resourceVersion is set
+	// See https://kubernetes.io/docs/reference/using-api/api-concepts/#resource-versions for
+	// details.
+	//
+	// Defaults to unset
+	// +optional
+	ResourceVersionMatch ResourceVersionMatch `json:"resourceVersionMatch,omitempty" protobuf:"bytes,10,opt,name=resourceVersionMatch,casttype=ResourceVersionMatch"`
 	// Timeout for the list/watch call.
 	// This limits the duration of the call, regardless of any activity or inactivity.
 	// +optional
@@ -402,20 +416,24 @@ type ListOptions struct {
 	Continue string `json:"continue,omitempty" protobuf:"bytes,8,opt,name=continue"`
 }
 
-// +k8s:conversion-gen:explicit-from=net/url.Values
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// resourceVersionMatch specifies how the resourceVersion parameter is applied. resourceVersionMatch
+// may only be set if resourceVersion is also set.
+//
+// "NotOlderThan" matches data at least as new as the provided resourceVersion.
+// "Exact" matches data at the exact resourceVersion provided.
+//
+// See https://kubernetes.io/docs/reference/using-api/api-concepts/#resource-versions for
+// details.
+type ResourceVersionMatch string
 
-// ExportOptions is the query options to the standard REST get call.
-// Deprecated. Planned for removal in 1.18.
-type ExportOptions struct {
-	TypeMeta `json:",inline"`
-	// Should this value be exported.  Export strips fields that a user can not specify.
-	// Deprecated. Planned for removal in 1.18.
-	Export bool `json:"export" protobuf:"varint,1,opt,name=export"`
-	// Should the export be exact.  Exact export maintains cluster-specific fields like 'Namespace'.
-	// Deprecated. Planned for removal in 1.18.
-	Exact bool `json:"exact" protobuf:"varint,2,opt,name=exact"`
-}
+const (
+	// ResourceVersionMatchNotOlderThan matches data at least as new as the provided
+	// resourceVersion.
+	ResourceVersionMatchNotOlderThan ResourceVersionMatch = "NotOlderThan"
+	// ResourceVersionMatchExact matches data at the exact resourceVersion
+	// provided.
+	ResourceVersionMatchExact ResourceVersionMatch = "Exact"
+)
 
 // +k8s:conversion-gen:explicit-from=net/url.Values
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -423,10 +441,12 @@ type ExportOptions struct {
 // GetOptions is the standard query options to the standard REST get call.
 type GetOptions struct {
 	TypeMeta `json:",inline"`
-	// When specified:
-	// - if unset, then the result is returned from remote storage based on quorum-read flag;
-	// - if it's 0, then we simply return what we currently have in cache, no guarantee;
-	// - if set to non zero, then the result is at least as fresh as given rv.
+	// resourceVersion sets a constraint on what resource versions a request may be served from.
+	// See https://kubernetes.io/docs/reference/using-api/api-concepts/#resource-versions for
+	// details.
+	//
+	// Defaults to unset
+	// +optional
 	ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,1,opt,name=resourceVersion"`
 	// +k8s:deprecated=includeUninitialized,protobuf=2
 }
@@ -557,6 +577,37 @@ type PatchOptions struct {
 	// types (JsonPatch, MergePatch, StrategicMergePatch).
 	// +optional
 	FieldManager string `json:"fieldManager,omitempty" protobuf:"bytes,3,name=fieldManager"`
+}
+
+// ApplyOptions may be provided when applying an API object.
+// FieldManager is required for apply requests.
+// ApplyOptions is equivalent to PatchOptions. It is provided as a convenience with documentation
+// that speaks specifically to how the options fields relate to apply.
+type ApplyOptions struct {
+	TypeMeta `json:",inline"`
+
+	// When present, indicates that modifications should not be
+	// persisted. An invalid or unrecognized dryRun directive will
+	// result in an error response and no further processing of the
+	// request. Valid values are:
+	// - All: all dry run stages will be processed
+	// +optional
+	DryRun []string `json:"dryRun,omitempty" protobuf:"bytes,1,rep,name=dryRun"`
+
+	// Force is going to "force" Apply requests. It means user will
+	// re-acquire conflicting fields owned by other people.
+	Force bool `json:"force" protobuf:"varint,2,opt,name=force"`
+
+	// fieldManager is a name associated with the actor or entity
+	// that is making these changes. The value must be less than or
+	// 128 characters long, and only contain printable characters,
+	// as defined by https://golang.org/pkg/unicode/#IsPrint. This
+	// field is required.
+	FieldManager string `json:"fieldManager" protobuf:"bytes,3,name=fieldManager"`
+}
+
+func (o ApplyOptions) ToPatchOptions() PatchOptions {
+	return PatchOptions{DryRun: o.DryRun, Force: &o.Force, FieldManager: o.FieldManager}
 }
 
 // +k8s:conversion-gen:explicit-from=net/url.Values
@@ -873,6 +924,9 @@ const (
 	// FieldManagerConflict is used to report when another client claims to manage this field,
 	// It should only be returned for a request using server-side apply.
 	CauseTypeFieldManagerConflict CauseType = "FieldManagerConflict"
+	// CauseTypeResourceVersionTooLarge is used to report that the requested resource version
+	// is newer than the data observed by the API server, so the request cannot be served.
+	CauseTypeResourceVersionTooLarge CauseType = "ResourceVersionTooLarge"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -1059,6 +1113,7 @@ type Patch struct{}
 // A label selector is a label query over a set of resources. The result of matchLabels and
 // matchExpressions are ANDed. An empty label selector matches all objects. A null
 // label selector matches no objects.
+// +structType=atomic
 type LabelSelector struct {
 	// matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
 	// map is equivalent to an element of matchExpressions, whose key field is "key", the
@@ -1124,6 +1179,15 @@ type ManagedFieldsEntry struct {
 	// FieldsV1 holds the first JSON version format as described in the "FieldsV1" type.
 	// +optional
 	FieldsV1 *FieldsV1 `json:"fieldsV1,omitempty" protobuf:"bytes,7,opt,name=fieldsV1"`
+
+	// Subresource is the name of the subresource used to update that object, or
+	// empty string if the object was updated through the main resource. The
+	// value of this field is used to distinguish between managers, even if they
+	// share the same name. For example, a status update will be distinct from a
+	// regular update using the same manager name.
+	// Note that the APIVersion field is not related to the Subresource field and
+	// it always corresponds to the version of the main resource.
+	Subresource string `json:"subresource,omitempty" protobuf:"bytes,8,opt,name=subresource"`
 }
 
 // ManagedFieldsOperationType is the type of operation which lead to a ManagedFieldsEntry being created.
@@ -1145,9 +1209,14 @@ const (
 // If a key maps to an empty Fields value, the field that key represents is part of the set.
 //
 // The exact format is defined in sigs.k8s.io/structured-merge-diff
+// +protobuf.options.(gogoproto.goproto_stringer)=false
 type FieldsV1 struct {
 	// Raw is the underlying serialization of this object.
 	Raw []byte `json:"-" protobuf:"bytes,1,opt,name=Raw"`
+}
+
+func (f FieldsV1) String() string {
+	return string(f.Raw)
 }
 
 // TODO: Table does not generate to protobuf because of the interface{} - fix protobuf
@@ -1310,4 +1379,66 @@ type PartialObjectMetadataList struct {
 
 	// items contains each of the included items.
 	Items []PartialObjectMetadata `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// Condition contains details for one aspect of the current state of this API Resource.
+// ---
+// This struct is intended for direct use as an array at the field path .status.conditions.  For example,
+// type FooStatus struct{
+//     // Represents the observations of a foo's current state.
+//     // Known .status.conditions.type are: "Available", "Progressing", and "Degraded"
+//     // +patchMergeKey=type
+//     // +patchStrategy=merge
+//     // +listType=map
+//     // +listMapKey=type
+//     Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+//
+//     // other fields
+// }
+type Condition struct {
+	// type of condition in CamelCase or in foo.example.com/CamelCase.
+	// ---
+	// Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+	// useful (see .node.status.conditions), the ability to deconflict is important.
+	// The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+	// +required
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
+	// +kubebuilder:validation:MaxLength=316
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// status of the condition, one of True, False, Unknown.
+	// +required
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=True;False;Unknown
+	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status"`
+	// observedGeneration represents the .metadata.generation that the condition was set based upon.
+	// For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+	// with respect to the current state of the instance.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	// lastTransitionTime is the last time the condition transitioned from one status to another.
+	// This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+	// +required
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	LastTransitionTime Time `json:"lastTransitionTime" protobuf:"bytes,4,opt,name=lastTransitionTime"`
+	// reason contains a programmatic identifier indicating the reason for the condition's last transition.
+	// Producers of specific condition types may define expected values and meanings for this field,
+	// and whether the values are considered a guaranteed API.
+	// The value should be a CamelCase string.
+	// This field may not be empty.
+	// +required
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`
+	Reason string `json:"reason" protobuf:"bytes,5,opt,name=reason"`
+	// message is a human readable message indicating details about the transition.
+	// This may be an empty string.
+	// +required
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=32768
+	Message string `json:"message" protobuf:"bytes,6,opt,name=message"`
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	gocbcore "github.com/couchbase/gocbcore/v9"
+	gocbcore "github.com/couchbase/gocbcore/v10"
 )
 
 // MutationToken holds the mutation state information from an operation.

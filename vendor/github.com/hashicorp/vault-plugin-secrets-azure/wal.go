@@ -9,10 +9,24 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const walAppKey = "appCreate"
+const (
+	walAppKey          = "appCreate"
+	walRotateRootCreds = "rotateRootCreds"
+)
 
 // Eventually expire the WAL if for some reason the rollback operation consistently fails
 var maxWALAge = 24 * time.Hour
+
+func (b *azureSecretBackend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
+	switch kind {
+	case walAppKey:
+		return b.rollbackAppWAL(ctx, req, data)
+	case walRotateRootCreds:
+		return b.rollbackRootWAL(ctx, req, data)
+	default:
+		return fmt.Errorf("unknown rollback type %q", kind)
+	}
+}
 
 type walApp struct {
 	AppID      string
@@ -20,10 +34,7 @@ type walApp struct {
 	Expiration time.Time
 }
 
-func (b *azureSecretBackend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
-	if kind != walAppKey {
-		return fmt.Errorf("unknown rollback type %q", kind)
-	}
+func (b *azureSecretBackend) rollbackAppWAL(ctx context.Context, req *logical.Request, data interface{}) error {
 	// Decode the WAL data
 	var entry walApp
 	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -57,6 +68,30 @@ func (b *azureSecretBackend) walRollback(ctx context.Context, req *logical.Reque
 		}
 		return err
 	}
+
+	return nil
+}
+
+type walRotateRoot struct{}
+
+func (b *azureSecretBackend) rollbackRootWAL(ctx context.Context, req *logical.Request, data interface{}) error {
+	b.Logger().Debug("rolling back config")
+	config, err := b.getConfig(ctx, req.Storage)
+	if err != nil {
+		return err
+	}
+
+	config.NewClientSecret = ""
+	config.NewClientSecretCreated = time.Time{}
+	config.NewClientSecretExpirationDate = time.Time{}
+	config.NewClientSecretKeyID = ""
+
+	err = b.saveConfig(ctx, config, req.Storage)
+	if err != nil {
+		return err
+	}
+
+	b.updatePassword = false
 
 	return nil
 }

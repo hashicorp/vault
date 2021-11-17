@@ -140,6 +140,7 @@ func (s *Space) Org() (Org, error) {
 	if err != nil {
 		return Org{}, errors.Wrap(err, "Error requesting org")
 	}
+	defer resp.Body.Close()
 	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return Org{}, errors.Wrap(err, "Error reading org request")
@@ -164,8 +165,8 @@ func (s *Space) Quota() (*SpaceQuota, error) {
 	if err != nil {
 		return &SpaceQuota{}, errors.Wrap(err, "Error requesting space quota")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return &SpaceQuota{}, errors.Wrap(err, "Error reading space quota body")
 	}
@@ -187,8 +188,8 @@ func (s *Space) Summary() (SpaceSummary, error) {
 	if err != nil {
 		return SpaceSummary{}, errors.Wrap(err, "Error requesting space summary")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return SpaceSummary{}, errors.Wrap(err, "Error reading space summary body")
 	}
@@ -231,6 +232,7 @@ func (c *Client) CreateSpace(req SpaceRequest) (Space, error) {
 	if err != nil {
 		return Space{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return Space{}, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -247,6 +249,7 @@ func (c *Client) DeleteSpace(guid string, recursive, async bool) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error deleting space %s, response code: %d", guid, resp.StatusCode)
 	}
@@ -464,6 +467,7 @@ func (s *Space) associateRole(userGUID, role string) (Space, error) {
 	if err != nil {
 		return Space{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return Space{}, errors.Wrapf(err, "Error associating %s %s, response code: %d", role, userGUID, resp.StatusCode)
 	}
@@ -487,6 +491,7 @@ func (s *Space) associateUserByRole(name, role, origin string) (Space, error) {
 	if err != nil {
 		return Space{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return Space{}, errors.Wrapf(err, "Error associating %s %s, response code: %d", role, name, resp.StatusCode)
 	}
@@ -500,6 +505,7 @@ func (s *Space) removeRole(userGUID, role string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		return errors.Wrapf(err, "Error removing %s %s, response code: %d", role, userGUID, resp.StatusCode)
 	}
@@ -530,6 +536,7 @@ func (s *Space) removeUserByRole(name, role, origin string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.Wrapf(err, "Error removing %s %s, response code: %d", role, name, resp.StatusCode)
 	}
@@ -551,6 +558,7 @@ func (s *Space) ListSecGroups() (secGroups []SecGroup, err error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "Error requesting sec groups")
 		}
+		defer resp.Body.Close()
 		resBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error reading sec group response body")
@@ -573,9 +581,7 @@ func (s *Space) ListSecGroups() (secGroups []SecGroup, err error) {
 				if err != nil {
 					return nil, err
 				}
-				for _, space := range spaces {
-					secGroup.Entity.SpacesData = append(secGroup.Entity.SpacesData, space)
-				}
+				secGroup.Entity.SpacesData = append(secGroup.Entity.SpacesData, spaces...)
 			}
 			secGroups = append(secGroups, secGroup.Entity)
 		}
@@ -595,7 +601,7 @@ func (s *Space) GetServiceOfferings() (ServiceOfferingResponse, error) {
 	if err != nil {
 		return ServiceOfferingResponse{}, errors.Wrap(err, "Error requesting service offerings")
 	}
-
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return ServiceOfferingResponse{}, errors.Wrap(err, "Error reading service offering response")
@@ -620,6 +626,7 @@ func (s *Space) Update(req SpaceRequest) (Space, error) {
 	if err != nil {
 		return Space{}, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return Space{}, fmt.Errorf("CF API returned with status code %d", resp.StatusCode)
 	}
@@ -627,14 +634,19 @@ func (s *Space) Update(req SpaceRequest) (Space, error) {
 }
 
 func (c *Client) ListSpacesByQuery(query url.Values) ([]Space, error) {
-	return c.fetchSpaces("/v2/spaces?" + query.Encode())
+	return c.fetchSpaces("/v2/spaces", query)
+}
+
+func (c *Client) ListSpacesByOrgGuid(orgGuid string) ([]Space, error) {
+	return c.fetchSpaces(fmt.Sprintf("/v2/organizations/%s/spaces", orgGuid), url.Values{})
 }
 
 func (c *Client) ListSpaces() ([]Space, error) {
 	return c.ListSpacesByQuery(nil)
 }
 
-func (c *Client) fetchSpaces(requestUrl string) ([]Space, error) {
+func (c *Client) fetchSpaces(path string, query url.Values) ([]Space, error) {
+	requestUrl := path + "?" + query.Encode()
 	var spaces []Space
 	for {
 		spaceResp, err := c.getSpaceResponse(requestUrl)
@@ -645,7 +657,7 @@ func (c *Client) fetchSpaces(requestUrl string) ([]Space, error) {
 			spaces = append(spaces, c.mergeSpaceResource(space))
 		}
 		requestUrl = spaceResp.NextUrl
-		if requestUrl == "" {
+		if requestUrl == "" || query.Get("page") != "" {
 			break
 		}
 	}
@@ -676,6 +688,7 @@ func (c *Client) GetSpaceByGuid(spaceGUID string) (Space, error) {
 	if err != nil {
 		return Space{}, errors.Wrap(err, "Error requesting space info")
 	}
+	defer resp.Body.Close()
 	return c.handleSpaceResp(resp)
 }
 
@@ -686,8 +699,8 @@ func (c *Client) getSpaceResponse(requestUrl string) (SpaceResponse, error) {
 	if err != nil {
 		return SpaceResponse{}, errors.Wrap(err, "Error requesting spaces")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return SpaceResponse{}, errors.Wrap(err, "Error reading space request")
 	}
@@ -705,8 +718,8 @@ func (c *Client) getSpaceRolesResponse(requestUrl string) (SpaceRoleResponse, er
 	if err != nil {
 		return roleResp, errors.Wrap(err, "Error requesting space roles")
 	}
-	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return roleResp, errors.Wrap(err, "Error reading space roles request")
 	}
@@ -783,6 +796,7 @@ func (c *Client) updateSpaceIsolationSegment(spaceGUID string, data interface{})
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.Wrapf(err, "Error setting isolation segment for space %s, response code: %d", spaceGUID, resp.StatusCode)
 	}

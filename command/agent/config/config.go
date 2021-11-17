@@ -1,20 +1,22 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -22,16 +24,20 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth      *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth bool                       `hcl:"exit_after_auth"`
-	Cache         *Cache                     `hcl:"cache"`
-	Vault         *Vault                     `hcl:"vault"`
-	Templates     []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth       *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth  bool                       `hcl:"exit_after_auth"`
+	Cache          *Cache                     `hcl:"cache"`
+	Vault          *Vault                     `hcl:"vault"`
+	TemplateConfig *TemplateConfig            `hcl:"template_config"`
+	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
 }
 
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
 		l.RawConfig = nil
+		l.Profiling.UnusedKeys = nil
+		l.Telemetry.UnusedKeys = nil
+		l.CustomResponseHeaders = nil
 	}
 	c.FoundKeys = nil
 	c.UnusedKeys = nil
@@ -60,14 +66,25 @@ type Vault struct {
 	Retry            *Retry      `hcl:"retry"`
 }
 
+// transportDialer is an interface that allows passing a custom dialer function
+// to an HTTP client's transport config
+type transportDialer interface {
+	// Dial is intended to match https://pkg.go.dev/net#Dialer.Dial
+	Dial(network, address string) (net.Conn, error)
+
+	// DialContext is intended to match https://pkg.go.dev/net#Dialer.DialContext
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{} `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool        `hcl:"-"`
-	ForceAutoAuthToken  bool        `hcl:"-"`
-	EnforceConsistency  string      `hcl:"enforce_consistency"`
-	WhenInconsistent    string      `hcl:"when_inconsistent"`
-	Persist             *Persist    `hcl:"persist"`
+	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool            `hcl:"-"`
+	ForceAutoAuthToken  bool            `hcl:"-"`
+	EnforceConsistency  string          `hcl:"enforce_consistency"`
+	WhenInconsistent    string          `hcl:"when_inconsistent"`
+	Persist             *Persist        `hcl:"persist"`
+	InProcDialer        transportDialer `hcl:"-"`
 }
 
 // Persist contains configuration needed for persistent caching
@@ -112,6 +129,13 @@ type Sink struct {
 	AAD        string        `hcl:"aad"`
 	AADEnvVar  string        `hcl:"aad_env_var"`
 	Config     map[string]interface{}
+}
+
+// TemplateConfig defines global behaviors around template
+type TemplateConfig struct {
+	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
+	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
+	StaticSecretRenderInt    time.Duration `hcl:"-"`
 }
 
 func NewConfig() *Config {
@@ -162,6 +186,12 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Pruning custom headers for Agent for now
+	for _, ln := range sharedConfig.Listeners {
+		ln.CustomResponseHeaders = nil
+	}
+
 	result.SharedConfig = sharedConfig
 
 	list, ok := obj.Node.(*ast.ObjectList)
@@ -177,13 +207,17 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
+	if err := parseTemplateConfig(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
+	}
+
 	if err := parseTemplates(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
 	if result.Cache != nil {
-		if len(result.Listeners) < 1 {
-			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		if len(result.Listeners) < 1 && len(result.Templates) < 1 {
+			return nil, fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
 		if result.Cache.UseAutoAuthToken {
@@ -548,6 +582,39 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.AutoAuth.Sinks = ts
+	return nil
+}
+
+func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
+	name := "template_config"
+
+	templateConfigList := list.Filter(name)
+	if len(templateConfigList.Items) == 0 {
+		return nil
+	}
+
+	if len(templateConfigList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
+	}
+
+	// Get our item
+	item := templateConfigList.Items[0]
+
+	var cfg TemplateConfig
+	if err := hcl.DecodeObject(&cfg, item.Val); err != nil {
+		return err
+	}
+
+	result.TemplateConfig = &cfg
+
+	if result.TemplateConfig.StaticSecretRenderIntRaw != nil {
+		var err error
+		if result.TemplateConfig.StaticSecretRenderInt, err = parseutil.ParseDurationSecond(result.TemplateConfig.StaticSecretRenderIntRaw); err != nil {
+			return err
+		}
+		result.TemplateConfig.StaticSecretRenderIntRaw = nil
+	}
+
 	return nil
 }
 

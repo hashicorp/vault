@@ -154,6 +154,36 @@ func (a *ACLTokens) Self(q *QueryOptions) (*ACLToken, *QueryMeta, error) {
 	return &resp, wm, nil
 }
 
+// UpsertOneTimeToken is used to create a one-time token
+func (a *ACLTokens) UpsertOneTimeToken(q *WriteOptions) (*OneTimeToken, *WriteMeta, error) {
+	var resp *OneTimeTokenUpsertResponse
+	wm, err := a.client.write("/v1/acl/token/onetime", nil, &resp, q)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resp == nil {
+		return nil, nil, fmt.Errorf("no one-time token returned")
+	}
+	return resp.OneTimeToken, wm, nil
+}
+
+// ExchangeOneTimeToken is used to create a one-time token
+func (a *ACLTokens) ExchangeOneTimeToken(secret string, q *WriteOptions) (*ACLToken, *WriteMeta, error) {
+	if secret == "" {
+		return nil, nil, fmt.Errorf("missing secret ID")
+	}
+	req := &OneTimeTokenExchangeRequest{OneTimeSecretID: secret}
+	var resp *OneTimeTokenExchangeResponse
+	wm, err := a.client.write("/v1/acl/token/onetime/exchange", req, &resp, q)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resp == nil {
+		return nil, nil, fmt.Errorf("no ACL token returned")
+	}
+	return resp.Token, wm, nil
+}
+
 // ACLPolicyListStub is used to for listing ACL policies
 type ACLPolicyListStub struct {
 	Name        string
@@ -193,4 +223,24 @@ type ACLTokenListStub struct {
 	CreateTime  time.Time
 	CreateIndex uint64
 	ModifyIndex uint64
+}
+
+type OneTimeToken struct {
+	OneTimeSecretID string
+	AccessorID      string
+	ExpiresAt       time.Time
+	CreateIndex     uint64
+	ModifyIndex     uint64
+}
+
+type OneTimeTokenUpsertResponse struct {
+	OneTimeToken *OneTimeToken
+}
+
+type OneTimeTokenExchangeRequest struct {
+	OneTimeSecretID string
+}
+
+type OneTimeTokenExchangeResponse struct {
+	Token *ACLToken
 }

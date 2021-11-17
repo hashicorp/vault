@@ -70,6 +70,11 @@ func ServiceProvider(v ServiceProviderType) *ServiceProviderType {
 	return &v
 }
 
+// SMTPAuthValue returns a pointer to a given smtp auth type.
+func SMTPAuthValue(v SMTPAuthType) *SMTPAuthType {
+	return &v
+}
+
 // String returns a pointer to the given string.
 func String(v string) *string {
 	return &v

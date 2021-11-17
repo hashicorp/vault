@@ -46,34 +46,45 @@ func TypeEqual(left, right DataType, opts ...TypeEqualOption) bool {
 
 	switch {
 	case left == nil || right == nil:
-		return false
+		return left == nil && right == nil
 	case left.ID() != right.ID():
 		return false
 	}
 
-	// StructType is the only type that has metadata.
-	l, ok := left.(*StructType)
-	if !ok || cfg.metadata {
-		return reflect.DeepEqual(left, right)
-	}
-
-	r := right.(*StructType)
-	switch {
-	case len(l.fields) != len(r.fields):
-		return false
-	case !reflect.DeepEqual(l.index, r.index):
-		return false
-	}
-	for i := range l.fields {
-		leftField, rightField := l.fields[i], r.fields[i]
-		switch {
-		case leftField.Name != rightField.Name:
-			return false
-		case leftField.Nullable != rightField.Nullable:
-			return false
-		case !TypeEqual(leftField.Type, rightField.Type, opts...):
+	switch l := left.(type) {
+	case ExtensionType:
+		return l.ExtensionEquals(right.(ExtensionType))
+	case *ListType:
+		if !TypeEqual(l.Elem(), right.(*ListType).Elem(), opts...) {
 			return false
 		}
+		if cfg.metadata {
+			return l.Meta.Equal(right.(*ListType).Meta)
+		}
+		return true
+	case *StructType:
+		r := right.(*StructType)
+		switch {
+		case len(l.fields) != len(r.fields):
+			return false
+		case !reflect.DeepEqual(l.index, r.index):
+			return false
+		}
+		for i := range l.fields {
+			leftField, rightField := l.fields[i], r.fields[i]
+			switch {
+			case leftField.Name != rightField.Name:
+				return false
+			case leftField.Nullable != rightField.Nullable:
+				return false
+			case !TypeEqual(leftField.Type, rightField.Type, opts...):
+				return false
+			case cfg.metadata && !leftField.Metadata.Equal(rightField.Metadata):
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(left, right)
 	}
-	return true
 }

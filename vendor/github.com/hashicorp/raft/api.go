@@ -564,7 +564,9 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 			r.logger.Error("failed to get log", "index", index, "error", err)
 			panic(err)
 		}
-		r.processConfigurationLogEntry(&entry)
+		if err := r.processConfigurationLogEntry(&entry); err != nil {
+			return nil, err
+		}
 	}
 	r.logger.Info("initial configuration",
 		"index", r.configurations.latestIndex,
@@ -627,7 +629,10 @@ func (r *Raft) restoreSnapshot() error {
 			conf = snapshot.Configuration
 			index = snapshot.ConfigurationIndex
 		} else {
-			conf = decodePeers(snapshot.Peers, r.trans)
+			var err error
+			if conf, err = decodePeers(snapshot.Peers, r.trans); err != nil {
+				return err
+			}
 			index = snapshot.Index
 		}
 		r.setCommittedConfiguration(conf, index)

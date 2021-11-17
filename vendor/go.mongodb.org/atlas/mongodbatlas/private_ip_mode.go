@@ -20,10 +20,11 @@ import (
 	"net/http"
 )
 
-const privateIPModePath = "groups/%s/privateIpMode"
+const privateIPModePath = "api/atlas/v1.0/groups/%s/privateIpMode"
 
 // PrivateIPModeService is an interface for interfacing with the PrivateIpMode
 // endpoints of the MongoDB Atlas API.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/get-private-ip-mode-for-project/
 type PrivateIPModeService interface {
 	Get(context.Context, string) (*PrivateIPMode, *Response, error)
@@ -31,7 +32,7 @@ type PrivateIPModeService interface {
 }
 
 // PrivateIPModeServiceOp handles communication with the Private IP Mode related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type PrivateIPModeServiceOp service
 
 var _ PrivateIPModeService = &PrivateIPModeServiceOp{}
@@ -42,6 +43,7 @@ type PrivateIPMode struct {
 }
 
 // Get Verify Connect via Peering Only Mode from the project associated to {GROUP-ID}.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/get-private-ip-mode-for-project/
 func (s *PrivateIPModeServiceOp) Get(ctx context.Context, groupID string) (*PrivateIPMode, *Response, error) {
 	path := fmt.Sprintf(privateIPModePath, groupID)
@@ -60,7 +62,8 @@ func (s *PrivateIPModeServiceOp) Get(ctx context.Context, groupID string) (*Priv
 	return root, resp, err
 }
 
-// Update connection via Peering Only Mode in the project associated to {GROUP-ID}
+// Update connection via Peering Only Mode in the project associated to {GROUP-ID}.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/set-private-ip-mode-for-project/
 func (s *PrivateIPModeServiceOp) Update(ctx context.Context, groupID string, updateRequest *PrivateIPMode) (*PrivateIPMode, *Response, error) {
 	if updateRequest == nil {

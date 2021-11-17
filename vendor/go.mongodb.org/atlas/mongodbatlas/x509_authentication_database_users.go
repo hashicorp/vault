@@ -21,10 +21,11 @@ import (
 	"net/http"
 )
 
-const x509AuthDBUsersPath = "groups/%s/databaseUsers/%s/certs"
-const x509CustomerAuthDBUserPath = "groups/%s/userSecurity"
+const x509AuthDBUsersPath = "api/atlas/v1.0/groups/%s/databaseUsers/%s/certs"
+const x509CustomerAuthDBUserPath = "api/atlas/v1.0/groups/%s/userSecurity"
 
 // X509AuthDBUsersService is an interface for interfacing with the x509 Authentication Database Users.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/x509-configuration/
 type X509AuthDBUsersService interface {
 	CreateUserCertificate(context.Context, string, string, int) (*UserCertificate, *Response, error)
@@ -35,7 +36,7 @@ type X509AuthDBUsersService interface {
 }
 
 // X509AuthDBUsersServiceOp handles communication with the  X509AuthDBUsers related methods
-// of the MongoDB Atlas API
+// of the MongoDB Atlas API.
 type X509AuthDBUsersServiceOp service
 
 var _ X509AuthDBUsersService = &X509AuthDBUsersServiceOp{}
@@ -60,7 +61,7 @@ type UserCertificates struct {
 	TotalCount int               `json:"totalCount"` // Total number of unexpired certificates returned in this response.
 }
 
-// UserSecurity represents the wrapper CustomerX509 struct
+// UserSecurity represents the wrapper CustomerX509 struct.
 type UserSecurity struct {
 	CustomerX509 CustomerX509 `json:"customerX509,omitempty"` // CustomerX509 represents Customer-managed X.509 configuration for an Atlas project.
 }
@@ -71,6 +72,7 @@ type CustomerX509 struct {
 }
 
 // CreateUserCertificate generates an Atlas-managed X.509 certificate for a MongoDB user that authenticates using X.509 certificates.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/x509-configuration-create-certificate/
 func (s *X509AuthDBUsersServiceOp) CreateUserCertificate(ctx context.Context, groupID, username string, monthsUntilExpiration int) (*UserCertificate, *Response, error) {
 	if groupID == "" {
@@ -107,6 +109,7 @@ func (s *X509AuthDBUsersServiceOp) CreateUserCertificate(ctx context.Context, gr
 }
 
 // GetUserCertificates gets a list of all Atlas-managed, unexpired certificates for a user.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/x509-configuration-get-certificates/
 func (s *X509AuthDBUsersServiceOp) GetUserCertificates(ctx context.Context, groupID, username string) ([]UserCertificate, *Response, error) {
 	if groupID == "" {
@@ -137,6 +140,7 @@ func (s *X509AuthDBUsersServiceOp) GetUserCertificates(ctx context.Context, grou
 }
 
 // SaveConfiguration saves a customer-managed X.509 configuration for an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/x509-configuration-save/
 func (s *X509AuthDBUsersServiceOp) SaveConfiguration(ctx context.Context, groupID string, customerX509 *CustomerX509) (*CustomerX509, *Response, error) {
 	if groupID == "" {
@@ -163,6 +167,7 @@ func (s *X509AuthDBUsersServiceOp) SaveConfiguration(ctx context.Context, groupI
 }
 
 // GetCurrentX509Conf gets the current customer-managed X.509 configuration details for an Atlas project.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/x509-configuration-get-current/
 func (s *X509AuthDBUsersServiceOp) GetCurrentX509Conf(ctx context.Context, groupID string) (*CustomerX509, *Response, error) {
 	if groupID == "" {
@@ -186,6 +191,7 @@ func (s *X509AuthDBUsersServiceOp) GetCurrentX509Conf(ctx context.Context, group
 }
 
 // DisableCustomerX509 clears customer-managed X.509 settings on a project. This disables customer-managed X.509.
+//
 // See more: https://docs.atlas.mongodb.com/reference/api/x509-configuration-disable-advanced/
 func (s *X509AuthDBUsersServiceOp) DisableCustomerX509(ctx context.Context, groupID string) (*Response, error) {
 	if groupID == "" {

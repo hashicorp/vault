@@ -14,12 +14,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/event"
+	"go.mongodb.org/mongo-driver/mongo/description"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"go.mongodb.org/mongo-driver/x/mongo/driver"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/description"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/session"
 )
 
@@ -45,6 +45,8 @@ type Aggregate struct {
 	selector                 description.ServerSelector
 	writeConcern             *writeconcern.WriteConcern
 	crypt                    *driver.Crypt
+	serverAPI                *driver.ServerAPIOptions
+	let                      bsoncore.Document
 
 	result driver.CursorResponse
 }
@@ -62,6 +64,7 @@ func (a *Aggregate) Result(opts driver.CursorOptions) (*driver.BatchCursor, erro
 	clientSession := a.session
 
 	clock := a.clock
+	opts.ServerAPI = a.serverAPI
 	return driver.NewBatchCursor(a.result, clientSession, clock, opts)
 }
 
@@ -69,10 +72,10 @@ func (a *Aggregate) ResultCursorResponse() driver.CursorResponse {
 	return a.result
 }
 
-func (a *Aggregate) processResponse(response bsoncore.Document, srvr driver.Server, desc description.Server, currIndex int) error {
+func (a *Aggregate) processResponse(info driver.ResponseInfo) error {
 	var err error
 
-	a.result, err = driver.NewCursorResponse(response, srvr, desc)
+	a.result, err = driver.NewCursorResponse(info)
 	return err
 
 }
@@ -100,6 +103,7 @@ func (a *Aggregate) Execute(ctx context.Context) error {
 		WriteConcern:                   a.writeConcern,
 		Crypt:                          a.crypt,
 		MinimumWriteConcernWireVersion: 5,
+		ServerAPI:                      a.serverAPI,
 	}.Execute(ctx, nil)
 
 }
@@ -145,6 +149,9 @@ func (a *Aggregate) command(dst []byte, desc description.SelectedServer) ([]byte
 	if a.pipeline != nil {
 
 		dst = bsoncore.AppendArrayElement(dst, "pipeline", a.pipeline)
+	}
+	if a.let != nil {
+		dst = bsoncore.AppendDocumentElement(dst, "let", a.let)
 	}
 	cursorDoc, _ = bsoncore.AppendDocumentEnd(cursorDoc, cursorIdx)
 	dst = bsoncore.AppendDocumentElement(dst, "cursor", cursorDoc)
@@ -351,5 +358,25 @@ func (a *Aggregate) Crypt(crypt *driver.Crypt) *Aggregate {
 	}
 
 	a.crypt = crypt
+	return a
+}
+
+// ServerAPI sets the server API version for this operation.
+func (a *Aggregate) ServerAPI(serverAPI *driver.ServerAPIOptions) *Aggregate {
+	if a == nil {
+		a = new(Aggregate)
+	}
+
+	a.serverAPI = serverAPI
+	return a
+}
+
+// Let specifies the let document to use. This option is only valid for server versions 5.0 and above.
+func (a *Aggregate) Let(let bsoncore.Document) *Aggregate {
+	if a == nil {
+		a = new(Aggregate)
+	}
+
+	a.let = let
 	return a
 }

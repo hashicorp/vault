@@ -7,8 +7,11 @@
             <FormField
               data-test-field
               @attr={{attr}}
+              @mode={{mode}}
               @model={{model}}
               @onChange={{onChange}}
+              @onKeyUp={{onKeyUp}}
+              @validationMessages={{validationMessages}}
             />
           {{/unless}}
         {{/each}}
@@ -27,6 +30,7 @@
               <FormField
                 data-test-field
                 @attr={{attr}}
+                @mode={{mode}}
                 @model={{model}}
               />
             {{/each}}

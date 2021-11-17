@@ -376,16 +376,9 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 
 		switch packet.Children[1].Tag {
 		case 4:
-			entry := new(Entry)
-			entry.DN = packet.Children[1].Children[0].Value.(string)
-			for _, child := range packet.Children[1].Children[1].Children {
-				attr := new(EntryAttribute)
-				attr.Name = child.Children[0].Value.(string)
-				for _, value := range child.Children[1].Children {
-					attr.Values = append(attr.Values, value.Value.(string))
-					attr.ByteValues = append(attr.ByteValues, value.ByteValue)
-				}
-				entry.Attributes = append(entry.Attributes, attr)
+			entry := &Entry{
+				DN:         packet.Children[1].Children[0].Value.(string),
+				Attributes: unpackAttributes(packet.Children[1].Children[1].Children),
 			}
 			result.Entries = append(result.Entries, entry)
 		case 5:
@@ -407,4 +400,28 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 			result.Referrals = append(result.Referrals, packet.Children[1].Children[0].Value.(string))
 		}
 	}
+}
+
+// unpackAttributes will extract all given LDAP attributes and it's values
+// from the ber.Packet
+func unpackAttributes(children []*ber.Packet) []*EntryAttribute {
+	entries := make([]*EntryAttribute, len(children))
+	for i, child := range children {
+		length := len(child.Children[1].Children)
+		entry := &EntryAttribute{
+			Name: child.Children[0].Value.(string),
+			// pre-allocate the slice since we can determine
+			// the number of attributes at this point
+			Values:     make([]string, length),
+			ByteValues: make([][]byte, length),
+		}
+
+		for i, value := range child.Children[1].Children {
+			entry.ByteValues[i] = value.ByteValue
+			entry.Values[i] = value.Value.(string)
+		}
+		entries[i] = entry
+	}
+
+	return entries
 }

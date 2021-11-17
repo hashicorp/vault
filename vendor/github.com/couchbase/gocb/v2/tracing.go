@@ -1,10 +1,11 @@
 package gocb
 
 import (
-	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
+	"time"
 )
 
-func tracerAddRef(tracer requestTracer) {
+func tracerAddRef(tracer RequestTracer) {
 	if tracer == nil {
 		return
 	}
@@ -15,7 +16,7 @@ func tracerAddRef(tracer requestTracer) {
 	}
 }
 
-func tracerDecRef(tracer requestTracer) {
+func tracerDecRef(tracer RequestTracer) {
 	if tracer == nil {
 		return
 	}
@@ -26,47 +27,51 @@ func tracerDecRef(tracer requestTracer) {
 	}
 }
 
-// requestTracer describes the tracing abstraction in the SDK.
-type requestTracer interface {
-	StartSpan(operationName string, parentContext requestSpanContext) requestSpan
+// RequestTracer describes the tracing abstraction in the SDK.
+type RequestTracer interface {
+	RequestSpan(parentContext RequestSpanContext, operationName string) RequestSpan
 }
 
-// requestSpan is the interface for spans that are created by a requestTracer.
-type requestSpan interface {
-	Finish()
-	Context() requestSpanContext
-	SetTag(key string, value interface{}) requestSpan
+// RequestSpan is the interface for spans that are created by a RequestTracer.
+type RequestSpan interface {
+	End()
+	Context() RequestSpanContext
+	AddEvent(name string, timestamp time.Time)
+	SetAttribute(key string, value interface{})
 }
 
-// requestSpanContext is the interface for for external span contexts that can be passed in into the SDK option blocks.
-type requestSpanContext interface {
+// RequestSpanContext is the interface for for external span contexts that can be passed in into the SDK option blocks.
+type RequestSpanContext interface {
 }
 
-type requestTracerWrapper struct {
-	tracer requestTracer
+type coreRequestTracerWrapper struct {
+	tracer RequestTracer
 }
 
-func (tracer *requestTracerWrapper) StartSpan(operationName string, parentContext gocbcore.RequestSpanContext) gocbcore.RequestSpan {
-	return requestSpanWrapper{
-		span: tracer.tracer.StartSpan(operationName, parentContext),
+func (tracer *coreRequestTracerWrapper) RequestSpan(parentContext gocbcore.RequestSpanContext, operationName string) gocbcore.RequestSpan {
+	return &coreRequestSpanWrapper{
+		span: tracer.tracer.RequestSpan(parentContext, operationName),
 	}
 }
 
-type requestSpanWrapper struct {
-	span requestSpan
+type coreRequestSpanWrapper struct {
+	span RequestSpan
 }
 
-func (span requestSpanWrapper) Finish() {
-	span.span.Finish()
+func (span *coreRequestSpanWrapper) End() {
+	span.span.End()
 }
 
-func (span requestSpanWrapper) Context() gocbcore.RequestSpanContext {
+func (span *coreRequestSpanWrapper) Context() gocbcore.RequestSpanContext {
 	return span.span.Context()
 }
 
-func (span requestSpanWrapper) SetTag(key string, value interface{}) gocbcore.RequestSpan {
-	span.span = span.span.SetTag(key, value)
-	return span
+func (span *coreRequestSpanWrapper) SetAttribute(key string, value interface{}) {
+	span.span.SetAttribute(key, value)
+}
+
+func (span *coreRequestSpanWrapper) AddEvent(key string, timestamp time.Time) {
+	span.span.SetAttribute(key, timestamp)
 }
 
 type noopSpan struct{}
@@ -77,21 +82,43 @@ var (
 	defaultNoopSpan        = noopSpan{}
 )
 
-// noopTracer will have a future use so we tell the linter not to flag it.
-type noopTracer struct { // nolint: unused
+// NoopTracer is a RequestTracer implementation that does not perform any tracing.
+type NoopTracer struct { // nolint: unused
 }
 
-func (tracer *noopTracer) StartSpan(operationName string, parentContext requestSpanContext) requestSpan {
+// RequestSpan creates a new RequestSpan.
+func (tracer *NoopTracer) RequestSpan(parentContext RequestSpanContext, operationName string) RequestSpan {
 	return defaultNoopSpan
 }
 
-func (span noopSpan) Finish() {
+// End completes the span.
+func (span noopSpan) End() {
 }
 
-func (span noopSpan) Context() requestSpanContext {
+// Context returns the RequestSpanContext for this span.
+func (span noopSpan) Context() RequestSpanContext {
 	return defaultNoopSpanContext
 }
 
-func (span noopSpan) SetTag(key string, value interface{}) requestSpan {
-	return defaultNoopSpan
+// SetAttribute adds an attribute to this span.
+func (span noopSpan) SetAttribute(key string, value interface{}) {
+}
+
+// AddEvent adds an event to this span.
+func (span noopSpan) AddEvent(key string, timestamp time.Time) {
+}
+
+func createSpan(tracer RequestTracer, parent RequestSpan, operationType, service string) RequestSpan {
+	var tracectx RequestSpanContext
+	if parent != nil {
+		tracectx = parent.Context()
+	}
+
+	span := tracer.RequestSpan(tracectx, operationType)
+	span.SetAttribute(spanAttribDBSystemKey, spanAttribDBSystemValue)
+	if service != "" {
+		span.SetAttribute(spanAttribServiceKey, service)
+	}
+
+	return span
 }

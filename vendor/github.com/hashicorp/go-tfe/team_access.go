@@ -14,7 +14,7 @@ var _ TeamAccesses = (*teamAccesses)(nil)
 // Terraform Enterprise API supports.
 //
 // TFE API docs:
-// https://www.terraform.io/docs/enterprise/api/team-access.html
+// https://www.terraform.io/docs/cloud/api/team-access.html
 type TeamAccesses interface {
 	// List all the team accesses for a given workspace.
 	List(ctx context.Context, options TeamAccessListOptions) (*TeamAccessList, error)
@@ -112,7 +112,7 @@ func (o TeamAccessListOptions) valid() error {
 		return errors.New("workspace ID is required")
 	}
 	if !validStringID(o.WorkspaceID) {
-		return errors.New("invalid value for workspace ID")
+		return ErrInvalidWorkspaceID
 	}
 	return nil
 }
@@ -139,8 +139,11 @@ func (s *teamAccesses) List(ctx context.Context, options TeamAccessListOptions) 
 
 // TeamAccessAddOptions represents the options for adding team access.
 type TeamAccessAddOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,team-workspaces"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,team-workspaces"`
 
 	// The type of access to grant.
 	Access *AccessType `jsonapi:"attr,access"`
@@ -179,9 +182,6 @@ func (s *teamAccesses) Add(ctx context.Context, options TeamAccessAddOptions) (*
 		return nil, err
 	}
 
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
-
 	req, err := s.client.newRequest("POST", "team-workspaces", &options)
 	if err != nil {
 		return nil, err
@@ -219,8 +219,11 @@ func (s *teamAccesses) Read(ctx context.Context, teamAccessID string) (*TeamAcce
 
 // TeamAccessUpdateOptions represents the options for updating team access.
 type TeamAccessUpdateOptions struct {
-	// For internal use only!
-	ID string `jsonapi:"primary,team-workspaces"`
+	// Type is a public field utilized by JSON:API to
+	// set the resource type via the field tag.
+	// It is not a user-defined value and does not need to be set.
+	// https://jsonapi.org/format/#crud-creating
+	Type string `jsonapi:"primary,team-workspaces"`
 
 	// The type of access to grant.
 	Access *AccessType `jsonapi:"attr,access,omitempty"`
@@ -239,9 +242,6 @@ func (s *teamAccesses) Update(ctx context.Context, teamAccessID string, options 
 	if !validStringID(&teamAccessID) {
 		return nil, errors.New("invalid value for team access ID")
 	}
-
-	// Make sure we don't send a user provided ID.
-	options.ID = ""
 
 	u := fmt.Sprintf("team-workspaces/%s", url.QueryEscape(teamAccessID))
 	req, err := s.client.newRequest("PATCH", u, &options)
