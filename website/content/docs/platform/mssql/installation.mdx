@@ -12,6 +12,15 @@ description: Installation steps for the Vault EKM Provider for Microsoft SQL Ser
 * Microsoft SQL Server for Windows (SQL Server for Linux [does not support EKM][linux-ekm])
 * An authenticated Vault client
 
+To check your Vault version and license, you can run:
+
+```bash
+vault status
+vault license get -format=json
+```
+
+The list of features should include "Key Management Transparent Data Encryption".
+
 [linux-ekm]: https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-editions-and-components-2019?view=sql-server-ver15#Unsupported
 
 ## Installing the Vault EKM provider
@@ -91,6 +100,9 @@ The remaining steps are all run on the database server.
 
 ### Configure the EKM provider using SQL
 
+Open Microsoft SQL Server Management Studio, and run the queries below to complete
+installation.
+
 1. Enable the EKM feature and create a cryptographic provider using the folder
    you just installed the EKM provider into.
 
@@ -121,9 +133,13 @@ The remaining steps are all run on the database server.
     secret ID from above:
 
     ```sql
+    -- Replace <approle-role-id> and <approle-secret-id> with the values from
+    -- the earlier vault commands:
+    -- vault read auth/approle/role/ekm-encryption-key-role/role-id
+    -- vault write -f auth/approle/role/ekm-encryption-key-role/secret-id
     CREATE CREDENTIAL TransitVaultCredentials
-        WITH IDENTITY = 'c1d62bb3-8238-ccfa-eeb4-7ce01e141d88',
-        SECRET = 'a588486c-aa01-2ead-d0e3-75a1dccaa130'
+        WITH IDENTITY = '<approle-role-id>',
+        SECRET = '<approle-secret-id>'
     FOR CRYPTOGRAPHIC PROVIDER TransitVaultProvider;
     GO
 
@@ -144,9 +160,11 @@ The remaining steps are all run on the database server.
 1. Create another login from the new asymmetric key:
 
     ```sql
+     -- Replace <approle-role-id> and <approle-secret-id> with the values from
+    -- the earlier vault commands again
     CREATE CREDENTIAL TransitVaultTDECredentials
-        WITH IDENTITY = 'c1d62bb3-8238-ccfa-eeb4-7ce01e141d88',
-        SECRET = 'a588486c-aa01-2ead-d0e3-75a1dccaa130'
+        WITH IDENTITY = '<approle-role-id>',
+        SECRET = '<approle-secret-id>'
     FOR CRYPTOGRAPHIC PROVIDER TransitVaultProvider;
     GO
 
@@ -175,7 +193,7 @@ The remaining steps are all run on the database server.
     GO
 
     ALTER DATABASE TestTDE
-    SET ENCRYPTION ON ;
+    SET ENCRYPTION ON;
     GO
     ```
 
