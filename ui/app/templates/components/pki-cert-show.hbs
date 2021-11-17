@@ -28,7 +28,7 @@
           />
         </InfoTableRow>
       {{else if (and (get model attr.name) (or (eq attr.name "issueDate") (eq attr.name "expiryDate")))}}
-       <InfoTableRow data-test-table-row 
+        <InfoTableRow data-test-table-row 
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}} 
           @value={{date-format (get model attr.name) 'MMM dd, yyyy hh:mm:ss a' isFormatted=true}} />
       {{else}}
