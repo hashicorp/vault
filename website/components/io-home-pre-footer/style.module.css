@@ -76,6 +76,10 @@
       0 16px 16px -10px rgba(101, 106, 118, 0.2);
   }
 
+  /* &:nth-of-type(1) {
+    color: var(--white);
+  } */
+
   &:nth-of-type(2) {
     background-color: var(--secondary);
   }

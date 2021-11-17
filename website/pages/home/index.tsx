@@ -58,6 +58,30 @@ export default function Homepage({ content }) {
         />
       </div>
 
+      <div className={s.inPractice}>
+        <div className={s.container}>
+          <header className={s.inPracticeHeader}>
+            <h2 className={s.inPracticeHeading}>Vault in practice</h2>
+            <p className={s.inPracticeDescription}>
+              The best way to understand what Vault can enable for your projects
+              is to see it in action
+            </p>
+          </header>
+        </div>
+      </div>
+
+      <div className={s.caseStudies}>
+        <div className={s.container}>
+          <header className={s.caseStudiesHeader}>
+            <h2 className={s.caseStudiesHeading}>Vault case studies</h2>
+            <p className={s.caseStudiesDescription}>
+              An inside look at powerful solutions from some of the world’s most
+              innovative companies.
+            </p>
+          </header>
+        </div>
+      </div>
+
       <IoHomeCallToAction
         brand="vault"
         heading="Get HashiCorp Certified"
