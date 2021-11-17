@@ -6,6 +6,7 @@
   "dependencies": {
     "@hashicorp/mktg-global-styles": "^4.0.0",
     "@hashicorp/mktg-logos": "^1.2.0",
+    "@hashicorp/platform-analytics": "^0.2.0",
     "@hashicorp/platform-code-highlighting": "^0.1.2",
     "@hashicorp/platform-markdown-utils": "^0.1.3",
     "@hashicorp/platform-runtime-error-monitoring": "^0.1.0",
@@ -23,7 +24,7 @@
     "@hashicorp/react-markdown-page": "^1.4.3",
     "@hashicorp/react-product-downloads-page": "^2.5.2",
     "@hashicorp/react-section-header": "^5.0.4",
-    "@hashicorp/react-subnav": "^9.1.1",
+    "@hashicorp/react-subnav": "^9.1.4",
     "@hashicorp/react-text-splits": "^3.2.7",
     "@hashicorp/react-use-cases": "^5.0.0",
     "@hashicorp/react-vertical-text-block-list": "^7.0.0",

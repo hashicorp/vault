@@ -44,6 +44,7 @@ export default class SecretCreateOrUpdate extends Component {
   @tracked codemirrorString = null;
   @tracked error = null;
   @tracked secretPaths = null;
+  @tracked pathWhiteSpaceWarning = false;
   @tracked validationErrorCount = 0;
   @tracked validationMessages = null;
 
@@ -82,6 +83,8 @@ export default class SecretCreateOrUpdate extends Component {
   }
   checkValidation(name, value) {
     if (name === 'path') {
+      // check for whitespace
+      this.pathHasWhiteSpace(value);
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
         : set(this.validationMessages, name, '');
@@ -105,6 +108,10 @@ export default class SecretCreateOrUpdate extends Component {
     } else {
       this.transitionToRoute(LIST_ROOT_ROUTE);
     }
+  }
+  pathHasWhiteSpace(value) {
+    let validation = new RegExp('\\s', 'g'); // search for whitespace
+    this.pathWhiteSpaceWarning = validation.test(value);
   }
   // successCallback is called in the context of the component
   persistKey(successCallback) {

@@ -332,8 +332,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				if data.role.AllowBareDomains &&
 					(strings.EqualFold(sanitizedName, currDomain) ||
 						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
-							// Handle the use case of AllowedDomain being an email address
-							(isEmail && strings.EqualFold(name, currDomain))) {
+						// Handle the use case of AllowedDomain being an email address
+						(isEmail && strings.EqualFold(name, currDomain))) {
 					valid = true
 					break
 				}
@@ -1034,8 +1034,23 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	var ttl time.Duration
 	var maxTTL time.Duration
 	var notAfter time.Time
+	var err error
 	{
 		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
+		notAfterAlt := data.role.NotAfter
+		if notAfterAlt == "" {
+			notAfterAltRaw, ok := data.apiData.GetOk("not_after")
+			if ok {
+				notAfterAlt = notAfterAltRaw.(string)
+			}
+
+		}
+		if ttl > 0 && notAfterAlt != "" {
+			return nil, errutil.UserError{
+				Err: fmt.Sprintf(
+					"Either ttl or not_after should be provided. Both should not be provided in the same request."),
+			}
+		}
 
 		if ttl == 0 && data.role.TTL > 0 {
 			ttl = data.role.TTL
@@ -1055,8 +1070,14 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			ttl = maxTTL
 		}
 
-		notAfter = time.Now().Add(ttl)
-
+		if notAfterAlt != "" {
+			notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
+			if err != nil {
+				return nil, errutil.UserError{Err: err.Error()}
+			}
+		} else {
+			notAfter = time.Now().Add(ttl)
+		}
 		// If it's not self-signed, verify that the issued certificate won't be
 		// valid past the lifetime of the CA certificate
 		if caSign != nil &&

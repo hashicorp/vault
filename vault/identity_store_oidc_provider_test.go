@@ -23,6 +23,54 @@ import (
  in: vault/external_tests/identity/oidc_provider_test.go
 */
 
+const (
+	authCodeRegex = "[a-zA-Z0-9]{32}"
+)
+
+// Tests that an authorization code issued by one provider cannot be exchanged
+// for a token using a different provider that the client is allowed to use.
+func TestOIDC_Path_OIDC_Cross_Provider_Exchange(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	s := new(logical.InmemStorage)
+
+	// Create the common OIDC configuration
+	entityID, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
+
+	// Create a second provider
+	providerPath := "oidc/provider/test-provider-2"
+	req := testProviderReq(s, clientID)
+	req.Path = providerPath
+	resp, err := c.identityStore.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Obtain an authorization code from the first provider
+	var authRes struct {
+		Code  string `json:"code"`
+		State string `json:"state"`
+	}
+	req = testAuthorizeReq(s, clientID)
+	req.EntityID = entityID
+	resp, err = c.identityStore.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &authRes))
+	require.Regexp(t, authCodeRegex, authRes.Code)
+	require.NotEmpty(t, authRes.State)
+
+	// Assert that the authorization code cannot be exchanged using the second provider
+	var tokenRes struct {
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	req = testTokenReq(s, authRes.Code, clientID, clientSecret)
+	req.Path = providerPath + "/token"
+	resp, err = c.identityStore.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &tokenRes))
+	require.Equal(t, ErrTokenInvalidGrant, tokenRes.Error)
+	require.Equal(t, "authorization code was not issued by the provider", tokenRes.ErrorDescription)
+}
+
 func TestOIDC_Path_OIDC_Token(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
@@ -282,7 +330,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				State string `json:"state"`
 			}
 			require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &authRes))
-			require.Regexp(t, "[a-zA-Z0-9]{32}", authRes.Code)
+			require.Regexp(t, authCodeRegex, authRes.Code)
 			require.NotEmpty(t, authRes.State)
 
 			// Update the assignment
@@ -785,7 +833,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			// Assert that we receive an authorization code (base62) and state
 			expectSuccess(t, resp, err)
 			require.Equal(t, http.StatusOK, resp.Data[logical.HTTPStatusCode].(int))
-			require.Regexp(t, "[a-zA-Z0-9]{32}", authRes.Code)
+			require.Regexp(t, authCodeRegex, authRes.Code)
 			require.NotEmpty(t, authRes.State)
 			require.Empty(t, authRes.Error)
 			require.Empty(t, authRes.ErrorDescription)
@@ -2466,7 +2514,11 @@ func TestOIDC_pathOIDCAssignmentExistenceCheck(t *testing.T) {
 
 // TestOIDC_Path_OIDCProvider tests CRUD operations for providers
 func TestOIDC_Path_OIDCProvider(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	redirectAddr := "http://localhost:8200"
+	conf := &CoreConfig{
+		RedirectAddr: redirectAddr,
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
@@ -2503,7 +2555,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "",
+		"issuer":             redirectAddr + "/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{},
 		"scopes_supported":   []string{},
 	}
@@ -2543,7 +2595,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "",
+		"issuer":             redirectAddr + "/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{"test-scope"},
 	}
@@ -2586,7 +2638,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "https://example.com:8200",
+		"issuer":             "https://example.com:8200/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{"test-scope"},
 	}
@@ -2685,7 +2737,12 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 // TestOIDC_Path_OIDCProvider_DeDuplication tests that a
 // provider doensn't have duplicate scopes or client IDs
 func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	redirectAddr := "http://localhost:8200"
+	conf := &CoreConfig{
+		RedirectAddr: redirectAddr,
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
+
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
@@ -2721,7 +2778,7 @@ func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "",
+		"issuer":             redirectAddr + "/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-id1", "test-id2"},
 		"scopes_supported":   []string{"test-scope1"},
 	}
@@ -2756,7 +2813,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected := map[string]interface{}{
-		"issuer":             "https://example.com:8200",
+		"issuer":             "https://example.com:8200/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{},
 	}
@@ -2783,7 +2840,7 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 	expected = map[string]interface{}{
-		"issuer":             "https://changedurl.com",
+		"issuer":             "https://changedurl.com/v1/identity/oidc/provider/test-provider",
 		"allowed_client_ids": []string{"test-client-id"},
 		"scopes_supported":   []string{},
 	}

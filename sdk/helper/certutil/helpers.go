@@ -33,6 +33,14 @@ import (
 	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
 
+// Mapping of NIST P-Curve's key length to expected signature bits.
+var expectedNISTPCurveHashBits = map[int]int{
+	224: 256,
+	256: 256,
+	384: 384,
+	521: 512,
+}
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -222,6 +230,17 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 
 	switch keyType {
 	case "rsa":
+		// XXX: there is a false-positive CodeQL path here around keyBits;
+		// because of a default zero value in the TypeDurationSecond and
+		// TypeSignedDurationSecond cases of schema.DefaultOrZero(), it
+		// thinks it is possible to end up with < 2048 bit RSA Key here.
+		// While this is true for SSH keys, it isn't true for PKI keys
+		// due to ValidateKeyTypeLength(...) below. While we could close
+		// the report as a false-positive, enforcing a minimum keyBits size
+		// here of 2048 would ensure no other paths exist.
+		if keyBits < 2048 {
+			return errutil.InternalError{Err: fmt.Sprintf("insecure bit length for RSA private key: %d", keyBits)}
+		}
 		privateKeyType = RSAPrivateKey
 		privateKey, err = rsa.GenerateKey(randReader, keyBits)
 		if err != nil {
@@ -514,13 +533,55 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 	return asn1.ObjectIdentifier(ret), nil
 }
 
-func ValidateSignatureLength(keyBits int) error {
-	switch keyBits {
+// Validates that the combination of keyType, keyBits, and hashBits are
+// valid together; replaces individual calls to ValidateSignatureLength and
+// ValidateKeyTypeLength.
+func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) error {
+	if err := ValidateKeyTypeLength(keyType, keyBits); err != nil {
+		return err
+	}
+
+	if keyType == "ec" {
+		// To comply with BSI recommendations Section 4.2 and Mozilla root
+		// store policy section 5.1.2, enforce that NIST P-curves use a hash
+		// length corresponding to curve length. Note that ed25519 does not
+		// the "ec" key type.
+		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
+
+		if expectedHashBits != *hashBits && *hashBits != 0 {
+			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, keyBits)
+		} else if *hashBits == 0 {
+			*hashBits = expectedHashBits
+		}
+	} else if keyType == "rsa" && *hashBits == 0 {
+		// To match previous behavior (and ignoring recommendations of hash
+		// size to match RSA key sizes), default to SHA-2-256.
+		*hashBits = 256
+	} /* else if keyType == "ed25519" {
+		// No-op; ed25519 and ed448 internally specify their own hash and
+		// we do not need to select one. Double hashing isn't supported in
+		// certificate signing.
+	} */
+
+	// Note that this check must come after we've selected a value for
+	// hashBits above, in the event it was left as the default, but we
+	// were allowed to update it.
+	if err := ValidateSignatureLength(*hashBits); err != nil || *hashBits == 0 {
+		return err
+	}
+
+	return nil
+}
+
+// Validates that the length of the hash (in bits) used in the signature
+// calculation is a known, approved value.
+func ValidateSignatureLength(hashBits int) error {
+	switch hashBits {
 	case 256:
 	case 384:
 	case 512:
 	default:
-		return fmt.Errorf("unsupported signature algorithm: %d", keyBits)
+		return fmt.Errorf("unsupported hash signature algorithm: %d", hashBits)
 	}
 	return nil
 }
@@ -537,12 +598,8 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 			return fmt.Errorf("unsupported bit length for RSA key: %d", keyBits)
 		}
 	case "ec":
-		switch keyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
+		_, present := expectedNISTPCurveHashBits[keyBits]
+		if !present {
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
 	case "any", "ed25519":
@@ -644,14 +701,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		case Ed25519PrivateKey:
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
-			}
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public(), data.Params.SignatureBits)
 		}
 
 		caCert := data.SigningBundle.Certificate
@@ -680,14 +730,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 		case "ed25519":
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
-			}
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
 		}
 
 		certTemplate.AuthorityKeyId = subjKeyID
@@ -720,6 +763,33 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 	}
 
 	return result, nil
+}
+
+func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x509.SignatureAlgorithm {
+	// If signature bits are configured, prefer them to the default choice.
+	switch signatureBits {
+	case 256:
+		return x509.ECDSAWithSHA256
+	case 384:
+		return x509.ECDSAWithSHA384
+	case 512:
+		return x509.ECDSAWithSHA512
+	}
+
+	key, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return x509.ECDSAWithSHA256
+	}
+	switch key.Curve {
+	case elliptic.P224(), elliptic.P256():
+		return x509.ECDSAWithSHA256
+	case elliptic.P384():
+		return x509.ECDSAWithSHA384
+	case elliptic.P521():
+		return x509.ECDSAWithSHA512
+	default:
+		return x509.ECDSAWithSHA256
+	}
 }
 
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}

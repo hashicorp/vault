@@ -4,8 +4,8 @@ import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { validator, buildValidations } from 'ember-cp-validations';
 
-//identity will be managed separately and the inclusion
-//of the system backend is an implementation detail
+// identity will be managed separately and the inclusion
+// of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const Validations = buildValidations({
@@ -52,7 +52,7 @@ export default Model.extend(Validations, {
     defaultValue: 0,
     label: 'Maximum number of versions',
     subText:
-      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value.',
+      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value. When 0 is used or the value is unset, Vault will keep 10 versions.',
   }),
   casRequired: attr('boolean', {
     defaultValue: false,

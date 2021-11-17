@@ -440,7 +440,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     }
   });
 
-  test('create secret with space shows version data', async function(assert) {
+  test('create secret with space shows version data and shows space warning', async function(assert) {
     let enginePath = `kv-${new Date().getTime()}`;
     let secretPath = 'space space';
     // mount version 2
@@ -452,7 +452,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       .submit();
     await settled();
     await listPage.create();
-    await editPage.createSecret(secretPath, 'foo', 'bar');
+    await editPage.createSecretDontSave(secretPath, 'foo', 'bar');
+    // to trigger warning need to hit keyup on the secret path
+    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
+    await settled();
+    assert.dom('[data-test-whitespace-warning]').exists('renders warning about their being a space');
+    await settled();
+    await click('[data-test-secret-save="true"]');
     await settled();
     await click('[data-test-popup-menu-trigger="version"]');
     await settled();
@@ -635,6 +641,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-delete-open-modal]');
     await settled();
+    assert.dom('.modal.is-active').exists('Modal appears');
     assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists(); // we have a if Ember.testing catch in the delete action because it breaks things in testing
     // we can however destroy the versions
     await click('#destroy-all-versions');

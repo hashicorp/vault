@@ -1,8 +1,14 @@
 <SplashPage as |Page|>
   <Page.header>
-    <h1 class="title is-3">
-      Sign in to Vault
-    </h1>
+    {{#if oidcProvider}}
+      <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
+        <LogoEdition aria-label="Sign in with Hashicorp Vault"/>
+      </div>
+    {{else}}
+      <h1 class="title is-3">
+        Sign in to Vault
+      </h1>
+    {{/if}}
   </Page.header>
   {{#if managedNamespaceRoot}}
     <Page.sub-header>
@@ -43,23 +49,24 @@
           <div class="field-label is-normal">
             <label class="is-label" for="namespace">Namespace</label>
           </div>
-          <div class="field-body">
-            <div class="field">
-              <div class="control">
-                <input
-                  value={{namespaceQueryParam}}
-                  placeholder="/ (Root)"
-                  oninput={{perform updateNamespace value="target.value"}}
-                  autocomplete="off"
-                  spellcheck="false"
-                  name="namespace"
-                  id="namespace"
-                  class="input"
-                  type="text"
-                />
+            <div class="field-body">
+              <div class="field">
+                <div class="control">
+                  <input
+                    value={{namespaceQueryParam}}
+                    placeholder="/ (Root)"
+                    oninput={{perform updateNamespace value="target.value"}}
+                    autocomplete="off"
+                    spellcheck="false"
+                    name="namespace"
+                    id="namespace"
+                    class="input"
+                    type="text"
+                    disabled={{oidcProvider}}
+                  />
+                </div>
               </div>
             </div>
-          </div>
         </div>
       </Toolbar>
     </Page.sub-header>
@@ -75,8 +82,12 @@
   </Page.content>
   <Page.footer>
     <div class="has-short-padding">
-      <p class="help has-text-grey-dark">
-        Contact your administrator for login credentials
+      <p class="help has-text-grey-dark" data-test-auth-helptext>
+        {{#if oidcProvider}}
+          Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.
+        {{else}}
+          Contact your administrator for login credentials
+        {{/if}}
       </p>
     </div>
   </Page.footer>

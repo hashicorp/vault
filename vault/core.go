@@ -108,6 +108,7 @@ var (
 	stopReplication              = stopReplicationImpl
 	LastWAL                      = lastWALImpl
 	LastPerformanceWAL           = lastPerformanceWALImpl
+	LastDRWAL                    = lastDRWALImpl
 	PerformanceMerkleRoot        = merkleRootImpl
 	DRMerkleRoot                 = merkleRootImpl
 	LastRemoteWAL                = lastRemoteWALImpl
@@ -569,9 +570,11 @@ type Core struct {
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
 
-	// VersionTimestamps is a map of vault versions to timestamps when the version
-	// was first run
-	VersionTimestamps map[string]time.Time
+	// versionTimestamps is a map of vault versions to timestamps when the version
+	// was first run. Note that because perf standbys should be upgraded first, and
+	// only the active node will actually write the new version timestamp, a perf
+	// standby shouldn't rely on the stored version timestamps being present.
+	versionTimestamps map[string]time.Time
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -1036,9 +1039,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	if c.VersionTimestamps == nil {
-		c.logger.Info("Initializing VersionTimestamps for core")
-		c.VersionTimestamps = make(map[string]time.Time)
+	if c.versionTimestamps == nil {
+		c.logger.Info("Initializing versionTimestamps for core")
+		c.versionTimestamps = make(map[string]time.Time)
 	}
 
 	return c, nil
@@ -1046,17 +1049,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 // HandleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
-func (c *Core) HandleVersionTimeStamps(ctx context.Context) error {
+func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now()
-	isUpdated, err := c.StoreVersionTimestamp(ctx, version.Version, currentTime)
+	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime)
 	if err != nil {
-		return err
+		return fmt.Errorf("error storing vault version: %w", err)
 	}
 	if isUpdated {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
 	}
 	// Finally, load the versions into core fields
-	err = c.HandleLoadVersionTimestamps(ctx)
+	err = c.loadVersionTimestamps(ctx)
 	if err != nil {
 		return err
 	}
@@ -1999,6 +2002,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
+		return err
+	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2139,6 +2145,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := seal.UpgradeKeys(c.activeContext); err != nil {
 			c.logger.Warn("post-unseal upgrade seal keys failed", "error", err)
 		}
+
+		// Start a periodic but infrequent heartbeat to detect auto-seal backend outages at runtime rather than being
+		// surprised by this at the next need to unseal.
+		seal.StartHealthCheck()
 	}
 
 	c.metricsCh = make(chan struct{})
@@ -2155,11 +2165,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := c.postSealMigration(ctx); err != nil {
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
 		}
-	}
-	err := c.HandleVersionTimeStamps(c.activeContext)
-	if err != nil {
-		c.logger.Warn("post-unseal version timestamp setup failed", "error", err)
-
 	}
 
 	c.logger.Info("post-unseal setup complete")
@@ -2223,6 +2228,10 @@ func (c *Core) preSeal() error {
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
+	}
+
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
 	}
 
 	preSealPhysical(c)
@@ -2301,6 +2310,10 @@ func lastWALImpl(c *Core) uint64 {
 }
 
 func lastPerformanceWALImpl(c *Core) uint64 {
+	return 0
+}
+
+func lastDRWALImpl(c *Core) uint64 {
 	return 0
 }
 
@@ -2684,7 +2697,6 @@ func (c *Core) SetConfig(conf *server.Config) {
 }
 
 func (c *Core) GetListenerCustomResponseHeaders(listenerAdd string) *ListenerCustomHeaders {
-
 	customHeaders := c.customListenerHeader.Load()
 	if customHeaders == nil {
 		return nil

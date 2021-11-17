@@ -11,9 +11,9 @@ import (
 
 const vaultVersionPath string = "core/versions/"
 
-// StoreVersionTimestamp will store the version and timestamp pair to storage only if no entry
+// storeVersionTimestamp will store the version and timestamp pair to storage only if no entry
 // for that version already exists in storage.
-func (c *Core) StoreVersionTimestamp(ctx context.Context, version string, currentTime time.Time) (bool, error) {
+func (c *Core) storeVersionTimestamp(ctx context.Context, version string, currentTime time.Time) (bool, error) {
 	timeStamp, err := c.barrier.Get(ctx, vaultVersionPath+version)
 	if err != nil {
 		return false, err
@@ -39,39 +39,18 @@ func (c *Core) StoreVersionTimestamp(ctx context.Context, version string, curren
 	return true, nil
 }
 
-// FindMostRecentVersionTimestamp loads the current vault version and associated
-// upgrade time from storage.
-func (c *Core) FindMostRecentVersionTimestamp() (string, time.Time, error) {
-	if c.VersionTimestamps == nil || len(c.VersionTimestamps) == 0 {
-		return "", time.Time{}, fmt.Errorf("Version timestamps are not initialized")
-	}
-	var latestUpgradeTime time.Time
-	var mostRecentVersion string
-	for version, upgradeTime := range c.VersionTimestamps {
-		if upgradeTime.After(latestUpgradeTime) {
-			mostRecentVersion = version
-			latestUpgradeTime = upgradeTime
-		}
-	}
-	// This if-case should never be hit
-	if mostRecentVersion == "" {
-		return "", latestUpgradeTime, fmt.Errorf("Empty vault version was written to storage at time: %+v", latestUpgradeTime)
-	}
-	return mostRecentVersion, latestUpgradeTime, nil
-}
-
 // FindOldestVersionTimestamp searches for the vault version with the oldest
 // upgrade timestamp from storage. The earliest version this can be (barring
 // downgrades) is 1.9.0.
 func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
-	if c.VersionTimestamps == nil || len(c.VersionTimestamps) == 0 {
+	if c.versionTimestamps == nil || len(c.versionTimestamps) == 0 {
 		return "", time.Time{}, fmt.Errorf("version timestamps are not initialized")
 	}
 
 	// initialize oldestUpgradeTime to current time
 	oldestUpgradeTime := time.Now()
 	var oldestVersion string
-	for version, upgradeTime := range c.VersionTimestamps {
+	for version, upgradeTime := range c.versionTimestamps {
 		if upgradeTime.Before(oldestUpgradeTime) {
 			oldestVersion = version
 			oldestUpgradeTime = upgradeTime
@@ -80,9 +59,9 @@ func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 	return oldestVersion, oldestUpgradeTime, nil
 }
 
-// HandleLoadVersionTimestamps loads all the vault versions and associated
+// loadVersionTimestamps loads all the vault versions and associated
 // upgrade timestamps from storage.
-func (c *Core) HandleLoadVersionTimestamps(ctx context.Context) (retErr error) {
+func (c *Core) loadVersionTimestamps(ctx context.Context) (retErr error) {
 	vaultVersions, err := c.barrier.List(ctx, vaultVersionPath)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve vault versions from storage: %+w", err)
@@ -104,7 +83,7 @@ func (c *Core) HandleLoadVersionTimestamps(ctx context.Context) (retErr error) {
 		if vaultVersion.Version == "" || vaultVersion.TimestampInstalled.IsZero() {
 			return fmt.Errorf("found empty serialized vault version at path %s", versionPath)
 		}
-		c.VersionTimestamps[vaultVersion.Version] = vaultVersion.TimestampInstalled
+		c.versionTimestamps[vaultVersion.Version] = vaultVersion.TimestampInstalled
 	}
 	return nil
 }

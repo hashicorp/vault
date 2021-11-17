@@ -19,6 +19,7 @@ that the value breaks under the label on smaller viewports.
 | [backend] | <code>String</code> |  | Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex: transformation |
 | [viewAll] | <code>String</code> |  | Passed through to InfoTableItemArray. Specify the word at the end of the link View all. |
 | [tooltipText] | <code>String</code> |  | Text if a tooltip should display over the value. |
+| [isTooltipCopyable] | <code>Boolean</code> |  | Allows tooltip click to copy |
 | [defaultShown] | <code>String</code> |  | Text that renders as value if alwaysRender=true. Eg. "Vault default" |
 
 **Example**

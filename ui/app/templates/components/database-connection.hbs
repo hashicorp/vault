@@ -23,7 +23,7 @@
           <button
             type="button"
             class="toolbar-link"
-            {{on 'click' this.delete}}
+            onclick={{action (mut isDeleteModalActive) true}}
             data-test-database-connection-delete
           >
             Delete connection
@@ -83,6 +83,14 @@
 {{/if}}
 
 {{#if (eq @mode 'create')}}
+
+  {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
+      <AlertBanner @type="warning">
+        Please ensure that your Oracle plugin has the default name of <b>vault-plugin-database-oracle</b>. 
+        Custom naming is not supported in the UI at this time. If the plugin is already named vault-plugin-database-oracle, disregard this warning.
+      </AlertBanner>
+  {{/if}}
+
   <form {{on 'submit' this.handleCreateConnection}}>
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
@@ -367,3 +375,18 @@
     </button>
   </footer>
 </Modal>
+
+<ConfirmationModal
+  @title="Delete connection?"
+  @onClose={{action (mut isDeleteModalActive) false}}
+  @isActive={{isDeleteModalActive}}
+  @confirmText={{@model.name}}
+  @toConfirmMsg="deleting the connection"
+  @onConfirm={{action "delete"}}
+  @testSelector="delete"
+>
+  <p>
+    Deleting the connection means that any associated roles won't be able to generate credentials until the connection is reconfigured.
+  </p>
+  <MessageError @model={{model}} @errorMessage={{error}} />
+</ConfirmationModal>

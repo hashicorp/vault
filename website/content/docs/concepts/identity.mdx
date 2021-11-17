@@ -115,9 +115,13 @@ a particular auth mount point.
 
 ## Local Auth Methods
 
-**Vault Enterpris:** If a login is performed using an auth method that was
-mounted locally (using `local=true`), no entities or groups will be associated
-with the resulting token.
+**Vault Enterprise:** All the auth methods will generate an entity by default 
+when a token is being issued, with the exception of token store. This is applicable 
+for both mounts that are shared between clusters and cluster local auth mounts (using `local=true`) 
+when Vault replication is in use.
+If the goal of marking an auth method as `local` was to comply to GDPR guidelines, 
+then care must be taken to not set the data pertaining to local auth mount or local auth 
+mount aliases in the metadata of the associated entity. 
 
 ## Implicit Entities
 

@@ -75,6 +75,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchListCerts(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
+			pathTidyStatus(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -86,6 +87,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
+	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 
 	return &b
@@ -98,6 +100,34 @@ type backend struct {
 	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
+
+	tidyStatusLock sync.RWMutex
+	tidyStatus     *tidyStatus
+}
+
+type tidyStatusState int
+
+const (
+	tidyStatusInactive tidyStatusState = iota
+	tidyStatusStarted
+	tidyStatusFinished
+	tidyStatusError
+)
+
+type tidyStatus struct {
+	// Parameters used to initiate the operation
+	safetyBuffer     int
+	tidyCertStore    bool
+	tidyRevokedCerts bool
+
+	// Status
+	state                   tidyStatusState
+	err                     error
+	timeStarted             time.Time
+	timeFinished            time.Time
+	message                 string
+	certStoreDeletedCount   uint
+	revokedCertDeletedCount uint
 }
 
 const backendHelp = `

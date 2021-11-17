@@ -19,6 +19,7 @@
  * @param {string} title - title of the chart
  * @param {array} mapLegend - array of objects with key names 'key' and 'label' for the map legend
  * @param {object} dataset - dataset for the chart
+ * @param {any} tooltipData - misc. information needed to display tooltip (i.e. total clients from query params)
  * @param {string} [description] - description of the chart
  * @param {string} [labelKey=label] - labelKey is the key name in the dataset passed in that corresponds to the value labeling the y-axis
  * @param {function} [onClick] - takes function from parent and passes it to click event on data bars
@@ -74,10 +75,10 @@ class BarChartComponent extends Component {
   }
 
   @action
-  renderBarChart(element, data) {
+  renderBarChart(element, args) {
     let elementId = guidFor(element);
-    let [dataset] = data;
-    let totalCount = dataset.reduce((prevValue, currValue) => prevValue + currValue.total, 0);
+    let dataset = args[0];
+    let totalCount = args[1];
     let handleClick = this.args.onClick;
     let labelKey = this.labelKey;
     let stackFunction = stack().keys(this.mapLegend.map(l => l.key));
@@ -140,7 +141,7 @@ class BarChartComponent extends Component {
       .append('rect')
       .attr('class', 'data-bar')
       .style('cursor', 'pointer')
-      .attr('width', chartData => `${xScale(chartData[1] - chartData[0] - 5)}%`)
+      .attr('width', chartData => `${xScale(chartData[1] - chartData[0]) - 0.25}%`)
       .attr('height', yScale.bandwidth())
       .attr('x', chartData => `${xScale(chartData[0])}%`)
       .attr('y', ({ data }) => yScale(data[labelKey]))
@@ -213,8 +214,8 @@ class BarChartComponent extends Component {
         select('.chart-tooltip')
           .style('opacity', 1)
           .style('max-width', '200px')
-          .style('left', `${event.pageX - 400}px`)
-          .style('top', `${event.pageY - 150}px`)
+          .style('left', `${event.pageX - 325}px`)
+          .style('top', `${event.pageY - 140}px`)
           .text(
             `${Math.round((chartData.total * 100) / totalCount)}% of total client counts:
             ${chartData.non_entity_tokens} non-entity tokens, ${chartData.distinct_entities} unique entities.
@@ -263,7 +264,7 @@ class BarChartComponent extends Component {
       .on('mousemove', function(chartData) {
         if (chartData.label.length >= CHAR_LIMIT) {
           select('.chart-tooltip')
-            .style('left', `${event.pageX - 400}px`)
+            .style('left', `${event.pageX - 300}px`)
             .style('top', `${event.pageY - 100}px`)
             .text(`${chartData.label}`)
             .style('max-width', 'fit-content');

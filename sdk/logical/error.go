@@ -51,10 +51,6 @@ var (
 	// Error indicating that the requested path used to serve a purpose in older
 	// versions, but the functionality has now been removed
 	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
-
-	// ErrorLocked indicates that the requested path is locked. Functionality
-	// will not be restored until it is unlocked.
-	ErrLocked = errors.New("API access to this namespace has been locked by an administrator")
 )
 
 type HTTPCodedError interface {

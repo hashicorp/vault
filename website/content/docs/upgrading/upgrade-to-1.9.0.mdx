@@ -14,6 +14,26 @@ official guidance until the release has been completed.
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.9.0 compared to 1.8. Please read it carefully.
 
+## OIDC Provider
+
+Vault 1.9.0 introduced the ability for Vault to be an OpenID Connect (OIDC) identity
+provider. To support the feature, Vault's [default policy](https://www.vaultproject.io/docs/concepts/policies#default-policy)
+was modified to include an ACL rule for its Authorization Endpoint. Due to the handling
+of Vault's default policy during upgrades, existing deployments of Vault that are upgraded
+to 1.9.0 will not have this required ACL rule.
+
+If you're upgrading to 1.9.0 and want to use the new OIDC provider feature, the following
+ACL rule must be added to the default policy **or** a policy associated with the Vault
+[Auth Method](https://www.vaultproject.io/docs/auth) used to authenticate end-users during
+the OIDC flow.
+
+```hcl
+# Allow a token to make requests to the Authorization Endpoint for OIDC providers.
+path "identity/oidc/provider/+/authorize" {
+  capabilities = ["read", "update"]
+}
+```
+
 ## Identity Tokens
 
 The Identity secrets engine has changed the procedure for creating Identity
@@ -39,7 +59,9 @@ To re-enable the old behavior, update the roles with a value
 of `"*"` to the `allowed_extensions` parameter allowing any/all extensions to be
 specified by clients.
 
-## HTTP Request Counter Deprecation
+## Deprecations
+
+### HTTP Request Counter Deprecation
 
 In Vault 1.9, the internal HTTP Request count
 [API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests)
@@ -49,3 +71,27 @@ error with a message stating that `functionality on this path has been removed`.
 Vault does not make backwards compatible guarantees on internal APIs (those
 prefaced with `sys/internal`). They are subject to change and may disappear
 without notice.
+
+### Etcd v2
+
+Support for Etcd v2 will be removed from Vault in Vault 1.10 (not this Vault
+release, but the next one). The Etcd v2 API
+was deprecated with the release of [Etcd
+v3.5](https://etcd.io/blog/2021/announcing-etcd-3.5/), and will be
+decommissioned in the Etcd v3.6 release.
+
+Users upgrading to Vault 1.9 and planning to eventually upgrade to Vault 1.10
+should prepare to [migrate](/docs/commands/operator/migrate) Vault storage to
+an Etcd v3 cluster prior to upgrading to Vault 1.10. All storage migrations
+should have [backups](/docs/concepts/storage#backing-up-vault-s-persisted-data)
+taken prior to migration.
+
+## TLS Cipher Suites Changes
+
+In Vault 1.9, due to changes in Go 1.17, the `tls_prefer_server_cipher_suites`
+TCP configuration parameter has been deprecated and its value will be ignored.
+
+Additionally, Go has begun doing automated cipher suite ordering and no longer
+respects the order of suites given in `tls_cipher_suites`.
+
+See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information.

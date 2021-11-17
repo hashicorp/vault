@@ -411,6 +411,8 @@ func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool
 	// be written to storage, since if we remove this code we will incur
 	// data loss for one segment's worth of TWEs.
 	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 || force {
+		// We can get away with simply using the oldest version stored because
+		// the storing of versions was introduced at the same time as this code.
 		oldestVersion, oldestUpgradeTime, err := a.core.FindOldestVersionTimestamp()
 		switch {
 		case err != nil:
@@ -592,6 +594,9 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	if err != nil {
 		return err
 	}
+	if data == nil {
+		return nil
+	}
 
 	out := &activity.EntityActivityLog{}
 	err = proto.Unmarshal(data.Value, out)
@@ -622,6 +627,9 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
+	}
+	if data == nil {
+		return nil
 	}
 
 	out := &activity.EntityActivityLog{}
@@ -683,6 +691,9 @@ func (a *ActivityLog) loadTokenCount(ctx context.Context, startTime time.Time) e
 	data, err := a.view.Get(ctx, path)
 	if err != nil {
 		return err
+	}
+	if data == nil {
+		return nil
 	}
 
 	out := &activity.TokenCount{}
@@ -771,12 +782,10 @@ func (a *ActivityLog) resetCurrentLog() {
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
 }
 
-func (a *ActivityLog) deleteLogWorker(startTimestamp int64, whenDone chan struct{}) {
-	ctx := namespace.RootContext(nil)
+func (a *ActivityLog) deleteLogWorker(ctx context.Context, startTimestamp int64, whenDone chan struct{}) {
 	entityPath := fmt.Sprintf("%v%v/", activityEntityBasePath, startTimestamp)
 	tokenPath := fmt.Sprintf("%v%v/", activityTokenBasePath, startTimestamp)
 
-	// TODO: handle seal gracefully, if we're still working?
 	entitySegments, err := a.view.List(ctx, entityPath)
 	if err != nil {
 		a.logger.Error("could not list entity paths", "error", err)
@@ -851,7 +860,7 @@ func (a *ActivityLog) refreshFromStoredLog(ctx context.Context, wg *sync.WaitGro
 		a.logger.Debug("activity log not enabled, skipping refresh from storage")
 		if !a.core.perfStandby && timeutil.IsCurrentMonth(mostRecent, now) {
 			a.logger.Debug("activity log is disabled, cleaning up logs for the current month")
-			go a.deleteLogWorker(mostRecent.Unix(), make(chan struct{}))
+			go a.deleteLogWorker(ctx, mostRecent.Unix(), make(chan struct{}))
 		}
 
 		return nil
@@ -964,7 +973,8 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 	if !a.enabled && a.currentSegment.startTimestamp != 0 {
 		a.logger.Trace("deleting current segment")
 		a.deleteDone = make(chan struct{})
-		go a.deleteLogWorker(a.currentSegment.startTimestamp, a.deleteDone)
+		// this is called from a request under stateLock, so use activeContext
+		go a.deleteLogWorker(a.core.activeContext, a.currentSegment.startTimestamp, a.deleteDone)
 		a.resetCurrentLog()
 	}
 
@@ -993,7 +1003,7 @@ func (a *ActivityLog) SetConfig(ctx context.Context, config activityConfig) {
 	a.retentionMonths = config.RetentionMonths
 
 	// check for segments out of retention period, if it has changed
-	go a.retentionWorker(time.Now(), a.retentionMonths)
+	go a.retentionWorker(ctx, time.Now(), a.retentionMonths)
 }
 
 // update the enable flag and reset the current log
@@ -1055,18 +1065,18 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 	// Lock already held here, can't use .PerfStandby()
 	// The workers need to know the current segment time.
 	if c.perfStandby {
-		go manager.perfStandbyFragmentWorker()
+		go manager.perfStandbyFragmentWorker(ctx)
 	} else {
-		go manager.activeFragmentWorker()
+		go manager.activeFragmentWorker(ctx)
 
 		// Check for any intent log, in the background
-		go manager.precomputedQueryWorker()
+		go manager.precomputedQueryWorker(ctx)
 
 		// Catch up on garbage collection
 		// Signal when this is done so that unit tests can proceed.
 		manager.retentionDone = make(chan struct{})
 		go func() {
-			manager.retentionWorker(time.Now(), manager.retentionMonths)
+			manager.retentionWorker(ctx, time.Now(), manager.retentionMonths)
 			close(manager.retentionDone)
 		}()
 	}
@@ -1077,7 +1087,6 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 // stopActivityLog removes the ActivityLog from Core
 // and frees any resources.
 func (c *Core) stopActivityLog() {
-
 	// preSeal may run before startActivityLog got a chance to complete.
 	if c.activityLog != nil {
 		// Shut down background worker
@@ -1103,7 +1112,7 @@ func (a *ActivityLog) StartOfNextMonth() time.Time {
 
 // perfStandbyFragmentWorker handles scheduling fragments
 // to send via RPC; it runs on perf standby nodes only.
-func (a *ActivityLog) perfStandbyFragmentWorker() {
+func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 	timer := time.NewTimer(time.Duration(0))
 	fragmentWaiting := false
 	// Eat first event, so timer is stopped
@@ -1115,7 +1124,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker() {
 	}
 
 	sendFunc := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), activityFragmentSendTimeout)
+		ctx, cancel := context.WithTimeout(ctx, activityFragmentSendTimeout)
 		defer cancel()
 		err := a.sendCurrentFragment(ctx)
 		if err != nil {
@@ -1190,7 +1199,7 @@ func (a *ActivityLog) perfStandbyFragmentWorker() {
 
 // activeFragmentWorker handles scheduling the write of the next
 // segment.  It runs on active nodes only.
-func (a *ActivityLog) activeFragmentWorker() {
+func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 	ticker := time.NewTicker(activitySegmentInterval)
 
 	endOfMonth := time.NewTimer(a.StartOfNextMonth().Sub(time.Now()))
@@ -1199,7 +1208,7 @@ func (a *ActivityLog) activeFragmentWorker() {
 	}
 
 	writeFunc := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), activitySegmentWriteTimeout)
+		ctx, cancel := context.WithTimeout(ctx, activitySegmentWriteTimeout)
 		defer cancel()
 		err := a.saveCurrentSegmentToStorage(ctx, false)
 		if err != nil {
@@ -1242,7 +1251,7 @@ func (a *ActivityLog) activeFragmentWorker() {
 			// Simpler, but ticker.Reset was introduced in go 1.15:
 			// ticker.Reset(activitySegmentInterval)
 		case currentTime := <-endOfMonth.C:
-			err := a.HandleEndOfMonth(currentTime.UTC())
+			err := a.HandleEndOfMonth(ctx, currentTime.UTC())
 			if err != nil {
 				a.logger.Error("failed to perform end of month rotation", "error", err)
 			}
@@ -1250,7 +1259,7 @@ func (a *ActivityLog) activeFragmentWorker() {
 			// Garbage collect any segments or queries based on the immediate
 			// value of retentionMonths.
 			a.l.RLock()
-			go a.retentionWorker(currentTime.UTC(), a.retentionMonths)
+			go a.retentionWorker(ctx, currentTime.UTC(), a.retentionMonths)
 			a.l.RUnlock()
 
 			delta := a.StartOfNextMonth().Sub(time.Now())
@@ -1270,9 +1279,7 @@ type ActivityIntentLog struct {
 
 // Handle rotation to end-of-month
 // currentTime is an argument for unit-testing purposes
-func (a *ActivityLog) HandleEndOfMonth(currentTime time.Time) error {
-	ctx := namespace.RootContext(nil)
-
+func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Time) error {
 	// Hold lock to prevent segment or enable changing,
 	// disable will apply to *next* month.
 	a.l.Lock()
@@ -1328,7 +1335,7 @@ func (a *ActivityLog) HandleEndOfMonth(currentTime time.Time) error {
 	a.fragmentLock.Unlock()
 
 	// Work on precomputed queries in background
-	go a.precomputedQueryWorker()
+	go a.precomputedQueryWorker(ctx)
 
 	return nil
 }
@@ -1583,31 +1590,33 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 	return config, nil
 }
 
-// HandleTokenUsage adds the TokenEntry to the current fragment of the activity log.
+// HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
+// and returns the corresponding Client ID.
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) {
+func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) string {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return
+		return ""
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return
+		return ""
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return
+		return ""
 	}
 
 	// Parse an entry's client ID and add it to the activity log
 	clientID, isTWE := a.CreateClientID(entry)
 	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE)
+	return clientID
 }
 
 // CreateClientID returns the client ID, and a boolean which is false if the clientID
@@ -1649,7 +1658,7 @@ func (a *ActivityLog) CreateClientID(entry *logical.TokenEntry) (string, bool) {
 
 	// Step 5: Hash the sum
 	hashed := sha256.Sum256([]byte(clientIDInput))
-	return base64.URLEncoding.EncodeToString(hashed[:]), true
+	return base64.StdEncoding.EncodeToString(hashed[:]), true
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {
@@ -1666,8 +1675,8 @@ func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string 
 // goroutine to process the request in the intent log, creating precomputed queries.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
-func (a *ActivityLog) precomputedQueryWorker() error {
-	ctx, cancel := context.WithCancel(namespace.RootContext(nil))
+func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cancel the context if activity log is shut down.
@@ -1871,8 +1880,8 @@ func (a *ActivityLog) precomputedQueryWorker() error {
 // the retention period.
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
-func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int) error {
-	ctx, cancel := context.WithCancel(namespace.RootContext(nil))
+func (a *ActivityLog) retentionWorker(ctx context.Context, currentTime time.Time, retentionMonths int) error {
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cancel the context if activity log is shut down.
@@ -1901,7 +1910,7 @@ func (a *ActivityLog) retentionWorker(currentTime time.Time, retentionMonths int
 		// One at a time seems OK
 		if t.Before(retentionThreshold) {
 			a.logger.Trace("deleting segments", "startTime", t)
-			a.deleteLogWorker(t.Unix(), make(chan struct{}))
+			a.deleteLogWorker(ctx, t.Unix(), make(chan struct{}))
 		}
 	}
 

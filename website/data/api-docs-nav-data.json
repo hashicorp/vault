@@ -133,6 +133,10 @@
           {
             "title": "AWS KMS",
             "path": "secret/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secret/key-management/gcpkms"
           }
         ]
       },
@@ -187,6 +191,10 @@
           {
             "title": "Lookup",
             "path": "secret/identity/lookup"
+          },
+          {
+            "title": "OIDC Provider",
+            "path": "secret/identity/oidc-provider"
           }
         ]
       },
