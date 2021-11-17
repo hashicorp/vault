@@ -51,12 +51,12 @@ Example of a JSON template for a scope:
 
 ```
 {
-  "userinfo": {
-    "groups": {{identity.entity.group_names}},
-    "email": {{identity.entity.metadata.user_email}},
-    "username": {{identity.entity.aliases.usermap_123.metadata.username}},
-  },
-  "nbf": {{time.now}}
+    "username": {{identity.entity.aliases.$MOUNT_ACCESSOR.name}},
+    "contact": {
+        "email": {{identity.entity.metadata.email}},
+        "phone_number": {{identity.entity.metadata.phone_number}}
+    },
+    "groups": {{identity.entity.groups.names}}
 }
 ```
 
