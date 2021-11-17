@@ -472,10 +472,10 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 		},
 	}
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "missing client token" {
+	if resp.Data["error"] != logical.ErrPermissionDenied.Error() {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
