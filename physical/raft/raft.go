@@ -1667,9 +1667,7 @@ func boltOptions() (*bolt.Options, error) {
 	// so if users are wanting to turn this off, they can also set it to 0. Setting it
 	// to a negative value is the same as not setting it at all.
 	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
-		if strconv.IntSize == 64 {
-			o.InitialMmapSize = 100 * 1024 * 1024 * 1024
-		}
+		o.InitialMmapSize = initialMmapSize
 	} else {
 		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
 		if err != nil {
