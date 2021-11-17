@@ -1,0 +1,7 @@
+.callToAction {
+  background-image: linear-gradient(52.3deg, #2c2d2f 39.83%, #626264 96.92%);
+
+  & > * {
+    background-color: transparent;
+  }
+}

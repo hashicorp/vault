@@ -1,9 +1,6 @@
 import IoHomeHero from 'components/io-home-hero'
+import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
-
-export async function getStaticProps() {
-  return { props: {} }
-}
 
 export default function Homepage({ content }) {
   return (
@@ -42,6 +39,20 @@ export default function Homepage({ content }) {
             },
             subText:
               'Get up and running in minutes with a fully managed Vault cluster on HCP (HashiCorp Cloud Platform)',
+          },
+        ]}
+      />
+
+      <IoHomeCallToAction
+        brand="vault"
+        heading="Get HashiCorp Certified"
+        content="Level up your concepts, skills, and use cases associated with open source HashiCorp Vault."
+        links={[
+          { text: 'Prepare & get certified', url: '#TODO' },
+          {
+            text: 'Learn more about Vault Ops Pro',
+            url: '#TODO',
+            type: 'inbound',
           },
         ]}
       />
