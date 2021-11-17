@@ -1697,7 +1697,7 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	// Verify and Decrypt
 	plain, err := aead.Open(nil, nonce, trueCT, opts.AdditionalData)
 	if err != nil {
-		return nil, err
+		return nil, errutil.UserError{Err: err.Error()}
 	}
 	return plain, nil
 }
