@@ -87,11 +87,13 @@ export default function Homepage({ content }) {
               {
                 link: '',
                 thumbnail: '/img/TEMP-thumbnail.png',
+                alt: 'Sample alt text',
                 heading: 'Accelerating the path to modern banking',
               },
               {
                 link: '',
                 thumbnail: '/img/TEMP-thumbnail.png',
+                alt: 'Sample alt text',
                 heading: 'A unified plan for secrets',
               },
             ]}
