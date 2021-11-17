@@ -701,6 +701,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
+		"enable_log_requests":                 true,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,

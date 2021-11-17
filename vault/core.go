@@ -389,6 +389,9 @@ type Core struct {
 	// disabled
 	physicalCache physical.ToggleablePurgemonster
 
+	// enableLogRequest indicates whether logging requests are enabled
+	logRequestsEnabled bool
+
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
 
@@ -1032,6 +1035,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	} else {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
+
+	c.logRequestsEnabled = conf.RawConfig.EnableLogRequests
 
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
@@ -2954,22 +2959,31 @@ type InFlightReqData struct {
 	StartTime        time.Time `json:"start_time"`
 	ClientRemoteAddr string    `json:"client_remote_address"`
 	ReqPath          string    `json:"request_path"`
+	Method           string    `json:"request_method"`
+	ClientID         string    `json:"client_id"`
 	SnapshotTime     time.Time `json:"snapshot_time"`
 }
 
 func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
 	c.inFlightReqData.InFlightReqMap.Store(reqID, data)
 	c.inFlightReqData.InFlightReqCount.Inc()
-
 }
 
-func (c *Core) DeleteInFlightReqData(reqID string) {
+// FinalizeInFlightReqData is going log the completed request if the
+// corresponding server config option is enabled. It also removes the
+// request from the inFlightReqMap and decrement the number of in-flight
+// requests by one.
+func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
+	if c.logRequestsEnabled {
+		c.LogCompletedRequests(reqID, statusCode)
+	}
 	c.inFlightReqData.InFlightReqMap.Delete(reqID)
 	c.inFlightReqData.InFlightReqCount.Dec()
 }
 
-func (c *Core) GetInFlightReqData() map[string]*InFlightReqData {
-
+// LoadInFlightReqData creates a snapshot map of the current
+// in-flight requests
+func (c *Core) LoadInFlightReqData() map[string]*InFlightReqData {
 	currentInFlightReqMap := make(map[string]*InFlightReqData)
 	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
 		// there is only one writer to this map, so skip checking for errors
@@ -2980,4 +2994,37 @@ func (c *Core) GetInFlightReqData() map[string]*InFlightReqData {
 	})
 
 	return currentInFlightReqMap
+}
+
+// UpdateInFlightReqData updates the data for a specific reqID with
+// the clientID
+func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.Logger().Trace("failed to retrieve request with ID %v", reqID)
+		return
+	}
+	reqData, _ := v.(*InFlightReqData)
+	reqData.ClientID = clientID
+	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
+}
+
+// LogCompletedRequests Logs the completed request to the server logs
+func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.Logger().Trace("failed to retrieve request with ID %v", reqID)
+		return
+	}
+	// there is only one writer to this map, so skip checking for errors
+	reqData, _ := v.(*InFlightReqData)
+	c.Logger().Trace("completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+}
+
+func (c *Core) SetLogRequests(){
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+	c.logRequestsEnabled = conf.(*server.Config).EnableLogRequests
 }

@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
@@ -224,6 +225,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 type WrappingResponseWriter interface {
 	http.ResponseWriter
 	Wrapped() http.ResponseWriter
+	StatusCode() int
+	SetHeaders(h map[string][]*vault.CustomHeader)
 }
 
 type statusHeaderResponseWriter struct {
@@ -231,7 +234,22 @@ type statusHeaderResponseWriter struct {
 	logger      log.Logger
 	wroteHeader bool
 	statusCode  int
+	written     *uint32
 	headers     map[string][]*vault.CustomHeader
+}
+
+
+// Written tells us if the writer has been written to yet.
+func (w *statusHeaderResponseWriter) Written() bool {
+	return atomic.LoadUint32(w.written) == 1
+}
+
+func (w *statusHeaderResponseWriter) StatusCode() int {
+	return w.statusCode
+}
+
+func (w *statusHeaderResponseWriter) SetHeaders(h map[string][]*vault.CustomHeader) {
+	w.headers = h
 }
 
 func (w *statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
@@ -270,7 +288,6 @@ func (w *statusHeaderResponseWriter) WriteHeader(statusCode int) {
 func (w *statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 	sch := w.headers
 	if sch == nil {
-		w.logger.Warn("status code header map not configured")
 		return
 	}
 
@@ -396,22 +413,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// The uuid for the request is going to be generated when a logical
-		// request is generated. But, here we generate one to be able to track
-		// in-flight requests
-		inFlightReqID, err := uuid.GenerateUUID()
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
+		w = &statusHeaderResponseWriter{
+			wrapped:     w,
+			logger:      core.Logger(),
+			wroteHeader: false,
+			statusCode:  200,
+			headers:     nil,
 		}
-		core.StoreInFlightReqData(
-			inFlightReqID,
-			&vault.InFlightReqData {
-				StartTime: time.Now(),
-				ClientRemoteAddr: r.RemoteAddr,
-				ReqPath: r.URL.Path,
-			})
-		// deleting the in-flight request entry
-		defer core.DeleteInFlightReqData(inFlightReqID)
 
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
@@ -419,15 +427,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			la := props.ListenerConfig.Address
 			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
 			if listenerCustomHeaders != nil {
-				w = &statusHeaderResponseWriter{
-					wrapped:     w,
-					logger:      core.Logger(),
-					wroteHeader: false,
-					statusCode:  200,
-					headers:     listenerCustomHeaders.StatusCodeHeaderMap,
-				}
+				newResponseWriter, _ := w.(WrappingResponseWriter)
+				newResponseWriter.SetHeaders(listenerCustomHeaders.StatusCodeHeaderMap)
 			}
 		}
+
+		// saving start time for the in-flight requests
+		inFlightReqStartTime := time.Now()
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
@@ -479,6 +485,44 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			cancelFunc()
 			return
 		}
+
+		// The uuid for the request is going to be generated when a logical
+		// request is generated. But, here we generate one to be able to track
+		// in-flight requests, and use that to update the req data with clientID
+		inFlightReqID, err := uuid.GenerateUUID()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
+		}
+		// adding an entry to the context to enable updating in-flight
+		// data with ClientID in the logical layer
+		r = r.WithContext(context.WithValue(r.Context(), "in-flight-reqID", inFlightReqID))
+
+		// extracting the client address to be included in the in-flight request
+		var clientAddr string
+		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
+		if !headersOK || len(headers) == 0 {
+			clientAddr = r.RemoteAddr
+		}else {
+			clientAddr = headers[0]
+		}
+
+		// getting the request method
+		requestMethod := r.Method
+
+		// Storing the in-flight requests. Path should include namespace as well
+		core.StoreInFlightReqData(
+			inFlightReqID,
+			&vault.InFlightReqData {
+				StartTime: inFlightReqStartTime,
+				ReqPath: r.URL.Path,
+				ClientRemoteAddr: clientAddr,
+				Method: requestMethod,
+			})
+		defer func() {
+			// Not expecting this fail, so skipping the assertion check
+			newResponseWriter, _ := w.(WrappingResponseWriter)
+			core.FinalizeInFlightReqData(inFlightReqID, newResponseWriter.StatusCode())
+		}()
 
 		// Setting the namespace in the header to be included in the error message
 		ns := r.Header.Get(consts.NamespaceHeaderName)

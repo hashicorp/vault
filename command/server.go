@@ -1547,6 +1547,9 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Error(err.Error())
 			}
 
+			// Setting log request with the new value in the config after reload
+			core.SetLogRequests()
+
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {

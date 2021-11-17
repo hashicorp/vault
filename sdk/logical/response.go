@@ -192,6 +192,12 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 	return ret, nil
 }
 
+type WrappingResponseWriter interface {
+	http.ResponseWriter
+	Wrapped() http.ResponseWriter
+	StatusCode() int
+}
+
 // HTTPResponseWriter is optionally added to a request object and can be used to
 // write directly to the HTTP response writer.
 type HTTPResponseWriter struct {
@@ -202,9 +208,19 @@ type HTTPResponseWriter struct {
 // NewHTTPResponseWriter creates a new HTTPResponseWriter object that wraps the
 // provided io.Writer.
 func NewHTTPResponseWriter(w http.ResponseWriter) *HTTPResponseWriter {
-	return &HTTPResponseWriter{
-		ResponseWriter: w,
-		written:        new(uint32),
+	// FIXME: this is a band aid and not a good solution, just put it here
+	// to make the tests pass
+	newR, ok := w.(WrappingResponseWriter)
+	if ok {
+		return &HTTPResponseWriter{
+			ResponseWriter: newR.Wrapped(),
+			written:        new(uint32),
+		}
+	}else {
+		return &HTTPResponseWriter{
+			ResponseWriter: w,
+			written:        new(uint32),
+		}
 	}
 }
 

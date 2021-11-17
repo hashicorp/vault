@@ -439,7 +439,12 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
 
-	resp, err = c.handleCancelableRequest(namespace.ContextWithNamespace(ctx, ns), req)
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	inFlightReqID, ok := httpCtx.Value("in-flight-reqID").(string)
+	if ok {
+		ctx = context.WithValue(ctx, "in-flight-reqID", inFlightReqID)
+	}
+	resp, err = c.handleCancelableRequest(ctx, req)
 
 	req.SetTokenEntry(nil)
 	cancel()
@@ -770,6 +775,17 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	auth, te, ctErr := c.checkToken(ctx, req, false)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
+	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value("in-flight-reqID").(string)
+	if ok {
+		switch {
+		case req.ClientID != "":
+			c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+		case req.EntityID != "":
+			c.UpdateInFlightReqData(inFlightReqID, req.EntityID)
+		}
 	}
 
 	// We run this logic first because we want to decrement the use count even
