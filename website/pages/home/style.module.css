@@ -28,11 +28,17 @@
     right: 0;
     bottom: 0;
     background: var(--black);
+    background-image: url('/img/practice-pattern.svg');
+    background-repeat: no-repeat;
+    background-size: 50%;
+    background-position: top 200px left;
 
     @media (--large) {
       border-radius: 6px;
       left: 24px;
       right: 24px;
+      background-size: 35%;
+      background-position: top 64px left;
     }
   }
 }
