@@ -50,15 +50,21 @@ export default class JsonEditorComponent extends Component {
     }
   }
 
+  get total() {
+    return this.count * 2;
+  }
+
   get getShowToolbar() {
     return this.args.showToolbar === false ? false : true;
   }
 
-  get visualDiff() {
+  @action
+  visualDiff() {
     let diffpatcher = jsondiffpatch.create({});
     let delta = diffpatcher.diff(this.args.leftSideVersionData, this.args.rightSideVersionData);
-    if (delta == undefined) {
-      return 'No changes, previous state matches.';
+    if (delta === undefined) {
+      // return 'messagge';
+      this.args.diffCheck(!this.args.statesMatch); // sending false
     }
     return jsondiffpatch.formatters.html.format(delta, this.args.leftSideVersionData);
   }

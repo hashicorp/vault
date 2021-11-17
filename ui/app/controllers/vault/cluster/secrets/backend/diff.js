@@ -14,6 +14,8 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
   leftSideVersionSelected = null;
   @tracked
   rightSideVersionSelected = null;
+  @tracked
+  statesMatch = false;
 
   adapter = this.store.adapterFor('secret-v2-version');
 
@@ -38,6 +40,11 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
       .querySecretDataByVersion(string)
       .then(response => response.data) // using ember promise helpers to await in the hbs file
       .catch(() => null);
+  }
+
+  @action
+  diffCheck(param) {
+    this.statesMatch = param;
   }
 
   // ARG TODO I believe I can remove this but double check
