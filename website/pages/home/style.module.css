@@ -68,7 +68,7 @@
 
 .inPracticeCards {
   --columns: 6;
-  --minCol: 300px;
+  --minCol: 250px;
 
   list-style: none;
   margin: -4px;
@@ -112,7 +112,7 @@
 
 .useCasesCards {
   --columns: 8;
-  --minCol: 300px;
+  --minCol: 250px;
 
   list-style: none;
   margin: -4px;
