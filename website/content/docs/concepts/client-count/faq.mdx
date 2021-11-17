@@ -30,7 +30,6 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: How can I disable the counting of client activity?](http://localhost:3000/docs/concepts/client-count/faq#q-how-can-i-disable-the-counting-of-client-activity)
 - [Q: If I request data for January 2021 - December 2021, but April’s data does not exist, what will be included in the total client count result?](#q-if-i-request-data-for-january-2021-december-2021-but-april-s-data-does-not-exist-what-will-be-included-in-the-total-client-count-result)
 - [Q: How can I configure the activity for log retention?](#q-how-can-i-configure-the-activity-for-log-retention)
-- [Q: What do we recommend in situations where high cardinality aliases occur?](#q-what-do-we-recommend-in-situations-where-high-cardinality-aliases-occur)
 - [Q: Do child namespaces create duplicate tokens?](#q-do-child-namespaces-create-duplicate-tokens)
 
 
@@ -201,7 +200,7 @@ You can disable the count of client activity by using the enabled parameter in t
 
 ### Q: If I request data for January 2021 - December 2021, but April’s data does not exist, what will be included in the total client count result?
 
-In this scenario where you requested data for January 2021 through December 2021, and April's data does not exist because tracking was disabled for that particular month while other months have data, Vault will only return the largest contiguous set of data, so in this case, data will only be returned for May 2021 through December 2021.
+In this scenario where you requested data for January 2021 through December 2021, and April's data does not exist because tracking was disabled for that particular month while other months have data, Vault will only return the most recent contiguous set of data, so in this case, data will only be returned for May 2021 through December 2021.
 
 ### Q: How can I configure the activity for log retention?
 
