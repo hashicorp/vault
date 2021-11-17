@@ -154,6 +154,112 @@ export default function Homepage({ content }) {
         </div>
       </div>
 
+      <div className={s.useCases}>
+        <div className={s.container}>
+          <header className={s.useCasesHeader}>
+            <h2 className={s.useCasesHeading}>Common use cases for Vault</h2>
+          </header>
+
+          <ul className={s.useCasesCards}>
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Kubernetes secrets"
+                description="Inject Vault Secrets Into Kubernetes Pods via a Sidecar."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Database credential rotation"
+                description="Automatically rotate database passwords with Vault's database secrets engine."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Service account rotation"
+                description="Simplify credential management across service accounts and reduce organizational complexity around managing access and secrets."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Automated TLS certificates/PKI"
+                description="Use Vault to quickly create X.509 certificates on demand and reduce the manual overhead."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Key management"
+                description="Use a standardized workflow for distribution and lifecycle management across KMS providers."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Dynamic cloud credentials"
+                description="Generates access credentials dynamically based on policies. Credentials are time-based and are automatically revoked when the lease expires."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Dynamic secrets (conceptual)"
+                description="Dynamic secret is generated on demand and is unique to a client, instead of a static secret, which is defined ahead of time and shared."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                link={{
+                  url: '/',
+                  type: 'inbound',
+                }}
+                inset="sm"
+                heading="Data encryption &amp; tokenization"
+                description="Performs secure data transformation for protecting secrets that reside in untrusted or semi-trusted systems outside of Vault."
+              />
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <div className={s.caseStudies}>
         <div className={s.container}>
           <header className={s.caseStudiesHeader}>
