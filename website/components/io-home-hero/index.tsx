@@ -61,6 +61,7 @@ export default function IoHomeHero({
             {cards.map((card, index) => {
               return (
                 <IoHomeHeroCard
+                  key={index}
                   index={index}
                   heading={card.heading}
                   description={card.description}
