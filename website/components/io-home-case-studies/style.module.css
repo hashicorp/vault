@@ -63,11 +63,16 @@
       rgba(0, 0, 0, 0),
       rgba(0, 0, 0, 0.45)
     );
+    transition: opacity ease-in-out 0.2s;
   }
 
   &:hover {
     box-shadow: 0 2px 3px rgba(101, 106, 118, 0.15),
       0 16px 16px -10px rgba(101, 106, 118, 0.2);
+
+    &::before {
+      opacity: 0.75;
+    }
   }
 }
 
@@ -82,9 +87,6 @@
   list-style: none;
   margin: 0;
   padding: 0;
-
-  @media (--medium-up) {
-  }
 
   @media (--large) {
     margin-top: -32px;
