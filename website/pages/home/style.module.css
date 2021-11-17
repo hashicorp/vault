@@ -15,11 +15,25 @@
  */
 
 .inPractice {
+  position: relative;
   margin: 0 auto 128px;
   max-width: 1600px;
-  width: calc(100% - 24px);
-  background-color: var(--black);
-  border-radius: 6px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--black);
+
+    @media (--large) {
+      border-radius: 6px;
+      left: 24px;
+      right: 24px;
+    }
+  }
 }
 
 .inPracticeHeader {
@@ -51,13 +65,27 @@
  */
 
 .caseStudies {
+  position: relative;
   margin: 0 auto 128px;
   padding-top: 64px;
   padding-bottom: 64px;
   max-width: 1600px;
-  width: calc(100% - 24px);
-  background-color: var(--vault-accent);
-  border-radius: 6px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--vault-accent);
+
+    @media (--large) {
+      border-radius: 6px;
+      left: 24px;
+      right: 24px;
+    }
+  }
 }
 
 .caseStudiesHeader {
