@@ -1,5 +1,7 @@
+import * as React from 'react'
 import IoHomeHero from 'components/io-home-hero'
 import IoHomeVideoCallout from 'components/io-home-video-callout'
+import IoHomeCard from 'components/io-home-card'
 import IoHomeCaseStudies from 'components/io-home-case-studies'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
@@ -70,6 +72,85 @@ export default function Homepage({ content }) {
               is to see it in action
             </p>
           </header>
+          <ul className={s.inPracticeCards}>
+            <li>
+              <IoHomeCard
+                variant="dark"
+                link={{
+                  url: '/',
+                  type: 'outbound',
+                }}
+                eyebrow="Documentation"
+                heading="Secrets storage"
+                description="Securely store and manage access to secrets and systems based on trusted sources of application and user identity."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                variant="dark"
+                link={{
+                  url: '/',
+                  type: 'outbound',
+                }}
+                eyebrow="Tutorial"
+                heading="Dynamic secrets"
+                description="Eliminate secret sprawl and reduce exposure risk with dynamically created and destroyed unique, on-demand credentials."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                variant="dark"
+                link={{
+                  url: '/',
+                  type: 'outbound',
+                }}
+                eyebrow="Tutorial"
+                heading="Automate credential rotation"
+                description="Reduce risk of secret exposure by automating how long secrets live and rotating secrets across your entire fleet."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                variant="dark"
+                link={{
+                  url: '/',
+                  type: 'outbound',
+                }}
+                eyebrow="Documentation"
+                heading="Encryption as a service"
+                description="Vault provides encryption as a service to simplify encrypting data, tokenizing sensitive values, signing and validating."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                variant="dark"
+                link={{
+                  url: '/',
+                  type: 'outbound',
+                }}
+                eyebrow="Tutorial"
+                heading="API-driven encryption"
+                description="Vault provides rich APIs to protect data, while using the state of the art in cryptography. Vault uses smart defaults but also."
+              />
+            </li>
+
+            <li>
+              <IoHomeCard
+                variant="dark"
+                link={{
+                  url: '/',
+                  type: 'outbound',
+                }}
+                eyebrow="Tutorial"
+                heading="Encryption key rolling"
+                description="Automatically update and rotate encryption keys without code changes, configuration updates, or re-deploys. Developers use a."
+              />
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -82,6 +163,7 @@ export default function Homepage({ content }) {
               innovative companies.
             </p>
           </header>
+
           <IoHomeCaseStudies
             primary={[
               {
