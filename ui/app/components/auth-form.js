@@ -128,14 +128,14 @@ export default Component.extend(DEFAULTS, {
     }
   ),
 
-  providerPartialName: computed('selectedAuthBackend.type', function() {
+  providerName: computed('selectedAuthBackend.type', function() {
     if (!this.selectedAuthBackend) {
       return;
     }
     let type = this.selectedAuthBackend.type || 'token';
     type = type.toLowerCase();
     let templateName = dasherize(type);
-    return `partials/auth-form/${templateName}`;
+    return templateName;
   }),
 
   hasCSPError: alias('csp.connectionViolations.firstObject'),

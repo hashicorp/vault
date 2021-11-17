@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -233,7 +232,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Top-level item should be the object list
@@ -248,7 +247,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		"path",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Create the initial policy and store the raw text of the rules
@@ -258,12 +257,12 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		namespace: ns,
 	}
 	if err := hcl.DecodeObject(&p, list); err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
 		if err := parsePaths(&p, o, performTemplating, entity, groups); err != nil {
-			return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
 	}
 
@@ -298,7 +297,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				String:            key,
 			})
 			if err != nil {
-				return errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+				return fmt.Errorf("failed to validate policy templating: %w", err)
 			}
 			if hasTemplating {
 				result.Templated = true
@@ -406,14 +405,14 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		if pc.MinWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MinWrappingTTLHCL)
 			if err != nil {
-				return errwrap.Wrapf("error parsing min_wrapping_ttl: {{err}}", err)
+				return fmt.Errorf("error parsing min_wrapping_ttl: %w", err)
 			}
 			pc.Permissions.MinWrappingTTL = dur
 		}
 		if pc.MaxWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MaxWrappingTTLHCL)
 			if err != nil {
-				return errwrap.Wrapf("error parsing max_wrapping_ttl: {{err}}", err)
+				return fmt.Errorf("error parsing max_wrapping_ttl: %w", err)
 			}
 			pc.Permissions.MaxWrappingTTL = dur
 		}
@@ -428,7 +427,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			if pc.ControlGroupHCL.TTL != nil {
 				dur, err := parseutil.ParseDurationSecond(pc.ControlGroupHCL.TTL)
 				if err != nil {
-					return errwrap.Wrapf("error parsing control group max ttl: {{err}}", err)
+					return fmt.Errorf("error parsing control group max ttl: %w", err)
 				}
 				pc.Permissions.ControlGroup.TTL = dur
 			}

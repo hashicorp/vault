@@ -8,7 +8,6 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
@@ -67,12 +66,12 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	core.AddLogger(groupsPackerLogger)
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
+		return nil, fmt.Errorf("failed to create entity packer: %w", err)
 	}
 
 	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
+		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
 	iStore.Backend = &framework.Backend{
@@ -348,7 +347,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		var oldEntity identity.EntityStorageEntry
 		oldEntityErr := ptypes.UnmarshalAny(item.Message, &oldEntity)
 		if oldEntityErr != nil {
-			return nil, errwrap.Wrapf("failed to decode entity from storage bucket item: {{err}}", err)
+			return nil, fmt.Errorf("failed to decode entity from storage bucket item: %w", err)
 		}
 
 		i.logger.Debug("upgrading the entity using patch introduced with vault 0.8.2.1", "entity_id", oldEntity.ID)
@@ -425,7 +424,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 	var group identity.Group
 	err := ptypes.UnmarshalAny(item.Message, &group)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode group from storage bucket item: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode group from storage bucket item: %w", err)
 	}
 
 	if group.NamespaceID == "" {

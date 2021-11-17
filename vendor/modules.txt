@@ -129,7 +129,7 @@ github.com/aliyun/alibaba-cloud-sdk-go/services/sts
 # github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 ## explicit
 github.com/aliyun/aliyun-oss-go-sdk/oss
-# github.com/andybalholm/brotli v1.0.0
+# github.com/andybalholm/brotli v1.0.1
 github.com/andybalholm/brotli
 # github.com/apache/arrow/go/arrow v0.0.0-20200601151325-b2287a20f230
 github.com/apache/arrow/go/arrow
@@ -350,7 +350,7 @@ github.com/docker/go-connections/sockets
 github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
-# github.com/dsnet/compress v0.0.1
+# github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5
 github.com/dsnet/compress
 github.com/dsnet/compress/bzip2
 github.com/dsnet/compress/bzip2/internal/sais
@@ -439,7 +439,9 @@ github.com/golang/snappy
 # github.com/google/flatbuffers v1.11.0
 github.com/google/flatbuffers/go
 # github.com/google/go-cmp v0.5.5
+## explicit
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
@@ -530,7 +532,7 @@ github.com/hashicorp/go-discover/provider/vsphere
 # github.com/hashicorp/go-gcp-common v0.6.0
 ## explicit
 github.com/hashicorp/go-gcp-common/gcputil
-# github.com/hashicorp/go-hclog v0.16.0
+# github.com/hashicorp/go-hclog v0.16.1
 ## explicit
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.3.0
@@ -869,15 +871,16 @@ github.com/keybase/go-crypto/openpgp/errors
 github.com/keybase/go-crypto/openpgp/packet
 github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
-# github.com/klauspost/compress v1.10.10
+# github.com/klauspost/compress v1.11.4
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/gzip
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/snappy
+github.com/klauspost/compress/zip
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
-# github.com/klauspost/pgzip v1.2.4
+# github.com/klauspost/pgzip v1.2.5
 github.com/klauspost/pgzip
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
@@ -905,7 +908,7 @@ github.com/mattn/go-isatty
 github.com/mattn/go-shellwords
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/mholt/archiver/v3 v3.5.0
+# github.com/mholt/archiver/v3 v3.5.1
 ## explicit
 github.com/mholt/archiver/v3
 # github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
@@ -1052,7 +1055,7 @@ github.com/petermattis/goid
 # github.com/pierrec/lz4 v2.5.2+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
-# github.com/pierrec/lz4/v4 v4.0.3
+# github.com/pierrec/lz4/v4 v4.1.2
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
@@ -1117,7 +1120,7 @@ github.com/sethvargo/go-limiter
 github.com/sethvargo/go-limiter/httplimit
 github.com/sethvargo/go-limiter/internal/fasttime
 github.com/sethvargo/go-limiter/memorystore
-# github.com/shirou/gopsutil v3.21.1+incompatible
+# github.com/shirou/gopsutil v3.21.5+incompatible
 ## explicit
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
@@ -1158,9 +1161,14 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312
 # github.com/tidwall/pretty v1.0.1
 ## explicit
+# github.com/tklauser/go-sysconf v0.3.6
+## explicit
+github.com/tklauser/go-sysconf
+# github.com/tklauser/numcpus v0.2.2
+github.com/tklauser/numcpus
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
 github.com/tv42/httpunix
-# github.com/ulikunitz/xz v0.5.7
+# github.com/ulikunitz/xz v0.5.9
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog

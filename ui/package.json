@@ -173,14 +173,16 @@
     "lodash.defaultsdeep": "^4.6.1",
     "lodash.merge": "^4.6.2",
     "lodash": "^4.17.13",
-    "merge": "^1.2.1",
     "minimatch": "^3.0.2",
     "minimist": "^1.2.2",
     "node-notifier": "^8.0.1",
     "prismjs": "^1.21.0",
     "qs": "^6.3.0",
     "serialize-javascript": "^3.1.0",
-    "yargs-parser": "^13.1.2"
+    "yargs-parser": "^13.1.2",
+    "underscore": "^1.12.1",
+    "trim": "^0.0.3",
+    "xmlhttprequest-ssl": "^1.6.2"
   },
   "engines": {
     "node": "10.* || >= 12"

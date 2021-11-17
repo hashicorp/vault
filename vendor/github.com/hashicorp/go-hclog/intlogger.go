@@ -124,7 +124,7 @@ func newLogger(opts *LoggerOptions) *intLogger {
 		independentLevels: opts.IndependentLevels,
 	}
 	if opts.IncludeLocation {
-		l.callerOffset = offsetIntLogger
+		l.callerOffset = offsetIntLogger + opts.AdditionalLocationOffset
 	}
 
 	if l.json {

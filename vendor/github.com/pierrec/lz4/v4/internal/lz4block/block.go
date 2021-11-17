@@ -132,7 +132,7 @@ func (c *Compressor) CompressBlock(src, dst []byte) (int, error) {
 
 		offset := si - ref
 
-		if ref < 0 || uint32(match) != binary.LittleEndian.Uint32(src[ref:]) {
+		if offset <= 0 || offset >= winSize || uint32(match) != binary.LittleEndian.Uint32(src[ref:]) {
 			// No match. Start calculating another hash.
 			// The processor can usually do this out-of-order.
 			h = blockHash(match >> 16)
@@ -142,13 +142,13 @@ func (c *Compressor) CompressBlock(src, dst []byte) (int, error) {
 			si += 1
 			offset = si - ref2
 
-			if ref2 < 0 || uint32(match>>8) != binary.LittleEndian.Uint32(src[ref2:]) {
+			if offset <= 0 || offset >= winSize || uint32(match>>8) != binary.LittleEndian.Uint32(src[ref2:]) {
 				// No match. Check the third match at si+2
 				si += 1
 				offset = si - ref3
 				c.put(h, si)
 
-				if ref3 < 0 || uint32(match>>16) != binary.LittleEndian.Uint32(src[ref3:]) {
+				if offset <= 0 || offset >= winSize || uint32(match>>16) != binary.LittleEndian.Uint32(src[ref3:]) {
 					// Skip one extra byte (at si+3) before we check 3 matches again.
 					si += 2 + (si-anchor)>>adaptSkipLog
 					continue

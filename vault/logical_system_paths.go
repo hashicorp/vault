@@ -60,6 +60,23 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "config/reload/(?P<subsystem>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"subsystem": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["config/reload"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:    b.handleConfigReload,
+					Summary:     "Reload the given subsystem",
+					Description: "",
+				},
+			},
+		},
+
+		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
 			Fields: map[string]*framework.FieldSchema{
@@ -1209,6 +1226,59 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
+		},
+
+		{
+			Pattern: "leases/count$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: "Set true if you want counts for this namespace and its children.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseCount,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["count-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["count-leases"][1]),
+		},
+
+		{
+			Pattern: "leases(/)?$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Type of leases to retrieve (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: "Set true if you want leases for this namespace and its children.",
+				},
+				"limit": {
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "Set to a positive integer of the maximum number of entries to return. If you want all results, set to 'none'. If not set, you will get a maximum of 10,000 results returned.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseList,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["list-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["list-leases"][1]),
 		},
 	}
 }

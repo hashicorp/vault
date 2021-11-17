@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -15,15 +16,15 @@ func TestStorageTimeout(t *testing.T) {
 		mb           physical.Backend
 	}{
 		{
-			errSubString: timeOutErr + "operation: Put",
+			errSubString: LatencyWarning,
 			mb:           mockStorageBackend{callType: timeoutCallWrite},
 		},
 		{
-			errSubString: timeOutErr + "operation: Get",
+			errSubString: LatencyWarning,
 			mb:           mockStorageBackend{callType: timeoutCallRead},
 		},
 		{
-			errSubString: timeOutErr + "operation: Delete",
+			errSubString: LatencyWarning,
 			mb:           mockStorageBackend{callType: timeoutCallDelete},
 		},
 		{
@@ -42,16 +43,29 @@ func TestStorageTimeout(t *testing.T) {
 			errSubString: wrongRWValsPrefix,
 			mb:           mockStorageBackend{callType: badReadCall},
 		},
-		{
-			errSubString: "",
-			mb:           mockStorageBackend{callType: ""},
-		},
 	}
 
 	for _, tc := range testCases {
-		outErr := StorageEndToEndLatencyCheck(context.Background(), tc.mb)
+		var outErr error
+		var dur time.Duration
+		uuid := "foo"
+		backendCallType := tc.mb.(mockStorageBackend).callType
+		if callTypeToOp(backendCallType) == readOp {
+			dur, outErr = EndToEndLatencyCheckRead(context.Background(), uuid, tc.mb)
+		}
+		if callTypeToOp(backendCallType) == writeOp {
+			dur, outErr = EndToEndLatencyCheckWrite(context.Background(), uuid, tc.mb)
+		}
+		if callTypeToOp(backendCallType) == deleteOp {
+			dur, outErr = EndToEndLatencyCheckDelete(context.Background(), uuid, tc.mb)
+		}
+
 		if tc.errSubString == "" && outErr == nil {
 			// this is the success case where the Storage Latency check passes
+			continue
+		}
+		if tc.errSubString == LatencyWarning && dur > time.Duration(0) {
+			// this is the success case where the Storage Latency check successfully returns nonzero duration
 			continue
 		}
 		if !strings.Contains(outErr.Error(), tc.errSubString) {

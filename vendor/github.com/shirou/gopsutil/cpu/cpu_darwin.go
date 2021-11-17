@@ -4,10 +4,10 @@ package cpu
 
 import (
 	"context"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
 )
 
@@ -25,17 +25,10 @@ const (
 var ClocksPerSec = float64(128)
 
 func init() {
-	getconf, err := exec.LookPath("getconf")
-	if err != nil {
-		return
-	}
-	out, err := invoke.Command(getconf, "CLK_TCK")
+	clkTck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	// ignore errors
 	if err == nil {
-		i, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-		if err == nil {
-			ClocksPerSec = float64(i)
-		}
+		ClocksPerSec = float64(clkTck)
 	}
 }
 

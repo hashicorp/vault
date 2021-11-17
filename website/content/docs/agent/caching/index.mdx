@@ -221,8 +221,10 @@ These are common configuration values that live within the `persist` block:
 
 - `listener` `(array of objects: required)` - Configuration for the listeners.
 
-There can be one or more `listener` blocks at the top level.
-These configuration values are common to all `listener` blocks.
+There can be one or more `listener` blocks at the top level. These configuration
+values are common to both `tcp` and `unix` listener blocks. Blocks of type
+`tcp` support the standard `tcp` [listener](/docs/configuration/listener/tcp)
+options.
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.

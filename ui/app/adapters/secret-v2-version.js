@@ -70,14 +70,27 @@ export default ApplicationAdapter.extend({
 
   v2DeleteOperation(store, id, deleteType = 'delete') {
     let [backend, path, version] = JSON.parse(id);
-
-    // deleteType should be 'delete', 'destroy', 'undelete'
-    return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
-      () => {
-        let model = store.peekRecord('secret-v2-version', id);
-        return model && model.rollbackAttributes() && model.reload();
-      }
-    );
+    // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-version'
+    if ((!version && deleteType === 'delete') || deleteType === 'delete-latest-version') {
+      return this.ajax(this._url(backend, path, 'data'), 'DELETE')
+        .then(() => {
+          let model = store.peekRecord('secret-v2-version', id);
+          return model && model.rollbackAttributes() && model.reload();
+        })
+        .catch(e => {
+          return e;
+        });
+    } else {
+      return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } })
+        .then(() => {
+          let model = store.peekRecord('secret-v2-version', id);
+          // potential that model.reload() is never called.
+          return model && model.rollbackAttributes() && model.reload();
+        })
+        .catch(e => {
+          return e;
+        });
+    }
   },
 
   handleResponse(status, headers, payload, requestData) {

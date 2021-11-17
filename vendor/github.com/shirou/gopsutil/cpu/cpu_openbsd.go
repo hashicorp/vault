@@ -7,13 +7,13 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/shirou/gopsutil/internal/common"
+	"github.com/tklauser/go-sysconf"
 	"golang.org/x/sys/unix"
 )
 
@@ -39,20 +39,12 @@ const (
 var ClocksPerSec = float64(128)
 
 func init() {
-	func() {
-		getconf, err := exec.LookPath("getconf")
-		if err != nil {
-			return
-		}
-		out, err := invoke.Command(getconf, "CLK_TCK")
-		// ignore errors
-		if err == nil {
-			i, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-			if err == nil {
-				ClocksPerSec = float64(i)
-			}
-		}
-	}()
+	clkTck, err := sysconf.Sysconf(sysconf.SC_CLK_TCK)
+	// ignore errors
+	if err == nil {
+		ClocksPerSec = float64(clkTck)
+	}
+
 	func() {
 		v, err := unix.Sysctl("kern.osrelease") // can't reuse host.PlatformInformation because of circular import
 		if err != nil {
