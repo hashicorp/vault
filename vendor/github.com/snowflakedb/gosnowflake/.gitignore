@@ -1,0 +1,13 @@
+.idea/
+parameters*.json
+parameters*.bat
+*.p8
+coverage.txt
+fuzz-*/
+/select1
+/selectmany
+/verifycert
+wss-golang-agent.config
+wss-unified-agent.jar
+whitesource/
+*.swp

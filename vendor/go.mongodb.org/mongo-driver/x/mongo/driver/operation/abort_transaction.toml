@@ -1,0 +1,17 @@
+version = 0
+name = "AbortTransaction"
+documentation = "AbortTransaction performs an abortTransaction operation."
+
+[properties]
+enabled = ["write concern"]
+retryable = {mode = "once per command", type = "writes"}
+
+[command]
+name = "abortTransaction"
+parameter = "database"
+
+[request.recoveryToken]
+type = "document"
+documentation = """
+RecoveryToken sets the recovery token to use when committing or aborting a sharded transaction.\
+"""

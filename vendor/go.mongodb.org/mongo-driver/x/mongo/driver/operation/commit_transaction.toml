@@ -1,0 +1,22 @@
+version = 0
+name = "CommitTransaction"
+documentation = "CommitTransaction attempts to commit a transaction."
+
+[properties]
+enabled = ["write concern"]
+disabled = ["collection"]
+retryable = {mode = "once per command", type = "writes"}
+
+[command]
+name = "commitTransaction"
+parameter = "database"
+
+[request.recoveryToken]
+type = "document"
+documentation = """
+RecoveryToken sets the recovery token to use when committing or aborting a sharded transaction.\
+"""
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."

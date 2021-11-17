@@ -127,7 +127,7 @@ require (
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.10.3
 	github.com/mattn/go-colorable v0.1.11
-	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.0.0
@@ -211,6 +211,7 @@ require (
 	github.com/Microsoft/hcsshim v0.9.0 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
+	github.com/andybalholm/brotli v1.0.1 // indirect
 	github.com/apache/arrow/go/arrow v0.0.0-20210818145353-234c94e4ce64 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.3.2 // indirect
@@ -246,7 +247,7 @@ require (
 	github.com/docker/cli v20.10.9+incompatible // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/dsnet/compress v0.0.1 // indirect
+	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/gabriel-vasile/mimetype v1.3.1 // indirect
@@ -301,6 +302,7 @@ require (
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/linode/linodego v0.7.1 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect

@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - "1.9.x"
+  - "1.10.x"
+  - "1.11.x"
+env:
+  global:
+    GO111MODULE=off
+
+before_install:
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+  - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+install:
+  - go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep '\.' | grep -v gopher-lua)
+script:
+  - $HOME/gopath/bin/goveralls -service=travis-ci

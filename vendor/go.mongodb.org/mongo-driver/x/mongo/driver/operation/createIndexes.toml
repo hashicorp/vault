@@ -1,0 +1,42 @@
+version = 0
+name = "CreateIndexes"
+documentation = "CreateIndexes performs a createIndexes operation."
+
+[properties]
+enabled = ["write concern"]
+
+[command]
+name = "createIndexes"
+parameter = "collection"
+
+[request.indexes]
+type = "array"
+constructor = true
+documentation = "An array containing index specification documents for the indexes being created."
+
+[request.maxTimeMS]
+type = "int64"
+documentation = "MaxTimeMS specifies the maximum amount of time to allow the query to run."
+
+[request.commitQuorum]
+type = "value"
+minWireVersionRequired = 9
+documentation = """
+The number of data-bearing members of a replica set, including the primary, that must complete the index builds
+successfully before the primary marks the indexes as ready. This should either be a string or int32 value.
+"""
+
+[response]
+name = "CreateIndexesResult"
+
+[response.field.createdCollectionAutomatically]
+type = "boolean"
+documentation = "If the collection was created automatically."
+
+[response.field.indexesBefore]
+type = "int32"
+documentation = "The number of indexes existing before this command."
+
+[response.field.indexesAfter]
+type = "int32"
+documentation = "The number of indexes existing after this command."

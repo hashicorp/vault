@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "types";
+
+package github_com_hashicorp_go_raftchunking_types;
+
+message ChunkInfo {
+	// OpNum is the ID of the op, used to ensure values are applied to the
+	// right operation
+	uint64 op_num = 1;
+
+	// SequenceNum is the current number of the ops; when applying we should
+	// see this start at zero and increment by one without skips
+	uint32 sequence_num = 2;
+
+	// NumChunks is used to check whether all chunks have been received and
+	// reconstruction should be attempted
+	uint32 num_chunks = 3;
+
+	// NextExtensions holds inner extensions information for the next layer
+	// down of Apply
+	bytes next_extensions = 4;
+}

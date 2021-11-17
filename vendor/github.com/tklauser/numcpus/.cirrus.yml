@@ -1,0 +1,12 @@
+env:
+  CIRRUS_CLONE_DEPTH: 1
+
+freebsd_12_task:
+  freebsd_instance:
+    image_family: freebsd-12-2
+  install_script: |
+    pkg install -y git go
+    GOBIN=$PWD/bin go get golang.org/dl/go1.17
+    bin/go1.17 download
+  build_script: bin/go1.17 build -v ./...
+  test_script: bin/go1.17 test -race ./...

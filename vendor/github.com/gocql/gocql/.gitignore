@@ -1,0 +1,5 @@
+gocql-fuzz
+fuzz-corpus
+fuzz-work
+gocql.test
+.idea
