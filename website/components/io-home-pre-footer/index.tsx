@@ -2,7 +2,19 @@ import * as React from 'react'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
-export default function IoHomePreFooter({ brand, heading, description, ctas }) {
+interface IoHomePreFooterProps {
+  brand: string
+  heading: string
+  description: string
+  ctas: [IoHomePreFooterCard, IoHomePreFooterCard, IoHomePreFooterCard]
+}
+
+export default function IoHomePreFooter({
+  brand,
+  heading,
+  description,
+  ctas,
+}: IoHomePreFooterProps) {
   return (
     <div className={s.preFooter}>
       <div className={s.container}>
@@ -19,7 +31,7 @@ export default function IoHomePreFooter({ brand, heading, description, ctas }) {
                 link={cta.link}
                 heading={cta.heading}
                 description={cta.description}
-                cta={cta.label}
+                label={cta.label}
               />
             )
           })}
@@ -29,7 +41,21 @@ export default function IoHomePreFooter({ brand, heading, description, ctas }) {
   )
 }
 
-function IoHomePreFooterCard({ brand, link, heading, description, cta }) {
+interface IoHomePreFooterCard {
+  brand?: string
+  link: string
+  heading: string
+  description: string
+  label: string
+}
+
+function IoHomePreFooterCard({
+  brand,
+  link,
+  heading,
+  description,
+  label,
+}: IoHomePreFooterCard) {
   return (
     <a
       href={link}
@@ -44,7 +70,7 @@ function IoHomePreFooterCard({ brand, link, heading, description, cta }) {
       <h3 className={s.cardHeading}>{heading}</h3>
       <p className={s.cardDescription}>{description}</p>
       <span className={s.cardCta}>
-        {cta} <IconArrowRight16 />
+        {label} <IconArrowRight16 />
       </span>
     </a>
   )
