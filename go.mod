@@ -115,7 +115,7 @@ require (
 	github.com/kr/text v0.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-colorable v0.1.8
-	github.com/mholt/archiver/v3 v3.5.0
+	github.com/mholt/archiver/v3 v3.5.1
 	github.com/michaelklishin/rabbit-hole v0.0.0-20191008194146-93d9988f0cd5
 	github.com/miekg/dns v1.1.40 // indirect
 	github.com/mitchellh/cli v1.1.1
@@ -150,7 +150,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/pretty v1.0.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
-	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.etcd.io/bbolt v1.3.5
