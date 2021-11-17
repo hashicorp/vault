@@ -5,6 +5,8 @@ description: >-
   The Vault CSI Provider allows pods to consume Vault secrets using CSI volumes.
 ---
 
+-> **Deprecated:** The issuer parameter has been deprecated as of Vault 1.9 and will and will be removed in a future release.
+
 # Vault CSI Provider
 
 The Vault CSI Provider allows pods to consume Vault secrets using
@@ -69,7 +71,7 @@ long-lived default service account token, with an issuer different to the tokens
 Vault CSI Provider will create. But one Kubernetes auth mount can only be
 configured to validate a single issuer value.
 
--> **Deprecated:** The issuer has been deprecated and will be removed in a future release.
+
 
 ## Secret Provider Class Example
 
