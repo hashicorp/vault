@@ -1,16 +1,16 @@
-{{#if showToolbar }}
+{{#if this.getShowToolbar }}
     <div data-test-component="json-editor-toolbar">
         <Toolbar>
             <label class="is-label" data-test-component="json-editor-title">
-                {{title}} 
-                {{#if subTitle }}
-                    <span class="is-size-9 is-lowercase has-text-grey">({{ subTitle }})</span>
+                {{@title}} 
+                {{#if @subTitle }}
+                    <span class="is-size-9 is-lowercase has-text-grey">({{ @subTitle }})</span>
                 {{/if}}
             </label>
             <ToolbarActions>
                 {{yield}}
                 <div class="toolbar-separator"></div>
-                <CopyButton class="button is-transparent" @clipboardText={{value}}
+                <CopyButton class="button is-transparent" @clipboardText={{@value}}
                     @buttonType="button" @success={{action (set-flash-message 'Data copied!')}}>
                     <Icon @glyph="copy-action" aria-label="Copy" />
                 </CopyButton>
@@ -19,19 +19,19 @@
     </div>
 {{/if}}
 
-{{#if diffView}}
-    <pre>{{{visualDiff}}}</pre>
+{{#if @diffView }}
+    <pre>{{{this.visualDiff}}}</pre>
 {{else}}
     {{ivy-codemirror
         data-test-component="json-editor" 
-        value=value
-        options=options
-        valueUpdated=(action "updateValue") 
+        value=@value
+        options=this.options
+        valueUpdated=(action "updateValue")
         onFocusOut=(action "onFocus")    
     }}
 {{/if}}
-{{#if helpText }}
+{{#if @helpText }}
     <div class="box is-shadowless is-fullwidth has-short-padding">
-        <p class="sub-text">{{ helpText }}</p>
+        <p class="sub-text">{{ @helpText }}</p>
     </div>
 {{/if}}
