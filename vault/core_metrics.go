@@ -147,6 +147,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 // TokenStore; there is one per method because an additional level of abstraction
 // seems confusing.
 func (c *Core) tokenGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	// stateLock or authLock protects the tokenStore pointer
 	c.stateLock.RLock()
 	ts := c.tokenStore
@@ -158,6 +163,11 @@ func (c *Core) tokenGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabe
 }
 
 func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	c.stateLock.RLock()
 	ts := c.tokenStore
 	c.stateLock.RUnlock()
@@ -179,6 +189,11 @@ func (c *Core) leaseExpiryGaugeCollector(ctx context.Context) ([]metricsutil.Gau
 }
 
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	c.stateLock.RLock()
 	ts := c.tokenStore
 	c.stateLock.RUnlock()
@@ -189,6 +204,11 @@ func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.Gau
 }
 
 func (c *Core) tokenGaugeTtlCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	c.stateLock.RLock()
 	ts := c.tokenStore
 	c.stateLock.RUnlock()
