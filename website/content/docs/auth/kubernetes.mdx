@@ -194,6 +194,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
+  auth "github.com/hashicorp/vault/api/auth/kubernetes"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.
@@ -202,7 +203,8 @@ import (
 //
 // For a more in-depth setup explanation, please see the full version of this code in the hashicorp/vault-examples repo.
 func getSecretWithKubernetesAuth() (string, error) {
-	// If set, the VAULT_ADDR environment variable will be the address that your pod uses to communicate with Vault.
+	// If set, the VAULT_ADDR environment variable will be the address that
+	// your pod uses to communicate with Vault.
 	config := vault.DefaultConfig() // modify for more granular configuration
 
 	client, err := vault.NewClient(config)
@@ -210,30 +212,27 @@ func getSecretWithKubernetesAuth() (string, error) {
 		return "", fmt.Errorf("unable to initialize Vault client: %w", err)
 	}
 
-	// Read the service-account token from the path where the token's Kubernetes Secret is mounted.
-	// By default, Kubernetes will mount this to /var/run/secrets/kubernetes.io/serviceaccount/token
-	// but an administrator may have configured it to be mounted elsewhere.
-	jwt, err := os.ReadFile("path/to/service-account-token")
+	// The service-account token will be read from the path where the token's
+	// Kubernetes Secret is mounted. By default, Kubernetes will mount it to
+	// /var/run/secrets/kubernetes.io/serviceaccount/token, but an administrator
+	// may have configured it to be mounted elsewhere.
+	// In that case, we'll use the option WithServiceAccountTokenPath to look
+	// for the token there.
+	k8sAuth, err := auth.NewKubernetesAuth(
+		"dev-role-k8s",
+		auth.WithServiceAccountTokenPath("path/to/service-account-token"),
+	)
 	if err != nil {
-		return "", fmt.Errorf("unable to read file containing service account token: %w", err)
+		return "", fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
 	}
 
-	params := map[string]interface{}{
-		"jwt":  string(jwt),
-		"role": "dev-role-k8s", // the name of the role in Vault that was created with this app's Kubernetes service account bound to it
-	}
-
-	// log in to Vault's Kubernetes auth method
-	resp, err := client.Logical().Write("auth/kubernetes/login", params)
+	authInfo, err := client.Auth().Login(context.TODO(), k8sAuth)
 	if err != nil {
 		return "", fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
 	}
-	if resp == nil || resp.Auth == nil || resp.Auth.ClientToken == "" {
-		return "", fmt.Errorf("login response did not return client token")
+	if authInfo == nil {
+		return "", fmt.Errorf("no auth info was returned after login")
 	}
-
-	// now you will use the resulting Vault token for making all future calls to Vault
-	client.SetToken(resp.Auth.ClientToken)
 
 	// get secret from Vault
 	secret, err := client.Logical().Read("kv-v2/data/creds")
@@ -246,7 +245,8 @@ func getSecretWithKubernetesAuth() (string, error) {
 		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
 	}
 
-	// data map can contain more than one key-value pair, in this case we're just grabbing one of them
+	// data map can contain more than one key-value pair,
+	// in this case we're just grabbing one of them
 	key := "password"
 	value, ok := data[key].(string)
 	if !ok {
