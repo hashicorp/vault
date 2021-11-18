@@ -1,5 +1,7 @@
 import * as React from 'react'
 import Image from 'next/image'
+import { isInternalLink } from 'lib/utils'
+import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-link-16'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
@@ -49,7 +51,11 @@ export default function IoHomeCaseStudies({
               <a className={s.link} href={item.link}>
                 <span className={s.linkInner}>
                   <h3 className={s.linkHeading}>{item.heading}</h3>
-                  <IconArrowRight16 />
+                  {isInternalLink(item.link) ? (
+                    <IconArrowRight16 />
+                  ) : (
+                    <IconExternalLink16 />
+                  )}
                 </span>
               </a>
             </li>
