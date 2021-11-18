@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import Controller from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import { inject as service } from '@ember/service';
@@ -38,13 +39,26 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
     let string = `["${this.model.engineId}", "${this.model.id}", "${this.getRightSideVersionInit}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
-      .then(response => response.data) // using ember promise helpers to await in the hbs file
+      .then(response => response.data) // using ember promise helpers to await in the hbs file\
       .catch(() => null);
   }
 
-  @action
-  diffCheck(param) {
-    this.statesMatch = param;
+  async createVisualDiff() {
+    let diffpatcher = jsondiffpatch.create({});
+    let leftSideVersionData = this.leftSideVersionDataSelected || (await this.leftSideDataInit);
+    let rightSideVersionData = this.rightSideVersionDataSelected || (await this.rightSideDataInit);
+    let delta = diffpatcher.diff(leftSideVersionData, rightSideVersionData);
+
+    if (delta === undefined) {
+      // return 'messagge';
+      // this.args.diffCheck(!this.args.statesMatch); // sending false
+    }
+
+    return jsondiffpatch.formatters.html.format(delta, this.leftSideVersionData);
+  }
+
+  get visualDiff() {
+    return this.createVisualDiff();
   }
 
   // ARG TODO I believe I can remove this but double check

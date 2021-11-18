@@ -19,17 +19,14 @@
 	</div>
 {{/if}}
 
-{{#if @diffView }}
-	<pre>{{{this.visualDiff}}}</pre>
-{{else}}
-	{{ivy-codemirror
-		data-test-component="json-editor" 
-		value=@value
-		options=this.options
-		valueUpdated=(action "updateValue")
-		onFocusOut=(action "onFocus")    
-	}}
-{{/if}}
+{{ivy-codemirror
+	data-test-component="json-editor" 
+	value=@value
+	options=this.options
+	valueUpdated=(action "updateValue")
+	onFocusOut=(action "onFocus")    
+}}
+
 {{#if @helpText }}
 	<div class="box is-shadowless is-fullwidth has-short-padding">
 		<p class="sub-text">{{ @helpText }}</p>
