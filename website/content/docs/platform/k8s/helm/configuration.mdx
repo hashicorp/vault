@@ -67,16 +67,6 @@ and consider if they're appropriate for your deployment.
 
     - `enabled` (`boolean: true`) - When set to `true`, enables leader election for Vault Agent Injector. This is required when using auto-tls and more than 1 replica.
 
-    - `useContainer` (`boolean: false`) - The deployment of the leader-elector container will soon be removed from this chart since vault-k8s now uses an internal mechanism to determine leadership. To enable the deployment of the leader-elector container for use with vault-k8s 0.12.0 and earlier, set `useContainer=true`
-
-    - `image` - Values that configure the Vault Agent Injector Leader Election image.
-
-      - `repository` (`string: "gcr.io/google_containers/leader-elector"`) - The name of the leader election image for the Vault Agent Injector.
-
-      - `tag` (`string: "0.4"`) - The tag of the Docker image for the Leader Election. **This should be pinned to a specific version when running in production.**
-
-    - `ttl` (`string: "60s"`) - The frequency in which leader elections are performed in the Vault Agent Injector cluster.
-
   - `image` - Values that configure the Vault Agent Injector Docker image.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
@@ -107,6 +97,8 @@ and consider if they're appropriate for your deployment.
     - `templateConfig` - Default values within Agent's [`template_config` stanza](/docs/agent/template-config).
 
       - `exitOnRetryFailure` (`boolean: true`) - Controls whether Vault Agent exits after it has exhausted its number of template retry attempts due to failures.
+
+      - `staticSecretRenderInterval` (`string: ""`) - Configures how often Vault Agent Template should render non-leased secrets such as KV v2. See the [Vault Agent Templates documentation] (/docs/agent/template#non-renewable-secrets) for more details.
 
   - `metrics` - Values that configure the Vault Agent Injector metric exporter.
 
