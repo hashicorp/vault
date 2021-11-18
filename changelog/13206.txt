@@ -1,4 +1,0 @@
-```release-note:feature
-**Add PKCE support to OIDC Auth**: The Authorization Code flow makes use of the
-Proof Key for Code Exchange (PKCE) extension.
-```
