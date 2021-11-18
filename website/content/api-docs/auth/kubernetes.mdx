@@ -43,9 +43,9 @@ access the Kubernetes API.
 
 The following fields have been deprecated and will be removed in a future release:
 
-- `disable_iss_validation` `(bool: true)` Disable JWT issuer validation. Allows to skip ISS validation.
+- `disable_iss_validation` `(bool: true)` **Deprecated** Disable JWT issuer validation. Allows to skip ISS validation.
 
-- `issuer` `(string: "")` Optional JWT issuer. If no issuer is specified, then this plugin will
+- `issuer` `(string: "")` **Deprecated** Optional JWT issuer. If no issuer is specified, then this plugin will
   use `kubernetes/serviceaccount` as the default issuer. See [these instructions](/docs/platform/k8s/csi#setting-issuer-for-kubernetes-authentication) for looking up the issuer for a given 
 
 ### Caveats
