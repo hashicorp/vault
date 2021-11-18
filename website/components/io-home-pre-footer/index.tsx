@@ -31,7 +31,7 @@ export default function IoHomePreFooter({
                 link={cta.link}
                 heading={cta.heading}
                 description={cta.description}
-                label={cta.label}
+                cta={cta.cta}
               />
             )
           })}
@@ -46,7 +46,7 @@ interface IoHomePreFooterCard {
   link: string
   heading: string
   description: string
-  label: string
+  cta: string
 }
 
 function IoHomePreFooterCard({
@@ -54,8 +54,8 @@ function IoHomePreFooterCard({
   link,
   heading,
   description,
-  label,
-}: IoHomePreFooterCard) {
+  cta,
+}: IoHomePreFooterCard): React.ReactNode {
   return (
     <a
       href={link}
@@ -70,7 +70,7 @@ function IoHomePreFooterCard({
       <h3 className={s.cardHeading}>{heading}</h3>
       <p className={s.cardDescription}>{description}</p>
       <span className={s.cardCta}>
-        {label} <IconArrowRight16 />
+        {cta} <IconArrowRight16 />
       </span>
     </a>
   )

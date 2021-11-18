@@ -9,7 +9,7 @@ interface IoHomeHeroProps {
   description: string
   ctas: Array<{
     title: string
-    url: string
+    link: string
   }>
   cards: Array<IoHomeHeroCardProps>
 }
@@ -43,7 +43,7 @@ export default function IoHomeHero({
                   <Button
                     key={index}
                     title={cta.title}
-                    url={cta.url}
+                    url={cta.link}
                     linkType="inbound"
                     theme={{
                       brand: 'neutral',
@@ -68,7 +68,7 @@ export default function IoHomeHero({
                   cta={{
                     brand: index === 0 ? 'neutral' : brand,
                     title: card.cta.title,
-                    url: card.cta.url,
+                    url: card.cta.link,
                   }}
                   subText={card.subText}
                 />
@@ -87,7 +87,7 @@ interface IoHomeHeroCardProps {
   description: string
   cta: {
     title: string
-    url: string
+    link: string
     brand?: 'neutral' | 'vault' | 'consul'
   }
   subText: string
@@ -99,7 +99,7 @@ function IoHomeHeroCard({
   description,
   cta,
   subText,
-}: IoHomeHeroCardProps) {
+}: IoHomeHeroCardProps): React.ReactNode {
   return (
     <article
       className={s.card}
@@ -113,7 +113,7 @@ function IoHomeHeroCard({
       <p className={s.cardDescription}>{description}</p>
       <Button
         title={cta.title}
-        url={cta.url}
+        url={cta.link}
         theme={{
           variant: 'primary',
           brand: cta.brand,

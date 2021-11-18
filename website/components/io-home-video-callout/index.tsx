@@ -5,12 +5,23 @@ import IoHomeDialog from 'components/io-home-dialog'
 import PlayIcon from './play-icon'
 import s from './style.module.css'
 
+interface IoHomeVideoCalloutProps {
+  thumbnail: string
+  heading: string
+  description: string
+  person: {
+    avatar: string
+    name: string
+    description: string
+  }
+}
+
 export default function IoHomeVideoCallout({
   thumbnail,
   heading,
   description,
   person,
-}) {
+}): React.ReactNode {
   const [showDialog, setShowDialog] = React.useState(false)
   const showVideo = () => setShowDialog(true)
   const hideVideo = () => setShowDialog(false)
@@ -20,7 +31,7 @@ export default function IoHomeVideoCallout({
         <button className={s.thumbnail} onClick={showVideo}>
           <VisuallyHidden>Play video</VisuallyHidden>
           <PlayIcon />
-          <Image src={thumbnail} layout="fill" objectFit="cover" />
+          <Image src={thumbnail} layout="fill" objectFit="cover" alt="" />
         </button>
         <figcaption className={s.content}>
           <h3 className={s.heading}>{heading}</h3>
@@ -29,7 +40,7 @@ export default function IoHomeVideoCallout({
             <div className={s.person}>
               <div className={s.personThumbnail}>
                 <Image
-                  src={person.thumbnail}
+                  src={person.avatar}
                   width={52}
                   height={52}
                   alt={`${person.name} avatar`}

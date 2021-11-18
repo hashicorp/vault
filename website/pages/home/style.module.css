@@ -19,7 +19,10 @@
 
 .introHeaderInner {
   margin: auto;
-  max-width: calc(100% * 5 / 12);
+
+  @media (--medium-up) {
+    max-width: calc(100% * 5 / 12);
+  }
 }
 
 .introHeading {

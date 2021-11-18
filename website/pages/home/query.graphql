@@ -1,0 +1,92 @@
+query homepageQuery {
+  vaultHomepage {
+    heroHeading
+    heroDescription
+    heroCtas {
+      title
+      link
+    }
+    heroCards {
+      heading
+      description
+      cta {
+        title
+        link
+      }
+      subText: subtext
+    }
+    introHeading
+    introDescription
+    introFeatures {
+      heading
+      description
+      link
+      image {
+        url
+        alt
+      }
+    }
+    introVideo {
+      heading
+      description
+      thumbnail {
+        url
+      }
+      personName
+      personDescription
+      personAvatar {
+        url
+      }
+    }
+    inPracticeHeading
+    inPracticeDescription
+    inPracticeCards {
+      eyebrow
+      heading
+      description
+      link
+      products {
+        name
+      }
+    }
+    useCasesHeading
+    useCasesDescription
+    useCasesCards {
+      eyebrow
+      heading
+      description
+      link
+      products {
+        name
+      }
+    }
+    caseStudiesHeading
+    caseStudiesDescription
+    caseStudiesFeatured {
+      thumbnail {
+        url
+        alt
+      }
+      heading
+      link
+    }
+    caseStudiesLinks {
+      heading
+      link
+    }
+    callToActionHeading
+    callToActionDescription
+    callToActionCtas {
+      text: title
+      url: link
+    }
+    preFooterHeading
+    preFooterDescription
+    preFooterCtas {
+      link
+      heading
+      description
+      cta
+    }
+  }
+}
