@@ -1,4 +1,4 @@
-// +build amd64 arm64 s390x
+// +build !386,!arm
 
 package raft
 

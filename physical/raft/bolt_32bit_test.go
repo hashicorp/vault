@@ -1,3 +1,5 @@
+// +build 386 arm
+
 package raft
 
 import (
@@ -15,7 +17,7 @@ func Test_BoltOptions(t *testing.T) {
 		env          string
 		expectedSize int
 	}{
-		{"none", "", 100 * 1024 * 1024 * 1024},
+		{"none", "", 0},
 		{"5MB", strconv.Itoa(5 * 1024 * 1024), 5 * 1024 * 1024},
 		{"negative", "-1", 0},
 	}
