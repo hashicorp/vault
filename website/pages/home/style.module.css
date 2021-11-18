@@ -10,6 +10,45 @@
   padding-bottom: 128px;
 }
 
+.introHeader {
+  padding-top: 64px;
+  padding-bottom: 64px;
+  background-color: var(--vault);
+  text-align: center;
+}
+
+.introHeaderInner {
+  margin: auto;
+  max-width: calc(100% * 5 / 12);
+}
+
+.introHeading {
+  margin: 0;
+  composes: g-type-display-2 from global;
+}
+
+.introDescription {
+  margin: 24px 0 0;
+  composes: g-type-body-large from global;
+}
+
+.features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 32px;
+  margin-bottom: 128px;
+
+  & li:first-of-type {
+    background-image: linear-gradient(
+      to bottom,
+      var(--vault) 50%,
+      var(--white) 50%
+    );
+  }
+}
+
 /*
  * In practice
  */
