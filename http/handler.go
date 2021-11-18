@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
@@ -234,14 +233,7 @@ type statusHeaderResponseWriter struct {
 	logger      log.Logger
 	wroteHeader bool
 	statusCode  int
-	written     *uint32
 	headers     map[string][]*vault.CustomHeader
-}
-
-
-// Written tells us if the writer has been written to yet.
-func (w *statusHeaderResponseWriter) Written() bool {
-	return atomic.LoadUint32(w.written) == 1
 }
 
 func (w *statusHeaderResponseWriter) StatusCode() int {
@@ -427,8 +419,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			la := props.ListenerConfig.Address
 			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
 			if listenerCustomHeaders != nil {
-				newResponseWriter, _ := w.(WrappingResponseWriter)
-				newResponseWriter.SetHeaders(listenerCustomHeaders.StatusCodeHeaderMap)
+				nw, _ := w.(WrappingResponseWriter)
+				nw.SetHeaders(listenerCustomHeaders.StatusCodeHeaderMap)
+				w = nw
 			}
 		}
 
