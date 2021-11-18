@@ -5,7 +5,9 @@ import IoHomeCard from 'components/io-home-card'
 import IoHomeCaseStudies from 'components/io-home-case-studies'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
+import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
+import IoHomeFeature from 'components/io-home-feature'
 
 export default function Homepage({ content }) {
   return (
@@ -49,6 +51,40 @@ export default function Homepage({ content }) {
       />
 
       <div className={s.intro}>
+        <header className={s.introHeader}>
+          <div className={s.introHeaderInner}>
+            <h2 className={s.introHeading}>Identity-based security</h2>
+            <p className={s.introDescription}>
+              Vault brokers and deeply integrates with trusted identities to
+              automate access to secrets, data, and systems.
+            </p>
+          </div>
+        </header>
+
+        <ul className={s.features}>
+          <li>
+            <div className={s.container}>
+              <IoHomeFeature
+                link=""
+                heading="Application &amp; machine identity"
+                description="Secure applications and systems with machine identity and
+                automate credential issuance, rotation, and more. Enable
+                attestation of application and workload identity, using
+                Vault as the trusted authority"
+              />
+            </div>
+          </li>
+          <li>
+            <div className={s.container}>
+              <IoHomeFeature
+                link=""
+                heading="User identity with Vault"
+                description="Leverage trusted identity platforms you use everyday to secure, store, and access credentials and resources"
+              />
+            </div>
+          </li>
+        </ul>
+
         <div className={s.container}>
           <IoHomeVideoCallout
             heading="How Vault works"
