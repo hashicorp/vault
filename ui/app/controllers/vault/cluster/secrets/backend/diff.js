@@ -16,7 +16,7 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
   @tracked
   rightSideVersionSelected = null;
   @tracked
-  statesMatch = true; // initialize as true because the getter visualDiff in the child is called twice https://github.com/emberjs/ember.js/issues/11638
+  statesMatch = false;
 
   adapter = this.store.adapterFor('secret-v2-version');
 
@@ -50,8 +50,10 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
     let delta = diffpatcher.diff(leftSideVersionData, rightSideVersionData);
 
     if (delta === undefined) {
-      // return 'messagge';
-      // this.args.diffCheck(!this.args.statesMatch); // sending false
+      this.statesMatch = true;
+      return JSON.stringify(leftSideVersionData, undefined, 2); // value, replacer (all properties included), space (white space and indentation, line break, etc.)
+    } else {
+      this.statesMatch = false;
     }
 
     return jsondiffpatch.formatters.html.format(delta, this.leftSideVersionData);
