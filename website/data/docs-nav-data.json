@@ -283,8 +283,7 @@
           },
           {
             "title": "Alicloud OSS",
-            "path": "configuration/storage/alicloudoss",
-            "hidden": true
+            "path": "configuration/storage/alicloudoss"
           },
           {
             "title": "Azure",
@@ -456,11 +455,6 @@
         "path": "commands/delete"
       },
       {
-        "title": "<code>help</code>",
-        "path": "commands/help",
-        "hidden": true
-      },
-      {
         "title": "<code>kv</code>",
         "routes": [
           {
@@ -518,8 +512,7 @@
           },
           {
             "title": "<code>lookup</code>",
-            "path": "commands/lease/lookup",
-            "hidden": true
+            "path": "commands/lease/lookup"
           },
           {
             "title": "<code>renew</code>",
@@ -916,11 +909,6 @@
         "path": "secrets/azure"
       },
       {
-        "title": "Cassandra",
-        "path": "secrets/cassandra",
-        "hidden": true
-      },
-      {
         "title": "Consul",
         "path": "secrets/consul"
       },
@@ -1119,8 +1107,7 @@
           },
           {
             "title": "FF3-1 Tweak Usage",
-            "path": "secrets/transform/ff3-tweak-details",
-            "hidden": true
+            "path": "secrets/transform/ff3-tweak-details"
           },
           {
             "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
@@ -1475,11 +1462,6 @@
   },
   {
     "divider": true
-  },
-  {
-    "title": "Versus Other Software",
-    "path": "vs",
-    "hidden": true
   },
   {
     "title": "Upgrade Guides",
