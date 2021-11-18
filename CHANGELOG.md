@@ -105,6 +105,10 @@ outstanding dirty pages that were not flushed. [[GH-2093](https://github.com/has
 * ui: replaces Vault's use of elazarl/go-bindata-assetfs in building the UI with Go's native Embed package [[GH-11208](https://github.com/hashicorp/vault/pull/11208)]
 * ui: updated client tracking config view [[GH-12422](https://github.com/hashicorp/vault/pull/12422)]
 
+DEPRECATIONS:
+
+* auth/kubernetes: deprecate `disable_iss_validation` and `issuer` configuration fields [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127)
+
 BUG FIXES:
 
 * activity log (enterprise): allow partial monthly client count to be accessed from namespaces [[GH-13086](https://github.com/hashicorp/vault/pull/13086)]
