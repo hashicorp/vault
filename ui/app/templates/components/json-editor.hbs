@@ -20,8 +20,7 @@
 {{/if}}
 
 {{#if @diffView }}
-	<button type="button" {{on "click" this.visualDiff}}>VisualDiff</button>
-	{{!-- <pre>{{{this.visualDiff}}}</pre> --}}
+	<pre>{{{this.visualDiff}}}</pre>
 {{else}}
 	{{ivy-codemirror
 		data-test-component="json-editor" 

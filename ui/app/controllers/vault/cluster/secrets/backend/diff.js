@@ -15,7 +15,7 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
   @tracked
   rightSideVersionSelected = null;
   @tracked
-  statesMatch = false;
+  statesMatch = true; // initialize as true because the getter visualDiff in the child is called twice https://github.com/emberjs/ember.js/issues/11638
 
   adapter = this.store.adapterFor('secret-v2-version');
 
