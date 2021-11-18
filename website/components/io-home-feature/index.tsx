@@ -3,14 +3,14 @@ import s from './style.module.css'
 
 interface IoHomeFeatureProps {
   link: string
-  thumnail: string
+  // thumnail: string
   heading: string
   description: string
 }
 
 export default function IoHomeFeature({
   link,
-  thumbnail,
+  // thumbnail,
   heading,
   description,
 }: IoHomeFeatureProps) {
