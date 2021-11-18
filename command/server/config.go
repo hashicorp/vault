@@ -77,8 +77,8 @@ type Config struct {
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
-	EnableLogRequests    bool        `hcl:"-"`
-	EnableLogRequestsRaw interface{} `hcl:"enable_log_requests"`
+	LogRequestsInfo    string      `hcl:"-"`
+	LogRequestsInfoRaw interface{} `hcl:"log_requests_info"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
@@ -295,9 +295,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
 	}
 
-	result.EnableLogRequests = c.EnableLogRequests
-	if c2.EnableLogRequests {
-		result.EnableLogRequests = c2.EnableLogRequests
+	result.LogRequestsInfo = c.LogRequestsInfo
+	if c2.LogRequestsInfo != "" {
+		result.LogRequestsInfo = c2.LogRequestsInfo
 	}
 
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
@@ -488,10 +488,9 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	if result.EnableLogRequestsRaw != nil {
-		if result.EnableLogRequests, err = parseutil.ParseBool(result.EnableLogRequestsRaw); err != nil {
-			return nil, err
-		}
+	if result.LogRequestsInfoRaw != nil {
+		result.LogRequestsInfo = strings.ToLower(result.LogRequestsInfoRaw.(string))
+		result.LogRequestsInfoRaw = ""
 	}
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
@@ -855,7 +854,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
-		"enable_log_requests": c.EnableLogRequests,
+		"log_requests_info": c.LogRequestsInfo,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

@@ -1,6 +1,6 @@
 disable_cache = true
 disable_mlock = true
-enable_log_requests = true
+log_requests_info = "Basic"
 
 ui = true
 
