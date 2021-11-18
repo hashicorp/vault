@@ -199,7 +199,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		req.HTTPRequest = r
 	}
 	if responseWriter != nil {
-		req.ResponseWriter = logical.NewHTTPResponseWriter(responseWriter)
+		req.ResponseWriter = logical.NewStatusHeaderResponseWriter(responseWriter)
 	}
 
 	return req, origBody, 0, nil

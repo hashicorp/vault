@@ -1,25 +1,22 @@
 package vault
 
 import (
+	"fmt"
 	"net/http"
 	"net/textproto"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type ListenerCustomHeaders struct {
 	Address             string
-	StatusCodeHeaderMap map[string][]*CustomHeader
+	StatusCodeHeaderMap map[string][]*logical.CustomHeader
 	// ConfiguredHeadersStatusCodeMap field is introduced so that we would not need to loop through
 	// StatusCodeHeaderMap to see if a header exists, the key for this map is the headers names
 	configuredHeadersStatusCodeMap map[string][]string
-}
-
-type CustomHeader struct {
-	Name  string
-	Value string
 }
 
 func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHeaders http.Header) []*ListenerCustomHeaders {
@@ -29,10 +26,10 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 		listenerCustomHeaderStruct := &ListenerCustomHeaders{
 			Address: l.Address,
 		}
-		listenerCustomHeaderStruct.StatusCodeHeaderMap = make(map[string][]*CustomHeader)
+		listenerCustomHeaderStruct.StatusCodeHeaderMap = make(map[string][]*logical.CustomHeader)
 		listenerCustomHeaderStruct.configuredHeadersStatusCodeMap = make(map[string][]string)
 		for statusCode, headerValMap := range l.CustomResponseHeaders {
-			var customHeaderList []*CustomHeader
+			var customHeaderList []*logical.CustomHeader
 			for headerName, headerVal := range headerValMap {
 				// Sanitizing custom headers
 				// X-Vault- prefix is reserved for Vault internal processes
@@ -45,7 +42,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 				if uiHeaders != nil {
 					exist := uiHeaders.Get(headerName)
 					if exist != "" {
-						logger.Warn("found a duplicate header in UI", "header:", headerName, "Headers defined in the server configuration take precedence.")
+						logger.Warn(fmt.Sprintf("found a duplicate header in UI: header=%s. Headers defined in the server configuration take precedence.",  headerName))
 					}
 				}
 
@@ -55,7 +52,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 					continue
 				}
 
-				ch := &CustomHeader{
+				ch := &logical.CustomHeader{
 					Name:  headerName,
 					Value: headerVal,
 				}

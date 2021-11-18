@@ -474,7 +474,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 	}
 
 	recorder := httptest.NewRecorder()
-	snap := logical.NewHTTPResponseWriter(recorder)
+	snap := logical.NewStatusHeaderResponseWriter(recorder)
 
 	err := raft1.Snapshot(snap, nil)
 	if err != nil {

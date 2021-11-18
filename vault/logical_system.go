@@ -2983,7 +2983,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
-	flusher, ok := w.ResponseWriter.(http.Flusher)
+	flusher, ok := w.Wrapped().(http.Flusher)
 	if !ok {
 		return logical.ErrorResponse("streaming not supported"), nil
 	}

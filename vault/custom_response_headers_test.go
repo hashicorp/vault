@@ -128,7 +128,7 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	hw := logical.NewHTTPResponseWriter(w)
+	hw := logical.NewStatusHeaderResponseWriter(w)
 
 	// setting a header that already exist in custom headers
 	req := logical.TestRequest(t, logical.UpdateOperation, "config/ui/headers/X-Custom-Header")

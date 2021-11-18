@@ -1138,7 +1138,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 
 // SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
 // response.
-func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal.Access) error {
+func (b *RaftBackend) SnapshotHTTP(out *logical.StatusHeaderResponseWriter, access *seal.Access) error {
 	out.Header().Add("Content-Disposition", "attachment")
 	out.Header().Add("Content-Type", "application/gzip")
 

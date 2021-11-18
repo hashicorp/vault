@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -192,30 +193,127 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 	return ret, nil
 }
 
-// HTTPResponseWriter is optionally added to a request object and can be used to
-// write directly to the HTTP response writer.
-type HTTPResponseWriter struct {
+type WrappingResponseWriter interface {
 	http.ResponseWriter
-	written *uint32
+	Wrapped() http.ResponseWriter
+	SetHeaders(h map[string][]*CustomHeader)
+	GetHeaders() map[string][]*CustomHeader
+	StatusCode() int
 }
 
-// NewHTTPResponseWriter creates a new HTTPResponseWriter object that wraps the
-// provided io.Writer.
-func NewHTTPResponseWriter(w http.ResponseWriter) *HTTPResponseWriter {
-	return &HTTPResponseWriter{
-		ResponseWriter: w,
-		written:        new(uint32),
+type StatusHeaderResponseWriter struct {
+	wrapped     http.ResponseWriter
+	wroteHeader bool
+	statusCode  int
+	headers     map[string][]*CustomHeader
+	written     *uint32
+}
+
+func NewStatusHeaderResponseWriter (w http.ResponseWriter) *StatusHeaderResponseWriter {
+	nw, ok := w.(WrappingResponseWriter)
+	if ok {
+		return &StatusHeaderResponseWriter{
+			wrapped:     nw.Wrapped(),
+			wroteHeader: false,
+			statusCode:  200,
+			headers:     nw.GetHeaders(),
+			written:     new(uint32),
+		}
+	} else {
+		return &StatusHeaderResponseWriter{
+			wrapped:     w,
+			wroteHeader: false,
+			statusCode:  200,
+			headers:     nil,
+			written:     new(uint32),
+		}
 	}
 }
 
-// Write will write the bytes to the underlying io.Writer.
-func (rw *HTTPResponseWriter) Write(bytes []byte) (int, error) {
-	atomic.StoreUint32(rw.written, 1)
-
-	return rw.ResponseWriter.Write(bytes)
-}
-
 // Written tells us if the writer has been written to yet.
-func (rw *HTTPResponseWriter) Written() bool {
-	return atomic.LoadUint32(rw.written) == 1
+func (w *StatusHeaderResponseWriter) Written() bool {
+	return atomic.LoadUint32(w.written) == 1
 }
+
+func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {
+	return w.wrapped
+}
+
+func (w *StatusHeaderResponseWriter) GetHeaders() map[string][]*CustomHeader {
+	return w.headers
+}
+
+func (w *StatusHeaderResponseWriter) SetHeaders(h map[string][]*CustomHeader) {
+	w.headers = h
+}
+
+func (w *StatusHeaderResponseWriter) StatusCode() int {
+	return w.statusCode
+}
+
+func (w *StatusHeaderResponseWriter) Header() http.Header {
+	return w.wrapped.Header()
+}
+
+func (w *StatusHeaderResponseWriter) Write(buf []byte) (int, error) {
+	// It is allowed to only call ResponseWriter.Write and skip
+	// ResponseWriter.WriteHeader. An example of such a situation is
+	// "handleUIStub". The Write function will internally set the status code
+	// 200 for the response for which that call might invoke other
+	// implementations of the WriteHeader function. So, we still need to set
+	// the custom headers. In cases where both WriteHeader and Write of
+	// statusHeaderResponseWriter struct are called the internal call to the
+	// WriterHeader invoked from inside Write method won't change the headers.
+	if !w.wroteHeader {
+		w.setCustomResponseHeaders(w.statusCode)
+	}
+	atomic.StoreUint32(w.written, 1)
+
+	return w.wrapped.Write(buf)
+}
+
+func (w *StatusHeaderResponseWriter) WriteHeader(statusCode int) {
+	w.setCustomResponseHeaders(statusCode)
+	w.wrapped.WriteHeader(statusCode)
+	w.statusCode = statusCode
+	// in cases where Write is called after WriteHeader, let's prevent setting
+	// ResponseWriter headers twice
+	w.wroteHeader = true
+}
+
+func (w *StatusHeaderResponseWriter) setCustomResponseHeaders(status int) {
+	sch := w.headers
+	if sch == nil {
+		return
+	}
+
+	// Checking the validity of the status code
+	if status >= 600 || status < 100 {
+		return
+	}
+
+	// setter function to set the headers
+	setter := func(hvl []*CustomHeader) {
+		for _, hv := range hvl {
+			w.Header().Set(hv.Name, hv.Value)
+		}
+	}
+
+	// Setting the default headers first
+	setter(sch["default"])
+
+	// setting the Xyy pattern first
+	d := fmt.Sprintf("%vxx", status/100)
+	if val, ok := sch[d]; ok {
+		setter(val)
+	}
+
+	// Setting the specific headers
+	if val, ok := sch[strconv.Itoa(status)]; ok {
+		setter(val)
+	}
+
+	return
+}
+
+var _ WrappingResponseWriter = &StatusHeaderResponseWriter{}

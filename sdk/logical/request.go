@@ -203,7 +203,7 @@ type Request struct {
 
 	// ResponseWriter if set can be used to stream a response value to the http
 	// request that generated this logical.Request object.
-	ResponseWriter *HTTPResponseWriter `json:"-" sentinel:""`
+	ResponseWriter *StatusHeaderResponseWriter `json:"-" sentinel:""`
 
 	// requiredState is used internally to propagate the X-Vault-Index request
 	// header to later levels of request processing that operate only on
@@ -376,4 +376,9 @@ type InitializationRequest struct {
 
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
+}
+
+type CustomHeader struct {
+	Name  string
+	Value string
 }
