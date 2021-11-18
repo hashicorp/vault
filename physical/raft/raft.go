@@ -364,10 +364,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		opts, err := boltOptions()
-		if err != nil {
-			return nil, err
-		}
+		opts := boltOptions()
 		raftOptions := raftboltdb.Options{
 			Path:        filepath.Join(path, "raft.db"),
 			BoltOptions: opts,
@@ -1646,7 +1643,7 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
 // bolt.Open(), pre-configured with all of our preferred defaults.
-func boltOptions() (*bolt.Options, error) {
+func boltOptions() *bolt.Options {
 	o := &bolt.Options{
 		Timeout:        1 * time.Second,
 		FreelistType:   bolt.FreelistMapType,
@@ -1670,12 +1667,13 @@ func boltOptions() (*bolt.Options, error) {
 		o.InitialMmapSize = initialMmapSize
 	} else {
 		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
-		if err != nil {
-			return nil, err
-		} else if imms >= 0 {
+
+		// If there's an error here, it means they passed something that's not convertible to
+		// a number. Rather than fail startup, just ignore it.
+		if err == nil && imms > 0 {
 			o.InitialMmapSize = imms
 		}
 	}
 
-	return o, nil
+	return o
 }
