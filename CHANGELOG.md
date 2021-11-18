@@ -108,7 +108,7 @@ outstanding dirty pages that were not flushed. [[GH-2093](https://github.com/has
 
 DEPRECATIONS:
 
-* auth/kubernetes: deprecate `disable_iss_validation` and `issuer` configuration fields [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127)
+* auth/kubernetes: deprecate `disable_iss_validation` and `issuer` configuration fields [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 
 BUG FIXES:
 
