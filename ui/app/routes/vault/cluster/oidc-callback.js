@@ -9,7 +9,8 @@ export default Route.extend({
     let { auth_path: path, code, state } = this.paramsFor(this.routeName);
     let { namespaceQueryParam: namespace } = this.paramsFor('vault.cluster');
     path = window.decodeURIComponent(path);
-    let queryParams = { namespace, path, code, state };
+    const source = 'oidc-callback'; // required by event listener in auth-jwt component
+    let queryParams = { source, namespace, path, code, state };
     window.opener.postMessage(queryParams, window.origin);
   },
   renderTemplate() {
