@@ -63,7 +63,7 @@ Since namespaces represent logical isolations within a single Vault cluster for 
 
 
 1. If a client authenticates to Vault in a parent or root namespaces, it is considered the same client in all child namespaces.  This is obvious as it is within the same logical isolation.  
-2. However if a client authenticates to Vault in two separate namespaces, because of logical isolation they are not considered as the same client.  As an example, /namespaceA/ldap/auth/login/bob is not related to /namespaceB/ldap/auth/login/bob.  If the intent is that “Bob” is the same client, authenticate into two namespaces: 
+2. However if a client authenticates to Vault in two separate namespaces, because of logical isolation they are not considered as the same client.  As an example, `/namespaceA/ldap/auth/login/bob` is not related to `/namespaceB/ldap/auth/login/bob`.  If the intent is that “Bob” is the same client, authenticate into two namespaces: 
     1. Move the auth to the parent workspace and any auth to child namespaces  would be  considered as the same client
     2. Place that auth in the root namespace to be considered as 1 client in all namespaces.
 
