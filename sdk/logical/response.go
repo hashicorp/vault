@@ -195,7 +195,6 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 type WrappingResponseWriter interface {
 	http.ResponseWriter
 	Wrapped() http.ResponseWriter
-	StatusCode() int
 }
 
 // HTTPResponseWriter is optionally added to a request object and can be used to

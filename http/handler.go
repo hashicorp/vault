@@ -25,7 +25,6 @@ import (
 	"github.com/NYTimes/gziphandler"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -224,20 +223,13 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 type WrappingResponseWriter interface {
 	http.ResponseWriter
 	Wrapped() http.ResponseWriter
-	StatusCode() int
-	SetHeaders(h map[string][]*vault.CustomHeader)
 }
 
 type statusHeaderResponseWriter struct {
 	wrapped     http.ResponseWriter
-	logger      log.Logger
 	wroteHeader bool
 	statusCode  int
 	headers     map[string][]*vault.CustomHeader
-}
-
-func (w *statusHeaderResponseWriter) StatusCode() int {
-	return w.statusCode
 }
 
 func (w *statusHeaderResponseWriter) SetHeaders(h map[string][]*vault.CustomHeader) {
@@ -405,9 +397,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		w = &statusHeaderResponseWriter{
+		nw := &statusHeaderResponseWriter{
 			wrapped:     w,
-			logger:      core.Logger(),
 			wroteHeader: false,
 			statusCode:  200,
 			headers:     nil,
@@ -419,9 +410,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			la := props.ListenerConfig.Address
 			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
 			if listenerCustomHeaders != nil {
-				nw, _ := w.(WrappingResponseWriter)
 				nw.SetHeaders(listenerCustomHeaders.StatusCodeHeaderMap)
-				w = nw
 			}
 		}
 
@@ -430,7 +419,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
-		w.Header().Set("Cache-Control", "no-store")
+		nw.Header().Set("Cache-Control", "no-store")
 
 		// Start with the request context
 		ctx := r.Context()
@@ -454,12 +443,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		if core.RaftNodeIDHeaderEnabled() {
 			nodeID := core.GetRaftNodeID()
 			if nodeID != "" {
-				w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+				nw.Header().Set("X-Vault-Raft-Node-ID", nodeID)
 			}
 		}
 
 		if core.HostnameHeaderEnabled() && hostname != "" {
-			w.Header().Set("X-Vault-Hostname", hostname)
+			nw.Header().Set("X-Vault-Hostname", hostname)
 		}
 
 		switch {
@@ -474,7 +463,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
-			respondError(w, http.StatusNotFound, nil)
+			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return
 		}
@@ -484,7 +473,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// in-flight requests, and use that to update the req data with clientID
 		inFlightReqID, err := uuid.GenerateUUID()
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
+			respondError(nw, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
 		}
 		// adding an entry to the context to enable updating in-flight
 		// data with ClientID in the logical layer
@@ -513,17 +502,16 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			})
 		defer func() {
 			// Not expecting this fail, so skipping the assertion check
-			newResponseWriter, _ := w.(WrappingResponseWriter)
-			core.FinalizeInFlightReqData(inFlightReqID, newResponseWriter.StatusCode())
+			core.FinalizeInFlightReqData(inFlightReqID, nw.statusCode)
 		}()
 
 		// Setting the namespace in the header to be included in the error message
 		ns := r.Header.Get(consts.NamespaceHeaderName)
 		if ns != "" {
-			w.Header().Set(consts.NamespaceHeaderName, ns)
+			nw.Header().Set(consts.NamespaceHeaderName, ns)
 		}
 
-		h.ServeHTTP(w, r)
+		h.ServeHTTP(nw, r)
 
 		cancelFunc()
 		return
