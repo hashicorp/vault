@@ -1,7 +1,7 @@
 <SplashPage as |Page|>
   <Page.header>
     {{#if oidcProvider}}
-      <div class="box is-shadowless is-flex-v-centered">
+      <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
         <LogoEdition aria-label="Sign in with Hashicorp Vault"/>
       </div>
     {{else}}
@@ -82,7 +82,7 @@
   </Page.content>
   <Page.footer>
     <div class="has-short-padding">
-      <p class="help has-text-grey-dark">
+      <p class="help has-text-grey-dark" data-test-auth-helptext>
         {{#if oidcProvider}}
           Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.
         {{else}}

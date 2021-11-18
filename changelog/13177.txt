@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue with automate secret deletion value not displaying initially if set in secret metadata edit view
+```

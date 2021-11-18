@@ -4,8 +4,8 @@ import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { validator, buildValidations } from 'ember-cp-validations';
 
-//identity will be managed separately and the inclusion
-//of the system backend is an implementation detail
+// identity will be managed separately and the inclusion
+// of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const Validations = buildValidations({
