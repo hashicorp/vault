@@ -52,9 +52,26 @@ For more on managing access with identity, entities, and more, check out [Identi
 
 Using the identity system allows for Vault to make sure that entities aren’t counted more than once. Once you determine the identity and authentication method to be used for each, human, application, platform, and CI/CD pipeline, upon authentication for the first time in a billing period, Vault instantiates a unique entity. For example, say you have an application “AppX” that needs to get a secret from Vault using the AppRole method. Since AppX has an associated entity within Vault with associated policies, Vault knows every time that AppX is authenticating and authorizing, so AppX is only counted once.
 
-### Non-entity Tokens
+## Non-entity Tokens
 
-If you chose to use the [Token Auth Method](/docs/auth/token) without an identity to avoid driving up client count, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. See more on entity alias below.
+If you choose to use the [Token Auth Method](https://www.vaultproject.io/docs/auth/token) without an identity, a non-entity token, to avoid driving up client count, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](https://www.vaultproject.io/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](https://www.vaultproject.io/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. Without this each token will be counted as a client instead. For further information, please refer to the changes reflected in the [1.9 release notes](https://www.vaultproject.io/docs/release-notes/1.9.0) or check out our [learn guide](https://learn.hashicorp.com/collections/vault/new-release).  \
+
+
+## Considerations for Namespaces
+
+Since namespaces represent logical isolations within a single Vault cluster for administrative purposes, consideration must be made on how Vault clients are determined in this context.
+
+
+1. If a client authenticates to Vault in a parent or root namespaces, it is considered the same client in all child namespaces.  This is obvious as it is within the same logical isolation.  
+2. However if a client authenticates to Vault in two separate namespaces, because of logical isolation they are not considered as the same client.  As an example, /namespaceA/ldap/auth/login/bob is not related to /namespaceB/ldap/auth/login/bob.  If the intent is that “Bob” is the same client, authenticate into two namespaces: 
+    1. Move the auth to the parent workspace and any auth to child namespaces  would be  considered as the same client
+    2. Place that auth in the root namespace to be considered as 1 client in all namespaces.
+
+See also the guide [Secure Multi-Tenancy with Namespaces | Vault](https://learn.hashicorp.com/tutorials/vault/namespaces).  
+
+## Onboarding Clients - Putting it all together
+
+This guide, [“Onboarding Applications to Vault Using Terraform: A Practical Guide“](https://www.hashicorp.com/blog/onboarding-applications-to-vault-using-terraform-a-practical-guide) is a very good example on how to build an automated HashiCorp Vault onboarding system with Terraform to accommodate Vault client using sensible naming standards, ACL policy templates, namespaces, pre-created application entities, and workflows driven by VCS and CI/CD.
 
 ## Authentication Methods and how they’re counted in Vault
 
