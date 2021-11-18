@@ -5,8 +5,6 @@ description: >-
   The Vault CSI Provider allows pods to consume Vault secrets using CSI volumes.
 ---
 
--> **Deprecated:** The issuer parameter has been deprecated as of Vault 1.9 and will and will be removed in a future release.
-
 # Vault CSI Provider
 
 The Vault CSI Provider allows pods to consume Vault secrets using
@@ -52,6 +50,8 @@ account provided to pods if no service account is defined.
 
 ### Setting `issuer` for Kubernetes authentication
 
+-> **Deprecated:** The issuer parameter has been deprecated as of Vault 1.9 and will and will be removed in a future release.
+
 You will likely need to set [`issuer`](/api-docs/auth/kubernetes#issuer) when
 configuring Kubernetes authentication for the Vault CSI Provider.
 Vault CSI Provider does not use the default token associated with service accounts.
@@ -70,8 +70,6 @@ Agent sidecars will most commonly be configured to authenticate using a
 long-lived default service account token, with an issuer different to the tokens
 Vault CSI Provider will create. But one Kubernetes auth mount can only be
 configured to validate a single issuer value.
-
-
 
 ## Secret Provider Class Example
 
