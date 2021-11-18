@@ -3,6 +3,7 @@
 
 CHANGES:
 
+* auth/kubernetes: `disable_iss_validation` defaults to true. [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 * expiration: VAULT_16_REVOKE_PERMITPOOL environment variable has been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
 * expiration: VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY environment variable has
 been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
@@ -10,7 +11,6 @@ been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
 * secrets/ssh: Roles with empty allowed_extensions will now forbid end-users
 specifying extensions when requesting ssh key signing. Update roles setting
 allowed_extensions to `*` to permit any extension to be specified by an end-user. [[GH-12847](https://github.com/hashicorp/vault/pull/12847)]
-* auth/kubernetes: `disable_iss_validation` defaults to true. [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 
 FEATURES:
 
