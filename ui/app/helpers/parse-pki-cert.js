@@ -6,7 +6,14 @@ export function parsePkiCert([model]) {
   if (!model.certificate) {
     return;
   }
-  const cert = pki.certificateFromPem(model.certificate);
+  let cert;
+  // node-forge cannot parse EC (elliptical curve) certs
+  // so just return model (original response) if pki parse returns an error
+  try {
+    cert = pki.certificateFromPem(model.certificate);
+  } catch (error) {
+    return model;
+  }
   const commonName = cert.subject.getField('CN') ? cert.subject.getField('CN').value : null;
   const issueDate = cert.validity.notBefore;
   const expiryDate = cert.validity.notAfter;
