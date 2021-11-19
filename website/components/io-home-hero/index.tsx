@@ -68,7 +68,7 @@ export default function IoHomeHero({
                   cta={{
                     brand: index === 0 ? 'neutral' : brand,
                     title: card.cta.title,
-                    url: card.cta.link,
+                    link: card.cta.link,
                   }}
                   subText={card.subText}
                 />
