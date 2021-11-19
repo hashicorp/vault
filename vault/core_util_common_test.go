@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // TestStoreMultipleVaultVersions writes multiple versions of 1.9.0 and verifies that only
@@ -11,29 +13,30 @@ import (
 func TestStoreMultipleVaultVersions(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	upgradeTimePlusEpsilon := time.Now()
-	wasStored, err := c.StoreVersionTimestamp(context.Background(), "1.9.0", upgradeTimePlusEpsilon.Add(30*time.Hour))
+	wasStored, err := c.storeVersionTimestamp(context.Background(), version.Version, upgradeTimePlusEpsilon.Add(30*time.Hour))
 	if err != nil || wasStored {
 		t.Fatalf("vault version was re-stored: %v, err is: %s", wasStored, err.Error())
 	}
-	upgradeTime, ok := c.VersionTimestamps["1.9.0"]
+	upgradeTime, ok := c.versionTimestamps[version.Version]
 	if !ok {
-		t.Fatalf("no 1.9.0 version timestamp found")
+		t.Fatalf("no %s version timestamp found", version.Version)
 	}
 	if upgradeTime.After(upgradeTimePlusEpsilon) {
-		t.Fatalf("upgrade time for 1.9.0 is incorrect: got %+v, expected less than %+v", upgradeTime, upgradeTimePlusEpsilon)
+		t.Fatalf("upgrade time for %s is incorrect: got %+v, expected less than %+v", version.Version, upgradeTime, upgradeTimePlusEpsilon)
 	}
 }
 
 // TestGetOldestVersion verifies that FindOldestVersionTimestamp finds the oldest
-// vault version stored.
+// (in time) vault version stored.
 func TestGetOldestVersion(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	upgradeTimePlusEpsilon := time.Now()
-	c.StoreVersionTimestamp(context.Background(), "1.9.1", upgradeTimePlusEpsilon.Add(-4*time.Hour))
-	c.StoreVersionTimestamp(context.Background(), "1.9.2", upgradeTimePlusEpsilon.Add(2*time.Hour))
-	c.HandleLoadVersionTimestamps(c.activeContext)
-	if len(c.VersionTimestamps) != 3 {
-		t.Fatalf("expected 3 entries in timestamps map after refresh, found: %d", len(c.VersionTimestamps))
+
+	c.storeVersionTimestamp(context.Background(), "1.9.1", upgradeTimePlusEpsilon.Add(-4*time.Hour))
+	c.storeVersionTimestamp(context.Background(), "1.9.2", upgradeTimePlusEpsilon.Add(2*time.Hour))
+	c.loadVersionTimestamps(c.activeContext)
+	if len(c.versionTimestamps) != 3 {
+		t.Fatalf("expected 3 entries in timestamps map after refresh, found: %d", len(c.versionTimestamps))
 	}
 	v, tm, err := c.FindOldestVersionTimestamp()
 	if err != nil {

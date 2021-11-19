@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // invalidKey is used to test Unseal
@@ -54,16 +55,16 @@ func TestSealConfig_Invalid(t *testing.T) {
 	}
 }
 
-// TestCore_HasVaultVersion checks that VersionTimestamps are correct and initialized
+// TestCore_HasVaultVersion checks that versionTimestamps are correct and initialized
 // after a core has been unsealed.
 func TestCore_HasVaultVersion(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	if c.VersionTimestamps == nil {
+	if c.versionTimestamps == nil {
 		t.Fatalf("Version timestamps for core were not initialized for a new core")
 	}
-	upgradeTime, ok := c.VersionTimestamps["1.9.0"]
+	upgradeTime, ok := c.versionTimestamps[version.Version]
 	if !ok {
-		t.Fatalf("1.9.0 upgrade time not found")
+		t.Fatalf("%s upgrade time not found", version.Version)
 	}
 	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
 		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +

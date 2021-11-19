@@ -1,7 +1,7 @@
 <!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in lib/core/addon/components/list-view.js. To make changes, first edit that file and run "yarn gen-story-md list-view" to re-generate the content.-->
 
 ## ListView
-`ListView` components are used in conjuction with `ListItem` for rendering a list.
+`ListView` components are used in conjunction with `ListItem` for rendering a list.
 
 
 | Param | Type | Default | Description |
@@ -11,7 +11,7 @@
 | [message] | <code>String</code> | <code></code> | The message to display within the banner. |
 
 **Example**
-  
+
 ```js
 <ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
   {{#if list.empty}}
