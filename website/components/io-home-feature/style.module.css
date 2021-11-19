@@ -23,10 +23,11 @@
 
 .featureMedia {
   flex-shrink: 0;
-  background-color: var(--gray-6);
-  aspect-ratio: 4 / 2;
+  display: flex;
   width: 100%;
   border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--gray-5);
 
   @media (--medium-up) {
     width: 300px;
@@ -34,6 +35,10 @@
 
   @media (--large) {
     width: 400px;
+  }
+
+  & > * {
+    width: 100%;
   }
 }
 

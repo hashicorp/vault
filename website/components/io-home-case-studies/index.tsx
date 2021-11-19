@@ -1,11 +1,16 @@
+import * as React from 'react'
 import Image from 'next/image'
+import { isInternalLink } from 'lib/utils'
+import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-link-16'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
 interface IoHomeCaseStudiesProps {
   primary: Array<{
-    thumbnail: string
-    alt: string
+    thumbnail: {
+      url: string
+      alt: string
+    }
     link: string
     heading: string
   }>
@@ -18,7 +23,7 @@ interface IoHomeCaseStudiesProps {
 export default function IoHomeCaseStudies({
   primary,
   secondary,
-}: IoHomeCaseStudiesProps) {
+}: IoHomeCaseStudiesProps): React.ReactElement {
   return (
     <div className={s.caseStudies}>
       <ul className={s.primary}>
@@ -28,10 +33,10 @@ export default function IoHomeCaseStudies({
               <a className={s.card} href={item.link}>
                 <h3 className={s.cardHeading}>{item.heading}</h3>
                 <Image
-                  src={item.thumbnail}
+                  src={item.thumbnail.url}
                   layout="fill"
                   objectFit="cover"
-                  alt={item.alt}
+                  alt={item.thumbnail.alt}
                 />
               </a>
             </li>
@@ -46,7 +51,11 @@ export default function IoHomeCaseStudies({
               <a className={s.link} href={item.link}>
                 <span className={s.linkInner}>
                   <h3 className={s.linkHeading}>{item.heading}</h3>
-                  <IconArrowRight16 />
+                  {isInternalLink(item.link) ? (
+                    <IconArrowRight16 />
+                  ) : (
+                    <IconExternalLink16 />
+                  )}
                 </span>
               </a>
             </li>

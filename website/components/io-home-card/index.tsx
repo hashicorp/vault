@@ -9,7 +9,9 @@ import s from './style.module.css'
 
 interface IoHomeCardProps {
   variant?: 'light' | 'gray' | 'dark'
-  products?: Array<keyof typeof productLogos>
+  products?: Array<{
+    name: keyof typeof productLogos
+  }>
   link: {
     url: string
     type: 'inbound' | 'outbound'
@@ -30,7 +32,7 @@ function IoHomeCard({
   heading,
   description,
   children,
-}: IoHomeCardProps) {
+}: IoHomeCardProps): React.ReactElement {
   const LinkWrapper = ({ className, children }) =>
     link.type === 'inbound' ? (
       <Link href={link.url}>
@@ -62,10 +64,15 @@ function IoHomeCard({
         <footer className={s.footer}>
           {products && (
             <ul className={s.products}>
-              {products.map((product, index) => {
+              {products.map(({ name }, index) => {
+                const key = name.toLowerCase()
+                const version = variant === 'dark' ? 'neutral' : 'color'
                 return (
                   <li key={index}>
-                    <InlineSvg className={s.logo} src={productLogos[product]} />
+                    <InlineSvg
+                      className={s.logo}
+                      src={productLogos[key][version]}
+                    />
                   </li>
                 )
               })}
