@@ -23,7 +23,7 @@ interface IoHomeCaseStudiesProps {
 export default function IoHomeCaseStudies({
   primary,
   secondary,
-}: IoHomeCaseStudiesProps): React.ReactNode {
+}: IoHomeCaseStudiesProps): React.ReactElement {
   return (
     <div className={s.caseStudies}>
       <ul className={s.primary}>

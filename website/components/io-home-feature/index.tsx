@@ -18,7 +18,7 @@ export default function IoHomeFeature({
   image,
   heading,
   description,
-}: IoHomeFeatureProps): React.ReactNode {
+}: IoHomeFeatureProps): React.ReactElement {
   return (
     <a href={link} className={s.feature}>
       <div className={s.featureMedia}>

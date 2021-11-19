@@ -32,7 +32,7 @@ function IoHomeCard({
   heading,
   description,
   children,
-}: IoHomeCardProps): React.ReactNode {
+}: IoHomeCardProps): React.ReactElement {
   const LinkWrapper = ({ className, children }) =>
     link.type === 'inbound' ? (
       <Link href={link.url}>
