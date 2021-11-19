@@ -15,7 +15,7 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: For customers using older versions prior to Vault 1.6, what’s the best way to compute clients?](#q-for-customers-using-older-versions-of-vault-1-6-what-s-the-best-way-to-compute-clients)
 - [Q: For customers using newer versions than Vault 1.6, what's the best way to compute clients?](#q-for-customers-using-newer-versions-than-vault-1-6-what-s-the-best-way-to-compute-clients)
 - [Q: Why do we have two different tools (auditor tool and UI/API) to compute clients? Do we plan to deprecate one in the future?](#q-why-do-we-have-two-different-tools-auditor-tool-and-ui-api-to-compute-clients-do-we-plan-to-deprecate-one-in-the-future)
-- [Q: How can I compute KMP clients for Vault?](#q-how-can-i-compute-kmp-clients-for-vault)
+- [Q: How can I compute KMIP clients for Vault?](#q-how-can-i-compute-kmip-clients-for-vault)
 - [Q: Why do the Vault auditor tool and the usage metrics UI show me different results for the total number of clients?](#q-why-do-the-vault-auditor-tool-and-the-usage-metrics-ui-show-me-different-results-for-the-total-number-of-clients)
 - [Q: When I upgrade to a version of Vault that's greater than Vault 1.6, will the clients be available for the entire history of the billing period, or only available after the upgrade occurred during the billing period?](#q-when-i-upgrade-to-a-version-of-vault-that-s-greater-vault-1-6-will-the-clients-be-available-for-the-entire-history-of-the-billing-period-or-only-available-after-the-upgrade-occurred-during-the-billing-period)
 - [Q: If I upgrade from Vault 1.8 to 1.9, how will the changes to non-entity token logic and local auth mount made in Vault 1.9 affect the clients created prior to the upgrade?](#q-if-i-upgrade-from-vault-1-8-to-1-9-how-will-the-changes-to-non-entity-token-logic-and-local-auth-mount-made-in-vault-1-9-affect-the-clients-created-prior-to-the-upgrade)
@@ -102,7 +102,7 @@ The usage metrics UI that leverages the internal client count API is the best wa
 
 Not all customers may be on a version greater than Vault version 1.6 that leverages the client count API to display clients via the UI. The [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) is available for customers running older Vault versions to compute client counts. The [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) does not contain client count computation logic updates (e.g., non-entity token computation logic made in Vault 1.9). In the future, we will deprecate the [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool).
 
-### Q: How can I compute KMP clients for Vault?
+### Q: How can I compute KMIP clients for Vault?
 
 As of Vault 1.9, KMIP clients are not available via the usage metrics UI or the client count API; they are provided via the [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool). To learn more, refer to the [Vault Usage Metrics](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) documentation.
 
