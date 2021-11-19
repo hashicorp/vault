@@ -44,7 +44,7 @@ func getBackend(t *testing.T) logical.Backend {
 	return be
 }
 
-func TestBackend_basic(t *testing.T) {
+func TestAcceptanceBackend_basic(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -58,7 +58,7 @@ func TestBackend_basic(t *testing.T) {
 	})
 }
 
-func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
+func TestAcceptanceBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	t.Parallel()
 	roleData := map[string]interface{}{
 		"credential_type":          iamUserCred,
@@ -77,7 +77,7 @@ func TestBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 	})
 }
 
-func TestBackend_basicSTS(t *testing.T) {
+func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	t.Parallel()
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -126,7 +126,7 @@ func TestBackend_policyCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -956,7 +956,7 @@ func testAccStepWriteArnPolicyRef(t *testing.T, name string, arn string) logical
 	}
 }
 
-func TestBackend_basicPolicyArnRef(t *testing.T) {
+func TestAcceptanceBackend_basicPolicyArnRef(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -970,7 +970,7 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	})
 }
 
-func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
+func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 	t.Parallel()
 	compacted, err := compactJSON(testDynamoPolicy)
 	if err != nil {
@@ -1019,7 +1019,7 @@ func TestBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 
 // Similar to TestBackend_iamUserManagedInlinePoliciesGroups() but managing
 // policies only with groups
-func TestBackend_iamUserGroups(t *testing.T) {
+func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 	t.Parallel()
 	group1Name := generateUniqueName(t.Name())
 	group2Name := generateUniqueName(t.Name())
@@ -1065,7 +1065,7 @@ func TestBackend_iamUserGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
@@ -1116,7 +1116,7 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueName(t.Name())
 
@@ -1151,7 +1151,7 @@ func TestBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	})
 }
 
-func TestBackend_AssumedRoleWithGroups(t *testing.T) {
+func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueName(t.Name())
 	groupName := generateUniqueName(t.Name())
@@ -1208,7 +1208,7 @@ func TestBackend_AssumedRoleWithGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
+func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	t.Parallel()
 	userName := generateUniqueName(t.Name())
 	accessKey := &awsAccessKey{}
@@ -1239,7 +1239,7 @@ func TestBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	})
 }
 
-func TestBackend_FederationTokenWithGroups(t *testing.T) {
+func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	t.Parallel()
 	userName := generateUniqueName(t.Name())
 	groupName := generateUniqueName(t.Name())
@@ -1289,7 +1289,7 @@ func TestBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
-func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
+func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueName(t.Name())
 	minAwsAssumeRoleDuration := 900
@@ -1327,7 +1327,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1386,7 +1386,7 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 func TestBackend_iamGroupsCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
@@ -1445,7 +1445,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 
 func TestBackend_iamTagsCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
+		AcceptanceTest: false,
 		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
