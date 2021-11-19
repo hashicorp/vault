@@ -84,8 +84,8 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
-	roleName := generateUniqueName(t.Name())
-	userName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -976,7 +976,7 @@ func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bad: %#v", err)
 	}
-	groupName := generateUniqueName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	roleData := map[string]interface{}{
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
@@ -1021,8 +1021,8 @@ func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 // policies only with groups
 func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 	t.Parallel()
-	group1Name := generateUniqueName(t.Name())
-	group2Name := generateUniqueName(t.Name())
+	group1Name := generateUniqueGroupName(t.Name())
+	group2Name := generateUniqueGroupName(t.Name())
 	roleData := map[string]interface{}{
 		"iam_groups":      []string{group1Name, group2Name},
 		"credential_type": iamUserCred,
@@ -1067,7 +1067,7 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 
 func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())[:64]
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -1118,7 +1118,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 
 func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -1153,8 +1153,8 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 
 func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
-	groupName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
@@ -1210,7 +1210,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 
 func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 	t.Parallel()
-	userName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
 	accessKey := &awsAccessKey{}
 
 	roleData := map[string]interface{}{
@@ -1241,8 +1241,8 @@ func TestAcceptanceBackend_FederationTokenWithPolicyARN(t *testing.T) {
 
 func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	t.Parallel()
-	userName := generateUniqueName(t.Name())
-	groupName := generateUniqueName(t.Name())
+	userName := generateUniqueUserName(t.Name())
+	groupName := generateUniqueGroupName(t.Name())
 	accessKey := &awsAccessKey{}
 
 	// IAM policy where Statement is a single element, not a list
@@ -1291,7 +1291,7 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 
 func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueName(t.Name())
+	roleName := generateUniqueRoleName(t.Name())
 	minAwsAssumeRoleDuration := 900
 	awsAccountID, err := getAccountID()
 	if err != nil {
@@ -1502,8 +1502,24 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 	}
 }
 
-func generateUniqueName(prefix string) string {
-	return testhelpers.RandomWithPrefix(prefix)
+func generateUniqueRoleName(prefix string) string {
+	return generateUniqueName(prefix, 64)
+}
+
+func generateUniqueUserName(prefix string) string {
+	return generateUniqueName(prefix, 64)
+}
+
+func generateUniqueGroupName(prefix string) string {
+	return generateUniqueName(prefix, 128)
+}
+
+func generateUniqueName(prefix string, maxLength int) string {
+	name := testhelpers.RandomWithPrefix(prefix)
+	if len(name) > maxLength {
+		return name[:maxLength]
+	}
+	return name
 }
 
 type awsAccessKey struct {
