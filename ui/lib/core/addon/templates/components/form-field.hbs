@@ -127,14 +127,17 @@
 {{else if (eq attr.options.editType "ttl")}}
   {{!-- TTL Picker --}}
   <div class="field">
-    <TtlPicker2
-      @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
-      @label={{labelString}}
-      @helperTextDisabled={{or attr.options.helperTextDisabled "Vault will use the default lease duration."}}
-      @helperTextEnabled={{or attr.options.helperTextEnabled "Lease will expire after"}}
-      @description={{attr.helpText}}
-      @initialValue={{or (get model valuePath) attr.options.setDefault}}
-    />
+    {{#let (or (get model valuePath) attr.options.setDefault) as |initialValue|}}
+      <TtlPicker2
+        @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
+        @label={{labelString}}
+        @helperTextDisabled={{or attr.options.helperTextDisabled "Vault will use the default lease duration."}}
+        @helperTextEnabled={{or attr.options.helperTextEnabled "Lease will expire after"}}
+        @description={{attr.helpText}}
+        @initialValue={{initialValue}}
+        @initialEnabled={{if (eq initialValue "0s") false initialValue}}
+      />
+    {{/let}}
   </div>
 {{else if (eq attr.options.editType "regex")}}
   {{!-- Regex Validated Input --}}
