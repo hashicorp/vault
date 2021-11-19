@@ -43,6 +43,7 @@
   color: var(--white);
   right: 24px;
   top: 24px;
+  z-index: 1;
 
   @media (min-width: 768px) {
     right: 48px;

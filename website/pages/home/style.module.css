@@ -19,7 +19,10 @@
 
 .introHeaderInner {
   margin: auto;
-  max-width: calc(100% * 5 / 12);
+
+  @media (--medium-up) {
+    max-width: calc(100% * 5 / 12);
+  }
 }
 
 .introHeading {
@@ -161,16 +164,13 @@
   gap: 32px;
   overflow-x: auto;
 
-  @media (--medium-up) {
-    --columns: 3;
+  @media (--large) {
     --minCol: 0;
 
     margin: 0;
     padding: 0;
     overflow-x: unset;
-  }
 
-  @media (--large) {
     --columns: 4;
   }
 

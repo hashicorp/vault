@@ -5,12 +5,25 @@ import IoHomeDialog from 'components/io-home-dialog'
 import PlayIcon from './play-icon'
 import s from './style.module.css'
 
+interface IoHomeVideoCalloutProps {
+  youtubeId: string
+  thumbnail: string
+  heading: string
+  description: string
+  person: {
+    avatar: string
+    name: string
+    description: string
+  }
+}
+
 export default function IoHomeVideoCallout({
+  youtubeId,
   thumbnail,
   heading,
   description,
   person,
-}) {
+}: IoHomeVideoCalloutProps): React.ReactElement {
   const [showDialog, setShowDialog] = React.useState(false)
   const showVideo = () => setShowDialog(true)
   const hideVideo = () => setShowDialog(false)
@@ -20,7 +33,7 @@ export default function IoHomeVideoCallout({
         <button className={s.thumbnail} onClick={showVideo}>
           <VisuallyHidden>Play video</VisuallyHidden>
           <PlayIcon />
-          <Image src={thumbnail} layout="fill" objectFit="cover" />
+          <Image src={thumbnail} layout="fill" objectFit="cover" alt="" />
         </button>
         <figcaption className={s.content}>
           <h3 className={s.heading}>{heading}</h3>
@@ -29,7 +42,7 @@ export default function IoHomeVideoCallout({
             <div className={s.person}>
               <div className={s.personThumbnail}>
                 <Image
-                  src={person.thumbnail}
+                  src={person.avatar}
                   width={52}
                   height={52}
                   alt={`${person.name} avatar`}
@@ -48,7 +61,16 @@ export default function IoHomeVideoCallout({
         onDismiss={hideVideo}
         label={`${heading} video}`}
       >
-        <div className={s.video}></div>
+        <div className={s.video}>
+          <iframe
+            width="560"
+            height="315"
+            src={`https://www.youtube.com/embed/${youtubeId}`}
+            title="YouTube video player"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            frameBorder="0"
+          ></iframe>
+        </div>
       </IoHomeDialog>
     </>
   )
