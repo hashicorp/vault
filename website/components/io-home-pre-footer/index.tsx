@@ -55,7 +55,7 @@ function IoHomePreFooterCard({
   heading,
   description,
   cta,
-}: IoHomePreFooterCard): React.ReactNode {
+}: IoHomePreFooterCard): React.ReactElement {
   return (
     <a
       href={link}
