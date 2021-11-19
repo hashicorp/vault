@@ -202,6 +202,7 @@ export async function getStaticProps() {
           description: introDescription,
           features: introFeatures,
           video: {
+            youtubeId: vaultHomepage.introVideo[0].youtubeId,
             heading: vaultHomepage.introVideo[0].heading,
             description: vaultHomepage.introVideo[0].description,
             thumbnail: vaultHomepage.introVideo[0].thumbnail.url,

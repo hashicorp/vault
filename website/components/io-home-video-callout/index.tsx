@@ -6,6 +6,7 @@ import PlayIcon from './play-icon'
 import s from './style.module.css'
 
 interface IoHomeVideoCalloutProps {
+  youtubeId: string
   thumbnail: string
   heading: string
   description: string
@@ -17,11 +18,12 @@ interface IoHomeVideoCalloutProps {
 }
 
 export default function IoHomeVideoCallout({
+  youtubeId,
   thumbnail,
   heading,
   description,
   person,
-}): React.ReactNode {
+}: IoHomeVideoCalloutProps): React.ReactElement {
   const [showDialog, setShowDialog] = React.useState(false)
   const showVideo = () => setShowDialog(true)
   const hideVideo = () => setShowDialog(false)
@@ -59,7 +61,16 @@ export default function IoHomeVideoCallout({
         onDismiss={hideVideo}
         label={`${heading} video}`}
       >
-        <div className={s.video}></div>
+        <div className={s.video}>
+          <iframe
+            width="560"
+            height="315"
+            src={`https://www.youtube.com/embed/${youtubeId}`}
+            title="YouTube video player"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            frameBorder="0"
+          ></iframe>
+        </div>
       </IoHomeDialog>
     </>
   )

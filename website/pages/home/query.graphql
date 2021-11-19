@@ -27,6 +27,7 @@ query homepageQuery {
       }
     }
     introVideo {
+      youtubeId
       heading
       description
       thumbnail {
