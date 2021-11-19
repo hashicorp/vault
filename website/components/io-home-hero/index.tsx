@@ -99,7 +99,7 @@ function IoHomeHeroCard({
   description,
   cta,
   subText,
-}: IoHomeHeroCardProps): React.ReactNode {
+}: IoHomeHeroCardProps): React.ReactElement {
   return (
     <article
       className={s.card}
