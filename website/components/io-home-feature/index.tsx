@@ -1,23 +1,34 @@
+import * as React from 'react'
+import Image from 'next/image'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
 interface IoHomeFeatureProps {
   link: string
-  // thumnail: string
+  image: {
+    url: string
+    alt: string
+  }
   heading: string
   description: string
 }
 
 export default function IoHomeFeature({
   link,
-  // thumbnail,
+  image,
   heading,
   description,
-}: IoHomeFeatureProps) {
+}: IoHomeFeatureProps): React.ReactElement {
   return (
     <a href={link} className={s.feature}>
       <div className={s.featureMedia}>
-        {/* <Image src={thumbnail} width={400} height={200} alt="" /> */}
+        <Image
+          src={image.url}
+          width={400}
+          height={200}
+          layout="responsive"
+          alt={image.alt}
+        />
       </div>
       <div className={s.featureContent}>
         <h3 className={s.featureHeading}>{heading}</h3>
