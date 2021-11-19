@@ -38,6 +38,7 @@
     "next-mdx-remote": "3.0.6",
     "next-remote-watch": "1.0.0",
     "react": "^17.0.2",
+    "react-datocms": "^1.6.6",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {

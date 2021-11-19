@@ -132,6 +132,10 @@
   & > li {
     display: flex;
   }
+
+& + .inPracticeCards {
+  margin-top: 32px;
+}
 }
 
 /*
@@ -153,7 +157,7 @@
 }
 
 .useCasesCards {
-  --columns: 8;
+  --columns: 4;
   --minCol: 250px;
 
   list-style: none;
@@ -164,22 +168,27 @@
   gap: 32px;
   overflow-x: auto;
 
-  @media (--medium-up) {
-    --columns: 3;
+  /* @media (--medium-up) {
+    --columns: 2;
+  } */
+
+  @media (--large) {
     --minCol: 0;
 
     margin: 0;
     padding: 0;
     overflow-x: unset;
-  }
 
-  @media (--large) {
     --columns: 4;
   }
 
   & > li {
     display: flex;
   }
+
+& + .useCasesCards {
+  margin-top: 32px;
+}
 }
 
 /*

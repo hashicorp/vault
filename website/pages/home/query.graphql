@@ -1,5 +1,10 @@
 query homepageQuery {
   vaultHomepage {
+    seo: _seoMetaTags {
+      attributes
+      content
+      tag
+    }
     heroHeading
     heroDescription
     heroCtas {
