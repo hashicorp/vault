@@ -196,9 +196,7 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 type WrappingResponseWriter interface {
 	http.ResponseWriter
 	Wrapped() http.ResponseWriter
-	SetHeaders(h map[string][]*CustomHeader)
 	GetHeaders() map[string][]*CustomHeader
-	StatusCode() int
 }
 
 type StatusHeaderResponseWriter struct {
@@ -245,10 +243,6 @@ func (w *StatusHeaderResponseWriter) GetHeaders() map[string][]*CustomHeader {
 
 func (w *StatusHeaderResponseWriter) SetHeaders(h map[string][]*CustomHeader) {
 	w.headers = h
-}
-
-func (w *StatusHeaderResponseWriter) StatusCode() int {
-	return w.statusCode
 }
 
 func (w *StatusHeaderResponseWriter) Header() http.Header {
