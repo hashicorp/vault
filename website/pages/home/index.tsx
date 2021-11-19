@@ -3,7 +3,7 @@ import Head from 'next/head'
 import rivetQuery from '@hashicorp/nextjs-scripts/dato/client'
 import homepageQuery from './query.graphql'
 import { renderMetaTags } from 'react-datocms'
-import { chunk, isInternalLink } from 'lib/utils'
+import { isInternalLink } from 'lib/utils'
 import IoHomeHero from 'components/io-home-hero'
 import IoHomeVideoCallout from 'components/io-home-video-callout'
 import IoHomeCard from 'components/io-home-card'
@@ -64,34 +64,27 @@ export default function Homepage({ data }) {
             <h2 className={s.inPracticeHeading}>{inPractice.heading}</h2>
             <p className={s.inPracticeDescription}>{inPractice.description}</p>
           </header>
-          {inPractice.cards.map((cards, index) => {
-            return (
-              <ul key={index} className={s.inPracticeCards}>
-                {cards.map(
-                  (
-                    { link, eyebrow, heading, description, products },
-                    index
-                  ) => {
-                    return (
-                      <li key={index}>
-                        <IoHomeCard
-                          variant="dark"
-                          link={{
-                            url: link,
-                            type: isInternalLink(link) ? 'inbound' : 'outbound',
-                          }}
-                          eyebrow={eyebrow}
-                          heading={heading}
-                          description={description}
-                          products={products}
-                        />
-                      </li>
-                    )
-                  }
-                )}
-              </ul>
-            )
-          })}
+          <ul className={s.inPracticeCards}>
+            {inPractice.cards.map(
+              ({ link, eyebrow, heading, description, products }, index) => {
+                return (
+                  <li key={index}>
+                    <IoHomeCard
+                      variant="dark"
+                      link={{
+                        url: link,
+                        type: isInternalLink(link) ? 'inbound' : 'outbound',
+                      }}
+                      eyebrow={eyebrow}
+                      heading={heading}
+                      description={description}
+                      products={products}
+                    />
+                  </li>
+                )
+              }
+            )}
+          </ul>
         </div>
       </section>
 
@@ -101,34 +94,27 @@ export default function Homepage({ data }) {
             <h2 className={s.useCasesHeading}>{useCases.heading}</h2>
           </header>
 
-          {useCases.cards.map((cards, index) => {
-            return (
-              <ul key={index} className={s.useCasesCards}>
-                {cards.map(
-                  (
-                    { link, eyebrow, heading, description, products },
-                    index
-                  ) => {
-                    return (
-                      <li key={index}>
-                        <IoHomeCard
-                          link={{
-                            url: link,
-                            type: isInternalLink(link) ? 'inbound' : 'outbound',
-                          }}
-                          inset="sm"
-                          eyebrow={eyebrow}
-                          heading={heading}
-                          description={description}
-                          products={products}
-                        />
-                      </li>
-                    )
-                  }
-                )}
-              </ul>
-            )
-          })}
+          <ul className={s.useCasesCards}>
+            {useCases.cards.map(
+              ({ link, eyebrow, heading, description, products }, index) => {
+                return (
+                  <li key={index}>
+                    <IoHomeCard
+                      link={{
+                        url: link,
+                        type: isInternalLink(link) ? 'inbound' : 'outbound',
+                      }}
+                      inset="sm"
+                      eyebrow={eyebrow}
+                      heading={heading}
+                      description={description}
+                      products={products}
+                    />
+                  </li>
+                )
+              }
+            )}
+          </ul>
         </div>
       </section>
 
@@ -237,12 +223,12 @@ export async function getStaticProps() {
         inPractice: {
           heading: inPracticeHeading,
           description: inPracticeDescription,
-          cards: chunk(inPracticeCards, 3),
+          cards: inPracticeCards,
         },
         useCases: {
           heading: useCasesHeading,
           description: useCasesDescription,
-          cards: chunk(useCasesCards, 4),
+          cards: useCasesCards,
         },
         caseStudies: {
           heading: caseStudiesHeading,

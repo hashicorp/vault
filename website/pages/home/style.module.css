@@ -132,10 +132,6 @@
   & > li {
     display: flex;
   }
-
-& + .inPracticeCards {
-  margin-top: 32px;
-}
 }
 
 /*
@@ -157,7 +153,7 @@
 }
 
 .useCasesCards {
-  --columns: 4;
+  --columns: 8;
   --minCol: 250px;
 
   list-style: none;
@@ -167,10 +163,6 @@
   grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
   overflow-x: auto;
-
-  /* @media (--medium-up) {
-    --columns: 2;
-  } */
 
   @media (--large) {
     --minCol: 0;
@@ -185,10 +177,6 @@
   & > li {
     display: flex;
   }
-
-& + .useCasesCards {
-  margin-top: 32px;
-}
 }
 
 /*
