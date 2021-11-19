@@ -3,6 +3,7 @@
 
 CHANGES:
 
+* auth/kubernetes: `disable_iss_validation` defaults to true. [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 * expiration: VAULT_16_REVOKE_PERMITPOOL environment variable has been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
 * expiration: VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY environment variable has
 been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
@@ -104,6 +105,10 @@ outstanding dirty pages that were not flushed. [[GH-2093](https://github.com/has
 * ui: parse and display pki cert metadata [[GH-12541](https://github.com/hashicorp/vault/pull/12541)]
 * ui: replaces Vault's use of elazarl/go-bindata-assetfs in building the UI with Go's native Embed package [[GH-11208](https://github.com/hashicorp/vault/pull/11208)]
 * ui: updated client tracking config view [[GH-12422](https://github.com/hashicorp/vault/pull/12422)]
+
+DEPRECATIONS:
+
+* auth/kubernetes: deprecate `disable_iss_validation` and `issuer` configuration fields [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 
 BUG FIXES:
 
