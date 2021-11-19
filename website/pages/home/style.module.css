@@ -7,7 +7,11 @@
  */
 
 .intro {
-  padding-bottom: 128px;
+  padding-bottom: 64px;
+
+  @media (--medium-up) {
+    padding-bottom: 128px;
+  }
 }
 
 .introHeader {
@@ -41,7 +45,11 @@
   padding: 0;
   display: grid;
   gap: 32px;
-  margin-bottom: 128px;
+  margin-bottom: 64px;
+
+  @media (--medium-up) {
+    margin-bottom: 128px;
+  }
 
   & li:first-of-type {
     background-image: linear-gradient(
@@ -58,9 +66,13 @@
 
 .inPractice {
   position: relative;
-  margin: 0 auto 128px;
+  margin: 0 auto 64px;
   padding: 64px 0;
   max-width: 1600px;
+
+  @media (--medium-up) {
+    margin-bottom: 128px;
+  }
 
   &::before {
     content: '';
@@ -139,7 +151,11 @@
  */
 
 .useCases {
-  margin-bottom: 128px;
+  margin-bottom: 64px;
+
+  @media (--medium-up) {
+    margin-bottom: 128px;
+  }
 }
 
 .useCasesHeader {
@@ -185,10 +201,14 @@
 
 .caseStudies {
   position: relative;
-  margin: 0 auto 128px;
+  margin: 0 auto 0;
   padding-top: 64px;
   padding-bottom: 64px;
   max-width: 1600px;
+
+  @media (--medium-up) {
+    margin-bottom: 128px;
+  }
 
   &::before {
     content: '';
