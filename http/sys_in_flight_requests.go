@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/hashicorp/vault/vault"
 )
@@ -17,13 +16,8 @@ func handleUnAuthenticatedInFlightRequest(core *vault.Core) http.Handler {
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
-		now := time.Now()
 
 		currentInFlightReqMap := core.LoadInFlightReqData()
-
-		for _, v := range currentInFlightReqMap {
-			v.SnapshotTime = now
-		}
 
 		content, err := json.Marshal(currentInFlightReqMap)
 		if err != nil {

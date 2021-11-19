@@ -394,6 +394,10 @@
         "path": "system/host-info"
       },
       {
+        "title": "<code>/sys/in-flight-req</code>",
+        "path": "system/in-flight-req"
+      },
+      {
         "title": "<code>/sys/init</code>",
         "path": "system/init"
       },

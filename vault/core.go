@@ -1036,7 +1036,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
-	c.logRequestsInfo = conf.RawConfig.LogRequestsInfo
+	if log.LevelFromString(conf.RawConfig.LogRequestsInfo) > 0 {
+		c.logRequestsInfo = conf.RawConfig.LogRequestsInfo
+	} else {
+		c.logger.Warn("invalid log_requests_info", "level", conf.RawConfig.LogRequestsInfo)
+	}
 
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
@@ -2961,7 +2965,6 @@ type InFlightReqData struct {
 	ReqPath          string    `json:"request_path"`
 	Method           string    `json:"request_method"`
 	ClientID         string    `json:"client_id"`
-	SnapshotTime     time.Time `json:"snapshot_time"`
 }
 
 func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
@@ -3015,8 +3018,6 @@ func (c *Core) logRequests(msg string, args ...interface{}) {
 		c.Logger().Error(msg, args...)
 	case "warn":
 		c.Logger().Warn(msg, args...)
-	case "basic":
-		fallthrough
 	case "info":
 		c.Logger().Info(msg, args...)
 	case "debug":
@@ -3043,5 +3044,10 @@ func (c *Core) ReloadLogRequestsInfo(){
 	if conf == nil {
 		return
 	}
-	c.logRequestsInfo = conf.(*server.Config).LogRequestsInfo
+	infoLevel := conf.(*server.Config).LogRequestsInfo
+	if log.LevelFromString(infoLevel) > 0 {
+		c.logRequestsInfo = infoLevel
+	}else {
+		c.logger.Warn("invalid log_requests_info", "level", infoLevel)
+	}
 }

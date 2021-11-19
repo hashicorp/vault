@@ -489,7 +489,7 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 
 	if result.LogRequestsInfoRaw != nil {
-		result.LogRequestsInfo = strings.ToLower(result.LogRequestsInfoRaw.(string))
+		result.LogRequestsInfo = strings.ToLower(strings.TrimSpace(result.LogRequestsInfoRaw.(string)))
 		result.LogRequestsInfoRaw = ""
 	}
 
