@@ -543,6 +543,9 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 				}
 				break
 			}
+			if token == nil {
+				return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
+			}
 			_, nsID := namespace.SplitIDFromString(token.(string))
 			if nsID != "" {
 				ns, err := NamespaceByID(ctx, nsID, c)
