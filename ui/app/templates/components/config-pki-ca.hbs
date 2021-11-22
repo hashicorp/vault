@@ -8,13 +8,13 @@
     {{/if}}
   </h2>
   {{#if (or model.certificate model.csr)}}
-    {{#unless model.canParse}}
+    {{#if not (eq model.canParse true)}}
       <AlertBanner
         @type="info"
         @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the common name or the issue and expiration dates. This will not interfere with the certificate's functionality."
         data-test-warning
       />
-      {{/unless}}
+    {{/if}}
     {{#each model.attrs as |attr|}}
       {{#if attr.options.masked}}
         <InfoTableRow data-test-table-row
