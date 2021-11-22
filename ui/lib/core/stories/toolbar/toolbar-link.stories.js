@@ -1,6 +1,6 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import { withKnobs, select, text } from '@storybook/addon-knobs';
+import { withKnobs, select, text, boolean } from '@storybook/addon-knobs';
 import notes from './toolbar-link.md';
 
 storiesOf('Toolbar', module)
@@ -17,6 +17,8 @@ storiesOf('Toolbar', module)
             <ToolbarLink
               @params={{array '#'}}
               @type={{type}}
+              @disabled={{disabled}}
+              @disabledTooltip={{disabledTooltip}}
             >
               {{label}}
             </ToolbarLink>
@@ -27,6 +29,8 @@ storiesOf('Toolbar', module)
       context: {
         type: select('Type', ['', 'add']),
         label: text('Button text', 'Edit secret'),
+        disabled: boolean('disabled', false),
+        disabledTooltip: text('Tooltip to display when disabled', ''),
       },
     }),
     { notes }
