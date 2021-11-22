@@ -8,7 +8,13 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
+{{#unless model.canParse}}
+  <AlertBanner
+    @type="info"
+    @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the common name or the issue and expiration dates. This will not interfere with the certificate's functionality."
+    data-test-warning
+  />
+{{/unless}}
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   <MessageError @model={{model}} />
   {{#each model.attrs as |attr|}}

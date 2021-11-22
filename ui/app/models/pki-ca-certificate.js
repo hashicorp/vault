@@ -27,7 +27,7 @@ export default Certificate.extend({
   backend: attr('string', {
     readOnly: true,
   }),
-  // canParse: attr('boolean'),
+  canParse: attr('boolean'),
   caType: attr('string', {
     possibleValues: ['root', 'intermediate'],
     defaultValue: 'root',
