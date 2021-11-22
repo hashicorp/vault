@@ -20,6 +20,7 @@ var (
 // provided, an error will be returned. If an OTP is provided, it must have the same length as the token
 func EncodeToken(token, otp, pgpKey string, cleanupFunc func()) (string, error) {
 	if len(token) == 0 {
+		cleanupFunc()
 		return "", ErrNoTokenProvided
 	}
 	// Get the encoded value first so that if there is an error we don't create
