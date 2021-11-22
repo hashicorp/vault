@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -15,7 +14,6 @@ func TestHelp(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpGet(t, "", addr+"/v1/sys/mounts?help=1")
-	fmt.Println(resp.StatusCode)
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatal("expected permission denied with no token")
 	}
