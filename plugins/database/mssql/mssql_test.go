@@ -56,7 +56,7 @@ func TestInitialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := new()
-			dbtesting.AssertInitialize(t, db, test.req)
+			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
 			defer dbtesting.AssertClose(t, db)
 
 			if !db.Initialized {
@@ -144,7 +144,7 @@ func TestNewUser(t *testing.T) {
 			}
 
 			db := new()
-			dbtesting.AssertInitialize(t, db, initReq)
+			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
 			createResp, err := db.NewUser(context.Background(), test.req)
@@ -250,7 +250,7 @@ func TestUpdateUser_password(t *testing.T) {
 			}
 
 			db := new()
-			dbtesting.AssertInitialize(t, db, initReq)
+			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
 			createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)
@@ -313,7 +313,8 @@ func TestDeleteUser(t *testing.T) {
 	}
 
 	db := new()
-	dbtesting.AssertInitialize(t, db, initReq)
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 	defer dbtesting.AssertClose(t, db)
 
 	createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)

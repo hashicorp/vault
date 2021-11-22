@@ -8,12 +8,12 @@ loaded, this file will be emitted as a JS ArrayBuffer to the passed `onChange` c
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| onChange | <code>function</code> | <code></code> | The function to call when the file read is complete. This function recieves the file as a JS ArrayBuffer |
+| onChange | <code>function</code> | <code></code> | The function to call when the file read is complete. This function receives the file as a JS ArrayBuffer |
 | [label] | <code>String</code> | <code></code> | Text to use as the label for the file input |
 | fileHelpText | <code>String</code> | <code></code> | Text to use as help under the file input |
 
 **Example**
-  
+
 ```js
   <FileToArrayBuffer @onChange={{action (mut file)}} />
 ```

@@ -48,7 +48,7 @@ operations to the `/sys` API (excluding the `/sys/leases`, `/sys/namespaces`,
 Some examples of workflows that write to the `/sys` API are upgrades and rekeys.
 In the future, this guidance may change for the Integrated Storage backend.
 
-Backups _can_ also help with accidential data deletions or modifications. In
+Backups _can_ also help with accidental data deletions or modifications. In
 this case, the story can get a little tricky. If you simply recover a backup
 from 5AM with the correct data, but the current time is 10AM, you will lose data
 written between 5 and 10AM. Lucy Davinhart gave a HashiConf talk that serves as

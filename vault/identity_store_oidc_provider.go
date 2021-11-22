@@ -1240,7 +1240,7 @@ func (i *IdentityStore) pathOIDCReadProvider(ctx context.Context, req *logical.R
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"issuer":             provider.Issuer,
+			"issuer":             provider.effectiveIssuer,
 			"allowed_client_ids": provider.AllowedClientIDs,
 			"scopes_supported":   provider.ScopesSupported,
 		},

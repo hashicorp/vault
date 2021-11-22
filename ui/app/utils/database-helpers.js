@@ -5,7 +5,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -26,7 +26,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'plugin_name' },
       { attr: 'name' },
       { attr: 'connection_url' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
@@ -44,7 +44,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'plugin_name' },
       { attr: 'name' },
       { attr: 'connection_url' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
@@ -61,7 +61,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -81,7 +81,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -101,7 +101,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -121,7 +121,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -136,12 +136,12 @@ export const AVAILABLE_PLUGIN_TYPES = [
     ],
   },
   {
-    value: 'oracle-database-plugin',
+    value: 'vault-plugin-database-oracle',
     displayName: 'Oracle',
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -159,7 +159,7 @@ export const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -188,7 +188,7 @@ export const STATEMENT_FIELDS = {
     'mysql-aurora-database-plugin': [],
     'mysql-legacy-database-plugin': [],
     'mysql-rds-database-plugin': [],
-    'oracle-database-plugin': [],
+    'vault-plugin-database-oracle': [],
     'postgresql-database-plugin': [],
   },
   dynamic: {
@@ -200,7 +200,7 @@ export const STATEMENT_FIELDS = {
     'mysql-aurora-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-legacy-database-plugin': ['creation_statements', 'revocation_statements'],
     'mysql-rds-database-plugin': ['creation_statements', 'revocation_statements'],
-    'oracle-database-plugin': ['creation_statements', 'revocation_statements'],
+    'vault-plugin-database-oracle': ['creation_statements', 'revocation_statements'],
     'postgresql-database-plugin': [
       'creation_statements',
       'revocation_statements',

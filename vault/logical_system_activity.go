@@ -41,7 +41,7 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 // monthlyActivityCountPath is available in every namespace
 func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 	return &framework.Path{
-		Pattern:         "internal/counters/activity/monthly",
+		Pattern:         "internal/counters/activity/monthly$",
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -50,6 +50,13 @@ func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
 				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
 			},
 		},
+	}
+}
+
+func (b *SystemBackend) activityPaths() []*framework.Path {
+	return []*framework.Path{
+		b.monthlyActivityCountPath(),
+		b.activityQueryPath(),
 	}
 }
 
