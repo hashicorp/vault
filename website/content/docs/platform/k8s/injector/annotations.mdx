@@ -137,7 +137,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-pre-populate-only` - configures whether an init container
   is the only injected container. If true, no sidecar container will be injected
-  at runtime of the pod.
+  at runtime of the pod. Enabling this option is recommended for workloads of type `CronJob` or `Job` to ensure a clean pod termination.    
 
 - `vault.hashicorp.com/preserve-secret-case` - configures Vault Agent to preserve
   the secret name case when creating the secret files. This should be set to a `true`
