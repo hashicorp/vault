@@ -13,7 +13,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/go-cleanhttp v0.5.0
+	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
