@@ -12,7 +12,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'plugin_name' },
       { attr: 'name' },
       { attr: 'connection_url' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
@@ -30,7 +30,7 @@ const AVAILABLE_PLUGIN_TYPES = [
       { attr: 'plugin_name' },
       { attr: 'name' },
       { attr: 'connection_url' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'username', group: 'pluginConfig', show: false },
       { attr: 'password', group: 'pluginConfig', show: false },
@@ -47,7 +47,7 @@ const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -67,7 +67,7 @@ const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -87,7 +87,7 @@ const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
@@ -107,7 +107,7 @@ const AVAILABLE_PLUGIN_TYPES = [
     fields: [
       { attr: 'plugin_name' },
       { attr: 'name' },
-      { attr: 'verify_connection' },
+      { attr: 'verify_connection', show: false },
       { attr: 'password_policy' },
       { attr: 'connection_url', group: 'pluginConfig' },
       { attr: 'username', group: 'pluginConfig', show: false },
