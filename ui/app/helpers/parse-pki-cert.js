@@ -8,7 +8,7 @@ export function parsePkiCert([model]) {
   }
   let cert;
   // node-forge cannot parse EC (elliptical curve) certs
-  // so just return model (original response) if pki parse returns an error
+  // return original response if unable to convert a Forge cert from PEM
   try {
     cert = pki.certificateFromPem(model.certificate);
   } catch (error) {
