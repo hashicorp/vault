@@ -7,7 +7,7 @@ import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-l
 import { productLogos } from './product-logos'
 import s from './style.module.css'
 
-interface IoHomeCardProps {
+interface IoCardProps {
   variant?: 'light' | 'gray' | 'dark'
   products?: Array<{
     name: keyof typeof productLogos
@@ -23,7 +23,7 @@ interface IoHomeCardProps {
   children?: React.ReactNode
 }
 
-function IoHomeCard({
+function IoCard({
   variant = 'light',
   products,
   link,
@@ -32,7 +32,7 @@ function IoHomeCard({
   heading,
   description,
   children,
-}: IoHomeCardProps): React.ReactElement {
+}: IoCardProps): React.ReactElement {
   const LinkWrapper = ({ className, children }) =>
     link.type === 'inbound' ? (
       <Link href={link.url}>
@@ -68,6 +68,7 @@ function IoHomeCard({
                 const key = name.toLowerCase()
                 const version = variant === 'dark' ? 'neutral' : 'color'
                 return (
+                  // eslint-disable-next-line react/no-array-index-key
                   <li key={index}>
                     <InlineSvg
                       className={s.logo}
@@ -116,8 +117,8 @@ function Description({ children }: DescriptionProps) {
   return <p className={s.description}>{children}</p>
 }
 
-IoHomeCard.Eyebrow = Eyebrow
-IoHomeCard.Heading = Heading
-IoHomeCard.Description = Description
+IoCard.Eyebrow = Eyebrow
+IoCard.Heading = Heading
+IoCard.Description = Description
 
-export default IoHomeCard
+export default IoCard

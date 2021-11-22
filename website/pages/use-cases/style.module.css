@@ -1,0 +1,13 @@
+.container {
+  composes: g-grid-container from global;
+}
+
+.callToAction {
+  margin-top: 132px;
+}
+
+.videoCallout {
+  margin-top: 132px;
+  margin-bottom: 132px;
+  composes: container;
+}

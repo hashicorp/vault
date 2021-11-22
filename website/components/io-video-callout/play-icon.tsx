@@ -1,4 +1,6 @@
-export default function PlayIcon() {
+import * as React from 'react'
+
+export default function PlayIcon(): React.ReactElement {
   return (
     <svg
       width="96"

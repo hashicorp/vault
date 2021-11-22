@@ -1,0 +1,8 @@
+.callToAction {
+  composes: g-grid-container from global;
+
+  & > * {
+    background-color: var(--background-color);
+    border-radius: 6px;
+  }
+}

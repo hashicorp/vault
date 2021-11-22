@@ -5,15 +5,15 @@ import homepageQuery from './query.graphql'
 import { renderMetaTags } from 'react-datocms'
 import { isInternalLink } from 'lib/utils'
 import IoHomeHero from 'components/io-home-hero'
-import IoHomeVideoCallout from 'components/io-home-video-callout'
-import IoHomeCard from 'components/io-home-card'
+import IoVideoCallout from 'components/io-video-callout'
+import IoCard from 'components/io-card'
 import IoHomeFeature from 'components/io-home-feature'
 import IoHomeCaseStudies from 'components/io-home-case-studies'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
 import IoHomePreFooter from 'components/io-home-pre-footer'
 import s from './style.module.css'
 
-export default function Homepage({ data }) {
+export default function Homepage({ data }): React.ReactElement {
   const {
     seo,
     hero,
@@ -44,6 +44,8 @@ export default function Homepage({ data }) {
         <ul className={s.features}>
           {intro.features.map((feature, index) => {
             return (
+              // Index is stable
+              // eslint-disable-next-line react/no-array-index-key
               <li key={index}>
                 <div className={s.container}>
                   <IoHomeFeature {...feature} />
@@ -54,7 +56,7 @@ export default function Homepage({ data }) {
         </ul>
 
         <div className={s.container}>
-          <IoHomeVideoCallout {...intro.video} />
+          <IoVideoCallout {...intro.video} />
         </div>
       </section>
 
@@ -68,8 +70,10 @@ export default function Homepage({ data }) {
             {inPractice.cards.map(
               ({ link, eyebrow, heading, description, products }, index) => {
                 return (
+                  // Index is stable
+                  // eslint-disable-next-line react/no-array-index-key
                   <li key={index}>
-                    <IoHomeCard
+                    <IoCard
                       variant="dark"
                       link={{
                         url: link,
@@ -98,8 +102,10 @@ export default function Homepage({ data }) {
             {useCases.cards.map(
               ({ link, eyebrow, heading, description, products }, index) => {
                 return (
+                  // Index is stable
+                  // eslint-disable-next-line react/no-array-index-key
                   <li key={index}>
-                    <IoHomeCard
+                    <IoCard
                       link={{
                         url: link,
                         type: isInternalLink(link) ? 'inbound' : 'outbound',
