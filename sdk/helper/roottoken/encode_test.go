@@ -1,4 +1,4 @@
-package root
+package roottoken
 
 import (
 	"testing"
@@ -46,17 +46,13 @@ func TestTokenEncodingDecodingWithOTP(t *testing.T) {
 	}
 	for _, otpTestCase := range otpTestCases {
 		t.Run(otpTestCase.name, func(t *testing.T) {
-			cleanupOnErr := false
-			otp, _, err := GenerateOTP(otpTestCase.otpLength)
+			otp, err := GenerateOTP(otpTestCase.otpLength)
 			if err != nil {
 				t.Fatal(err.Error())
 			}
-			encodedToken, err := EncodeToken(otpTestCase.token, otp, "", func() {
-				cleanupOnErr = true
-			})
+			encodedToken, err := EncodeToken(otpTestCase.token, otp, "")
 			if err != nil || otpTestCase.expectedDecodingErr != "" {
 				assert.EqualError(t, err, otpTestCase.expectedEncodingErr)
-				assert.True(t, cleanupOnErr)
 				return
 			}
 			assert.NotEqual(t, otp, encodedToken)
@@ -64,23 +60,21 @@ func TestTokenEncodingDecodingWithOTP(t *testing.T) {
 			decodedToken, err := DecodeToken(encodedToken, otp, len(otp))
 			if err != nil || otpTestCase.expectedDecodingErr != "" {
 				assert.EqualError(t, err, otpTestCase.expectedDecodingErr)
-				assert.True(t, cleanupOnErr)
 				return
 			}
 			assert.Equal(t, otpTestCase.token, decodedToken)
-			assert.False(t, cleanupOnErr)
 		})
 	}
 }
 
 func TestTokenEncodingDecodingWithNoOTPorPGPKey(t *testing.T) {
-	_, err := EncodeToken("", "", "", func() {})
-	assert.ErrorIs(t, err, ErrNoTokenProvided)
+	_, err := EncodeToken("", "", "")
+	assert.EqualError(t, err, "no token provided")
 }
 
 func TestTokenEncodingWithPGPKey(t *testing.T) {
 	token := "someToken"
-	encodedToken, err := EncodeToken(token, "", pgpkeys.TestPubKey1, func() {})
+	encodedToken, err := EncodeToken(token, "", pgpkeys.TestPubKey1)
 	assert.Nil(t, err)
 	assert.NotEqual(t, encodedToken, token)
 	bb, err := pgpkeys.DecryptBytes(encodedToken, pgpkeys.TestPrivKey1)

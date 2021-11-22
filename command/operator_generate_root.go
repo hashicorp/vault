@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
-	"github.com/hashicorp/vault/sdk/helper/tokenutil/root"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -286,9 +286,13 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind gener
 		return "", 2
 	}
 
-	otp, retCode, err := root.GenerateOTP(status.OTPLength)
+	otp, err := roottoken.GenerateOTP(status.OTPLength)
+	var retCode int
 	if err != nil {
+		retCode = 2
 		c.UI.Error(err.Error())
+	} else {
+		retCode = 2
 	}
 	return otp, retCode
 }
@@ -339,7 +343,7 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 		return 2
 	}
 
-	token, err := root.DecodeToken(encoded, otp, status.OTPLength)
+	token, err := roottoken.DecodeToken(encoded, otp, status.OTPLength)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error decoding root token: %s", err))
 		return 1

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
-	"github.com/hashicorp/vault/sdk/helper/tokenutil/root"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/shamir"
 )
 
@@ -317,8 +317,9 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		return nil, err
 	}
 
-	token, err = root.EncodeToken(token, c.generateRootConfig.OTP, c.generateRootConfig.PGPKey, cleanupFunc)
+	token, err = roottoken.EncodeToken(token, c.generateRootConfig.OTP, c.generateRootConfig.PGPKey)
 	if err != nil {
+		cleanupFunc()
 		return nil, err
 	}
 

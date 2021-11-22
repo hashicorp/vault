@@ -1,4 +1,4 @@
-package root
+package roottoken
 
 import (
 	"testing"
@@ -7,15 +7,13 @@ import (
 )
 
 func TestBase64OTPGeneration(t *testing.T) {
-	token, errCode, err := GenerateOTP(0)
+	token, err := GenerateOTP(0)
 	assert.Len(t, token, 24)
-	assert.Equal(t, errCode, 0)
 	assert.Nil(t, err)
 }
 
 func TestBase62OTPGeneration(t *testing.T) {
-	token, errCode, err := GenerateOTP(20)
+	token, err := GenerateOTP(20)
 	assert.Len(t, token, 20)
-	assert.Equal(t, errCode, 0)
 	assert.Nil(t, err)
 }
