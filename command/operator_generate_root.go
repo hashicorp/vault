@@ -2,17 +2,14 @@ package command
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil/root"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -289,32 +286,11 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind gener
 		return "", 2
 	}
 
-	switch status.OTPLength {
-	case 0:
-		// This is the fallback case
-		buf := make([]byte, 16)
-		readLen, err := rand.Read(buf)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error reading random bytes: %s", err))
-			return "", 2
-		}
-
-		if readLen != 16 {
-			c.UI.Error(fmt.Sprintf("Read %d bytes when we should have read 16", readLen))
-			return "", 2
-		}
-
-		return base64.StdEncoding.EncodeToString(buf), 0
-
-	default:
-		otp, err := base62.Random(status.OTPLength)
-		if err != nil {
-			c.UI.Error(fmt.Errorf("Error reading random bytes: %w", err).Error())
-			return "", 2
-		}
-
-		return otp, 0
+	otp, retCode, err := root.GenerateOTP(status.OTPLength)
+	if err != nil {
+		c.UI.Error(err.Error())
 	}
+	return otp, retCode
 }
 
 // decode decodes the given value using the otp.
@@ -363,7 +339,7 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 		return 2
 	}
 
-	token, err := root.DecodeRootToken(encoded, otp, status.OTPLength)
+	token, err := root.DecodeToken(encoded, otp, status.OTPLength)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error decoding root token: %s", err))
 		return 1

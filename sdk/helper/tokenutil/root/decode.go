@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/xor"
 )
 
-// DecodeRootToken will decode the root token returned by the Vault API
+// DecodeToken will decode the root token returned by the Vault API
 // The algorithm was initially used in the generate root command
-func DecodeRootToken(encoded, otp string, otpLength int) (string, error) {
+func DecodeToken(encoded, otp string, otpLength int) (string, error) {
 	if otpLength == 0 {
 		// Backwards compat
 		tokenBytes, err := xor.XORBase64(encoded, otp)

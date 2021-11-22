@@ -13,6 +13,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
 	github.com/hashicorp/errwrap v1.1.0
+	github.com/hashicorp/go-cleanhttp v0.5.0
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
@@ -28,8 +29,8 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/go-version v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/hashicorp/vault v1.8.5
 	github.com/hashicorp/hcl v1.0.0
+	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/copystructure v1.0.0

@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
