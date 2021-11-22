@@ -3,6 +3,7 @@
 
 CHANGES:
 
+* auth/kubernetes: `disable_iss_validation` defaults to true. [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 * expiration: VAULT_16_REVOKE_PERMITPOOL environment variable has been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
 * expiration: VAULT_LEASE_USE_LEGACY_REVOCATION_STRATEGY environment variable has
 been removed. [[GH-12888](https://github.com/hashicorp/vault/pull/12888)]
@@ -49,6 +50,7 @@ IMPROVEMENTS:
 * auth/aws: add profile support for AWS credentials when using the AWS auth method [[GH-12621](https://github.com/hashicorp/vault/pull/12621)]
 * auth/kubernetes: validate JWT against the provided role on alias look ahead operations [[GH-12688](https://github.com/hashicorp/vault/pull/12688)]
 * auth/kubernetes: Add ability to configure entity alias names based on the serviceaccount's namespace and name. [#110](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/110) [#112](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/112) [[GH-12633](https://github.com/hashicorp/vault/pull/12633)]
+* auth/ldap: include support for an optional user filter field when searching for users [[GH-11000](https://github.com/hashicorp/vault/pull/11000)]
 * auth/oidc: Adds the `skip_browser` CLI option to allow users to skip opening the default browser during the authentication flow. [[GH-12876](https://github.com/hashicorp/vault/pull/12876)]
 * auth/okta: Send x-forwarded-for in Okta Push Factor request [[GH-12320](https://github.com/hashicorp/vault/pull/12320)]
 * auth/token: Add `allowed_policies_glob` and `disallowed_policies_glob` fields to token roles to allow glob matching of policies [[GH-7277](https://github.com/hashicorp/vault/pull/7277)]
@@ -104,6 +106,10 @@ outstanding dirty pages that were not flushed. [[GH-2093](https://github.com/has
 * ui: parse and display pki cert metadata [[GH-12541](https://github.com/hashicorp/vault/pull/12541)]
 * ui: replaces Vault's use of elazarl/go-bindata-assetfs in building the UI with Go's native Embed package [[GH-11208](https://github.com/hashicorp/vault/pull/11208)]
 * ui: updated client tracking config view [[GH-12422](https://github.com/hashicorp/vault/pull/12422)]
+
+DEPRECATIONS:
+
+* auth/kubernetes: deprecate `disable_iss_validation` and `issuer` configuration fields [#127](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/127) [[GH-12975](https://github.com/hashicorp/vault/pull/12975)]
 
 BUG FIXES:
 

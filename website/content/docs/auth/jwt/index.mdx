@@ -117,7 +117,8 @@ JSON Pointer can be used as a selector. Refer to the
 This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
 refer to the [JWT Authentication](/docs/auth/jwt#jwt-authentication) section below. Basic
 familiarity with [OIDC concepts](https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1)
-is assumed.
+is assumed. The Authorization Code flow makes use of the Proof Key for Code
+Exchange (PKCE) extension.
 
 Vault includes two built-in OIDC login flows: the Vault UI, and the CLI
 using a `vault login`.
