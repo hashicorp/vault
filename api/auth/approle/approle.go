@@ -105,31 +105,34 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 		"role_id": a.roleID,
 	}
 
-	if a.secretIDFile != "" {
-		secretIDValue, err := a.readSecretIDFromFile()
+	var secretIDValue string
+
+	switch {
+	case a.secretIDFile != "":
+		s, err := a.readSecretIDFromFile()
 		if err != nil {
 			return nil, fmt.Errorf("error reading secret ID: %w", err)
 		}
+		secretIDValue = s
+	case a.secretIDEnv != "":
+		s := os.Getenv(a.secretIDEnv)
+		if s == "" {
+			return nil, fmt.Errorf("secret ID was specified with an environment variable %q with an empty value", a.secretIDEnv)
+		}
+		secretIDValue = s
+	default:
+		secretIDValue = a.secretID
+	}
 
-		// if it was indicated that the value in the file was actually a wrapping
-		// token, unwrap it first
-		if a.unwrap {
-			unwrappedToken, err := client.Logical().Unwrap(secretIDValue)
-			if err != nil {
-				return nil, fmt.Errorf("unable to unwrap token: %w. If the AppRoleAuth struct was initialized with the WithWrappingToken LoginOption, then the secret ID's filepath should be a path to a response-wrapping token", err)
-			}
-			loginData["secret_id"] = unwrappedToken.Data["secret_id"]
-		} else {
-			loginData["secret_id"] = secretIDValue
+	// if the caller indicated that the value was actually a wrapping token, unwrap it first
+	if a.unwrap {
+		unwrappedToken, err := client.Logical().Unwrap(secretIDValue)
+		if err != nil {
+			return nil, fmt.Errorf("unable to unwrap response wrapping token: %w", err)
 		}
-	} else if a.secretIDEnv != "" {
-		secretIDValue := os.Getenv(a.secretIDEnv)
-		if secretIDValue == "" {
-			return nil, fmt.Errorf("secret ID was specified with an environment variable with an empty value")
-		}
-		loginData["secret_id"] = secretIDValue
+		loginData["secret_id"] = unwrappedToken.Data["secret_id"]
 	} else {
-		loginData["secret_id"] = a.secretID
+		loginData["secret_id"] = secretIDValue
 	}
 
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
