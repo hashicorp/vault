@@ -26,8 +26,6 @@ func Test_BoltOptions(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			if tc.env != "" {
 				current := os.Getenv(key)
 				defer os.Setenv(key, current)
