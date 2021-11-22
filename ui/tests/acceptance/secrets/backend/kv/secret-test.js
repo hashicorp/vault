@@ -617,13 +617,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
-    // check you can create new version
-    await click('[data-test-secret-edit="true"]');
-    await settled();
-    await fillIn('[data-test-secret-key]', 'version2');
-    await editPage.save();
-    await settled();
-    assert.dom('[data-test-row-label="version2"]').exists('the current version displayed is the new version');
+    // create new version should be disabled with no metadata read access
+    assert.dom('[data-test-secret-edit]').hasClass('disabled', 'Create new version action is disabled');
     assert
       .dom('[data-test-popup-menu-trigger="version"]')
       .doesNotExist('the version drop down menu does not show');
