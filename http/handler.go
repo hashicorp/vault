@@ -906,8 +906,11 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 	// additional output. Headers have already been sent. If the response writer
 	// is set but has not been written to it likely means there was some kind of
 	// error
-	if r.ResponseWriter != nil && r.ResponseWriter.Written() {
-		return nil, true, false
+	if r.ResponseWriter != nil {
+		w, ok := (*r.ResponseWriter).(logical.WrappingResponseWriter)
+		if ok && w.Written() {
+			return nil, true, false
+		}
 	}
 
 	if respondErrorCommon(w, r, resp, err) {

@@ -199,7 +199,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		req.HTTPRequest = r
 	}
 	if responseWriter != nil {
-		req.ResponseWriter = logical.NewStatusHeaderResponseWriter(responseWriter)
+		req.ResponseWriter = &responseWriter
 	}
 
 	return req, origBody, 0, nil
@@ -368,8 +368,11 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 
 	// If vault's core has already written to the response writer do not add any
 	// additional output. Headers have already been sent.
-	if req != nil && req.ResponseWriter != nil && req.ResponseWriter.Written() {
-		return
+	if req != nil && req.ResponseWriter != nil {
+		w, ok := (*req.ResponseWriter).(logical.WrappingResponseWriter)
+		if ok && w.Written() {
+			return
+		}
 	}
 
 	if resp != nil {

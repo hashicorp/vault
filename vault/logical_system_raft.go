@@ -391,7 +391,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 			return nil, errors.New("no writer for request")
 		}
 
-		err := raftStorage.SnapshotHTTP(req.ResponseWriter, b.Core.seal.GetAccess())
+		err := raftStorage.SnapshotHTTP(*req.ResponseWriter, b.Core.seal.GetAccess())
 		if err != nil {
 			return nil, err
 		}

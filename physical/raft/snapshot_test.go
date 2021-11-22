@@ -17,7 +17,6 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
@@ -473,8 +472,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	recorder := httptest.NewRecorder()
-	snap := logical.NewStatusHeaderResponseWriter(recorder)
+	snap := httptest.NewRecorder()
 
 	err := raft1.Snapshot(snap, nil)
 	if err != nil {
@@ -492,7 +490,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(recorder.Body), nil)
+	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(snap.Body), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

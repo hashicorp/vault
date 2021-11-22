@@ -196,7 +196,7 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 type WrappingResponseWriter interface {
 	http.ResponseWriter
 	Wrapped() http.ResponseWriter
-	GetHeaders() map[string][]*CustomHeader
+	Written() bool
 }
 
 type StatusHeaderResponseWriter struct {
@@ -208,23 +208,12 @@ type StatusHeaderResponseWriter struct {
 }
 
 func NewStatusHeaderResponseWriter (w http.ResponseWriter) *StatusHeaderResponseWriter {
-	nw, ok := w.(WrappingResponseWriter)
-	if ok {
-		return &StatusHeaderResponseWriter{
-			wrapped:     nw.Wrapped(),
-			wroteHeader: false,
-			statusCode:  200,
-			headers:     nw.GetHeaders(),
-			written:     new(uint32),
-		}
-	} else {
-		return &StatusHeaderResponseWriter{
-			wrapped:     w,
-			wroteHeader: false,
-			statusCode:  200,
-			headers:     nil,
-			written:     new(uint32),
-		}
+	return &StatusHeaderResponseWriter{
+		wrapped:     w,
+		wroteHeader: false,
+		statusCode:  200,
+		headers:     nil,
+		written:     new(uint32),
 	}
 }
 
@@ -235,10 +224,6 @@ func (w *StatusHeaderResponseWriter) Written() bool {
 
 func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {
 	return w.wrapped
-}
-
-func (w *StatusHeaderResponseWriter) GetHeaders() map[string][]*CustomHeader {
-	return w.headers
 }
 
 func (w *StatusHeaderResponseWriter) SetHeaders(h map[string][]*CustomHeader) {

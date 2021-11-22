@@ -2972,7 +2972,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
-	w := req.ResponseWriter
+	w := *req.ResponseWriter
 
 	if ll == "" {
 		ll = "info"
@@ -2983,9 +2983,18 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
-	flusher, ok := w.Wrapped().(http.Flusher)
+	flusher, ok := w.(http.Flusher)
 	if !ok {
-		return logical.ErrorResponse("streaming not supported"), nil
+		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
+		// access the underlying functionality
+		nw, ok := w.(logical.WrappingResponseWriter)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
+		flusher, ok = nw.Wrapped().(http.Flusher)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
 	}
 
 	isJson := b.Core.LogFormat() == "json"

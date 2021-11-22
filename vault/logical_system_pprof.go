@@ -159,7 +159,7 @@ func (b *SystemBackend) handlePprofIndex(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	pprof.Index(req.ResponseWriter, req.HTTPRequest)
+	pprof.Index(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -168,7 +168,7 @@ func (b *SystemBackend) handlePprofCmdline(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
-	pprof.Cmdline(req.ResponseWriter, req.HTTPRequest)
+	pprof.Cmdline(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -177,7 +177,7 @@ func (b *SystemBackend) handlePprofGoroutine(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	pprof.Handler("goroutine").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	pprof.Handler("goroutine").ServeHTTP(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -186,7 +186,7 @@ func (b *SystemBackend) handlePprofHeap(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
-	pprof.Handler("heap").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	pprof.Handler("heap").ServeHTTP(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -195,7 +195,7 @@ func (b *SystemBackend) handlePprofAllocs(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	pprof.Handler("allocs").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	pprof.Handler("allocs").ServeHTTP(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -204,7 +204,7 @@ func (b *SystemBackend) handlePprofThreadcreate(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	pprof.Handler("threadcreate").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	pprof.Handler("threadcreate").ServeHTTP(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -213,7 +213,7 @@ func (b *SystemBackend) handlePprofBlock(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	pprof.Handler("block").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	pprof.Handler("block").ServeHTTP(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -222,7 +222,7 @@ func (b *SystemBackend) handlePprofMutex(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	pprof.Handler("mutex").ServeHTTP(req.ResponseWriter, req.HTTPRequest)
+	pprof.Handler("mutex").ServeHTTP(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -243,7 +243,7 @@ func (b *SystemBackend) handlePprofProfile(ctx context.Context, req *logical.Req
 		}
 	}
 
-	pprof.Profile(req.ResponseWriter, req.HTTPRequest)
+	pprof.Profile(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -252,7 +252,7 @@ func (b *SystemBackend) handlePprofSymbol(ctx context.Context, req *logical.Requ
 		return nil, err
 	}
 
-	pprof.Symbol(req.ResponseWriter, req.HTTPRequest)
+	pprof.Symbol(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 
@@ -273,7 +273,7 @@ func (b *SystemBackend) handlePprofTrace(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	pprof.Trace(req.ResponseWriter, req.HTTPRequest)
+	pprof.Trace(*req.ResponseWriter, req.HTTPRequest)
 	return nil, nil
 }
 

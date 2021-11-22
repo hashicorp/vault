@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -27,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
@@ -1138,7 +1138,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 
 // SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
 // response.
-func (b *RaftBackend) SnapshotHTTP(out *logical.StatusHeaderResponseWriter, access *seal.Access) error {
+func (b *RaftBackend) SnapshotHTTP(out http.ResponseWriter, access *seal.Access) error {
 	out.Header().Add("Content-Disposition", "attachment")
 	out.Header().Add("Content-Type", "application/gzip")
 
