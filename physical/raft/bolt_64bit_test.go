@@ -34,10 +34,7 @@ func Test_BoltOptions(t *testing.T) {
 				os.Setenv(key, tc.env)
 			}
 
-			o, err := boltOptions()
-			if err != nil {
-				t.Error(err)
-			}
+			o := boltOptions()
 
 			if o.InitialMmapSize != tc.expectedSize {
 				t.Errorf("expected InitialMmapSize to be %d but it was %d", tc.expectedSize, o.InitialMmapSize)
