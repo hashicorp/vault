@@ -364,13 +364,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		freelistType, noFreelistSync := freelistOptions()
+		opts := boltOptions()
 		raftOptions := raftboltdb.Options{
-			Path: filepath.Join(path, "raft.db"),
-			BoltOptions: &bolt.Options{
-				FreelistType:   freelistType,
-				NoFreelistSync: noFreelistSync,
-			},
+			Path:        filepath.Join(path, "raft.db"),
+			BoltOptions: opts,
 		}
 		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
@@ -1644,20 +1641,39 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	return s.access.Decrypt(ctx, &eblob, nil)
 }
 
-// freelistOptions returns the freelist type and nofreelistsync values to use
-// when opening boltdb files, based on our preferred defaults, and the possible
-// presence of overriding environment variables.
-func freelistOptions() (bolt.FreelistType, bool) {
-	freelistType := bolt.FreelistMapType
-	noFreelistSync := true
+// boltOptions returns a bolt.Options struct, suitable for passing to
+// bolt.Open(), pre-configured with all of our preferred defaults.
+func boltOptions() *bolt.Options {
+	o := &bolt.Options{
+		Timeout:        1 * time.Second,
+		FreelistType:   bolt.FreelistMapType,
+		NoFreelistSync: true,
+	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
-		freelistType = bolt.FreelistArrayType
+		o.FreelistType = bolt.FreelistArrayType
 	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
-		noFreelistSync = false
+		o.NoFreelistSync = false
 	}
 
-	return freelistType, noFreelistSync
+	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
+	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
+	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
+	// so if users are wanting to turn this off, they can also set it to 0. Setting it
+	// to a negative value is the same as not setting it at all.
+	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
+		o.InitialMmapSize = initialMmapSize
+	} else {
+		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
+
+		// If there's an error here, it means they passed something that's not convertible to
+		// a number. Rather than fail startup, just ignore it.
+		if err == nil && imms > 0 {
+			o.InitialMmapSize = imms
+		}
+	}
+
+	return o
 }
