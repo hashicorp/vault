@@ -22,13 +22,12 @@ type AppRoleAuth struct {
 var _ api.AuthMethod = (*AppRoleAuth)(nil)
 
 // SecretID is a struct that allows you to specify where your application is
-// storing the secret ID required for login to the AppRole auth method.
+// storing the secret ID required for login to the AppRole auth method. The
+// recommended secure pattern is to use response-wrapping tokens rather than
+// a plaintext value, by passing WithWrappingToken() to NewAppRoleAuth.
+// https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
 type SecretID struct {
-	// Path on the file system where a trusted orchestrator has placed the
-	// application's secret ID. The recommended secure pattern is to use
-	// response-wrapping tokens rather than a plaintext value, by passing
-	// WithWrappingToken() to NewAppRoleAuth.
-	// https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
+	// Path on the file system where the secret ID can be found.
 	FromFile string
 	// The name of the environment variable containing the application's
 	// secret ID.
