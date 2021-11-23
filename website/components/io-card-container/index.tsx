@@ -1,7 +1,7 @@
 import * as React from 'react'
 import classNames from 'classnames'
 import Button from '@hashicorp/react-button'
-import { IoCardProps } from 'components/io-card'
+import IoCard, { IoCardProps } from 'components/io-card'
 import s from './style.module.css'
 
 interface IoCardContaianerProps {
@@ -14,9 +14,7 @@ interface IoCardContaianerProps {
     text: string
   }
   cardsPerRow: 3 | 4
-  children:
-    | Array<React.ReactElement<IoCardProps>>
-    | React.ReactElement<IoCardProps>
+  cards: Array<IoCardProps>
 }
 
 export default function IoCardContaianer({
@@ -26,7 +24,7 @@ export default function IoCardContaianer({
   label,
   cta,
   cardsPerRow = 3,
-  children,
+  cards,
 }: IoCardContaianerProps): React.ReactElement {
   return (
     <div className={classNames(s.cardContainer, s[theme])}>
@@ -58,14 +56,18 @@ export default function IoCardContaianer({
         style={
           {
             '--per-row': cardsPerRow,
-            '--length': React.Children.count(children),
+            '--length': cards.length,
           } as React.CSSProperties
         }
       >
-        {React.Children.map(children, (child, index) => {
-          // Index is stable
-          // eslint-disable-next-line react/no-array-index-key
-          return <li key={index}>{React.cloneElement(child)}</li>
+        {cards.map((card, index) => {
+          return (
+            // Index is stable
+            // eslint-disable-next-line react/no-array-index-key
+            <li key={index}>
+              <IoCard {...card} />
+            </li>
+          )
         })}
       </ul>
     </div>
