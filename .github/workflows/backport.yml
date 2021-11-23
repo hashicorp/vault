@@ -45,7 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Backport changes to targeted release branch
         run: |
-          backport-assistant backport -automerge
+          backport-assistant backport
         env:
           BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.\\w+)"
           BACKPORT_TARGET_TEMPLATE: "release/{{.target}}"
