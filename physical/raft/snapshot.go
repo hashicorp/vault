@@ -16,12 +16,11 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/rboyer/safeio"
 	bolt "go.etcd.io/bbolt"
 	"go.uber.org/atomic"
-
-	"github.com/hashicorp/raft"
 )
 
 const (

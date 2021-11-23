@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/cockroachdb/pebble"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
@@ -22,7 +23,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	raftpebble "github.com/raskchanky/raft-pebble"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -364,12 +365,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		opts := boltOptions()
-		raftOptions := raftboltdb.Options{
-			Path:        filepath.Join(path, "raft.db"),
-			BoltOptions: opts,
+		raftOptions := raftpebble.Options{
+			Path: filepath.Join(path, "raft.db"),
 		}
-		store, err := raftboltdb.New(raftOptions)
+		store, err := raftpebble.New(raftOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -475,7 +474,7 @@ func (b *RaftBackend) Close() error {
 		return err
 	}
 
-	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
+	if err := b.stableStore.(*raftpebble.PebbleStore).Close(); err != nil {
 		return err
 	}
 
@@ -484,11 +483,11 @@ func (b *RaftBackend) Close() error {
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
-	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
-	fsmStats := b.fsm.db.Stats()
+	logstoreMetrics := b.stableStore.(*raftpebble.PebbleStore).Metrics()
+	fsmMetrics := b.fsm.db.Metrics()
 	b.l.RUnlock()
-	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
-	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+	b.collectMetricsWithStats(logstoreMetrics, sink, "logstore")
+	b.collectMetricsWithStats(fsmMetrics, sink, "fsm")
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
