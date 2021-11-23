@@ -292,7 +292,7 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind gener
 		retCode = 2
 		c.UI.Error(err.Error())
 	} else {
-		retCode = 2
+		retCode = 0
 	}
 	return otp, retCode
 }
