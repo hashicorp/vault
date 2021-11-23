@@ -6,6 +6,7 @@ module.exports = {
   tap_failed_tests_only: true,
   disable_watching: true,
   launch_in_ci: ['Chrome'],
+  launch_in_dev: ['Chrome'],
   browser_start_timeout: 120,
   browser_args: {
     Chrome: {

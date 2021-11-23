@@ -9,10 +9,6 @@
 # dependencies
 /bower_components/
 /node_modules/
-/.storybook/
-/.yarn/
-/stories/
-/storybook-static/
 
 # misc
 /coverage/
@@ -23,5 +19,3 @@
 /.node_modules.ember-try/
 /bower.json.ember-try
 /package.json.ember-try
-
-/tests/helpers/vault-keys.js

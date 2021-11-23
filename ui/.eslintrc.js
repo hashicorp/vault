@@ -12,21 +12,17 @@ module.exports = {
       legacyDecorators: true,
     },
   },
-  plugins: ['ember', 'prettier'],
-  extends: ['eslint:recommended', 'plugin:ember/recommended', 'prettier'],
+  plugins: ['ember'],
+  extends: ['eslint:recommended', 'plugin:ember/recommended', 'plugin:prettier/recommended'],
   env: {
     browser: true,
-    es6: true,
-  },
-  rules: {
-    // TODO revisit once figure out how to replace, added during upgrade to 3.20
-    'ember/no-new-mixins': 'off',
-    'ember/no-mixins': 'off',
   },
   overrides: [
     // node files
     {
       files: [
+        '.eslintrc.js',
+        '.prettierrc.js',
         '.template-lintrc.js',
         'ember-cli-build.js',
         'testem.js',
@@ -34,10 +30,10 @@ module.exports = {
         'config/**/*.js',
         'lib/*/index.js',
         'scripts/start-vault.js',
+        'server/**/*.js',
       ],
       parserOptions: {
         sourceType: 'script',
-        ecmaVersion: 2018,
       },
       env: {
         browser: false,
