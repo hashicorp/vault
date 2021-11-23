@@ -1,8 +1,12 @@
 .customer {
+  position: relative;
   background-color: var(--black);
   color: var(--white);
-  padding-bottom: 132px;
-  padding-top: 64px;
+  padding-bottom: 64px;
+
+  @media (--medium-up) {
+    padding-bottom: 132px;
+  }
 }
 
 .container {
@@ -22,7 +26,7 @@
 }
 
 .media {
-  margin-top: -128px;
+  margin-top: -64px;
   grid-column: 1 / -1;
 
   @media (--medium-up) {
@@ -34,6 +38,7 @@
   grid-column: 1 / -1;
 
   @media (--medium-up) {
+    padding-top: 64px;
     grid-column: 8 / -1;
   }
 }
@@ -71,7 +76,7 @@
   --columns: 1;
 
   list-style: none;
-  margin: 132px 0 0;
+  margin: 64px 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
@@ -79,6 +84,8 @@
 
   @media (--medium-up) {
     --columns: 12;
+
+    margin-top: 132px;
   }
 
   & > li {

@@ -3,30 +3,32 @@
   max-width: 1600px;
   margin-right: auto;
   margin-left: auto;
-  padding-top: 132px;
-  padding-bottom: 132px;
+  padding-top: 64px;
+  padding-bottom: 64px;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-
-    @media (--medium-up) {
-      border-radius: 6px;
-      left: 24px;
-      right: 24px;
-    }
+  @media (--medium-up) {
+    padding-top: 132px;
+    padding-bottom: 132px;
   }
 
-  &:nth-of-type(even) {
-    &.vault::before {
+  & + .section {
+    padding-bottom: 132px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background-color: var(--vault-secondary);
-    }
-    &.consul::before {
-      background-color: var(--consul-secondary);
+
+      @media (--medium-up) {
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        left: 24px;
+        right: 24px;
+      }
     }
   }
 }

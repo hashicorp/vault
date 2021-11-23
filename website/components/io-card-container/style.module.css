@@ -2,7 +2,11 @@
   position: relative;
 
   & + .cardContainer {
-    margin-top: 132px;
+    margin-top: 64px;
+
+    @media (--medium-up) {
+      margin-top: 132px;
+    }
   }
 }
 

@@ -3,8 +3,13 @@
   max-width: 1600px;
   margin-right: auto;
   margin-left: auto;
-  padding-top: 132px;
-  padding-bottom: 132px;
+  padding-top: 64px;
+  padding-bottom: 64px;
+
+  @media (--medium-up) {
+    padding-top: 132px;
+    padding-bottom: 132px;
+  }
 
   &::before {
     content: '';

@@ -1,12 +1,32 @@
 import * as React from 'react'
-import { Products as HashiCorpProduct } from '@hashicorp/platform-product-meta'
+import { Products } from '@hashicorp/platform-product-meta'
 import classNames from 'classnames'
 import Image from 'next/image'
 import Button from '@hashicorp/react-button'
 import s from './style.module.css'
 
+interface IoUsecaseSectionsProps {
+  brand?: Products | 'neutral'
+  sections: [IoUsecaseSectionProps, IoUsecaseSectionProps]
+}
+
+export default function IoUseCaseSestions({
+  brand = 'neutral',
+  sections,
+}: IoUsecaseSectionsProps): React.ReactElement {
+  return (
+    <>
+      {sections.map((section, index) => {
+        // Index is stable
+        // eslint-disable-next-line react/no-array-index-key
+        return <IoUsecaseSection key={index} brand={brand} {...section} />
+      })}
+    </>
+  )
+}
+
 interface IoUsecaseSectionProps {
-  brand?: HashiCorpProduct | 'neutral'
+  brand?: Products | 'neutral'
   eyebrow: string
   heading: string
   description: React.ReactNode
@@ -22,7 +42,7 @@ interface IoUsecaseSectionProps {
   }
 }
 
-export default function IoUsecaseSection({
+function IoUsecaseSection({
   brand = 'neutral',
   eyebrow,
   heading,
