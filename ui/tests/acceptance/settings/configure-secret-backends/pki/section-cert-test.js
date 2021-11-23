@@ -1,4 +1,4 @@
-import { currentRouteName, settled, click } from '@ember/test-helpers';
+import { currentRouteName, settled, click, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
@@ -92,6 +92,16 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
       page.flash.latestMessage.includes('You tried to generate a new root CA'),
       'shows warning message'
     );
+  });
+
+  test('EC cert config: generate', async function(assert) {
+    await mountAndNav(assert);
+    await settled();
+    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+
+    await page.form.generateCAKeyTypeEC();
+
+    assert.dom('[data-test-warning]').exists('Info banner renders when unable to parse certificate metadata');
   });
 
   test('cert config: upload', async function(assert) {
