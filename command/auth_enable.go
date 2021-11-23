@@ -203,8 +203,8 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedManagedKeys,
 		Target: &c.flagAllowedManagedKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Comma-separated string or list of managed key registry entry names" +
+			"that the mount in question is allowed to access ",
 	})
 
 	return set
