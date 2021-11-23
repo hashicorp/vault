@@ -87,14 +87,14 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name     string
-		args     []string
-		out      string
-		code     int
-		expected map[string]interface{}
+		name            string
+		args            []string
+		out             string
+		code            int
+		expectedUpdates map[string]interface{}
 	}{
 		{
-			"cas_required",
+			"cas_required_success",
 			[]string{"-cas-required=true"},
 			"Success!",
 			0,
@@ -103,18 +103,27 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 			},
 		},
 		{
-			"custom_metadata",
-			[]string{"-custom-metadata=baz=quux"},
+			"cas_required_invalid",
+			[]string{"-cas-required=12345"},
+			"invalid boolean value",
+			1,
+			map[string]interface{}{},
+		},
+		{
+			"custom_metadata_success",
+			[]string{"-custom-metadata=baz=ghi"},
 			"Success!",
 			0,
 			map[string]interface{}{
 				"custom_metadata": map[string]interface{}{
-					"baz": "quux",
+					"foo": "abc",
+					"bar": "def",
+					"baz": "ghi",
 				},
 			},
 		},
 		{
-			"delete_version_after",
+			"delete_version_after_success",
 			[]string{"-delete-version-after=5s"},
 			"Success!",
 			0,
@@ -123,12 +132,40 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 			},
 		},
 		{
-			"max_versions",
+			"delete_version_after_invalid",
+			[]string{"-delete-version-after=false"},
+			"invalid duration",
+			1,
+			map[string]interface{}{},
+		},
+		{
+			"max_versions_success",
 			[]string{"-max-versions=10"},
 			"Success!",
 			0,
 			map[string]interface{}{
 				"max_versions": json.Number("10"),
+			},
+		},
+		{
+			"max_versions_invalid",
+			[]string{"-max-versions=false"},
+			"invalid syntax",
+			1,
+			map[string]interface{}{},
+		},
+		{
+			"multiple_flags_success",
+			[]string{"-max-versions=20", "-custom-metadata=baz=123"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"max_versions": json.Number("20"),
+				"custom_metadata": map[string]interface{}{
+					"foo": "abc",
+					"bar": "def",
+					"baz": "123",
+				},
 			},
 		},
 	}
@@ -148,7 +185,8 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 				t.Fatalf("kv-v2 mount error: %#v", err)
 			}
 
-			code, combined := kvMetadataPutWithRetry(t, client, []string{secretPath}, nil)
+			putArgs := []string{"-custom-metadata=foo=abc", "-custom-metadata=bar=def", secretPath}
+			code, combined := kvMetadataPutWithRetry(t, client, putArgs, nil)
 
 			if code != 0 {
 				t.Fatalf("initial metadata put failed, code: %d, output: %s", code, combined)
@@ -176,21 +214,17 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 			}
 
 			for k, v := range patchedMetadata.Data {
-				if k == "versions" {
-					continue
-				}
-
 				var expectedVal interface{}
 
-				if inputVal, ok := tc.expected[k]; ok {
+				if inputVal, ok := tc.expectedUpdates[k]; ok {
 					expectedVal = inputVal
 				} else {
 					expectedVal = initialMetadata.Data[k]
 				}
 
-				if k == "custom_metadata" {
+				if k == "custom_metadata" || k == "versions" {
 					if diff := deep.Equal(expectedVal, v); len(diff) > 0 {
-						t.Fatalf("patched \"custom_metadata\" mismatch, diff: %#v", diff)
+						t.Fatalf("patched %q mismatch, diff: %#v", k, diff)
 					}
 				} else if expectedVal != v {
 					t.Fatalf("patched key %q mismatch, expected: %#v, actual %#v", k, expectedVal, v)
