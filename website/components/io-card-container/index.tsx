@@ -1,9 +1,11 @@
 import * as React from 'react'
+import classNames from 'classnames'
 import Button from '@hashicorp/react-button'
 import { IoCardProps } from 'components/io-card'
 import s from './style.module.css'
 
 interface IoCardContaianerProps {
+  theme?: 'light' | 'dark'
   heading?: string
   description?: string
   label?: string
@@ -18,6 +20,7 @@ interface IoCardContaianerProps {
 }
 
 export default function IoCardContaianer({
+  theme = 'light',
   heading,
   description,
   label,
@@ -26,7 +29,7 @@ export default function IoCardContaianer({
   children,
 }: IoCardContaianerProps): React.ReactElement {
   return (
-    <div className={s.cardContainer}>
+    <div className={classNames(s.cardContainer, s[theme])}>
       {heading || description ? (
         <header className={s.header}>
           {heading ? <h2 className={s.heading}>{heading}</h2> : null}
@@ -44,6 +47,7 @@ export default function IoCardContaianer({
               theme={{
                 brand: 'neutral',
                 variant: 'tertiary',
+                background: theme,
               }}
             />
           ) : null}

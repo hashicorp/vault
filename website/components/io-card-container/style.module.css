@@ -7,17 +7,26 @@
 }
 
 .header {
+  margin-bottom: 64px;
   text-align: center;
 }
 
 .heading {
   margin: 0;
   composes: g-type-display-2 from global;
+
+  @nest .dark & {
+    color: var(--gray-5);
+  }
 }
 
 .description {
   margin: 8px 0 0;
   composes: g-type-body-large from global;
+
+  @nest .dark & {
+    color: var(--gray-5);
+  }
 }
 
 .subHeader {
@@ -26,8 +35,8 @@
   align-items: center;
   justify-content: space-between;
 
-  @nest .header + & {
-    margin-top: 64px;
+  @nest .dark & {
+    color: var(--gray-5);
   }
 }
 
