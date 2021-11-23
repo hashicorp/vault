@@ -11,7 +11,7 @@
     {{#if (not (eq model.canParse true))}}
       <AlertBanner
         @type="info"
-        @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the common name or the issue and expiration dates. This will not interfere with the certificate's functionality."
+        @message="There was an error parsing the certificate's metadata. As a result, Vault cannot display the issue and expiration dates. This will not interfere with the certificate's functionality."
         data-test-warning
       />
     {{/if}}
