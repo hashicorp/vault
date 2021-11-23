@@ -1,4 +1,4 @@
-import { currentRouteName, settled, click, fillIn } from '@ember/test-helpers';
+import { currentRouteName, settled, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section-cert';
