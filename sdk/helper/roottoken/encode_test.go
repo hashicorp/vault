@@ -3,7 +3,6 @@ package roottoken
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,7 +49,7 @@ func TestTokenEncodingDecodingWithOTP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err.Error())
 			}
-			encodedToken, err := EncodeToken(otpTestCase.token, otp, "")
+			encodedToken, err := EncodeToken(otpTestCase.token, otp)
 			if err != nil || otpTestCase.expectedDecodingErr != "" {
 				assert.EqualError(t, err, otpTestCase.expectedEncodingErr)
 				return
@@ -68,17 +67,6 @@ func TestTokenEncodingDecodingWithOTP(t *testing.T) {
 }
 
 func TestTokenEncodingDecodingWithNoOTPorPGPKey(t *testing.T) {
-	_, err := EncodeToken("", "", "")
+	_, err := EncodeToken("", "")
 	assert.EqualError(t, err, "no token provided")
-}
-
-func TestTokenEncodingWithPGPKey(t *testing.T) {
-	token := "someToken"
-	encodedToken, err := EncodeToken(token, "", pgpkeys.TestPubKey1)
-	assert.Nil(t, err)
-	assert.NotEqual(t, encodedToken, token)
-	bb, err := pgpkeys.DecryptBytes(encodedToken, pgpkeys.TestPrivKey1)
-	assert.Nil(t, err)
-	plaintext := bb.String()
-	assert.Equal(t, token, plaintext)
 }

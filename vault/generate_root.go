@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 
@@ -317,7 +318,19 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		return nil, err
 	}
 
-	token, err = roottoken.EncodeToken(token, c.generateRootConfig.OTP, c.generateRootConfig.PGPKey)
+	var encodedToken string
+
+	switch {
+	case len(c.generateRootConfig.OTP) > 0:
+		encodedToken, err = roottoken.EncodeToken(token, c.generateRootConfig.OTP)
+	case len(c.generateRootConfig.PGPKey) > 0:
+		var tokenBytesArr [][]byte
+		_, tokenBytesArr, err = pgpkeys.EncryptShares([][]byte{[]byte(token)}, []string{c.generateRootConfig.PGPKey})
+		encodedToken = base64.StdEncoding.EncodeToString(tokenBytesArr[0])
+	default:
+		err = fmt.Errorf("unreachable condition")
+	}
+
 	if err != nil {
 		cleanupFunc()
 		return nil, err
@@ -326,7 +339,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	results := &GenerateRootResult{
 		Progress:       progress,
 		Required:       config.SecretThreshold,
-		EncodedToken:   token,
+		EncodedToken:   encodedToken,
 		PGPFingerprint: c.generateRootConfig.PGPFingerprint,
 	}
 
