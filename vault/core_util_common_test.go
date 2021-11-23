@@ -17,7 +17,7 @@ func TestStoreMultipleVaultVersions(t *testing.T) {
 	if err != nil || wasStored {
 		t.Fatalf("vault version was re-stored: %v, err is: %s", wasStored, err.Error())
 	}
-	upgradeTime, ok := c.VersionTimestamps[version.Version]
+	upgradeTime, ok := c.versionTimestamps[version.Version]
 	if !ok {
 		t.Fatalf("no %s version timestamp found", version.Version)
 	}
@@ -35,8 +35,8 @@ func TestGetOldestVersion(t *testing.T) {
 	c.storeVersionTimestamp(context.Background(), "1.9.1", upgradeTimePlusEpsilon.Add(-4*time.Hour))
 	c.storeVersionTimestamp(context.Background(), "1.9.2", upgradeTimePlusEpsilon.Add(2*time.Hour))
 	c.loadVersionTimestamps(c.activeContext)
-	if len(c.VersionTimestamps) != 3 {
-		t.Fatalf("expected 3 entries in timestamps map after refresh, found: %d", len(c.VersionTimestamps))
+	if len(c.versionTimestamps) != 3 {
+		t.Fatalf("expected 3 entries in timestamps map after refresh, found: %d", len(c.versionTimestamps))
 	}
 	v, tm, err := c.FindOldestVersionTimestamp()
 	if err != nil {

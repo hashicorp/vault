@@ -15,7 +15,7 @@ func TestInFlightRequestUnauthenticated(t *testing.T) {
 
 	// Default: Only authenticated access
 	resp := testHttpGet(t, "", addr+"/v1/sys/in-flight-req")
-	testResponseStatus(t, resp, 400)
+	testResponseStatus(t, resp, 403)
 	resp = testHttpGet(t, token, addr+"/v1/sys/in-flight-req")
 	testResponseStatus(t, resp, 200)
 

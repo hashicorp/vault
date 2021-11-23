@@ -111,7 +111,7 @@ const (
 )
 
 var (
-	requiredClaims = []string{
+	reservedClaims = []string{
 		"iat", "aud", "exp", "iss",
 		"sub", "namespace", "nonce",
 		"auth_time", "at_hash", "c_hash",
@@ -970,6 +970,7 @@ func (tok *idToken) generatePayload(logger hclog.Logger, templates ...string) ([
 		"iat":       tok.IssuedAt,
 	}
 
+	// Copy optional claims into output
 	if len(tok.Nonce) > 0 {
 		output["nonce"] = tok.Nonce
 	}
@@ -1009,7 +1010,7 @@ func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, temp
 		}
 
 		for k, v := range parsed {
-			if !strutil.StrListContains(requiredClaims, k) {
+			if !strutil.StrListContains(reservedClaims, k) {
 				output[k] = v
 			} else {
 				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
@@ -1114,9 +1115,9 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		}
 
 		for key := range tmp {
-			if strutil.StrListContains(requiredClaims, key) {
+			if strutil.StrListContains(reservedClaims, key) {
 				return logical.ErrorResponse(`top level key %q not allowed. Restricted keys: %s`,
-					key, strings.Join(requiredClaims, ", ")), nil
+					key, strings.Join(reservedClaims, ", ")), nil
 			}
 		}
 	}
