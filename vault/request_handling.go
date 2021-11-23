@@ -126,7 +126,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
-		return nil, nil, nil, nil, &logical.StatusBadRequest{Err: "missing client token"}
+		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
 
 	if c.tokenStore == nil {

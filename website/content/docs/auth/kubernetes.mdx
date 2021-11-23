@@ -103,6 +103,8 @@ management tool.
 
 ### Discovering the service account `issuer`
 
+-> **Deprecated:** The `issuer` parameter has been deprecated as of Vault 1.9 and will be removed in a future release.
+
 Kubernetes 1.21+ clusters may require setting the service account
 [`issuer`](/api-docs/auth/kubernetes#issuer) to the same value as
 `kube-apiserver`'s `--service-account-issuer` flag. This is because the service
