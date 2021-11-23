@@ -32,5 +32,6 @@ export default class diff extends Route {
     controller.set('model', model);
     controller.set('noReadAccess', model.noReadAccess);
     controller.set('currentVersion', model.currentVersion);
+    controller.createVisualDiff();
   }
 }

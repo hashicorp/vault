@@ -6,17 +6,13 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 export default class DiffController extends Controller.extend(BackendCrumbMixin) {
+  @tracked leftSideVersionDataSelected = null;
+  @tracked leftSideVersionSelected = null;
+  @tracked rightSideVersionDataSelected = null;
+  @tracked rightSideVersionSelected = null;
+  @tracked statesMatch = false;
+  @tracked visualDiff = null;
   @service store;
-  @tracked
-  leftSideVersionDataSelected = null;
-  @tracked
-  rightSideVersionDataSelected = null;
-  @tracked
-  leftSideVersionSelected = null;
-  @tracked
-  rightSideVersionSelected = null;
-  @tracked
-  statesMatch = false;
 
   adapter = this.store.adapterFor('secret-v2-version');
 
@@ -28,19 +24,17 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
       .then(response => response.data) // using ember promise helpers to await in the hbs file
       .catch(() => null);
   }
-
-  get getRightSideVersionInit() {
-    // initial value of right side version is one less than the current version
-    return this.model.currentVersion === 1 ? 0 : this.model.currentVersion - 1;
-  }
-
   get rightSideDataInit() {
     // return secretData from hitting the get secret endpoint
-    let string = `["${this.model.engineId}", "${this.model.id}", "${this.getRightSideVersionInit}"]`;
+    let string = `["${this.model.engineId}", "${this.model.id}", "${this.rightSideVersionInit}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
       .then(response => response.data) // using ember promise helpers to await in the hbs file\
       .catch(() => null);
+  }
+  get rightSideVersionInit() {
+    // initial value of right side version is one less than the current version
+    return this.model.currentVersion === 1 ? 0 : this.model.currentVersion - 1;
   }
 
   async createVisualDiff() {
@@ -48,19 +42,13 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
     let leftSideVersionData = this.leftSideVersionDataSelected || (await this.leftSideDataInit);
     let rightSideVersionData = this.rightSideVersionDataSelected || (await this.rightSideDataInit);
     let delta = diffpatcher.diff(leftSideVersionData, rightSideVersionData);
-
     if (delta === undefined) {
       this.statesMatch = true;
       return JSON.stringify(leftSideVersionData, undefined, 2); // value, replacer (all properties included), space (white space and indentation, line break, etc.)
     } else {
       this.statesMatch = false;
     }
-
-    return jsondiffpatch.formatters.html.format(delta, this.leftSideVersionData);
-  }
-
-  get visualDiff() {
-    return this.createVisualDiff();
+    this.visualDiff = jsondiffpatch.formatters.html.format(delta, leftSideVersionData);
   }
 
   // ARG TODO I believe I can remove this but double check
@@ -69,20 +57,18 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
     this.send('refreshModel');
   }
   @action
-  async selectLeftSideVersion(selectedVersion, actions) {
+  async selectVersion(selectedVersion, actions, side) {
     let string = `["${this.model.engineId}", "${this.model.id}", "${selectedVersion}"]`;
     let secretData = await this.adapter.querySecretDataByVersion(string);
-    this.leftSideVersionDataSelected = secretData.data;
-    this.leftSideVersionSelected = selectedVersion;
-    // close dropdown menu.
-    actions.close();
-  }
-  @action
-  async selectRightSideVersion(selectedVersion, actions) {
-    let string = `["${this.model.engineId}", "${this.model.id}", "${selectedVersion}"]`;
-    let secretData = await this.adapter.querySecretDataByVersion(string);
-    this.rightSideVersionDataSelected = secretData.data;
-    this.rightSideVersionSelected = selectedVersion;
+    if (side === 'left') {
+      this.leftSideVersionDataSelected = secretData.data;
+      this.leftSideVersionSelected = selectedVersion;
+    }
+    if (side === 'right') {
+      this.rightSideVersionDataSelected = secretData.data;
+      this.rightSideVersionSelected = selectedVersion;
+    }
+    await this.createVisualDiff();
     // close dropdown menu.
     actions.close();
   }
