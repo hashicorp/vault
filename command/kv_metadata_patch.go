@@ -72,7 +72,7 @@ func (c *KVMetadataPatchCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:    "max-versions",
 		Target:  &c.flagMaxVersions,
-		Default: 0,
+		Default: -1,
 		Usage:   `The number of versions to keep. If not set, the backend’s configured max version is used.`,
 	})
 
@@ -85,6 +85,7 @@ func (c *KVMetadataPatchCommand) Flags() *FlagSets {
 	f.DurationVar(&DurationVar{
 		Name:       "delete-version-after",
 		Target:     &c.flagDeleteVersionAfter,
+		Default:    -1,
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: `Specifies the length of time before a version is deleted.
@@ -154,7 +155,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 
 	data := map[string]interface{}{}
 
-	if c.flagMaxVersions > 0 {
+	if c.flagMaxVersions >= 0 {
 		data["max_versions"] = c.flagMaxVersions
 	}
 
@@ -162,7 +163,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 		data["cas_required"] = c.flagCASRequired.Get()
 	}
 
-	if c.flagDeleteVersionAfter > 0 {
+	if c.flagDeleteVersionAfter >= 0 {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
