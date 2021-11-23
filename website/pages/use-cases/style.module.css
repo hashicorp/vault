@@ -3,18 +3,31 @@
 }
 
 .callToAction {
-  margin-top: 132px;
   composes: container;
+  margin-top: 64px;
+
+  @media (--medium-up) {
+    margin-top: 132px;
+  }
 }
 
 .videoCallout {
-  margin-top: 132px;
-  margin-bottom: 64px;
   composes: container;
+  margin-top: 64px;
+  margin-bottom: 64px;
+
+  @media (--medium-up) {
+    margin-top: 132px;
+  }
 }
 
 .cards {
-  margin-top: 132px;
-  margin-bottom: 132px;
+  margin-top: 64px;
+  margin-bottom: 64px;
   composes: container;
+
+  @media (--medium-up) {
+    margin-top: 132px;
+    margin-bottom: 132px;
+  }
 }
