@@ -3,13 +3,16 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Integration | Component | shamir-modal-flow', function(hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function() {
     this.set('isActive', true);
     this.set('onClose', sinon.spy());
+    this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', () => {});
   });
 
   test('it renders with initial content by default', async function(assert) {
