@@ -1,17 +1,19 @@
-{{#basic-dropdown-hover
-  renderInPlace=renderInPlace
-  verticalPosition=verticalPosition
-  horizontalPosition=horizontalPosition
-  matchTriggerWidth=matchTriggerWidth
-  triggerComponent=triggerComponent
-  contentComponent=contentComponent
-  calculatePosition=calculatePosition
-  onOpen=onOpen
-  onClose=onClose
-  onFocus=onFocus
-  calculateInPlacePosition=calculateInPlacePosition
-  as |dd|
-}}
+<BasicDropdown
+  renderInPlace={{renderInPlace}}
+  verticalPosition={{verticalPosition}}
+  horizontalPosition={{horizontalPosition}}
+  matchTriggerWidth={{matchTriggerWidth}}
+  triggerComponent={{triggerComponent}}
+  contentComponent={{contentComponent}}
+  calculatePosition={{calculatePosition}}
+  onOpen={{onOpen}}
+  onClose={{onClose}}
+  onFocus={{onFocus}}
+  calculateInPlacePosition={{calculateInPlacePosition}}
+  {{on 'mousedown' this.prevent}}
+  {{on 'mouseenter' (fn this.open dd)}}
+  {{on 'mouseleave' (fn this.closeLater dd)}}
+as |dd|>
   {{yield (assign
     dd
     (hash
@@ -26,4 +28,4 @@
       )
     )
   )}}
-{{/basic-dropdown-hover}}
+</BasicDropdown>

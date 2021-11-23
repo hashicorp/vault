@@ -93,7 +93,7 @@ module('Acceptance | auth backend list', function (hooks) {
       await click(`[data-test-auth-backend-link="${type}"]`);
 
       if (!supportManaged.includes(type)) {
-        assert.equal(findAll('[data-test-auth-section-tab]').length, 1);
+        assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
         assert
           .dom('[data-test-auth-section-tab]')
           .hasText('Configuration', `only shows configuration tab for ${type} auth method`);

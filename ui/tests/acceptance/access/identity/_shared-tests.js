@@ -51,7 +51,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await selectChoose('#policies', '.ember-power-select-option', 0);
   await page.editForm.submit();
   await click('[data-test-tab-subnav="policies"]');
-  assert.equal(findAll('.list-item-row').length, 1, 'One item is under policies');
+  assert.dom('.list-item-row').exists({ count: 1 }, 'One item is under policies');
   await click('[data-test-tab-subnav="metadata"]');
   assert.dom('.info-table-row').hasText('hello goodbye', 'Metadata shows on tab');
   await showPage.edit();
