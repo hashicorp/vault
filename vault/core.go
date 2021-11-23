@@ -1038,9 +1038,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
-	if log.LevelFromString(conf.RawConfig.LogRequestsInfo) > 0 {
+	switch {
+	case log.LevelFromString(conf.RawConfig.LogRequestsInfo) > 0:
 		c.logRequestsInfo = conf.RawConfig.LogRequestsInfo
-	} else {
+	case conf.RawConfig.LogRequestsInfo != "":
 		c.logger.Warn("invalid log_requests_info", "level", conf.RawConfig.LogRequestsInfo)
 	}
 
@@ -3055,9 +3056,10 @@ func (c *Core) ReloadLogRequestsInfo(){
 		return
 	}
 	infoLevel := conf.(*server.Config).LogRequestsInfo
-	if log.LevelFromString(infoLevel) > 0 {
+	switch {
+	case log.LevelFromString(infoLevel) > 0:
 		c.logRequestsInfo = infoLevel
-	}else {
+	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_info", "level", infoLevel)
 	}
 }
