@@ -37,6 +37,7 @@ type AuthEnableCommand struct {
 	flagExternalEntropyAccess     bool
 	flagTokenType                 string
 	flagVersion                   int
+	flagAllowedManagedKeys        []string
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -199,6 +200,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedManagedKeys,
+		Target: &c.flagAllowedManagedKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
+			"devices in the request data object.",
+	})
+
 	return set
 }
 
@@ -297,6 +305,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameTokenType {
 			authOpts.Config.TokenType = c.flagTokenType
+		}
+
+		if fl.Name == flagNameAllowedManagedKeys {
+			authOpts.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 	})
 

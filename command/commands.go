@@ -116,6 +116,8 @@ const (
 	flagNameAllowedResponseHeaders = "allowed-response-headers"
 	// flagNameTokenType is the flag name used to force a specific token type
 	flagNameTokenType = "token-type"
+	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
+	flagNameAllowedManagedKeys = "allowed-managed-keys"
 )
 
 var (

@@ -31,6 +31,7 @@ type AuthTuneCommand struct {
 	flagOptions                   map[string]string
 	flagTokenType                 string
 	flagVersion                   int
+	flagAllowedManagedKeys        []string
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -144,6 +145,13 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedManagedKeys,
+		Target: &c.flagAllowedManagedKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
+			"devices in the request data object.",
+	})
+
 	return set
 }
 
@@ -220,6 +228,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
+		}
+
+		if fl.Name == flagNameAllowedManagedKeys {
+			mountConfigInput.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 	})
 

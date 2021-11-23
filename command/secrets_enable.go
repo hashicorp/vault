@@ -37,6 +37,7 @@ type SecretsEnableCommand struct {
 	flagSealWrap                  bool
 	flagExternalEntropyAccess     bool
 	flagVersion                   int
+	flagAllowedManagedKeys        []string
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -209,6 +210,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the engine to run. Not supported by all engines.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedManagedKeys,
+		Target: &c.flagAllowedManagedKeys,
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
+			"devices in the request data object.",
+	})
+
 	return set
 }
 
@@ -306,6 +314,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAllowedResponseHeaders {
 			mountInput.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+		}
+
+		if fl.Name == flagNameAllowedManagedKeys {
+			mountInput.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 	})
 
