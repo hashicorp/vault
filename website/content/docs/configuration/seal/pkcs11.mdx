@@ -63,13 +63,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   libraries to interpret Windows .dll files).
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
-  specified as a string (e.g. `"2305843009213693953"`). May also be specified by 
+  specified as a string (e.g. `"2305843009213693953"`). May also be specified by
   the `VAULT_HSM_SLOT` environment variable.
 
-  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup 
-  utility and their decimal equivalent is what should be used. For example using the 
-  HSM command-line `pkcs11-tool` a slot listed as `0x2000000000000001`in hex is equal 
-  to `2305843009213693953` in decimal; these values may be listed shorter or 
+  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup
+  utility and their decimal equivalent is what should be used. For example using the
+  HSM command-line `pkcs11-tool` a slot listed as `0x2000000000000001`in hex is equal
+  to `2305843009213693953` in decimal; these values may be listed shorter or
   differently as determined by the HSM in use.
 
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
@@ -92,6 +92,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   set, decryption may fail. May also be specified by the `VAULT_HSM_DEFAULT_KEY_LABEL`
   environment variable. This value is ignored in new installations.
 
+- `key_id` `(string: "")`: The ID of the key to use. The value should be a hexadecimal
+  string (e.g., "0x33333435363434373537"). May also be specified by the
+  `VAULT_HSM_KEY_ID` environment variable.
+
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
   HMACing. This needs to be a suitable type. If Vault tries to create this it
   will attempt to use CKK_GENERIC_SECRET_KEY. If the key does not exist and
@@ -107,9 +111,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable. This value is ignored in
   new installations.
 
+- `hmac_key_id` `(string: "")`: The ID of the HMAC key to use. The value should be a
+  hexadecimal string (e.g., "0x33333435363434373537"). May also be specified by the
+  `VAULT_HSM_HMAC_KEY_ID` environment variable.
+
 - `mechanism` `(string: <best available>)`: The encryption/decryption mechanism to use,
   specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be
-  specified by the `VAULT_HSM_MECHANISM` environment variable.  
+  specified by the `VAULT_HSM_MECHANISM` environment variable.
   Currently supported mechanisms (in order of precedence):
 
   - `0x1085` `CKM_AES_CBC_PAD` (HMAC mechanism required)
@@ -172,8 +180,10 @@ VAULT_HSM_TOKEN_LABEL
 VAULT_HSM_PIN
 VAULT_HSM_KEY_LABEL
 VAULT_HSM_DEFAULT_KEY_LABEL
+VAULT_HSM_KEY_ID
 VAULT_HSM_HMAC_KEY_LABEL
 VAULT_HSM_HMAC_DEFAULT_KEY_LABEL
+VAULT_HSM_HMAC_KEY_ID
 VAULT_HSM_MECHANISM
 VAULT_HSM_HMAC_MECHANISM
 VAULT_HSM_GENERATE_KEY
