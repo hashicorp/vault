@@ -1,12 +1,13 @@
 import * as React from 'react'
-import ReactCallToAction from '@hashicorp/react-call-to-action'
+import classNames from 'classnames'
+import Button from '@hashicorp/react-button'
 import s from './style.module.css'
 
 interface IoUsecaseCallToActionProps {
   brand: string
   theme?: 'light' | 'dark'
   heading: string
-  content: string
+  description: string
   links: Array<{
     text: string
     url: string
@@ -17,26 +18,41 @@ export default function IoUsecaseCallToAction({
   brand,
   theme,
   heading,
-  content,
+  description,
   links,
 }: IoUsecaseCallToActionProps): React.ReactElement {
   return (
     <div
-      className={s.callToAction}
+      className={classNames(s.callToAction, s[theme])}
       style={
         {
           '--background-color': `var(--${brand})`,
         } as React.CSSProperties
       }
     >
-      <ReactCallToAction
-        variant="compact"
-        heading={heading}
-        content={content}
-        product="neutral"
-        theme={theme}
-        links={links}
-      />
+      <h2 className={s.heading}>{heading}</h2>
+      <div className={s.content}>
+        <p className={s.description}>{description}</p>
+        <div className={s.links}>
+          {links.map((link, index) => {
+            return (
+              <Button
+                // Index is stable
+                // eslint-disable-next-line react/no-array-index-key
+                key={index}
+                title={link.text}
+                url={link.url}
+                theme={{
+                  brand: 'neutral',
+                  variant: index === 0 ? 'primary' : 'secondary',
+                  background: theme,
+                }}
+              />
+            )
+          })}
+        </div>
+      </div>
+      <span className={s.pattern} />
     </div>
   )
 }

@@ -4,6 +4,7 @@
 
 .callToAction {
   margin-top: 132px;
+  composes: container;
 }
 
 .videoCallout {

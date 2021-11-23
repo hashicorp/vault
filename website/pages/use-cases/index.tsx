@@ -107,7 +107,7 @@ export default function UseCases(): React.ReactElement {
           theme="light"
           brand="vault"
           heading="Get started HCP Vault and secrets injection into Kubernetes"
-          content="We’ve built a step-by-step guide on integrating HCP Vault and your Kubernetes cluster."
+          description="We’ve built a step-by-step guide on integrating HCP Vault and your Kubernetes cluster."
           links={[
             {
               text: 'Try HCP Vault for free',

@@ -1,8 +1,70 @@
 .callToAction {
-  composes: g-grid-container from global;
+  --columns: 1;
 
-  & > * {
-    background-color: var(--background-color);
-    border-radius: 6px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 0 32px;
+  padding: 88px 32px;
+  background-color: var(--background-color);
+  border-radius: 6px;
+
+  &.light {
+    color: var(--black);
+  }
+
+  &.dark {
+    color: var(--white);
+  }
+
+  @media (--medium-up) {
+    --columns: 12;
+
+    padding: 124px 0;
+  }
+}
+
+.heading {
+  grid-column: 1 / -1;
+  margin: 0 0 16px;
+  composes: g-type-display-3 from global;
+
+  @media (--medium-up) {
+    grid-column: 1 / 6;
+    padding-left: 64px;
+    padding-right: 32px;
+  }
+}
+
+.content {
+  grid-column: 1 / -1;
+
+  @media (--medium-up) {
+    grid-column: 6 / 11;
+  }
+}
+
+.description {
+  margin: 0 0 32px;
+  composes: g-type-body-large from global;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+}
+
+.pattern {
+  @media (--medium-up) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: calc((100% * 2 / 12) - 32px);
+    background-image: url('./pattern.svg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center left;
   }
 }
