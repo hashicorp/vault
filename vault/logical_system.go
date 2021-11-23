@@ -2972,7 +2972,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 
 func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	ll := data.Get("log_level").(string)
-	w := *req.ResponseWriter
+	w := req.ResponseWriter
 
 	if ll == "" {
 		ll = "info"
@@ -2983,11 +2983,11 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
-	flusher, ok := w.(http.Flusher)
+	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
 		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
 		// access the underlying functionality
-		nw, ok := w.(logical.WrappingResponseWriter)
+		nw, ok := w.ResponseWriter.(logical.WrappingResponseWriter)
 		if !ok {
 			return logical.ErrorResponse("streaming not supported"), nil
 		}

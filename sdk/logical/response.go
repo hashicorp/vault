@@ -193,10 +193,36 @@ func RespondWithStatusCode(resp *Response, req *Request, code int) (*Response, e
 	return ret, nil
 }
 
+// HTTPResponseWriter is optionally added to a request object and can be used to
+// write directly to the HTTP response writer.
+type HTTPResponseWriter struct {
+	http.ResponseWriter
+	written *uint32
+}
+
+// NewHTTPResponseWriter creates a new HTTPResponseWriter object that wraps the
+// provided io.Writer.
+func NewHTTPResponseWriter(w http.ResponseWriter) *HTTPResponseWriter {
+	return &HTTPResponseWriter{
+		ResponseWriter: w,
+		written:        new(uint32),
+	}
+}
+
+// Write will write the bytes to the underlying io.Writer.
+func (w *HTTPResponseWriter) Write(bytes []byte) (int, error) {
+	atomic.StoreUint32(w.written, 1)
+	return w.ResponseWriter.Write(bytes)
+}
+
+// Written tells us if the writer has been written to yet.
+func (w *HTTPResponseWriter) Written() bool {
+	return atomic.LoadUint32(w.written) == 1
+}
+
 type WrappingResponseWriter interface {
 	http.ResponseWriter
 	Wrapped() http.ResponseWriter
-	Written() bool
 }
 
 type StatusHeaderResponseWriter struct {
@@ -204,30 +230,19 @@ type StatusHeaderResponseWriter struct {
 	wroteHeader bool
 	statusCode  int
 	headers     map[string][]*CustomHeader
-	written     *uint32
 }
 
-func NewStatusHeaderResponseWriter (w http.ResponseWriter) *StatusHeaderResponseWriter {
+func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*CustomHeader) *StatusHeaderResponseWriter {
 	return &StatusHeaderResponseWriter{
 		wrapped:     w,
 		wroteHeader: false,
 		statusCode:  200,
-		headers:     nil,
-		written:     new(uint32),
+		headers:     h,
 	}
-}
-
-// Written tells us if the writer has been written to yet.
-func (w *StatusHeaderResponseWriter) Written() bool {
-	return atomic.LoadUint32(w.written) == 1
 }
 
 func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {
 	return w.wrapped
-}
-
-func (w *StatusHeaderResponseWriter) SetHeaders(h map[string][]*CustomHeader) {
-	w.headers = h
 }
 
 func (w *StatusHeaderResponseWriter) Header() http.Header {
@@ -246,7 +261,6 @@ func (w *StatusHeaderResponseWriter) Write(buf []byte) (int, error) {
 	if !w.wroteHeader {
 		w.setCustomResponseHeaders(w.statusCode)
 	}
-	atomic.StoreUint32(w.written, 1)
 
 	return w.wrapped.Write(buf)
 }

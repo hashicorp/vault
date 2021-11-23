@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -128,9 +127,8 @@ func TestCustomResponseHeadersConfigInteractUiConfig(t *testing.T) {
 		t.Fatalf("custom header config should be configured in core")
 	}
 
-	hw := func(w http.ResponseWriter) *http.ResponseWriter {
-		return &w
-	}(httptest.NewRecorder())
+	w := httptest.NewRecorder()
+	hw := logical.NewHTTPResponseWriter(w)
 
 	// setting a header that already exist in custom headers
 	req := logical.TestRequest(t, logical.UpdateOperation, "config/ui/headers/X-Custom-Header")

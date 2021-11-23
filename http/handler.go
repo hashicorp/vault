@@ -305,17 +305,18 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		nw := logical.NewStatusHeaderResponseWriter(w)
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
+		var customHeaders map[string][]*logical.CustomHeader
 		if props.ListenerConfig != nil {
 			la := props.ListenerConfig.Address
 			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
 			if listenerCustomHeaders != nil {
-				nw.SetHeaders(listenerCustomHeaders.StatusCodeHeaderMap)
+				customHeaders = listenerCustomHeaders.StatusCodeHeaderMap
 			}
 		}
 
+		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders)
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		nw.Header().Set("Cache-Control", "no-store")
@@ -906,11 +907,8 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 	// additional output. Headers have already been sent. If the response writer
 	// is set but has not been written to it likely means there was some kind of
 	// error
-	if r.ResponseWriter != nil {
-		w, ok := (*r.ResponseWriter).(logical.WrappingResponseWriter)
-		if ok && w.Written() {
-			return nil, true, false
-		}
+	if r.ResponseWriter != nil && r.ResponseWriter.Written() {
+		return nil, true, false
 	}
 
 	if respondErrorCommon(w, r, resp, err) {
