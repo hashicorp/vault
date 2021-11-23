@@ -315,8 +315,8 @@ func TestHandler_MissingToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != 400 {
-		t.Fatalf("expected code 400, got: %d", resp.StatusCode)
+	if resp.StatusCode != 403 {
+		t.Fatalf("expected code 403, got: %d", resp.StatusCode)
 	}
 }
 
