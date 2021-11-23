@@ -1,7 +1,8 @@
 import IoUsecaseHero from 'components/io-usecase-hero'
 import IoUsecaseSection from 'components/io-usecase-section'
 import IoUsecaseCustomer from 'components/io-usecase-customer'
-// import IoCard from 'components/io-card'
+import IoCardContainer from 'components/io-card-container'
+import IoCard from 'components/io-card'
 import IoVideoCallout from 'components/io-video-callout'
 import IoUsecaseCallToAction from 'components/io-usecase-call-to-action'
 import s from './style.module.css'
@@ -101,6 +102,78 @@ export default function UseCases(): React.ReactElement {
           },
         ]}
       />
+
+      <div className={s.cards}>
+        <IoCardContainer
+          heading="Consul in practice"
+          description="How and why users deploy Consul"
+          label="Tutorials"
+          cta={{
+            url: '/',
+            text: 'Explore all',
+          }}
+          cardsPerRow={3}
+        >
+          <IoCard
+            link={{
+              url: '/',
+              type: 'inbound',
+            }}
+            heading="Dynamic secrets: database secrets engine"
+            description="Vault can generate secrets on-demand for some systems. For example, when an app needs to access an Amazon S3 bucket, it asks Vault ..."
+          />
+          <IoCard
+            link={{
+              url: '/',
+              type: 'inbound',
+            }}
+            heading="Dynamic secrets: database secrets engine"
+            description="Vault can generate secrets on-demand for some systems. For example, when an app needs to access an Amazon S3 bucket, it asks Vault ..."
+          />
+          <IoCard
+            link={{
+              url: '/',
+              type: 'inbound',
+            }}
+            heading="Dynamic secrets: database secrets engine"
+            description="Vault can generate secrets on-demand for some systems. For example, when an app needs to access an Amazon S3 bucket, it asks Vault ..."
+          />
+        </IoCardContainer>
+
+        <IoCardContainer
+          label="Docs"
+          cta={{
+            url: '/',
+            text: 'Explore all',
+          }}
+          cardsPerRow={3}
+        >
+          <IoCard
+            link={{
+              url: '/',
+              type: 'inbound',
+            }}
+            heading="Dynamic secrets: database secrets engine"
+            description="Vault can generate secrets on-demand for some systems. For example, when an app needs to access an Amazon S3 bucket, it asks Vault ..."
+          />
+          <IoCard
+            link={{
+              url: '/',
+              type: 'inbound',
+            }}
+            heading="Dynamic secrets: database secrets engine"
+            description="Vault can generate secrets on-demand for some systems. For example, when an app needs to access an Amazon S3 bucket, it asks Vault ..."
+          />
+          <IoCard
+            link={{
+              url: '/',
+              type: 'inbound',
+            }}
+            heading="Dynamic secrets: database secrets engine"
+            description="Vault can generate secrets on-demand for some systems. For example, when an app needs to access an Amazon S3 bucket, it asks Vault ..."
+          />
+        </IoCardContainer>
+      </div>
 
       <div className={s.callToAction}>
         <IoUsecaseCallToAction

@@ -7,7 +7,7 @@ import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-l
 import { productLogos } from './product-logos'
 import s from './style.module.css'
 
-interface IoCardProps {
+export interface IoCardProps {
   variant?: 'light' | 'gray' | 'dark'
   products?: Array<{
     name: keyof typeof productLogos

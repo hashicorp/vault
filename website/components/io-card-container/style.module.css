@@ -1,0 +1,54 @@
+.cardContainer {
+  position: relative;
+
+  & + .cardContainer {
+    margin-top: 132px;
+  }
+}
+
+.header {
+  text-align: center;
+}
+
+.heading {
+  margin: 0;
+  composes: g-type-display-2 from global;
+}
+
+.description {
+  margin: 8px 0 0;
+  composes: g-type-body-large from global;
+}
+
+.subHeader {
+  margin: 0 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  @nest .header + & {
+    margin-top: 64px;
+  }
+}
+
+.label {
+  margin: 0;
+  composes: g-type-display-4 from global;
+}
+
+.cardList {
+  list-style: none;
+
+  --columns: var(--length);
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(250px, 1fr));
+  gap: 32px;
+  overflow-x: auto;
+  margin: -4px;
+  padding: 4px;
+
+  @media (--medium-up) {
+    --columns: var(--per-row);
+  }
+}

@@ -9,6 +9,12 @@
 
 .videoCallout {
   margin-top: 132px;
+  margin-bottom: 64px;
+  composes: container;
+}
+
+.cards {
+  margin-top: 132px;
   margin-bottom: 132px;
   composes: container;
 }
