@@ -23,28 +23,16 @@ export default create({
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
-  createSecret: async function(path, key, value) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value)
-      .save();
+  createSecret: async function (path, key, value) {
+    return this.path(path).secretKey(key).secretValue(value).save();
   },
-  createSecretDontSave: async function(path, key, value) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value);
+  createSecretDontSave: async function (path, key, value) {
+    return this.path(path).secretKey(key).secretValue(value);
   },
-  createSecretWithMetadata: async function(path, key, value, maxVersion) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value)
-      .toggleMetadata()
-      .maxVersion(maxVersion)
-      .save();
+  createSecretWithMetadata: async function (path, key, value, maxVersion) {
+    return this.path(path).secretKey(key).secretValue(value).toggleMetadata().maxVersion(maxVersion).save();
   },
-  editSecret: async function(key, value) {
-    return this.secretKey(key)
-      .secretValue(value)
-      .save();
+  editSecret: async function (key, value) {
+    return this.secretKey(key).secretValue(value).save();
   },
 });

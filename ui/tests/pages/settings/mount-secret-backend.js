@@ -15,7 +15,7 @@ export default create({
   secretList: clickable('[data-test-navbar-item="secrets"]'),
   defaultTTLVal: fillable('input[data-test-ttl-value="Default Lease TTL"]'),
   defaultTTLUnit: fillable('[data-test-ttl-unit="Default Lease TTL"] [data-test-select="ttl-unit"]'),
-  enable: async function(type, path) {
+  enable: async function (type, path) {
     await this.visit();
     await settled();
     await this.mount(type, path);

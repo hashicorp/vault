@@ -38,22 +38,13 @@ export default {
 
   async generateCA(commonName = 'PKI CA', type = 'root') {
     if (type === 'intermediate') {
-      return await this.replaceCA()
-        .commonName(commonName)
-        .caType('intermediate')
-        .submit();
+      return await this.replaceCA().commonName(commonName).caType('intermediate').submit();
     }
-    return await this.replaceCA()
-      .commonName(commonName)
-      .submit();
+    return await this.replaceCA().commonName(commonName).submit();
   },
 
   async uploadCA(pem) {
-    return await this.replaceCA()
-      .uploadCert()
-      .enterCertAsText()
-      .pemBundle(pem)
-      .submit();
+    return await this.replaceCA().uploadCert().enterCertAsText().pemBundle(pem).submit();
   },
 
   async signIntermediate(commonName) {

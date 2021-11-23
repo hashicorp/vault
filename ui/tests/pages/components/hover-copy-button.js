@@ -15,6 +15,5 @@ export default {
 
   async mouseEnter() {
     await triggerEvent('[data-test-tooltip-trigger]', 'mouseenter');
-    await settled();
   },
 };

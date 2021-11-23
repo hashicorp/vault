@@ -28,9 +28,8 @@ import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
 import keys from 'vault/lib/keycodes';
 
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { set } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 import { isBlank, isNone } from '@ember/utils';
@@ -66,7 +65,7 @@ export default class SecretCreateOrUpdate extends Component {
       let adapter = this.store.adapterFor('secret-v2');
       let type = { modelName: 'secret-v2' };
       let query = { backend: this.args.model.backend };
-      adapter.query(this.store, type, query).then(result => {
+      adapter.query(this.store, type, query).then((result) => {
         this.secretPaths = result.data.keys;
       });
     }
@@ -143,7 +142,7 @@ export default class SecretCreateOrUpdate extends Component {
               .then(() => {
                 this.saveComplete(successCallback, key);
               })
-              .catch(e => {
+              .catch((e) => {
                 // when mode is not create the metadata error is handled in secret-edit-metadata
                 if (this.args.mode === 'create') {
                   this.error = e.errors.join(' ');
@@ -155,7 +154,7 @@ export default class SecretCreateOrUpdate extends Component {
           }
         }
       })
-      .catch(error => {
+      .catch((error) => {
         if (error instanceof ControlGroupError) {
           let errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
@@ -188,7 +187,7 @@ export default class SecretCreateOrUpdate extends Component {
     return false;
   }
 
-  @(task(function*(name, value) {
+  @(task(function* (name, value) {
     this.checkValidation(name, value);
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
