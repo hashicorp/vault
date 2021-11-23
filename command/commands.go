@@ -711,6 +711,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"kv metadata patch": func() (cli.Command, error) {
+			return &KVMetadataPatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"kv metadata get": func() (cli.Command, error) {
 			return &KVMetadataGetCommand{
 				BaseCommand: getBaseCommand(),
