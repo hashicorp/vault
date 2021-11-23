@@ -1497,8 +1497,24 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 	}
 
 	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: nextSigningKey.KeyID})
-	k.SigningKey = k.NextSigningKey
-	k.NextSigningKey = nextSigningKey
+
+	if k.NextSigningKey == nil {
+		signingKey, err := generateKeys(k.Algorithm)
+		if err != nil {
+			return err
+		}
+
+		k.SigningKey = signingKey
+		k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
+
+		if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
+			return err
+		}
+		logger.Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
+	} else {
+		k.SigningKey = k.NextSigningKey
+		k.NextSigningKey = nextSigningKey
+	}
 	k.NextRotation = now.Add(k.RotationPeriod)
 
 	// store named key (it was modified when rotate was called on it)
