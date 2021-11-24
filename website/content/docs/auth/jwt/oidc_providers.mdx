@@ -262,3 +262,148 @@ vault write auth/oidc/role/your_default_role \
 1. Save client ID and secret.
 
 Note your policy will need `oidc_scopes` to include `profile` to get a full profile ("[Fat Token](https://support.okta.com/help/s/article/Okta-Groups-or-Attribute-Missing-from-Id-Token)"). You will also need to configure bound audience along the lines of `"bound_audiences": ["api://default", "0a4........."]` if you are using the default authorization server.
+
+## Kubernetes
+
+Kubernetes can function as an OIDC provider such that Vault can validate its
+service account tokens using JWT/OIDC auth.
+
+-> **Note:** The JWT auth engine does **not** use Kubernetes' `TokenReview` API
+during authentication, and instead uses public key cryptography to verify the
+contents of JWTs. This means tokens that have been revoked by Kubernetes will
+still be considered valid by Vault until their expiry time. To mitigate this
+risk, use short TTLs for service account tokens or use
+[Kubernetes auth][/docs/auth/kubernetes] which _does_ use the `TokenReview` API.
+
+### Using service account issuer discovery
+
+Kubernetes cluster requirements:
+
+* `ServiceAccountIssuerDiscovery` feature gate enabled.
+   * Present from 1.18, defaults to true from 1.20.
+* Must use short-lived service account tokens when logging in.
+   * Tokens mounted into pods default to short-lived from 1.21.
+* kube-apiserver's `--service-account-issuer` flag is set to a URL that is
+  reachable from Vault. Public by default for most managed Kubernetes solutions.
+
+1. Ensure OIDC discovery URLs do not require authentication, as detailed
+   [here](k8s-sa-issuer-discovery):
+
+   ```bash
+   kubectl create clusterrolebinding oidc-reviewer  \
+      --clusterrole=system:service-account-issuer-discovery \
+      --group=system:unauthenticated
+   ```
+
+1. Enable and configure JWT auth in Vault.
+
+   1. If Vault is running in Kubernetes:
+
+      ```bash
+      kubectl exec vault-0 -- vault auth enable jwt
+      kubectl exec vault-0 -- vault write auth/jwt/config \
+         oidc_discovery_url=https://kubernetes.default.svc.cluster.local \
+         oidc_discovery_ca_pem=@/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      ```
+
+   1. Alternatively, if Vault is _not_ running in Kubernetes:
+
+      -> **Note:** When Vault is outside the cluster, the `$ISSUER` below may
+         or may not be reachable. If not, you can configure JWT auth using
+         [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
+
+      ```bash
+      # 1. Find the issuer URL of the cluster.
+      kubectl proxy &
+      ISSUER="$(curl --silent 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
+
+      # 2. Enable and configure the JWT auth mount.
+      vault auth enable jwt
+      vault write auth/jwt/config oidc_discovery_url="${ISSUER}"
+      ```
+
+1. Configure a role and log in as detailed below.
+
+[k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
+[k8s-token-audience]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#serviceaccounttokenprojection-v1-core
+
+### Using JWT validation public keys
+
+Kubernetes cluster requirements:
+
+* `ServiceAccountIssuerDiscovery` feature gate enabled.
+   * Present from 1.18, defaults to true from 1.20.
+   * This requirement can be avoided if you can access the Kubernetes master
+      nodes to read the public signing key directly from disk at
+      `/etc/kubernetes/pki/sa.pub`. In this case, you can also skip the step to
+      convert the key as it will already be in PEM format.
+* Must use short-lived service account tokens when logging in.
+   * Tokens mounted into pods default to short-lived from 1.21.
+
+This method can be useful if Kubernetes' API is not reachable from Vault or if
+you would like a single JWT auth mount to service multiple Kubernetes clusters
+by chaining their public signing keys.
+
+1. Fetch the service account signing public key from your cluster's JWKS URI.
+
+   ```bash
+   # 1. Find the issuer URL of the cluster.
+   kubectl proxy &
+   ISSUER="$(curl --silent 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
+
+   # 2. Query the jwks_uri specified in /.well-known/openid-configuration
+   # NB: You may need to run this from a pod within the cluster if the $ISSUER
+   # URL is not available outside the cluster.
+   curl "$(curl --silent "${ISSUER}/.well-known/openid-configuration" | jq -r '.jwks_uri')"
+   ```
+
+1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online
+   converter such as [this one][jwk-to-pem].
+
+1. Configure the JWT auth mount with those public keys.
+
+   ```bash
+   vault write auth/jwt/config \
+      jwt_validation_pubkeys="-----BEGIN PUBLIC KEY-----
+   MIIBIjANBgkqhkiG9...
+   -----END PUBLIC KEY-----","-----BEGIN PUBLIC KEY-----
+   MIIBIjANBgkqhkiG9...
+   -----END PUBLIC KEY-----"
+   ```
+
+1. Configure a role and log in as detailed below.
+
+[jwk-to-pem]: https://8gwifi.org/jwkconvertfunctions.jsp
+
+### Configuring a role and logging in
+
+Once your JWT auth mount is configured, you're ready to configure a role and
+log in.
+
+1. Create a role for JWT auth that the `default` service account from the
+   `default` namespace can use. The audience of tokens defaults to the same as
+   the issuer, but it is [configurable][k8s-token-audience].
+
+   ```bash
+   vault write auth/jwt/role/my-role \
+      role_type="jwt" \
+      bound_audiences="${ISSUER}" \
+      user_claim="sub" \
+      bound_subject="system:serviceaccount:default:default" \
+      policies="default" \
+      ttl="1h"
+   ```
+
+1. Pods or other clients with access to a service account JWT can then log in.
+
+   ```bash
+   vault write auth/jwt/login \
+      role=my-role \
+      jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
+   # OR equivalent to:
+   curl \
+      --request PUT \
+      --header "X-Vault-Request: true" \
+      --data '{"jwt":"<JWT-TOKEN-HERE>","role":"my-role"}' \
+      "${VAULT_ADDR}/v1/auth/jwt/login"
+   ```
