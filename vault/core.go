@@ -1039,7 +1039,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	switch {
-	case log.LevelFromString(conf.RawConfig.LogRequestsInfo) > 0:
+	case log.LevelFromString(conf.RawConfig.LogRequestsInfo) > log.NoLevel && log.LevelFromString(conf.RawConfig.LogRequestsInfo) < log.Off:
 		c.logRequestsInfo = conf.RawConfig.LogRequestsInfo
 	case conf.RawConfig.LogRequestsInfo != "":
 		c.logger.Warn("invalid log_requests_info", "level", conf.RawConfig.LogRequestsInfo)
@@ -3023,31 +3023,16 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
 }
 
-func (c *Core) logRequests(msg string, args ...interface{}) {
-	switch c.logRequestsInfo {
-	case "error":
-		c.Logger().Error(msg, args...)
-	case "warn":
-		c.Logger().Warn(msg, args...)
-	case "info":
-		c.Logger().Info(msg, args...)
-	case "debug":
-		c.Logger().Debug(msg, args...)
-	case "trace":
-		c.Logger().Trace(msg, args...)
-	}
-}
-
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
-		c.logRequests(fmt.Sprintf("failed to retrieve request with ID %v", reqID))
+		c.logger.Log(log.LevelFromString(c.logRequestsInfo), fmt.Sprintf("failed to retrieve request with ID %v", reqID))
 		return
 	}
 	// there is only one writer to this map, so skip checking for errors
 	reqData, _ := v.(*InFlightReqData)
-	c.logRequests("completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+	c.logger.Log(log.LevelFromString(c.logRequestsInfo), "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
 func (c *Core) ReloadLogRequestsInfo(){
@@ -3057,7 +3042,7 @@ func (c *Core) ReloadLogRequestsInfo(){
 	}
 	infoLevel := conf.(*server.Config).LogRequestsInfo
 	switch {
-	case log.LevelFromString(infoLevel) > 0:
+	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
 		c.logRequestsInfo = infoLevel
 	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_info", "level", infoLevel)

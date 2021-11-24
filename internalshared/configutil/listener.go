@@ -27,8 +27,12 @@ type ListenerProfiling struct {
 	UnusedKeys                       UnusedKeyMap `hcl:",unusedKeyPositions"`
 	UnauthenticatedPProfAccess       bool         `hcl:"-"`
 	UnauthenticatedPProfAccessRaw    interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
+}
+
+type ListenerInFlightRequestLogging struct {
+	UnusedKeys                       UnusedKeyMap `hcl:",unusedKeyPositions"`
 	UnauthenticatedInFlightAccess    bool         `hcl:"-"`
-	UnauthenticatedInFlightAccessRaw interface{}  `hcl:"unauthenticated_in_flight_request_access,alias:unauthenticatedInFlightAccessRaw"`
+	UnauthenticatedInFlightAccessRaw interface{}  `hcl:"unauthenticated_in_flight_requests_access,alias:unauthenticatedInFlightAccessRaw"`
 }
 
 // Listener is the listener configuration for the server.
@@ -89,8 +93,9 @@ type Listener struct {
 	SocketUser  string `hcl:"socket_user"`
 	SocketGroup string `hcl:"socket_group"`
 
-	Telemetry ListenerTelemetry `hcl:"telemetry"`
-	Profiling ListenerProfiling `hcl:"profiling"`
+	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
+	Profiling              ListenerProfiling              `hcl:"profiling"`
+	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
@@ -345,10 +350,16 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 
 				l.Profiling.UnauthenticatedPProfAccessRaw = nil
 			}
-			if l.Profiling.UnauthenticatedInFlightAccessRaw != nil {
-				if l.Profiling.UnauthenticatedInFlightAccess, err = parseutil.ParseBool(l.Profiling.UnauthenticatedInFlightAccessRaw); err != nil {
-					return multierror.Prefix(fmt.Errorf("invalid value for profiling.unauthenticated_in_flight_request_access: %w", err), fmt.Sprintf("listeners.%d", i))
+		}
+
+		// InFlight Request logging
+		{
+			if l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw != nil {
+				if l.InFlightRequestLogging.UnauthenticatedInFlightAccess, err = parseutil.ParseBool(l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for inflight_requests_logging.unauthenticated_in_flight_requests_access: %w", err), fmt.Sprintf("listeners.%d", i))
 				}
+
+				l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw = ""
 			}
 		}
 

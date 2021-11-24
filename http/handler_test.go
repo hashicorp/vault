@@ -11,7 +11,6 @@ import (
 	"net/textproto"
 	"net/url"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -321,73 +320,15 @@ func TestHandler_InFlightRequest(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if actual == nil {
-		t.Fatalf("")
+		t.Fatal("expected to get at least one in-flight request, got nil")
 	}
-}
-
-func TestHandler_InFlightRequestWithLoad(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
-
-	stop := make(chan string)
-
-	go func() {
-		i := 0
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				break
-			}
-			// WRITE
-			secResp := testHttpPut(t, token, addr+"/v1/secret/foo"+strconv.Itoa(i), map[string]interface{}{
-				"data": "bar",
-			})
-			testResponseStatus(t, secResp, 204)
-			i++
+	for _, v := range actual {
+		reqInfo, ok := v.(map[string]interface{})
+		if !ok {
+			t.Fatal("failed to read in-flight request")
 		}
-	}()
-
-	timeout := time.After(10 * time.Second)
-
-	for {
-		select {
-		case <-timeout:
-			stop <- "done"
-			t.Fatalf("could not capture any in-flight-req")
-			return
-		default:
-		}
-		req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		req.Header.Set(consts.AuthHeaderName, token)
-
-		client := cleanhttp.DefaultClient()
-		resp, err := client.Do(req)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-
-		if resp == nil {
-			t.Fatalf("nil response")
-		}
-
-		var inFlightReqData map[string]interface{}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &inFlightReqData)
-
-		if inFlightReqData == nil {
-			t.Fatalf("")
-		}
-
-		if inFlightReqData != nil || len(inFlightReqData) > 0 {
-			stop <- "done"
-			return
+		if reqInfo["request_path"] != "/v1/sys/in-flight-req" {
+			t.Fatalf("expected /v1/sys/in-flight-req in-flight request path, got %s", actual["request_path"])
 		}
 	}
 }

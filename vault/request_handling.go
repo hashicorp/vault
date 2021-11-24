@@ -440,9 +440,9 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	}
 
 	ctx = namespace.ContextWithNamespace(ctx, ns)
-	inFlightReqID, ok := httpCtx.Value("in-flight-reqID").(string)
+	inFlightReqID, ok := httpCtx.Value(logical.CtxKeyInFlightRequestID{}).(string)
 	if ok {
-		ctx = context.WithValue(ctx, "in-flight-reqID", inFlightReqID)
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
 	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 
@@ -778,14 +778,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	// Updating in-flight request data with client/entity ID
-	inFlightReqID, ok := ctx.Value("in-flight-reqID").(string)
-	if ok {
-		switch {
-		case req.ClientID != "":
-			c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
-		case req.EntityID != "":
-			c.UpdateInFlightReqData(inFlightReqID, req.EntityID)
-		}
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -1181,6 +1176,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+	}
+
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct

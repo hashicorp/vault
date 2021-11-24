@@ -27,7 +27,7 @@ func TestInFlightRequestUnauthenticated(t *testing.T) {
 	props := &vault.HandlerProperties{
 		Core: core,
 		ListenerConfig: &configutil.Listener{
-			Profiling: configutil.ListenerProfiling{
+			InFlightRequestLogging: configutil.ListenerInFlightRequestLogging{
 				UnauthenticatedInFlightAccess: true,
 			},
 		},

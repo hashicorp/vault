@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -26,6 +25,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -195,7 +195,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 		}
 
-		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedInFlightAccess {
+		if props.ListenerConfig != nil && props.ListenerConfig.InFlightRequestLogging.UnauthenticatedInFlightAccess {
 			mux.Handle("/v1/sys/in-flight-req", handleUnAuthenticatedInFlightRequest(core))
 		} else {
 			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
@@ -385,12 +385,12 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}
 		// adding an entry to the context to enable updating in-flight
 		// data with ClientID in the logical layer
-		r = r.WithContext(context.WithValue(r.Context(), "in-flight-reqID", inFlightReqID))
+		r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyInFlightRequestID{}, inFlightReqID))
 
 		// extracting the client address to be included in the in-flight request
 		var clientAddr string
-		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
-		if !headersOK || len(headers) == 0 {
+		headers := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
+		if len(headers) == 0 {
 			clientAddr = r.RemoteAddr
 		}else {
 			clientAddr = headers[0]
