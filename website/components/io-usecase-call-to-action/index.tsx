@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import * as React from 'react'
 import classNames from 'classnames'
 import Button from '@hashicorp/react-button'
@@ -12,6 +13,8 @@ interface IoUsecaseCallToActionProps {
     text: string
     url: string
   }>
+  // TODO document intended usage
+  pattern: string
 }
 
 export default function IoUsecaseCallToAction({
@@ -20,6 +23,7 @@ export default function IoUsecaseCallToAction({
   heading,
   description,
   links,
+  pattern,
 }: IoUsecaseCallToActionProps): React.ReactElement {
   return (
     <div
@@ -52,7 +56,15 @@ export default function IoUsecaseCallToAction({
           })}
         </div>
       </div>
-      <span className={s.pattern} />
+      <div className={s.pattern}>
+        <Image
+          src={pattern}
+          layout="fill"
+          objectFit="cover"
+          objectPosition="center left"
+          alt=""
+        />
+      </div>
     </div>
   )
 }

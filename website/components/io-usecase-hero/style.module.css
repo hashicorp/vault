@@ -3,13 +3,6 @@
   max-width: 1600px;
   margin-right: auto;
   margin-left: auto;
-  padding-top: 64px;
-  padding-bottom: 64px;
-
-  @media (--medium-up) {
-    padding-top: 132px;
-    padding-bottom: 132px;
-  }
 
   &::before {
     content: '';
@@ -33,14 +26,31 @@
 }
 
 .container {
-  composes: g-grid-container from global;
+  @media (--medium-up) {
+    display: grid;
+    grid-template-columns: 1fr max-content 1fr;
+    gap: 32px;
+  }
+}
+
+.pattern {
+  margin-left: 24px;
+  transform: translateY(48px);
+  position: relative;
 }
 
 .content {
+  position: relative;
   max-width: 520px;
   width: 100%;
   margin-right: auto;
   margin-left: auto;
+  padding: 64px 24px;
+
+  @media (--medium-up) {
+    padding-top: 132px;
+    padding-bottom: 132px;
+  }
 }
 
 .eyebrow {

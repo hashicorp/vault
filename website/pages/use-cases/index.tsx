@@ -1,5 +1,4 @@
 import IoUsecaseHero from 'components/io-usecase-hero'
-// import IoUsecaseSection from 'components/io-usecase-section'
 import IoUsecaseSections from 'components/io-usecase-sections'
 import IoUsecaseCustomer from 'components/io-usecase-customer'
 import IoCardContainer from 'components/io-card-container'
@@ -15,6 +14,7 @@ export default function UseCases(): React.ReactElement {
         eyebrow="Common use case"
         heading="Credential rotation with Vault"
         description="Eliminate long standing shared credentials and reduce risk of breach and credential leakage with automated database credential rotation"
+        pattern="/img/usecase-hero-pattern.svg"
       />
 
       <IoUsecaseSections
@@ -163,6 +163,7 @@ export default function UseCases(): React.ReactElement {
               url: '/',
             },
           ]}
+          pattern="/img/usecase-callout-pattern.svg"
         />
       </div>
 

@@ -5,7 +5,7 @@
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   gap: 0 32px;
-  padding: 88px 32px;
+  padding: 32px;
   background-color: var(--background-color);
   border-radius: 6px;
 
@@ -20,7 +20,7 @@
   @media (--medium-up) {
     --columns: 12;
 
-    padding: 124px 0;
+    padding: 0;
   }
 }
 
@@ -31,8 +31,7 @@
 
   @media (--medium-up) {
     grid-column: 1 / 6;
-    padding-left: 64px;
-    padding-right: 32px;
+    padding: 88px 32px 88px 64px;
   }
 }
 
@@ -41,6 +40,7 @@
 
   @media (--medium-up) {
     grid-column: 6 / 11;
+    padding: 88px 0;
   }
 }
 
@@ -56,15 +56,11 @@
 }
 
 .pattern {
+  position: relative;
+  display: none;
+
   @media (--medium-up) {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: calc((100% * 2 / 12) - 32px);
-    background-image: url('./pattern.svg');
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center left;
+    grid-column: 11 / -1;
+    display: flex;
   }
 }
