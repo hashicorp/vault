@@ -58,7 +58,7 @@ func kvMetadataPutWithRetry(t *testing.T, client *api.Client, args []string, std
 	})
 }
 
-func TestKvMetadataPatchEmptyArgs(t *testing.T) {
+func TestKvMetadataPatchCommand_EmptyArgs(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -83,7 +83,7 @@ func TestKvMetadataPatchEmptyArgs(t *testing.T) {
 	}
 }
 
-func TestKvMetadataPatchFlags(t *testing.T) {
+func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -185,7 +185,7 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 				t.Fatalf("kv-v2 mount error: %#v", err)
 			}
 
-			putArgs := []string{"-custom-metadata=foo=abc", "-custom-metadata=bar=def", secretPath}
+			putArgs := []string{"-cas-required=true", secretPath}
 			code, combined := kvMetadataPutWithRetry(t, client, putArgs, nil)
 
 			if code != 0 {
@@ -197,15 +197,15 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 				t.Fatalf("metadata read failed, err: %#v", err)
 			}
 
-			args := append(tc.args, secretPath)
+			patchArgs := append(tc.args, secretPath)
 
-			code, combined = kvMetadataPatchWithRetry(t, client, args, nil)
+			code, combined = kvMetadataPatchWithRetry(t, client, patchArgs, nil)
 
 			if !strings.Contains(combined, tc.out) {
-				t.Fatalf("expected output to be %q but was %q for patch cmd with args %#v", tc.out, combined, args)
+				t.Fatalf("expected output to be %q but was %q for patch cmd with args %#v", tc.out, combined, patchArgs)
 			}
 			if code != tc.code {
-				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v", tc.code, code, args)
+				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v", tc.code, code, patchArgs)
 			}
 
 			patchedMetadata, err := client.Logical().Read(metadataPath)
@@ -231,5 +231,47 @@ func TestKvMetadataPatchFlags(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestKvMetadataPatchCommand_CasWarning(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	basePath := "kv/"
+	if err := client.Sys().Mount(basePath, &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount error: %#v", err)
+	}
+
+	secretPath := basePath + "my-secret"
+
+	args := []string{"-cas-required=true", secretPath}
+	code, combined := kvMetadataPutWithRetry(t, client, args, nil)
+
+	if code != 0 {
+		t.Fatalf("metadata put failed, code: %d, output: %s", code, combined)
+	}
+
+	casConfig := map[string]interface{}{
+		"cas_required": true,
+	}
+
+	_, err := client.Logical().Write(basePath + "config", casConfig)
+	if err != nil {
+		t.Fatalf("config write failed, err: #%v", err)
+	}
+
+	args = []string{"-cas-required=false", secretPath}
+	code, combined = kvMetadataPatchWithRetry(t, client, args, nil)
+
+	if code != 0 {
+		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v", code, args)
+	}
+
+	expectedOutput := "\"cas_required\" set to false, but is mandated by backend config"
+	if !strings.Contains(combined, expectedOutput) {
+		t.Fatalf("expected output to be %q but was %q for patch cmd with args %#v", expectedOutput, combined, args)
 	}
 }
