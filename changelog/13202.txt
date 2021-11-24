@@ -1,0 +1,3 @@
+```release-note:feature
+/sys/mounts/:path/tune: Add `allowed_managed_keys` field to mount config which is a list of managed key registry entry names that the mount in question is allowed to access.
+```

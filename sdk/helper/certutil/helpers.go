@@ -557,11 +557,12 @@ func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) 
 		// To match previous behavior (and ignoring recommendations of hash
 		// size to match RSA key sizes), default to SHA-2-256.
 		*hashBits = 256
-	} /* else if keyType == "ed25519" {
+	} else if keyType == "ed25519" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
 		// certificate signing.
-	} */
+		return nil
+	}
 
 	// Note that this check must come after we've selected a value for
 	// hashBits above, in the event it was left as the default, but we

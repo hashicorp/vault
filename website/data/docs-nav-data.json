@@ -12,19 +12,6 @@
     "divider": true
   },
   {
-    "title": "Feature Deprecation Notice and Plans",
-    "routes": [
-      {
-        "title": "Overview",
-        "path": "deprecation"
-      },
-      {
-        "title": "FAQ",
-        "path": "deprecation/faq"
-      }
-    ]
-  },
-  {
     "title": "Browser Support",
     "path": "browser-support"
   },
@@ -1745,7 +1732,22 @@
   {
     "divider": true
   },
-
+  {
+    "title": "Deprecation Notices",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "deprecation"
+      },
+      {
+        "title": "FAQ",
+        "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
   {
     "title": "Glossary",
     "path": "glossary"
