@@ -10,7 +10,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 
 	"github.com/keybase/go-crypto/openpgp"

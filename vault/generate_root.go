@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/shamir"
 )
