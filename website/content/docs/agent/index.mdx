@@ -20,7 +20,7 @@ If the client can securely acquire the token, all subsequent requests (e.g., req
 database credentials, read key/value secrets) are processed based on the
 trust established by a successful authentication.
 
-This means that the client application must invoke the Vault API to authenticate
+This means that client application must invoke the Vault API to authenticate
 with Vault and manage the acquired token in addition to invoking the API to
 request secrets from Vault. This implies code changes to client applications
 along with additional testing and maintenance of the application.
