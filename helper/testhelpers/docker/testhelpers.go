@@ -145,7 +145,9 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 			})
 			if err == nil {
 				b, err := ioutil.ReadAll(rc)
-				if err == nil {
+				if err != nil {
+					d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs, err=%v, read: %s", err, string(b)))
+				} else {
 					d.RunOptions.LogConsumer(string(b))
 				}
 			}
