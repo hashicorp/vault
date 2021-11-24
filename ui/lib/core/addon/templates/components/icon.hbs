@@ -1,12 +1,11 @@
 {{#if this.isFlightIcon}}
   <FlightIcon
     @name={{@name}}
-    @size={{this.flightIconSize}}
-    class={{this.iconClass}}
+    @size={{@size}}
     ...attributes
   />
 {{else}}
-  <span class="hs-icon {{this.iconClass}}" ...attributes>
+  <span class="hs-icon {{this.hsIconClass}}" ...attributes>
     {{svg-jar @name}}
   </span>
 {{/if}}

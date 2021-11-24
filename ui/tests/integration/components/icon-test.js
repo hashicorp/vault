@@ -13,6 +13,7 @@ module('Integration | Component | icon', function(hooks) {
 
     await render(hbs`<Icon @name="vault-logo" />`);
     assert.dom('.vault-logo').exists('inlines the SVG');
+    assert.dom('.hs-icon').hasClass('hs-icon-l', 'Default hs class applied');
 
     await render(hbs`<Icon class="ah" aria-hidden="true" />`);
     assert.dom('.ah').hasAttribute('aria-hidden', 'true', 'renders aria-hidden');
@@ -20,25 +21,25 @@ module('Integration | Component | icon', function(hooks) {
     await render(hbs`<Icon class="al" aria-label="Testing" />`);
     assert.dom('.al').hasAttribute('aria-label', 'Testing', 'renders aria-label');
 
-    await render(hbs`<Icon @name="vault-logo" @sizeClass="s"/>`);
-    assert.dom('.hs-icon').hasClass('hs-icon-s', 'adds the size class');
+    await render(hbs`<Icon @name="vault-logo" @size="24"/>`);
+    assert.dom('.hs-icon').hasClass('hs-icon-xl', 'adds the larger size class');
 
     let promise = waitForError();
-    render(hbs`<Icon @name="vault-logo" @sizeClass="no"/>`);
+    render(hbs`<Icon @name="vault-logo" @size="12"/>`);
     let err = await promise;
-    assert.ok(
-      err.message.includes('The sizeClass property of'),
-      "errors when passed a sizeClass that's not allowed"
+    assert.equal(
+      err.message,
+      'Assertion Failed: Icon component size argument must be either "16" or "24"',
+      'Error is thrown when supported size is not provided'
     );
   });
 
   test('it should render FlightIcon', async function(assert) {
-    assert.expect(5);
+    assert.expect(4);
 
-    await render(hbs`<Icon @name="x" @sizeClass="xl" />`);
+    await render(hbs`<Icon @name="x" />`);
     assert.dom('.flight-icon').exists('FlightIcon renders when provided name of icon in set');
-    assert.dom('.flight-icon').hasClass('hs-icon-xl', 'hs icon class applied to component');
-    assert.dom('.flight-icon').hasAttribute('width', '24', 'Correct size applied based on sizeClass');
+    assert.dom('.flight-icon').hasAttribute('width', '16', 'Default size applied svg');
 
     await render(hbs`<Icon @name="x" @size="24" />`);
     assert.dom('.flight-icon').hasAttribute('width', '24', 'Size applied to svg');
@@ -46,9 +47,10 @@ module('Integration | Component | icon', function(hooks) {
     const promise = waitForError();
     render(hbs`<Icon @name="x" @size="12"/>`);
     const err = await promise;
-    assert.ok(
-      err.message.includes(`must be either '16' or '24'`),
-      "errors when passed a size that's not allowed"
+    assert.equal(
+      err.message,
+      'Assertion Failed: Icon component size argument must be either "16" or "24"',
+      'Error is thrown when supported size is not provided'
     );
   });
 });

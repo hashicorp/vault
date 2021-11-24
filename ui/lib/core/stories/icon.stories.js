@@ -34,9 +34,7 @@ storiesOf('Icon', module)
                 {{type}}
               </td>
               <td>
-                <span class="hs-icon {{concat "hs-icon-" (if size size "m")}}">
-                  {{svg-jar type}}
-                </span>
+                <Icon @name={{type}} @size={{size}} />
               </td>
               {{#let (get structureIconMap type) as |flightIcon|}}
                 <td>
@@ -48,7 +46,7 @@ storiesOf('Icon', module)
                 </td>
                 <td>
                   {{#if flightIcon}}
-                    <Icon @name={{flightIcon}} @sizeClass={{size}} />
+                    <Icon @name={{flightIcon}} @size={{size}} />
                   {{else}}
                     &mdash;
                   {{/if}}
@@ -78,9 +76,7 @@ storiesOf('Icon', module)
                 {{localIcon}}
               </td>
               <td>
-                <span class="hs-icon {{concat "hs-icon-" (if size size "m")}}">
-                  {{svg-jar localIcon}}
-                </span>
+                <Icon @name={{localIcon}} @size={{size}} />
               </td>
               <td>
                 {{#if flightIcon}}
@@ -91,7 +87,7 @@ storiesOf('Icon', module)
               </td>
               <td>
                 {{#if flightIcon}}
-                  <Icon @name={{flightIcon}} @sizeClass={{size}} />
+                  <Icon @name={{flightIcon}} @size={{size}} />
                 {{else}}
                   &mdash;
                 {{/if}}
@@ -105,7 +101,7 @@ storiesOf('Icon', module)
         types: icons,
         structureIconMap,
         localIconMap,
-        size: select('Size', ['s', 'm', 'l', 'xl', 'xxl'], 'm'),
+        size: select('Size', ['16', '24'], '16'),
       },
     }),
     { notes }
