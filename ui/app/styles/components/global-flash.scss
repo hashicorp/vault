@@ -10,7 +10,10 @@
   .message {
     box-shadow: $box-shadow-high;
     .message-body {
-      word-break: break-all;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      word-break: break-word;
+      white-space: pre-wrap;
     }
   }
 }

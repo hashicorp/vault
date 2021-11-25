@@ -37,8 +37,14 @@ jobs:
             # "Enhancement is not a valid type of changelog entry, but it's a common mistake.
             echo "Found invalid type (enhancement) in changelog - did you mean improvement?"
             exit 1
+          elif grep -q ':changes$' $changelog_files; then
+            echo "Found invalid type (changes) in changelog - did you mean change?"
+            exit 1
           elif grep -q ':bugs$' $changelog_files; then
             echo "Found invalid type (bugs) in changelog - did you mean bug?"
+            exit 1
+          elif grep -q ':fix$' $changelog_files; then
+            echo "Found invalid type (fix) in changelog - did you mean bug?"
             exit 1
           elif ! grep -q '```release-note:' $changelog_files; then
             # People often make changelog files like ```changelog:, which is incorrect.

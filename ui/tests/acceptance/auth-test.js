@@ -91,18 +91,22 @@ module('Acceptance | auth', function(hooks) {
   test('it shows the token warning beacon on the menu', async function(assert) {
     let authService = this.owner.lookup('service:auth');
     await authPage.login();
+    await settled();
     await consoleComponent.runCommands([
       'write -field=client_token auth/token/create policies=default ttl=1h',
     ]);
     let token = consoleComponent.lastTextOutput;
     await logout.visit();
+    await settled();
     await authPage.login(token);
+    await settled();
     this.clock.tick(authService.IDLE_TIMEOUT);
     authService.shouldRenew();
     await settled();
     assert.dom('[data-test-allow-expiration="true"]').exists('shows expiration beacon');
 
     await visit('/vault/access');
+    await settled();
     assert.dom('[data-test-allow-expiration="true"]').doesNotExist('hides beacon when the api is used again');
   });
 

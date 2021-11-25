@@ -244,7 +244,7 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
-			"parsing \"34日\": invalid syntax",
+			"unknown unit \"\\xe6\\x97\\xa5\" in duration",
 			1,
 			"-test-server-config",
 		},

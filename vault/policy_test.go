@@ -83,6 +83,9 @@ path "test/req" {
 	capabilities = ["create", "sudo"]
 	required_parameters = ["foo"]
 }
+path "test/patch" {
+	capabilities = ["patch"]
+}
 path "test/mfa" {
 	capabilities = ["create", "sudo"]
 	mfa_methods = ["my_totp", "my_totp2"]
@@ -242,6 +245,13 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				RequiredParameters: []string{"foo"},
+			},
+		},
+		{
+			Path:         "test/patch",
+			Capabilities: []string{"patch"},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (PatchCapabilityInt),
 			},
 		},
 		{

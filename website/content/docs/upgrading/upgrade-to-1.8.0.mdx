@@ -27,6 +27,9 @@ The following API endpoints have been deprecated and will be removed in a future
 * `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
   in GCP Secrets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
 
+-> **Note:** Policies containing globs should be avoided when giving users read access
+to `/gcp/roleset` to avoid giving users permissions to generate tokens.
+
 ## Go Version
 
 Vault 1.8.0 is built with Go 1.16. Please review the [Go Release
@@ -39,6 +42,9 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
 
 ## Known Issues
 
+- MSSQL integrations (storage and secrets engine) will crash with a "panic: not implemented" error
+  ([#12830](https://github.com/hashicorp/vault/issues/12830)). This affects Vault versions
+  1.8.0 and up. It will be fixed in the next minor update.
 - Vault Enterprise binaries for `arm64` architectures will crash immediately when using production-ready storage backends.  This issue is addressed in Vault 1.8.1.
 - AWS Auth using the [EC2 method](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method)
   fails with the error `failed to verify the signature`. This effects 1.8.0 and 1.8.1 and there
@@ -48,3 +54,7 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
   the defaults when a new package was installed. This
   [issue](https://github.com/hashicorp/vault/issues/12275) affects RedHat
   packages for Vault 1.8.0 and the 1.8.1-0 package, and is fixed in 1.8.1-1 and up.
+- The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give
+  users the ability to generate tokens and key if globs are used in policies. To avoid issues like this,
+  globs should be avoided in policies to help adhere to the principle of least privilege. See the 
+  [roleset documentation](/docs/secrets/gcp#rolesets) for more information.

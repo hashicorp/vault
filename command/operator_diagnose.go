@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -248,6 +249,42 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	if config == nil {
 		return fmt.Errorf("No vault server configuration found.")
 	}
+
+	diagnose.Test(ctx, "Check Telemetry", func(ctx context.Context) (err error) {
+		if config.Telemetry == nil {
+			diagnose.Warn(ctx, "Telemetry is using default configuration")
+			diagnose.Advise(ctx, "By default only Prometheus and JSON metrics are available.  Ignore this warning if you are using telemetry or are using these metrics and are satisfied with the default retention time and gauge period.")
+		} else {
+			t := config.Telemetry
+			// If any Circonus setting is present but we're missing the basic fields...
+			if coalesce(t.CirconusAPIURL, t.CirconusAPIToken, t.CirconusCheckID, t.CirconusCheckTags, t.CirconusCheckSearchTag,
+				t.CirconusBrokerID, t.CirconusBrokerSelectTag, t.CirconusCheckForceMetricActivation, t.CirconusCheckInstanceID,
+				t.CirconusCheckSubmissionURL, t.CirconusCheckDisplayName) != nil {
+				if t.CirconusAPIURL == "" {
+					return errors.New("incomplete Circonus telemetry configuration, missing circonus_api_url")
+				} else if t.CirconusAPIToken != "" {
+					return errors.New("incomplete Circonus telemetry configuration, missing circonus_api_token")
+				}
+			}
+			if len(t.DogStatsDTags) > 0 && t.DogStatsDAddr == "" {
+				return errors.New("incomplete DogStatsD telemetry configuration, missing dogstatsd_addr, while dogstatsd_tags specified")
+			}
+
+			// If any Stackdriver setting is present but we're missing the basic fields...
+			if coalesce(t.StackdriverNamespace, t.StackdriverLocation, t.StackdriverDebugLogs, t.StackdriverNamespace) != nil {
+				if t.StackdriverProjectID == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_project_id")
+				}
+				if t.StackdriverLocation == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_location")
+				}
+				if t.StackdriverNamespace == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_namespace")
+				}
+			}
+		}
+		return nil
+	})
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
@@ -674,5 +711,14 @@ SEALFAIL:
 		}
 		return nil
 	})
+	return nil
+}
+
+func coalesce(values ...interface{}) interface{} {
+	for _, val := range values {
+		if val != nil && val != "" {
+			return val
+		}
+	}
 	return nil
 }

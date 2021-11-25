@@ -368,3 +368,22 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 
 	return &result, err
 }
+
+// PutRaftAutopilotConfiguration allows modifying the raft autopilot configuration
+func (c *Sys) PutRaftAutopilotConfiguration(opts *AutopilotConfig) error {
+	r := c.c.NewRequest("POST", "/v1/sys/storage/raft/autopilot/configuration")
+
+	if err := r.SetJSONBody(opts); err != nil {
+		return err
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}

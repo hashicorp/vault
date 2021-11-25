@@ -99,7 +99,7 @@ func (c *AuditListCommand) Run(args []string) int {
 	switch Format(c.UI) {
 	case "table":
 		if len(audits) == 0 {
-			c.UI.Output(fmt.Sprintf("No audit devices are enabled."))
+			c.UI.Output("No audit devices are enabled.")
 			return 2
 		}
 

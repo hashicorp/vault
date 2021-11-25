@@ -16,6 +16,12 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
+var DefaultCustomHeaders = map[string]map[string]string{
+	"default": {
+		"Strict-Transport-Security": configutil.StrictTransportSecurity,
+	},
+}
+
 func boolPointer(x bool) *bool {
 	return &x
 }
@@ -30,8 +36,9 @@ func testConfigRaftRetryJoin(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:8200",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:8200",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 			DisableMlock: true,
@@ -62,8 +69,9 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -172,12 +180,14 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:444",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:444",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -334,8 +344,9 @@ func testLoadConfigFileIntegerAndBooleanValuesCommon(t *testing.T, path string) 
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:8200",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:8200",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 			DisableMlock: true,
@@ -377,8 +388,9 @@ func testLoadConfigFile(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -486,7 +498,7 @@ func testUnknownFieldValidation(t *testing.T) {
 	for _, er1 := range errors {
 		found := false
 		if strings.Contains(er1.String(), "sentinel") {
-			//This happens on OSS, and is fine
+			// This happens on OSS, and is fine
 			continue
 		}
 		for _, ex := range expected {
@@ -523,8 +535,9 @@ func testLoadConfigFile_json(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -608,8 +621,9 @@ func testLoadConfigDir(t *testing.T) {
 
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 
@@ -818,12 +832,51 @@ listener "tcp" {
 					Profiling: configutil.ListenerProfiling{
 						UnauthenticatedPProfAccess: true,
 					},
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 		},
 	}
 	config.Prune()
 	if diff := deep.Equal(config, *expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func testParseSockaddrTemplate(t *testing.T) {
+	config, err := ParseConfig(`
+api_addr = <<EOF
+{{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}
+EOF
+listener "tcp" {
+	address = <<EOF
+{{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:443
+EOF
+	cluster_address = <<EOF
+{{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:8201
+EOF
+	tls_disable = true
+}`, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		APIAddr: "127.0.0.1",
+		SharedConfig: &configutil.SharedConfig{
+			Listeners: []*configutil.Listener{
+				{
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					ClusterAddress:        "127.0.0.1:8201",
+					TLSDisable:            true,
+					CustomResponseHeaders: DefaultCustomHeaders,
+				},
+			},
+		},
+	}
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
 	}
 }
@@ -843,8 +896,9 @@ func testParseSeals(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 			Seals: []*configutil.KMS{
@@ -896,8 +950,9 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			Listeners: []*configutil.Listener{
 				{
-					Type:    "tcp",
-					Address: "127.0.0.1:443",
+					Type:                  "tcp",
+					Address:               "127.0.0.1:443",
+					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
 

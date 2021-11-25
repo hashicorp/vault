@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	_ "github.com/denisenkom/go-mssqldb"
@@ -30,6 +31,9 @@ type MSSQL struct {
 	*connutil.SQLConnectionProducer
 
 	usernameProducer template.StringTemplate
+
+	// A flag to let us know to skip cross DB queries and server login checks
+	containedDB bool
 }
 
 func New() (interface{}, error) {
@@ -93,6 +97,20 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template - did you reference a field that isn't available? : %w", err)
 	}
+
+	containedDB := false
+	containedDBRaw, err := strutil.GetString(req.Config, "contained_db")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve contained_db: %w", err)
+	}
+	if containedDBRaw != "" {
+		containedDB, err = strconv.ParseBool(containedDBRaw)
+		if err != nil {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("parsing error: incorrect boolean operator provided for contained_db: %w", err)
+		}
+	}
+
+	m.containedDB = containedDB
 
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
@@ -199,6 +217,19 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	db, err := m.getConnection(ctx)
 	if err != nil {
 		return err
+	}
+
+	// Check if DB is contained
+	if m.containedDB {
+		revokeStmt, err := db.PrepareContext(ctx, fmt.Sprintf("DROP USER IF EXISTS [%s]", username))
+		if err != nil {
+			return err
+		}
+		defer revokeStmt.Close()
+		if _, err := revokeStmt.ExecContext(ctx); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// First disable server login
@@ -311,7 +342,7 @@ func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) 
 
 func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	stmts := changePass.Statements.Commands
-	if len(stmts) == 0 {
+	if len(stmts) == 0 && !m.containedDB {
 		stmts = []string{alterLoginSQL}
 	}
 
@@ -329,12 +360,16 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 		return err
 	}
 
-	var exists bool
+	// Since contained DB users do not have server logins, we
+	// only query for a login if DB is not a contained DB
+	if !m.containedDB {
+		var exists bool
 
-	err = db.QueryRowContext(ctx, "SELECT 1 FROM master.sys.server_principals where name = N'$1'", username).Scan(&exists)
+		err = db.QueryRowContext(ctx, "SELECT 1 FROM master.sys.server_principals where name = N'$1'", username).Scan(&exists)
 
-	if err != nil && err != sql.ErrNoRows {
-		return err
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
 	}
 
 	tx, err := db.BeginTx(ctx, nil)

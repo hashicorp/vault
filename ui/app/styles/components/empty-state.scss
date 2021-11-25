@@ -42,6 +42,8 @@
 
 .empty-state-actions {
   margin-top: $spacing-xs;
+  display: flex;
+  justify-content: space-between;
 
   a,
   .link,
@@ -54,6 +56,7 @@
 
   > * + * {
     margin-left: $spacing-s;
+    margin-right: $spacing-s;
   }
 }
 

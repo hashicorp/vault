@@ -152,6 +152,7 @@ var jsonConfigDefault = []byte(`
   "groupattr": "cn",
   "upndomain": "",
   "userattr": "cn",
+  "userfilter": "({{.UserAttr}}={{.Username}})",
   "certificate": "",
   "client_tls_cert": "",
   "client_tsl_key": "",

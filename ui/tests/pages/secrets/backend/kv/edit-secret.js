@@ -29,6 +29,19 @@ export default create({
       .secretValue(value)
       .save();
   },
+  createSecretDontSave: async function(path, key, value) {
+    return this.path(path)
+      .secretKey(key)
+      .secretValue(value);
+  },
+  createSecretWithMetadata: async function(path, key, value, maxVersion) {
+    return this.path(path)
+      .secretKey(key)
+      .secretValue(value)
+      .toggleMetadata()
+      .maxVersion(maxVersion)
+      .save();
+  },
   editSecret: async function(key, value) {
     return this.secretKey(key)
       .secretValue(value)

@@ -34,7 +34,7 @@ const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
   await connectionPage.visitCreate({ backend });
   await connectionPage.dbPlugin(plugin);
   await connectionPage.name(name);
-  await connectionPage.url(`mongodb://127.0.0.1:4321/${name}`);
+  await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
   await connectionPage.toggleVerify();
   await connectionPage.save();
   await connectionPage.enable();
@@ -42,6 +42,26 @@ const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
 };
 
 const connectionTests = [
+  {
+    name: 'elasticsearch-connection',
+    plugin: 'elasticsearch-database-plugin',
+    elasticUser: 'username',
+    elasticPassword: 'password',
+    url: 'http://127.0.0.1:9200',
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom('[data-test-input="ca_cert"]').exists(`CA certificate field exists for ${name}`);
+      assert.dom('[data-test-input="ca_path"]').exists(`CA path field exists for ${name}`);
+      assert.dom('[data-test-input="client_cert"]').exists(`Client certificate field exists for ${name}`);
+      assert.dom('[data-test-input="client_key"]').exists(`Client key field exists for ${name}`);
+      assert.dom('[data-test-input="tls_server_name"]').exists(`TLS server name field exists for ${name}`);
+      assert.dom('[data-test-input="insecure"]').exists(`Insecure checkbox exists for ${name}`);
+      assert
+        .dom('[data-test-toggle-input="show-username_template"]')
+        .exists(`Username template toggle exists for ${name}`);
+    },
+  },
   {
     name: 'mongodb-connection',
     plugin: 'mongodb-database-plugin',
@@ -165,6 +185,52 @@ const connectionTests = [
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
+  {
+    name: 'postgresql-connection',
+    plugin: 'postgresql-database-plugin',
+    url: `postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=disable`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+      assert
+        .dom('[data-test-toggle-input="show-username_template"]')
+        .exists(`Username template toggle exists for ${name}`);
+    },
+  },
+  // keep oracle as last DB because it is skipped in some tests (line 285) the UI doesn't return to empty state after
+  {
+    name: 'oracle-connection',
+    plugin: 'vault-plugin-database-oracle',
+    url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
+    requiredFields: async (assert, name) => {
+      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
+      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_open_connections"]')
+        .exists(`Max open connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_idle_connections"]')
+        .exists(`Max idle connections exists for ${name}`);
+      assert
+        .dom('[data-test-input="max_connection_lifetime"]')
+        .exists(`Max connection lifetime exists for ${name}`);
+      assert
+        .dom('[data-test-input="root_rotation_statements"]')
+        .exists(`Root rotation statements exists for ${name}`);
+    },
+  },
 ];
 
 module('Acceptance | secrets/database/*', function(hooks) {
@@ -208,13 +274,24 @@ module('Acceptance | secrets/database/*', function(hooks) {
       await connectionPage.dbPlugin(testCase.plugin);
       assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
       await connectionPage.name(testCase.name);
-      await connectionPage.url(testCase.url);
+      if (testCase.plugin === 'elasticsearch-database-plugin') {
+        await connectionPage.url(testCase.url);
+        await connectionPage.username(testCase.elasticUser);
+        await connectionPage.password(testCase.elasticPassword);
+      } else {
+        await connectionPage.connectionUrl(testCase.url);
+      }
+      // skip adding oracle db connection since plugin doesn't exist
+      if (testCase.plugin === 'vault-plugin-database-oracle') {
+        testCase.requiredFields(assert, testCase.name);
+        continue;
+      }
       testCase.requiredFields(assert, testCase.name);
       await connectionPage.toggleVerify();
       await connectionPage.save();
-      await connectionPage.enable();
+      await settled();
       assert
-        .dom('[data-test-modal-title]')
+        .dom('.modal.is-active .title')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       await connectionPage.enable();
       assert.ok(
@@ -253,8 +330,8 @@ module('Acceptance | secrets/database/*', function(hooks) {
       plugin: 'mongodb-database-plugin',
       id: 'horses-db',
       fields: [
-        { label: 'Connection Name', name: 'name', value: 'horses-db' },
-        { label: 'Connection url', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
+        { label: 'Connection name', name: 'name', value: 'horses-db' },
+        { label: 'Connection URL', name: 'connection_url', value: 'mongodb://127.0.0.1:235/horses' },
         { label: 'Username', name: 'username', value: 'user', hideOnShow: true },
         { label: 'Password', name: 'password', password: 'so-secure', hideOnShow: true },
         { label: 'Write concern', name: 'write_concern' },
@@ -283,8 +360,9 @@ module('Acceptance | secrets/database/*', function(hooks) {
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
     await connectionPage.save();
+    await settled();
     assert
-      .dom('[data-test-modal-title]')
+      .dom('.modal.is-active .title')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
     assert.equal(
@@ -304,6 +382,13 @@ module('Acceptance | secrets/database/*', function(hooks) {
       }
     });
     await connectionPage.delete();
+    assert
+      .dom('.modal.is-active .title')
+      .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
+    await fillIn('[data-test-confirmation-modal-input="delete"]', connectionDetails.id);
+    await click('[data-test-confirm-button]');
+    await settled();
+
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
       .dom('[data-test-empty-state-title')

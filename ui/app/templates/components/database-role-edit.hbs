@@ -19,56 +19,56 @@
   <Toolbar>
     <ToolbarActions>
       {{#if @model.canDelete}}
-      <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @onConfirmAction={{action 'delete'}}
-        @confirmTitle="Delete role?"
-        @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
-        @confirmButtonText="Delete"
-        data-test-database-role-delete
-      >
-        Delete role
-      </ConfirmAction>
-      <div class="toolbar-separator" />
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action 'delete'}}
+          @confirmTitle="Delete role?"
+          @confirmMessage="This role will be permanently deleted. You will need to recreate it to use it again."
+          @confirmButtonText="Delete"
+          data-test-database-role-delete
+        >
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator" />
       {{/if}}
       {{#if @model.canGenerateCredentials}}
-      <button
-        type="button"
-        class="toolbar-link"
-        {{on 'click' (fn this.generateCreds @model.id @model.type)}}
-        data-test-database-role-generate-creds
-      >
-        {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
-      </button>
+        <button
+          type="button"
+          class="toolbar-link"
+          {{on 'click' (fn this.generateCreds @model.id @model.type)}}
+          data-test-database-role-generate-creds
+        >
+          {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
+        </button>
       {{/if}}
       {{#if @model.canEditRole}}
-      <ToolbarSecretLink
-        @secret={{concat 'role/' @model.id}}
-        @mode="edit"
-        @replace=true
-        @queryParams={{query-params itemType="role"}}
-        @data-test-edit-link=true
-      >
-        Edit role
-      </ToolbarSecretLink>
+        <ToolbarSecretLink
+          @secret={{concat 'role/' @model.id}}
+          @mode="edit"
+          @replace=true
+          @queryParams={{query-params itemType="role"}}
+          @data-test-edit-link=true
+        >
+          Edit role
+        </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
   {{#each @model.showFields as |attr|}}
-    {{#let attr.options.defaultDisplay as |defaultDisplay|}}
+    {{#let attr.options.defaultShown as |defaultDisplay|}}
       {{#if (eq attr.type "object")}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
         />
       {{else}}
         <InfoTableRow
           @alwaysRender={{true}}
-          @defaultShown={{attr.options.defaultShown}}
+          @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{or (get @model attr.name) defaultDisplay}}
+          @value={{get @model attr.name}}
           @isLink={{eq attr.name 'database'}}
         />
       {{/if}}

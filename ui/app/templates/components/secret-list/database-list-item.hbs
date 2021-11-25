@@ -1,11 +1,11 @@
-{{#linked-block
-  "vault.cluster.secrets.backend.show"
-  (if this.keyTypeValue (concat 'role/' @item.id) @item.id)
+<LinkedBlock
+  @params={{array "vault.cluster.secrets.backend.show"
+  (if this.keyTypeValue (concat 'role/' @item.id) @item.id)}}
   class="list-item-row"
-  data-test-secret-link=@item.id
-  encode=true
-  queryParams=(secret-query-params @backendType @item.type)
-}}
+  data-test-secret-link={{@item.id}}
+  encode={{true}}
+  queryParams={{secret-query-params @backendType @item.type}}
+>
   <div class="columns is-mobile">
     <div class="column is-10">
       <LinkTo
@@ -80,4 +80,4 @@
       </PopupMenu>
     </div>
   </div>
-{{/linked-block}}
+</LinkedBlock>

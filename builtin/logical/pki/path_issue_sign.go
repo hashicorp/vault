@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -219,7 +220,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	if useCSR {
 		parsedBundle, err = signCert(b, input, signingBundle, false, useCSRValues)
 	} else {
-		parsedBundle, err = generateCert(ctx, b, input, signingBundle, false)
+		parsedBundle, err = generateCert(ctx, b, input, signingBundle, false, rand.Reader)
 	}
 	if err != nil {
 		switch err.(type) {

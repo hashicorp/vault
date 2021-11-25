@@ -26,7 +26,7 @@
         {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
           {{#if this.auth.authData.renewable}}
             <li class="action">
-              <button type="button" {{action "renewToken"}} class="link button {{if this.isRenewing 'is-loading'}}">
+              <button type="button" {{on "click" this.renewToken}} class="link button {{if this.isRenewing 'is-loading'}}">
                 Renew token
               </button>
             </li>

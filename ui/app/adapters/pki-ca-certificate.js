@@ -1,3 +1,4 @@
+import { parsePkiCert } from '../helpers/parse-pki-cert';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -41,7 +42,14 @@ export default ApplicationAdapter.extend({
       }
       response.id = snapshot.id;
       response.modelName = type.modelName;
-      store.pushPayload(type.modelName, response);
+      // only parse if certificate is attached to response
+      if (response.data && response.data.certificate) {
+        const caCertMetadata = parsePkiCert([response.data]);
+        const transformedResponse = { ...response, ...caCertMetadata };
+        store.pushPayload(type.modelName, transformedResponse);
+      } else {
+        store.pushPayload(type.modelName, response);
+      }
     });
   },
 

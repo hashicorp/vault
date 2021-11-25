@@ -1,4 +1,5 @@
 import RESTSerializer from '@ember-data/serializer/rest';
+import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
 export default RESTSerializer.extend({
   primaryKey: 'name',
@@ -44,5 +45,26 @@ export default RESTSerializer.extend({
       transformedPayload = { [modelName]: { id, ...connections } };
     }
     return this._super(store, primaryModelClass, transformedPayload, id, requestType);
+  },
+
+  serialize(snapshot, requestType) {
+    let data = this._super(snapshot, requestType);
+    if (!data.plugin_name) {
+      return data;
+    }
+    let pluginType = AVAILABLE_PLUGIN_TYPES.find(plugin => plugin.value === data.plugin_name);
+    if (!pluginType) {
+      return data;
+    }
+    let pluginAttributes = pluginType.fields.map(fields => fields.attr).concat('backend');
+
+    // filter data to only allow plugin specific attrs
+    let allowedAttributes = Object.keys(data).filter(dataAttrs => pluginAttributes.includes(dataAttrs));
+    for (const key in data) {
+      if (!allowedAttributes.includes(key)) {
+        delete data[key];
+      }
+    }
+    return data;
   },
 });

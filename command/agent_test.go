@@ -1618,10 +1618,10 @@ func TestAgent_Cache_Retry(t *testing.T) {
 		t.Run(tcname, func(t *testing.T) {
 			h.failCount = 2
 
-			cacheConfig := fmt.Sprintf(`
+			cacheConfig := `
 cache {
 }
-`)
+`
 			listenAddr := "127.0.0.1:18123"
 			listenConfig := fmt.Sprintf(`
 listener "tcp" {

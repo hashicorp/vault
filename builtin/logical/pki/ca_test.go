@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -49,7 +50,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Set RSA/EC CA certificates
-	var rsaCAKey, rsaCACert, ecCAKey, ecCACert string
+	var rsaCAKey, rsaCACert, ecCAKey, ecCACert, edCAKey, edCACert string
 	{
 		cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
@@ -119,10 +120,40 @@ func TestBackend_CA_Steps(t *testing.T) {
 			Bytes: caBytes,
 		}
 		rsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+
+		_, edk, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			panic(err)
+		}
+		marshaledKey, err = x509.MarshalPKCS8PrivateKey(edk)
+		if err != nil {
+			panic(err)
+		}
+		keyPEMBlock = &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: marshaledKey,
+		}
+		edCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		if err != nil {
+			panic(err)
+		}
+		_, err = certutil.GetSubjKeyID(edk)
+		if err != nil {
+			panic(err)
+		}
+		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, edk.Public(), edk)
+		if err != nil {
+			panic(err)
+		}
+		caCertPEMBlock = &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: caBytes,
+		}
+		edCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 	}
 
 	// Setup backends
-	var rsaRoot, rsaInt, ecRoot, ecInt *backend
+	var rsaRoot, rsaInt, ecRoot, ecInt, edRoot, edInt *backend
 	{
 		if err := client.Sys().Mount("rsaroot", &api.MountInput{
 			Type: "pki",
@@ -167,6 +198,28 @@ func TestBackend_CA_Steps(t *testing.T) {
 			t.Fatal(err)
 		}
 		ecInt = b
+
+		if err := client.Sys().Mount("ed25519root", &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		edRoot = b
+
+		if err := client.Sys().Mount("ed25519int", &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		edInt = b
 	}
 
 	t.Run("teststeps", func(t *testing.T) {
@@ -187,6 +240,15 @@ func TestBackend_CA_Steps(t *testing.T) {
 			}
 			subClient.SetToken(client.Token())
 			runSteps(t, ecRoot, ecInt, subClient, "ecroot/", "ecint/", ecCACert, ecCAKey)
+		})
+		t.Run("ed25519", func(t *testing.T) {
+			t.Parallel()
+			subClient, err := client.Clone()
+			if err != nil {
+				t.Fatal(err)
+			}
+			subClient.SetToken(client.Token())
+			runSteps(t, edRoot, edInt, subClient, "ed25519root/", "ed25519int/", edCACert, edCAKey)
 		})
 	})
 }
@@ -496,6 +558,32 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		}
 	}
 
+	verifyTidyStatus := func(expectedCertStoreDeleteCount int, expectedRevokedCertDeletedCount int) {
+		tidyStatus, err := client.Logical().Read(rootName+"tidy-status")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if tidyStatus.Data["state"] != "Finished" {
+			t.Fatalf("Expected tidy operation to be finished, but tidy-status reports its state is %v", tidyStatus.Data)
+		}
+
+		var count int64
+		if count, err = tidyStatus.Data["cert_store_deleted_count"].(json.Number).Int64(); err != nil {
+			t.Fatal(err)
+		}
+		if int64(expectedCertStoreDeleteCount) != count {
+			t.Fatalf("Expected %d for cert_store_deleted_count, but got %d", expectedCertStoreDeleteCount, count)
+		}
+
+		if count, err = tidyStatus.Data["revoked_cert_deleted_count"].(json.Number).Int64(); err != nil {
+			t.Fatal(err)
+		}
+		if int64(expectedRevokedCertDeletedCount) != count {
+			t.Fatalf("Expected %d for revoked_cert_deleted_count, but got %d", expectedRevokedCertDeletedCount, count)
+		}
+	}
+
 	// Validate current state of revoked certificates
 	verifyRevocation(t, intSerialNumber, true)
 
@@ -523,6 +611,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, true)
+
+			verifyTidyStatus(0, 0)
 		}
 
 		// Run with both values set false, nothing should happen
@@ -544,6 +634,8 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, true)
+
+			verifyTidyStatus(0, 0)
 		}
 
 		// Run with a short safety buffer and both set to true, both should be cleared
@@ -565,6 +657,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 			// Check to make sure we still find the cert and see it on the CRL
 			verifyRevocation(t, intSerialNumber, false)
+
+			verifyTidyStatus(1, 1)
 		}
 	}
 }
+

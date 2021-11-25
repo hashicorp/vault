@@ -16,6 +16,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -103,6 +104,8 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
+
+	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
 func init() {
@@ -210,6 +213,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	return printablePathCheckHandler
 }
 
+
 type copyResponseWriter struct {
 	wrapped    http.ResponseWriter
 	statusCode int
@@ -300,9 +304,22 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// This block needs to be here so that upon sending SIGHUP, custom response
+		// headers are also reloaded into the handlers.
+		var customHeaders map[string][]*logical.CustomHeader
+		if props.ListenerConfig != nil {
+			la := props.ListenerConfig.Address
+			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
+			if listenerCustomHeaders != nil {
+				customHeaders = listenerCustomHeaders.StatusCodeHeaderMap
+			}
+		}
+
+		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders)
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
-		w.Header().Set("Cache-Control", "no-store")
+		nw.Header().Set("Cache-Control", "no-store")
 
 		// Start with the request context
 		ctx := r.Context()
@@ -326,19 +343,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		if core.RaftNodeIDHeaderEnabled() {
 			nodeID := core.GetRaftNodeID()
 			if nodeID != "" {
-				w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+				nw.Header().Set("X-Vault-Raft-Node-ID", nodeID)
 			}
 		}
 
 		if core.HostnameHeaderEnabled() && hostname != "" {
-			w.Header().Set("X-Vault-Hostname", hostname)
+			nw.Header().Set("X-Vault-Hostname", hostname)
 		}
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			newR, status := adjustRequest(core, r)
 			if status != 0 {
-				respondError(w, status, nil)
+				respondError(nw, status, nil)
 				cancelFunc()
 				return
 			}
@@ -346,7 +363,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
-			respondError(w, http.StatusNotFound, nil)
+			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return
 		}
@@ -354,10 +371,10 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// Setting the namespace in the header to be included in the error message
 		ns := r.Header.Get(consts.NamespaceHeaderName)
 		if ns != "" {
-			w.Header().Set(consts.NamespaceHeaderName, ns)
+			nw.Header().Set(consts.NamespaceHeaderName, ns)
 		}
 
-		h.ServeHTTP(w, r)
+		h.ServeHTTP(nw, r)
 
 		cancelFunc()
 		return
@@ -632,7 +649,15 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
-			reader = http.MaxBytesReader(w, r.Body, max)
+			// MaxBytesReader won't do all the internal stuff it must unless it's
+			// given a ResponseWriter that implements the internal http interface
+			// requestTooLarger.  So we let it have access to the underlying
+			// ResponseWriter.
+			inw := w
+			if myw, ok := inw.(logical.WrappingResponseWriter); ok {
+				inw = myw.Wrapped()
+			}
+			reader = http.MaxBytesReader(inw, r.Body, max)
 		}
 	}
 	var origBody io.ReadWriter
@@ -1114,6 +1139,15 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 		return false
 	}
 
+	// If ErrPermissionDenied occurs for OIDC protected resources (e.g., userinfo),
+	// then respond with a JSON error format that complies with the specification.
+	// This prevents the JSON error format from changing to a Vault-y format (i.e.,
+	// the format that results from respondError) after an OIDC access token expires.
+	if oidcPermissionDenied(req.Path, err) {
+		respondOIDCPermissionDenied(w)
+		return true
+	}
+
 	respondError(w, statusCode, newErr)
 	return true
 }
@@ -1128,4 +1162,38 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
+}
+
+// oidcPermissionDenied returns true if the given path matches the
+// UserInfo Endpoint published by Vault OIDC providers and the given
+// error is a logical.ErrPermissionDenied.
+func oidcPermissionDenied(path string, err error) bool {
+	return errwrap.Contains(err, logical.ErrPermissionDenied.Error()) &&
+		oidcProtectedPathRegex.MatchString(path)
+}
+
+// respondOIDCPermissionDenied writes a response to the given w for
+// permission denied errors (expired token) on resources protected
+// by OIDC access tokens. Currently, the UserInfo Endpoint is the only
+// protected resource. See the following specifications for details:
+//  - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
+//  - https://datatracker.ietf.org/doc/html/rfc6750#section-3.1
+func respondOIDCPermissionDenied(w http.ResponseWriter) {
+	errorCode := "invalid_token"
+	errorDescription := logical.ErrPermissionDenied.Error()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Bearer error=%q,error_description=%q",
+		errorCode, errorDescription))
+	w.WriteHeader(http.StatusUnauthorized)
+
+	var oidcResponse struct {
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	oidcResponse.Error = errorCode
+	oidcResponse.ErrorDescription = errorDescription
+
+	enc := json.NewEncoder(w)
+	enc.Encode(oidcResponse)
 }

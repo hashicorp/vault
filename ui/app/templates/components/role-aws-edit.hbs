@@ -18,6 +18,15 @@
 {{#if (eq mode "show")}}
   <Toolbar>
     <ToolbarActions>
+      {{#if model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{action "delete"}}
+        >
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator" />
+      {{/if}}
       {{#if model.canGenerate}}
         <ToolbarSecretLink
           @secret={{model.id}}
@@ -26,17 +35,6 @@
         >
           Generate credentials
         </ToolbarSecretLink>
-      {{/if}}
-      {{#if (and model.canGenerate (or model.canDelete model.canEdit))}}
-        <div class="toolbar-separator" />
-      {{/if}}
-      {{#if model.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-        >
-          Delete role
-        </ConfirmAction>
       {{/if}}
       {{#if model.canEdit}}
         <ToolbarSecretLink

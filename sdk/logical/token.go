@@ -87,11 +87,17 @@ type TokenEntry struct {
 	// Which named policies should be used
 	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
 
+	// InlinePolicy specifies ACL rules to be applied to this token entry.
+	InlinePolicy string `json:"inline_policy" mapstructure:"inline_policy" structs:"inline_policy"`
+
 	// Used for audit trails, this is something like "auth/user/login"
 	Path string `json:"path" mapstructure:"path" structs:"path"`
 
 	// Used for auditing. This could include things like "source", "user", "ip"
 	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta" sentinel:"meta"`
+
+	// InternalMeta is used to store internal metadata. This metadata will not be audit logged or returned from lookup APIs.
+	InternalMeta map[string]string `json:"internal_meta" mapstructure:"internal_meta" structs:"internal_meta"`
 
 	// Used for operators to be able to associate with the source
 	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
@@ -128,7 +134,12 @@ type TokenEntry struct {
 	CreationTimeDeprecated   int64         `json:"CreationTime" mapstructure:"CreationTime" structs:"CreationTime" sentinel:""`
 	ExplicitMaxTTLDeprecated time.Duration `json:"ExplicitMaxTTL" mapstructure:"ExplicitMaxTTL" structs:"ExplicitMaxTTL" sentinel:""`
 
+	// EntityID is the ID of the entity associated with this token.
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
+
+	// If NoIdentityPolicies is true, the token will not inherit
+	// identity policies from the associated EntityID.
+	NoIdentityPolicies bool `json:"no_identity_policies" mapstructure:"no_identity_policies" structs:"no_identity_policies"`
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs" sentinel:""`
@@ -222,4 +233,13 @@ func (te *TokenEntry) SentinelKeys() []string {
 		"metadata",
 		"type",
 	}
+}
+
+// IsRoot returns false if the token is not root (or doesn't exist)
+func (te *TokenEntry) IsRoot() bool {
+	if te == nil {
+		return false
+	}
+
+	return len(te.Policies) == 1 && te.Policies[0] == "root"
 }

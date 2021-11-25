@@ -110,6 +110,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 		Request: &AuditRequest{
 			ID:                  req.ID,
+			ClientID:            req.ClientID,
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
@@ -336,6 +337,7 @@ type AuditResponseEntry struct {
 
 type AuditRequest struct {
 	ID                            string                 `json:"id,omitempty"`
+	ClientID                      string                 `json:"client_id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
 	Operation                     logical.Operation      `json:"operation,omitempty"`
 	MountType                     string                 `json:"mount_type,omitempty"`

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Use entropy augmentation when available when generating root and intermediate CA key material.
+```

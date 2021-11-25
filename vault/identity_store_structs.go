@@ -65,12 +65,22 @@ type IdentityStore struct {
 	// will invalidate the cache.
 	oidcCache *oidcCache
 
+	// oidcAuthCodeCache stores OIDC authorization codes to be exchanged
+	// for an ID token during an authorization code flow.
+	oidcAuthCodeCache *oidcCache
+
 	// logger is the server logger copied over from core
 	logger log.Logger
 
 	// entityPacker is used to pack multiple entity storage entries into 256
 	// buckets
 	entityPacker *storagepacker.StoragePacker
+
+	// localAliasPacker is used to pack multiple local alias entries into lesser
+	// storage entries. This is also used to cache entities in the secondary
+	// clusters, those entities which were created by the primary but hasn't
+	// reached secondary via invalidations.
+	localAliasPacker *storagepacker.StoragePacker
 
 	// groupPacker is used to pack multiple group storage entries into 256
 	// buckets
@@ -87,6 +97,8 @@ type IdentityStore struct {
 	metrics       metricsutil.Metrics
 	totpPersister TOTPPersister
 	groupUpdater  GroupUpdater
+	tokenStorer   TokenStorer
+	entityCreator EntityCreator
 }
 
 type groupDiff struct {
@@ -124,3 +136,16 @@ type GroupUpdater interface {
 }
 
 var _ GroupUpdater = &Core{}
+
+type TokenStorer interface {
+	LookupToken(context.Context, string) (*logical.TokenEntry, error)
+	CreateToken(context.Context, *logical.TokenEntry) error
+}
+
+var _ TokenStorer = &Core{}
+
+type EntityCreator interface {
+	CreateEntity(ctx context.Context) (*identity.Entity, error)
+}
+
+var _ EntityCreator = &Core{}

@@ -76,18 +76,33 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
 
     await page.form.generateCA();
     await settled();
-    assert.ok(page.form.rows.length > 0, 'shows all of the rows');
-    // TODO come back and figure out why not working after upgrade.  I see it, it's a timing issue.
-    // assert.ok(page.form.certificateIsPresent, 'the certificate is included');
+
+    assert.ok(page.form.commonNameIsPresent, 'the common name displays');
+    assert.ok(page.form.issueDateIsPresent, 'the issue date displays');
+    assert.ok(page.form.expiryDateIsPresent, 'the expiration date displays');
+    assert
+      .dom('[data-test-value-div="Certificate"] [data-test-masked-input]')
+      .exists('certificate is present');
 
     await page.form.back();
-    await settled();
     await page.form.generateCA();
     await settled();
+
     assert.ok(
       page.flash.latestMessage.includes('You tried to generate a new root CA'),
       'shows warning message'
     );
+  });
+
+  test('EC cert config: generate', async function(assert) {
+    await mountAndNav(assert);
+    await settled();
+    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+
+    await page.form.generateCAKeyTypeEC();
+    await settled();
+
+    assert.dom('[data-test-warning]').exists('Info banner renders when unable to parse certificate metadata');
   });
 
   test('cert config: upload', async function(assert) {

@@ -6,10 +6,6 @@ import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export default Model.extend({
   idPrefix: 'cert/',
-
-  backend: attr('string', {
-    readOnly: true,
-  }),
   //the id prefixed with `cert/` so we can use it as the *secret param for the secret show route
   idForNav: attr('string', {
     readOnly: true,
@@ -17,29 +13,51 @@ export default Model.extend({
   DISPLAY_FIELDS: computed(function() {
     return [
       'certificate',
+      'commonName',
       'issuingCa',
       'caChain',
       'privateKey',
       'privateKeyType',
-      'serialNumber',
       'revocationTime',
+      'issueDate',
+      'expiryDate',
+      'serialNumber',
     ];
-  }),
-  role: attr('object', {
-    readOnly: true,
-  }),
-
-  revocationTime: attr('number'),
-  commonName: attr('string', {
-    label: 'Common Name',
   }),
 
   altNames: attr('string', {
     label: 'DNS/Email Subject Alternative Names (SANs)',
   }),
-
+  backend: attr('string', {
+    readOnly: true,
+  }),
+  caChain: attr('string', {
+    label: 'CA chain',
+    masked: true,
+  }),
+  canParse: attr('boolean'),
+  certificate: attr('string', {
+    masked: true,
+  }),
+  commonName: attr('string'),
+  excludeCnFromSans: attr('boolean', {
+    label: 'Exclude Common Name from Subject Alternative Names (SANs)',
+    defaultValue: false,
+  }),
+  expiryDate: attr('string', {
+    label: 'Expiration date',
+  }),
+  format: attr('string', {
+    defaultValue: 'pem',
+    possibleValues: ['pem', 'der', 'pem_bundle'],
+  }),
   ipSans: attr('string', {
     label: 'IP Subject Alternative Names (SANs)',
+  }),
+  issueDate: attr('string'),
+  issuingCa: attr('string', {
+    label: 'Issuing CA',
+    masked: true,
   }),
   otherSans: attr({
     editType: 'stringArray',
@@ -47,38 +65,19 @@ export default Model.extend({
     helpText:
       'The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8',
   }),
-
-  ttl: attr({
-    label: 'TTL',
-    editType: 'ttl',
-  }),
-
-  format: attr('string', {
-    defaultValue: 'pem',
-    possibleValues: ['pem', 'der', 'pem_bundle'],
-  }),
-
-  excludeCnFromSans: attr('boolean', {
-    label: 'Exclude Common Name from Subject Alternative Names (SANs)',
-    defaultValue: false,
-  }),
-
-  certificate: attr('string', {
-    masked: true,
-  }),
-  issuingCa: attr('string', {
-    label: 'Issuing CA',
-    masked: true,
-  }),
-  caChain: attr('string', {
-    label: 'CA chain',
-    masked: true,
-  }),
   privateKey: attr('string', {
     masked: true,
   }),
   privateKeyType: attr('string'),
+  revocationTime: attr('number'),
+  role: attr('object', {
+    readOnly: true,
+  }),
   serialNumber: attr('string'),
+  ttl: attr({
+    label: 'TTL',
+    editType: 'ttl',
+  }),
 
   fieldsToAttrs(fieldGroups) {
     return fieldToAttrs(this, fieldGroups);

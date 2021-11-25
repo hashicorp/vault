@@ -31,7 +31,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	name := d.Get("name").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())

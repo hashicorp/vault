@@ -7,6 +7,7 @@ export default function ProductSubnav() {
 
   return (
     <Subnav
+      className="g-product-subnav"
       hideGithubStars={true}
       titleLink={{
         text: 'vault',

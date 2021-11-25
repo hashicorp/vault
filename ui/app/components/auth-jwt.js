@@ -89,12 +89,18 @@ export default Component.extend({
     // start watching the popup window and the current one
     this.watchPopup.perform(oidcWindow);
     this.watchCurrent.perform(oidcWindow);
-    // wait for message posted from popup
-    const event = yield waitForEvent(thisWindow, 'message');
-    if (event.origin === thisWindow.origin && event.isTrusted) {
-      this.exchangeOIDC.perform(event.data, oidcWindow);
-    } else {
-      this.handleOIDCError();
+    // wait for message posted from oidc callback
+    // see issue https://github.com/hashicorp/vault/issues/12436
+    // ensure that postMessage event is from expected source
+    while (true) {
+      const event = yield waitForEvent(thisWindow, 'message');
+      if (event.origin !== thisWindow.origin || !event.isTrusted) {
+        return this.handleOIDCError();
+      }
+      if (event.data.source === 'oidc-callback') {
+        return this.exchangeOIDC.perform(event.data, oidcWindow);
+      }
+      // continue to wait for the correct message
     }
   }),
 

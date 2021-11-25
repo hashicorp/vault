@@ -22,6 +22,12 @@ export default AuthConfigComponent.extend({
   saveModel: task(function*() {
     let data = this.model.config.serialize();
     data.description = this.model.description;
+
+    // token_type should not be tuneable for the token auth method, default is 'default-service'
+    if (this.model.type === 'token') {
+      delete data.token_type;
+    }
+
     try {
       yield this.model.tune(data);
     } catch (err) {

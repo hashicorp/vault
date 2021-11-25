@@ -19,7 +19,6 @@ module('Acceptance | settings/configure/secrets/pki/crl', function(hooks) {
     await page.visit({ backend: path, section: 'crl' });
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
-    await page.form.enableTtl();
     await page.form.fillInUnit('h');
     await page.form.fillInValue(3);
     await page.form.submit();

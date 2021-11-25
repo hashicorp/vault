@@ -339,6 +339,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace lock": func() (cli.Command, error) {
+			return &NamespaceAPILockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace unlock": func() (cli.Command, error) {
+			return &NamespaceAPIUnlockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
 				BaseCommand: getBaseCommand(),

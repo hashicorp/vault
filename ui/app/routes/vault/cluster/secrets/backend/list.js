@@ -10,6 +10,7 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
+  noMetadataPermissions: false,
   queryParams: {
     page: {
       refreshModel: true,
@@ -111,6 +112,9 @@ export default Route.extend({
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
+          } else if (backendModel.engineType === 'kv' && backendModel.isV2KV) {
+            this.set('noMetadataPermissions', true);
+            return [];
           } else {
             // else we're throwing and dealing with this in the error action
             throw err;
@@ -149,6 +153,7 @@ export default Route.extend({
     let backend = this.enginePathParam();
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let has404 = this.has404;
+    let noMetadataPermissions = this.noMetadataPermissions;
     // only clear store cache if this is a new model
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
@@ -157,6 +162,7 @@ export default Route.extend({
     controller.setProperties({
       model,
       has404,
+      noMetadataPermissions,
       backend,
       backendModel,
       baseKey: { id: secret },
