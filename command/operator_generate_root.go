@@ -180,7 +180,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: "Path to a file on disk containing a binary or base64-encoded " +
-			"public GPG key. This can also be specified as a Keybase username " +
+			"public PGP key. This can also be specified as a Keybase username " +
 			"using the format \"keybase:<username>\". When supplied, the generated " +
 			"root token will be encrypted and base64-encoded with the given public " +
 			"key.",

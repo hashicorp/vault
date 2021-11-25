@@ -56,7 +56,7 @@ const testCases = [
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
   },
   {
-    pluginType: 'oracle-database-plugin',
+    pluginType: 'vault-plugin-database-oracle',
     staticRoleFields: ['username', 'rotation_period'],
     dynamicRoleFields: ['creation_statements', 'revocation_statements', 'ttl', 'max_ttl'],
   },

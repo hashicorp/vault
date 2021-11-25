@@ -220,6 +220,17 @@ func TestSystemBackend_mounts(t *testing.T) {
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
 	}
+
+	for name, conf := range exp {
+		req := logical.TestRequest(t, logical.ReadOperation, "mounts/"+name)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if diff := deep.Equal(resp.Data, conf); len(diff) > 0 {
+			t.Fatalf("bad, diff: %#v", diff)
+		}
+	}
 }
 
 func TestSystemBackend_mount(t *testing.T) {

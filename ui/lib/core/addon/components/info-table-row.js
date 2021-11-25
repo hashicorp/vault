@@ -42,6 +42,7 @@ export default Component.extend({
   tooltipText: '',
   isTooltipCopyable: false,
   defaultShown: '',
+  hasLabelOverflow: false, // is calculated and set in didInsertElement
 
   valueIsBoolean: computed('value', function() {
     return typeOf(this.value) === 'boolean';
@@ -63,4 +64,16 @@ export default Component.extend({
         return false;
     }
   }),
+
+  didInsertElement() {
+    this._super(...arguments);
+    const labelDiv = this.element.querySelector('div');
+    const labelText = this.element.querySelector('.is-label');
+    if (labelDiv && labelText) {
+      if (labelText.offsetWidth > labelDiv.offsetWidth) {
+        labelDiv.classList.add('label-overflow');
+        this.set('hasLabelOverflow', true);
+      }
+    }
+  },
 });

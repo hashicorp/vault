@@ -31,10 +31,7 @@ export default Component.extend({
       list = this.listData.slice(0, this.listLength);
     } else if (this.listLength > this.listData.length) {
       // add to the current list by creating a new list and copying over existing list
-      list = this.newList(this.listLength);
-      if (this.listData.length) {
-        list.splice(0, this.listData.length, ...this.listData);
-      }
+      list = [...this.listData, ...this.newList(this.listLength - this.listData.length)];
     }
     this.set('listData', list || this.listData);
     this.onDataUpdate((list || this.listData).compact().map(k => k.value));

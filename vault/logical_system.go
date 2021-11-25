@@ -826,6 +826,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
 		entryConfig["allowed_response_headers"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
+		entryConfig["allowed_managed_keys"] = rawVal.([]string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -1020,6 +1023,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if len(apiConfig.AllowedResponseHeaders) > 0 {
 		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
 	}
+	if len(apiConfig.AllowedManagedKeys) > 0 {
+		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
+	}
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -1041,6 +1047,21 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	return nil, nil
+}
+
+func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	path = sanitizePath(path)
+
+	entry := b.Core.router.MatchingMountEntry(ctx, path)
+
+	if entry == nil {
+		return logical.ErrorResponse("No secret engine mount at %s", path), nil
+	}
+
+	return &logical.Response{
+		Data: mountInfo(entry),
+	}, nil
 }
 
 // used to intercept an HTTPCodedError so it goes back to callee
@@ -1284,6 +1305,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
 		resp.Data["allowed_response_headers"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_managed_keys"); ok {
+		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
 	if len(mountEntry.Options) > 0 {
@@ -1594,6 +1619,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("allowed_managed_keys"); ok {
+		AllowedManagedKeys := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AllowedManagedKeys
+		mountEntry.Config.AllowedManagedKeys = AllowedManagedKeys
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AllowedManagedKeys = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
+		}
+	}
+
 	var err error
 	var resp *logical.Response
 	var options map[string]string
@@ -1881,6 +1932,7 @@ func expandStringValsWithCommas(configMap map[string]interface{}) error {
 		"audit_non_hmac_response_keys",
 		"passthrough_request_headers",
 		"allowed_response_headers",
+		"allowed_managed_keys",
 	}
 	for _, paramName := range configParamNameSlice {
 		if raw, ok := configMap[paramName]; ok {
@@ -2036,6 +2088,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.AllowedResponseHeaders) > 0 {
 		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
+	}
+	if len(apiConfig.AllowedManagedKeys) > 0 {
+		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
 
 	// Create the mount entry
@@ -2970,7 +3025,16 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
-		return logical.ErrorResponse("streaming not supported"), nil
+		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
+		// access the underlying functionality
+		nw, ok := w.ResponseWriter.(logical.WrappingResponseWriter)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
+		flusher, ok = nw.Wrapped().(http.Flusher)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
 	}
 
 	isJson := b.Core.LogFormat() == "json"

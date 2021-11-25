@@ -84,6 +84,10 @@
         "path": "concepts/seal"
       },
       {
+        "title": "Namespace API Lock",
+        "path": "concepts/namespace-api-lock"
+      },
+      {
         "title": "Lease, Renew, and Revoke",
         "path": "concepts/lease"
       },
@@ -98,7 +102,11 @@
       {
         "title": "Identity",
         "path": "concepts/identity"
-        },
+      },
+      {
+        "title": "OIDC Provider",
+        "path": "concepts/oidc-provider"
+      },
       {
         "title": "Response Wrapping",
         "path": "concepts/response-wrapping"
@@ -137,7 +145,7 @@
         ]
       },
       {
-        "title": "PGP, GPG, and Keybase",
+        "title": "PGP, GnuPG, and Keybase",
         "path": "concepts/pgp-gpg-keybase"
       },
       {
@@ -150,7 +158,16 @@
       },
       {
         "title": "Client Count",
-        "path": "concepts/client-count"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "concepts/client-count"
+          },
+          {
+            "title": "FAQ",
+            "path": "concepts/client-count/faq"
+          }
+        ]
       },
       {
         "title": "Transform",
@@ -985,6 +1002,10 @@
           {
             "title": "AWS KMS",
             "path": "secrets/key-management/awskms"
+          },
+          {
+            "title": "GCP Cloud KMS",
+            "path": "secrets/key-management/gcpkms"
           }
         ]
       },
@@ -1011,7 +1032,21 @@
       },
       {
         "title": "Identity",
-        "path": "secrets/identity"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+
       },
       {
         "title": "MongoDB Atlas",
@@ -1222,6 +1257,10 @@
     "path": "partnerships"
   },
   {
+    "title": "Troubleshoot",
+    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+  },
+  {
     "divider": true
   },
   {
@@ -1401,6 +1440,23 @@
             "path": "platform/servicenow/troubleshooting"
           }
         ]
+      },
+      {
+        "title": "Microsoft SQL Server EKM provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/mssql"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/mssql/installation"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/mssql/troubleshooting"
+          }
+        ]
       }
     ]
   },
@@ -1425,8 +1481,7 @@
       },
       {
         "title": "Upgrade to 1.9.0",
-        "path": "upgrading/upgrade-to-1.9.0",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.9.0"
       },
       {
         "title": "Upgrade to 1.8.0",
@@ -1653,27 +1708,46 @@
         "path": "release-notes"
       },
       {
-        "title": "1.5.0",
-        "path": "release-notes/1.5.0"
+        "title": "1.9.0",
+        "path": "release-notes/1.9.0"
       },
       {
-        "title": "1.6.0",
-        "path": "release-notes/1.6.0"
+        "title": "1.8.0",
+        "path": "release-notes/1.8.0"
       },
       {
         "title": "1.7.0",
         "path": "release-notes/1.7.0"
       },
       {
-        "title": "1.8.0",
-        "path": "release-notes/1.8.0"
+        "title": "1.6.0",
+        "path": "release-notes/1.6.0"
+      },
+      {
+        "title": "1.5.0",
+        "path": "release-notes/1.5.0"
       }
     ]
   },
   {
     "divider": true
   },
-
+  {
+    "title": "Deprecation Notices",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "deprecation"
+      },
+      {
+        "title": "FAQ",
+        "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
   {
     "title": "Glossary",
     "path": "glossary"

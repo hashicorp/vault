@@ -55,8 +55,6 @@ type Listener struct {
 	TLSMaxVersion                    string      `hcl:"tls_max_version"`
 	TLSCipherSuites                  []uint16    `hcl:"-"`
 	TLSCipherSuitesRaw               string      `hcl:"tls_cipher_suites"`
-	TLSPreferServerCipherSuites      bool        `hcl:"-"`
-	TLSPreferServerCipherSuitesRaw   interface{} `hcl:"tls_prefer_server_cipher_suites"`
 	TLSRequireAndVerifyClientCert    bool        `hcl:"-"`
 	TLSRequireAndVerifyClientCertRaw interface{} `hcl:"tls_require_and_verify_client_cert"`
 	TLSClientCAFile                  string      `hcl:"tls_client_ca_file"`
@@ -214,14 +212,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				if l.TLSCipherSuites, err = tlsutil.ParseCiphers(l.TLSCipherSuitesRaw); err != nil {
 					return multierror.Prefix(fmt.Errorf("invalid value for tls_cipher_suites: %w", err), fmt.Sprintf("listeners.%d", i))
 				}
-			}
-
-			if l.TLSPreferServerCipherSuitesRaw != nil {
-				if l.TLSPreferServerCipherSuites, err = parseutil.ParseBool(l.TLSPreferServerCipherSuitesRaw); err != nil {
-					return multierror.Prefix(fmt.Errorf("invalid value for tls_prefer_server_cipher_suites: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				l.TLSPreferServerCipherSuitesRaw = nil
 			}
 
 			if l.TLSRequireAndVerifyClientCertRaw != nil {

@@ -177,7 +177,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
 		Completion: complete.PredictAnything,
 		Usage: "Comma-separated list of paths to files on disk containing " +
-			"public GPG keys OR a comma-separated list of Keybase usernames using " +
+			"public PGP keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
 			"specified in this list.",

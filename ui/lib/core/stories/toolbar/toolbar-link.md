@@ -4,18 +4,21 @@
 `ToolbarLink` components style links and buttons for the Toolbar
 It should only be used inside of `Toolbar`.
 
+**Params**
 
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| params | <code>Array</code> | <code>&#x27;&#x27;</code> | Array to pass to LinkTo |
-| type | <code>String</code> | <code>&#x27;&#x27;</code> | Use "add" to change icon |
+| Param | Type | Description |
+| --- | --- | --- |
+| params | <code>array</code> | Array to pass to LinkTo |
+| type | <code>string</code> | Use "add" to change icon |
+| disabled | <code>boolean</code> | pass true to disable link |
+| disabledTooltip | <code>string</code> | tooltip to display on hover when disabled |
 
 **Example**
   
 ```js
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @params={{array 'vault.cluster.policies.create'}} @type="add">
+    <ToolbarLink @params={{array 'vault.cluster.policies.create'}} @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
       Create policy
     </ToolbarLink>
   </ToolbarActions>
