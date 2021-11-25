@@ -392,7 +392,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		headers := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
 		if len(headers) == 0 {
 			clientAddr = r.RemoteAddr
-		}else {
+		} else {
 			clientAddr = headers[0]
 		}
 

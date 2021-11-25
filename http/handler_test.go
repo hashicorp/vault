@@ -319,8 +319,8 @@ func TestHandler_InFlightRequest(t *testing.T) {
 	var actual map[string]interface{}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	if actual == nil {
-		t.Fatal("expected to get at least one in-flight request, got nil")
+	if actual == nil || len(actual) == 0 {
+		t.Fatal("expected to get at least one in-flight request, got nil or zero length map")
 	}
 	for _, v := range actual {
 		reqInfo, ok := v.(map[string]interface{})

@@ -390,7 +390,7 @@ type Core struct {
 	physicalCache physical.ToggleablePurgemonster
 
 	// logRequestsInfo indicates at which level requests should be logged
-	logRequestsInfo string
+	logRequestsInfo uberAtomic.String
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
@@ -1040,7 +1040,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	switch {
 	case log.LevelFromString(conf.RawConfig.LogRequestsInfo) > log.NoLevel && log.LevelFromString(conf.RawConfig.LogRequestsInfo) < log.Off:
-		c.logRequestsInfo = conf.RawConfig.LogRequestsInfo
+		c.logRequestsInfo.Store(conf.RawConfig.LogRequestsInfo)
 	case conf.RawConfig.LogRequestsInfo != "":
 		c.logger.Warn("invalid log_requests_info", "level", conf.RawConfig.LogRequestsInfo)
 	}
@@ -2988,7 +2988,7 @@ func (c *Core) StoreInFlightReqData(reqID string, data *InFlightReqData) {
 // request from the inFlightReqMap and decrement the number of in-flight
 // requests by one.
 func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
-	if c.logRequestsInfo != "" {
+	if c.logRequestsInfo.Load() != "" {
 		c.LogCompletedRequests(reqID, statusCode)
 	}
 	c.inFlightReqData.InFlightReqMap.Delete(reqID)
@@ -3026,13 +3026,14 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	logInfoLevel := log.LevelFromString(c.logRequestsInfo.Load())
 	if !ok {
-		c.logger.Log(log.LevelFromString(c.logRequestsInfo), fmt.Sprintf("failed to retrieve request with ID %v", reqID))
+		c.logger.Log(logInfoLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
 		return
 	}
 	// there is only one writer to this map, so skip checking for errors
 	reqData, _ := v.(*InFlightReqData)
-	c.logger.Log(log.LevelFromString(c.logRequestsInfo), "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+	c.logger.Log(logInfoLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
 func (c *Core) ReloadLogRequestsInfo(){
@@ -3043,7 +3044,7 @@ func (c *Core) ReloadLogRequestsInfo(){
 	infoLevel := conf.(*server.Config).LogRequestsInfo
 	switch {
 	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
-		c.logRequestsInfo = infoLevel
+		c.logRequestsInfo.Store(infoLevel)
 	case infoLevel != "":
 		c.logger.Warn("invalid log_requests_info", "level", infoLevel)
 	}

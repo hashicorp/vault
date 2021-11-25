@@ -541,5 +541,5 @@ func (c *Core) cachedGaugeMetricsEmitter() {
 func (c *Core) inFlightReqGaugeMetric() {
 	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
 	// Adding a gauge metric to capture total number of inflight requests
-	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_request"}, float32(totalInFlightReq), nil)
+	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
 }

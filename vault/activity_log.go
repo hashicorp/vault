@@ -1593,30 +1593,28 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
 // and returns the corresponding Client ID.
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) string {
+func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry, clientID string, isTWE bool) {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return ""
+		return
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return ""
+		return
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return ""
+		return
 	}
 
 	// Parse an entry's client ID and add it to the activity log
-	clientID, isTWE := a.CreateClientID(entry)
 	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE)
-	return clientID
 }
 
 // CreateClientID returns the client ID, and a boolean which is false if the clientID
