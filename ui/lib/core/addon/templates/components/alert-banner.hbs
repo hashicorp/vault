@@ -2,7 +2,6 @@
   <div class="columns is-mobile is-variable is-1">
     <div class="column is-narrow message-icon">
       <Icon
-        @sizeClass="l"
         class={{alertType.glyphClass}}
         aria-hidden="true"
         @name={{alertType.glyph}}
@@ -16,7 +15,6 @@
           {{or @title this.alertType.text}}
           {{#if @secondIconType}}
             <Icon
-              @sizeClass="l"
               class="{{secondAlertType.glyphClass}}"
               aria-hidden="true"
               @name={{secondAlertType.glyph}}

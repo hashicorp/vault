@@ -9,7 +9,6 @@
     <d.trigger @tagName="button" @type="button" @class={{concat "button is-compact" (if isFullscreen " active")}} @click={{action "fullscreen"}} @data-test-tool-tip-trigger={{true}}>
     <Icon
       @name={{if isFullscreen "minimize" "maximize"}}
-      @sizeClass="l"
       aria-label={{if isFullscreen "Minimize" "Maximize"}}
     />
     </d.trigger>
