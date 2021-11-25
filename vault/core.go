@@ -3003,15 +3003,14 @@ func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
 
 // LoadInFlightReqData creates a snapshot map of the current
 // in-flight requests
-func (c *Core) LoadInFlightReqData() map[string]*InFlightReqData {
-	currentInFlightReqMap := make(map[string]*InFlightReqData)
+func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
+	currentInFlightReqMap := make(map[string]InFlightReqData)
 	c.inFlightReqData.l.Lock()
 	defer c.inFlightReqData.l.Unlock()
 	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
 		// there is only one writer to this map, so skip checking for errors
 		v, _ := value.(*InFlightReqData)
-		currentInFlightReqMap[key.(string)] = v
-
+		currentInFlightReqMap[key.(string)] = *v
 		return true
 	})
 
