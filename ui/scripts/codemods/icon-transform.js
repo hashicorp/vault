@@ -24,10 +24,14 @@ module.exports = env => {
 
   // possibly a bug with ember-template-recast for multi line components with attributes on their own lines
   // when removing an attribute the one on the line below will jump to the same line as the previous one
-  // shift the location of the attributes that appear after the one being removed to preserve formatting
+  // this does not happen when removing the first attribute -- doing so may add unnecessary quotes to the first shifted attribute
+  // example: class="{{foo}}" -> class=""{{foo}}""
   const preserveFormatting = (attributes, removeIndex) => {
-    for (let i = attributes.length - 1; i > removeIndex; i--) {
-      attributes[i].loc = attributes[i - 1].loc;
+    if (removeIndex > 0) {
+      // shift the location of the attributes that appear after the one being removed to preserve formatting
+      for (let i = attributes.length - 1; i > removeIndex; i--) {
+        attributes[i].loc = attributes[i - 1].loc;
+      }
     }
   };
 
