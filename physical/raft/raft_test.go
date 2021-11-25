@@ -20,6 +20,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	bolt "go.etcd.io/bbolt"
@@ -184,7 +185,6 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 
 		return nil
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,6 +225,34 @@ func TestRaft_Backend(t *testing.T) {
 	physical.ExerciseBackend(t, b)
 }
 
+func TestRaft_Backend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := &physical.Entry{Key: key, Value: []byte(key)}
+
+	err = b.Put(context.Background(), entry)
+	if err == nil {
+		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
@@ -259,7 +287,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	rand.Read(value)
 
 	txns := []*physical.TxnEntry{
-		&physical.TxnEntry{
+		{
 			Operation: physical.PutOperation,
 			Entry: &physical.Entry{
 				Key:   "foo",
@@ -391,15 +419,15 @@ func TestRaft_Recovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +527,6 @@ func TestRaft_Backend_Performance(t *testing.T) {
 	if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
 		t.Fatalf("bad config: %v", localConfig)
 	}
-
 }
 
 func BenchmarkDB_Puts(b *testing.B) {
