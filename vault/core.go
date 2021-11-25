@@ -3005,8 +3005,8 @@ func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
 // in-flight requests
 func (c *Core) LoadInFlightReqData() map[string]*InFlightReqData {
 	currentInFlightReqMap := make(map[string]*InFlightReqData)
-	c.inFlightReqData.l.RLock()
-	defer c.inFlightReqData.l.RUnlock()
+	c.inFlightReqData.l.Lock()
+	defer c.inFlightReqData.l.Unlock()
 	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
 		// there is only one writer to this map, so skip checking for errors
 		v, _ := value.(*InFlightReqData)
@@ -3021,33 +3021,29 @@ func (c *Core) LoadInFlightReqData() map[string]*InFlightReqData {
 // UpdateInFlightReqData updates the data for a specific reqID with
 // the clientID
 func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
-	c.inFlightReqData.l.RLock()
+	c.inFlightReqData.l.Lock()
+	defer c.inFlightReqData.l.Unlock()
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
-		defer c.inFlightReqData.l.RUnlock()
 		c.Logger().Trace("failed to retrieve request with ID %v", reqID)
 		return
 	}
-	c.inFlightReqData.l.RUnlock()
 
 	reqData, _ := v.(*InFlightReqData)
 	reqData.ClientID = clientID
-	c.inFlightReqData.l.Lock()
-	defer c.inFlightReqData.l.Unlock()
 	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
 }
 
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	logLevel := log.LevelFromString(c.logRequestsInfo.Load())
-	c.inFlightReqData.l.RLock()
+	c.inFlightReqData.l.Lock()
+	defer c.inFlightReqData.l.Unlock()
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
-		defer c.inFlightReqData.l.RUnlock()
 		c.logger.Log(logLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
 		return
 	}
-	c.inFlightReqData.l.RUnlock()
 
 	// there is only one writer to this map, so skip checking for errors
 	reqData, _ := v.(*InFlightReqData)
