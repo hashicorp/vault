@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
+
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	hclog "github.com/hashicorp/go-hclog"
@@ -222,6 +224,34 @@ func TestRaft_Backend(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend(t, b)
+}
+
+func TestRaft_Backend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := &physical.Entry{Key: key, Value: []byte(key)}
+
+	err = b.Put(context.Background(), entry)
+	if err == nil {
+		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
 }
 
 func TestRaft_Backend_LargeValue(t *testing.T) {
