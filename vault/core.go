@@ -3026,14 +3026,14 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 // LogCompletedRequests Logs the completed request to the server logs
 func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
-	logInfoLevel := log.LevelFromString(c.logRequestsInfo.Load())
+	logLevel := log.LevelFromString(c.logRequestsInfo.Load())
 	if !ok {
-		c.logger.Log(logInfoLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
+		c.logger.Log(logLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
 		return
 	}
 	// there is only one writer to this map, so skip checking for errors
 	reqData, _ := v.(*InFlightReqData)
-	c.logger.Log(logInfoLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
+	c.logger.Log(logLevel, "completed_request","client_id", reqData.ClientID, "client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath, "request_method", reqData.Method)
 }
 
 func (c *Core) ReloadLogRequestsInfo(){

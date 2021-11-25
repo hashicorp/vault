@@ -349,6 +349,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Accessor:    req.ClientTokenAccessor,
 	}
 
+	var clientID string
+	var isTWE bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
@@ -365,6 +367,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		if te.CreationTime > 0 {
 			auth.IssueTime = time.Unix(te.CreationTime, 0)
 		}
+		clientID, isTWE = c.CreateClientID(te)
+		req.ClientID = clientID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -397,13 +401,6 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
 		return auth, te, retErr
-	}
-
-	var clientID string
-	var isTWE bool
-	if te != nil {
-		clientID, isTWE = c.CreateClientID(te)
-		req.ClientID = clientID
 	}
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
