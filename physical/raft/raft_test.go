@@ -279,6 +279,45 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	}
 }
 
+func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txns := []*physical.TxnEntry{
+		{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   key,
+				Value: []byte(key),
+			},
+		},
+	}
+
+	err = b.Transaction(context.Background(), txns)
+	if err == nil {
+		t.Fatal("expected error for transactions")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), txns[0].Entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
