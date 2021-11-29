@@ -349,7 +349,7 @@ by chaining their public signing keys.
    ```bash
    # 1. Find the issuer URL of the cluster.
    kubectl proxy &
-   ISSUER="$(curl --silent 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
+   ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
 
    # 2. Query the jwks_uri specified in /.well-known/openid-configuration
    # NB: You may need to run this from a pod within the cluster if the $ISSUER
