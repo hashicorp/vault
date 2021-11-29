@@ -49,7 +49,8 @@
   "dependencies": {
     "electron-devtools-installer": "^3.2.0",
     "electron-is-dev": "^2.0.0",
-    "electron-squirrel-startup": "^1.0.0"
+    "electron-squirrel-startup": "^1.0.0",
+    "electron-window-state": "^5.0.3"
   },
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.54",

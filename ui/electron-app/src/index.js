@@ -6,17 +6,16 @@ const {
   EMBER_INSPECTOR,
 } = require('electron-devtools-installer');
 const { pathToFileURL } = require('url');
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
 const path = require('path'); 
 const handleFileUrls = require('./handle-file-urls');
 const isDev = require('electron-is-dev');
+const windowStateKeeper = require('electron-window-state');
 
 const emberAppDir = path.resolve(__dirname, '..', 'ember-dist');
 const emberAppURL = pathToFileURL(
   path.join(emberAppDir, 'index.html')
 ).toString();
-
-let mainWindow = null;
 
 // Uncomment the lines below to enable Electron's crash reporter
 // For more information, see http://electron.atom.io/docs/api/crash-reporter/
@@ -51,10 +50,22 @@ app.on('ready', async () => {
 
   await handleFileUrls(emberAppDir);
 
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const mainWindowState = windowStateKeeper({
+    defaultWidth: primaryDisplay.size.width / 2,
+    defaultHeight: primaryDisplay.size.height
+  }); 
+  let mainWindow = new BrowserWindow({
+    x: mainWindowState.x,
+    y: mainWindowState.y,
+    width: primaryDisplay.size.width / 2,
+    height: primaryDisplay.size.height,
+    useContentSize: true
   });
+
+  // register listeners on the window to update the state
+  // listeners will be removed automatically when the window is closed and restore the maximized or full screen state
+  mainWindowState.manage(mainWindow);
 
   // If you want to open up dev tools programmatically, call
   // mainWindow.openDevTools();
