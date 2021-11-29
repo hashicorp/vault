@@ -5,6 +5,7 @@
 .callToAction {
   composes: container;
   margin-top: 64px;
+  margin-bottom: 64px;
 
   @media (--medium-up) {
     margin-top: 132px;

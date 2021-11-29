@@ -1,0 +1,88 @@
+query UseCasesQuery {
+  allVaultUseCases {
+    seo: _seoMetaTags {
+      attributes
+      content
+      tag
+    }
+    slug
+    heroHeading
+    heroDescription
+    challengeHeading
+    challengeDescription
+    challengeImage {
+      url
+      alt
+      width
+      height
+    }
+    challengeLink
+    solutionHeading
+    solutionDescription
+    solutionImage {
+      url
+      alt
+      width
+      height
+    }
+    solutionLink
+    caseStudyImage {
+      url
+      alt
+      width
+      height
+    }
+    caseStudyLogo {
+      url
+      alt
+      width
+      height
+    }
+    caseStudyHeading
+    caseStudyDescription
+    caseStudyLink
+    caseStudyStats {
+      value
+      label
+    }
+    cardsHeading
+    cardsDescription
+    tutorialCards {
+      eyebrow
+      heading
+      description
+      link
+      products {
+        name
+      }
+    }
+    documentationCards {
+      eyebrow
+      heading
+      description
+      link
+      products {
+        name
+      }
+    }
+    callToActionHeading
+    callToActionDescription
+    callToActionLinks {
+      link
+      title
+    }
+    videoCallout {
+      youtubeId
+      heading
+      description
+      thumbnail {
+        url
+      }
+      personName
+      personDescription
+      personAvatar {
+        url
+      }
+    }
+  }
+}
