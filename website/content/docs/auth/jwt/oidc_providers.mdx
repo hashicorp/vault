@@ -315,7 +315,7 @@ Kubernetes cluster requirements:
       ```bash
       # 1. Find the issuer URL of the cluster.
       kubectl proxy &
-      ISSUER="$(curl --silent 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
+      ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
 
       # 2. Enable and configure the JWT auth mount.
       vault auth enable jwt
