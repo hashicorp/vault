@@ -1,0 +1,45 @@
+query UseCasesQuery {
+  allVaultUseCases {
+    slug
+    heroHeading
+    heroDescription
+    challengeHeading
+    challengeDescription
+    challengeLink
+    solutionHeading
+    solutionDescription
+    solutionLink
+    caseStudyLogo {
+      url
+      alt
+      width
+      height
+    }
+    caseStudyHeading
+    caseStudyDescription
+    caseStudyLink
+    caseStudyStats {
+      value
+      label
+    }
+    callToActionHeading
+    callToActionDescription
+    callToActionLinks {
+      link
+      title
+    }
+    videoCallout {
+      youtubeId
+      heading
+      description
+      thumbnail {
+        url
+      }
+      personName
+      personDescription
+      personAvatar {
+        url
+      }
+    }
+  }
+}

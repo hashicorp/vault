@@ -1,11 +1,11 @@
+import * as React from 'react'
 import IoUsecaseHero from 'components/io-usecase-hero'
-import IoUsecaseSections from 'components/io-usecase-sections'
+import IoUsecaseSection from 'components/io-usecase-section'
 import IoUsecaseCustomer from 'components/io-usecase-customer'
 import IoCardContainer from 'components/io-card-container'
 import IoVideoCallout from 'components/io-video-callout'
 import IoUsecaseCallToAction from 'components/io-usecase-call-to-action'
 import s from './style.module.css'
-import React from 'react'
 
 export default function UseCases(): React.ReactElement {
   return (
@@ -17,7 +17,7 @@ export default function UseCases(): React.ReactElement {
         pattern="/img/usecase-hero-pattern.svg"
       />
 
-      <IoUsecaseSections
+      {/* <IoUsecaseSections
         brand="vault"
         sections={[
           {
@@ -73,7 +73,7 @@ export default function UseCases(): React.ReactElement {
             },
           },
         ]}
-      />
+      /> */}
 
       <IoUsecaseCustomer
         link="/"

@@ -5,31 +5,11 @@ import Image from 'next/image'
 import Button from '@hashicorp/react-button'
 import s from './style.module.css'
 
-interface IoUsecaseSectionsProps {
-  brand?: Products | 'neutral'
-  sections: [IoUsecaseSectionProps, IoUsecaseSectionProps]
-}
-
-export default function IoUseCaseSestions({
-  brand = 'neutral',
-  sections,
-}: IoUsecaseSectionsProps): React.ReactElement {
-  return (
-    <>
-      {sections.map((section, index) => {
-        // Index is stable
-        // eslint-disable-next-line react/no-array-index-key
-        return <IoUsecaseSection key={index} brand={brand} {...section} />
-      })}
-    </>
-  )
-}
-
 interface IoUsecaseSectionProps {
   brand?: Products | 'neutral'
   eyebrow: string
   heading: string
-  description: React.ReactNode
+  description: string
   media?: {
     src: string
     width: string
@@ -42,7 +22,7 @@ interface IoUsecaseSectionProps {
   }
 }
 
-function IoUsecaseSection({
+export default function IoUsecaseSection({
   brand = 'neutral',
   eyebrow,
   heading,
@@ -57,7 +37,14 @@ function IoUsecaseSection({
         <div className={s.columns}>
           <div className={s.column}>
             <h2 className={s.heading}>{heading}</h2>
-            {media ? <p className={s.description}>{description}</p> : null}
+            {media ? (
+              <div
+                className={s.description}
+                dangerouslySetInnerHTML={{
+                  __html: description,
+                }}
+              />
+            ) : null}
             {cta ? (
               <div className={s.cta}>
                 <Button
@@ -75,7 +62,12 @@ function IoUsecaseSection({
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image {...media} />
             ) : (
-              <div className={s.description}>{description}</div>
+              <div
+                className={s.description}
+                dangerouslySetInnerHTML={{
+                  __html: description,
+                }}
+              />
             )}
           </div>
         </div>
