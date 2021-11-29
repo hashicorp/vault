@@ -329,7 +329,7 @@ Kubernetes cluster requirements:
       vault write auth/jwt/config oidc_discovery_url="${ISSUER}"
       ```
 
-1. Configure a role and log in as detailed [below](#configuring-a-role-and-logging-in).
+1. Configure a role and log in as detailed [below](#creating-a-role-and-logging-in).
 
 [k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
 
@@ -377,18 +377,18 @@ Kubernetes cluster requirements:
    -----END PUBLIC KEY-----"
    ```
 
-1. Configure a role and log in as detailed [below](#configuring-a-role-and-logging-in).
+1. Configure a role and log in as detailed [below](#creating-a-role-and-logging-in).
 
 [jwk-to-pem]: https://8gwifi.org/jwkconvertfunctions.jsp
 
-### Configuring a role and logging in
+### Creating a role and logging in
 
 Once your JWT auth mount is configured, you're ready to configure a role and
 log in.
 
 1. Create a role for JWT auth that the `default` service account from the
    `default` namespace can use. The audience of tokens defaults to the same as
-   the issuer, but it is [configurable][k8s-token-audience].
+   the issuer, but it is configurable.
 
    ```bash
    vault write auth/jwt/role/my-role \
@@ -415,4 +415,49 @@ log in.
       "${VAULT_ADDR}/v1/auth/jwt/login"
    ```
 
-[k8s-token-audience]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#serviceaccounttokenprojection-v1-core
+### Specifying TTL and audience
+
+If you would like to specify a custom TTL or audience for service account tokens,
+the following pod spec illustrates a volume mount that overrides the default
+admission injected token. This is especially relevant if you are unable to
+disable the [--service-account-extend-token-expiration][k8s-extended-tokens]
+flag for `kube-apiserver` and want to use short TTLs.
+
+When using the resulting token, you will need to set `bound_audiences=vault`
+when creating roles in Vault's JWT auth mount.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      volumeMounts:
+      - name: custom-token
+        mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+  volumes:
+  - name: custom-token
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          path: token
+          expirationSeconds: 600 # 10 minutes is the minimum TTL
+          audience: vault
+      - configMap:
+          name: kube-root-ca.crt
+          items:
+          - key: ca.crt
+            path: ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+```
+
+[k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options

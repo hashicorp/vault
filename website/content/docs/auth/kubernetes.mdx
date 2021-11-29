@@ -126,7 +126,16 @@ each of which is explained in more detail below.
 | Use long-lived token as reviewer JWT | No                         | Yes                     |                      |
 | Use JWT auth                         | Yes                        | No                      |                      |
 
+-> **Note:** By default, Kubernetes currently extends the lifetime of admission
+injected service account tokens to a year to help smooth the transition to
+short-lived tokens. If you would like to disable this, set
+[--service-account-extend-token-expiration=false][k8s-extended-tokens] for
+`kube-apiserver` or specify your own `serviceAccountToken` volume mount at
+`/var/run/secrets/kubernetes.io/serviceaccount` in your pods. See
+[here](/docs/auth/jwt/oidc_providers#specifying-ttl-and-audience) for an example.
+
 [k8s-1.21-changelog]: https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.21.md#api-change-2
+[k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
 
 #### Use the Vault client's JWT as the reviewer JWT
 
