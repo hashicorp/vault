@@ -8,9 +8,9 @@ description: The Vault CSI Provider can be installed using Vault Helm.
 
 ## Prerequisites
 
-* Kubernetes 1.16+ for both the master and worker nodes (Linux-only)
-* [Secrets store CSI driver](https://secrets-store-csi-driver.sigs.k8s.io/getting-started/installation.html) installed
-* `TokenRequest` endpoint available, which requires setting the flags
+- Kubernetes 1.16+ for both the master and worker nodes (Linux-only)
+- [Secrets store CSI driver](https://secrets-store-csi-driver.sigs.k8s.io/getting-started/installation.html) installed
+- `TokenRequest` endpoint available, which requires setting the flags
   `--service-account-signing-key-file` and `--service-account-issuer` for
   `kube-apiserver`. Set by default from 1.20+ and earlier in most managed services.
 

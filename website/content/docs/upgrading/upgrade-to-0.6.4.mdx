@@ -28,13 +28,13 @@ creating tokens using this endpoint:
 1. If a token creation request does not specify desired policies, the parent's
    policies will be used (as normal) but `default` will not be automatically
    added, so the child token will only have `default` if the parent does
-2. If a token creation request specifies desired policies, `default` will be
+1. If a token creation request specifies desired policies, `default` will be
    added automatically if and only if the parent token has `default`
-3. If the parent token has `sudo` capability on the token creation endpoint,
+1. If the parent token has `sudo` capability on the token creation endpoint,
    `default` is always added; since `sudo` capability on this endpoint allows
    adding any policy, this is not privilege escalation with respect to the
    parent token-holder
-4. When using token store roles, `default` is always added to the list of child
+1. When using token store roles, `default` is always added to the list of child
    token policies unless `default` is contained in `disallowed_policies`
 
 **Regardless of provenance**, if a token being created has the `default` policy
@@ -66,7 +66,7 @@ To mitigate this issue we have taken the following steps:
    allowing future revocation requests to succeed if the underlying cause of the
    failure has been addressed.
 
-2. Added a function `auth/token/tidy` that can both clean up the leaked
+1. Added a function `auth/token/tidy` that can both clean up the leaked
    accessor entries and expire the leases associated with those accessors'
    tokens.
 

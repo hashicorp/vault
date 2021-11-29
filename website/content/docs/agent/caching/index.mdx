@@ -31,7 +31,7 @@ specific scenarios.
    be cached by the agent only if the parent token is already being managed by
    the agent or if the new token is an orphan token.
 
-2. Leased secret creation requests are made through the agent using tokens that
+1. Leased secret creation requests are made through the agent using tokens that
    are already managed by the agent. This means that any dynamic credentials
    that are issued using the tokens managed by the agent, will be cached and
    its renewals are taken care of.
@@ -209,13 +209,14 @@ page.
   or `"never"`.
 
 - `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
-   or `"forward"`.
+  or `"forward"`.
 
 -> **Note:** When the `cache` block is defined, at least one
 [template][agent-template] or [listener][agent-listener] must also be defined
 in the config, otherwise there is no way to utilize the cache.
 
 [agent-template]: /docs/agent/template
+
 [agent-listener]: /docs/agent/caching#configuration-listener
 
 ### Configuration (Persist)

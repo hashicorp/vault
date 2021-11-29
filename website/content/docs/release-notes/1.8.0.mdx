@@ -1,8 +1,7 @@
 ---
 layout: docs
 page_title: 1.8.0
-description: |-
-  This page contains release notes for Vault 1.8.0.
+description: This page contains release notes for Vault 1.8.0.
 ---
 
 # Vault 1.8.0
@@ -30,8 +29,11 @@ description: |-
 ### Other Enhancements
 
 - **ServiceNow Credential Resolver:** Vault can now act as an external credential store for the ServiceNow MID servers when using a ServiceNow workflow for service discovery
+
 - **RedHat certified helm charts:** Vault’s Kubernetes Helm charts are now certified by RedHat!
+
 - **Integrated Storage Autopilot:** Autopilot capabilities to monitor and manage clusters are now supported with DR.
+
 - **SSH Secrets Engine identity template support:** When configuring a role for the SSH Secrets Engine, users may now specify Vault identity templates in the _default_extensions_ field. This allows Vault to conform to the required identity semantics for services such as GitHub Enterprise when functioning as an SSH CA.
 
 - **Expiration manager improvements**
@@ -47,7 +49,9 @@ description: |-
   - **Update Agent Auth with GCP to use new SignJWT endpoint:** This enhancement should benefit GCP customers who want to use the Vault Agent to authenticate using GCP’s IAM Service Account Credentials for signing JWTs.
 
 - **Control Group triggers:** This enhancement provides flexibility to customers to apply control groups to only certain permissions in a path. Vault now supports a new parameter called controlled_capabilities in the control_group stanza factors. This is a list of permissions, which when invoked will result in the control group workflow only being triggered if the operation that initiated the request is included in the list.
+
 - **Password policies in namespaces:** Vault now supports setting up password policies in namespaces
+
 - **Obscuring secret Values in the UI:** Vault now provides the ability to mask secrets on entry - whether they be KV secrets or certificates - anywhere secrets are entered in the UI.
 
 ### Deprecations:

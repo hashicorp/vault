@@ -72,38 +72,51 @@ during this call.
   _Note:_ The ID should not start with the `s.` prefix.
 
 - `role_name` `(string: "")` – The name of the token role.
+
 - `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless
   the calling token is root or contains `sudo` capabilities to `auth/token/create`.
   If not specified, defaults to all the policies of the calling token.
+
 - `meta` `(map: {})` – A map of string to string valued metadata. This is
   passed through to the audit devices.
+
 - `no_parent` `(bool: false)` - This argument only has effect if used by a root
   or sudo caller. When set to true, the token created will not have a parent.
+
 - `no_default_policy` `(bool: false)` - If true the `default` policy will not be
   contained in this token's policy set.
+
 - `renewable` `(bool: true)` - Set to `false` to disable the ability of the token
   to be renewed past its initial TTL. Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
+
 - `lease` `(string: "")` - DEPRECATED; use `ttl` instead
+
 - `ttl` `(string: "")` - The TTL period of the token, provided as "1h", where
   hour is the largest suffix. If not provided, the token is valid for the
   [default lease TTL](/docs/configuration), or indefinitely if the
   root policy is used.
+
 - `type` `(string: "")` - The token type. Can be "batch" or "service". Defaults
   to the type specified by the role configuration named by `role_name`.
+
 - `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
   max TTL set upon it. This maximum token TTL _cannot_ be changed later, and
   unlike with normal tokens, updates to the system/mount max TTL value will
   have no effect at renewal time -- the token will never be able to be renewed
   or used past the value set at issue time.
+
 - `display_name` `(string: "token")` - The display name of the token.
+
 - `num_uses` `(integer: 0)` - The maximum uses for the given token. This can be
   used to create a one-time-token or limited use token. The value of 0 has no
   limit to the number of uses.
+
 - `period` `(string: "")` - If specified, the token will be periodic; it will have
   no maximum TTL (unless an "explicit-max-ttl" is also set) but every renewal
   will use the given period. Requires a root token or one with the sudo capability.
+
 - `entity_alias` `(string: "")` - Name of the entity alias to associate with
   during token creation. Only works in combination with `role_name` argument
   and used entity alias must be listed in `allowed_entity_aliases`. If this has

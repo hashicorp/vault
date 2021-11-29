@@ -235,14 +235,14 @@ for IAM service accounts looks like this:
    [`projects.serviceAccounts.signJwt`][signjwt-method] API method. For examples
    of how to do this, see the [Generating JWTs](#generating-jwts) section.
 
-2. The client sends this signed JWT to Vault along with a role name.
+1. The client sends this signed JWT to Vault along with a role name.
 
-3. Vault extracts the `kid` header value, which contains the ID of the
+1. Vault extracts the `kid` header value, which contains the ID of the
    key-pair used to generate the JWT, and the `sub` ID/email to find the service
    account key. If the service account does not exist or the key is not linked to
    the service account, Vault denies authentication.
 
-4. Vault authorizes the confirmed service account against the given role. If
+1. Vault authorizes the confirmed service account against the given role. If
    that is successful, a Vault token with the proper policies is returned.
 
 ### GCE Login
@@ -256,13 +256,13 @@ another cloud provider.
 1. The client obtains an [instance identity metadata token][instance-identity]
    on a GCE instance.
 
-2. The client sends this JWT to Vault along with a role name.
+1. The client sends this JWT to Vault along with a role name.
 
-3. Vault extracts the `kid` header value, which contains the ID of the
+1. Vault extracts the `kid` header value, which contains the ID of the
    key-pair used to generate the JWT, to find the OAuth2 public cert to verify
    this JWT.
 
-4. Vault authorizes the confirmed instance against the given role, ensuring
+1. Vault authorizes the confirmed instance against the given role, ensuring
    the instance matches the bound zones, regions, or instance groups. If that is
    successful, a Vault token with the proper policies is returned.
 
@@ -356,12 +356,19 @@ The GCP Auth Plugin has a full HTTP API. Please see the
 [API docs][api-docs] for more details.
 
 [jwt]: https://tools.ietf.org/html/rfc7519
+
 [signjwt-method]: https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signJwt
+
 [cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
+
 [service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts
+
 [api-docs]: /api/auth/gcp
+
 [identity-group-aliases]: /api/secret/identity/group-alias
+
 [instance-identity]: https://cloud.google.com/compute/docs/instances/verifying-instance-identity
+
 [repo]: https://github.com/hashicorp/vault-plugin-auth-gcp
 
 ## Code Example
@@ -579,6 +586,7 @@ namespace Examples
     }
 }
 ```
+
 </CodeBlockConfig>
 
 </CodeTabs>

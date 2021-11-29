@@ -48,7 +48,7 @@ There are two ways that tokens can be response-wrapped by the agent:
    daemonized in this mode since some auth methods allow for reauthentication
    on certain events.
 
-2. By any of the token sinks. Because more than one sink can be configured, the
+1. By any of the token sinks. Because more than one sink can be configured, the
    token must be wrapped after it is fetched, rather than wrapped by Vault as
    it's being returned. As a result, the `creation_path` will always be
    `sys/wrapping/wrap`, and validation of this field cannot be used as

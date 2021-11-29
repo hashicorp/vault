@@ -14,8 +14,8 @@ method](/docs/auth/alicloud).
 The Vault agent will use the first credential it can successfully obtain in the following order:
 
 1. [Environment variables](https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/env.go)
-2. A static credential configuration
-3. Instance metadata (recommended)
+1. A static credential configuration
+1. Instance metadata (recommended)
 
 Wherever possible, we recommend using instance metadata for credentials. These rotate every hour
 and require no effort on your part to provision, making instance metadata the most secure of the three methods. If

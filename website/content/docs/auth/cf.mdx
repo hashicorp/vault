@@ -11,11 +11,11 @@ for CF instances. It leverages CF's [App and Container Identity Assurance](https
 At a high level, this works as follows:
 
 1. You construct a request to Vault including your `CF_INSTANCE_CERT`, signed by your `CF_INSTANCE_KEY`.
-2. Vault validates that the signature is no more than 300 seconds old, or 60 seconds in the future.
-3. Vault validates that the cert was issued by the CA certificate you've pre-configured.
-4. Vault validates that the request was signed by the private key for the `CF_INSTANCE_CERT`.
-5. Vault validates that the `CF_INSTANCE_CERT` application ID, space ID, and org ID presently exist.
-6. If all checks pass, Vault issues an appropriately-scoped token.
+1. Vault validates that the signature is no more than 300 seconds old, or 60 seconds in the future.
+1. Vault validates that the cert was issued by the CA certificate you've pre-configured.
+1. Vault validates that the request was signed by the private key for the `CF_INSTANCE_CERT`.
+1. Vault validates that the `CF_INSTANCE_CERT` application ID, space ID, and org ID presently exist.
+1. If all checks pass, Vault issues an appropriately-scoped token.
 
 ## Known Risks
 
@@ -189,9 +189,9 @@ Specifically, the `vault` user created here will need to be able to perform the 
 
 - Method: "GET", endpoint: "/v2/info"
 - Method: "POST", endpoint: "/oauth/token"
-- Method: "GET", endpoint: "/v2/apps/\$APP_ID"
-- Method: "GET", endpoint: "/v2/organizations/\$ORG_ID"
-- Method: "GET", endpoint: "/v2/spaces/\$SPACE_ID"
+- Method: "GET", endpoint: "/v2/apps/$APP_ID"
+- Method: "GET", endpoint: "/v2/organizations/$ORG_ID"
+- Method: "GET", endpoint: "/v2/spaces/$SPACE_ID"
 
 Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first
 with an error like:

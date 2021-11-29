@@ -26,7 +26,7 @@ One can configure rotations after fewer encryptions or on a time based schedule.
 - `max_operations` `(int: 3865470566)` - Specify the limit of encryptions after which
   the key will be automatically rotated. The number must be between 1,000,000 and the
   default.
-- `interval` `(string: "") - If set, the age of the active key at which an
+- `interval` \`(string: "") - If set, the age of the active key at which an
   automatic rotation is triggered. Specified as a Go duration string (e.g.
   4320h), the value must be at least 24 hours.
 - `enabled` `(bool: true)` - If set to false, automatic rotations will not

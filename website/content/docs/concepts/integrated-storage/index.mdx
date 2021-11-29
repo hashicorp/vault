@@ -111,7 +111,7 @@ storage "raft" {
 ```
 
 By default, Vault will attempt to reach discovered peers using HTTPS and port
-8200.  Operators may override these through the
+8200\.  Operators may override these through the
 [`auto_join_scheme`](/docs/configuration/storage/raft#auto_join_scheme) and
 [`auto_join_port`](/docs/configuration/storage/raft#auto_join_port) fields
 respectively.
@@ -225,12 +225,12 @@ instead of the cluster port.  This is currently the only situation in which
 OSS Vault does this (Vault Enterprise also does something similar when setting
 up replication.)
 
-* `node2` wants to join the cluster, so issues challenge API request to existing member `node1`
-* `node1` replies to challenge request with (1) an encrypted random UUID and (2) seal config
-* `node2` must decrypt UUID using seal; if using auto-unseal can do it directly, if using Shamir must wait for user to provide enough unseal keys to perform decryption
-* `node2` sends decrypted UUID back to `node1` using answer API
-* `node1` sees `node2` can be trusted (since it has seal access) and replies with a bootstrap package which includes the cluster TLS certificate and private key
-* `node2` gets sent a raft snapshot over the cluster port
+- `node2` wants to join the cluster, so issues challenge API request to existing member `node1`
+- `node1` replies to challenge request with (1) an encrypted random UUID and (2) seal config
+- `node2` must decrypt UUID using seal; if using auto-unseal can do it directly, if using Shamir must wait for user to provide enough unseal keys to perform decryption
+- `node2` sends decrypted UUID back to `node1` using answer API
+- `node1` sees `node2` can be trusted (since it has seal access) and replies with a bootstrap package which includes the cluster TLS certificate and private key
+- `node2` gets sent a raft snapshot over the cluster port
 
 After this procedure the new node will never again send traffic to the API port.
 All subsequent inter-node communication will use the cluster port.

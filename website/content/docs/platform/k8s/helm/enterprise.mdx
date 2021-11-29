@@ -1,8 +1,7 @@
 ---
 layout: docs
 page_title: Vault Enterprise License Management - Kubernetes
-description: >-
-  Vault Helm supports deploying Vault Enterprise, including license autoloading.
+description: 'Vault Helm supports deploying Vault Enterprise, including license autoloading.'
 ---
 
 # Vault Enterprise License Management
@@ -81,7 +80,7 @@ kubectl exec vault-0 -- vault license inspect
 kubectl exec vault-0 -- vault write -f sys/config/reload/license
 ```
 
-  Or you may issue an HUP signal directly to Vault:
+Or you may issue an HUP signal directly to Vault:
 
 ```shell
 kubectl exec vault-0 -- pkill -HUP vault

@@ -12,6 +12,7 @@ Vault isn't starting up due to some newly discovered bug.  This probably won't
 be helpful without a Vault expert on hand to advise.
 
 Differences between recovery mode and regular Vault operation:
+
 - none of the usual subsystems run, e.g. expiration, clustering, RPCs from other nodes
 - instead of a regular unseal request, unseal a node by generating a recovery token
 - all requests are to `sys/raw` and are authenticated using the recovery token
@@ -19,6 +20,7 @@ Differences between recovery mode and regular Vault operation:
 ## Recovery process
 
 The usual way recovery mode is used is:
+
 - seal or stop all nodes in the cluster
 - if using Integrated Storage, run `vault status` on each node to find the highest-index ones
   (this will require they be running and sealed, as if unsealed a new leader might be
@@ -74,4 +76,3 @@ are two ways to do so: either delete the vault data directory on the other nodes
 and re-join them to the recovered node, or use the
 [Manual Recovery Using peers.json](https://www.vaultproject.io/docs/concepts/integrated-storage#manual-recovery-using-peers-json)
 approach to get all nodes to agree on what nodes are part of the cluster.
-

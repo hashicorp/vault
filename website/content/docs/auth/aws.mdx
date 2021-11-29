@@ -103,6 +103,7 @@ is also represented in the graphic below) is as follows:
    instance metadata.
 
 [aws-iid]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+
 [aws-ec2-mds]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 There are various modifications to this workflow that provide more or less
@@ -216,9 +217,9 @@ role. Some examples of how this works in practice:
 
 1. You configure a role with the ec2 auth type, with a bound AMI ID. A
    client would not be able to login using the iam auth type.
-2. You configure a role with the iam auth type, with a bound IAM
+1. You configure a role with the iam auth type, with a bound IAM
    principal ARN. A client would not be able to login with the ec2 auth method.
-3. You configure a role with the iam auth type and further configure
+1. You configure a role with the iam auth type and further configure
    inferencing. You have a bound AMI ID and a bound IAM principal ARN. A client
    must login using the iam method; the RoleSessionName must be a valid instance
    ID viewable by Vault, and the instance must have come from the bound AMI ID.
@@ -817,6 +818,7 @@ func getSecretWithAWSAuthIAM() (string, error) {
 	return value, nil
 }
 ```
+
 </CodeBlockConfig>
 
 <CodeBlockConfig lineNumbers>
@@ -904,6 +906,7 @@ namespace Examples
     }
 }
 ```
+
 </CodeBlockConfig>
 
 </CodeTabs>

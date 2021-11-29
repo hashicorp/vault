@@ -32,7 +32,6 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: How can I configure the activity for log retention?](#q-how-can-i-configure-the-activity-for-log-retention)
 - [Q: Do child namespaces create duplicate tokens?](#q-do-child-namespaces-create-duplicate-tokens)
 
-
 ### Q: What is a client?
 
 Clients are unique applications, services, or users that authenticate to a HashiCorp Vault cluster. For billing and consumption, only unique and active clients during the billing period (monthly in the case of HCP and annual in the case of self-managed Vault) count towards totals. Each client is counted just once within a billing period, regardless of how many times it's been active. When a client authenticates to a cluster, those clients have unlimited access to that cluster for the remainder of the billing period. The client metric is a combination of active identity entities and active non-entity tokens. To learn more, refer to the documentation on [What is a Client?](/docs/concepts/client-count#what-is-a-client).
@@ -56,10 +55,10 @@ While the definition of clients appears to be simple on the surface, there are m
 
 One thing to note is that Vault clients are a combination of active identities as well as non-entity tokens. Identity entities are unique users, and when identities authenticate to Vault, corresponding tokens are generated. However, there are some situations in which tokens are generated without corresponding identities (e.g., when using the token auth method to create a token for someone else whose identity is unknown). As such, these non-entity tokens also represent users, and are counted towards the overall client aggregates.  Here are some situations in which non-entity tokens get created within Vault.
 
-* Tokens within Vault are the core method for authentication. You can use Tokens to authenticate directly, or use the [auth methods](/docs/concepts/auth) to dynamically generate tokens based on external identities.
-* There are scenarios where tokens are created outside of the identity system without an associated entity. For this reason, unique identity entities alone cannot always add up to the total unique authentications made to Vault over a stipulated time period.
-* In a scenario where tokens are created outside of the identity system, these tokens are considered clients. Note that it should be rare for production usage to have any tokens created outside any identity systems.
-* There are a few ways of creating tokens without entities: *Token Roles*, *Token Create APIs*, *Wrapping Tokens*, and *Control Groups*. For more information, refer to the [What is a Client?](/docs/concepts/client-count/#what-is-a-client) documentation.
+- Tokens within Vault are the core method for authentication. You can use Tokens to authenticate directly, or use the [auth methods](/docs/concepts/auth) to dynamically generate tokens based on external identities.
+- There are scenarios where tokens are created outside of the identity system without an associated entity. For this reason, unique identity entities alone cannot always add up to the total unique authentications made to Vault over a stipulated time period.
+- In a scenario where tokens are created outside of the identity system, these tokens are considered clients. Note that it should be rare for production usage to have any tokens created outside any identity systems.
+- There are a few ways of creating tokens without entities: _Token Roles_, _Token Create APIs_, _Wrapping Tokens_, and _Control Groups_. For more information, refer to the [What is a Client?](/docs/concepts/client-count/#what-is-a-client) documentation.
 
 Client counts are not computed solely using a combination of unique identity entities within Vault but also computed using a combination of unique identity entities and non-entity tokens.
 
@@ -68,11 +67,12 @@ Client counts are not computed solely using a combination of unique identity ent
 Although client counts have been available via the usage metrics UI since Vault 1.6 and the Vault auditor tool was available around the same time, we have since made improvements to the Vault client count computation logic in newer versions of Vault. These changes are reflected only in the usage metrics UI (and the corresponding internal API leveraged by the UI) and not in the auditor tool. The initial version and improvements made after that with their corresponding versions are:
 
 **API/UI**:
-* Vault 1.6: Introduction of client counts in the usage metrics UI
-* Vault 1.8:
+
+- Vault 1.6: Introduction of client counts in the usage metrics UI
+- Vault 1.8:
   - Eliminated wrapped tokens and control groups from client count, thereby reducing the non-entity token count. Previously, the creation and usage of control groups and wrapping tokens affected the client count each time the response is read (in the case of a wrapping token) and each time a control group was created (a non-entity token was created)
   - Changed logic of counting of non-entity tokens on usage instead of at create time (therefore resulting in more accurate client counts)
-* Vault 1.9:
+- Vault 1.9:
   - Changed the non-entity token computation logic to deduplicate non-entity tokens, reducing the overall client count. Moving forward, non-entity tokens, where there is no entity to map tokens, Vault will use the contents fo the token to generate a unique client identifier based on the namespace ID and associated  policies. The clientID will prevent duplicating the same token in the overall client count when the token is used again during the billing period.
   - Changed the tracking of non-entity tokens to complete on access instead of creation.
   - Changed the computation logic to not include root tokens in the client count aggregate.
@@ -81,10 +81,11 @@ Although client counts have been available via the usage metrics UI since Vault 
   - Added ability to display clients earlier than a month (within ten minutes of enabling the feature) in the UI. Prior to Vault 1.9, after enabling the counting of clients, you had to wait for a month to view the client aggregates in the UI.
 
 **Auditor tool**:
-  - This tool is independent of the Vault binary and the version run by the customer. The tool can be used for versions 1.3-1.5 (tested) and prior versions as early as Vault 1.0. The auditor tool was introduced in Vault 1.6.
-  - In Vault 1.7, we introduced KMIP clients to this auditor tool
-  - This tool does not contain any of the updates made to the client count computation logic that the API/UI have had since Vault 1.8
-  - In the future, we plan to deprecate this tool
+
+- This tool is independent of the Vault binary and the version run by the customer. The tool can be used for versions 1.3-1.5 (tested) and prior versions as early as Vault 1.0. The auditor tool was introduced in Vault 1.6.
+- In Vault 1.7, we introduced KMIP clients to this auditor tool
+- This tool does not contain any of the updates made to the client count computation logic that the API/UI have had since Vault 1.8
+- In the future, we plan to deprecate this tool
 
 The latest GA version of the Vault binary contains the most updated version of the client count computation logic. However, it’s important to note that even if one upgrades to the latest version and the billing period falls on either side of the upgrade time, the compute logic may be different across the billing period. For more details, refer to the question [If I migrate from Vault 1.8 to 1.9, how will the changes to non-entity token logic and local auth mount made in Vault 1.9 affect the clients created prior to the migration?](#q-if-i-migrate-from-vault-1-8-to-1-9-how-will-the-changes-to-non-entity-token-logic-and-local-auth-mount-made-in-vault-1-9-affect-the-clients-created-prior-to-the-migration).
 
@@ -109,14 +110,14 @@ As of Vault 1.9, KMIP clients are not available via the usage metrics UI or the 
 ### Q: Why do the Vault auditor tool and the usage metrics UI show me different results for the total number of clients?
 
 For versions prior to Vault 1.7, the [auditor tool](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) and usage metrics UI should typically result in the same number of total unique clients for the billing period, unless there is some discrepancy in the underlying data represented by both or due to some other error. For example:
-* If there is a discrepancy between the dates selected in the two tools, then the clients reflected in the results may be different
-* If the auditor tool does not leverage audit data for the billing period, the auditor results may be incorrect
-* If the Vault upgrade made to a version that computes clients in the usage metrics UI (any version greater than Vault 1.6) happened during the billing period, then the results shown in the usage metrics UI will only reflect the period since the upgrade occurred
+
+- If there is a discrepancy between the dates selected in the two tools, then the clients reflected in the results may be different
+- If the auditor tool does not leverage audit data for the billing period, the auditor results may be incorrect
+- If the Vault upgrade made to a version that computes clients in the usage metrics UI (any version greater than Vault 1.6) happened during the billing period, then the results shown in the usage metrics UI will only reflect the period since the upgrade occurred
 
 However, there is one fine detail to keep in mind: the usage metrics UI only allows selection of billing periods from the start of a month to the end of a month (not mid-month). If the dates represented by the audit logs fed into the auditor tool begin and end mid-month, this may result in a subtle change of client counts between the two tools.
 
 For newer versions of Vault 1.8, the API/UI for client counts was updated to reflect count clients more accurately. These changes were not made in the auditor tool and may cause a difference in the results generated by the two tools. For more information on the specific differences, refer to the question [Which Vault version reflects the most accurate count of clients within Vault?](#q-which-version-of-vault-reflects-the-most-accurate-client-counts).
-
 
 ### Q: When I upgrade to a version of Vault that's greater Vault 1.6, will the clients be available for the entire history of the billing period, or only available after the upgrade occurred during the billing period?
 
@@ -149,24 +150,24 @@ To perform this calculation, you must know the billing period. For the sake of t
 
 1. To compute new active unique clients (clients who are new to Vault) for January, you need to use the UI to set the billing start date to January 1st and end date to January 31st:
 
-   -Unique clients for Jan = [Jan1 to Jan31]
+   \-Unique clients for Jan = [Jan1 to Jan31]
 
 1. To compute new active unique clients for February, you need to do the following:
 
-   -Unique clients for Jan + Feb = [Jan 1 to Feb 28/29]
+   \-Unique clients for Jan + Feb = [Jan 1 to Feb 28/29]
 
-   -Unique clients  for Jan = [Jan1 to Jan31]
+   \-Unique clients  for Jan = [Jan1 to Jan31]
 
-   -Unique clients for Feb = (Unique clients for Jan + Feb) - (Unique clients  for Jan)
+   \-Unique clients for Feb = (Unique clients for Jan + Feb) - (Unique clients  for Jan)
 
 1. To compute new active unique clients for March, you need to do the following:
 
-   -Unique clients for Jan + Feb + Mar = [Jan 1 to Mar 31]
+   \-Unique clients for Jan + Feb + Mar = [Jan 1 to Mar 31]
 
-   -Unique clients  for Jan + Feb = [Jan1 to Feb 28/29]
+   \-Unique clients  for Jan + Feb = [Jan1 to Feb 28/29]
 
-   -Unique clients for Feb = (Unique clients for Jan + Feb + Mar) - (Unique clients  for Jan + feb)
-… and so on.
+   \-Unique clients for Feb = (Unique clients for Jan + Feb + Mar) - (Unique clients  for Jan + feb)
+   … and so on.
 
 ### Q: What if I selected an inaccurate billing period via the UI/API?
 
@@ -176,17 +177,18 @@ If you selected an inaccurate billing period, then the clients reflected in the 
 
 If you break the billing period, duplicates may likely occur. For instance, assume the start date of your billing period is January 1st and December 31st. You compute clients for period 1 = January 1st to March 31st and then period 2 = May 1st to December 31st (thus skipping the month of April). Clients that were already counted during period 1 may be recounted in period 2. Therefore, the addition of clients for period 1 + period 2 will include duplicates.
 
-
 ### Q: What are the known client count issues in the auditor tool as well as in the UI/API?
 
 Known issues for both tools include the following:
 
 **Auditor tool**:
-  - New updates to the client count logic (made in the API/UI starting Vault 1.8) are not reflected in the Vault auditor tool. We do not plan to update the auditor tool to be consistent with the API/UI and will eventually deprecate it. Use this tool as a stop-gap until you upgrade to a newer version of Vault
+
+- New updates to the client count logic (made in the API/UI starting Vault 1.8) are not reflected in the Vault auditor tool. We do not plan to update the auditor tool to be consistent with the API/UI and will eventually deprecate it. Use this tool as a stop-gap until you upgrade to a newer version of Vault
 
 **UI/API**:
-  - Via the UI/API, the billing period cannot be computed for start and end dates that fall in the middle of a month. For example, if the billing period starts on March 15th and ends on March 14th within the subsequent year, the tool can only compute the billing period assuming March 1 is the start date or April 1 is the start date, but not using the March 15th start date
-  - As of Vault 1.9, KMIP clients are not provided by the API/CLI. We have plans to add this to a future version
+
+- Via the UI/API, the billing period cannot be computed for start and end dates that fall in the middle of a month. For example, if the billing period starts on March 15th and ends on March 14th within the subsequent year, the tool can only compute the billing period assuming March 1 is the start date or April 1 is the start date, but not using the March 15th start date
+- As of Vault 1.9, KMIP clients are not provided by the API/CLI. We have plans to add this to a future version
 
 ### Q: Under what conditions can cause the loss of client data?
 

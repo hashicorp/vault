@@ -133,7 +133,7 @@ This endpoint configures LDAP in the Kerberos auth method.
   as `username@example.com`.
 - `groupfilter` `(string: "")` – Go template used when constructing the group
   membership query. The template can access the following context variables:
-  \[`UserDN`, `Username`\]. The default is
+  [`UserDN`, `Username`]. The default is
   `(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
   which is compatible with several common directory schemas. To support
   nested group resolution for Active Directory, instead use the following

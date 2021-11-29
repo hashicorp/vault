@@ -2,8 +2,7 @@
 layout: docs
 page_title: Storage
 sidebar_title: Storage
-description: >-
-  Vault relies on external storage to save its durable information.
+description: Vault relies on external storage to save its durable information.
 ---
 
 # Storage
@@ -28,7 +27,7 @@ providing exact guidance on backing up Vault is challenging.
 When backing up Vault, there are two pieces to consider:
 
 1. Vault's encrypted data in the storage backend
-2. Configuration files and management scripts for running the Vault server
+1. Configuration files and management scripts for running the Vault server
 
 There's also a big question - what is the error case you're trying to guard
 against by saving a backup?
@@ -87,8 +86,8 @@ HashiCorp-supported storage backend, see the instructions linked below. For
 other storage backends, follow the documentation of that backend for taking and
 restoring backups.
 
-* Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
-* Consul [snapshots](https://www.consul.io/docs/commands/snapshot.html)
+- Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
+- Consul [snapshots](https://www.consul.io/docs/commands/snapshot.html)
 
 #### Backing up Multiple Clusters
 

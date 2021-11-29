@@ -15,9 +15,10 @@ required to use the autoloading method.
 License Autoloading can be done using one of these mechanisms, in increasing order
 of priority (i.e. `VAULT_LICENSE` takes precedence over `VAULT_LICENSE_PATH`, which
 takes precedence over `license_path` in config.)
-* [license_path in config](/docs/configuration#license_path)
-* [VAULT_LICENSE_PATH environment variable](/docs/commands#vault_license_path)
-* [VAULT_LICENSE environment variable](/docs/commands#vault_license)
+
+- [license_path in config](/docs/configuration#license_path)
+- [VAULT_LICENSE_PATH environment variable](/docs/commands#vault_license_path)
+- [VAULT_LICENSE environment variable](/docs/commands#vault_license)
 
 Nodes within a cluster should be consistently licensed. All nodes in a cluster
 should use autoloading, or none should. If autoloading is used, all nodes should

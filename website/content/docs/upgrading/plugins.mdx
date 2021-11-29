@@ -22,10 +22,10 @@ Instead, you can restart or reload a plugin with the
 replace or upgrade a Vault plugin binary:
 
 1. Register plugin_v1 to the catalog
-2. Mount the plugin backend
-3. Register plugin_v2 to the catalog under the same plugin name, but with
+1. Mount the plugin backend
+1. Register plugin_v2 to the catalog under the same plugin name, but with
    updated command to run plugin_v2 and updated sha256 of plugin_v2
-4. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
+1. Trigger a plugin reload with `sys/plugins/reload/backend` to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
    with either the `plugin` or `mounts` parameter respectively.
 

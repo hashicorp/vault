@@ -21,9 +21,9 @@ Vault will use the AWS SDK's normal credential chain behavior, which means it
 will use the first valid credentials it finds in the following order:
 
 1. A static credential configuration
-2. Environment variables
-3. A file containing credentials
-4. From any identity services available in its physical environment like container environment variables or role-based instance metadata
+1. Environment variables
+1. A file containing credentials
+1. From any identity services available in its physical environment like container environment variables or role-based instance metadata
 
 Wherever possible, we recommend using identity services (method 4) for credentials.
 These rotate regularly and require no effort on your part to provision, making
@@ -56,8 +56,8 @@ parameters unset in your configuration.
 - `header_value` `(string: optional)` - If configured in Vault, the value to use for
   [`iam_server_id_header_value`](/api/auth/aws#iam_server_id_header_value).
 
-- `nonce` `(string: optional)` - If not provided, Vault will generate a new UUID every time `vault agent` runs. 
-  If set, make sure you understand the importance of generating a good, unique `nonce` and protecting it. 
+- `nonce` `(string: optional)` - If not provided, Vault will generate a new UUID every time `vault agent` runs.
+  If set, make sure you understand the importance of generating a good, unique `nonce` and protecting it.
   See [Client Nonce](/docs/auth/aws#client-nonce) for more information.
 
 ## Learn

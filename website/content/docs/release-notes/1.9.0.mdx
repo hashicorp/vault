@@ -1,8 +1,7 @@
 ---
 layout: docs
 page_title: 1.9.0
-description: |-
-  This page contains release notes for Vault 1.9.0.
+description: This page contains release notes for Vault 1.9.0.
 ---
 
 # Vault 1.9.0 Release notes
@@ -23,11 +22,11 @@ Several improvements to client count were made to help customers better track an
 
 The improvements made include the following:
 
-* New logic enables de-duplication of non-entity tokens, thereby reducing their contribution towards the client count
-* New logic allows entities to be created for local auth mounts, thereby eliminating  non-entity-tokens being  issued by the local auth mounts and reducing the overall client count
-* Eliminates root tokesn from the client count aggregate
-* Displays client counts per namespace (top ten, descending order by attribution) in the usage metrics UI with the ability to export data for all namespaces
-* Displays clients earlier than a month in the usage metrics UI (within ten minutes since initiation of computation)
+- New logic enables de-duplication of non-entity tokens, thereby reducing their contribution towards the client count
+- New logic allows entities to be created for local auth mounts, thereby eliminating  non-entity-tokens being  issued by the local auth mounts and reducing the overall client count
+- Eliminates root tokesn from the client count aggregate
+- Displays client counts per namespace (top ten, descending order by attribution) in the usage metrics UI with the ability to export data for all namespaces
+- Displays clients earlier than a month in the usage metrics UI (within ten minutes since initiation of computation)
 
 ### Advanced Data Protection Module (ADP) Enhancements
 
@@ -77,14 +76,15 @@ We have upgraded the [Vault Terraform Provider](https://registry.terraform.io/pr
 
 The following enhancement are included:
 
-* Added `use_microsoft_graph_api` configuration parameter is added to use with Microsoft Graph API. We are targeting to remove Azure Active Directory API by [June 30, 2022](https://docs.microsoft.com/en-us/graph/migrate-azure-ad-graph-overview).
-* Rotate root API is now available to rotate client_secret immediately after configuration.
+- Added `use_microsoft_graph_api` configuration parameter is added to use with Microsoft Graph API. We are targeting to remove Azure Active Directory API by [June 30, 2022](https://docs.microsoft.com/en-us/graph/migrate-azure-ad-graph-overview).
+- Rotate root API is now available to rotate client_secret immediately after configuration.
 
 ### Customized metadata for KV
 
 This [enhancement](https://www.vaultproject.io/api-docs/secret/kv/kv-v2) provides the ability to set version-agnostic custom key metadata for Vault KVv2 secrets via a metadata endpoint. This custom metadata is also visible in the UI.
 
 ## UI Enhancements
+
 ### Expanding the UI for more DB secrets engines
 
 We have been adding support for DB secrets engines in the UI over the past few releases. In the Vault 1.9 release, we have added support for [Oracle](/docs/secrets/databases/oracle) and [ElasticSearch](/docs/secrets/databases/elasticdb) and [PostgresSQL](/docs/secrets/databases/postgresql) database secrets engines in the UI.

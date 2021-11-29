@@ -35,7 +35,7 @@ before approaching Kerberos, you become familiar with its fundamentals.
 
 - [MicroNugget: How Kerberos Works in Windows Active Directory](https://www.youtube.com/watch?v=kp5d8Yv3-0c)
 - [MIT's Kerberos Documentation](https://web.mit.edu/kerberos/)
-- [Kerberos: The Definitive Guide](https://www.amazon.com/Kerberos-Definitive-Guide-ebook-dp-B004P1J81C/dp/B004P1J81C/ref=mt_kindle?_encoding=UTF8&me=&qid=1573685442)
+- [Kerberos: The Definitive Guide](https://www.amazon.com/Kerberos-Definitive-Guide-ebook-dp-B004P1J81C/dp/B004P1J81C/ref=mt_kindle?_encoding=UTF8\&me=\&qid=1573685442)
 
 Regardless of how you gain your knowledge, before using this auth method,
 ensure you are comfortable with Kerberos' high-level architecture, and
@@ -172,10 +172,10 @@ your debugging efforts in the most useful direction.
 
 1. Use `ldapsearch` while logged into your machine hosting Vault to ensure
    your LDAP configuration is functional.
-2. Authenticate to your domain server using `kinit`, your `keytab`, and your
+1. Authenticate to your domain server using `kinit`, your `keytab`, and your
    `krb5.conf`. Do this with both Vault's `keytab`, and any client `keytab` being
    used for logging in. This ensures your Kerberos network is working.
-3. While logged into your client machine, verify you can reach Vault
+1. While logged into your client machine, verify you can reach Vault
    through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
 
 ### Build Clear Steps to Reproduce the Problem

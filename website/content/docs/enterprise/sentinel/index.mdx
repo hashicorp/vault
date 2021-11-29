@@ -50,9 +50,9 @@ Evaluation uses the following logic:
 1. If the request is unauthenticated, skip to step 3. Otherwise, evaluate the
    token's ACL policies. These must grant access; as always, a failure to be
    granted capabilities on a path via ACL policies denies the request.
-2. RGPs attached to the token are evaluated. All policies must pass according
+1. RGPs attached to the token are evaluated. All policies must pass according
    to their enforcement level.
-3. EGPs set on the requested path, and any prefix-matching EGPs set on
+1. EGPs set on the requested path, and any prefix-matching EGPs set on
    less-specific paths, are evaluated. All policies must pass according to
    their enforcement level.
 

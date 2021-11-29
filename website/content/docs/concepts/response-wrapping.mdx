@@ -126,12 +126,12 @@ an operation and path to a desired TTL.
 If a client requests wrapping:
 
 1. The original HTTP response is serialized
-2. A new single-use token is generated with the TTL supplied by the client
-3. Internally, the original serialized response is stored in the single-use
+1. A new single-use token is generated with the TTL supplied by the client
+1. Internally, the original serialized response is stored in the single-use
    token's cubbyhole
-4. A new response is generated, with the token ID, TTL, and path stored in the
+1. A new response is generated, with the token ID, TTL, and path stored in the
    new response's wrap information object
-5. The new response is returned to the caller
+1. The new response is returned to the caller
 
 Note that policies can control minimum/maximum wrapping TTLs; see the [policies
 concepts page](/docs/concepts/policies) for
@@ -148,14 +148,14 @@ Validation is best performed by the following steps:
    none arrives, this may be due to an attacker intercepting the token and then
    preventing it from traveling further. This should cause an alert to trigger
    an immediate investigation.
-2. Perform a lookup on the response-wrapping token. This immediately tells you
+1. Perform a lookup on the response-wrapping token. This immediately tells you
    if the token has already been unwrapped or is expired (or otherwise
    revoked). If the lookup indicates that a token is invalid, it does not
    necessarily mean that the data was intercepted (for instance, perhaps the
    client took a long time to start up and the TTL expired) but should trigger
    an alert for immediate investigation, likely with the assistance of Vault's
    audit logs to see if the token really was unwrapped.
-3. With the token information in hand, validate that the creation path matches
+1. With the token information in hand, validate that the creation path matches
    expectations. If you expect to find a TLS key/certificate inside, chances
    are the path should be something like `pki/issue/...`. If the path is not
    what you expect, it is possible that the data contained inside was read and
@@ -165,7 +165,7 @@ Validation is best performed by the following steps:
    there. For example, if you expect a secret to come from `secret/foo` and
    the interceptor provides a token with `secret/bar` as the path, simply
    checking for a prefix of `secret/` is not enough.
-4. After prefix validation, unwrap the token. If the unwrap fails, the response
+1. After prefix validation, unwrap the token. If the unwrap fails, the response
    is similar to if the initial lookup fails: trigger an alert for immediate
    investigation.
 

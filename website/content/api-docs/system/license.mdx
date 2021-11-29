@@ -97,13 +97,13 @@ performance replication cluster, this must be run against a Vault instance withi
 _DR Secondary Specific Parameters_
 
 - `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
-Note that this is the legacy mechanism for providing a DR operation token. It is
-equally valid to provide the DR operation token in the `X-Vault-Token` header, as
-with a regular vault token.
+  Note that this is the legacy mechanism for providing a DR operation token. It is
+  equally valid to provide the DR operation token in the `X-Vault-Token` header, as
+  with a regular vault token.
 
 If you are using a batch `dr_operation_token`, note you will need to add the following to the token's policy
 
-```# Manage license for DR Secondary
+````# Manage license for DR Secondary
 path "sys/replication/dr/secondary/license" {
 capabilities = ["update"]
 }```
@@ -114,7 +114,7 @@ capabilities = ["update"]
 {
   "text": "01ABCDEFG..."
 }
-```
+````
 
 ### Sample Request
 
@@ -138,7 +138,6 @@ an error unless license autoloading is in use.
 | :----- | :------------- |
 | `DELETE`  | `/sys/license` |
 
-
 ### Sample Request
 
 ```shell-session
@@ -157,13 +156,14 @@ information the Vault cluster has.  See
 [license autoloading](/docs/enterprise/license/autoloading) for background.
 
 In the response:
-* `autoloading_used` will be true if an autoloaded license was provided to the
+
+- `autoloading_used` will be true if an autoloaded license was provided to the
   node, false otherwise.
-* `autoloaded` is the autoloaded license if autoloading_used is true.
-* `persisted_autoload` is the autoloaded license the active node last wrote to
+- `autoloaded` is the autoloaded license if autoloading_used is true.
+- `persisted_autoload` is the autoloaded license the active node last wrote to
   storage; this is only used to detect inconsistently licensed nodes in the
   cluster. It cannot be used as a license itself.
-* `stored` is the stored license if any, i.e. one written using `PUT sys/license`.
+- `stored` is the stored license if any, i.e. one written using `PUT sys/license`.
 
 `autoloaded`, `persisted_autoload`, and `stored` all have the same structure,
 which is also the same structure as the top-level `data` returned by `GET sys/license`.

@@ -10,7 +10,7 @@ description: |-
 
 These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
-found in the sidebar._ 
+found in the sidebar._
 
 !> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
@@ -70,30 +70,34 @@ backend).
 Perform these steps on each standby:
 
 1. Properly shut down Vault on the standby node via `SIGINT` or `SIGTERM`
-2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
-3. Start the standby node
-4. Unseal the standby node
-5. Verify `vault status` shows correct Version and HA Mode is `standby`
-6. Review the node's logs to ensure successful startup and unseal
+1. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
+1. Start the standby node
+1. Unseal the standby node
+1. Verify `vault status` shows correct Version and HA Mode is `standby`
+1. Review the node's logs to ensure successful startup and unseal
 
 At this point all standby nodes will be upgraded and ready to take over. The
 upgrade will not be complete until one of the upgraded standby nodes takes over
 active duty. To do this:
 
-1. Properly shut down the remaining (active) node 
+1. Properly shut down the remaining (active) node
 
-   ~> **Note:** It is important that you shut the node down properly. 
+   ~> **Note:** It is important that you shut the node down properly.
    This will perform a step-down and release the HA lock, allowing a standby
    node to take over with a very short delay.
    If you kill Vault without letting it release the lock, a standby node will
    not be able to take over until the lock's timeout period has expired. This
    is backend-specific but could be ten seconds or more.
-   
-2. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
-4. Start the node
-5. Unseal the node
-5. Verify `vault status` shows correct Version and HA Mode is `standby`
-7. Review the node's logs to ensure successful startup and unseal
+
+1. Replace the Vault binary with the new version; ensure that `mlock()` capability is added to the new binary with [setcap](/docs/configuration#disable_mlock)
+
+1. Start the node
+
+1. Unseal the node
+
+1. Verify `vault status` shows correct Version and HA Mode is `standby`
+
+1. Review the node's logs to ensure successful startup and unseal
 
 Internal upgrade tasks will happen after one of the upgraded standby nodes
 takes over active duty.
@@ -126,8 +130,8 @@ verifying functionality after each cluster upgrade.
 1. Upgrade Clusters B and D, using the HA upgrade process above. These clusters
    have no downstream clusters, so they should be upgraded first, but the
    ordering of B vs D does not matter.
-2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
+1. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
    Because Cluster C is a cluster, it should also use the HA upgrade process.
-3. Finally, upgrade Cluster A. All clusters downstream of A will already be
+1. Finally, upgrade Cluster A. All clusters downstream of A will already be
    upgraded. It should be upgraded last, as it is a Performance Primary and a DR
    Primary.

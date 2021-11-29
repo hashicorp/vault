@@ -22,6 +22,7 @@ specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
 advertise the correct address to other nodes.
 
 ## Listener's custom response headers
+
 Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for
@@ -37,6 +38,7 @@ the `X-Vault-` prefix will not be accepted. A message will be logged in the Vaul
 upon start up indicating the header with `X-Vault-` prefix is not accepted.
 
 ### Order of precedence
+
 If the same header is configured in both the configuration file and
 in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui), the header in the configuration file takes precedence.
 For example, the `"Content-Security-Policy"` header is defined by default in the
@@ -187,20 +189,20 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 ### `custom_response_headers` Parameters
 
 - `default` `(key-value-map: {})` - A map of string header names to an array of
- string values. The default headers are set on all endpoints regardless of
- the status code value. For an example, please refer to the
- "Configuring custom http response headers" section.
+  string values. The default headers are set on all endpoints regardless of
+  the status code value. For an example, please refer to the
+  "Configuring custom http response headers" section.
 
 - `<specific status code>` `(key-value-map: {})` - A map of string header names
- to an array of string values. These headers are set only when the specific status
- code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
- is set when the http response status code is `"200"`.
+  to an array of string values. These headers are set only when the specific status
+  code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`.
 
 - `<collective status code>` `(key-value-map: {})` - A map of string header names
- to an array of string values. These headers are set only when the response status
- code falls under the collective status code.
- For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
- is set when the http response status code is `"200"`, `"204"`, etc.
+  to an array of string values. These headers are set only when the response status
+  code falls under the collective status code.
+  For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`, `"204"`, etc.
 
 ## `tcp` Listener Examples
 
@@ -256,7 +258,6 @@ listener "tcp" {
   }
 }
 ```
-
 
 ### Configuring custom http response headers
 
@@ -337,6 +338,9 @@ cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
 ```
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
+
 [api-addr]: /docs/configuration#api_addr
+
 [cluster-addr]: /docs/configuration#cluster_addr
+
 [go-tls-blog]: https://go.dev/blog/tls-cipher-suites

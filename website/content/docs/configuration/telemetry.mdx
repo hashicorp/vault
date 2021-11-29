@@ -28,8 +28,8 @@ parameters on this page are grouped by the telemetry provider.
 The following options are available on all telemetry configurations.
 
 - `usage_gauge_period` `(string: "10m")` - Specifies the interval at which high-cardinality
-  usage data is collected, such as token counts, entity counts, and secret counts.  
-   A value of "none" disables the collection.
+  usage data is collected, such as token counts, entity counts, and secret counts.\
+  A value of "none" disables the collection.
 - `maximum_gauge_cardinality` `(int: 500)` - The maximum cardinality of gauge labels.
 - `disable_hostname` `(bool: false)` - Specifies if gauge values should be
   prefixed with the local hostname.
@@ -59,9 +59,8 @@ The following options are available on all telemetry configurations.
   ```json
   ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
   ```
-  A leading "**+**" will enable any metrics with the given prefix, and a leading "**-**" will block them. 
+  A leading "**+**" will enable any metrics with the given prefix, and a leading "**-**" will block them.
   If there is overlap between two rules, the more specific rule will take precedence. Blocking will take priority if the same prefix is listed multiple times.
-
 
 ### `statsite`
 
@@ -164,7 +163,7 @@ These `telemetry` parameters apply to
   Vault will send various telemetry information to that instance for
   aggregation. This can be used to capture runtime information.
 
-* `dogstatsd_tags` `(string array: [])` - This provides a list of global tags
+- `dogstatsd_tags` `(string array: [])` - This provides a list of global tags
   that will be added to all telemetry packets sent to DogStatsD. It is a list
   of strings, where each string looks like "my_tag_name:my_tag_value".
 
@@ -244,7 +243,7 @@ roles/monitoring.metricWriter
 - `stackdriver_location` `(string: "")` - The GCP or AWS region of the monitored resource.
 - `stackdriver_namespace` `(string: "")` - A namespace identifier for the telemetry data.
 - `stackdriver_debug_logs` `(bool: "false")` - Specifies if Vault writes additional stackdriver
-related debug logs to standard error output (stderr).  
+  related debug logs to standard error output (stderr).
 
 It is recommended to also enable the option `disable_hostname` to avoid having prefixed
 metrics with hostname and enable instead `enable_hostname_label`.

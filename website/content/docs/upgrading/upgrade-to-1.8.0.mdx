@@ -21,10 +21,10 @@ OSS users. Please see the [License](/docs/enterprise/license) documentation for 
 
 The following API endpoints have been deprecated and will be removed in a future release:
 
-* `sys/license` to manage licenses in storage; it is recommended to use
-   [License Autoloading](/docs/enterprise/license/autoloading) instead.
+- `sys/license` to manage licenses in storage; it is recommended to use
+  [License Autoloading](/docs/enterprise/license/autoloading) instead.
 
-* `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
+- `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
   in GCP Secrets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
 
 -> **Note:** Policies containing globs should be avoided when giving users read access
@@ -56,5 +56,5 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
   packages for Vault 1.8.0 and the 1.8.1-0 package, and is fixed in 1.8.1-1 and up.
 - The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give
   users the ability to generate tokens and key if globs are used in policies. To avoid issues like this,
-  globs should be avoided in policies to help adhere to the principle of least privilege. See the 
+  globs should be avoided in policies to help adhere to the principle of least privilege. See the
   [roleset documentation](/docs/secrets/gcp#rolesets) for more information.

@@ -28,21 +28,21 @@ salt).
 
 An example, real world process for using this provider:
 
-1.  Create unique app IDs (UUIDs work well) and map them to policies. (Path:
-    `map/app-id/<app-id>`)
+1. Create unique app IDs (UUIDs work well) and map them to policies. (Path:
+   `map/app-id/<app-id>`)
 
-2.  Store the app IDs within configuration management systems.
+1. Store the app IDs within configuration management systems.
 
-3.  An out-of-band process run by security operators map unique user IDs to
-    these app IDs. Example: when an instance is launched, a cloud-init system
-    tells security operators a unique ID for this machine. This process can be
-    scripted, but the key is that it is out-of-band and out of reach of
-    configuration management. (Path: `map/user-id/<user-id>`)
+1. An out-of-band process run by security operators map unique user IDs to
+   these app IDs. Example: when an instance is launched, a cloud-init system
+   tells security operators a unique ID for this machine. This process can be
+   scripted, but the key is that it is out-of-band and out of reach of
+   configuration management. (Path: `map/user-id/<user-id>`)
 
-4.  A new server is provisioned. Configuration management configures the app
-    ID, the server itself detects its user ID. With both of these pieces of
-    information, Vault can be accessed according to the policy set by the app
-    ID.
+1. A new server is provisioned. Configuration management configures the app
+   ID, the server itself detects its user ID. With both of these pieces of
+   information, Vault can be accessed according to the policy set by the app
+   ID.
 
 More details on this process follow:
 
@@ -51,7 +51,7 @@ More details on this process follow:
   UUID-formatted random value, but any hard-to-guess unique value can be used.
 
 - After creating app IDs, an operator authorizes a fixed set of user IDs with
-  each app ID. When a valid {app ID, user ID} tuple is given to the "login"
+  each app ID. When a valid \{app ID, user ID} tuple is given to the "login"
   path, then the user is authenticated with the configured app ID policies.
 
 - The user ID can be any value (just like the app ID), however it is generally a
@@ -81,41 +81,41 @@ Auth methods must be configured in advance before users or machines can
 authenticate. These steps are usually completed by an operator or configuration
 management tool.
 
-1.  Enable the AppID auth method:
+1. Enable the AppID auth method:
 
-    ```text
-    $ vault auth enable app-id
-    ```
+   ```text
+   $ vault auth enable app-id
+   ```
 
-1.  Configure it with the set of AppIDs, user IDs, and the mapping between them:
+1. Configure it with the set of AppIDs, user IDs, and the mapping between them:
 
-    ```text
-    $ vault write auth/app-id/map/app-id/foo value=admins display_name=foo
-    # ...
+   ```text
+   $ vault write auth/app-id/map/app-id/foo value=admins display_name=foo
+   # ...
 
-    $ vault write auth/app-id/map/user-id/bar value=foo cidr_block=10.0.0.0/16
-    # ...
-    ```
+   $ vault write auth/app-id/map/user-id/bar value=foo cidr_block=10.0.0.0/16
+   # ...
+   ```
 
-    This will create an AppID "foo" that associates with the policy "admins".
-    The `display_name` sets the display name for audit logs and secrets. Next,
-    we configure the user ID "bar" and say that the user ID bar can be paired
-    with "foo" but only if the client is in the "10.0.0.0/16" CIDR block. The
-    `cidr_block` configuration is optional.
+   This will create an AppID "foo" that associates with the policy "admins".
+   The `display_name` sets the display name for audit logs and secrets. Next,
+   we configure the user ID "bar" and say that the user ID bar can be paired
+   with "foo" but only if the client is in the "10.0.0.0/16" CIDR block. The
+   `cidr_block` configuration is optional.
 
-    This means that if a client authenticates and provide both "foo" and "bar",
-    then the app ID will authenticate that client with the policy "admins".
+   This means that if a client authenticates and provide both "foo" and "bar",
+   then the app ID will authenticate that client with the policy "admins".
 
-    In practice, both the user and app ID are likely hard-to-guess UUID-like
-    values.
+   In practice, both the user and app ID are likely hard-to-guess UUID-like
+   values.
 
-    Note that it is possible to authorize multiple app IDs with each user ID by
-    writing them as comma-separated values to the user ID mapping:
+   Note that it is possible to authorize multiple app IDs with each user ID by
+   writing them as comma-separated values to the user ID mapping:
 
-    ```text
-    $ vault write auth/app-id/map/user-id/bar value=foo,baz cidr_block=10.0.0.0/16
-    # ...
-    ```
+   ```text
+   $ vault write auth/app-id/map/user-id/bar value=foo,baz cidr_block=10.0.0.0/16
+   # ...
+   ```
 
 ## API
 

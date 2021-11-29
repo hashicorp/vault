@@ -1,8 +1,7 @@
 ---
 layout: docs
 page_title: Vault Agent Template Config
-description: |-
-  Vault Agent's Template Config to set Templating Engine behavior
+description: Vault Agent's Template Config to set Templating Engine behavior
 ---
 
 # Vault Agent Template Config
@@ -50,8 +49,8 @@ value of `exit_on_retry_failure`.
 The top level `template_config` block has the following configuration entries:
 
 - `exit_on_retry_failure` `(bool: false)` - This option configures Vault Agent
-to exit after it has exhausted its number of template retry attempts due to
-failures.
+  to exit after it has exhausted its number of template retry attempts due to
+  failures.
 
 - `static_secret_render_interval` `(string or integer: 5m)` - If specified, configures
   how often Vault Agent Template should render non-leased secrets such as KV v2.
