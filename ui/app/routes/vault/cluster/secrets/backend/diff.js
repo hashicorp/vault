@@ -7,7 +7,7 @@ export default class diff extends Route {
 
   beforeModel() {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    this.backend = backend; // coming in undefined on totally
+    this.backend = backend;
   }
 
   model(params) {
