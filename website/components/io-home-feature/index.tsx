@@ -1,10 +1,13 @@
 import * as React from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
+import classNames from 'classnames'
+import { isInternalLink } from 'lib/utils'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
 interface IoHomeFeatureProps {
-  link: string
+  link?: string
   image: {
     url: string
     alt: string
@@ -20,7 +23,7 @@ export default function IoHomeFeature({
   description,
 }: IoHomeFeatureProps): React.ReactElement {
   return (
-    <a href={link} className={s.feature}>
+    <IoHomeFeatureWrap href={link}>
       <div className={s.featureMedia}>
         <Image
           src={image.url}
@@ -33,13 +36,35 @@ export default function IoHomeFeature({
       <div className={s.featureContent}>
         <h3 className={s.featureHeading}>{heading}</h3>
         <p className={s.featureDescription}>{description}</p>
-        <span className={s.featureCta} aria-hidden={true}>
-          Learn more{' '}
-          <span>
-            <IconArrowRight16 />
+        {link ? (
+          <span className={s.featureCta} aria-hidden={true}>
+            Learn more{' '}
+            <span>
+              <IconArrowRight16 />
+            </span>
           </span>
-        </span>
+        ) : null}
       </div>
+    </IoHomeFeatureWrap>
+  )
+}
+
+function IoHomeFeatureWrap({ href, children }) {
+  if (!href) {
+    return <div className={s.feature}>{children}</div>
+  }
+
+  if (isInternalLink(href)) {
+    return (
+      <Link href={href}>
+        <a className={s.feature}>{children}</a>
+      </Link>
+    )
+  }
+
+  return (
+    <a className={s.feature} href={href}>
+      {children}
     </a>
   )
 }
