@@ -120,11 +120,11 @@ There are a few different ways to configure Kubernetes auth in this
 scenario, each with their own tradeoffs. This table summarizes the options,
 each of which is explained in more detail below.
 
-Option | All tokens are short-lived | Can revoke tokens early | Other considerations
-------------------------------------------------------------------------
-Use client JWT as reviewer JWT       | Yes | Yes | Operational overhead
-Use long-lived token as reviewer JWT | No  | Yes |
-Use JWT auth                         | Yes | No  |
+| Option                               | All tokens are short-lived | Can revoke tokens early | Other considerations |
+| ------------------------------------ | -------------------------- | ----------------------- | -------------------- |
+| Use client JWT as reviewer JWT       | Yes                        | Yes                     | Operational overhead |
+| Use long-lived token as reviewer JWT | No                         | Yes                     |                      |
+| Use JWT auth                         | Yes                        | No                      |                      |
 
 [k8s-1.21-changelog]: https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.21.md#api-change-2
 
@@ -136,9 +136,8 @@ the Kubernetes TokenReview API. If Vault is running in Kubernetes, you also need
 to set `disable_local_ca_jwt=true`.
 
 This means Vault does not store any JWTs and allows you to use short-lived tokens
-everywhere but adds some operational overhead to maintain the cluster role
-binding on the set of service accounts you want to be able to authenticate with
-Vault.
+everywhere but adds some operational overhead to maintain the role bindings on
+the set of service accounts you want to be able to authenticate with Vault.
 
 #### Continue using long-lived tokens
 
