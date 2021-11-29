@@ -1,5 +1,5 @@
 <Toolbar>
-  <div class="version-diff-toolbar">
+  <div class="version-diff-toolbar" data-test-version-diff-toolbar>
     {{!-- Left side version --}}
     <BasicDropdown
       @class="popup-menu"
@@ -19,8 +19,11 @@
         <nav class="box menu">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |leftSideSecretVersion|}}
-              <li class="action">
-                <button class="link" {{on "click" (fn this.selectVersion leftSideSecretVersion.version D.actions "left")}}>
+              <li class="action" data-test-leftSide-version={{leftSideSecretVersion.version}}>
+                <button 
+                  class="link"
+                  {{on "click" (fn this.selectVersion leftSideSecretVersion.version D.actions "left")}}
+                  >
                   Version {{leftSideSecretVersion.version}}
                   {{#if (and (eq leftSideSecretVersion.version (or this.leftSideVersionSelected this.model.currentVersion)) (not leftSideSecretVersion.destroyed) (not leftSideSecretVersion.deleted))}}
                     <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
@@ -55,8 +58,10 @@
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |rightSideSecretVersion|}}
               <li class="action">
-                {{!-- ARG TODO test when versions are destroyed or deleted --}}
-                <button class="link" {{on "click" (fn this.selectVersion rightSideSecretVersion.version D.actions "right")}} >
+                <button
+                  class="link"
+                  {{on "click" (fn this.selectVersion rightSideSecretVersion.version D.actions "right")}} 
+                  >
                   Version {{rightSideSecretVersion.version}}
                   {{#if (and (eq rightSideSecretVersion.version (or this.rightSideVersionSelected this.rightSideVersionInit)) (not rightSideSecretVersion.destroyed) (not rightSideSecretVersion.deleted))}}
                     <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
@@ -82,6 +87,6 @@
   </div>
 </Toolbar>
 
-<div class="form-section">
+<div class="form-section visual-diff">
   <pre>{{{this.visualDiff}}}</pre>
 </div>
