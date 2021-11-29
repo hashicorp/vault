@@ -1,0 +1,87 @@
+<Toolbar>
+  <div class="version-diff-toolbar">
+    {{!-- Left side version --}}
+    <BasicDropdown
+      @class="popup-menu"
+      @horizontalPosition="auto-right"
+      @verticalPosition="below"
+      as |D|
+    >
+      <D.trigger
+        data-test-popup-menu-trigger="version"
+        @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @tagName="button"
+      >
+        Version {{or this.leftSideVersionSelected @model.currentVersion}}
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.trigger>
+      <D.content @class="popup-menu-content">
+        <nav class="box menu">
+          <ul class="menu-list">
+            {{#each (reverse @model.versions) as |leftSideSecretVersion|}}
+              <li class="action">
+                <button class="link" {{on "click" (fn this.selectVersion leftSideSecretVersion.version D.actions "left")}}>
+                  Version {{leftSideSecretVersion.version}}
+                  {{#if (and (eq leftSideSecretVersion.version (or this.leftSideVersionSelected this.model.currentVersion)) (not leftSideSecretVersion.destroyed) (not leftSideSecretVersion.deleted))}}
+                    <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
+                  {{else if leftSideSecretVersion.destroyed}}
+                      <Icon @glyph="cancel-square-fill" class="has-text-danger is-pulled-right" />
+                  {{else if leftSideSecretVersion.deleted}}
+                      <Icon @glyph="cancel-square-fill" class="has-text-grey is-pulled-right" />
+                  {{/if}}
+                </button>
+              </li>
+            {{/each}}
+          </ul>
+        </nav>
+      </D.content>
+    </BasicDropdown>
+    {{!-- Right side version --}}
+    <BasicDropdown
+      @class="popup-menu"
+      @horizontalPosition="right"
+      @verticalPosition="below"
+      as |D|
+    >
+      <D.trigger
+        @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @tagName="button"
+      >
+        Version {{or this.rightSideVersionSelected this.rightSideVersionInit}}
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.trigger>
+      <D.content @class="popup-menu-content">
+        <nav class="box menu">
+          <ul class="menu-list">
+            {{#each (reverse @model.versions) as |rightSideSecretVersion|}}
+              <li class="action">
+                {{!-- ARG TODO test when versions are destroyed or deleted --}}
+                <button class="link" {{on "click" (fn this.selectVersion rightSideSecretVersion.version D.actions "right")}} >
+                  Version {{rightSideSecretVersion.version}}
+                  {{#if (and (eq rightSideSecretVersion.version (or this.rightSideVersionSelected this.rightSideVersionInit)) (not rightSideSecretVersion.destroyed) (not rightSideSecretVersion.deleted))}}
+                    <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
+                  {{else if rightSideSecretVersion.destroyed}}
+                      <Icon @glyph="cancel-square-fill" class="has-text-danger is-pulled-right" />
+                  {{else if rightSideSecretVersion.deleted}}
+                      <Icon @glyph="cancel-square-fill" class="has-text-grey is-pulled-right" />
+                  {{/if}}
+                </button>
+              </li>
+            {{/each}}
+          </ul>
+        </nav>
+      </D.content>
+    </BasicDropdown>
+    {{!-- Status --}}
+    {{#if this.statesMatch}}
+      <div class="diff-status"> 
+        <span>States match</span>
+        <Icon @glyph="check-circle-fill" class="has-text-success" /> 
+      </div>        
+    {{/if}} 
+  </div>
+</Toolbar>
+
+<div class="form-section">
+  <pre>{{{this.visualDiff}}}</pre>
+</div>

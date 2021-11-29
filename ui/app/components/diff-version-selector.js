@@ -1,11 +1,21 @@
 /* eslint-disable no-undef */
-import Controller from '@ember/controller';
-import BackendCrumbMixin from 'vault/mixins/backend-crumb';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
-export default class DiffController extends Controller.extend(BackendCrumbMixin) {
+/**
+ * @module DiffVersionSelector
+ * DiffVersionSelector component is a specific component that has a toolbar for selecting KV 2 versions and showing a diff between those versions.
+ *
+ * @example
+ * ```js
+ * <DiffVersionSelector @model={model}/>
+ * ```
+ * @param {object} model - model of formed from secret-v2-version
+ */
+
+export default class DiffVersionSelector extends Component {
   @tracked leftSideVersionDataSelected = null;
   @tracked leftSideVersionSelected = null;
   @tracked rightSideVersionDataSelected = null;
@@ -16,9 +26,14 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
 
   adapter = this.store.adapterFor('secret-v2-version');
 
+  constructor() {
+    super(...arguments);
+    this.createVisualDiff();
+  }
+
   get leftSideDataInit() {
     // return secretData from hitting the get secret endpoint
-    let string = `["${this.model.engineId}", "${this.model.id}", "${this.model.currentVersion}"]`;
+    let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.args.model.currentVersion}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
       .then(response => response.data) // using ember promise helpers to await in the hbs file
@@ -26,7 +41,7 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
   }
   get rightSideDataInit() {
     // return secretData from hitting the get secret endpoint
-    let string = `["${this.model.engineId}", "${this.model.id}", "${this.rightSideVersionInit}"]`;
+    let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.rightSideVersionInit}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
       .then(response => response.data) // using ember promise helpers to await in the hbs file\
@@ -34,7 +49,7 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
   }
   get rightSideVersionInit() {
     // initial value of right side version is one less than the current version
-    return this.model.currentVersion === 1 ? 0 : this.model.currentVersion - 1;
+    return this.args.model.currentVersion === 1 ? 0 : this.args.model.currentVersion - 1;
   }
 
   async createVisualDiff() {
@@ -44,21 +59,16 @@ export default class DiffController extends Controller.extend(BackendCrumbMixin)
     let delta = diffpatcher.diff(leftSideVersionData, rightSideVersionData);
     if (delta === undefined) {
       this.statesMatch = true;
-      this.visualDiff = JSON.stringify(leftSideVersionData, undefined, 2); // value, replacer (all properties included), space (white space and indentation, line break, etc.)
+      this.visualDiff = JSON.stringify(leftSideVersionData, undefined, 2); // params: value, replacer (all properties included), space (white space and indentation, line break, etc.)
     } else {
       this.statesMatch = false;
       this.visualDiff = jsondiffpatch.formatters.html.format(delta, leftSideVersionData);
     }
   }
 
-  // ARG TODO I believe I can remove this but double check
-  @action
-  refreshModel() {
-    this.send('refreshModel');
-  }
   @action
   async selectVersion(selectedVersion, actions, side) {
-    let string = `["${this.model.engineId}", "${this.model.id}", "${selectedVersion}"]`;
+    let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${selectedVersion}"]`;
     let secretData = await this.adapter.querySecretDataByVersion(string);
     if (side === 'left') {
       this.leftSideVersionDataSelected = secretData.data;

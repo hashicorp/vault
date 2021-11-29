@@ -30,8 +30,6 @@ export default class diff extends Route {
     controller.set('backend', this.backend); // for backendCrumb
     controller.set('id', model.id); // for navigation on tabs
     controller.set('model', model);
-    controller.set('noReadAccess', model.noReadAccess);
-    controller.set('currentVersion', model.currentVersion);
-    controller.createVisualDiff();
+    controller.set('noReadAccess', model.noReadAccess); // ARG TODO see if you need.
   }
 }
