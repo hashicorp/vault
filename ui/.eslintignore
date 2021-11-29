@@ -23,3 +23,6 @@
 /package.json.ember-try
 
 /tests/helpers/vault-keys.js
+
+# ember-electron
+/electron-app/
