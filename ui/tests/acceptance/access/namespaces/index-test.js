@@ -6,7 +6,7 @@ import page from 'vault/tests/pages/access/namespaces/index';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
-module('Acceptance | /access/namespaces', function(hooks) {
+module('Acceptance | Enterprise | /access/namespaces', function(hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
