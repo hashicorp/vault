@@ -158,8 +158,6 @@ export async function getStaticProps({ params }) {
 
   const page = allVaultUseCases.find((page) => page.slug === slug)
 
-  console.log(page)
-
   return {
     props: {
       data: page,
