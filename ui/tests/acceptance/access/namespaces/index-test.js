@@ -4,6 +4,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import page from 'vault/tests/pages/access/namespaces/index';
 import authPage from 'vault/tests/pages/auth';
+import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | /access/namespaces', function(hooks) {
   setupApplicationTest(hooks);
@@ -11,6 +12,10 @@ module('Acceptance | /access/namespaces', function(hooks) {
 
   hooks.beforeEach(function() {
     return authPage.login();
+  });
+
+  hooks.afterEach(function() {
+    return logout.visit();
   });
 
   test('it navigates to namespaces page', async function(assert) {
@@ -27,7 +32,8 @@ module('Acceptance | /access/namespaces', function(hooks) {
     assert.expect(3);
     await page.visit();
     const store = this.owner.lookup('service:store');
-    assert.equal(store.peekAll('namespace').length, 15, '15 namespaces records');
+    // Default page size is 15
+    assert.equal(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
     assert.dom('.list-item-row').exists({ count: 15 });
     assert.dom('[data-test-list-view-pagination]').exists();
   });
