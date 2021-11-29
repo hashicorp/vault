@@ -561,18 +561,10 @@ func (i *IdentityStore) pathOIDCCreateUpdateKey(ctx context.Context, req *logica
 		}
 		i.Logger().Debug("generated OIDC public key to sign JWTs", "key_id", signingKey.Public().KeyID)
 
-		nextSigningKey, err := generateKeys(key.Algorithm)
+		err = key.generateAndSetNextKey(ctx, i.Logger(), req.Storage)
 		if err != nil {
 			return nil, err
 		}
-
-		key.NextSigningKey = nextSigningKey
-		key.KeyRing = append(key.KeyRing, &expireableKey{KeyID: nextSigningKey.Public().KeyID})
-
-		if err := saveOIDCPublicKey(ctx, req.Storage, nextSigningKey.Public()); err != nil {
-			return nil, err
-		}
-		i.Logger().Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
 	}
 
 	if err := i.oidcCache.Flush(ns); err != nil {
@@ -1018,6 +1010,24 @@ func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, temp
 		}
 	}
 
+	return nil
+}
+
+// generateAndSetNextKey will generate new signing and public key pairs and set
+// them as the NextSigningKey.
+func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logger, s logical.Storage) error {
+	signingKey, err := generateKeys(k.Algorithm)
+	if err != nil {
+		return err
+	}
+
+	k.NextSigningKey = signingKey
+	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: signingKey.Public().KeyID})
+
+	if err := saveOIDCPublicKey(ctx, s, signingKey.Public()); err != nil {
+		return err
+	}
+	logger.Debug("generated OIDC public key for future use", "key_id", signingKey.Public().KeyID)
 	return nil
 }
 
@@ -1477,16 +1487,6 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 		verificationTTL = overrideVerificationTTL
 	}
 
-	// generate new key
-	nextSigningKey, err := generateKeys(k.Algorithm)
-	if err != nil {
-		return err
-	}
-	if err := saveOIDCPublicKey(ctx, s, nextSigningKey.Public()); err != nil {
-		return err
-	}
-	logger.Debug("generated OIDC public key for future use", "key_id", nextSigningKey.Public().KeyID)
-
 	now := time.Now()
 	// set the previous public key's expiry time
 	for _, key := range k.KeyRing {
@@ -1496,10 +1496,23 @@ func (k *namedKey) rotate(ctx context.Context, logger hclog.Logger, s logical.St
 		}
 	}
 
-	k.KeyRing = append(k.KeyRing, &expireableKey{KeyID: nextSigningKey.KeyID})
+	if k.NextSigningKey == nil {
+		// keys will not have a NextSigningKey if they were generated before
+		// vault 1.9
+		err := k.generateAndSetNextKey(ctx, logger, s)
+		if err != nil {
+			return err
+		}
+	}
+	// do the rotation
 	k.SigningKey = k.NextSigningKey
-	k.NextSigningKey = nextSigningKey
 	k.NextRotation = now.Add(k.RotationPeriod)
+
+	// now that we have rotated, generate a new NextSigningKey
+	err := k.generateAndSetNextKey(ctx, logger, s)
+	if err != nil {
+		return err
+	}
 
 	// store named key (it was modified when rotate was called on it)
 	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+k.name, k)
