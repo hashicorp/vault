@@ -114,6 +114,13 @@
   color: var(--gray-3);
 }
 
+.videoHeading {
+  margin-top: 0;
+  margin-bottom: 32px;
+  padding-right: 100px;
+  composes: g-type-display-4 from global;
+}
+
 .video {
   position: relative;
   background-color: var(--gray-2);

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import Image from 'next/image'
+import ReactPlayer from 'react-player'
 import VisuallyHidden from '@reach/visually-hidden'
 import IoDialog from 'components/io-dialog'
 import PlayIcon from './play-icon'
@@ -61,15 +62,18 @@ export default function IoVideoCallout({
         onDismiss={hideVideo}
         label={`${heading} video}`}
       >
+        <h2 className={s.videoHeading}>{heading}</h2>
         <div className={s.video}>
-          <iframe
+          <ReactPlayer
+            url={`https://www.youtube.com/embed/${youtubeId}`}
+            playing={true}
             width="560"
             height="315"
-            src={`https://www.youtube.com/embed/${youtubeId}`}
-            title="YouTube video player"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            frameBorder="0"
-          ></iframe>
+            style={{
+              maxWidth: '100%',
+            }}
+            controls={true}
+          />
         </div>
       </IoDialog>
     </>

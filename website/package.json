@@ -39,7 +39,8 @@
     "next-remote-watch": "1.0.0",
     "react": "^17.0.2",
     "react-datocms": "^1.6.6",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "react-player": "^2.9.0"
   },
   "devDependencies": {
     "@hashicorp/platform-cli": "^1.2.0",
