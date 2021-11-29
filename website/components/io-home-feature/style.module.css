@@ -9,11 +9,14 @@
   color: var(--black);
   box-shadow: 0 2px 3px rgba(101, 106, 118, 0.1),
     0 8px 16px -10px rgba(101, 106, 118, 0.2);
-  transition: box-shadow ease-in-out 0.2s;
 
   @media (--medium-up) {
     flex-direction: row;
   }
+}
+
+.featureLink {
+  transition: box-shadow ease-in-out 0.2s;
 
   &:hover {
     box-shadow: 0 2px 3px rgba(101, 106, 118, 0.15),
