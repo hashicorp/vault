@@ -402,6 +402,7 @@ log in.
       jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token
    # OR equivalent to:
    curl \
+      --fail \
       --request PUT \
       --header "X-Vault-Request: true" \
       --data '{"jwt":"<JWT-TOKEN-HERE>","role":"my-role"}' \
