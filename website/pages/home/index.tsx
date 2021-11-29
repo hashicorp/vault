@@ -3,10 +3,9 @@ import Head from 'next/head'
 import rivetQuery from '@hashicorp/nextjs-scripts/dato/client'
 import homepageQuery from './query.graphql'
 import { renderMetaTags } from 'react-datocms'
-import { isInternalLink } from 'lib/utils'
 import IoHomeHero from 'components/io-home-hero'
 import IoVideoCallout from 'components/io-video-callout'
-import IoCard from 'components/io-card'
+import IoCardContainer from 'components/io-card-container'
 import IoHomeFeature from 'components/io-home-feature'
 import IoHomeCaseStudies from 'components/io-home-case-studies'
 import IoHomeCallToAction from 'components/io-home-call-to-action'
@@ -62,65 +61,45 @@ export default function Homepage({ data }): React.ReactElement {
 
       <section className={s.inPractice}>
         <div className={s.container}>
-          <header className={s.inPracticeHeader}>
-            <h2 className={s.inPracticeHeading}>{inPractice.heading}</h2>
-            <p className={s.inPracticeDescription}>{inPractice.description}</p>
-          </header>
-          <ul className={s.inPracticeCards}>
-            {inPractice.cards.map(
-              ({ link, eyebrow, heading, description, products }, index) => {
-                return (
-                  // Index is stable
-                  // eslint-disable-next-line react/no-array-index-key
-                  <li key={index}>
-                    <IoCard
-                      variant="dark"
-                      link={{
-                        url: link,
-                        type: isInternalLink(link) ? 'inbound' : 'outbound',
-                      }}
-                      eyebrow={eyebrow}
-                      heading={heading}
-                      description={description}
-                      products={products}
-                    />
-                  </li>
-                )
+          <IoCardContainer
+            theme="dark"
+            heading="Vault in practice"
+            description="The best way to understand what Vault can enable for your projects is to see it in action"
+            cardsPerRow={3}
+            cards={inPractice.cards.map((card) => {
+              return {
+                eyebrow: card.eyebrow,
+                link: {
+                  url: card.link,
+                  type: 'inbound',
+                },
+                heading: card.heading,
+                description: card.description,
+                products: card.products,
               }
-            )}
-          </ul>
+            })}
+          />
         </div>
       </section>
 
       <section className={s.useCases}>
         <div className={s.container}>
-          <header className={s.useCasesHeader}>
-            <h2 className={s.useCasesHeading}>{useCases.heading}</h2>
-          </header>
-
-          <ul className={s.useCasesCards}>
-            {useCases.cards.map(
-              ({ link, eyebrow, heading, description, products }, index) => {
-                return (
-                  // Index is stable
-                  // eslint-disable-next-line react/no-array-index-key
-                  <li key={index}>
-                    <IoCard
-                      link={{
-                        url: link,
-                        type: isInternalLink(link) ? 'inbound' : 'outbound',
-                      }}
-                      inset="sm"
-                      eyebrow={eyebrow}
-                      heading={heading}
-                      description={description}
-                      products={products}
-                    />
-                  </li>
-                )
+          <IoCardContainer
+            heading={useCases.heading}
+            cardsPerRow={4}
+            cards={useCases.cards.map((card) => {
+              return {
+                eyebrow: card.eyebrow,
+                link: {
+                  url: card.link,
+                  type: 'inbound',
+                },
+                heading: card.heading,
+                description: card.description,
+                products: card.products,
               }
-            )}
-          </ul>
+            })}
+          />
         </div>
       </section>
 
