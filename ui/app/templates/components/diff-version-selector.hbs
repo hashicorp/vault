@@ -8,7 +8,7 @@
       as |D|
     >
       <D.trigger
-        data-test-popup-menu-trigger="version"
+        data-test-popup-menu-trigger="left-version"
         @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
         @tagName="button"
       >
@@ -49,6 +49,7 @@
       <D.trigger
         @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
         @tagName="button"
+        data-test-popup-menu-trigger="right-version"
       >
         Version {{or this.rightSideVersionSelected this.rightSideVersionInit}}
         <Chevron @direction="down" @isButton={{true}} />
@@ -60,7 +61,8 @@
               <li class="action">
                 <button
                   class="link"
-                  {{on "click" (fn this.selectVersion rightSideSecretVersion.version D.actions "right")}} 
+                  {{on "click" (fn this.selectVersion rightSideSecretVersion.version D.actions "right")}}
+                  data-test-rightSide-version={{rightSideSecretVersion.version}}
                   >
                   Version {{rightSideSecretVersion.version}}
                   {{#if (and (eq rightSideSecretVersion.version (or this.rightSideVersionSelected this.rightSideVersionInit)) (not rightSideSecretVersion.destroyed) (not rightSideSecretVersion.deleted))}}

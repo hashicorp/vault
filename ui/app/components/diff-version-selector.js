@@ -56,13 +56,13 @@ export default class DiffVersionSelector extends Component {
     let diffpatcher = jsondiffpatch.create({});
     let leftSideVersionData = this.leftSideVersionDataSelected || (await this.leftSideDataInit);
     let rightSideVersionData = this.rightSideVersionDataSelected || (await this.rightSideDataInit);
-    let delta = diffpatcher.diff(leftSideVersionData, rightSideVersionData);
+    let delta = diffpatcher.diff(rightSideVersionData, leftSideVersionData);
     if (delta === undefined) {
       this.statesMatch = true;
       this.visualDiff = JSON.stringify(leftSideVersionData, undefined, 2); // params: value, replacer (all properties included), space (white space and indentation, line break, etc.)
     } else {
       this.statesMatch = false;
-      this.visualDiff = jsondiffpatch.formatters.html.format(delta, leftSideVersionData);
+      this.visualDiff = jsondiffpatch.formatters.html.format(delta, rightSideVersionData);
     }
   }
 
