@@ -1,7 +1,7 @@
 import * as React from 'react'
 import Image from 'next/image'
 import VisuallyHidden from '@reach/visually-hidden'
-import IoHomeDialog from 'components/io-home-dialog'
+import IoDialog from 'components/io-dialog'
 import PlayIcon from './play-icon'
 import s from './style.module.css'
 
@@ -17,7 +17,7 @@ interface IoHomeVideoCalloutProps {
   }
 }
 
-export default function IoHomeVideoCallout({
+export default function IoVideoCallout({
   youtubeId,
   thumbnail,
   heading,
@@ -56,7 +56,7 @@ export default function IoHomeVideoCallout({
           )}
         </figcaption>
       </figure>
-      <IoHomeDialog
+      <IoDialog
         isOpen={showDialog}
         onDismiss={hideVideo}
         label={`${heading} video}`}
@@ -71,7 +71,7 @@ export default function IoHomeVideoCallout({
             frameBorder="0"
           ></iframe>
         </div>
-      </IoHomeDialog>
+      </IoDialog>
     </>
   )
 }
