@@ -153,7 +153,7 @@ Vault. Each client of Vault would need the `system:auth-delegator` ClusterRole:
 kubectl create clusterrolebinding vault-client-auth-delegator \
   --clusterrole=system:auth-delegator \
   --group=group1 \
-  --serviceaccount=svcaccount1 \
+  --serviceaccount=default:svcaccount1 \
   ...
 ```
 
