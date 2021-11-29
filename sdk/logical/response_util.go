@@ -17,7 +17,7 @@ import (
 func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	if err == nil && (resp == nil || !resp.IsError()) {
 		switch {
-		case req.Operation == ReadOperation, req.Operation == PatchOperation:
+		case req.Operation == ReadOperation:
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}

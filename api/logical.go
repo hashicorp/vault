@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -235,12 +236,13 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
+	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
-			c.c.SetToken(wrappingToken)
+			c.c.SetToken(wt)
 		} else if wrappingToken != c.c.Token() {
 			data = map[string]interface{}{
-				"token": wrappingToken,
+				"token": wt,
 			}
 		}
 	}
