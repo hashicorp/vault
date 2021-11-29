@@ -578,12 +578,12 @@ func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, err
 		// To match previous behavior (and ignoring NIST's recommendations for
 		// hash size to align with RSA key sizes), default to SHA-2-256.
 		hashBits = 256
-	} /* else if keyType == "ed25519" {
+	} else if keyType == "ed25519" || keyType == "ed448" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
-		// certificate signing.
-		return nil
-	} */
+		// certificate signing and we must
+		return 0, nil
+	}
 
 	return hashBits, nil
 }
@@ -610,7 +610,7 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 	// Note that this check must come after we've selected a value for
 	// hashBits above, in the event it was left as the default, but we
 	// were allowed to update it.
-	if err = ValidateSignatureLength(hashBits); err != nil {
+	if err = ValidateSignatureLength(keyType, hashBits); err != nil {
 		return keyBits, hashBits, err
 	}
 
@@ -619,7 +619,22 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 
 // Validates that the length of the hash (in bits) used in the signature
 // calculation is a known, approved value.
-func ValidateSignatureLength(hashBits int) error {
+func ValidateSignatureLength(keyType string, hashBits int) error {
+	if keyType == "ed25519" || keyType == "ed448" {
+		// ed25519 and ed448 include built-in hashing and is not externally
+		// configurable. There are three modes for each of these schemes:
+		//
+		// 1. Built-in hash (default, used in TLS, x509).
+		// 2. Double hash (notably used in some block-chain implementations,
+		//    but largely regarded as a specialized use case with security
+		//    concerns).
+		// 3. No hash (bring your own hash function, less commonly used).
+		//
+		// In all cases, we won't have a hash algorithm to validate here, so
+		// return nil.
+		return nil
+	}
+
 	switch hashBits {
 	case 256:
 	case 384:
@@ -627,6 +642,7 @@ func ValidateSignatureLength(hashBits int) error {
 	default:
 		return fmt.Errorf("unsupported hash signature algorithm: %d", hashBits)
 	}
+
 	return nil
 }
 
