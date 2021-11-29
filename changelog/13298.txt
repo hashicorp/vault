@@ -1,0 +1,3 @@
+```release-note:bug
+identity: Fixes a panic in the OIDC key rotation due to a missing nil check.
+```
