@@ -83,7 +83,7 @@ func (c *OperatorMembersCommand) Run(args []string) int {
 
 	switch Format(c.UI) {
 	case "table":
-		out := []string{"Host Name | API Address | Cluster Address | ActiveNode | Last echo"}
+		out := []string{"Host Name | API Address | Cluster Address | ActiveNode | Last Echo"}
 		for _, node := range result.Nodes {
 			out = append(out, fmt.Sprintf("%s | %s | %s | %t | %s", node.Hostname, node.APIAddress, node.ClusterAddress, node.ActiveNode, node.LastEcho))
 		}

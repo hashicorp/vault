@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -35,27 +36,28 @@ func TestSysHAStatus(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
-	// Make sure standbys have time to echo and populate the cache
-	time.Sleep(6 * time.Second)
 
-	// Use standby deliberately to make sure it forwards
-	client := cluster.Cores[1].Client
-	r := client.NewRequest("GET", "/v1/sys/ha-status")
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := client.RawRequestWithContext(ctx, r)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
+	testhelpers.RetryUntil(t, 10*time.Second, func() error {
+		// Use standby deliberately to make sure it forwards
+		client := cluster.Cores[1].Client
+		r := client.NewRequest("GET", "/v1/sys/ha-status")
+		ctx, cancelFunc := context.WithCancel(context.Background())
+		defer cancelFunc()
+		resp, err := client.RawRequestWithContext(ctx, r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
 
-	var result HaStatusResponse
-	err = resp.DecodeJSON(&result)
-	if err != nil {
-		t.Fatal(err)
-	}
+		var result HaStatusResponse
+		err = resp.DecodeJSON(&result)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	if len(result.Nodes) != len(cluster.Cores) {
-		t.Fatalf("expected %d nodes, got %d", len(cluster.Cores), len(result.Nodes))
-	}
+		if len(result.Nodes) != len(cluster.Cores) {
+			return fmt.Errorf("expected %d nodes, got %d", len(cluster.Cores), len(result.Nodes))
+		}
+		return nil
+	})
 }
