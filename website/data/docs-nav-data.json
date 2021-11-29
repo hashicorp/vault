@@ -575,6 +575,10 @@
             "path": "commands/operator/key-status"
           },
           {
+            "title": "<code>members</code>",
+            "path": "commands/operator/members"
+          },
+          {
             "title": "<code>migrate</code>",
             "path": "commands/operator/migrate"
           },
