@@ -15,10 +15,13 @@ export default function UseCasePage({ data }) {
     heroDescription,
     challengeHeading,
     challengeDescription,
+    challengeImage,
     challengeLink,
     solutionHeading,
     solutionDescription,
+    solutionImage,
     solutionLink,
+    caseStudyImage,
     caseStudyLogo,
     caseStudyHeading,
     caseStudyDescription,
@@ -45,10 +48,10 @@ export default function UseCasePage({ data }) {
         heading={challengeHeading}
         description={challengeDescription}
         media={{
-          src: '/img/TEMP-customer-story.png',
-          width: '592',
-          height: '455',
-          alt: '',
+          src: challengeImage?.url,
+          width: challengeImage?.width,
+          height: challengeImage?.height,
+          alt: challengeImage?.alt,
         }}
         cta={{
           text: 'Learn more',
@@ -62,10 +65,10 @@ export default function UseCasePage({ data }) {
         heading={solutionHeading}
         description={solutionDescription}
         media={{
-          src: '/img/TEMP-customer-story.png',
-          width: '592',
-          height: '455',
-          alt: '',
+          src: solutionImage?.url,
+          width: solutionImage?.width,
+          height: solutionImage?.height,
+          alt: solutionImage?.alt,
         }}
         cta={{
           text: 'Learn more',
@@ -76,10 +79,10 @@ export default function UseCasePage({ data }) {
       <IoUsecaseCustomer
         link={caseStudyLink}
         media={{
-          src: '/img/TEMP-customer-story.png',
-          width: '592',
-          height: '455',
-          alt: '',
+          src: caseStudyImage.url,
+          width: caseStudyImage.width,
+          height: caseStudyImage.height,
+          alt: caseStudyImage.alt,
         }}
         logo={{
           src: caseStudyLogo.url,

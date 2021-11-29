@@ -5,10 +5,28 @@ query UseCasesQuery {
     heroDescription
     challengeHeading
     challengeDescription
+    challengeImage {
+      url
+      alt
+      width
+      height
+    }
     challengeLink
     solutionHeading
     solutionDescription
+    solutionImage {
+      url
+      alt
+      width
+      height
+    }
     solutionLink
+    caseStudyImage {
+      url
+      alt
+      width
+      height
+    }
     caseStudyLogo {
       url
       alt

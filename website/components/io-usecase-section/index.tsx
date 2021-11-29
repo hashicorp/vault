@@ -37,7 +37,7 @@ export default function IoUsecaseSection({
         <div className={s.columns}>
           <div className={s.column}>
             <h2 className={s.heading}>{heading}</h2>
-            {media ? (
+            {media?.src ? (
               <div
                 className={s.description}
                 dangerouslySetInnerHTML={{
@@ -58,7 +58,7 @@ export default function IoUsecaseSection({
             ) : null}
           </div>
           <div className={s.column}>
-            {media ? (
+            {media?.src ? (
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image {...media} />
             ) : (
