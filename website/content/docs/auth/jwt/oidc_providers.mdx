@@ -273,26 +273,38 @@ during authentication, and instead uses public key cryptography to verify the
 contents of JWTs. This means tokens that have been revoked by Kubernetes will
 still be considered valid by Vault until their expiry time. To mitigate this
 risk, use short TTLs for service account tokens or use
-[Kubernetes auth][/docs/auth/kubernetes] which _does_ use the `TokenReview` API.
+[Kubernetes auth](/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
 
 ### Using service account issuer discovery
 
+When using service account issuer discovery, you only need to provide the JWT
+auth mount with an OIDC discovery URL, and sometimes a TLS certificate authority
+to trust. This makes it the most straightforward method to configure if your
+Kubernetes cluster meets the requirements.
+
 Kubernetes cluster requirements:
 
-* `ServiceAccountIssuerDiscovery` feature gate enabled.
-   * Present from 1.18, defaults to true from 1.20.
-* Must use short-lived service account tokens when logging in.
-   * Tokens mounted into pods default to short-lived from 1.21.
+* [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
+   * Present from 1.18, defaults to enabled from 1.20.
 * kube-apiserver's `--service-account-issuer` flag is set to a URL that is
   reachable from Vault. Public by default for most managed Kubernetes solutions.
+* Must use short-lived service account tokens when logging in.
+   * Tokens mounted into pods default to short-lived from 1.21.
 
 1. Ensure OIDC discovery URLs do not require authentication, as detailed
-   [here](k8s-sa-issuer-discovery):
+   [here][k8s-sa-issuer-discovery]:
 
    ```bash
    kubectl create clusterrolebinding oidc-reviewer  \
       --clusterrole=system:service-account-issuer-discovery \
       --group=system:unauthenticated
+   ```
+
+1. Find the issuer URL of the cluster.
+
+   ```bash
+   kubectl proxy &
+   ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
    ```
 
 1. Enable and configure JWT auth in Vault.
@@ -313,36 +325,30 @@ Kubernetes cluster requirements:
          [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
 
       ```bash
-      # 1. Find the issuer URL of the cluster.
-      kubectl proxy &
-      ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
-
-      # 2. Enable and configure the JWT auth mount.
       vault auth enable jwt
       vault write auth/jwt/config oidc_discovery_url="${ISSUER}"
       ```
 
-1. Configure a role and log in as detailed below.
+1. Configure a role and log in as detailed [below](#configuring-a-role-and-logging-in).
 
 [k8s-sa-issuer-discovery]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-issuer-discovery
-[k8s-token-audience]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#serviceaccounttokenprojection-v1-core
 
 ### Using JWT validation public keys
-
-Kubernetes cluster requirements:
-
-* `ServiceAccountIssuerDiscovery` feature gate enabled.
-   * Present from 1.18, defaults to true from 1.20.
-   * This requirement can be avoided if you can access the Kubernetes master
-      nodes to read the public signing key directly from disk at
-      `/etc/kubernetes/pki/sa.pub`. In this case, you can also skip the step to
-      convert the key as it will already be in PEM format.
-* Must use short-lived service account tokens when logging in.
-   * Tokens mounted into pods default to short-lived from 1.21.
 
 This method can be useful if Kubernetes' API is not reachable from Vault or if
 you would like a single JWT auth mount to service multiple Kubernetes clusters
 by chaining their public signing keys.
+
+Kubernetes cluster requirements:
+
+* [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
+   * Present from 1.18, defaults to enabled from 1.20.
+   * This requirement can be avoided if you can access the Kubernetes master
+      nodes to read the public signing key directly from disk at
+      `/etc/kubernetes/pki/sa.pub`. In this case, you can skip the steps to
+      retrieve and then convert the key as it will already be in PEM format.
+* Must use short-lived service account tokens when logging in.
+   * Tokens mounted into pods default to short-lived from 1.21.
 
 1. Fetch the service account signing public key from your cluster's JWKS URI.
 
@@ -371,7 +377,7 @@ by chaining their public signing keys.
    -----END PUBLIC KEY-----"
    ```
 
-1. Configure a role and log in as detailed below.
+1. Configure a role and log in as detailed [below](#configuring-a-role-and-logging-in).
 
 [jwk-to-pem]: https://8gwifi.org/jwkconvertfunctions.jsp
 
@@ -408,3 +414,5 @@ log in.
       --data '{"jwt":"<JWT-TOKEN-HERE>","role":"my-role"}' \
       "${VAULT_ADDR}/v1/auth/jwt/login"
    ```
+
+[k8s-token-audience]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#serviceaccounttokenprojection-v1-core
