@@ -54,10 +54,13 @@ export default function IoCardContaianer({
             </header>
           ) : null}
           <ul
-            className={s.cardList}
+            className={classNames(
+              s.cardList,
+              cardsPerRow === 3 && s.threeUp,
+              cardsPerRow === 4 && s.fourUp
+            )}
             style={
               {
-                '--per-row': cardsPerRow,
                 '--length': cards.length,
               } as React.CSSProperties
             }
@@ -67,7 +70,7 @@ export default function IoCardContaianer({
                 // Index is stable
                 // eslint-disable-next-line react/no-array-index-key
                 <li key={index}>
-                  <IoCard {...card} />
+                  <IoCard variant={theme} {...card} />
                 </li>
               )
             })}
