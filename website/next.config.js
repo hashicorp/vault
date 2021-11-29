@@ -4,6 +4,9 @@ const redirects = require('./redirects.next')
 module.exports = withHashicorp({
   nextOptimizedImages: true,
 })({
+  experimental: {
+    esmExternals: true,
+  },
   svgo: { plugins: [{ removeViewBox: false }] },
   rewrites: () => [
     {
