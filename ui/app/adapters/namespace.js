@@ -32,8 +32,6 @@ export default ApplicationAdapter.extend({
     return this._super(...arguments);
   },
   query() {
-    return this.ajax(`/${this.urlPrefix()}/namespaces?list=true`).then(resp => {
-      return resp;
-    });
+    return this.ajax(`/${this.urlPrefix()}/namespaces?list=true`);
   },
 });

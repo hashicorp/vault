@@ -39,10 +39,10 @@ export default Route.extend(UnloadModel, {
 
   setupController(controller, model) {
     const has404 = this.has404;
-    controller.set('hasModel', true);
     controller.setProperties({
       model: model,
       has404,
+      hasModel: true,
     });
     if (!has404) {
       controller.setProperties({
