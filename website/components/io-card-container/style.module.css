@@ -11,8 +11,9 @@
 }
 
 .header {
-  margin-bottom: 64px;
+  margin: 0 auto 64px;
   text-align: center;
+  max-width: 600px;
 }
 
 .heading {
@@ -20,7 +21,7 @@
   composes: g-type-display-2 from global;
 
   @nest .dark & {
-    color: var(--gray-5);
+    color: var(--white);
   }
 }
 
@@ -52,18 +53,39 @@
 .cardList {
   list-style: none;
 
+  --minCol: 250px;
   --columns: var(--length);
 
   display: grid;
-  grid-template-columns: repeat(var(--columns), minmax(250px, 1fr));
+  grid-template-columns: repeat(var(--columns), minmax(var(--minCol), 1fr));
   gap: 32px;
   overflow-x: auto;
   margin: -4px;
   padding: 4px;
 
   @media (--medium-up) {
-    --columns: var(--per-row);
-
     overflow-x: unset;
+  }
+
+  &.threeUp {
+    @media (--medium-up) {
+      --columns: 3;
+      --minCol: 0;
+    }
+  }
+
+  &.fourUp {
+    @media (--medium-up) {
+      --columns: 3;
+      --minCol: 0;
+    }
+
+    @media (--large) {
+      --columns: 4;
+    }
+  }
+
+  & > li {
+    display: flex;
   }
 }
