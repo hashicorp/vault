@@ -25,6 +25,7 @@ export default function IoUsecaseHero({
               layout="fill"
               objectFit="cover"
               objectPosition="bottom right"
+              priority={true}
               alt=""
             />
           ) : null}
