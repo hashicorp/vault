@@ -541,45 +541,80 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 	return asn1.ObjectIdentifier(ret), nil
 }
 
-// Validates that the combination of keyType, keyBits, and hashBits are
-// valid together; replaces individual calls to ValidateSignatureLength and
-// ValidateKeyTypeLength.
-func ValidateKeyTypeSignatureLength(keyType string, keyBits *int, hashBits *int) error {
-	if err := ValidateKeyTypeLength(keyType, keyBits); err != nil {
-		return err
+// Returns default key bits for the specified key type, or the present value
+// if keyBits is non-zero.
+func DefaultOrValueKeyBits(keyType string, keyBits int) (int, error) {
+	if keyBits == 0 {
+		newValue, present := defaultAlgorithmKeyBits[keyType]
+		if present {
+			keyBits = newValue
+		} /* else {
+		  // We cannot return an error here as ed25519 (and potentially ed448
+		  // in the future) aren't in defaultAlgorithmKeyBits -- the value of
+		  // the keyBits parameter is ignored under that algorithm.
+		} */
 	}
 
+	return keyBits, nil
+}
+
+// Returns default signature hash bit length for the specified key type and
+// bits, or the present value if hashBits is non-zero. Returns an error under
+// certain internal circumstances.
+func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, error) {
 	if keyType == "ec" {
 		// To comply with BSI recommendations Section 4.2 and Mozilla root
 		// store policy section 5.1.2, enforce that NIST P-curves use a hash
 		// length corresponding to curve length. Note that ed25519 does not
 		// the "ec" key type.
-		expectedHashBits := expectedNISTPCurveHashBits[*keyBits]
+		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
 
-		if expectedHashBits != *hashBits && *hashBits != 0 {
-			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, *keyBits)
-		} else if *hashBits == 0 {
-			*hashBits = expectedHashBits
+		if expectedHashBits != hashBits && hashBits != 0 {
+			return hashBits, fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", hashBits, keyBits)
+		} else if hashBits == 0 {
+			hashBits = expectedHashBits
 		}
-	} else if keyType == "rsa" && *hashBits == 0 {
-		// To match previous behavior (and ignoring recommendations of hash
-		// size to match RSA key sizes), default to SHA-2-256.
-		*hashBits = 256
-	} else if keyType == "ed25519" {
+	} else if keyType == "rsa" && hashBits == 0 {
+		// To match previous behavior (and ignoring NIST's recommendations for
+		// hash size to align with RSA key sizes), default to SHA-2-256.
+		hashBits = 256
+	} /* else if keyType == "ed25519" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
 		// certificate signing.
 		return nil
+	} */
+
+	return hashBits, nil
+}
+
+// Validates that the combination of keyType, keyBits, and hashBits are
+// valid together; replaces individual calls to ValidateSignatureLength and
+// ValidateKeyTypeLength. Also updates the value of keyBits and hashBits on
+// return.
+func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, hashBits int) (int, int, error) {
+	var err error
+
+	if keyBits, err = DefaultOrValueKeyBits(keyType, keyBits); err != nil {
+		return keyBits, hashBits, err
+	}
+
+	if err = ValidateKeyTypeLength(keyType, keyBits); err != nil {
+		return keyBits, hashBits, err
+	}
+
+	if hashBits, err = DefaultOrValueHashBits(keyType, keyBits, hashBits); err != nil {
+		return keyBits, hashBits, err
 	}
 
 	// Note that this check must come after we've selected a value for
 	// hashBits above, in the event it was left as the default, but we
 	// were allowed to update it.
-	if err := ValidateSignatureLength(*hashBits); err != nil || *hashBits == 0 {
-		return err
+	if err = ValidateSignatureLength(hashBits); err != nil {
+		return keyBits, hashBits, err
 	}
 
-	return nil
+	return keyBits, hashBits, nil
 }
 
 // Validates that the length of the hash (in bits) used in the signature
@@ -595,32 +630,25 @@ func ValidateSignatureLength(hashBits int) error {
 	return nil
 }
 
-func ValidateKeyTypeLength(keyType string, keyBits *int) error {
-	if *keyBits == 0 {
-		newValue, present := defaultAlgorithmKeyBits[keyType]
-		if present {
-			*keyBits = newValue
-		}
-	}
-
-	if keyType == "rsa" && *keyBits < rsaMinimumSecureKeySize {
-		return fmt.Errorf("RSA keys < %d bits are unsafe and not supported: got %d", rsaMinimumSecureKeySize, *keyBits)
-	}
-
+func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	switch keyType {
 	case "rsa":
-		switch *keyBits {
+		if keyBits < rsaMinimumSecureKeySize {
+			return fmt.Errorf("RSA keys < %d bits are unsafe and not supported: got %d", rsaMinimumSecureKeySize, keyBits)
+		}
+
+		switch keyBits {
 		case 2048:
 		case 3072:
 		case 4096:
 		case 8192:
 		default:
-			return fmt.Errorf("unsupported bit length for RSA key: %d", *keyBits)
+			return fmt.Errorf("unsupported bit length for RSA key: %d", keyBits)
 		}
 	case "ec":
-		_, present := expectedNISTPCurveHashBits[*keyBits]
+		_, present := expectedNISTPCurveHashBits[keyBits]
 		if !present {
-			return fmt.Errorf("unsupported bit length for EC key: %d", *keyBits)
+			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
 	case "any", "ed25519":
 	default:

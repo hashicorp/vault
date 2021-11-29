@@ -50,7 +50,8 @@ func (b *backend) getGenerationParams(
 		PostalCode:           data.Get("postal_code").([]string),
 	}
 
-	if err := certutil.ValidateKeyTypeSignatureLength(role.KeyType, &role.KeyBits, &role.SignatureBits); err != nil {
+	var err error
+	if role.KeyBits, role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(role.KeyType, role.KeyBits, role.SignatureBits); err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 	}
 
