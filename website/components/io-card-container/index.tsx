@@ -34,42 +34,46 @@ export default function IoCardContaianer({
           {description ? <p className={s.description}>{description}</p> : null}
         </header>
       ) : null}
-      {label || cta ? (
-        <header className={s.subHeader}>
-          {label ? <h3 className={s.label}>{label}</h3> : null}
-          {cta ? (
-            <Button
-              title={cta.text}
-              href={cta.url}
-              linkType="inbound"
-              theme={{
-                brand: 'neutral',
-                variant: 'tertiary',
-                background: theme,
-              }}
-            />
+      {cards.length ? (
+        <>
+          {label || cta ? (
+            <header className={s.subHeader}>
+              {label ? <h3 className={s.label}>{label}</h3> : null}
+              {cta ? (
+                <Button
+                  title={cta.text}
+                  href={cta.url}
+                  linkType="inbound"
+                  theme={{
+                    brand: 'neutral',
+                    variant: 'tertiary',
+                    background: theme,
+                  }}
+                />
+              ) : null}
+            </header>
           ) : null}
-        </header>
+          <ul
+            className={s.cardList}
+            style={
+              {
+                '--per-row': cardsPerRow,
+                '--length': cards.length,
+              } as React.CSSProperties
+            }
+          >
+            {cards.map((card, index) => {
+              return (
+                // Index is stable
+                // eslint-disable-next-line react/no-array-index-key
+                <li key={index}>
+                  <IoCard {...card} />
+                </li>
+              )
+            })}
+          </ul>
+        </>
       ) : null}
-      <ul
-        className={s.cardList}
-        style={
-          {
-            '--per-row': cardsPerRow,
-            '--length': cards.length,
-          } as React.CSSProperties
-        }
-      >
-        {cards.map((card, index) => {
-          return (
-            // Index is stable
-            // eslint-disable-next-line react/no-array-index-key
-            <li key={index}>
-              <IoCard {...card} />
-            </li>
-          )
-        })}
-      </ul>
     </div>
   )
 }
