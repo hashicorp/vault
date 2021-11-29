@@ -6,13 +6,13 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module DiffVersionSelector
- * DiffVersionSelector component is a specific component that has a toolbar for selecting KV 2 versions and showing a diff between those versions.
+ * DiffVersionSelector component includes a toolbar and diff view between KV 2 versions. It uses the library jsondiffpatch.
  *
  * @example
  * ```js
  * <DiffVersionSelector @model={model}/>
  * ```
- * @param {object} model - model of formed from secret-v2-version
+ * @param {object} model - model that comes from secret-v2-version
  */
 
 export default class DiffVersionSelector extends Component {
@@ -32,19 +32,17 @@ export default class DiffVersionSelector extends Component {
   }
 
   get leftSideDataInit() {
-    // return secretData from hitting the get secret endpoint
     let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.args.model.currentVersion}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
-      .then(response => response.data) // using ember promise helpers to await in the hbs file
+      .then(response => response.data)
       .catch(() => null);
   }
   get rightSideDataInit() {
-    // return secretData from hitting the get secret endpoint
     let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.rightSideVersionInit}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
-      .then(response => response.data) // using ember promise helpers to await in the hbs file\
+      .then(response => response.data)
       .catch(() => null);
   }
   get rightSideVersionInit() {

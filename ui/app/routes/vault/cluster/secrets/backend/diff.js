@@ -1,5 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+
 export default class diff extends Route {
   @service store;
   noReadAccess = false; // ARG TODO keep or remove but put in controller

@@ -1,17 +1,20 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
-// ARG TODO fill out
 /**
  * @module JsonEditor
  *
  * @example
  * ```js
- * <JsonEditor @activeClusterName={{cluster.name}} @onLinkClick={{action "onLinkClick"}} />
+ * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
  * ```
  *
- * @param {string} activeClusterName - name of the current cluster, passed from the parent.
- * @param {Function} onLinkClick - parent action which determines the behavior on link click
+ * @param {string} [title] - Name above codemirror view
+ * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display
+ * @param {Function} [valueUpdated] - action to preform when you edit the codemirror value.
+ * @param {Function} [onFocusOut] - action to preform when you focus out of codemirror.
+ * @param {string} [helpText] - helper text.
+ * @param {object} [options] - option object that overrides codemirror default options such as the styling.
  */
 
 const JSON_EDITOR_DEFAULTS = {
