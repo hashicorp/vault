@@ -145,8 +145,17 @@ the Kubernetes TokenReview API. If Vault is running in Kubernetes, you also need
 to set `disable_local_ca_jwt=true`.
 
 This means Vault does not store any JWTs and allows you to use short-lived tokens
-everywhere but adds some operational overhead to maintain the role bindings on
-the set of service accounts you want to be able to authenticate with Vault.
+everywhere but adds some operational overhead to maintain the cluster role
+bindings on the set of service accounts you want to be able to authenticate with
+Vault. Each client of Vault would need the `system:auth-delegator` ClusterRole:
+
+```bash
+kubectl create clusterrolebinding vault-client-auth-delegator \
+  --clusterrole=system:auth-delegator \
+  --group=group1 \
+  --serviceaccount=svcaccount1 \
+  ...
+```
 
 #### Continue using long-lived tokens
 
