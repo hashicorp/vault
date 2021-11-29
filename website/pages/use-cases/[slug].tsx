@@ -113,19 +113,21 @@ export default function UseCasePage({ data }) {
         />
       </div>
 
-      <div className={s.videoCallout}>
-        <IoVideoCallout
-          youtubeId={_videoCallout.youtubeId}
-          thumbnail={_videoCallout.thumbnail.url}
-          heading={_videoCallout.heading}
-          description={_videoCallout.description}
-          person={{
-            avatar: _videoCallout.personAvatar.url,
-            name: _videoCallout.personName,
-            description: _videoCallout.personDescription,
-          }}
-        />
-      </div>
+      {_videoCallout ? (
+        <div className={s.videoCallout}>
+          <IoVideoCallout
+            youtubeId={_videoCallout.youtubeId}
+            thumbnail={_videoCallout.thumbnail.url}
+            heading={_videoCallout.heading}
+            description={_videoCallout.description}
+            person={{
+              avatar: _videoCallout.personAvatar.url,
+              name: _videoCallout.personName,
+              description: _videoCallout.personDescription,
+            }}
+          />
+        </div>
+      ) : null}
     </>
   )
 }
