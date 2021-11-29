@@ -354,7 +354,7 @@ by chaining their public signing keys.
    # 2. Query the jwks_uri specified in /.well-known/openid-configuration
    # NB: You may need to run this from a pod within the cluster if the $ISSUER
    # URL is not available outside the cluster.
-   curl "$(curl --silent "${ISSUER}/.well-known/openid-configuration" | jq -r '.jwks_uri')"
+   curl "$(curl --fail --silent --show-error "${ISSUER}/.well-known/openid-configuration" | jq -r '.jwks_uri')"
    ```
 
 1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online
