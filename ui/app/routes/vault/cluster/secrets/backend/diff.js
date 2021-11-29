@@ -3,7 +3,6 @@ import { inject as service } from '@ember/service';
 
 export default class diff extends Route {
   @service store;
-  noReadAccess = false; // ARG TODO keep or remove but put in controller
   secretMetadata;
 
   beforeModel() {
@@ -13,24 +12,15 @@ export default class diff extends Route {
 
   model(params) {
     let { id } = params;
-    return this.store
-      .queryRecord('secret-v2', {
-        backend: this.backend,
-        id,
-      })
-      .catch(error => {
-        // there was an error likely in read metadata.
-        // still load the page and handle what you show by filtering for this property
-        if (error.httpStatus === 403) {
-          this.noReadAccess = true;
-        }
-      });
+    return this.store.queryRecord('secret-v2', {
+      backend: this.backend,
+      id,
+    });
   }
 
   setupController(controller, model) {
     controller.set('backend', this.backend); // for backendCrumb
     controller.set('id', model.id); // for navigation on tabs
     controller.set('model', model);
-    controller.set('noReadAccess', model.noReadAccess); // ARG TODO see if you need.
   }
 }
