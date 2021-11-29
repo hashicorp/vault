@@ -1,6 +1,8 @@
 import * as React from 'react'
+import Head from 'next/head'
 import rivetQuery from '@hashicorp/nextjs-scripts/dato/client'
 import useCasesQuery from './query.graphql'
+import { renderMetaTags } from 'react-datocms'
 import IoUsecaseHero from 'components/io-usecase-hero'
 import IoUsecaseSection from 'components/io-usecase-section'
 import IoUsecaseCustomer from 'components/io-usecase-customer'
@@ -11,6 +13,7 @@ import s from './style.module.css'
 
 export default function UseCasePage({ data }) {
   const {
+    seo,
     heroHeading,
     heroDescription,
     challengeHeading,
@@ -27,14 +30,21 @@ export default function UseCasePage({ data }) {
     caseStudyDescription,
     caseStudyLink,
     caseStudyStats,
+    cardsHeading,
+    cardsDescription,
+    tutorialCards,
+    documentationCards,
     callToActionHeading,
     callToActionDescription,
     callToActionLinks,
     videoCallout,
   } = data
   const _videoCallout = videoCallout[0]
+
   return (
     <>
+      <Head>{renderMetaTags(seo)}</Head>
+
       <IoUsecaseHero
         eyebrow="Common use case"
         heading={heroHeading}
@@ -99,6 +109,48 @@ export default function UseCasePage({ data }) {
           }
         })}
       />
+
+      <div className={s.cards}>
+        <IoCardContainer
+          heading={cardsHeading}
+          description={cardsDescription}
+          label="Tutorials"
+          cta={{
+            url: 'https://learn.hashicorp.com/vault',
+            text: 'Explore all',
+          }}
+          cardsPerRow={3}
+          cards={tutorialCards.map((card) => {
+            return {
+              link: {
+                url: card.link,
+                type: 'inbound',
+              },
+              heading: card.heading,
+              description: card.description,
+            }
+          })}
+        />
+
+        <IoCardContainer
+          label="Docs"
+          cta={{
+            url: '/docs',
+            text: 'Explore all',
+          }}
+          cardsPerRow={3}
+          cards={documentationCards.map((card) => {
+            return {
+              link: {
+                url: card.link,
+                type: 'inbound',
+              },
+              heading: card.heading,
+              description: card.description,
+            }
+          })}
+        />
+      </div>
 
       <div className={s.callToAction}>
         <IoUsecaseCallToAction

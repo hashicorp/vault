@@ -1,5 +1,10 @@
 query UseCasesQuery {
   allVaultUseCases {
+    seo: _seoMetaTags {
+      attributes
+      content
+      tag
+    }
     slug
     heroHeading
     heroDescription
@@ -39,6 +44,26 @@ query UseCasesQuery {
     caseStudyStats {
       value
       label
+    }
+    cardsHeading
+    cardsDescription
+    tutorialCards {
+      eyebrow
+      heading
+      description
+      link
+      products {
+        name
+      }
+    }
+    documentationCards {
+      eyebrow
+      heading
+      description
+      link
+      products {
+        name
+      }
     }
     callToActionHeading
     callToActionDescription
