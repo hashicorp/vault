@@ -2960,7 +2960,7 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
 		info := item.Object.(nodeHAConnectionInfo)
 		nodes = append(nodes, PeerNode{
-			Hostname:       info.nodeInfo.NodeID,
+			Hostname:       info.nodeInfo.Hostname,
 			APIAddress:     info.nodeInfo.ApiAddr,
 			ClusterAddress: itemClusterAddr,
 			LastEcho:       info.lastHeartbeat,

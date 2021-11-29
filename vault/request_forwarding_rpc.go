@@ -119,9 +119,9 @@ func (c *forwardingClient) startHeartbeat() {
 		clusterAddr := c.core.ClusterAddr()
 		h, _ := host.Info()
 		ni := NodeInformation{
-			ApiAddr: c.core.redirectAddr,
-			NodeID:  h.Hostname,
-			Mode:    "standby",
+			ApiAddr:  c.core.redirectAddr,
+			Hostname: h.Hostname,
+			Mode:     "standby",
 		}
 		tick := func() {
 			req := &EchoRequest{
