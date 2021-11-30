@@ -82,7 +82,7 @@ func (c *DecryptCommand) Run(args []string) int {
 
 	passphrase := "my password"
 
-	plaintext, err := decrypt(input, passphrase)
+	plaintext, err := c.decrypt(input, passphrase)
 	if err != nil {
 		// Confirm if this is the right code
 		c.UI.Error(fmt.Sprintf("error decrypting file: %s", err.Error()))
@@ -103,7 +103,7 @@ func (c *DecryptCommand) Run(args []string) int {
 	return 0
 }
 
-func parseAAD(input []byte) (argon2Params, []byte, error) {
+func (c *DecryptCommand) parseAAD(input []byte) (argon2Params, []byte, error) {
 	var aad argon2Params
 
 	parts := bytes.SplitN(input, []byte("$"), 2)
@@ -123,8 +123,8 @@ func parseAAD(input []byte) (argon2Params, []byte, error) {
 	return aad, parts[1], nil
 }
 
-func decrypt(rawDataToDecrypt []byte, passphrase string) ([]byte, error) {
-	aad, dataToDecrypt, err := parseAAD(rawDataToDecrypt)
+func (c *DecryptCommand) decrypt(rawDataToDecrypt []byte, passphrase string) ([]byte, error) {
+	aad, dataToDecrypt, err := c.parseAAD(rawDataToDecrypt)
 	if err != nil {
 		return nil, err
 	}

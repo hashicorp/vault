@@ -96,7 +96,7 @@ func (c *EncryptCommand) Run(args []string) int {
 
 	passphrase := "my password"
 
-	encrypted, err := encrypt(data, passphrase)
+	encrypted, err := c.encrypt(data, passphrase)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 		return 1
@@ -115,7 +115,7 @@ func (c *EncryptCommand) Run(args []string) int {
 	return 0
 }
 
-func encrypt(dataToEncrypt []byte, passphrase string) ([]byte, error) {
+func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string) ([]byte, error) {
 	aad := argon2Params{
 		Salt:        make([]byte, 16),
 		Memory:      64 * 1024,
