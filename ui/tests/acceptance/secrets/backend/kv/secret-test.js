@@ -734,7 +734,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await visit(url);
     await settled();
     await click(`[data-test-secret-link=${secretPath}]`);
-    await this.settled();
+    await settled();
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
   });
