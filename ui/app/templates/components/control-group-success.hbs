@@ -11,6 +11,7 @@
     <div class="control-group-success {{if unwrapData 'is-editor'}}">
       <div class="has-copy-button">
         <JsonEditor
+          data-test-json-viewer
           @showToolbar={{false}}
           @value={{ stringify unwrapData }}
           @options={{hash

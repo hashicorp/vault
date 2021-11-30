@@ -12,20 +12,21 @@
         @class={{concat "toolbar-link" (if D.isOpen " is-active")}}
         @tagName="button"
       >
-        Version {{or this.leftSideVersionSelected @model.currentVersion}}
+        Version {{or this.leftSideVersionSelected this.args.model.currentVersion}}
         <Chevron @direction="down" @isButton={{true}} />
       </D.trigger>
       <D.content @class="popup-menu-content">
         <nav class="box menu">
           <ul class="menu-list">
-            {{#each (reverse @model.versions) as |leftSideSecretVersion|}}
+            {{#each (reverse this.args.model.versions) as |leftSideSecretVersion|}}
+            {{log leftSideSecretVersion "here"}}
               <li class="action" data-test-leftSide-version={{leftSideSecretVersion.version}}>
                 <button 
                   class="link"
                   {{on "click" (fn this.selectVersion leftSideSecretVersion.version D.actions "left")}}
                   >
                   Version {{leftSideSecretVersion.version}}
-                  {{#if (and (eq leftSideSecretVersion.version (or this.leftSideVersionSelected this.model.currentVersion)) (not leftSideSecretVersion.destroyed) (not leftSideSecretVersion.deleted))}}
+                  {{#if (and (eq leftSideSecretVersion.version (or this.leftSideVersionSelected this.args.model.currentVersion)) (not leftSideSecretVersion.destroyed) (not leftSideSecretVersion.deleted))}}
                     <Icon @glyph="check-circle-outline" class="has-text-success is-pulled-right" />
                   {{else if leftSideSecretVersion.destroyed}}
                       <Icon @glyph="cancel-square-fill" class="has-text-danger is-pulled-right" />
@@ -57,7 +58,7 @@
       <D.content @class="popup-menu-content">
         <nav class="box menu">
           <ul class="menu-list">
-            {{#each (reverse @model.versions) as |rightSideSecretVersion|}}
+            {{#each (reverse this.args.model.versions) as |rightSideSecretVersion|}}
               <li class="action">
                 <button
                   class="link"

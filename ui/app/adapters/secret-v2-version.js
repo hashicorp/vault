@@ -55,9 +55,13 @@ export default ApplicationAdapter.extend({
   },
 
   querySecretDataByVersion(id) {
-    return this.ajax(this.urlForQueryRecord(id), 'GET').then(resp => {
-      return resp.data;
-    });
+    return this.ajax(this.urlForQueryRecord(id), 'GET')
+      .then(resp => {
+        return resp.data;
+      })
+      .catch(error => {
+        return error.data;
+      });
   },
 
   urlForCreateRecord(modelName, snapshot) {
