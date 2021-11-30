@@ -1,0 +1,8 @@
+# File is used by the openapi-generator cli to generate a go client.
+generatorName: go
+gitUserId: hashicorp
+gitRepoId: vault/clients/go/v2
+inputSpec: /local/openapi.json
+outputDir: /local/clients/go/v2
+packageName: client
+packageVersion: 1.8.2

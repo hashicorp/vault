@@ -23,6 +23,10 @@ ifneq ($(FDB_ENABLED), )
 	BUILD_TAGS+=foundationdb
 endif
 
+# OpenAPI Generator Support Variables
+OPENAPI_GENERATOR_VERSION=v5.2.0
+OPENAPI_GENERATOR_IMAGE="openapitools/openapi-generator-cli:$(OPENAPI_GENERATOR_VERSION)"
+
 default: dev
 
 # bin generates the releasable binaries for Vault
@@ -179,8 +183,8 @@ ember-dist-dev:
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build:dev
 
-static-dist: ember-dist 
-static-dist-dev: ember-dist-dev 
+static-dist: ember-dist
+static-dist-dev: ember-dist-dev
 
 proto: bootstrap
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
@@ -262,3 +266,15 @@ ci-verify:
 .NOTPARALLEL: ember-dist ember-dist-dev
 
 -include packagespec.mk
+
+.PHONY: v2
+v2:
+	@echo "==> Building v2 OpenAPI clients..."
+	@docker run \
+		--rm \
+		--volume "$(PWD):/local" \
+		 $(OPENAPI_GENERATOR_IMAGE) batch --clean /local/clients/go/v2/config.yaml
+	@docker run \
+		--rm \
+		--volume "$(PWD):/local" \
+		$(OPENAPI_GENERATOR_IMAGE) batch --clean /local/clients/javascript/v2/config.yaml

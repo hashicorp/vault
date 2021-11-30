@@ -1,0 +1,9 @@
+# File is used by the openapi-generator cli to generate a javascript client.
+generatorName: javascript
+gitUserId: hashicorp
+gitRepoId: vault/clients/javascript/v2
+inputSpec: /local/openapi.json
+outputDir: /local/clients/javascript/v2
+moduleName: vault-client
+projectVersion: 1.8.2
+licenseName: Mozilla Public License 2.0

@@ -1,0 +1,23 @@
+openapi: 3.0.2
+info:
+  description: HTTP API that gives you full access to Vault. All API routes are prefixed
+    with `/v1/`.
+  license:
+    name: Mozilla Public License 2.0
+    url: https://www.mozilla.org/en-US/MPL/2.0
+  title: HashiCorp Vault API
+  version: 1.0.0
+servers:
+- url: /
+paths:
+  /auth/token/create:
+    description: The token create path is used to create new tokens.
+    post:
+      responses:
+        "200":
+          description: OK
+      summary: The token create path is used to create new tokens.
+      tags:
+      - auth
+components:
+  schemas: {}
