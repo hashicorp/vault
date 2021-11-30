@@ -19,7 +19,6 @@
         <nav class="box menu">
           <ul class="menu-list">
             {{#each (reverse this.args.model.versions) as |leftSideSecretVersion|}}
-            {{log leftSideSecretVersion "here"}}
               <li class="action" data-test-leftSide-version={{leftSideSecretVersion.version}}>
                 <button 
                   class="link"
