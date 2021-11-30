@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/pebble"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
@@ -24,27 +25,27 @@ import (
 )
 
 const (
-	// boltSnapshotID is the stable ID for any boltDB snapshot. Keeping the ID
-	// stable means there is only ever one bolt snapshot in the system
-	boltSnapshotID = "bolt-snapshot"
-	tmpSuffix      = ".tmp"
-	snapPath       = "snapshots"
+	// pebbleSnapshotID is the stable ID for any pebble snapshot. Keeping the ID
+	// stable means there is only ever one pebble snapshot in the system
+	pebbleSnapshotID = "pebble-snapshot"
+	tmpSuffix        = ".tmp"
+	snapPath         = "snapshots"
 )
 
-// BoltSnapshotStore implements the SnapshotStore interface and allows snapshots
-// to be stored in BoltDB files on local disk. Since we always have an up to
+// PebbleSnapshotStore implements the SnapshotStore interface and allows snapshots
+// to be stored in pebble files on local disk. Since we always have an up to
 // date FSM we use a special snapshot ID to indicate that the snapshot can be
-// pulled from the BoltDB file that is currently backing the FSM. This allows us
+// pulled from the pebble file that is currently backing the FSM. This allows us
 // to provide just-in-time snapshots without doing incremental data dumps.
 //
 // When a snapshot is being installed on the node we will Create and Write data
-// to it. This will cause the snapshot store to create a new BoltDB file and
+// to it. This will cause the snapshot store to create a new pebble file and
 // write the snapshot data to it. Then, we can simply rename the snapshot to the
 // FSM's filename. This allows us to atomically install the snapshot and
 // reduces the amount of disk i/o. Older snapshots are reaped on startup and
 // before each subsequent snapshot write. This ensures we only have one snapshot
 // on disk at a time.
-type BoltSnapshotStore struct {
+type PebbleSnapshotStore struct {
 	// path is the directory in which to store file based snapshots
 	path string
 
@@ -55,10 +56,10 @@ type BoltSnapshotStore struct {
 	logger log.Logger
 }
 
-// BoltSnapshotSink implements SnapshotSink optionally choosing to write to a
+// PebbleSnapshotSink implements SnapshotSink optionally choosing to write to a
 // file.
-type BoltSnapshotSink struct {
-	store  *BoltSnapshotStore
+type PebbleSnapshotSink struct {
+	store  *PebbleSnapshotStore
 	logger log.Logger
 	meta   raft.SnapshotMeta
 	trans  raft.Transport
@@ -76,9 +77,9 @@ type BoltSnapshotSink struct {
 	closed bool
 }
 
-// NewBoltSnapshotStore creates a new BoltSnapshotStore based
+// NewPebbleSnapshotStore creates a new PebbleSnapshotStore based
 // on a base directory.
-func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapshotStore, error) {
+func NewPebbleSnapshotStore(base string, logger log.Logger, fsm *FSM) (*PebbleSnapshotStore, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("no logger provided")
 	}
@@ -90,7 +91,7 @@ func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapsh
 	}
 
 	// Setup the store
-	store := &BoltSnapshotStore{
+	store := &PebbleSnapshotStore{
 		logger: logger,
 		fsm:    fsm,
 		path:   path,
@@ -105,19 +106,19 @@ func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapsh
 }
 
 // Create is used to start a new snapshot
-func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+func (f *PebbleSnapshotStore) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
 	// We only support version 1 snapshots at this time.
 	if version != 1 {
 		return nil, fmt.Errorf("unsupported snapshot version %d", version)
 	}
 
 	// Create the sink
-	sink := &BoltSnapshotSink{
+	sink := &PebbleSnapshotSink{
 		store:  f,
 		logger: f.logger,
 		meta: raft.SnapshotMeta{
 			Version:            version,
-			ID:                 boltSnapshotID,
+			ID:                 pebbleSnapshotID,
 			Index:              index,
 			Term:               term,
 			Configuration:      configuration,
@@ -132,7 +133,7 @@ func (f *BoltSnapshotStore) Create(version raft.SnapshotVersion, index, term uin
 // List returns available snapshots in the store. It only returns bolt
 // snapshots. No snapshot will be returned if there are no indexes in the
 // FSM.
-func (f *BoltSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
+func (f *PebbleSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 	meta, err := f.getMetaFromFSM()
 	if err != nil {
 		return nil, err
@@ -147,11 +148,11 @@ func (f *BoltSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 }
 
 // getBoltSnapshotMeta returns the fsm's latest state and configuration.
-func (f *BoltSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
+func (f *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 	latestIndex, latestConfig := f.fsm.LatestState()
 	meta := &raft.SnapshotMeta{
 		Version: 1,
-		ID:      boltSnapshotID,
+		ID:      pebbleSnapshotID,
 		Index:   latestIndex.Index,
 		Term:    latestIndex.Term,
 	}
@@ -164,15 +165,15 @@ func (f *BoltSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 }
 
 // Open takes a snapshot ID and returns a ReadCloser for that snapshot.
-func (f *BoltSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
-	if id == boltSnapshotID {
+func (f *PebbleSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+	if id == pebbleSnapshotID {
 		return f.openFromFSM()
 	}
 
 	return f.openFromFile(id)
 }
 
-func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
+func (f *PebbleSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
 	meta, err := f.getMetaFromFSM()
 	if err != nil {
 		return nil, nil, err
@@ -204,7 +205,7 @@ func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, er
 	return meta, readCloser, nil
 }
 
-func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error) {
+func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error) {
 	if len(id) == 0 {
 		return nil, errors.New("can not open empty snapshot ID")
 	}
@@ -255,7 +256,7 @@ func (f *BoltSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error)
 	return meta, nil
 }
 
-func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+func (f *PebbleSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
 	meta, err := f.getMetaFromDB(id)
 	if err != nil {
 		return nil, nil, err
@@ -272,7 +273,7 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 }
 
 // ReapSnapshots reaps all snapshots.
-func (f *BoltSnapshotStore) ReapSnapshots() error {
+func (f *PebbleSnapshotStore) ReapSnapshots() error {
 	snapshots, err := ioutil.ReadDir(f.path)
 	switch {
 	case err == nil:
@@ -309,14 +310,14 @@ func (f *BoltSnapshotStore) ReapSnapshots() error {
 
 // ID returns the ID of the snapshot, can be used with Open()
 // after the snapshot is finalized.
-func (s *BoltSnapshotSink) ID() string {
+func (s *PebbleSnapshotSink) ID() string {
 	s.l.Lock()
 	defer s.l.Unlock()
 
 	return s.meta.ID
 }
 
-func (s *BoltSnapshotSink) writeBoltDBFile() error {
+func (s *PebbleSnapshotSink) writeBoltDBFile() error {
 	// Create a new path
 	name := snapshotName(s.meta.Term, s.meta.Index)
 	path := filepath.Join(s.store.path, name+tmpSuffix)
@@ -412,7 +413,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 
 // Write is used to append to the bolt file. The first call to write ensures we
 // have the file created.
-func (s *BoltSnapshotSink) Write(b []byte) (int, error) {
+func (s *PebbleSnapshotSink) Write(b []byte) (int, error) {
 	s.l.Lock()
 	defer s.l.Unlock()
 
@@ -433,7 +434,7 @@ func (s *BoltSnapshotSink) Write(b []byte) (int, error) {
 }
 
 // Close is used to indicate a successful end.
-func (s *BoltSnapshotSink) Close() error {
+func (s *PebbleSnapshotSink) Close() error {
 	s.l.Lock()
 	defer s.l.Unlock()
 
@@ -474,7 +475,7 @@ func (s *BoltSnapshotSink) Close() error {
 }
 
 // Cancel is used to indicate an unsuccessful end.
-func (s *BoltSnapshotSink) Cancel() error {
+func (s *PebbleSnapshotSink) Cancel() error {
 	s.l.Lock()
 	defer s.l.Unlock()
 
@@ -495,21 +496,21 @@ func (s *BoltSnapshotSink) Cancel() error {
 	return nil
 }
 
-type boltSnapshotInstaller struct {
+type pebbleSnapshotInstaller struct {
 	io.ReadCloser
 	meta     *raft.SnapshotMeta
 	filename string
 }
 
-func (i *boltSnapshotInstaller) Filename() string {
+func (i *pebbleSnapshotInstaller) Filename() string {
 	return i.filename
 }
 
-func (i *boltSnapshotInstaller) Metadata() *raft.SnapshotMeta {
+func (i *pebbleSnapshotInstaller) Metadata() *raft.SnapshotMeta {
 	return i.meta
 }
 
-func (i *boltSnapshotInstaller) Install(filename string) error {
+func (i *pebbleSnapshotInstaller) Install(filename string) error {
 	if len(i.filename) == 0 {
 		return errors.New("snapshot filename empty")
 	}

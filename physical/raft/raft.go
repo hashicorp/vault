@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	raftpebble "github.com/raskchanky/raft-pebble"
-	bolt "go.etcd.io/bbolt"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -382,7 +381,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		log = cacheStore
 
 		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
+		snapshots, err := NewPebbleSnapshotStore(path, logger.Named("snapshot"), fsm)
 		if err != nil {
 			return nil, err
 		}
@@ -490,27 +489,27 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.collectMetricsWithStats(fsmMetrics, sink, "fsm")
 }
 
-func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
-	txstats := stats.TxStats
-	labels := []metricsutil.Label{{"database", database}}
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.PageCount), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.PageAlloc), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.CursorCount), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
+func (b *RaftBackend) collectMetricsWithStats(metrics *pebble.Metrics, sink *metricsutil.ClusterMetricSink, database string) {
+	// txstats := stats.TxStats
+	// labels := []metricsutil.Label{{"database", database}}
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.PageCount), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.PageAlloc), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.CursorCount), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
+	// sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
+	// sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
+	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
+	// sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -1638,41 +1637,4 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
-}
-
-// boltOptions returns a bolt.Options struct, suitable for passing to
-// bolt.Open(), pre-configured with all of our preferred defaults.
-func boltOptions() *bolt.Options {
-	o := &bolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   bolt.FreelistMapType,
-		NoFreelistSync: true,
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
-		o.FreelistType = bolt.FreelistArrayType
-	}
-
-	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
-		o.NoFreelistSync = false
-	}
-
-	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
-	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
-	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
-	// so if users are wanting to turn this off, they can also set it to 0. Setting it
-	// to a negative value is the same as not setting it at all.
-	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
-		o.InitialMmapSize = initialMmapSize
-	} else {
-		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
-
-		// If there's an error here, it means they passed something that's not convertible to
-		// a number. Rather than fail startup, just ignore it.
-		if err == nil && imms > 0 {
-			o.InitialMmapSize = imms
-		}
-	}
-
-	return o
 }
