@@ -1769,6 +1769,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"allowed_managed_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
