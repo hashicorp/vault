@@ -83,32 +83,37 @@ func (c *EncryptCommand) Run(args []string) int {
 	// TODO Create key w/ passphrase
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
-		fmt.Errorf(err.Error())
+		c.UI.Error(fmt.Sprintf("error creating key: %s", err.Error()))
+		return 1
 	}
 
-	encrypt(data, key, c.outfile)
+	err = encrypt(data, key, c.outfile)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
+		return 1
+	}
 
 	return 0
 }
 
-func encrypt(dataToEncrypt []byte, key []byte, outfile string) {
+func encrypt(dataToEncrypt []byte, key []byte, outfile string) error {
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		fmt.Errorf(err.Error())
+		return fmt.Errorf("error creating new cipher block: %s", err.Error())
 	}
 
 	// Create a new GCM
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		fmt.Errorf(err.Error())
+		return fmt.Errorf("error creating GCM: %s", err.Error())
 	}
 
 	// Create a nonce from GCM
 	nonce := make([]byte, aesGCM.NonceSize())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		fmt.Errorf(err.Error())
+		return fmt.Errorf("error creating nonce: %s", err.Error())
 	}
 
 	// Encrypt and write to file
@@ -121,7 +126,8 @@ func encrypt(dataToEncrypt []byte, key []byte, outfile string) {
 	}
 	err = ioutil.WriteFile(outfile, ciphertext, 0644)
 	if err != nil {
-		fmt.Errorf(err.Error())
+		return fmt.Errorf("error writing encrypted data to file: %s", err.Error())
 	}
 
+	return nil
 }
