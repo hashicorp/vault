@@ -8,7 +8,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/hex"
 	"io"
 	"io/ioutil"
 
@@ -20,8 +19,7 @@ var _ cli.Command = (*EncryptCommand)(nil)
 type EncryptCommand struct {
 	*BaseCommand
 
-	aes128 bool
-	// outfile string
+	outfile string
 }
 
 func (c *EncryptCommand) Synopsis() string {
@@ -46,20 +44,13 @@ func (c *EncryptCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 	f := set.NewFlagSet("Command Options")
 
-	f.BoolVar(&BoolVar{
-		Name:    "aes128",
-		Target:  &c.aes128,
-		Default: false,
-		Usage:   "Encrypt the file using 128bit encryption instead of the default aes256.",
+	f.StringVar(&StringVar{
+		Name:    "out",
+		Aliases: []string{"o"},
+		Target:  &c.outfile,
+		Default: "output.enc",
+		Usage:   "Specify the name of the output file.",
 	})
-
-	// f.StringVar(&StringVar{
-	// 	Name:    "out",
-	// 	Aliases: []string{"o"},
-	// 	Target:  &c.outfile,
-	// 	Default: "output.enc",
-	// 	Usage:   "Specify the name of the output file.",
-	// })
 
 	return set
 }
@@ -88,21 +79,15 @@ func (c *EncryptCommand) Run(args []string) int {
 		log.Fatal(err)
 	}
 
-	if !c.aes128 {
-		key := make([]byte, 32)
-		if _, err := rand.Read(key); err != nil {
-			fmt.Errorf(err.Error())
-		}
-
-		keyString := hex.EncodeToString(key)
-
-		// TODO Write keyString to file
-		fmt.Printf("Key written to file: %s", keyString)
-		encrypt(data, key)
-
-	} else {
-		// Create 128bit key
+	// TODO Prompt w/ passphrase
+	// TODO Create key w/ passphrase
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		fmt.Errorf(err.Error())
 	}
+
+	encrypt(data, key)
+
 	return 0
 }
 
@@ -129,6 +114,7 @@ func encrypt(dataToEncrypt []byte, key []byte) {
 	// Encrypt and write to file
 	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, nil)
 
+	// TODO ensure output is not written to stdout
 	err = ioutil.WriteFile("output.enc", ciphertext, 0644)
 	if err != nil {
 		fmt.Errorf(err.Error())
