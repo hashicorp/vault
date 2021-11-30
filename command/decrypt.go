@@ -9,9 +9,9 @@ import (
 
 	"crypto/aes"
 	"crypto/cipher"
-	"io/ioutil"
 
 	"github.com/mitchellh/cli"
+	"golang.org/x/crypto/argon2"
 )
 
 var _ cli.Command = (*DecryptCommand)(nil)
@@ -30,9 +30,9 @@ func (c *DecryptCommand) Help() string {
 	helpText := `
 Usage: vault decrypt [options] [filename]
 
-  Decrpyts an  AES-256 encrypted file.
+  Decrypts an  AES-256 encrypted file.
 
-  Decrpyt a single file:
+  Decrypt a single file:
 
       $ vault decrypt -o foo.txt foo.enc
 
@@ -80,29 +80,31 @@ func (c *DecryptCommand) Run(args []string) int {
 		log.Fatal(err)
 	}
 
-	aad, encryptedData, err := parseAAD(input)
-	if err != nil {
-		log.Fatal(err)
-	}
+	passphrase := "my password"
 
-	key, _, err := generateKeyAAD("my password", aad)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("error creating key: %s", err.Error()))
-		return 1
-	}
-
-	err = decrypt(encryptedData, key, aad, c.outfile)
+	plaintext, err := decrypt(input, passphrase)
 	if err != nil {
 		// Confirm if this is the right code
 		c.UI.Error(fmt.Sprintf("error decrypting file: %s", err.Error()))
 		return 1
 	}
 
+	// TODO ensure output is not written to stdout
+	outfile := c.outfile
+	if outfile == "" {
+		outfile = "input.txt"
+	}
+	err = os.WriteFile(outfile, plaintext, 0644)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("error writing decrypted data to file: %s", err.Error()))
+		return 1
+	}
+
 	return 0
 }
 
-func parseAAD(input []byte) (additionalData, []byte, error) {
-	var aad additionalData
+func parseAAD(input []byte) (argon2Params, []byte, error) {
+	var aad argon2Params
 
 	parts := bytes.SplitN(input, []byte("$"), 2)
 	if len(parts) != 2 {
@@ -121,18 +123,27 @@ func parseAAD(input []byte) (additionalData, []byte, error) {
 	return aad, parts[1], nil
 }
 
-func decrypt(dataToDecrypt, key []byte, aad additionalData, outfile string) error {
+func decrypt(rawDataToDecrypt []byte, passphrase string) ([]byte, error) {
+	aad, dataToDecrypt, err := parseAAD(rawDataToDecrypt)
+	if err != nil {
+		return nil, err
+	}
+
+	key := argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
+	if err != nil {
+		return nil, fmt.Errorf("error creating key: %w", err)
+	}
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return fmt.Errorf("error creating new cipher block: %s", err.Error())
+		return nil, fmt.Errorf("error creating new cipher block: %w", err)
 	}
 
 	// Create a new GCM
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return fmt.Errorf("error creating GCM: %s", err.Error())
+		return nil, fmt.Errorf("error creating GCM: %w", err)
 	}
 
 	// Create a nonce from GCM
@@ -143,19 +154,9 @@ func decrypt(dataToDecrypt, key []byte, aad additionalData, outfile string) erro
 	// Decrypt and write to file
 	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, aad.encode())
 	if err != nil {
-		return fmt.Errorf("error decrypting cipher text: %s", err.Error())
+		return nil, fmt.Errorf("error decrypting cipher text: %w", err)
 
 	}
 
-	// TODO ensure output is not written to stdout
-
-	if outfile == "" {
-		outfile = "input.txt"
-	}
-	err = ioutil.WriteFile(outfile, plaintext, 0644)
-	if err != nil {
-		return fmt.Errorf("error writing decrypted data to file: %s", err.Error())
-	}
-
-	return nil
+	return plaintext, nil
 }

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -26,19 +27,12 @@ type EncryptCommand struct {
 	outfile string
 }
 
-type additionalData struct {
+type argon2Params struct {
 	Salt        []byte
 	Memory      uint32
 	Time        uint32
 	Parallelism uint8
 }
-
-//type argon2Params struct{
-//	Salt        []byte
-//	Memory      int
-//	Time        int
-//	Parallelism int
-//}
 
 func (c *EncryptCommand) Synopsis() string {
 	return "Encrypts a file using AES-256 encryption."
@@ -102,14 +96,18 @@ func (c *EncryptCommand) Run(args []string) int {
 
 	passphrase := "my password"
 
-	key, aad, err := generateKey(passphrase)
+	encrypted, err := encrypt(data, passphrase)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error generating key: %s", err.Error()))
+		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 		return 1
 	}
 
-	err = encrypt(data, key, aad, c.outfile)
-	if err != nil {
+	outfile := c.outfile
+	if outfile == "" {
+		outfile = "output.enc"
+	}
+
+	if err := os.WriteFile(outfile, encrypted, 0644); err != nil {
 		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 		return 1
 	}
@@ -117,56 +115,40 @@ func (c *EncryptCommand) Run(args []string) int {
 	return 0
 }
 
-func generateKey(passphrase string) ([]byte, additionalData, error) {
-	aad := additionalData{
+func encrypt(dataToEncrypt []byte, passphrase string) ([]byte, error) {
+	aad := argon2Params{
 		Salt:        make([]byte, 16),
 		Memory:      64 * 1024,
 		Time:        3,
 		Parallelism: 4,
 	}
 	if _, err := rand.Read(aad.Salt); err != nil {
-		return nil, aad, err
+		return nil, err
 	}
 
-	return generateKeyAAD(passphrase, aad)
-}
-
-func generateKeyAAD(passphrase string, aad additionalData) ([]byte, additionalData, error) {
 	key := argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
-
-	return key, aad, nil
-}
-
-func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) error {
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return fmt.Errorf("error creating new cipher block: %s", err.Error())
+		return nil, fmt.Errorf("error creating new cipher block: %s", err.Error())
 	}
 
 	// Create a new GCM
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return fmt.Errorf("error creating GCM: %s", err.Error())
+		return nil, fmt.Errorf("error creating GCM: %s", err.Error())
 	}
 
 	// Create a nonce for GCM
 	nonce := make([]byte, aesGCM.NonceSize())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		return fmt.Errorf("error creating nonce: %s", err.Error())
+		return nil, fmt.Errorf("error creating nonce: %s", err.Error())
 	}
 
-	if outfile == "" {
-		outfile = "output.enc"
-	}
-	out, err := os.Create(outfile)
-	if err != nil {
-		return err
-	}
-
+	var out bytes.Buffer
 	if _, err := out.Write(aad.encode()); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Encrypt and write to file
@@ -175,14 +157,14 @@ func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) erro
 	// TODO ensure output is not written to stdout
 
 	if _, err := out.Write(ciphertext); err != nil {
-		return fmt.Errorf("error writing encrypted data to file: %w", err)
+		return nil, fmt.Errorf("error writing encrypted data to file: %w", err)
 	}
 
-	return nil
+	return out.Bytes(), nil
 }
 
-func (aad additionalData) encode() []byte {
-	//TODO split out version
+func (aad argon2Params) encode() []byte {
+	// TODO split out version
 	e := fmt.Sprintf("vault:v=%d:%x:t=%d:m=%d:p=%d$", vaultEncryptVersion, aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
 
 	return []byte(e)
