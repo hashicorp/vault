@@ -11,7 +11,9 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/cli"
+	"golang.org/x/crypto/argon2"
 )
 
 var _ cli.Command = (*EncryptCommand)(nil)
@@ -21,6 +23,22 @@ type EncryptCommand struct {
 
 	outfile string
 }
+
+type additionalData struct {
+	Version int
+
+	Salt        []byte
+	Memory      uint32
+	Time        uint32
+	Parallelism uint8
+}
+
+//type argon2Params struct{
+//	Salt        []byte
+//	Memory      int
+//	Time        int
+//	Parallelism int
+//}
 
 func (c *EncryptCommand) Synopsis() string {
 	return "Encrypts a file using AES-256 encryption."
@@ -81,13 +99,16 @@ func (c *EncryptCommand) Run(args []string) int {
 
 	// TODO Prompt w/ passphrase
 	// TODO Create key w/ passphrase
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		c.UI.Error(fmt.Sprintf("error creating key: %s", err.Error()))
+
+	passphrase := "my password"
+
+	key, aad, err := generateKey(passphrase)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error generating key: %s", err.Error()))
 		return 1
 	}
 
-	err = encrypt(data, key, c.outfile)
+	err = encrypt(data, key, aad, c.outfile)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 		return 1
@@ -96,7 +117,24 @@ func (c *EncryptCommand) Run(args []string) int {
 	return 0
 }
 
-func encrypt(dataToEncrypt []byte, key []byte, outfile string) error {
+func generateKey(passphrase string) ([]byte, additionalData, error) {
+	ad := additionalData{
+		Version:     1,
+		Salt:        make([]byte, 16),
+		Memory:      64 * 1024,
+		Time:        3,
+		Parallelism: 4,
+	}
+
+	if _, err := rand.Read(ad.Salt); err != nil {
+		return nil, ad, err
+	}
+	key := argon2.IDKey([]byte(passphrase), ad.Salt, ad.Time, ad.Memory, ad.Parallelism, 32)
+
+	return key, ad, nil
+}
+
+func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) error {
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
@@ -110,14 +148,20 @@ func encrypt(dataToEncrypt []byte, key []byte, outfile string) error {
 		return fmt.Errorf("error creating GCM: %s", err.Error())
 	}
 
-	// Create a nonce from GCM
+	// Create a nonce for GCM
 	nonce := make([]byte, aesGCM.NonceSize())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
 		return fmt.Errorf("error creating nonce: %s", err.Error())
 	}
 
+	adEnc, err := jsonutil.EncodeJSON(aad)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(adEnc))
+
 	// Encrypt and write to file
-	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, nil)
+	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, adEnc)
 
 	// TODO ensure output is not written to stdout
 
