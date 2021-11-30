@@ -3,7 +3,6 @@ import { inject as service } from '@ember/service';
 
 export default class diff extends Route {
   @service store;
-  secretMetadata;
 
   beforeModel() {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
