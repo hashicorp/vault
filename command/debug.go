@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/internalshared/gatedwriter"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mholt/archiver"
 	"github.com/mitchellh/cli"
@@ -1000,6 +1000,9 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	for {
 		select {
 		case log := <-logCh:
+			if !strings.HasSuffix(log, "\n") {
+				log += "\n"
+			}
 			_, err = out.WriteString(log)
 			if err != nil {
 				c.captureError("log", err)

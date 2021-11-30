@@ -55,34 +55,6 @@ module('Integration | Component | pricing-metrics-dates', function(hooks) {
     assert.dom('[data-test-results-date-warning]').doesNotExist('Does not show result states warning');
   });
 
-  test('If result and query start dates are > 1 day apart, warning is shown', async function(assert) {
-    this.set('resultStart', new Date(2020, 1, 20));
-    this.set('resultEnd', new Date(2020, 9, 31));
-    await render(hbs`
-      <PricingMetricsDates
-        @queryStart="2-2020"
-        @queryEnd="10-2020"
-        @resultStart={{resultStart}}
-        @resultEnd={{resultEnd}}
-      />
-    `);
-    assert.dom('[data-test-results-date-warning]').exists('shows states warning');
-  });
-
-  test('If result and query end dates are > 1 day apart, warning is shown', async function(assert) {
-    this.set('resultStart', new Date(2020, 1, 1));
-    this.set('resultEnd', new Date(2020, 9, 15));
-    await render(hbs`
-      <PricingMetricsDates
-        @queryStart="2-2020"
-        @queryEnd="10-2020"
-        @resultStart={{resultStart}}
-        @resultEnd={{resultEnd}}
-      />
-    `);
-    assert.dom('[data-test-results-date-warning]').exists('shows states warning');
-  });
-
   test('it shows appropriate errors on input form', async function(assert) {
     const lastAvailable = endOfMonth(subMonths(startOfToday(), 1));
     const firstAvailable = subMonths(lastAvailable, 12);

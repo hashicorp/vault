@@ -5,7 +5,7 @@ import BeforeAfterDiagram from 'components/before-after-diagram'
 import UseCaseCtaSection from 'components/use-case-cta-section'
 //  Imports below are used in getStaticProps
 import RAW_CONTENT from './content.json'
-import highlightData from '@hashicorp/nextjs-scripts/prism/highlight-data'
+import highlightData from '@hashicorp/platform-code-highlighting/highlight-data'
 import processBeforeAfterDiagramProps from 'components/before-after-diagram/server'
 
 export async function getStaticProps() {
@@ -18,9 +18,9 @@ export async function getStaticProps() {
 
 export default function DataEncryptionUseCase({ content }) {
   return (
-    <div id="use-cases" className="g-section-block page-wrap">
+    <main id="use-cases" className="g-section-block page-wrap">
       {/* Header / Buttons */}
-      <section className="g-container">
+      <section className="g-grid-container">
         <SectionHeader
           headline="Encrypt Application Data in Low Trust Networks"
           description="Keep application data secure with one centralized workflow to encrypt data in flight and at rest"
@@ -30,16 +30,22 @@ export default function DataEncryptionUseCase({ content }) {
         <div className="button-container">
           <Button
             title="Download"
+            label="Download CLI"
             url="/downloads"
             theme={{ brand: 'vault' }}
           />
-          <Button title="Get Started" url="/intro" theme="dark-outline" />
+          <Button
+            title="Get Started"
+            label="Get started — external link to education platform"
+            url="/intro"
+            theme="dark-outline"
+          />
         </div>
       </section>
 
       {/* Before/After Diagram */}
       <section>
-        <div className="g-container">
+        <div className="g-grid-container">
           <BeforeAfterDiagram {...content.beforeAfterDiagram} />
         </div>
       </section>
@@ -53,6 +59,6 @@ export default function DataEncryptionUseCase({ content }) {
       </section>
 
       <UseCaseCtaSection />
-    </div>
+    </main>
   )
 }

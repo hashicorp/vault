@@ -17,7 +17,7 @@ import (
 func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 	if err == nil && (resp == nil || !resp.IsError()) {
 		switch {
-		case req.Operation == ReadOperation:
+		case req.Operation == ReadOperation, req.Operation == PatchOperation:
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}
@@ -102,6 +102,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrPermissionDenied.Error()):
 			statusCode = http.StatusForbidden
+		case errwrap.Contains(err, consts.ErrInvalidWrappingToken.Error()):
+			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrUnsupportedOperation.Error()):
 			statusCode = http.StatusMethodNotAllowed
 		case errwrap.Contains(err, ErrUnsupportedPath.Error()):
@@ -114,6 +116,10 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusTooManyRequests
 		case errwrap.Contains(err, ErrLeaseCountQuotaExceeded.Error()):
 			statusCode = http.StatusTooManyRequests
+		case errwrap.Contains(err, ErrMissingRequiredState.Error()):
+			statusCode = http.StatusPreconditionFailed
+		case errwrap.Contains(err, ErrPathFunctionalityRemoved.Error()):
+			statusCode = http.StatusNotFound
 		}
 	}
 
@@ -137,6 +143,10 @@ func AdjustErrorStatusCode(status *int, err error) {
 
 	// Adjust status code when sealed
 	if errwrap.Contains(err, consts.ErrSealed.Error()) {
+		*status = http.StatusServiceUnavailable
+	}
+
+	if errwrap.Contains(err, consts.ErrAPILocked.Error()) {
 		*status = http.StatusServiceUnavailable
 	}
 

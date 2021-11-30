@@ -10,23 +10,24 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/patrickmn/go-cache"
 )
 
 const (
-	groupBucketsPrefix = "packer/group/buckets/"
+	groupBucketsPrefix        = "packer/group/buckets/"
+	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
 )
 
 var (
 	caseSensitivityKey           = "casesensitivity"
-	sendGroupUpgrade             = func(context.Context, *IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
 )
@@ -48,9 +49,17 @@ func (i *IdentityStore) resetDB(ctx context.Context) error {
 
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
-		view:   config.StorageView,
-		logger: logger,
-		core:   core,
+		view:          config.StorageView,
+		logger:        logger,
+		router:        core.router,
+		redirectAddr:  core.redirectAddr,
+		localNode:     core,
+		namespacer:    core,
+		metrics:       core.MetricSink(),
+		totpPersister: core,
+		groupUpdater:  core,
+		tokenStorer:   core,
+		entityCreator: core,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -62,11 +71,19 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
 	core.AddLogger(entitiesPackerLogger)
+	localAliasesPackerLogger := iStore.logger.Named("storagepacker").Named("local-aliases")
+	core.AddLogger(localAliasesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
+
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity packer: %w", err)
+	}
+
+	iStore.localAliasPacker, err = storagepacker.NewStoragePacker(iStore.view, localAliasesPackerLogger, localAliasesBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create local alias packer: %w", err)
 	}
 
 	iStore.groupPacker, err = storagepacker.NewStoragePacker(iStore.view, groupsPackerLogger, groupBucketsPrefix)
@@ -82,6 +99,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"oidc/.well-known/*",
+				"oidc/provider/+/.well-known/*",
+				"oidc/provider/+/token",
+			},
+			LocalStorage: []string{
+				localAliasesBucketsPrefix,
 			},
 		},
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
@@ -91,7 +113,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		},
 	}
 
-	iStore.oidcCache = newOIDCCache()
+	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
+	iStore.oidcAuthCodeCache = newOIDCCache(5*time.Minute, 5*time.Minute)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {
@@ -110,6 +133,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 		lookupPaths(i),
 		upgradePaths(i),
 		oidcPaths(i),
+		oidcProviderPaths(i),
 	)
 }
 
@@ -175,6 +199,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			i.logger.Error("failed to load groups during invalidation", "error", err)
 			return
 		}
+		if err := i.loadOIDCClients(ctx); err != nil {
+			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
+			return
+		}
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
 		// Create a MemDB transaction
@@ -222,6 +250,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// storage entry is non-nil, its an indication of an update. In this
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
+		entityIDs := make([]string, 0, len(bucket.Items))
 		if bucket != nil {
 			for _, item := range bucket.Items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
@@ -230,11 +259,52 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					return
 				}
 
+				localAliases, err := i.parseLocalAliases(entity.ID)
+				if err != nil {
+					i.logger.Error("failed to load local aliases from storage", "error", err)
+					return
+				}
+				if localAliases != nil {
+					for _, alias := range localAliases.Aliases {
+						entity.UpsertAlias(alias)
+					}
+				}
+
 				// Only update MemDB and don't touch the storage
 				err = i.upsertEntityInTxn(ctx, txn, entity, nil, false)
 				if err != nil {
 					i.logger.Error("failed to update entity in MemDB", "error", err)
 					return
+				}
+
+				// If we are a secondary, the entity created by the secondary
+				// via the CreateEntity RPC would have been cached. Now that the
+				// invalidation of the same has hit, there is no need of the
+				// cache. Clearing the cache. Writing to storage can't be
+				// performed by perf standbys. So only doing this in the active
+				// node of the secondary.
+				if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+					if err := i.localAliasPacker.DeleteItem(ctx, entity.ID+tmpSuffix); err != nil {
+						i.logger.Error("failed to clear local alias entity cache", "error", err, "entity_id", entity.ID)
+						return
+					}
+				}
+
+				entityIDs = append(entityIDs, entity.ID)
+			}
+		}
+
+		// entitiesFetched are the entities before invalidation. entityIDs
+		// represent entities that are valid after invalidation. Clear the
+		// storage entries of local aliases for those entities that are
+		// indicated deleted by this invalidation.
+		if i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && i.localNode.HAState() != consts.PerfStandby {
+			for _, entity := range entitiesFetched {
+				if !strutil.StrListContains(entityIDs, entity.ID) {
+					if err := i.localAliasPacker.DeleteItem(ctx, entity.ID); err != nil {
+						i.logger.Error("failed to clear local alias for entity", "error", err, "entity_id", entity.ID)
+						return
+					}
 				}
 			}
 		}
@@ -243,6 +313,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	// Check if the key is a storage entry key for an group bucket
+	// For those entities that are deleted, clear up the local alias entries
 	case strings.HasPrefix(key, groupBucketsPrefix):
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
@@ -328,7 +399,133 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		if err := i.oidcCache.Flush(ns); err != nil {
 			i.logger.Error("error flushing oidc cache", "error", err)
 		}
+	case strings.HasPrefix(key, clientPath):
+		name := strings.TrimPrefix(key, clientPath)
+
+		// Invalidate the cached client in memdb
+		if err := i.memDBDeleteClientByName(ctx, name); err != nil {
+			i.logger.Error("error invalidating client", "error", err, "key", key)
+			return
+		}
+	case strings.HasPrefix(key, localAliasesBucketsPrefix):
+		//
+		// This invalidation only happens on perf standbys
+		//
+
+		txn := i.db.Txn(true)
+		defer txn.Abort()
+
+		// Find all the local aliases belonging to this bucket and remove it
+		// both from aliases table and entities table. We will add the local
+		// aliases back by parsing the storage key. This way the deletion
+		// invalidation gets handled.
+		aliases, err := i.MemDBLocalAliasesByBucketKeyInTxn(txn, key)
+		if err != nil {
+			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
+			return
+		}
+
+		for _, alias := range aliases {
+			entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, true)
+			if err != nil {
+				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
+				return
+			}
+
+			// Delete local aliases from the entity.
+			err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
+			if err != nil {
+				i.logger.Error("failed to delete aliases in entity", "entity_id", entity.ID, "error", err)
+				return
+			}
+
+			// Update the entity with removed alias.
+			if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
+				i.logger.Error("failed to delete entity from MemDB", "entity_id", entity.ID, "error", err)
+				return
+			}
+		}
+
+		// Now read the invalidated storage key
+		bucket, err := i.localAliasPacker.GetBucket(ctx, key)
+		if err != nil {
+			i.logger.Error("failed to refresh local aliases", "key", key, "error", err)
+			return
+		}
+		if bucket != nil {
+			for _, item := range bucket.Items {
+				if strings.HasSuffix(item.ID, tmpSuffix) {
+					continue
+				}
+
+				var localAliases identity.LocalAliases
+				err = ptypes.UnmarshalAny(item.Message, &localAliases)
+				if err != nil {
+					i.logger.Error("failed to parse local aliases during invalidation", "error", err)
+					return
+				}
+				for _, alias := range localAliases.Aliases {
+					// Add to the aliases table
+					if err := i.MemDBUpsertAliasInTxn(txn, alias, false); err != nil {
+						i.logger.Error("failed to insert local alias to memdb during invalidation", "error", err)
+						return
+					}
+
+					// Fetch the associated entity and add the alias to that too.
+					entity, err := i.MemDBEntityByIDInTxn(txn, alias.CanonicalID, false)
+					if err != nil {
+						i.logger.Error("failed to fetch entity during local alias invalidation", "error", err)
+						return
+					}
+					if entity == nil {
+						cachedEntityItem, err := i.localAliasPacker.GetItem(alias.CanonicalID + tmpSuffix)
+						if err != nil {
+							i.logger.Error("failed to fetch cached entity", "key", key, "error", err)
+							return
+						}
+						if cachedEntityItem != nil {
+							entity, err = i.parseCachedEntity(cachedEntityItem)
+							if err != nil {
+								i.logger.Error("failed to parse cached entity", "key", key, "error", err)
+								return
+							}
+						}
+					}
+					if entity == nil {
+						i.logger.Error("received local alias invalidation for an invalid entity", "item.ID", item.ID)
+						return
+					}
+					entity.UpsertAlias(alias)
+
+					// Update the entities table
+					if err := i.MemDBUpsertEntityInTxn(txn, entity); err != nil {
+						i.logger.Error("failed to upsert entity during local alias invalidation", "error", err)
+						return
+					}
+				}
+			}
+		}
+		txn.Commit()
+		return
 	}
+}
+
+func (i *IdentityStore) parseLocalAliases(entityID string) (*identity.LocalAliases, error) {
+	item, err := i.localAliasPacker.GetItem(entityID)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		return nil, nil
+	}
+
+	var localAliases identity.LocalAliases
+	err = ptypes.UnmarshalAny(item.Message, &localAliases)
+	if err != nil {
+		return nil, err
+	}
+
+	return &localAliases, nil
 }
 
 func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *storagepacker.Item) (*identity.Entity, error) {
@@ -377,7 +574,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 			newAlias.CreationTime = oldAlias.CreationTime
 			newAlias.LastUpdateTime = oldAlias.LastUpdateTime
 			newAlias.MergedFromCanonicalIDs = oldAlias.MergedFromEntityIDs
-			entity.Aliases = append(entity.Aliases, &newAlias)
+			entity.UpsertAlias(&newAlias)
 		}
 
 		persistNeeded = true
@@ -391,7 +588,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		persistNeeded = true
 	}
 
-	if persistNeeded && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if persistNeeded && !i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
 		entityAsAny, err := ptypes.MarshalAny(&entity)
 		if err != nil {
 			return nil, err
@@ -407,6 +604,24 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if entity.NamespaceID == "" {
+		entity.NamespaceID = namespace.RootNamespaceID
+	}
+
+	return &entity, nil
+}
+
+func (i *IdentityStore) parseCachedEntity(item *storagepacker.Item) (*identity.Entity, error) {
+	if item == nil {
+		return nil, fmt.Errorf("nil item")
+	}
+
+	var entity identity.Entity
+	err := ptypes.UnmarshalAny(item.Message, &entity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode cached entity from storage bucket item: %w", err)
 	}
 
 	if entity.NamespaceID == "" {
@@ -450,7 +665,7 @@ func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, cl
 	return i.entityByAliasFactorsInTxn(txn, mountAccessor, aliasName, clone)
 }
 
-// entityByAlaisFactorsInTxn fetches the entity based on factors of alias, i.e
+// entityByAliasFactorsInTxn fetches the entity based on factors of alias, i.e
 // mount accessor and the alias name.
 func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
 	if txn == nil {
@@ -477,6 +692,37 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 	return i.MemDBEntityByAliasIDInTxn(txn, alias.ID, clone)
 }
 
+// CreateEntity creates a new entity.
+func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, error) {
+	defer metrics.MeasureSince([]string{"identity", "create_entity"}, time.Now())
+
+	entity := new(identity.Entity)
+	err := i.sanitizeEntity(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+	if err := i.upsertEntity(ctx, entity, nil, true); err != nil {
+		return nil, err
+	}
+
+	// Emit a metric for the new entity
+	ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
+	var nsLabel metrics.Label
+	if err != nil {
+		nsLabel = metrics.Label{"namespace", "unknown"}
+	} else {
+		nsLabel = metricsutil.NamespaceLabel(ns)
+	}
+	i.metrics.IncrCounterWithLabels(
+		[]string{"identity", "entity", "creation"},
+		1,
+		[]metrics.Label{
+			nsLabel,
+		})
+
+	return entity, nil
+}
+
 // CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
 func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
@@ -494,13 +740,9 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, fmt.Errorf("empty alias name")
 	}
 
-	mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor)
+	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
 	if mountValidationResp == nil {
 		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
-	}
-
-	if mountValidationResp.MountLocal {
-		return nil, fmt.Errorf("mount_accessor %q is of a local mount", alias.MountAccessor)
 	}
 
 	if mountValidationResp.MountType != alias.MountType {
@@ -555,6 +797,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 			Metadata:      alias.Metadata,
 			MountPath:     mountValidationResp.MountPath,
 			MountType:     mountValidationResp.MountType,
+			Local:         alias.Local,
 		}
 
 		err = i.sanitizeAlias(ctx, newAlias)
@@ -570,14 +813,14 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		}
 
 		// Emit a metric for the new entity
-		ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+		ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
 		var nsLabel metrics.Label
 		if err != nil {
 			nsLabel = metrics.Label{"namespace", "unknown"}
 		} else {
 			nsLabel = metricsutil.NamespaceLabel(ns)
 		}
-		i.core.MetricSink().IncrCounterWithLabels(
+		i.metrics.IncrCounterWithLabels(
 			[]string{"identity", "entity", "creation"},
 			1,
 			[]metrics.Label{

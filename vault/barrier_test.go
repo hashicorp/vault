@@ -12,6 +12,9 @@ import (
 
 func testBarrier(t *testing.T, b SecurityBarrier) {
 	err, e, key := testInitAndUnseal(t, b)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	// Operations should work
 	out, err := b.Get(context.Background(), "test")

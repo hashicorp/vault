@@ -3,6 +3,7 @@ package certutil
 import (
 	"bytes"
 	"crypto"
+	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -31,6 +32,14 @@ import (
 	"golang.org/x/crypto/cryptobyte"
 	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
+
+// Mapping of NIST P-Curve's key length to expected signature bits.
+var expectedNISTPCurveHashBits = map[int]int{
+	224: 256,
+	256: 256,
+	384: 384,
+	521: 512,
+}
 
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
@@ -164,6 +173,10 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKey = signer
 				parsedBundle.PrivateKeyType = ECPrivateKey
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
+			case ed25519.PrivateKey:
+				parsedBundle.PrivateKey = signer
+				parsedBundle.PrivateKeyType = Ed25519PrivateKey
+				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
 			certPath = append(certPath, &CertBlock{
@@ -217,6 +230,17 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 
 	switch keyType {
 	case "rsa":
+		// XXX: there is a false-positive CodeQL path here around keyBits;
+		// because of a default zero value in the TypeDurationSecond and
+		// TypeSignedDurationSecond cases of schema.DefaultOrZero(), it
+		// thinks it is possible to end up with < 2048 bit RSA Key here.
+		// While this is true for SSH keys, it isn't true for PKI keys
+		// due to ValidateKeyTypeLength(...) below. While we could close
+		// the report as a false-positive, enforcing a minimum keyBits size
+		// here of 2048 would ensure no other paths exist.
+		if keyBits < 2048 {
+			return errutil.InternalError{Err: fmt.Sprintf("insecure bit length for RSA private key: %d", keyBits)}
+		}
 		privateKeyType = RSAPrivateKey
 		privateKey, err = rsa.GenerateKey(randReader, keyBits)
 		if err != nil {
@@ -245,6 +269,16 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 		privateKeyBytes, err = x509.MarshalECPrivateKey(privateKey.(*ecdsa.PrivateKey))
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error marshalling EC private key: %v", err)}
+		}
+	case "ed25519":
+		privateKeyType = Ed25519PrivateKey
+		_, privateKey, err = ed25519.GenerateKey(randReader)
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error generating ed25519 private key: %v", err)}
+		}
+		privateKeyBytes, err = x509.MarshalPKCS8PrivateKey(privateKey.(ed25519.PrivateKey))
+		if err != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error marshalling Ed25519 private key: %v", err)}
 		}
 	default:
 		return errutil.UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
@@ -309,7 +343,16 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 			return false, nil
 		}
 		return true, nil
-
+	case ed25519.PublicKey:
+		key1 := key1Iface.(ed25519.PublicKey)
+		key2, ok := key2Iface.(ed25519.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		if !key1.Equal(key2) {
+			return false, nil
+		}
+		return true, nil
 	default:
 		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
 	}
@@ -490,6 +533,59 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 	return asn1.ObjectIdentifier(ret), nil
 }
 
+// Validates that the combination of keyType, keyBits, and hashBits are
+// valid together; replaces individual calls to ValidateSignatureLength and
+// ValidateKeyTypeLength.
+func ValidateKeyTypeSignatureLength(keyType string, keyBits int, hashBits *int) error {
+	if err := ValidateKeyTypeLength(keyType, keyBits); err != nil {
+		return err
+	}
+
+	if keyType == "ec" {
+		// To comply with BSI recommendations Section 4.2 and Mozilla root
+		// store policy section 5.1.2, enforce that NIST P-curves use a hash
+		// length corresponding to curve length. Note that ed25519 does not
+		// the "ec" key type.
+		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
+
+		if expectedHashBits != *hashBits && *hashBits != 0 {
+			return fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", *hashBits, keyBits)
+		} else if *hashBits == 0 {
+			*hashBits = expectedHashBits
+		}
+	} else if keyType == "rsa" && *hashBits == 0 {
+		// To match previous behavior (and ignoring recommendations of hash
+		// size to match RSA key sizes), default to SHA-2-256.
+		*hashBits = 256
+	} /* else if keyType == "ed25519" {
+		// No-op; ed25519 and ed448 internally specify their own hash and
+		// we do not need to select one. Double hashing isn't supported in
+		// certificate signing.
+	} */
+
+	// Note that this check must come after we've selected a value for
+	// hashBits above, in the event it was left as the default, but we
+	// were allowed to update it.
+	if err := ValidateSignatureLength(*hashBits); err != nil || *hashBits == 0 {
+		return err
+	}
+
+	return nil
+}
+
+// Validates that the length of the hash (in bits) used in the signature
+// calculation is a known, approved value.
+func ValidateSignatureLength(hashBits int) error {
+	switch hashBits {
+	case 256:
+	case 384:
+	case 512:
+	default:
+		return fmt.Errorf("unsupported hash signature algorithm: %d", hashBits)
+	}
+	return nil
+}
+
 func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	switch keyType {
 	case "rsa":
@@ -502,15 +598,11 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 			return fmt.Errorf("unsupported bit length for RSA key: %d", keyBits)
 		}
 	case "ec":
-		switch keyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
+		_, present := expectedNISTPCurveHashBits[keyBits]
+		if !present {
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
-	case "any":
+	case "any", "ed25519":
 	default:
 		return fmt.Errorf("unknown key type %s", keyType)
 	}
@@ -598,9 +690,18 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 	if data.SigningBundle != nil {
 		switch data.SigningBundle.PrivateKeyType {
 		case RSAPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			switch data.Params.SignatureBits {
+			case 256:
+				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			case 384:
+				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+			case 512:
+				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+			}
+		case Ed25519PrivateKey:
+			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public(), data.Params.SignatureBits)
 		}
 
 		caCert := data.SigningBundle.Certificate
@@ -618,9 +719,18 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 
 		switch data.Params.KeyType {
 		case "rsa":
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			switch data.Params.SignatureBits {
+			case 256:
+				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+			case 384:
+				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+			case 512:
+				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+			}
+		case "ed25519":
+			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
 		}
 
 		certTemplate.AuthorityKeyId = subjKeyID
@@ -653,6 +763,33 @@ func createCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertB
 	}
 
 	return result, nil
+}
+
+func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x509.SignatureAlgorithm {
+	// If signature bits are configured, prefer them to the default choice.
+	switch signatureBits {
+	case 256:
+		return x509.ECDSAWithSHA256
+	case 384:
+		return x509.ECDSAWithSHA384
+	case 512:
+		return x509.ECDSAWithSHA512
+	}
+
+	key, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return x509.ECDSAWithSHA256
+	}
+	switch key.Curve {
+	case elliptic.P224(), elliptic.P256():
+		return x509.ECDSAWithSHA256
+	case elliptic.P384():
+		return x509.ECDSAWithSHA384
+	case elliptic.P521():
+		return x509.ECDSAWithSHA512
+	default:
+		return x509.ECDSAWithSHA256
+	}
 }
 
 var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
@@ -715,6 +852,8 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 	case "ec":
 		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+	case "ed25519":
+		csrTemplate.SignatureAlgorithm = x509.PureEd25519
 	}
 
 	csr, err := x509.CreateCertificateRequest(randReader, csrTemplate, result.PrivateKey)
@@ -791,9 +930,23 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	switch data.SigningBundle.PrivateKeyType {
 	case RSAPrivateKey:
-		certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+		}
 	case ECPrivateKey:
-		certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA384
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA512
+		}
 	}
 
 	if data.Params.UseCSRValues {
@@ -919,4 +1072,23 @@ func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 		return certs, errors.New("data does not contain any valid RSA or ECDSA certificates")
 	}
 	return certs, nil
+}
+
+// GetPublicKeySize returns the key size in bits for a given arbitrary crypto.PublicKey
+// Returns -1 for an unsupported key type.
+func GetPublicKeySize(key crypto.PublicKey) int {
+	if key, ok := key.(*rsa.PublicKey); ok {
+		return key.Size() * 8
+	}
+	if key, ok := key.(*ecdsa.PublicKey); ok {
+		return key.Params().BitSize
+	}
+	if key, ok := key.(ed25519.PublicKey); ok {
+		return len(key) * 8
+	}
+	if key, ok := key.(dsa.PublicKey); ok {
+		return key.Y.BitLen()
+	}
+
+	return -1
 }

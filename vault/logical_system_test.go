@@ -57,6 +57,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"leases/revoke-force/*",
 		"leases/lookup/*",
 		"storage/raft/snapshot-auto/config/*",
+		"leases",
 	}
 
 	b := testSystemBackend(t)
@@ -206,9 +207,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -217,6 +219,17 @@ func TestSystemBackend_mounts(t *testing.T) {
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
 		t.Fatalf("bad, diff: %#v", diff)
+	}
+
+	for name, conf := range exp {
+		req := logical.TestRequest(t, logical.ReadOperation, "mounts/"+name)
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if diff := deep.Equal(resp.Data, conf); len(diff) > 0 {
+			t.Fatalf("bad, diff: %#v", diff)
+		}
 	}
 }
 
@@ -307,9 +320,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"accessor":                resp.Data["identity/"].(map[string]interface{})["accessor"],
 			"uuid":                    resp.Data["identity/"].(map[string]interface{})["uuid"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Authorization"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -2475,9 +2489,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"accessor":                resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["accessor"],
 				"uuid":                    resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["uuid"],
 				"config": map[string]interface{}{
-					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-					"force_no_cache":    false,
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Authorization"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -3305,15 +3320,15 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			assert(t, actualResp != nil, "response is nil")
-			assert(t, actualResp.Data != nil, "expected data, got nil")
+			assertTrue(t, actualResp != nil, "response is nil")
+			assertTrue(t, actualResp.Data != nil, "expected data, got nil")
 			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
 			assertIsString(t, actualResp.Data["password"], "password key should have a string value")
 			password := actualResp.Data["password"].(string)
 
 			// Delete the password so the rest of the response can be compared
 			delete(actualResp.Data, "password")
-			assert(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
+			assertTrue(t, reflect.DeepEqual(actualResp, expectedResp), "Actual response: %#v\nExpected response: %#v", actualResp, expectedResp)
 
 			// Check to make sure the password is correctly formatted
 			passwordLength := len([]rune(password))
@@ -3330,7 +3345,7 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 	})
 }
 
-func assert(t *testing.T, pass bool, f string, vals ...interface{}) {
+func assertTrue(t *testing.T, pass bool, f string, vals ...interface{}) {
 	t.Helper()
 	if !pass {
 		t.Fatalf(f, vals...)
@@ -3579,4 +3594,90 @@ func makeStorage(t *testing.T, entries ...*logical.StorageEntry) *logical.InmemS
 	}
 
 	return store
+}
+
+func leaseLimitFieldData(limit string) *framework.FieldData {
+	raw := make(map[string]interface{})
+	raw["limit"] = limit
+	return &framework.FieldData{
+		Raw: raw,
+		Schema: map[string]*framework.FieldSchema{
+			"limit": {
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "limit return results",
+			},
+		},
+	}
+}
+
+func TestProcessLimit(t *testing.T) {
+	testCases := []struct {
+		d               *framework.FieldData
+		expectReturnAll bool
+		expectLimit     int
+		expectErr       bool
+	}{
+		{
+			d:               leaseLimitFieldData("500"),
+			expectReturnAll: false,
+			expectLimit:     500,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData(""),
+			expectReturnAll: false,
+			expectLimit:     MaxIrrevocableLeasesToReturn,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("none"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("NoNe"),
+			expectReturnAll: true,
+			expectLimit:     10000,
+			expectErr:       false,
+		},
+		{
+			d:               leaseLimitFieldData("hello_world"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("0"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+		{
+			d:               leaseLimitFieldData("-1"),
+			expectReturnAll: false,
+			expectLimit:     0,
+			expectErr:       true,
+		},
+	}
+
+	for i, tc := range testCases {
+		returnAll, limit, err := processLimit(tc.d)
+
+		if returnAll != tc.expectReturnAll {
+			t.Errorf("bad return all for test case %d. expected %t, got %t", i, tc.expectReturnAll, returnAll)
+		}
+		if limit != tc.expectLimit {
+			t.Errorf("bad limit for test case %d. expected %d, got %d", i, tc.expectLimit, limit)
+		}
+
+		haveErr := err != nil
+		if haveErr != tc.expectErr {
+			t.Errorf("bad error status for test case %d. expected error: %t, got error: %t", i, tc.expectErr, haveErr)
+			if err != nil {
+				t.Errorf("error was: %v", err)
+			}
+		}
+	}
 }

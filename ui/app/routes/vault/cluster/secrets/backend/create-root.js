@@ -47,7 +47,12 @@ export default EditBase.extend({
       }
       return this.store.createRecord(modelType);
     }
-
+    // create record in capabilities that checks for access to create metadata
+    // this record is then maybeQueryRecord in the component secret-create-or-update
+    if (modelType === 'secret-v2') {
+      // only check for kv2 secrets
+      this.store.findRecord('capabilities', `${backend}/metadata/`);
+    }
     return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },
 

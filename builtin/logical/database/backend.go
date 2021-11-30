@@ -9,13 +9,13 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -315,7 +315,7 @@ func (b *databaseBackend) clearConnection(name string) error {
 func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
-	case rpc.ErrShutdown, v4.ErrPluginShutdown:
+	case rpc.ErrShutdown, v4.ErrPluginShutdown, v5.ErrPluginShutdown:
 		// Put this in a goroutine so that requests can run with the read or write lock
 		// and simply defer the unlock.  Since we are attaching the instance and matching
 		// the id in the connection map, we can safely do this.

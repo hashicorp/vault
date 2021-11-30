@@ -169,10 +169,14 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		}
 
-		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+		input := &setStaticAccountInput{
 			RoleName: name,
 			Role:     role,
-		})
+		}
+		if walID, ok := item.Value.(string); ok {
+			input.WALID = walID
+		}
+		resp, err := b.setStaticAccount(ctx, req.Storage, input)
 		// if err is not nil, we need to attempt to update the priority and place
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
@@ -188,6 +192,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		} else {
 			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+			item.Value = ""
 		}
 
 		// Add their rotation to the queue
@@ -195,8 +201,13 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, fmt.Errorf("unable to finish rotating credentials; retries will "+
+				"continue in the background but it is also safe to retry manually: %w", err)
+		}
+
 		// return any err from the setStaticAccount call
-		return nil, err
+		return nil, nil
 	}
 }
 

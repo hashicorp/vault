@@ -31,6 +31,7 @@ const (
 	testIP              = "127.0.0.1"
 	testUserName        = "vaultssh"
 	testAdminUser       = "vaultssh"
+	testCaKeyType       = "ca"
 	testOTPKeyType      = "otp"
 	testDynamicKeyType  = "dynamic"
 	testCIDRList        = "127.0.0.1/32"
@@ -124,7 +125,6 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 
 	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
-
 )
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
@@ -202,10 +202,10 @@ func testSSH(user, host string, auth ssh.AuthMethod, command string) error {
 	if err != nil {
 		return fmt.Errorf("command %v failed, error: %v, stderr: %v", command, err, stderr.String())
 	}
-	return err
+	return nil
 }
 
-func TestBackend_allowed_users(t *testing.T) {
+func TestBackend_AllowedUsers(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -317,6 +317,24 @@ func TestBackend_allowed_users(t *testing.T) {
 		resp.Data["username"] != "test" {
 		t.Fatalf("failed to create credential: resp:%#v", resp)
 	}
+}
+
+func TestBackend_AllowedUsersTemplate(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName, map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_AllowedUsersTemplate_WithStaticPrefix(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"ssh-{{ identity.entity.metadata.ssh_username }}",
+		"ssh-"+testUserName, map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
 }
 
 func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -1349,7 +1367,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+	sshKeyID := "vault-userpass-" + testUserName + "-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
 
 	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
 	client.SetToken(userpassToken)
@@ -1414,6 +1432,53 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 }
 
+func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Get auth accessor for identity template.
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	userpassAccessor := auths["userpass/"].Accessor
+
+	// Write SSH role to test with no allowed extension. We also provide a templated default extension,
+	// to verify that it's not actually being evaluated
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
+		"key_type":                    "ca",
+		"allow_user_certificates":     true,
+		"allowed_users":               "tuber",
+		"default_user":                "tuber",
+		"allowed_extensions":          "",
+		"default_extensions_template": false,
+		"default_extensions": map[string]interface{}{
+			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Issue SSH certificate with default extensions templating disabled, and user-provided extensions
+	client.SetToken(userpassToken)
+	userProvidedAnyExtensionPermissions := map[string]string{
+		"login@foobar.com": "not_userpassname",
+	}
+	_, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
+		"public_key": publicKey4096,
+		"extensions": userProvidedAnyExtensionPermissions,
+	})
+	if err == nil {
+		t.Fatal("Expected failure we should not have allowed specifying custom extensions")
+	}
+
+	if !strings.Contains(err.Error(), "are not on allowed list") {
+		t.Fatalf("Expected failure to contain 'are not on allowed list' but was %s", err)
+	}
+}
+
 func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
@@ -1433,6 +1498,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
 		"default_user":                "tuber",
+		"allowed_extensions":          "*",
 		"default_extensions_template": false,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
@@ -1442,9 +1508,9 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sshKeyID := "vault-userpass-"+testUserName+"-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
+	sshKeyID := "vault-userpass-" + testUserName + "-9bd0f01b7dfc50a13aa5e5cd11aea19276968755c8f1f9c98965d04147f30ed0"
 
-// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
+	// Issue SSH certificate with default extensions templating disabled, and no user-provided extensions
 	client.SetToken(userpassToken)
 	defaultExtensionPermissions := map[string]string{
 		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
@@ -1565,6 +1631,63 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	return cluster, userpassToken
+}
+
+func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": testEntityMetadata,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"allowed_users":           testAllowedUsersTemplate,
+		"allowed_users_template":  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key":       testCAPublicKey,
+		"valid_principals": expectedValidPrincipal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if actualPrincipals[0] != expectedValidPrincipal {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{expectedValidPrincipal}),
+		)
+	}
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {

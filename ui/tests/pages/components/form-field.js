@@ -16,6 +16,7 @@ export default {
   hasTextFile: isPresent('[data-test-component=text-file]'),
   hasTTLPicker: isPresent('[data-test-toggle-input="Foo"]'),
   hasJSONEditor: isPresent('[data-test-component=json-editor]'),
+  hasJSONClearButton: isPresent('[data-test-json-clear-button]'),
   hasSelect: isPresent('select'),
   hasInput: isPresent('input'),
   hasCheckbox: isPresent('input[type=checkbox]'),

@@ -80,6 +80,11 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/enterprise/license/faqs',
+    destination: '/docs/enterprise/license/faq',
+    permanent: true,
+  },
+  {
     source: '/docs/enterprise/hsm/configuration',
     destination: '/docs/configuration/seal/pkcs11',
     permanent: true,
@@ -426,6 +431,11 @@ module.exports = [
     permanent: true,
   },
   // Guides and Intro redirects to Learn
+  {
+    source: '/guides',
+    destination: 'https://learn.hashicorp.com/vault',
+    permanent: true,
+  },
   {
     source: '/guides/getting-started',
     destination: 'https://learn.hashicorp.com/vault',

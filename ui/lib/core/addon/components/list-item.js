@@ -8,6 +8,7 @@ export default Component.extend({
   flashMessages: service(),
   tagName: '',
   linkParams: null,
+  queryParams: null,
   componentName: null,
   hasMenu: true,
 

@@ -106,6 +106,7 @@
 
 .message-inline {
   display: flex;
+  align-items: center;
   margin: 0 0 $spacing-l;
 
   .hs-icon {
@@ -127,8 +128,20 @@
   &.padding-top {
     padding-top: $size-8;
   }
+
+  &.is-marginless {
+    margin-bottom: 0;
+  }
+
+  > p::first-letter {
+    text-transform: capitalize;
+  }
 }
 
 .has-text-highlight {
   color: $yellow-500;
+}
+
+.message.message-marginless {
+  margin: 0;
 }

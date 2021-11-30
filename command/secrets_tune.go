@@ -20,14 +20,16 @@ var (
 type SecretsTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys  []string
-	flagAuditNonHMACResponseKeys []string
-	flagDefaultLeaseTTL          time.Duration
-	flagDescription              string
-	flagListingVisibility        string
-	flagMaxLeaseTTL              time.Duration
-	flagOptions                  map[string]string
-	flagVersion                  int
+	flagAuditNonHMACRequestKeys   []string
+	flagAuditNonHMACResponseKeys  []string
+	flagDefaultLeaseTTL           time.Duration
+	flagDescription               string
+	flagListingVisibility         string
+	flagMaxLeaseTTL               time.Duration
+	flagPassthroughRequestHeaders []string
+	flagAllowedResponseHeaders    []string
+	flagOptions                   map[string]string
+	flagVersion                   int
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -104,6 +106,20 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Usage: "The maximum lease TTL for this secrets engine. If unspecified, " +
 			"this defaults to the Vault server's globally configured maximum lease " +
 			"TTL, or a previously configured value for the secrets engine.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNamePassthroughRequestHeaders,
+		Target: &c.flagPassthroughRequestHeaders,
+		Usage: "Comma-separated string or list of request header values that " +
+			"will be sent to the plugin",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedResponseHeaders,
+		Target: &c.flagAllowedResponseHeaders,
+		Usage: "Comma-separated string or list of response header values that " +
+			"plugins will be allowed to set",
 	})
 
 	f.StringMapVar(&StringMapVar{
@@ -188,6 +204,14 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			mountConfigInput.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNamePassthroughRequestHeaders {
+			mountConfigInput.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameAllowedResponseHeaders {
+			mountConfigInput.AllowedResponseHeaders = c.flagAllowedResponseHeaders
 		}
 	})
 

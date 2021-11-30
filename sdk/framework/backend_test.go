@@ -240,14 +240,17 @@ func TestBackendHandleRequest_badwrite(t *testing.T) {
 		},
 	}
 
-	_, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "foo/bar",
 		Data:      map[string]interface{}{"value": "3false3"},
 	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-	if err == nil {
-		t.Fatalf("should have thrown a conversion error")
+	if !strings.Contains(resp.Data["error"].(string), "Field validation failed") {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 

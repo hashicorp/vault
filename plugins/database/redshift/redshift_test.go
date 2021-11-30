@@ -11,12 +11,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/lib/pq"
+	"github.com/stretchr/testify/require"
 )
 
 /*
@@ -375,6 +374,103 @@ func testCredsExist(t testing.TB, url, username, password string) error {
 	}
 	defer db.Close()
 	return db.Ping()
+}
+
+func TestRedshift_DefaultUsernameTemplate(t *testing.T) {
+	if os.Getenv(vaultACC) != "1" {
+		t.SkipNow()
+	}
+
+	connURL, url, _, _, err := redshiftEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := newRedshift()
+	dbtesting.AssertInitialize(t, db, dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	})
+
+	usernameConfig := dbplugin.UsernameMetadata{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	const password = "SuperSecurePa55w0rd!"
+	for _, commands := range [][]string{{testRedshiftRole}, {testRedshiftReadOnlyRole}} {
+		resp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+			UsernameConfig: usernameConfig,
+			Password:       password,
+			Statements: dbplugin.Statements{
+				Commands: commands,
+			},
+			Expiration: time.Now().Add(5 * time.Minute),
+		})
+		username := resp.Username
+
+		if resp.Username == "" {
+			t.Fatalf("Missing username")
+		}
+
+		testCredsExist(t, url, username, password)
+
+		require.Regexp(t, `^v-test-test-[a-z0-9]{20}-[0-9]{10}$`, resp.Username)
+	}
+	dbtesting.AssertClose(t, db)
+}
+
+func TestRedshift_CustomUsernameTemplate(t *testing.T) {
+	if os.Getenv(vaultACC) != "1" {
+		t.SkipNow()
+	}
+
+	connURL, url, _, _, err := redshiftEnv()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+		"username_template": "{{.DisplayName}}-{{random 10}}",
+	}
+
+	db := newRedshift()
+	dbtesting.AssertInitialize(t, db, dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	})
+
+	usernameConfig := dbplugin.UsernameMetadata{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	const password = "SuperSecurePa55w0rd!"
+	for _, commands := range [][]string{{testRedshiftRole}, {testRedshiftReadOnlyRole}} {
+		resp := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+			UsernameConfig: usernameConfig,
+			Password:       password,
+			Statements: dbplugin.Statements{
+				Commands: commands,
+			},
+			Expiration: time.Now().Add(5 * time.Minute),
+		})
+		username := resp.Username
+
+		if resp.Username == "" {
+			t.Fatalf("Missing username")
+		}
+
+		testCredsExist(t, url, username, password)
+
+		require.Regexp(t, `^test-[a-zA-Z0-9]{10}$`, resp.Username)
+	}
+	dbtesting.AssertClose(t, db)
 }
 
 const testRedshiftRole = `

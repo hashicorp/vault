@@ -60,6 +60,23 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
+			Pattern: "config/reload/(?P<subsystem>.+)",
+			Fields: map[string]*framework.FieldSchema{
+				"subsystem": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["config/reload"][0]),
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:    b.handleConfigReload,
+					Summary:     "Reload the given subsystem",
+					Description: "",
+				},
+			},
+		},
+
+		{
 			Pattern: "config/ui/headers/" + framework.GenericNameRegex("header"),
 
 			Fields: map[string]*framework.FieldSchema{
@@ -911,7 +928,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    pathInternalUINamespacesRead(b),
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -922,7 +939,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalUIResultantACL,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -933,7 +950,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersRequests,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -944,7 +961,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersTokens,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -955,7 +972,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback:    b.pathInternalCountersEntities,
-					Unpublished: true,
+					Summary: "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
@@ -1209,6 +1226,59 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
+		},
+
+		{
+			Pattern: "leases/count$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Type of leases to get counts for (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: "Set true if you want counts for this namespace and its children.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseCount,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["count-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["count-leases"][1]),
+		},
+
+		{
+			Pattern: "leases$",
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Required:    true,
+					Description: "Type of leases to retrieve (currently only supporting irrevocable).",
+				},
+				"include_child_namespaces": {
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: "Set true if you want leases for this namespace and its children.",
+				},
+				"limit": {
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: "Set to a positive integer of the maximum number of entries to return. If you want all results, set to 'none'. If not set, you will get a maximum of 10,000 results returned.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				// currently only works for irrevocable leases with param: type=irrevocable
+				logical.ReadOperation: b.handleLeaseList,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["list-leases"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["list-leases"][1]),
 		},
 	}
 }
@@ -1699,6 +1769,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"allowed_managed_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1756,6 +1830,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadMount,
+					Summary:  "Read the configuration of the secret engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleMount,
 					Summary:  "Enable a new secrets engine at the given path.",

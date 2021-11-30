@@ -1,5 +1,0 @@
-github.com/go-asn1-ber/asn1-ber v1.3.1/go.mod h1:hEBeB/ic+5LoWskz+yKT7vGhhPYkProFKoKdwZRWMe0=
-github.com/go-asn1-ber/asn1-ber v1.4.1 h1:qP/QDxOtmMoJVgXHCXNzDpA0+wkgYB2x5QoLMVOciyw=
-github.com/go-asn1-ber/asn1-ber v1.4.1/go.mod h1:hEBeB/ic+5LoWskz+yKT7vGhhPYkProFKoKdwZRWMe0=
-github.com/go-ldap/ldap/v3 v3.1.7 h1:aHjuWTgZsnxjMgqzx0JHwNqz4jBYZTcNarbPFkW1Oww=
-github.com/go-ldap/ldap/v3 v3.1.7/go.mod h1:5Zun81jBTabRaI8lzN7E1JjyEl1g6zI6u9pd8luAK4Q=

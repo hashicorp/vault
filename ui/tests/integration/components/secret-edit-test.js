@@ -94,9 +94,11 @@ module('Integration | Component | secret edit', function(hooks) {
         null: 'null',
         float: '1.234',
       },
+      canReadSecretData: true,
     });
 
     await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
+    await settled();
     let instance = this.codeMirror.instanceFor(find('[data-test-component=json-editor]').id);
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();

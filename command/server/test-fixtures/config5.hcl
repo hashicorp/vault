@@ -5,7 +5,7 @@ disable_cache = true
 
  listener "tcp" {
      address = "127.0.0.1:443"
- 	allow_stuff = true
+ 	 allow_stuff = true
  }
 
  backend "consul" {

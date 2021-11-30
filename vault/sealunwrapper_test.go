@@ -82,6 +82,9 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 		if err != nil {
 			t.Fatal(err)
 		}
+		if entry == nil {
+			t.Fatal("nil entry")
+		}
 		if !bytes.Equal(entry.Value, origBytes) {
 			t.Fatalf("mismatched original bytes and unwrapped entry bytes:\ngot:\n%v\nexpected:\n%v", entry.Value, origBytes)
 		}

@@ -1,0 +1,3 @@
+```release-note:improvement
+core/token: Return the token_no_default_policy config on token role read if set
+```

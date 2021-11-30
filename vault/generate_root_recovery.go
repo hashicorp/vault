@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"go.uber.org/atomic"
 )
 

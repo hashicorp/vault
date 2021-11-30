@@ -150,6 +150,25 @@ module('Integration | Component | auth form', function(hooks) {
     server.shutdown();
   });
 
+  test('it renders the description', async function(assert) {
+    let methods = {
+      'approle/': {
+        type: 'userpass',
+        description: 'app description',
+      },
+    };
+    let server = new Pretender(function() {
+      this.get('/v1/sys/internal/ui/mounts', () => {
+        return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
+      });
+    });
+    this.set('cluster', EmberObject.create({}));
+    await render(hbs`{{auth-form cluster=cluster }}`);
+    await settled();
+    assert.equal(component.descriptionText, 'app description', 'renders a description for auth methods');
+    server.shutdown();
+  });
+
   test('it calls authenticate with the correct path', async function(assert) {
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);

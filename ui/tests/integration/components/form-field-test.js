@@ -85,6 +85,13 @@ module('Integration | Component | form field', function(hooks) {
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
+  test('it renders: string as json with clear button', async function(assert) {
+    await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
+    assert.equal(component.fields.objectAt(0).labelText, 'Foo', 'renders a label');
+    assert.ok(component.hasJSONEditor, 'renders the json editor');
+    assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
+  });
+
   test('it renders: editType textarea', async function(assert) {
     let [model, spy] = await setup.call(
       this,
@@ -152,5 +159,35 @@ module('Integration | Component | form field', function(hooks) {
     await setup.call(this, createAttr('foo', 'string', { helpText: 'Here is some help text' }));
     await component.tooltipTrigger();
     assert.ok(component.hasTooltip, 'renders the tooltip component');
+  });
+
+  test('it should not expand and toggle ttl when default 0s value is present', async function(assert) {
+    assert.expect(2);
+
+    this.setProperties({
+      model: EmberObject.create({ foo: '0s' }),
+      attr: createAttr('foo', null, { editType: 'ttl' }),
+      onChange: () => {},
+    });
+
+    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    assert
+      .dom('[data-test-toggle-input="Foo"]')
+      .isNotChecked('Toggle is initially unchecked when given default value');
+    assert.dom('[data-test-ttl-picker-group="Foo"]').doesNotExist('Ttl input is hidden');
+  });
+
+  test('it should toggle and expand ttl when initial non default value is provided', async function(assert) {
+    assert.expect(2);
+
+    this.setProperties({
+      model: EmberObject.create({ foo: '1s' }),
+      attr: createAttr('foo', null, { editType: 'ttl' }),
+      onChange: () => {},
+    });
+
+    await render(hbs`{{form-field attr=attr model=model onChange=onChange}}`);
+    assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
+    assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
   });
 });

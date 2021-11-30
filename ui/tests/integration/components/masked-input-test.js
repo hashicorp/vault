@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, focus } from '@ember/test-helpers';
+import { render, focus, triggerKeyEvent } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import maskedInput from 'vault/tests/pages/components/masked-input';
@@ -87,5 +87,14 @@ module('Integration | Component | masked input', function(hooks) {
     assert.dom('.masked-value').hasClass('masked-font');
     await focus('.masked-value');
     assert.dom('.masked-value').hasClass('masked-font');
+  });
+
+  test('it does not remove value on tab', async function(assert) {
+    this.set('value', 'hello');
+    await render(hbs`{{masked-input value=value}}`);
+    await triggerKeyEvent('[data-test-textarea]', 'keydown', 9);
+    await component.toggleMasked();
+    let unMaskedValue = document.querySelector('.masked-value').value;
+    assert.equal(unMaskedValue, this.value);
   });
 });

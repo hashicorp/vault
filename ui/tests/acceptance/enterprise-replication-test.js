@@ -275,10 +275,10 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-secondary-add]');
     await settled();
     await pollCluster(this.owner);
-
+    await settled();
+    let modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     // checks on secondary token modal
     assert.dom('#modal-wormhole').exists();
-    let modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     assert.equal(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
     await click('[data-test-modal-background]');
@@ -293,7 +293,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-secondary-add]');
     await settled();
     await pollCluster(this.owner);
-
+    await settled();
     let modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     assert.equal(modalTtl, '180s', 'shows the correct TTL of 180s');
     await click('[data-test-modal-background]');

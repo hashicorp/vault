@@ -11,12 +11,11 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"golang.org/x/net/http2"
@@ -81,7 +80,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	if ok {
 		_, err := parseutil.ParseDurationSecond(sessionTTLStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("invalid session_ttl: {{err}}", err)
+			return nil, fmt.Errorf("invalid session_ttl: %w", err)
 		}
 		sessionTTL = sessionTTLStr
 		if logger.IsDebug() {
@@ -94,7 +93,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	if ok {
 		d, err := parseutil.ParseDurationSecond(lockWaitTimeRaw)
 		if err != nil {
-			return nil, errwrap.Wrapf("invalid lock_wait_time: {{err}}", err)
+			return nil, fmt.Errorf("invalid lock_wait_time: %w", err)
 		}
 		lockWaitTime = d
 		if logger.IsDebug() {
@@ -107,7 +106,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	if ok {
 		maxParInt, err := strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -130,12 +129,12 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	SetupSecureTLS(consulConf, conf, logger, false)
+	SetupSecureTLS(context.Background(), consulConf, conf, logger, false)
 
 	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
 	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+		return nil, fmt.Errorf("client setup failed: %w", err)
 	}
 
 	// Setup the backend
@@ -152,7 +151,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 	return c, nil
 }
 
-func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
+func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string]string, logger log.Logger, isDiagnose bool) error {
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
 		if logger.IsDebug() {
@@ -190,13 +189,16 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			certPath, okCert := conf["tls_cert_file"]
 			keyPath, okKey := conf["tls_key_file"]
 			if okCert && okKey {
-				err := diagnose.TLSFileChecks(certPath, keyPath)
+				warnings, err := diagnose.TLSFileChecks(certPath, keyPath)
+				for _, warning := range warnings {
+					diagnose.Warn(ctx, warning)
+				}
 				if err != nil {
 					return err
 				}
-			} else {
-				return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
+				return nil
 			}
+			return fmt.Errorf("key or cert path: %s, %s, cannot be loaded from consul config file", certPath, keyPath)
 		}
 
 		// Use the parsed Address instead of the raw conf['address']
@@ -210,6 +212,10 @@ func SetupSecureTLS(consulConf *api.Config, conf map[string]string, logger log.L
 			return err
 		}
 		logger.Debug("configured TLS")
+	} else {
+		if isDiagnose {
+			diagnose.Skipped(ctx, "HTTPS is not used, Skipping TLS verification.")
+		}
 	}
 	return nil
 }
@@ -249,7 +255,7 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
 	if err != nil {
 		if strings.Contains(err.Error(), "is too large") {
-			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+			return fmt.Errorf("%s: %w", physical.ErrValueTooLarge, err)
 		}
 		return err
 	}
@@ -283,7 +289,7 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	_, err := c.kv.Put(pair, writeOpts)
 	if err != nil {
 		if strings.Contains(err.Error(), "Value exceeds") {
-			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+			return fmt.Errorf("%s: %w", physical.ErrValueTooLarge, err)
 		}
 		return err
 	}
@@ -372,7 +378,7 @@ func (c *ConsulBackend) LockWith(key, value string) (physical.Lock, error) {
 	}
 	lock, err := c.client.LockOpts(opts)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create lock: {{err}}", err)
+		return nil, fmt.Errorf("failed to create lock: %w", err)
 	}
 	cl := &ConsulLock{
 		client:          c.client,

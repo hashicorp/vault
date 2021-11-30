@@ -23,13 +23,11 @@ export default function DownloadsPage(staticProps) {
         },
         {
           label: 'Getting Started with Vault UI',
-          href:
-            'http://learn.hashicorp.com/collections/vault/getting-started-ui',
+          href: 'http://learn.hashicorp.com/collections/vault/getting-started-ui',
         },
         {
           label: 'Vault on HCP',
-          href:
-            'http://learn.hashicorp.com/collections/vault/getting-started-ui',
+          href: 'http://learn.hashicorp.com/collections/vault/getting-started-ui',
         },
         {
           label: 'View all Vault tutorials',
@@ -52,7 +50,7 @@ export default function DownloadsPage(staticProps) {
           <MerchandisingSlot />
           <p className={s.releaseNote}>
             Release notes are available in our{' '}
-            <Link href={`/docs/release-notes/${VERSION}`}>
+            <Link href={`/docs/release-notes`}>
               <a>documentation</a>
             </Link>
             .

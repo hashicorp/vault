@@ -3,15 +3,15 @@ package etcd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
-	"go.etcd.io/etcd/client"
+	"go.etcd.io/etcd/client/v2"
 )
 
 var (
@@ -137,7 +137,7 @@ func getEtcdEndpoints(conf map[string]string) ([]string, error) {
 		discoverer := client.NewSRVDiscover()
 		endpoints, err := discoverer.Discover(domain, srvName)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to discover etcd endpoints through SRV discovery: {{err}}", err)
+			return nil, fmt.Errorf("failed to discover etcd endpoints through SRV discovery: %w", err)
 		}
 		return endpoints, nil
 	}

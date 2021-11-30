@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -190,7 +191,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	}
 
 	if generateSigningKey {
-		publicKey, privateKey, err = generateSSHKeyPair()
+		publicKey, privateKey, err = generateSSHKeyPair(b.Backend.GetRandomReader())
 		if err != nil {
 			return nil, err
 		}
@@ -264,8 +265,11 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	return nil, nil
 }
 
-func generateSSHKeyPair() (string, string, error) {
-	privateSeed, err := rsa.GenerateKey(rand.Reader, 4096)
+func generateSSHKeyPair(randomSource io.Reader) (string, string, error) {
+	if randomSource == nil {
+		randomSource = rand.Reader
+	}
+	privateSeed, err := rsa.GenerateKey(randomSource, 4096)
 	if err != nil {
 		return "", "", err
 	}

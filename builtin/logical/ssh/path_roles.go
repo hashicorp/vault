@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
 )
@@ -245,7 +245,8 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				A comma-separated list of extensions that certificates can have when signed.
-				To allow any extensions, set this to an empty string.
+				An empty list means that no extension overrides are allowed by an end-user; explicitly
+				specify '*' to allow any extensions to be set.
 				`,
 			},
 			"default_critical_options": {
@@ -460,15 +461,14 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			return logical.ErrorResponse("missing admin username"), nil
 		}
 
-		// This defaults to 1024 and it can also be 2048 and 4096.
+		// This defaults to 2048, but it can also be 1024, 3072, 4096, or 8192.
+		// In the near future, we should disallow 1024-bit SSH keys.
 		keyBits := d.Get("key_bits").(int)
-		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 && keyBits != 4096 {
-			return logical.ErrorResponse("invalid key_bits field"), nil
-		}
-
-		// If user has not set this field, default it to 2048
 		if keyBits == 0 {
 			keyBits = 2048
+		}
+		if keyBits != 1024 && keyBits != 2048 && keyBits != 3072 && keyBits != 4096 && keyBits != 8192 {
+			return logical.ErrorResponse("invalid key_bits field"), nil
 		}
 
 		// Store all the fields required by dynamic key type

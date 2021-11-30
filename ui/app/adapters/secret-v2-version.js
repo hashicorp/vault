@@ -4,7 +4,6 @@ import { isEmpty } from '@ember/utils';
 import { get } from '@ember/object';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-import ControlGroupError from 'vault/lib/control-group-error';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -35,6 +34,13 @@ export default ApplicationAdapter.extend({
       }
       return errorOrModel;
     });
+  },
+
+  async getSecretDataVersion(backend, id) {
+    // used in secret-edit route when you don't have current version and you need it for pulling the correct secret-v2-version record
+    let url = this._url(backend, id);
+    let response = await this.ajax(this._url(backend, id), 'GET');
+    return response.data.metadata.version;
   },
 
   queryRecord(id, options) {
@@ -68,16 +74,73 @@ export default ApplicationAdapter.extend({
     return this._url(backend, path);
   },
 
-  v2DeleteOperation(store, id, deleteType = 'delete') {
-    let [backend, path, version] = JSON.parse(id);
+  async deleteLatestVersion(backend, path) {
+    try {
+      await this.ajax(this._url(backend, path, 'data'), 'DELETE');
+      let model = this.store.peekRecord('secret-v2-version', path);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
 
-    // deleteType should be 'delete', 'destroy', 'undelete'
-    return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
-      () => {
-        let model = store.peekRecord('secret-v2-version', id);
-        return model && model.rollbackAttributes() && model.reload();
-      }
-    );
+  async undeleteVersion(backend, path, currentVersionForNoReadMetadata) {
+    try {
+      await this.ajax(this._url(backend, path, 'undelete'), 'POST', {
+        data: { versions: [currentVersionForNoReadMetadata] },
+      });
+      let model = this.store.peekRecord('secret-v2-version', path);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  async softDelete(backend, path, version) {
+    try {
+      await this.ajax(this._url(backend, path, 'delete'), 'POST', {
+        data: { versions: [version] },
+      });
+      let model = this.store.peekRecord('secret-v2-version', path);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  async deleteByDeleteType(backend, path, deleteType, version) {
+    try {
+      await this.ajax(this._url(backend, path, deleteType), 'POST', {
+        data: { versions: [version] },
+      });
+      let model = this.store.peekRecord('secret-v2-version', path);
+      await model.reload();
+      return model && model.rollbackAttributes();
+    } catch (e) {
+      return e;
+    }
+  },
+
+  v2DeleteOperation(store, id, deleteType = 'delete', currentVersionForNoReadMetadata) {
+    let [backend, path, version] = JSON.parse(id);
+    // deleteType should be 'delete', 'destroy', 'undelete', 'delete-latest-version', 'destroy-version'
+    if (
+      (currentVersionForNoReadMetadata && deleteType === 'delete') ||
+      deleteType === 'delete-latest-version'
+    ) {
+      // moved to async to away model reload which is a promise
+      return this.deleteLatestVersion(backend, path);
+    } else if (deleteType === 'undelete' && !version) {
+      // happens when no read access to metadata
+      return this.undeleteVersion(backend, path, currentVersionForNoReadMetadata);
+    } else if (deleteType === 'soft-delete') {
+      return this.softDelete(backend, path, version);
+    } else {
+      return this.deleteByDeleteType(backend, path, deleteType, version);
+    }
   },
 
   handleResponse(status, headers, payload, requestData) {

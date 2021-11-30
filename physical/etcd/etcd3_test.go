@@ -2,33 +2,37 @@ package etcd
 
 import (
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/etcd"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func TestEtcd3Backend(t *testing.T) {
-	addr := os.Getenv("ETCD_ADDR")
-	if addr == "" {
-		t.Skipf("Skipped. No etcd3 server found")
-	}
+	cleanup, config := etcd.PrepareTestContainer(t, "v3.5.0")
+	defer cleanup()
 
 	logger := logging.NewVaultLogger(log.Debug)
-	config := map[string]string{
+	configMap := map[string]string{
+		"address":  config.URL().String(),
 		"path":     fmt.Sprintf("/vault-%d", time.Now().Unix()),
 		"etcd_api": "3",
+		"username": "root",
+		"password": "insecure",
+
+		// Syncing adverticed client urls should be disabled since docker port mapping confuses the client.
+		"sync": "false",
 	}
 
-	b, err := NewEtcdBackend(config, logger)
+	b, err := NewEtcdBackend(configMap, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	b2, err := NewEtcdBackend(config, logger)
+	b2, err := NewEtcdBackend(configMap, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

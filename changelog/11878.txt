@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: add validations for duplicate path kv engine
+```

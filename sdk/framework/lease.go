@@ -91,7 +91,7 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are
-		if maxValidTTL < 0 {
+		if maxValidTTL <= 0 {
 			return 0, nil, fmt.Errorf("past the max TTL, cannot renew")
 		}
 

@@ -1,4 +1,4 @@
-<form {{action "doSubmit" (hash input=input signature=signature signature_algorithm=signature_algorithm hmac=hmac hash_algorithm=hash_algorithm context=context prehashed=prehashed encodedBase64=encodedBase64) on="submit"}}>
+<form onsubmit={{action @doSubmit (hash input=@input signature=@signature signature_algorithm=@signature_algorithm hmac=@hmac hash_algorithm=@hash_algorithm context=@context prehashed=@prehashed encodedBase64=@encodedBase64)}}>
     <div class="box is-sideless is-fullwidth is-marginless">
       <div class="content">
         <p>Check whether the provided signature is valid for the given data.</p>
@@ -7,7 +7,7 @@
         <div class="control is-relative">
           <JsonEditor
               @title="Input"
-              @value={{input}} @valueUpdated={{action (mut input)}} 
+              @value={{@input}} @valueUpdated={{action (mut @input)}} 
               @options={{hash
                 mode='ruby'
               }} 
@@ -15,25 +15,25 @@
         </div>
       </div>
       <div class="field">
-        <Input @type="checkbox" @id="encodedBase64" @checked={{encodedBase64}} data-test-transit-input="encodedBase64" />
+        <Input @type="checkbox" @id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
         <label for="encodedBase64">This data is already encoded in base64</label>
       </div>
-      {{#if (and key.supportsSigning key.derived (not hmac))}}
+      {{#if (and @key.supportsSigning @key.derived (not @hmac))}}
         <div class="field">
           <label for="context" class="is-label">
             Context
           </label>
           <div class="field has-addons">
             <div class="control">
-              <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
+              <Input @type="text" @id="context" @value={{@context}} class="input" data-test-transit-input="context" />
             </div>
             <div class="control">
-              <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
+              <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
             </div>
           </div>
         </div>
       {{/if}}
-      {{#if key.supportsSigning}}
+      {{#if @key.supportsSigning}}
         <div class="columns is-5">
           <div class="column is-one-third">
             <div class="field">
@@ -44,12 +44,12 @@
                    name="verification"
                    id="verification"
                    onchange={{queue
-                    (action (mut verification) value="target.value")
-                    (action "clearParams" (array "hmac" "signature"))
+                    (action (mut @verification) value="target.value")
+                    (action @clearParams (array "hmac" "signature"))
                    }}
                   >
                     {{#each (array 'Signature' 'HMAC') as |type|}}
-                      <option selected={{if verification (eq verification type) (if hmac (eq type 'HMAC') (eq type 'Signature'))}} value={{type}}>
+                      <option selected={{if @verification (eq @verification type) (if @hmac (eq type 'HMAC') (eq type 'Signature'))}} value={{type}}>
                         {{type}}
                       </option>
                     {{/each}}
@@ -63,9 +63,9 @@
                   <label for="hash_algorithm" class="is-label">Hash Algorithm</label>
                 </div>
                 <div class="level-right">
-                  {{#unless (eq verification 'HMAC')}}
+                  {{#unless (eq @verification 'HMAC')}}
                     <div class="control is-flex">
-                      <Input @id="prehashed" @type="checkbox" @name="prehashed" class="switch is-rounded is-success is-small" @checked={{prehashed}} />
+                      <Input @id="prehashed" @type="checkbox" @name="prehashed" class="switch is-rounded is-success is-small" @checked={{@prehashed}} />
                       <label for="prehashed">Prehashed</label>
                     </div>
                   {{/unless}}
@@ -76,10 +76,10 @@
                   <select
                    name="hash_algorithm"
                    id="hash_algorithm"
-                   onchange={{action (mut hash_algorithm) value="target.value"}}
+                   onchange={{action (mut @hash_algorithm) value="target.value"}}
                   >
                     {{#each (sha2-digest-sizes) as |algo|}}
-                      <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+                      <option selected={{if @hash_algorithm (eq @hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
                         <code>{{algo}}</code>
                       </option>
                     {{/each}}
@@ -87,7 +87,7 @@
                 </div>
               </div>
             </div>
-            {{#if (and keyIsRSA (or (and verification (eq verification 'Signature')) signature))}}
+            {{#if (and @keyIsRSA (or (and @verification (eq @verification 'Signature')) @signature))}}
               <div class="field">
                 <label for="signature_algorithm" class="is-label">Signature Algorithm</label>
                 <div class="control is-expanded">
@@ -96,10 +96,10 @@
                      name="signature_algorithm"
                      id="signature_algorithm"
                      data-test-signature-algorithm="true"
-                     onchange={{action (mut signature_algorithm) value="target.value"}}
+                     onchange={{action (mut @signature_algorithm) value="target.value"}}
                      >
                      {{#each (array 'pss' 'pkcs1v15') as |sigAlgo|}}
-                       <option selected={{if signature_algorithm (eq signature_algorithm sigAlgo) (eq sigAlgo 'pss')}} value={{sigAlgo}}>
+                       <option selected={{if @signature_algorithm (eq @signature_algorithm sigAlgo) (eq sigAlgo 'pss')}} value={{sigAlgo}}>
                          {{sigAlgo}}
                        </option>
                      {{/each}}
@@ -111,13 +111,13 @@
 
           </div>
           <div class="column is-two-thirds is-flex-column">
-            {{#if (or (and verification (eq verification 'HMAC')) hmac)}}
+            {{#if (or (and @verification (eq @verification 'HMAC')) @hmac)}}
               <div class="field is-flex-column is-flex-1">
                 <div class="control is-flex-column is-flex-1">
                   <JsonEditor
                       @title="HMAC"
-                      @value={{hmac}} 
-                      @valueUpdated={{action (mut hmac)}} 
+                      @value={{@hmac}} 
+                      @valueUpdated={{action (mut @hmac)}} 
                       @options={{hash
                         mode='ruby'
                       }} 
@@ -129,8 +129,8 @@
                 <div class="control is-flex-column is-flex-1">
                   <JsonEditor
                   @title="Signature"
-                  @value={{signature}} 
-                  @valueUpdated={{action (mut signature)}} 
+                  @value={{@signature}} 
+                  @valueUpdated={{action (mut @signature)}} 
                   @options={{hash
                       mode='ruby'
                     }} />
@@ -144,8 +144,8 @@
           <div class="control">
             <JsonEditor
                 @title="HMAC"
-                @value={{hmac}} 
-                @valueUpdated={{action (mut hmac)}} 
+                @value={{@hmac}} 
+                @valueUpdated={{action (mut @hmac)}} 
                 @options={{hash
                   mode='ruby'
                 }} 
@@ -159,10 +159,10 @@
               <select
                name="hash_algorithm"
                id="hash_algorithm"
-               onchange={{action (mut hash_algorithm) value="target.value"}}
+               onchange={{action (mut @hash_algorithm) value="target.value"}}
               >
                 {{#each (array 'sha2-224' 'sha2-256' 'sha2-384' 'sha2-512') as |algo|}}
-                  <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+                  <option selected={{if @hash_algorithm (eq @hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
                     <code>{{algo}}</code>
                   </option>
                 {{/each}}
@@ -174,18 +174,18 @@
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}">
+        <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
           Verify
         </button>
       </div>
     </div>
 </form>
-<Modal @title="Results" @onClose={{action (mut isModalActive) false}} @isActive={{isModalActive}}>
+<Modal @title="Results" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
   <section class="modal-card-body">
     <AlertBanner
-      @type={{if valid 'success' 'danger'}}
-      @title={{if valid 'Valid' 'Not Valid'}}
-      @message="The input is {{if valid 'valid' 'not valid'}} for the given {{if signature 'signature' 'HMAC'}}"
+      @type={{if @valid 'success' 'danger'}}
+      @title={{if @valid 'Valid' 'Not Valid'}}
+      @message="The input is {{if @valid 'valid' 'not valid'}} for the given {{if @signature 'signature' 'HMAC'}}"
       data-test-transit-verify="true"/>
   </section>
 </Modal>

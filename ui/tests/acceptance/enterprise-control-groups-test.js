@@ -71,7 +71,9 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
   const setupControlGroup = async context => {
     let userpassAccessor;
     await visit('/vault/secrets');
+    await settled();
     await consoleComponent.toggle();
+    await settled();
     await consoleComponent.runCommands([
       //enable kv-v1 mount and write a secret
       'write sys/mounts/kv type=kv',

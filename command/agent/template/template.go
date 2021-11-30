@@ -172,8 +172,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 		case err := <-ts.runner.ErrCh:
+			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
-			return fmt.Errorf("template server: %w", err)
+
+			// Return after stopping the runner if exit on retry failure was
+			// specified
+			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+				return fmt.Errorf("template server: %w", err)
+			}
+
+			ts.runner, err = manager.NewRunner(runnerConfig, false)
+			if err != nil {
+				return fmt.Errorf("template server failed to create: %w", err)
+			}
+			go ts.runner.Start()
 
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
@@ -228,6 +240,10 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		conf.Vault.Namespace = &sc.Namespace
 	}
 
+	if sc.AgentConfig.TemplateConfig != nil && sc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
+		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
+	}
+
 	conf.Vault.SSL = &ctconfig.SSLConfig{
 		Enabled:    pointerutil.BoolPtr(false),
 		Verify:     pointerutil.BoolPtr(false),
@@ -248,28 +264,34 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	}
 
 	// Use the cache if available or fallback to the Vault server values.
-	// For now we're only routing templating through the cache when persistence
-	// is enabled. The templating engine and the cache have some inconsistencies
-	// that need to be fixed for 1.7x/1.8
-	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
+	if sc.AgentConfig.Cache != nil {
 		attempts = 0
-		scheme := "unix://"
-		if sc.AgentConfig.Listeners[0].Type == "tcp" {
-			scheme = "https://"
-			if sc.AgentConfig.Listeners[0].TLSDisable {
-				scheme = "http://"
-			}
-		}
-		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
-		conf.Vault.Address = &address
 
-		// Skip verification if its using the cache because they're part of the same agent.
-		if scheme == "https://" {
-			if sc.AgentConfig.Listeners[0].TLSRequireAndVerifyClientCert {
-				return nil, errors.New("template server cannot use local cache when mTLS is enabled")
-			}
-			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
+		// If we don't want exit on template retry failure (i.e. unlimited
+		// retries), let consul-template handle retry and backoff logic.
+		//
+		// Note: This is a fixed value (12) that ends up being a multiplier to
+		// retry.num_retires (i.e. 12 * N total retries per runner restart).
+		// Since we are performing retries indefinitely this base number helps
+		// prevent agent from spamming Vault if retry.num_retries is set to a
+		// low value by forcing exponential backoff to be high towards the end
+		// of retries during the process.
+		if sc.AgentConfig.TemplateConfig != nil && !sc.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+			attempts = ctconfig.DefaultRetryAttempts
 		}
+
+		if sc.AgentConfig.Cache.InProcDialer == nil {
+			return nil, fmt.Errorf("missing in-process dialer configuration")
+		}
+		if conf.Vault.Transport == nil {
+			conf.Vault.Transport = &ctconfig.TransportConfig{}
+		}
+		conf.Vault.Transport.CustomDialer = sc.AgentConfig.Cache.InProcDialer
+		// The in-process dialer ignores the address passed in, but we're still
+		// setting it here to override the setting at the top of this function,
+		// and to prevent the vault/http client from defaulting to https.
+		conf.Vault.Address = pointerutil.StringPtr("http://127.0.0.1:8200")
+
 	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
 		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
 		verify := !skipVerify

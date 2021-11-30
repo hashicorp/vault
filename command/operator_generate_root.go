@@ -9,13 +9,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-secure-stdlib/password"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/sdk/helper/base62"
-	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -131,7 +130,8 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    "",
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage:      "The value to decode; setting this triggers a decode operation.",
+		Usage: "The value to decode; setting this triggers a decode operation. " +
+			" If the value is \"-\" then read the encoded token from stdin.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -180,7 +180,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: "Path to a file on disk containing a binary or base64-encoded " +
-			"public GPG key. This can also be specified as a Keybase username " +
+			"public PGP key. This can also be specified as a Keybase username " +
 			"using the format \"keybase:<username>\". When supplied, the generated " +
 			"root token will be encrypted and base64-encoded with the given public " +
 			"key.",
@@ -310,7 +310,7 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind gener
 	default:
 		otp, err := base62.Random(status.OTPLength)
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error reading random bytes: {{err}}", err).Error())
+			c.UI.Error(fmt.Errorf("Error reading random bytes: %w", err).Error())
 			return "", 2
 		}
 
@@ -327,6 +327,27 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 	if otp == "" {
 		c.UI.Error("Missing otp: use -otp to supply it")
 		return 1
+	}
+
+	if encoded == "-" {
+		// Pull our fake stdin if needed
+		stdin := (io.Reader)(os.Stdin)
+		if c.testStdin != nil {
+			stdin = c.testStdin
+		}
+
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, stdin); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to read from stdin: %s", err))
+			return 1
+		}
+
+		encoded = buf.String()
+
+		if encoded == "" {
+			c.UI.Error("Missing encoded value. When using -decode=\"-\" value must be passed via stdin.")
+			return 1
+		}
 	}
 
 	f := client.Sys().GenerateRootStatus
@@ -363,13 +384,13 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 	default:
 		tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error decoding base64'd token: {{err}}", err).Error())
+			c.UI.Error(fmt.Errorf("Error decoding base64'd token: %w", err).Error())
 			return 1
 		}
 
 		tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
 		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error xoring token: {{err}}", err).Error())
+			c.UI.Error(fmt.Errorf("Error xoring token: %w", err).Error())
 			return 1
 		}
 		token = string(tokenBytes)

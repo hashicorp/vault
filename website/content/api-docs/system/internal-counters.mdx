@@ -7,52 +7,9 @@ description: >-
 
 # `/sys/internal/counters`
 
-The `/sys/internal/counters` endpoints are used to return data about the number of Http Requests, Tokens, and Entities in Vault.
+The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
 
-~> **NOTE**: This endpoint is only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
-
-## Http Requests
-
-This endpoint lists the number of Http Requests made per month.
-
-| Method | Path                              |
-| :----- | :-------------------------------- |
-| `GET`  | `/sys/internal/counters/requests` |
-
-### Sample Request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request GET \
-    http://127.0.0.1:8200/v1/sys/internal/counters/requests
-```
-
-### Sample Response
-
-```json
-{
-  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "counters": [
-      {
-        "start_time": "2019-05-01T00:00:00Z",
-        "total": 50
-      },
-      {
-        "start_time": "2019-04-01T00:00:00Z",
-        "total": 45
-      }
-    ]
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
-}
-```
+~> **NOTE**: These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
 
 ## Entities
 
@@ -132,9 +89,13 @@ $ curl \
 
 ## Client Count
 
-This endpoint returns the number of clients per namespace, as the sum of active entities and non-entity tokens.
+This endpoint returns the number of clients per namespace, as the sum of clients calculated from the use 
+of active entities and non-entity tokens.
 An "active entity" is a distinct entity that has created one or more tokens in the given time period.
-A "non-entity token" is a token with no attached entity ID.
+A "non-entity token" is a token with no attached entity ID. 
+Both non-entity tokens and active entities have distinct client IDs. For more information on how clients
+map to these client IDs, and how clients are counted, please visit the 
+[client count](/docs/concepts/client-count) concepts page.
 
 A time period may be specified; otherwise it reports on a default reporting period, such as the
 previous twelve calendar months. Reports are only available with month granularity, after each month

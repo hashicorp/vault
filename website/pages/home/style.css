@@ -11,7 +11,7 @@
     max-width: 50%;
   }
 
-  & .g-container.remove-bottom-padding {
+  & .g-grid-container.remove-bottom-padding {
     padding-bottom: 0;
   }
 
@@ -25,7 +25,7 @@
     }
   }
 
-  & .g-container.before-after {
+  & .g-grid-container.before-after {
     padding-top: 50px;
   }
 }

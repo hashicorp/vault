@@ -18,12 +18,16 @@ import layout from '../templates/components/form-field-groups';
  *  @model={{mountModel}}
  *  @onChange={{action "onTypeChange"}}
  *  @renderGroup="Method Options"
+ *  @onKeyUp={{action "onKeyUp"}}
+ *  @validationMessages={{validationMessages}}
  * />
  * ```
  *
  * @param [renderGroup=null] {String} - An allow list of groups to include in the render.
  * @param model=null {DS.Model} - Model to be passed down to form-field component. If `fieldGroups` is present on the model then it will be iterated over and groups of `FormField` components will be rendered.
  * @param onChange=null {Func} - Handler that will get set on the `FormField` component.
+ * @param onKeyUp=null {Func} - Handler that will set the value and trigger validation on input changes
+ * @param validationMessages=null {Object} Object containing validation message for each property
  *
  */
 
