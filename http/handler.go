@@ -93,6 +93,7 @@ var (
 		"/v1/sys/capabilities",
 		"/v1/sys/capabilities-accessor",
 		"/v1/sys/capabilities-self",
+		"/v1/sys/ha-status",
 		"/v1/sys/key-status",
 		"/v1/sys/mounts",
 		"/v1/sys/mounts/",
@@ -142,7 +143,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
-		mux.Handle("/v1/sys/ha-status", handleRequestForwarding(core, handleSysHaStatus(core)))
 		mux.Handle("/v1/sys/health", handleSysHealth(core))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
