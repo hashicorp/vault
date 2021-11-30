@@ -11,6 +11,7 @@ const path = require('path');
 const handleFileUrls = require('./handle-file-urls');
 const isDev = require('electron-is-dev');
 const windowStateKeeper = require('electron-window-state');
+const setApplicationMenu = require('./app-menu');
 
 const emberAppDir = path.resolve(__dirname, '..', 'ember-dist');
 const emberAppURL = pathToFileURL(
@@ -49,6 +50,9 @@ app.on('ready', async () => {
   }
 
   await handleFileUrls(emberAppDir);
+
+  // setup custom application menu
+  setApplicationMenu();
 
   const primaryDisplay = screen.getPrimaryDisplay();
   const mainWindowState = windowStateKeeper({
