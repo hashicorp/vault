@@ -4121,19 +4121,13 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 }
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	_, address, clusterAddr, err := b.Core.Leader()
-	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
-		err = nil
-	}
-	if err != nil {
-		return nil, err
-	}
+	// We're always the leader if we're handling this request.
 	h, _ := host.Info()
 	nodes := []HAStatusNode{
 		{
 			Hostname:       h.Hostname,
-			APIAddress:     address,
-			ClusterAddress: clusterAddr,
+			APIAddress:     b.Core.redirectAddr,
+			ClusterAddress: b.Core.ClusterAddr(),
 			ActiveNode:     true,
 		},
 	}
