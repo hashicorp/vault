@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"crypto/aes"
@@ -11,7 +12,6 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/cli"
 	"golang.org/x/crypto/argon2"
 )
@@ -103,6 +103,7 @@ func (c *EncryptCommand) Run(args []string) int {
 	passphrase := "my password"
 
 	key, aad, err := generateKey(passphrase)
+	fmt.Printf("encoded key: %x\n", key)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error generating key: %s", err.Error()))
 		return 1
@@ -118,20 +119,24 @@ func (c *EncryptCommand) Run(args []string) int {
 }
 
 func generateKey(passphrase string) ([]byte, additionalData, error) {
-	ad := additionalData{
+	aad := additionalData{
 		Version:     1,
 		Salt:        make([]byte, 16),
 		Memory:      64 * 1024,
 		Time:        3,
 		Parallelism: 4,
 	}
-
-	if _, err := rand.Read(ad.Salt); err != nil {
-		return nil, ad, err
+	if _, err := rand.Read(aad.Salt); err != nil {
+		return nil, aad, err
 	}
-	key := argon2.IDKey([]byte(passphrase), ad.Salt, ad.Time, ad.Memory, ad.Parallelism, 32)
 
-	return key, ad, nil
+	return generateKeyAAD(passphrase, aad)
+}
+
+func generateKeyAAD(passphrase string, aad additionalData) ([]byte, additionalData, error) {
+	key := argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
+
+	return key, aad, nil
 }
 
 func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) error {
@@ -154,24 +159,41 @@ func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) erro
 		return fmt.Errorf("error creating nonce: %s", err.Error())
 	}
 
-	adEnc, err := jsonutil.EncodeJSON(aad)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(adEnc))
-
-	// Encrypt and write to file
-	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, adEnc)
-
-	// TODO ensure output is not written to stdout
-
 	if outfile == "" {
 		outfile = "output.enc"
 	}
-	err = ioutil.WriteFile(outfile, ciphertext, 0644)
+	out, err := os.Create(outfile)
 	if err != nil {
-		return fmt.Errorf("error writing encrypted data to file: %s", err.Error())
+		return err
+	}
+
+	e := encodeAAD(aad)
+
+	//adEnc, err := jsonutil.EncodeJSON(aad)
+	//if err != nil {
+	//	return err
+	//}
+
+	if _, err := out.Write(e); err != nil {
+		return err
+	}
+
+	// Encrypt and write to file
+	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, e)
+
+	// TODO ensure output is not written to stdout
+
+	if _, err := out.Write(ciphertext); err != nil {
+		return fmt.Errorf("error writing encrypted data to file: %w", err)
 	}
 
 	return nil
+}
+
+func encodeAAD(aad additionalData) []byte {
+	//TODO split out version
+	e := fmt.Sprintf("vault:v=%d:%x:t=%d:m=%d:p=%d$", aad.Version, aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
+	fmt.Println(e)
+
+	return []byte(e)
 }

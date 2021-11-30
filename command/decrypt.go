@@ -1,13 +1,14 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"io/ioutil"
 
 	"github.com/mitchellh/cli"
@@ -73,21 +74,32 @@ func (c *DecryptCommand) Run(args []string) int {
 	}
 
 	filename := strings.TrimSpace(args[0])
-	encryptedData, err := ioutil.ReadFile(filename)
+
+	input, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO Prompt w/ passphrase
-	// TODO Create key w/ passphrase
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
+	aad, encryptedData, err := parseAAD(input)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(aad)
+
+	//encryptedData, err := io.ReadAll(input)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	fmt.Println(len(encryptedData))
+
+	key, _, err := generateKeyAAD("my password", aad)
+	fmt.Printf("decoded key: %x\n", key)
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("error creating key: %s", err.Error()))
 		return 1
-
 	}
 
-	err = decrypt(encryptedData, key, c.outfile)
+	err = decrypt(encryptedData, key, aad, c.outfile)
 	if err != nil {
 		// Confirm if this is the right code
 		c.UI.Error(fmt.Sprintf("error decrypting file: %s", err.Error()))
@@ -97,7 +109,23 @@ func (c *DecryptCommand) Run(args []string) int {
 	return 0
 }
 
-func decrypt(dataToDecrypt []byte, key []byte, outfile string) error {
+func parseAAD(input []byte) (additionalData, []byte, error) {
+	var aad additionalData
+
+	parts := bytes.SplitN(input, []byte("$"), 2)
+	if len(parts) != 2 {
+		return aad, nil, fmt.Errorf("unexpected number of parts")
+	}
+
+	if _, err := fmt.Sscanf(string(parts[0]), "vault:v=%d:%x:t=%d:m=%d:p=%d", &aad.Version, &aad.Salt, &aad.Time, &aad.Memory, &aad.Parallelism); err != nil {
+		// TODO: check n
+		return aad, nil, err
+	}
+
+	return aad, parts[1], nil
+}
+
+func decrypt(dataToDecrypt, key []byte, aad additionalData, outfile string) error {
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
@@ -113,10 +141,12 @@ func decrypt(dataToDecrypt []byte, key []byte, outfile string) error {
 
 	// Create a nonce from GCM
 	nonceSize := aesGCM.NonceSize()
+
 	nonce, ciphertext := dataToDecrypt[:nonceSize], dataToDecrypt[nonceSize:]
 
 	// Decrypt and write to file
-	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+	e := encodeAAD(aad)
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, e)
 	if err != nil {
 		return fmt.Errorf("error decrypting cipher text: %s", err.Error())
 
