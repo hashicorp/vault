@@ -118,7 +118,6 @@ type collector struct {
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
 
-	// errLock is used to lock error capture into the index file
 	errLock sync.Mutex
 
 	uiError func(string)
@@ -255,30 +254,34 @@ func (c *DebugCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Print debug information
-	c.UI.Output("==> Starting debug capture...")
-	// c.UI.Info(fmt.Sprintf("         Vault Address: %s", c.debugIndex.VaultAddress))
-	// c.UI.Info(fmt.Sprintf("        Client Version: %s", c.debugIndex.ClientVersion))
-	c.UI.Info(fmt.Sprintf("              Duration: %s", c.flagDuration))
-	c.UI.Info(fmt.Sprintf("              Interval: %s", c.flagInterval))
-	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagMetricsInterval))
-	c.UI.Info(fmt.Sprintf("               Targets: %s", strings.Join(c.flagTargets, ", ")))
-	c.UI.Info(fmt.Sprintf("                Output: %s", dstOutputFile))
-	// TODO add "hosts line"
-	c.UI.Output("")
+	genericClient, err := c.Client()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error creating client: %s", err))
+		return 1
+	}
 
 	var collectors []*collector
+	if len(c.flagAddresses) == 0 {
+		c.flagAddresses = append(c.flagAddresses, genericClient.Address())
+	}
+
 	for _, addr := range c.flagAddresses {
 		debugIndex := *baseDebugIndex
 		debugIndex.VaultAddress = addr
-		client, err := api.NewClient(api.DefaultConfig())
+		client, err := api.NewClient(genericClient.CloneConfig())
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error create client for addr %s: %s", addr, err))
+			c.UI.Error(fmt.Sprintf("Error creating client for addr %s: %s", addr, err))
 			return 1
 		}
 		err = client.SetAddress(addr)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error create client for addr %s: %s", addr, err))
+			c.UI.Error(fmt.Sprintf("Error creating client for addr %s: %s", addr, err))
+			return 1
+		}
+		client.SetToken(genericClient.Token())
+
+		if _, err := client.Sys().Health(); err != nil {
+			c.UI.Error(fmt.Sprintf("Unable to connect to addr %s: %s", addr, err))
 			return 1
 		}
 
@@ -298,6 +301,18 @@ func (c *DebugCommand) Run(args []string) int {
 			uiError:         func(s string) { c.UI.Error(s) },
 		})
 	}
+
+	// Print debug information
+	c.UI.Output("==> Starting debug capture...")
+	// c.UI.Info(fmt.Sprintf("         Vault Address: %s", c.debugIndex.VaultAddress))
+	// c.UI.Info(fmt.Sprintf("        Client Version: %s", c.debugIndex.ClientVersion))
+	c.UI.Info(fmt.Sprintf("              Duration: %s", c.flagDuration))
+	c.UI.Info(fmt.Sprintf("              Interval: %s", c.flagInterval))
+	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagMetricsInterval))
+	c.UI.Info(fmt.Sprintf("               Targets: %s", strings.Join(c.flagTargets, ", ")))
+	c.UI.Info(fmt.Sprintf("                Output: %s", dstOutputFile))
+	// TODO add "hosts line"
+	c.UI.Output("")
 
 	// Release the log gate.
 	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
@@ -485,15 +500,6 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, *debugIndex, error) 
 			c.flagTargets = strutil.Difference(c.flagTargets, invalidTargets, true)
 		}
 	}
-
-	// TODO Make sure we can talk to the server
-	//client, err := c.Client()
-	//if err != nil {
-	//	return "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
-	//}
-	//if _, err := client.Sys().Health(); err != nil {
-	//	return "", fmt.Errorf("unable to connect to the server: %s", err)
-	//}
 
 	captureTime := time.Now().UTC()
 	if len(c.flagOutput) == 0 {
@@ -811,13 +817,16 @@ func (c *collector) collectPprof(ctx context.Context) {
 			wg.Add(1)
 			go func(target string) {
 				defer wg.Done()
+				c.logger.Info("running pprofTarget", "target", target)
 				data, err := pprofTarget(ctx, c.client, target, nil)
 				if err != nil {
 					c.captureError("pprof."+target, err)
 					return
 				}
 
-				err = ioutil.WriteFile(filepath.Join(dirName, target+".prof"), data, 0o644)
+				filename := filepath.Join(dirName, target+".prof")
+				c.logger.Info("writing pprofTarget", "target", target, "filename", filename)
+				err = ioutil.WriteFile(filename, data, 0o644)
 				if err != nil {
 					c.captureError("pprof."+target, err)
 				}
@@ -1048,7 +1057,6 @@ func pprofTrace(ctx context.Context, client *api.Client, duration time.Duration)
 	return data, nil
 }
 
-// newCaptureError instantiates a new captureError.
 func (c *collector) captureError(target string, err error) {
 	c.errLock.Lock()
 	c.debugIndex.Errors = append(c.debugIndex.Errors, &captureError{

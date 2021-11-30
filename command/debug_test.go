@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mholt/archiver"
@@ -179,6 +178,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 			}
 
 			tgz := archiver.NewTarGz()
+			hostBasePath := filepath.Join(basePath, strings.TrimPrefix(client.Address(), "https://"))
 			err = tgz.Walk(bundlePath, func(f archiver.File) error {
 				fh, ok := f.Header.(*tar.Header)
 				if !ok {
@@ -186,11 +186,11 @@ func TestDebugCommand_Archive(t *testing.T) {
 				}
 
 				// Ignore base directory and index file
-				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
+				if fh.Name == basePath+"/" || fh.Name == hostBasePath+"/" || fh.Name == filepath.Join(hostBasePath, "index.json") {
 					return nil
 				}
 
-				if fh.Name != filepath.Join(basePath, "server_status.json") {
+				if fh.Name != filepath.Join(hostBasePath, "server_status.json") {
 					return fmt.Errorf("unexpected file: %s", fh.Name)
 				}
 				return nil
@@ -283,6 +283,7 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			}
 
 			tgz := archiver.NewTarGz()
+			hostBasePath := filepath.Join(basePath, strings.TrimPrefix(client.Address(), "https://"))
 			err = tgz.Walk(bundlePath, func(f archiver.File) error {
 				fh, ok := f.Header.(*tar.Header)
 				if !ok {
@@ -290,12 +291,12 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 				}
 
 				// Ignore base directory and index file
-				if fh.Name == basePath+"/" || fh.Name == filepath.Join(basePath, "index.json") {
+				if fh.Name == basePath+"/" || fh.Name == hostBasePath+"/" || fh.Name == filepath.Join(hostBasePath, "index.json") {
 					return nil
 				}
 
 				for _, fileName := range tc.expectedFiles {
-					if fh.Name == filepath.Join(basePath, fileName) {
+					if fh.Name == filepath.Join(hostBasePath, fileName) {
 						return nil
 					}
 				}
@@ -324,8 +325,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 	cmd.client = client
 	cmd.skipTimingChecks = true
 
-	basePath := "pprof"
-	outputPath := filepath.Join(testDir, basePath)
+	outputPath := filepath.Join(testDir, "pprof")
 	// pprof requires a minimum interval of 1s, we set it to 2 to ensure it
 	// runs through and reduce flakiness on slower systems.
 	args := []string{
@@ -345,9 +345,10 @@ func TestDebugCommand_Pprof(t *testing.T) {
 	profiles := []string{"heap.prof", "goroutine.prof"}
 	pollingProfiles := []string{"profile.prof", "trace.out"}
 
+	hostBasePath := filepath.Join(outputPath, strings.TrimPrefix(client.Address(), "https://"))
 	// These are captures on the first (0th) and last (1st) frame
 	for _, v := range profiles {
-		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", outputPath, v))
+		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", hostBasePath, v))
 		if len(files) != 2 {
 			t.Errorf("2 output files should exist for %s: got: %v", v, files)
 		}
@@ -356,7 +357,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 	// Since profile and trace are polling outputs, these only get captured
 	// on the first (0th) frame.
 	for _, v := range pollingProfiles {
-		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", outputPath, v))
+		files, _ := filepath.Glob(fmt.Sprintf("%s/*/%s", hostBasePath, v))
 		if len(files) != 1 {
 			t.Errorf("1 output file should exist for %s: got: %v", v, files)
 		}
@@ -399,7 +400,7 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 		t.Fatalf("expected %d to be %d", code, exp)
 	}
 
-	content, err := ioutil.ReadFile(filepath.Join(outputPath, "index.json"))
+	content, err := ioutil.ReadFile(filepath.Join(outputPath, strings.TrimPrefix(client.Address(), "https://"), "index.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,19 +464,8 @@ func TestDebugCommand_TimingChecks(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			// If we are past the minimum duration + some grace, trigger shutdown
-			// to prevent hanging
-			grace := 10 * time.Second
-			shutdownCh := make(chan struct{})
-			go func() {
-				time.AfterFunc(grace, func() {
-					close(shutdownCh)
-				})
-			}()
-
 			ui, cmd := testDebugCommand(t)
 			cmd.client = client
-			cmd.ShutdownCh = shutdownCh
 
 			basePath := tc.name
 			outputPath := filepath.Join(testDir, basePath)
@@ -667,15 +657,11 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	}
 
 	tgz := archiver.NewTarGz()
+	hostBasePath := filepath.Join(basePath, strings.TrimPrefix(client.Address(), "https://"))
 	err = tgz.Walk(bundlePath, func(f archiver.File) error {
 		fh, ok := f.Header.(*tar.Header)
 		if !ok {
 			t.Fatalf("invalid file header: %#v", f.Header)
-		}
-
-		// Ignore base directory and index file
-		if fh.Name == basePath+"/" {
-			return nil
 		}
 
 		// Ignore directories, which still get created by pprof but should
@@ -685,10 +671,10 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 		}
 
 		switch {
-		case fh.Name == filepath.Join(basePath, "index.json"):
-		case fh.Name == filepath.Join(basePath, "replication_status.json"):
-		case fh.Name == filepath.Join(basePath, "server_status.json"):
-		case fh.Name == filepath.Join(basePath, "vault.log"):
+		case fh.Name == filepath.Join(hostBasePath, "index.json"):
+		case fh.Name == filepath.Join(hostBasePath, "replication_status.json"):
+		case fh.Name == filepath.Join(hostBasePath, "server_status.json"):
+		case fh.Name == filepath.Join(hostBasePath, "vault.log"):
 		default:
 			return fmt.Errorf("unexpected file: %s", fh.Name)
 		}
