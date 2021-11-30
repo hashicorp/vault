@@ -18,6 +18,8 @@ import (
 
 var _ cli.Command = (*EncryptCommand)(nil)
 
+const vaultEncryptVersion = 1
+
 type EncryptCommand struct {
 	*BaseCommand
 
@@ -25,8 +27,6 @@ type EncryptCommand struct {
 }
 
 type additionalData struct {
-	Version int
-
 	Salt        []byte
 	Memory      uint32
 	Time        uint32
@@ -103,7 +103,6 @@ func (c *EncryptCommand) Run(args []string) int {
 	passphrase := "my password"
 
 	key, aad, err := generateKey(passphrase)
-	fmt.Printf("encoded key: %x\n", key)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error generating key: %s", err.Error()))
 		return 1
@@ -120,7 +119,6 @@ func (c *EncryptCommand) Run(args []string) int {
 
 func generateKey(passphrase string) ([]byte, additionalData, error) {
 	aad := additionalData{
-		Version:     1,
 		Salt:        make([]byte, 16),
 		Memory:      64 * 1024,
 		Time:        3,
@@ -167,19 +165,12 @@ func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) erro
 		return err
 	}
 
-	e := encodeAAD(aad)
-
-	//adEnc, err := jsonutil.EncodeJSON(aad)
-	//if err != nil {
-	//	return err
-	//}
-
-	if _, err := out.Write(e); err != nil {
+	if _, err := out.Write(aad.encode()); err != nil {
 		return err
 	}
 
 	// Encrypt and write to file
-	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, e)
+	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, aad.encode())
 
 	// TODO ensure output is not written to stdout
 
@@ -190,10 +181,9 @@ func encrypt(dataToEncrypt, key []byte, aad additionalData, outfile string) erro
 	return nil
 }
 
-func encodeAAD(aad additionalData) []byte {
+func (aad additionalData) encode() []byte {
 	//TODO split out version
-	e := fmt.Sprintf("vault:v=%d:%x:t=%d:m=%d:p=%d$", aad.Version, aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
-	fmt.Println(e)
+	e := fmt.Sprintf("vault:v=%d:%x:t=%d:m=%d:p=%d$", vaultEncryptVersion, aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
 
 	return []byte(e)
 }

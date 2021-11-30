@@ -84,16 +84,8 @@ func (c *DecryptCommand) Run(args []string) int {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(aad)
-
-	//encryptedData, err := io.ReadAll(input)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	fmt.Println(len(encryptedData))
 
 	key, _, err := generateKeyAAD("my password", aad)
-	fmt.Printf("decoded key: %x\n", key)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("error creating key: %s", err.Error()))
 		return 1
@@ -117,9 +109,13 @@ func parseAAD(input []byte) (additionalData, []byte, error) {
 		return aad, nil, fmt.Errorf("unexpected number of parts")
 	}
 
-	if _, err := fmt.Sscanf(string(parts[0]), "vault:v=%d:%x:t=%d:m=%d:p=%d", &aad.Version, &aad.Salt, &aad.Time, &aad.Memory, &aad.Parallelism); err != nil {
-		// TODO: check n
+	var version int
+	if _, err := fmt.Sscanf(string(parts[0]), "vault:v=%d:%x:t=%d:m=%d:p=%d", &version, &aad.Salt, &aad.Time, &aad.Memory, &aad.Parallelism); err != nil {
 		return aad, nil, err
+	}
+
+	if version != vaultEncryptVersion {
+		return aad, nil, fmt.Errorf("unknown version: %d", version)
 	}
 
 	return aad, parts[1], nil
@@ -145,8 +141,7 @@ func decrypt(dataToDecrypt, key []byte, aad additionalData, outfile string) erro
 	nonce, ciphertext := dataToDecrypt[:nonceSize], dataToDecrypt[nonceSize:]
 
 	// Decrypt and write to file
-	e := encodeAAD(aad)
-	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, e)
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, aad.encode())
 	if err != nil {
 		return fmt.Errorf("error decrypting cipher text: %s", err.Error())
 
