@@ -278,6 +278,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
+		"decrypt": func() (cli.Command, error) {
+			return &DecryptCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
 				BaseCommand: getBaseCommand(),
