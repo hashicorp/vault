@@ -283,6 +283,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"encrypt": func() (cli.Command, error) {
+			return &EncryptCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease": func() (cli.Command, error) {
 			return &LeaseCommand{
 				BaseCommand: getBaseCommand(),
