@@ -693,7 +693,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-secret-tab]');
     await settled();
-    let text = document.querySelector('[data-test-empty-state-title]').innerText;
+    let text = document.querySelector('[data-test-empty-state-title]').innerText.trim();
     assert.equal(text, 'Version 1 of this secret has been permanently destroyed');
   });
 
