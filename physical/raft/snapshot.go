@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/rboyer/safeio"
-	bolt "go.etcd.io/bbolt"
 	"go.uber.org/atomic"
 )
 
@@ -130,7 +129,7 @@ func (f *PebbleSnapshotStore) Create(version raft.SnapshotVersion, index, term u
 	return sink, nil
 }
 
-// List returns available snapshots in the store. It only returns bolt
+// List returns available snapshots in the store. It only returns pebble
 // snapshots. No snapshot will be returned if there are no indexes in the
 // FSM.
 func (f *PebbleSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
@@ -147,7 +146,6 @@ func (f *PebbleSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 	return []*raft.SnapshotMeta{meta}, nil
 }
 
-// getBoltSnapshotMeta returns the fsm's latest state and configuration.
 func (f *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 	latestIndex, latestConfig := f.fsm.LatestState()
 	meta := &raft.SnapshotMeta{
@@ -170,7 +168,7 @@ func (f *PebbleSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser
 		return f.openFromFSM()
 	}
 
-	return f.openFromFile(id)
+	return f.openFromDirectory(id)
 }
 
 func (f *PebbleSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
@@ -210,63 +208,74 @@ func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 		return nil, errors.New("can not open empty snapshot ID")
 	}
 
-	filename := filepath.Join(f.path, id, databaseFilename)
-	boltDB, err := bolt.Open(filename, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	dirname := filepath.Join(f.path, id, databaseDirectoryName)
+	pebbleDB, err := pebble.Open(dirname, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer boltDB.Close()
+	defer pebbleDB.Close()
 
 	meta := &raft.SnapshotMeta{
 		Version: 1,
 		ID:      id,
 	}
 
-	err = boltDB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(configBucketName)
-		val := b.Get(latestIndexKey)
-		if val != nil {
-			var snapshotIndexes IndexValue
-			err := proto.Unmarshal(val, &snapshotIndexes)
-			if err != nil {
-				return err
-			}
-
-			meta.Index = snapshotIndexes.Index
-			meta.Term = snapshotIndexes.Term
-		}
-
-		// Read in our latest config and populate it inmemory
-		val = b.Get(latestConfigKey)
-		if val != nil {
-			var config ConfigurationValue
-			err := proto.Unmarshal(val, &config)
-			if err != nil {
-				return err
-			}
-
-			meta.ConfigurationIndex, meta.Configuration = protoConfigurationToRaftConfiguration(&config)
-		}
-		return nil
-	})
+	key := append(configBucketPrefix, latestIndexKey...)
+	val, closer, err := pebbleDB.Get(key)
 	if err != nil {
+		if closer != nil {
+			closer.Close()
+		}
+
 		return nil, err
+	}
+
+	if val != nil {
+		var snapshotIndexes IndexValue
+		err := proto.Unmarshal(val, &snapshotIndexes)
+		if err != nil {
+			return nil, err
+		}
+
+		meta.Index = snapshotIndexes.Index
+		meta.Term = snapshotIndexes.Term
+	}
+	closer.Close()
+
+	key = append(configBucketPrefix, latestConfigKey...)
+	val, closer, err = pebbleDB.Get(key)
+	if err != nil {
+		if closer != nil {
+			closer.Close()
+		}
+
+		return nil, err
+	}
+
+	if val != nil {
+		var config ConfigurationValue
+		err := proto.Unmarshal(val, &config)
+		if err != nil {
+			return nil, err
+		}
+
+		meta.ConfigurationIndex, meta.Configuration = protoConfigurationToRaftConfiguration(&config)
 	}
 
 	return meta, nil
 }
 
-func (f *PebbleSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+func (f *PebbleSnapshotStore) openFromDirectory(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
 	meta, err := f.getMetaFromDB(id)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	filename := filepath.Join(f.path, id, databaseFilename)
-	installer := &boltSnapshotInstaller{
+	dirname := filepath.Join(f.path, id, databaseDirectoryName)
+	installer := &pebbleSnapshotInstaller{
 		meta:       meta,
-		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
-		filename:   filename,
+		ReadCloser: ioutil.NopCloser(strings.NewReader(dirname)),
+		dirname:    dirname,
 	}
 
 	return meta, installer, nil
@@ -317,7 +326,7 @@ func (s *PebbleSnapshotSink) ID() string {
 	return s.meta.ID
 }
 
-func (s *PebbleSnapshotSink) writeBoltDBFile() error {
+func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 	// Create a new path
 	name := snapshotName(s.meta.Term, s.meta.Index)
 	path := filepath.Join(s.store.path, name+tmpSuffix)
@@ -329,15 +338,15 @@ func (s *PebbleSnapshotSink) writeBoltDBFile() error {
 		return err
 	}
 
-	// Create the BoltDB file
-	dbPath := filepath.Join(path, databaseFilename)
-	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{Timeout: 1 * time.Second})
+	// Create the pebble database
+	dbPath := filepath.Join(path, databaseDirectoryName)
+	pebbleDB, err := pebble.Open(dbPath, nil)
 	if err != nil {
 		return err
 	}
 
 	// Write the snapshot metadata
-	if err := writeSnapshotMetaToDB(&s.meta, boltDB); err != nil {
+	if err := writeSnapshotMetaToDB(&s.meta, pebbleDB); err != nil {
 		return err
 	}
 
@@ -357,10 +366,10 @@ func (s *PebbleSnapshotSink) writeBoltDBFile() error {
 	s.writer = writer
 
 	// Start a go routine in charge of piping data from the snapshot's Write
-	// call to the delimtedreader and the BoltDB file.
+	// call to the delimtedreader and the pebble database.
 	go func() {
 		defer close(s.doneWritingCh)
-		defer boltDB.Close()
+		defer pebbleDB.Close()
 
 		// The delimted reader will parse full proto messages from the snapshot
 		// data.
@@ -369,35 +378,31 @@ func (s *PebbleSnapshotSink) writeBoltDBFile() error {
 
 		var done bool
 		var keys int
+		var err error
 		entry := new(pb.StorageEntry)
+
 		for !done {
-			err := boltDB.Update(func(tx *bolt.Tx) error {
-				b, err := tx.CreateBucketIfNotExists(dataBucketName)
+			bt := pebbleDB.NewIndexedBatch()
+
+			// Commit in batches of 50k. Pebble does some stuff I don't fully
+			// understand yet, but I don't have a reason for deviating from
+			// what we did for bolt, so here we are.
+			for i := 0; i < 50000; i++ {
+				err = protoReader.ReadMsg(entry)
 				if err != nil {
-					return err
+					if err == io.EOF {
+						done = true
+					}
 				}
 
-				// Commit in batches of 50k. Bolt holds all the data in memory and
-				// doesn't split the pages until commit so we do incremental writes.
-				for i := 0; i < 50000; i++ {
-					err := protoReader.ReadMsg(entry)
-					if err != nil {
-						if err == io.EOF {
-							done = true
-							return nil
-						}
-						return err
-					}
-
-					err = b.Put([]byte(entry.Key), entry.Value)
-					if err != nil {
-						return err
-					}
-					keys += 1
+				key := append(dataBucketPrefix, []byte(entry.Key)...)
+				err = bt.Set(key, entry.Value, nil)
+				if err != nil {
+					done = true
 				}
+				keys += 1
+			}
 
-				return nil
-			})
 			if err != nil {
 				s.logger.Error("snapshot write: failed to write transaction", "error", err)
 				s.writeError = err
@@ -411,13 +416,13 @@ func (s *PebbleSnapshotSink) writeBoltDBFile() error {
 	return nil
 }
 
-// Write is used to append to the bolt file. The first call to write ensures we
-// have the file created.
+// Write is used to append to the pebble database. The first call to write ensures we
+// have the directory created.
 func (s *PebbleSnapshotSink) Write(b []byte) (int, error) {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	// If this is the first call to Write we need to setup the boltDB file and
+	// If this is the first call to Write we need to setup the pebble database and
 	// kickoff the pipeline write
 	if previouslyWritten := s.written.Swap(true); !previouslyWritten {
 		// Reap any old snapshots
@@ -425,7 +430,7 @@ func (s *PebbleSnapshotSink) Write(b []byte) (int, error) {
 			return 0, err
 		}
 
-		if err := s.writeBoltDBFile(); err != nil {
+		if err := s.writePebbleDatabase(); err != nil {
 			return 0, err
 		}
 	}
@@ -498,32 +503,32 @@ func (s *PebbleSnapshotSink) Cancel() error {
 
 type pebbleSnapshotInstaller struct {
 	io.ReadCloser
-	meta     *raft.SnapshotMeta
-	filename string
+	meta    *raft.SnapshotMeta
+	dirname string
 }
 
-func (i *pebbleSnapshotInstaller) Filename() string {
-	return i.filename
+func (i *pebbleSnapshotInstaller) Dirname() string {
+	return i.dirname
 }
 
 func (i *pebbleSnapshotInstaller) Metadata() *raft.SnapshotMeta {
 	return i.meta
 }
 
-func (i *pebbleSnapshotInstaller) Install(filename string) error {
-	if len(i.filename) == 0 {
+func (i *pebbleSnapshotInstaller) Install(dirname string) error {
+	if len(i.dirname) == 0 {
 		return errors.New("snapshot filename empty")
 	}
 
-	if len(filename) == 0 {
+	if len(dirname) == 0 {
 		return errors.New("fsm filename empty")
 	}
 
 	// Rename the snapshot to the FSM location
 	if runtime.GOOS != "windows" {
-		return safeio.Rename(i.filename, filename)
+		return safeio.Rename(i.dirname, dirname)
 	} else {
-		return os.Rename(i.filename, filename)
+		return os.Rename(i.dirname, dirname)
 	}
 }
 

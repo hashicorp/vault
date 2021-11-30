@@ -32,8 +32,8 @@ const (
 	putOp
 	restoreCallbackOp
 
-	chunkingPrefix   = "raftchunking/"
-	databaseFilename = "vault.db"
+	chunkingPrefix        = "raftchunking/"
+	databaseDirectoryName = "vault-db"
 )
 
 var (
@@ -123,7 +123,7 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		ctx: context.Background(),
 	})
 
-	dbPath := filepath.Join(path, databaseFilename)
+	dbPath := filepath.Join(path, databaseDirectoryName)
 	if err := f.openDBFile(dbPath); err != nil {
 		return nil, fmt.Errorf("failed to open pebble file: %w", err)
 	}
@@ -791,7 +791,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		return err
 	}
 
-	dbPath := filepath.Join(f.path, databaseFilename)
+	dbPath := filepath.Join(f.path, databaseDirectoryName)
 
 	f.logger.Info("installing snapshot to FSM")
 
