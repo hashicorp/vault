@@ -3025,7 +3025,16 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
-		return logical.ErrorResponse("streaming not supported"), nil
+		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
+		// access the underlying functionality
+		nw, ok := w.ResponseWriter.(logical.WrappingResponseWriter)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
+		flusher, ok = nw.Wrapped().(http.Flusher)
+		if !ok {
+			return logical.ErrorResponse("streaming not supported"), nil
+		}
 	}
 
 	isJson := b.Core.LogFormat() == "json"

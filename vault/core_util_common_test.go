@@ -32,8 +32,9 @@ func TestGetOldestVersion(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	upgradeTimePlusEpsilon := time.Now()
 
-	c.storeVersionTimestamp(context.Background(), "1.9.1", upgradeTimePlusEpsilon.Add(-4*time.Hour))
-	c.storeVersionTimestamp(context.Background(), "1.9.2", upgradeTimePlusEpsilon.Add(2*time.Hour))
+	// 1.6.2 is stored before 1.6.1, so even though it is a higher number, it should be returned.
+	c.storeVersionTimestamp(context.Background(), "1.6.2", upgradeTimePlusEpsilon.Add(-4*time.Hour))
+	c.storeVersionTimestamp(context.Background(), "1.6.1", upgradeTimePlusEpsilon.Add(2*time.Hour))
 	c.loadVersionTimestamps(c.activeContext)
 	if len(c.versionTimestamps) != 3 {
 		t.Fatalf("expected 3 entries in timestamps map after refresh, found: %d", len(c.versionTimestamps))
@@ -42,8 +43,8 @@ func TestGetOldestVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v != "1.9.1" {
-		t.Fatalf("expected 1.9.1, found: %s", v)
+	if v != "1.6.2" {
+		t.Fatalf("expected 1.6.2, found: %s", v)
 	}
 	if tm.Before(upgradeTimePlusEpsilon.Add(-6*time.Hour)) || tm.After(upgradeTimePlusEpsilon.Add(-2*time.Hour)) {
 		t.Fatalf("incorrect upgrade time logged: %v", tm)

@@ -377,3 +377,8 @@ type InitializationRequest struct {
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
 }
+
+type CustomHeader struct {
+	Name  string
+	Value string
+}
