@@ -682,6 +682,19 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-delete-modal="destroy-version"]').exists('destroy this version option shows');
     assert.dom('[data-test-delete-modal="destroy-all-versions"]').exists('destroy all versions option shows');
     assert.dom('[data-test-delete-modal="delete-version"]').doesNotExist('delete version does not show');
+
+    // because destroy requires a page refresh (making the test suite run in a loop) this action is caught in ember testing and does not refresh.
+    // therefore to show new state change after modal closes we jump to the metadata tab and then back.
+    await click('#destroy-version');
+    await settled();
+    await click('[data-test-modal-delete]');
+    await settled();
+    await click('[data-test-secret-metadata-tab]');
+    await settled();
+    await click('[data-test-secret-tab]');
+    await settled();
+    let text = document.querySelector('[data-test-empty-state-title]').innerText;
+    assert.equal(text, 'Version 1 of this secret has been permanently destroyed');
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function(assert) {
@@ -721,6 +734,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await visit(url);
     await settled();
     await click(`[data-test-secret-link=${secretPath}]`);
+    await this.settled();
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
   });
