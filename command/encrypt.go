@@ -23,7 +23,7 @@ type EncryptCommand struct {
 }
 
 func (c *EncryptCommand) Synopsis() string {
-	return "Encrypts a file using AES 128bit or 256bit encryption."
+	return "Encrypts a file using AES-256 encryption."
 }
 
 func (c *EncryptCommand) Help() string {
@@ -86,12 +86,12 @@ func (c *EncryptCommand) Run(args []string) int {
 		fmt.Errorf(err.Error())
 	}
 
-	encrypt(data, key)
+	encrypt(data, key, c.outfile)
 
 	return 0
 }
 
-func encrypt(dataToEncrypt []byte, key []byte) {
+func encrypt(dataToEncrypt []byte, key []byte, outfile string) {
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
@@ -115,7 +115,11 @@ func encrypt(dataToEncrypt []byte, key []byte) {
 	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, nil)
 
 	// TODO ensure output is not written to stdout
-	err = ioutil.WriteFile("output.enc", ciphertext, 0644)
+
+	if outfile == "" {
+		outfile = "output.enc"
+	}
+	err = ioutil.WriteFile(outfile, ciphertext, 0644)
 	if err != nil {
 		fmt.Errorf(err.Error())
 	}
