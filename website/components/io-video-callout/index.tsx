@@ -66,6 +66,8 @@ export default function IoVideoCallout({
         <div className={s.video}>
           <ReactPlayer
             url={`https://www.youtube.com/watch?v=${youtubeId}`}
+            width="100%"
+            height="100%"
             playing={true}
             controls={true}
           />
