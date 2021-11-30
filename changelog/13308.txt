@@ -1,0 +1,3 @@
+```release-note:improvement
+command/debug: Add support for multi-node debug.
+```
