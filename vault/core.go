@@ -1047,7 +1047,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, nil
 }
 
-// HandleVersionTimeStamps stores the current version at the current time to
+// handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	currentTime := time.Now()
