@@ -89,6 +89,7 @@ type DebugCommand struct {
 	flagOutput          string
 	flagTargets         []string
 	flagAddresses       []string
+	flagCluster         bool
 
 	logger hclog.Logger
 
@@ -192,6 +193,12 @@ func (c *DebugCommand) Flags() *FlagSets {
 			"For a single node just use the usual CLI mechanisms like VAULT_ADDRESS, -address",
 	})
 
+	f.BoolVar(&BoolVar{
+		Name:   "cluster",
+		Target: &c.flagCluster,
+		Usage:  "When true, all nodes in the cluster will be queried based on the active node's sys/ha-status response",
+	})
+
 	return set
 }
 
@@ -261,7 +268,20 @@ func (c *DebugCommand) Run(args []string) int {
 	}
 
 	var collectors []*collector
-	if len(c.flagAddresses) == 0 {
+	switch {
+	case len(c.flagAddresses) > 0 && c.flagCluster:
+		c.UI.Error("Cannot specify both -cluster and -addresses")
+		return 1
+	case c.flagCluster:
+		resp, err := genericClient.Sys().HAStatus()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error reading ha-status: %s", err))
+			return 1
+		}
+		for _, n := range resp.Nodes {
+			c.flagAddresses = append(c.flagAddresses, n.APIAddress)
+		}
+	case len(c.flagAddresses) == 0:
 		c.flagAddresses = append(c.flagAddresses, genericClient.Address())
 	}
 
@@ -817,7 +837,6 @@ func (c *collector) collectPprof(ctx context.Context) {
 			wg.Add(1)
 			go func(target string) {
 				defer wg.Done()
-				c.logger.Info("running pprofTarget", "target", target)
 				data, err := pprofTarget(ctx, c.client, target, nil)
 				if err != nil {
 					c.captureError("pprof."+target, err)
@@ -825,7 +844,6 @@ func (c *collector) collectPprof(ctx context.Context) {
 				}
 
 				filename := filepath.Join(dirName, target+".prof")
-				c.logger.Info("writing pprofTarget", "target", target, "filename", filename)
 				err = ioutil.WriteFile(filename, data, 0o644)
 				if err != nil {
 					c.captureError("pprof."+target, err)
