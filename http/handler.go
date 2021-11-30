@@ -93,6 +93,7 @@ var (
 		"/v1/sys/capabilities",
 		"/v1/sys/capabilities-accessor",
 		"/v1/sys/capabilities-self",
+		"/v1/sys/ha-status",
 		"/v1/sys/key-status",
 		"/v1/sys/mounts",
 		"/v1/sys/mounts/",
@@ -213,7 +214,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	return printablePathCheckHandler
 }
 
-
 type copyResponseWriter struct {
 	wrapped    http.ResponseWriter
 	statusCode int
@@ -304,7 +304,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	hostname, _ := os.Hostname()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
