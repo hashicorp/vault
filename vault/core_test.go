@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // invalidKey is used to test Unseal
