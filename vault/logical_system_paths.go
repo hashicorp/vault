@@ -476,6 +476,19 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["seal-status"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["seal-status"][1]),
 		},
+		{
+			Pattern: "ha-status$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleHAStatus,
+					Summary:  "Check the HA status of a Vault cluster",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["ha-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
+		},
 	}
 }
 
@@ -927,8 +940,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/namespaces",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    pathInternalUINamespacesRead(b),
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: pathInternalUINamespacesRead(b),
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -938,8 +951,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/resultant-acl",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalUIResultantACL,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalUIResultantACL,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -949,8 +962,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/requests",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersRequests,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalCountersRequests,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -960,8 +973,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/tokens",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersTokens,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalCountersTokens,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -971,8 +984,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/entities",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersEntities,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalCountersEntities,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),

@@ -2946,3 +2946,25 @@ type LicenseState struct {
 	ExpiryTime time.Time
 	Terminated bool
 }
+
+type PeerNode struct {
+	Hostname       string    `json:"hostname"`
+	APIAddress     string    `json:"api_address"`
+	ClusterAddress string    `json:"cluster_address"`
+	LastEcho       time.Time `json:"last_echo"`
+}
+
+// GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
+func (c *Core) GetHAPeerNodesCached() []PeerNode {
+	var nodes []PeerNode
+	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
+		info := item.Object.(nodeHAConnectionInfo)
+		nodes = append(nodes, PeerNode{
+			Hostname:       info.nodeInfo.Hostname,
+			APIAddress:     info.nodeInfo.ApiAddr,
+			ClusterAddress: itemClusterAddr,
+			LastEcho:       info.lastHeartbeat,
+		})
+	}
+	return nodes
+}
