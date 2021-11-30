@@ -67,11 +67,6 @@ export default function IoVideoCallout({
           <ReactPlayer
             url={`https://www.youtube.com/embed/${youtubeId}`}
             playing={true}
-            width="560"
-            height="315"
-            style={{
-              maxWidth: '100%',
-            }}
             controls={true}
           />
         </div>
