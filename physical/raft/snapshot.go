@@ -410,6 +410,7 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 			}
 
 			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
+			bt.Commit(nil)
 		}
 	}()
 

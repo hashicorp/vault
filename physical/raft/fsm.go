@@ -941,6 +941,7 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 		}
 	}
 
+	bt.Commit(nil)
 	*done = uint32(len(keys)) == chunk.NumChunks
 	return *done, nil
 }
