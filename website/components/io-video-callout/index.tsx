@@ -65,7 +65,7 @@ export default function IoVideoCallout({
         <h2 className={s.videoHeading}>{heading}</h2>
         <div className={s.video}>
           <ReactPlayer
-            url={`https://www.youtube.com/embed/${youtubeId}`}
+            url={`https://www.youtube.com/watch?v=${youtubeId}`}
             playing={true}
             controls={true}
           />
