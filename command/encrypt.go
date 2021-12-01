@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -18,12 +19,22 @@ import (
 
 var _ cli.Command = (*EncryptCommand)(nil)
 
-const vaultEncryptVersion = 1
+const (
+	vaultEncryptVersion = 1
+	vaultKeyName        = "my-transit-key"
+	transitPath         = "transit/datakey/plaintext"
+	decryptPath         = "transit/decrypt"
+	defaultPassphrase   = "my password"
+)
 
 type EncryptCommand struct {
 	*BaseCommand
 
-	outfile string
+	outfile     string
+	passphrase  string
+	key         string
+	flagDecrypt bool
+	flagTransit bool
 }
 
 type argon2Params struct {
@@ -63,6 +74,38 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Usage:   "Specify the name of the output file.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "pass",
+		Aliases: []string{"p"},
+		Target:  &c.passphrase,
+		Default: defaultPassphrase,
+		Usage:   "Specify a passphrase to encrypt/decrpyt this file.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "decrypt",
+		Aliases: []string{"d"},
+		Target:  &c.flagDecrypt,
+		Default: false,
+		Usage:   "Enables AES-256 decrypt mode.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "transit",
+		Aliases: []string{"t"},
+		Target:  &c.flagTransit,
+		Default: false,
+		Usage:   "Enables data key generation for encryption using Vault Transit.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "key",
+		Aliases: []string{"k"},
+		Target:  &c.key,
+		Default: "",
+		Usage:   "Provide an encrypted transit data key for decryption. Can only be used if both decrypt and transit flags are set.",
+	})
+
 	return set
 }
 
@@ -85,36 +128,90 @@ func (c *EncryptCommand) Run(args []string) int {
 	}
 
 	filename := strings.TrimSpace(args[0])
-	data, err := os.ReadFile(filename)
+	rawData, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO Prompt w/ passphrase
-	// TODO Create key w/ passphrase
-
-	passphrase := "my password"
-
-	encrypted, err := c.encrypt(data, passphrase)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
-		return 1
-	}
-
+	var processedData []byte
 	outfile := c.outfile
-	if outfile == "" {
-		outfile = "output.enc"
+
+	passphrase := c.passphrase
+	if passphrase == "" {
+		passphrase = defaultPassphrase
+	}
+	if !c.flagDecrypt {
+		// Encryption Mode
+
+		if c.flagTransit {
+			// Fetch data key from Vault Transit
+			key, encryptedKey, err := c.fetchDatakey(vaultKeyName, "")
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("error generating transit data key: %s", err.Error()))
+				return 1
+			}
+
+			processedData, err = c.encrypt(rawData, passphrase, key)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
+				return 1
+			}
+			fmt.Println(encryptedKey)
+		} else {
+			// Create key using passphrase
+			processedData, err = c.encrypt(rawData, passphrase, nil)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
+				return 1
+			}
+		}
+
+		if outfile == "" {
+			outfile = "output.enc"
+		}
+
+	} else {
+		// Decryption Mode
+
+		if c.flagTransit {
+			// Fetch data key from Vault Transit
+			key, _, err := c.fetchDatakey(vaultKeyName, c.key)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("error generating transit data key: %s", err.Error()))
+				return 1
+			}
+
+			processedData, err = c.encrypt(rawData, passphrase, key)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
+				return 1
+			}
+
+		} else {
+			// Create key using passphrase
+			processedData, err = c.decrypt(rawData, passphrase, nil)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("error decrypting file: %s", err.Error()))
+				return 1
+			}
+		}
+
+		if outfile == "" {
+			outfile = "input.txt"
+		}
+
 	}
 
-	if err := os.WriteFile(outfile, encrypted, 0644); err != nil {
-		c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
+	// Write processed data to file
+	if err := os.WriteFile(outfile, processedData, 0644); err != nil {
+		c.UI.Error(fmt.Sprintf("error writing processed data to file: %s", err.Error()))
 		return 1
 	}
 
 	return 0
 }
 
-func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string) ([]byte, error) {
+func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string, key []byte) ([]byte, error) {
 	aad := argon2Params{
 		Salt:        make([]byte, 16),
 		Memory:      64 * 1024,
@@ -125,7 +222,9 @@ func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string) ([]byt
 		return nil, err
 	}
 
-	key := argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
+	if key == nil {
+		key = argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
+	}
 
 	// Create a new Cipher Block using key
 	block, err := aes.NewCipher(key)
@@ -167,4 +266,109 @@ func (aad argon2Params) encode() []byte {
 	e := fmt.Sprintf("vault:v=%d:%x:t=%d:m=%d:p=%d$", vaultEncryptVersion, aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
 
 	return []byte(e)
+}
+
+func (c *EncryptCommand) parseAAD(input []byte) (argon2Params, []byte, error) {
+	var aad argon2Params
+
+	parts := bytes.SplitN(input, []byte("$"), 2)
+	if len(parts) != 2 {
+		return aad, nil, fmt.Errorf("unexpected number of parts")
+	}
+
+	var version int
+	if _, err := fmt.Sscanf(string(parts[0]), "vault:v=%d:%x:t=%d:m=%d:p=%d", &version, &aad.Salt, &aad.Time, &aad.Memory, &aad.Parallelism); err != nil {
+		return aad, nil, err
+	}
+
+	if version != vaultEncryptVersion {
+		return aad, nil, fmt.Errorf("unknown version: %d", version)
+	}
+
+	return aad, parts[1], nil
+}
+
+func (c *EncryptCommand) decrypt(rawDataToDecrypt []byte, passphrase string, key []byte) ([]byte, error) {
+	aad, dataToDecrypt, err := c.parseAAD(rawDataToDecrypt)
+	if err != nil {
+		return nil, err
+	}
+
+	if key == nil {
+		key = argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error creating key: %w", err)
+	}
+
+	// Create a new Cipher Block using key
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new cipher block: %w", err)
+	}
+
+	// Create a new GCM
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("error creating GCM: %w", err)
+	}
+
+	// Create a nonce from GCM
+	nonceSize := aesGCM.NonceSize()
+
+	nonce, ciphertext := dataToDecrypt[:nonceSize], dataToDecrypt[nonceSize:]
+
+	// Decrypt and write to file
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, aad.encode())
+	if err != nil {
+		return nil, fmt.Errorf("error decrypting cipher text: %w", err)
+
+	}
+
+	return plaintext, nil
+}
+
+func (c *EncryptCommand) fetchDatakey(name string, ciphertext string) ([]byte, string, error) {
+	client, err := c.Client()
+	if err != nil {
+		return nil, "", fmt.Errorf("Error initializing client: %s", err)
+	}
+	var key []byte
+
+	if ciphertext == "" {
+		// Encryption mode
+		data := map[string]interface{}{
+			"bits": 256,
+		}
+
+		secret, err := client.Logical().Write(fmt.Sprintf("%s/%s", transitPath, name), data)
+		if err != nil {
+			return nil, "", fmt.Errorf("Error making request for datakey: %s", err)
+		}
+
+		key, err = base64.StdEncoding.DecodeString(secret.Data["plaintext"].(string)) // TODO: check assertion
+		if err != nil {
+			return nil, "", fmt.Errorf("Error b64 encoding plaintext: %s", err)
+		}
+
+		return key, secret.Data["ciphertext"].(string), nil
+	} else {
+		// Decrypt ciphertext
+		data := map[string]interface{}{
+			"ciphertext": ciphertext,
+		}
+
+		secret, err := client.Logical().Write(fmt.Sprintf("%s/%s", decryptPath, name), data)
+		if err != nil {
+			return nil, "", fmt.Errorf("Error decrypting transit key: %s", err)
+		}
+
+		key, err = base64.StdEncoding.DecodeString(secret.Data["plaintext"].(string)) // TODO: check assertion
+		if err != nil {
+			return nil, "", fmt.Errorf("Error b64 encoding plaintext: %s", err)
+		}
+
+		return key, "", nil
+	}
+
 }
