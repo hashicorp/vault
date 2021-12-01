@@ -181,7 +181,7 @@ func (c *EncryptCommand) Run(args []string) int {
 				return 1
 			}
 
-			processedData, err = c.encrypt(rawData, passphrase, key)
+			processedData, err = c.decrypt(rawData, passphrase, key)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 				return 1
