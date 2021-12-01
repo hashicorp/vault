@@ -23,6 +23,12 @@ const (
 	vaultEncryptVersion = 1
 	vaultKeyName        = "my-transit-key"
 	defaultPassphrase   = "my password"
+
+	// See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-argon2-04#section-4 for details on parameter selection
+	argon2SaltLen     = 16
+	argon2Memory      = 32 * 1024
+	argon2Parallelism = 4
+	argon2Time        = 20
 )
 
 type EncryptCommand struct {
@@ -238,10 +244,10 @@ func (c *EncryptCommand) Run(args []string) int {
 
 func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string, key []byte) ([]byte, error) {
 	aad := argon2Params{
-		Salt:        make([]byte, 16),
-		Memory:      64 * 1024,
-		Time:        3,
-		Parallelism: 4,
+		Salt:        make([]byte, argon2SaltLen),
+		Memory:      argon2Memory,
+		Time:        argon2Time,
+		Parallelism: argon2Parallelism,
 	}
 	if _, err := rand.Read(aad.Salt); err != nil {
 		return nil, err
