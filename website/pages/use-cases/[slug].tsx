@@ -204,7 +204,7 @@ export async function getStaticPaths() {
         },
       }
     }),
-    fallback: false,
+    fallback: 'blocking',
   }
 }
 
@@ -217,9 +217,17 @@ export async function getStaticProps({ params }) {
 
   const page = allVaultUseCases.find((page) => page.slug === slug)
 
+  if (!page) {
+    return { notFound: true }
+  }
+
   return {
     props: {
       data: page,
     },
+    revalidate:
+      process.env.HASHI_ENV === 'production'
+        ? process.env.GLOBAL_REVALIDATE
+        : 10,
   }
 }
