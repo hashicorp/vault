@@ -70,7 +70,7 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Name:    "out",
 		Aliases: []string{"o"},
 		Target:  &c.outfile,
-		Default: "output.enc",
+		Default: "",
 		Usage:   "Specify the name of the output file.",
 	})
 
