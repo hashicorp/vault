@@ -4,10 +4,6 @@ go 1.17
 
 replace github.com/hashicorp/vault/api => ./api
 
-replace github.com/hashicorp/vault/api/auth/approle => ./api/auth/approle
-
-replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
-
 replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
@@ -114,8 +110,8 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.3.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
 	github.com/hashicorp/vault/api v1.3.0
-	github.com/hashicorp/vault/api/auth/approle v0.0.0-00010101000000-000000000000
-	github.com/hashicorp/vault/api/auth/userpass v0.0.0-00010101000000-000000000000
+	github.com/hashicorp/vault/api/auth/approle v0.1.0
+	github.com/hashicorp/vault/api/auth/userpass v0.1.0
 	github.com/hashicorp/vault/sdk v0.3.0
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.4.2
