@@ -10,6 +10,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"github.com/hashicorp/vault/vault"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/mholt/archiver"
 	"github.com/mitchellh/cli"
@@ -683,5 +687,85 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDebugCommand_MultiAddress(t *testing.T) {
+	t.Parallel()
+
+	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.InmemBackendSetup)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
+
+	var addrArgs []string
+	for _, core := range cluster.Cores {
+		addrArgs = append(addrArgs, "-addresses", core.Client.Address())
+	}
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{
+			"multi-addresses",
+			addrArgs,
+		},
+		{
+			"cluster",
+			[]string{"-cluster"},
+		},
+	}
+
+	for _, testcase := range cases {
+		t.Run(testcase.name, func(t *testing.T) {
+			baseOutput := "debug-out"
+			output := filepath.Join(t.TempDir(), baseOutput)
+			ui, cmd := testDebugCommand(t)
+			cmd.client = cluster.Cores[1].Client
+			cmd.skipTimingChecks = true
+			args := []string{
+				"-duration=1s",
+				fmt.Sprintf("-output=%s", output),
+			}
+
+			code := cmd.Run(append(args, testcase.args...))
+			if code != 0 {
+				t.Log(ui.ErrorWriter.String())
+				t.Fatalf("expected code to be 0, got: %d", code)
+			}
+
+			bundlePath := output + debugCompressionExt
+			_, err := os.Open(bundlePath)
+			if err != nil {
+				t.Fatalf("failed to open archive: %s", err)
+			}
+
+			byTopLevelDir := make(map[string][]string)
+			tgz := archiver.NewTarGz()
+			err = tgz.Walk(bundlePath, func(f archiver.File) error {
+				fh, ok := f.Header.(*tar.Header)
+				if !ok {
+					t.Fatalf("invalid file header: %#v", f.Header)
+				}
+
+				if fh.FileInfo().IsDir() {
+					return nil
+				}
+				name := strings.TrimPrefix(fh.Name, baseOutput+"/")
+
+				pieces := strings.SplitN(name, "/", 2)
+				byTopLevelDir[pieces[0]] = append(byTopLevelDir[pieces[0]], pieces[1])
+
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(byTopLevelDir) != len(cluster.Cores) {
+				t.Fatalf("expected output for %d nodes, got %d", len(cluster.Cores), len(byTopLevelDir))
+			}
+		})
 	}
 }

@@ -95,8 +95,6 @@ type DebugCommand struct {
 
 	// skipTimingChecks bypasses timing-related checks, used primarily for tests
 	skipTimingChecks bool
-
-	collectors map[string]collector
 }
 
 type collector struct {
@@ -324,14 +322,13 @@ func (c *DebugCommand) Run(args []string) int {
 
 	// Print debug information
 	c.UI.Output("==> Starting debug capture...")
-	// c.UI.Info(fmt.Sprintf("         Vault Address: %s", c.debugIndex.VaultAddress))
-	// c.UI.Info(fmt.Sprintf("        Client Version: %s", c.debugIndex.ClientVersion))
+	c.UI.Info(fmt.Sprintf("       Vault Addresses: %s", c.flagAddresses))
+	c.UI.Info(fmt.Sprintf("        Client Version: %s", version.GetVersion().VersionNumber()))
 	c.UI.Info(fmt.Sprintf("              Duration: %s", c.flagDuration))
 	c.UI.Info(fmt.Sprintf("              Interval: %s", c.flagInterval))
 	c.UI.Info(fmt.Sprintf("      Metrics Interval: %s", c.flagMetricsInterval))
 	c.UI.Info(fmt.Sprintf("               Targets: %s", strings.Join(c.flagTargets, ", ")))
 	c.UI.Info(fmt.Sprintf("                Output: %s", dstOutputFile))
-	// TODO add "hosts line"
 	c.UI.Output("")
 
 	// Release the log gate.
