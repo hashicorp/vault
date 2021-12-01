@@ -529,7 +529,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 	compareFSMs(t, raft1.fsm, raft2.fsm)
 }
 
-func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
+func TestPebbleSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
 	parent, err := ioutil.TempDir("", "raft")
 	if err != nil {
 		t.Fatalf("err: %v ", err)
@@ -546,7 +546,7 @@ func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	snap, err := NewBoltSnapshotStore(dir, logger, nil)
+	snap, err := NewPebbleSnapshotStore(dir, logger, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -565,13 +565,13 @@ func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
 	}
 
 	// Ensure the snapshot file exists
-	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseFilename))
+	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseDirectoryName))
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestBoltSnapshotStore_Listing(t *testing.T) {
+func TestPebbleSnapshotStore_Listing(t *testing.T) {
 	// Create a test dir
 	parent, err := ioutil.TempDir("", "raft")
 	if err != nil {
@@ -594,7 +594,7 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	snap, err := NewBoltSnapshotStore(dir, logger, fsm)
+	snap, err := NewPebbleSnapshotStore(dir, logger, fsm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -631,12 +631,12 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 		t.Fatalf("bad snapshot: %+v", snaps[0])
 	}
 
-	if snaps[0].ID != boltSnapshotID {
+	if snaps[0].ID != pebbleSnapshotID {
 		t.Fatalf("bad snapshot: %+v", snaps[0])
 	}
 }
 
-func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
+func TestPebbleSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 	// Create a test dir
 	parent, err := ioutil.TempDir("", "raft")
 	if err != nil {
@@ -660,7 +660,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 	}
 	defer fsm.Close()
 
-	snap, err := NewBoltSnapshotStore(dir, logger, fsm)
+	snap, err := NewPebbleSnapshotStore(dir, logger, fsm)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -747,12 +747,12 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		t.Fatalf("bad snapshot: %+v", meta)
 	}
 
-	installer, ok := r.(*boltSnapshotInstaller)
+	installer, ok := r.(*pebbleSnapshotInstaller)
 	if !ok {
 		t.Fatal("expected snapshot installer object")
 	}
 
-	newFSM, err := NewFSM(filepath.Dir(installer.Filename()), "", logger)
+	newFSM, err := NewFSM(filepath.Dir(installer.Dirname()), "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -818,7 +818,7 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 	}
 }
 
-func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
+func TestPebbleSnapshotStore_CancelSnapshot(t *testing.T) {
 	// Create a test dir
 	dir, err := ioutil.TempDir("", "raft")
 	if err != nil {
@@ -831,7 +831,7 @@ func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	snap, err := NewBoltSnapshotStore(dir, logger, nil)
+	snap, err := NewPebbleSnapshotStore(dir, logger, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -847,7 +847,7 @@ func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 	}
 
 	// Ensure the snapshot file exists
-	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseFilename))
+	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseDirectoryName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -859,7 +859,7 @@ func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 	}
 
 	// Ensure the snapshot file does not exist
-	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseFilename))
+	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseDirectoryName))
 	if !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
@@ -871,7 +871,7 @@ func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 	}
 }
 
-func TestBoltSnapshotStore_BadPerm(t *testing.T) {
+func TestPebbleSnapshotStore_BadPerm(t *testing.T) {
 	var err error
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping file permission test on windows")
@@ -901,13 +901,13 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	_, err = NewBoltSnapshotStore(dir2, logger, nil)
+	_, err = NewPebbleSnapshotStore(dir2, logger, nil)
 	if err == nil {
 		t.Fatalf("should fail to use dir with bad perms")
 	}
 }
 
-func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
+func TestPebbleSnapshotStore_CloseFailure(t *testing.T) {
 	// Create a test dir
 	dir, err := ioutil.TempDir("", "raft")
 	if err != nil {
@@ -920,7 +920,7 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 		Level: hclog.Trace,
 	})
 
-	snap, err := NewBoltSnapshotStore(dir, logger, nil)
+	snap, err := NewPebbleSnapshotStore(dir, logger, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -944,7 +944,7 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 	}
 
 	// Ensure the snapshot file does not exist
-	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseFilename))
+	_, err = os.Stat(filepath.Join(snap.path, sink.ID()+tmpSuffix, databaseDirectoryName))
 	if !os.IsNotExist(err) {
 		t.Fatal(err)
 	}

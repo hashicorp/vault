@@ -178,7 +178,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
 
 	val, closer, err := pebbleDB.Get(latestIndexKey)
-	if err != nil {
+	if err != nil && err != pebble.ErrNotFound {
 		return err
 	}
 
@@ -197,7 +197,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 
 	val, closer, err = pebbleDB.Get(latestConfigKey)
-	if err != nil {
+	if err != nil && err != pebble.ErrNotFound {
 		return err
 	}
 	if val != nil {
@@ -257,7 +257,7 @@ func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
 	key := append(configBucketPrefix, localNodeConfigKey...)
 
 	value, closer, err := f.db.Get(key)
-	if err != nil {
+	if err != nil && err != pebble.ErrNotFound {
 		if closer != nil {
 			closer.Close()
 		}
@@ -453,7 +453,7 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	key := append(dataBucketPrefix, []byte(path)...)
 
 	val, closer, err := f.db.Get(key)
-	if err != nil {
+	if err != nil && err != pebble.ErrNotFound {
 		if closer != nil {
 			closer.Close()
 		}
@@ -502,7 +502,7 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	defer f.l.RUnlock()
 
 	var keys []string
-	bt := f.db.NewBatch()
+	bt := f.db.NewIndexedBatch()
 	iter := bt.NewIter(nil)
 	prefixBytes := append(dataBucketPrefix, []byte(prefix)...)
 
@@ -705,7 +705,11 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	iter := f.db.NewIter(&pebble.IterOptions{
+	// snapshot the db first, so we get a consistent view of the data during this process
+	snapshot := f.db.NewSnapshot()
+	defer snapshot.Close()
+
+	iter := snapshot.NewIter(&pebble.IterOptions{
 		LowerBound: dataBucketPrefix,
 	})
 

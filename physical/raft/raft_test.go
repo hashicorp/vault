@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cockroachdb/pebble"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	hclog "github.com/hashicorp/go-hclog"
@@ -22,7 +23,6 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	bolt "go.etcd.io/bbolt"
 )
 
 func getRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
@@ -161,53 +161,31 @@ func compareFSMsWithErr(t *testing.T, fsm1, fsm2 *FSM) error {
 	return compareDBs(t, fsm1.getDB(), fsm2.getDB(), false)
 }
 
-func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
+func compareDBs(t *testing.T, pb1, pb2 *pebble.DB, dataOnly bool) error {
 	t.Helper()
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 
-	err := boltDB1.View(func(tx *bolt.Tx) error {
-		c := tx.Cursor()
-		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
-			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
-				continue
-			}
+	iter := pb1.NewIter(nil)
+	for iter.First(); iter.Valid(); iter.Next() {
+		k := iter.Key()
 
-			b := tx.Bucket(bucketName)
-
-			cBucket := b.Cursor()
-
-			for k, v := cBucket.First(); k != nil; k, v = cBucket.Next() {
-				db1[string(k)] = base64.StdEncoding.EncodeToString(v)
-			}
+		if dataOnly && !bytes.HasPrefix(k, dataBucketPrefix) {
+			continue
 		}
 
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
+		db1[string(k)] = base64.StdEncoding.EncodeToString(iter.Value())
 	}
 
-	err = boltDB2.View(func(tx *bolt.Tx) error {
-		c := tx.Cursor()
-		for bucketName, _ := c.First(); bucketName != nil; bucketName, _ = c.Next() {
-			if dataOnly && !bytes.Equal(bucketName, dataBucketName) {
-				continue
-			}
-			b := tx.Bucket(bucketName)
+	iter = pb2.NewIter(nil)
+	for iter.First(); iter.Valid(); iter.Next() {
+		k := iter.Key()
 
-			c := b.Cursor()
-
-			for k, v := c.First(); k != nil; k, v = c.Next() {
-				db2[string(k)] = base64.StdEncoding.EncodeToString(v)
-			}
+		if dataOnly && !bytes.HasPrefix(k, dataBucketPrefix) {
+			continue
 		}
 
-		return nil
-	})
-
-	if err != nil {
-		t.Fatal(err)
+		db2[string(k)] = base64.StdEncoding.EncodeToString(iter.Value())
 	}
 
 	if diff := deep.Equal(db1, db2); diff != nil {

@@ -222,7 +222,7 @@ func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 
 	key := append(configBucketPrefix, latestIndexKey...)
 	val, closer, err := pebbleDB.Get(key)
-	if err != nil {
+	if err != nil && err != pebble.ErrNotFound {
 		if closer != nil {
 			closer.Close()
 		}
@@ -244,7 +244,7 @@ func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 
 	key = append(configBucketPrefix, latestConfigKey...)
 	val, closer, err = pebbleDB.Get(key)
-	if err != nil {
+	if err != nil && err != pebble.ErrNotFound {
 		if closer != nil {
 			closer.Close()
 		}
