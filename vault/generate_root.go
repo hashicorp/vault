@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/shamir"
 )
 
@@ -318,40 +318,28 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		return nil, err
 	}
 
-	var tokenBytes []byte
+	var encodedToken string
 
-	// Get the encoded value first so that if there is an error we don't create
-	// the root token.
 	switch {
 	case len(c.generateRootConfig.OTP) > 0:
-		// This function performs decoding checks so rather than decode the OTP,
-		// just encode the value we're passing in.
-		tokenBytes, err = xor.XORBytes([]byte(c.generateRootConfig.OTP), []byte(token))
-		if err != nil {
-			cleanupFunc()
-			c.logger.Error("xor of root token failed", "error", err)
-			return nil, err
-		}
-		token = base64.RawStdEncoding.EncodeToString(tokenBytes)
-
+		encodedToken, err = roottoken.EncodeToken(token, c.generateRootConfig.OTP)
 	case len(c.generateRootConfig.PGPKey) > 0:
-		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(token)}, []string{c.generateRootConfig.PGPKey})
-		if err != nil {
-			cleanupFunc()
-			c.logger.Error("error encrypting new root token", "error", err)
-			return nil, err
-		}
-		token = base64.StdEncoding.EncodeToString(tokenBytesArr[0])
-
+		var tokenBytesArr [][]byte
+		_, tokenBytesArr, err = pgpkeys.EncryptShares([][]byte{[]byte(token)}, []string{c.generateRootConfig.PGPKey})
+		encodedToken = base64.StdEncoding.EncodeToString(tokenBytesArr[0])
 	default:
+		err = fmt.Errorf("unreachable condition")
+	}
+
+	if err != nil {
 		cleanupFunc()
-		return nil, fmt.Errorf("unreachable condition")
+		return nil, err
 	}
 
 	results := &GenerateRootResult{
 		Progress:       progress,
 		Required:       config.SecretThreshold,
-		EncodedToken:   token,
+		EncodedToken:   encodedToken,
 		PGPFingerprint: c.generateRootConfig.PGPFingerprint,
 	}
 
