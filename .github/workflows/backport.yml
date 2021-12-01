@@ -20,7 +20,7 @@ jobs:
           BACKPORT_LABEL_REGEXP: "backport/(?P<target>website)"
           BACKPORT_TARGET_TEMPLATE: "stable-{{.target}}"
           GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - name: Backport changes to latest release branch
+      - name: Backport changes labeled website to latest release branch
         run: |
           resp=$(curl -f -s "https://api.github.com/repos/$GITHUB_REPOSITORY/releases?per_page=100")
           ret="$?"
