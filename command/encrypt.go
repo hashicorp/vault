@@ -11,7 +11,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 
 	"github.com/mitchellh/cli"
 	"golang.org/x/crypto/argon2"
@@ -86,7 +85,7 @@ func (c *EncryptCommand) Run(args []string) int {
 	}
 
 	filename := strings.TrimSpace(args[0])
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
