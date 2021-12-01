@@ -54,6 +54,16 @@ export default ApplicationAdapter.extend({
     });
   },
 
+  querySecretDataByVersion(id) {
+    return this.ajax(this.urlForQueryRecord(id), 'GET')
+      .then(resp => {
+        return resp.data;
+      })
+      .catch(error => {
+        return error.data;
+      });
+  },
+
   urlForCreateRecord(modelName, snapshot) {
     let backend = snapshot.belongsTo('secret').belongsTo('engine').id;
     let path = snapshot.attr('path');
