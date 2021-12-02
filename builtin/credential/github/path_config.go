@@ -186,6 +186,8 @@ func (c *config) setOrganizationID(ctx context.Context, b *backend) error {
 	if err != nil {
 		return err
 	}
+
+	// ensure our client has the BaseURL if it was provided
 	if c.BaseURL != "" {
 		parsedURL, err := url.Parse(c.BaseURL)
 		if err != nil {
@@ -198,9 +200,11 @@ func (c *config) setOrganizationID(ctx context.Context, b *backend) error {
 	if err != nil {
 		return err
 	}
-	c.OrganizationID = *org.ID
-	if c.OrganizationID == 0 {
+	if org == nil || *org.ID == 0 {
 		return fmt.Errorf("organization_id not found for %s", c.Organization)
 	}
+
+	c.OrganizationID = *org.ID
+
 	return nil
 }
