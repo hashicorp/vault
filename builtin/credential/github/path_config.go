@@ -79,6 +79,13 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		c.BaseURL = baseURL
 	}
 
+	// we want to set the Org ID in the config so we can use that to verify the
+	// credentials on login
+	err = c.setOrganizationID(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := c.ParseTokenFields(req, data); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -116,8 +123,9 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 	}
 
 	d := map[string]interface{}{
-		"organization": config.Organization,
-		"base_url":     config.BaseURL,
+		"organization_id": config.OrganizationID,
+		"organization":    config.Organization,
+		"base_url":        config.BaseURL,
 	}
 	config.PopulateTokenData(d)
 
@@ -163,8 +171,33 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 type config struct {
 	tokenutil.TokenParams
 
-	Organization string        `json:"organization" structs:"organization" mapstructure:"organization"`
-	BaseURL      string        `json:"base_url" structs:"base_url" mapstructure:"base_url"`
-	TTL          time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL       time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	OrganizationID int64         `json:"organization_id" structs:"organization_id" mapstructure:"organization_id"`
+	Organization   string        `json:"organization" structs:"organization" mapstructure:"organization"`
+	BaseURL        string        `json:"base_url" structs:"base_url" mapstructure:"base_url"`
+	TTL            time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	MaxTTL         time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+}
+
+func (c *config) setOrganizationID(ctx context.Context, b *backend) error {
+	client, err := b.Client("")
+	if err != nil {
+		return err
+	}
+	if c.BaseURL != "" {
+		parsedURL, err := url.Parse(c.BaseURL)
+		if err != nil {
+			return err
+		}
+		client.BaseURL = parsedURL
+	}
+
+	org, _, err := client.Organizations.Get(ctx, c.Organization)
+	if err != nil {
+		return err
+	}
+	c.OrganizationID = *org.ID
+	if c.OrganizationID == 0 {
+		return fmt.Errorf("organization_id not found for %s", c.Organization)
+	}
+	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -159,9 +158,9 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		}
 	}
 
-	if config.Organization == "" {
+	if config.OrganizationID == 0 {
 		return nil, logical.ErrorResponse(
-			"organization not found in configuration"), nil
+			"organization_id not found in configuration"), nil
 	}
 
 	client, err := b.Client(token)
@@ -203,14 +202,29 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		orgOpt.Page = resp.NextPage
 	}
 
+	orgLoginName := ""
 	for _, o := range allOrgs {
-		if strings.EqualFold(*o.Login, config.Organization) {
+		if *o.ID == config.OrganizationID {
 			org = o
+			orgLoginName = *o.Login
 			break
 		}
 	}
 	if org == nil {
 		return nil, logical.ErrorResponse("user is not part of required org"), nil
+	}
+
+	if orgLoginName != config.Organization {
+		// the org name has changed, update it
+		config.Organization = orgLoginName
+		entry, err := logical.StorageEntryJSON("config", config)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// Get the teams that this user is part of to determine the policies
