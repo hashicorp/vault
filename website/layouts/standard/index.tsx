@@ -15,7 +15,12 @@ export default function StandardLayout(props: Props): React.ReactElement {
           { text: 'Overview', url: '/' },
           {
             text: 'Use Cases',
-            submenu: useCaseNavItems,
+            submenu: useCaseNavItems.map((item) => {
+              return {
+                text: item.text,
+                url: `/use-cases/${item.url}`,
+              }
+            }),
           },
           {
             text: 'Enterprise',
@@ -42,6 +47,6 @@ StandardLayout.rivetParams = {
 interface Props {
   children: React.ReactChildren
   data: {
-    useCaseNavItems: Array<{ slug: string; text: string }>
+    useCaseNavItems: Array<{ url: string; text: string }>
   }
 }
