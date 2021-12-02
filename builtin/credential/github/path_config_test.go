@@ -84,6 +84,21 @@ func TestGitHub_WriteReadConfig(t *testing.T) {
 	assert.Equal(t, "foo-org", resp.Data["organization"])
 }
 
+func TestGitHub_WriteConfig_ErrorNoOrg(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Write the config
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "config",
+		Operation: logical.UpdateOperation,
+		Data:      map[string]interface{}{},
+		Storage:   s,
+	})
+
+	assert.NoError(t, err)
+	assert.Error(t, resp.Error())
+}
+
 // many of the fields have been omitted
 // https://docs.github.com/en/rest/reference/users#get-the-authenticated-user
 var getUserResponse = `

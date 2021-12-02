@@ -66,12 +66,15 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	if organizationRaw, ok := data.GetOk("organization"); ok {
 		c.Organization = organizationRaw.(string)
 	}
+	if c.Organization == "" {
+		return logical.ErrorResponse(fmt.Sprintf("organization is a required parameter")), nil
+	}
 
 	if baseURLRaw, ok := data.GetOk("base_url"); ok {
 		baseURL := baseURLRaw.(string)
 		_, err := url.Parse(baseURL)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
+			return logical.ErrorResponse(fmt.Sprintf("error parsing given base_url: %s", err)), nil
 		}
 		if !strings.HasSuffix(baseURL, "/") {
 			baseURL += "/"
