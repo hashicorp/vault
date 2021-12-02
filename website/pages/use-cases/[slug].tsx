@@ -46,7 +46,7 @@ export default function UseCasePage({ data }) {
       <Head>{renderMetaTags(seo)}</Head>
 
       <IoUsecaseHero
-        eyebrow="Common use case"
+        eyebrow="Use case"
         heading={heroHeading}
         description={heroDescription}
         pattern="/img/usecase-hero-pattern.svg"
