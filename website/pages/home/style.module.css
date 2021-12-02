@@ -71,6 +71,7 @@
   max-width: 1600px;
 
   @media (--medium-up) {
+    padding: 80px 0;
     margin-bottom: 128px;
   }
 
