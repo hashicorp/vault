@@ -526,6 +526,13 @@ func (i *pebbleSnapshotInstaller) Install(dirname string) error {
 	}
 
 	// Rename the snapshot to the FSM location
+	// os.Rename doesn't overwrite directories that already exist, so to make this work
+	// I have to delete the old directory first. This is no longer atomic, which is a
+	// a bummer, but this is also hack week and I just want this to work.
+	err := os.RemoveAll(dirname)
+	if err != nil {
+		return err
+	}
 	if runtime.GOOS != "windows" {
 		return safeio.Rename(i.dirname, dirname)
 	} else {

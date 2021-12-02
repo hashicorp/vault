@@ -240,11 +240,11 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *pebble.DB) error {
 		return err
 	}
 
-	err = db.Set(latestConfigKey, configBytes, nil)
+	err = db.Set(append(configBucketPrefix, latestConfigKey...), configBytes, nil)
 	if err != nil {
 		return err
 	}
-	err = db.Set(latestIndexKey, indexBytes, nil)
+	err = db.Set(append(configBucketPrefix, latestIndexKey...), indexBytes, nil)
 	if err != nil {
 		return err
 	}
@@ -511,7 +511,7 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 
 		if bytes.HasPrefix(k, prefixBytes) {
 			key := string(k)
-			key = strings.TrimPrefix(key, prefix)
+			key = strings.TrimPrefix(key, string(prefixBytes))
 			if i := strings.Index(key, "/"); i == -1 {
 				// Add objects only from the current 'folder'
 				keys = append(keys, key)
@@ -709,21 +709,23 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 	snapshot := f.db.NewSnapshot()
 	defer snapshot.Close()
 
-	iter := snapshot.NewIter(&pebble.IterOptions{
-		LowerBound: dataBucketPrefix,
-	})
-
 	var err error
 
+	metaIter := snapshot.NewIter(&pebble.IterOptions{
+		LowerBound: dataBucketPrefix,
+	})
+	copyIter, err := metaIter.Clone()
+
 	// Do the first scan of the data for metadata purposes.
-	for iter.First(); iter.Valid(); iter.Next() {
-		k := iter.Key()
+	for metaIter.First(); metaIter.Valid(); metaIter.Next() {
+		k := metaIter.Key()
 		if k == nil {
 			continue
 		}
+		realKey := bytes.TrimPrefix(k, dataBucketPrefix)
 		err = metadataProtoWriter.WriteMsg(&pb.StorageEntry{
-			Key:   string(k),
-			Value: iter.Value(),
+			Key:   string(realKey),
+			Value: metaIter.Value(),
 		})
 		if err != nil {
 			metaSink.CloseWithError(err)
@@ -731,22 +733,25 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 		}
 	}
 	metaSink.Close()
+	metaIter.Close()
 
 	// Do the second scan for copy purposes.
-	for iter.First(); iter.Valid(); iter.Next() {
-		k := iter.Key()
+	for copyIter.First(); copyIter.Valid(); copyIter.Next() {
+		k := copyIter.Key()
 		if k == nil {
 			continue
 		}
+		realKey := bytes.TrimPrefix(k, dataBucketPrefix)
 		err = protoWriter.WriteMsg(&pb.StorageEntry{
-			Key:   string(k),
-			Value: iter.Value(),
+			Key:   string(realKey),
+			Value: copyIter.Value(),
 		})
 		if err != nil {
 			break
 		}
 	}
 	sink.CloseWithError(err)
+	copyIter.Close()
 }
 
 // Snapshot implements the FSM interface. It returns a noop snapshot object.
@@ -766,7 +771,7 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 }
 
 // Restore installs a new snapshot from the provided reader. It does an atomic
-// rename of the snapshot file into the database filepath. While a restore is
+// rename of the snapshot directory into the database filepath. While a restore is
 // happening the FSM is locked and no writes or reads can be performed.
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
@@ -783,13 +788,13 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	f.l.Lock()
 	defer f.l.Unlock()
 
-	// Cache the local node config before closing the db file
+	// Cache the local node config before closing the db
 	lnConfig, err := f.localNodeConfig()
 	if err != nil {
 		return err
 	}
 
-	// Close the db file
+	// Close the db
 	if err := f.db.Close(); err != nil {
 		f.logger.Error("failed to close database file", "error", err)
 		return err
