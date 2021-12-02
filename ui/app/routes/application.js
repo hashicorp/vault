@@ -2,6 +2,7 @@ import { inject as service } from '@ember/service';
 import { next } from '@ember/runloop';
 import Route from '@ember/routing/route';
 import ControlGroupError from 'vault/lib/control-group-error';
+import config from '../config/environment';
 
 export default Route.extend({
   controlGroup: service(),
@@ -85,7 +86,7 @@ export default Route.extend({
   },
 
   async beforeModel() {
-    const result = await fetch('/v1/sys/internal/ui/feature-flags', {
+    const result = await fetch(`${config.apiHost || ''}/v1/sys/internal/ui/feature-flags`, {
       method: 'GET',
     });
     if (result.status === 200) {

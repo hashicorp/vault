@@ -4,7 +4,7 @@
 module.exports = function(environment) {
   var ENV = {
     modulePrefix: 'vault',
-    environment: environment,
+    environment: process.env.EMBER_CLI_ELECTRON ? 'electron' : environment,
     rootURL: process.env.EMBER_CLI_ELECTRON ? '' : '/ui/',
     serviceWorkerScope: '/v1/sys/storage/raft/snapshot',
     locationType: process.env.EMBER_CLI_ELECTRON ? 'hash' : 'auto',
@@ -65,16 +65,18 @@ module.exports = function(environment) {
   }
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;
-    ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
-    ENV.contentSecurityPolicyMeta = true;
-    ENV.contentSecurityPolicy = {
-      'connect-src': ["'self'"],
-      'img-src': ["'self'", 'data:'],
-      'font-src': ["'self'"],
-      'form-action': ["'none'"],
-      'script-src': ["'self'"],
-      'style-src': ["'unsafe-inline'", "'self'"],
-    };
+    if (!process.env.EMBER_CLI_ELECTRON) {
+      ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
+      ENV.contentSecurityPolicyMeta = true;
+      ENV.contentSecurityPolicy = {
+        'connect-src': ["'self'"],
+        'img-src': ["'self'", 'data:'],
+        'font-src': ["'self'"],
+        'form-action': ["'none'"],
+        'script-src': ["'self'"],
+        'style-src': ["'unsafe-inline'", "'self'"],
+      };
+    }
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;

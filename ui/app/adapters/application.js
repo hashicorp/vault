@@ -19,6 +19,12 @@ export default RESTAdapter.extend({
 
   namespace: 'v1/sys',
 
+  ajaxOptions() {
+    const options = this._super(...arguments);
+    options.url = `${config.apiHost || ''}${options.url}`;
+    return options;
+  },
+
   shouldReloadAll() {
     return true;
   },
