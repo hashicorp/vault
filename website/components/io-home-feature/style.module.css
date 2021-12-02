@@ -45,6 +45,10 @@
   }
 }
 
+.featureContent {
+  max-width: 520px;
+}
+
 .featureHeading {
   margin: 0;
   composes: g-type-display-4 from global;
