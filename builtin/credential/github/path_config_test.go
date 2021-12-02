@@ -45,7 +45,7 @@ func setupTestServer(t *testing.T) *httptest.Server {
 			resp = getOrgResponse
 		}
 
-		w.Header().Add("Content-Type", "applicaion/json")
+		w.Header().Add("Content-Type", "application/json")
 		fmt.Fprintln(w, resp)
 	}))
 }
