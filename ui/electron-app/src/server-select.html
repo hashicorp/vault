@@ -1,0 +1,28 @@
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="./server-select.css" rel="stylesheet">
+</head>
+
+<body>
+  <svg width="300" height="300" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M0 0l16.9 34L34 0H0zm15 15h-2v-2h2v2zm0-3h-2v-2h2v2zm0-3h-2V7h2v2zm3 9h-2v-2h2v2zm0-3h-2v-2h2v2zm0-3h-2v-2h2v2zm0-3h-2V7h2v2zm3 6h-2v-2h2v2zm0-3h-2v-2h2v2zm-2-3V7h2v2h-2z"
+      fill-rule="nonzero" />
+  </svg>
+  <h1>Vault Desktop</h1>
+  <div class="servers column">
+    <div class="server-toolbar">
+      <h4>Servers</h4>
+      <button class="icon" onclick="addServer()">
+        <span class="material-icons">playlist_add</span>
+      </button>
+    </div>
+
+    <div id="server-list"></div>
+  </div>
+
+  <script src="./server-select.js"></script>
+</body>

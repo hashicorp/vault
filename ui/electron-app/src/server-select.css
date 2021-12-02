@@ -1,0 +1,134 @@
+body {
+  background-color: #262626;
+  font-family: 'Ubuntu', sans-serif;
+  font-size: 16px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+.material-icons {
+  font-family: 'Material Icons';
+  font-size: 32px;
+}
+h1 {
+  font-size: 40px;
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+}
+p, h4 {
+  margin: 0;
+}
+svg {
+  fill: #eddd68;
+}
+.row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  /* justify-content: center; */
+  /* align-items: center; */
+}
+.center {
+  text-align: center;
+}
+.servers {
+  margin-top: 32px;
+  width: 85vw;
+}
+.server-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.server {
+  margin-top: 16px;
+  padding: 12px 18px;
+  border: 1.75px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+input {
+  padding: 4px 8px;
+  font-size: 16px;
+  color:white;
+  font-weight: 600;
+  letter-spacing: 3px;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  outline: black;
+}
+input:focus {
+  border-color: #eddd68;
+}
+input:disabled {
+  background-color: transparent;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+button {
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+  background-color: #eddd68;
+  border: none;
+  border-radius: 3px;
+  color: #262626;
+  padding: 8px 16px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+button:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+button .material-icons {
+  font-size: 24px;
+}
+button.icon {
+  background-color: transparent;
+  padding: 0;
+  color: #eddd68;
+}
+.hidden {
+  visibility: hidden;
+  height: 0;
+  width: 0;
+}
+.left-margin {
+  margin-left: 16px;
+}
+.right-margin {
+  margin-right: 16px;
+}
+.flex {
+  flex: 1;
+}
+.pointer {
+  cursor: pointer;
+}
+@media screen and (min-width: 1025px) {
+  .servers {
+    width: 55vw;
+    max-width: 640px;
+  }
+}
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  .servers {
+    width: 70vw;
+  }
+}
