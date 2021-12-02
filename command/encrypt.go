@@ -58,7 +58,10 @@ Usage: vault encrypt [options] [filename]
 
       $ vault encrypt -o foo.enc foo.txt
 
-`
+  Additional flags and more advanced use cases are detailed below.
+
+` + c.Flags().Help()
+
 	return strings.TrimSpace(helpText)
 }
 
