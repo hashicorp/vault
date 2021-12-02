@@ -1,12 +1,14 @@
 import Subnav from '@hashicorp/react-subnav'
+import classNames from 'classnames'
 import { useRouter } from 'next/router'
+import s from './style.module.css'
 
 export default function ProductSubnav({ menuItems }) {
   const router = useRouter()
 
   return (
     <Subnav
-      className="g-product-subnav"
+      className={classNames('g-product-subnav', s.subnav)}
       hideGithubStars={true}
       titleLink={{
         text: 'HashiCorp Vault',
