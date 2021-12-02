@@ -88,7 +88,7 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Aliases: []string{"p"},
 		Target:  &c.passphrase,
 		Default: defaultPassphrase,
-		Usage:   "Specify a passphrase to encrypt/decrpyt this file.",
+		Usage:   "Specify a passphrase to encrypt/decrypt this file.",
 	})
 
 	f.StringVar(&StringVar{
