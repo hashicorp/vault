@@ -22,8 +22,6 @@ var _ cli.Command = (*EncryptCommand)(nil)
 const (
 	vaultEncryptVersion = 1
 	vaultKeyName        = "my-transit-key"
-	transitPath         = "transit/datakey/plaintext"
-	decryptPath         = "transit/decrypt"
 	defaultPassphrase   = "my password"
 )
 
@@ -33,6 +31,8 @@ type EncryptCommand struct {
 	outfile     string
 	passphrase  string
 	key         string
+	path        string
+	ciphertext  string
 	flagDecrypt bool
 	flagTransit bool
 }
@@ -82,6 +82,13 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Usage:   "Specify a passphrase to encrypt/decrpyt this file.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "path",
+		Target:  &c.path,
+		Default: "transit",
+		Usage:   "Path to mount used for transit.",
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "decrypt",
 		Aliases: []string{"d"},
@@ -103,7 +110,15 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Aliases: []string{"k"},
 		Target:  &c.key,
 		Default: "",
-		Usage:   "Provide an encrypted transit data key for decryption. Can only be used if both decrypt and transit flags are set.",
+		Usage:   "Name of the datakey in Vault Transit.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "cipher",
+		Aliases: []string{"c"},
+		Target:  &c.ciphertext,
+		Default: "",
+		Usage:   "Encrypted transit ciphertext used for decryption. Can only be used if both decrypt and transit flags are set.",
 	})
 
 	return set
@@ -145,7 +160,12 @@ func (c *EncryptCommand) Run(args []string) int {
 
 		if c.flagTransit {
 			// Fetch data key from Vault Transit
-			key, encryptedKey, err := c.fetchDatakey(vaultKeyName, "")
+			if c.key == "" {
+				c.UI.Error(fmt.Sprintf("key name not provided for Vault Transit"))
+				return 1
+			}
+
+			key, encryptedKey, err := c.fetchDatakey(c.key, "")
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error generating transit data key: %s", err.Error()))
 				return 1
@@ -175,7 +195,12 @@ func (c *EncryptCommand) Run(args []string) int {
 
 		if c.flagTransit {
 			// Fetch data key from Vault Transit
-			key, _, err := c.fetchDatakey(vaultKeyName, c.key)
+			if c.key == "" {
+				c.UI.Error(fmt.Sprintf("key name not provided for Vault Transit"))
+				return 1
+			}
+
+			key, _, err := c.fetchDatakey(c.key, c.ciphertext)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error generating transit data key: %s", err.Error()))
 				return 1
@@ -197,7 +222,7 @@ func (c *EncryptCommand) Run(args []string) int {
 		}
 
 		if outfile == "" {
-			outfile = "input.txt"
+			outfile = "decoded.txt"
 		}
 
 	}
@@ -341,7 +366,7 @@ func (c *EncryptCommand) fetchDatakey(name string, ciphertext string) ([]byte, s
 			"bits": 256,
 		}
 
-		secret, err := client.Logical().Write(fmt.Sprintf("%s/%s", transitPath, name), data)
+		secret, err := client.Logical().Write(fmt.Sprintf("%s/datakey/plaintext/%s", c.path, name), data)
 		if err != nil {
 			return nil, "", fmt.Errorf("Error making request for datakey: %s", err)
 		}
@@ -358,7 +383,7 @@ func (c *EncryptCommand) fetchDatakey(name string, ciphertext string) ([]byte, s
 			"ciphertext": ciphertext,
 		}
 
-		secret, err := client.Logical().Write(fmt.Sprintf("%s/%s", decryptPath, name), data)
+		secret, err := client.Logical().Write(fmt.Sprintf("%s/decrypt/%s", c.path, name), data)
 		if err != nil {
 			return nil, "", fmt.Errorf("Error decrypting transit key: %s", err)
 		}
