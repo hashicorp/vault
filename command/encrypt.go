@@ -21,8 +21,6 @@ var _ cli.Command = (*EncryptCommand)(nil)
 
 const (
 	vaultEncryptVersion = 1
-	vaultKeyName        = "my-transit-key"
-	defaultPassphrase   = "my password"
 
 	// See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-argon2-04#section-4 for details on parameter selection
 	argon2SaltLen     = 16
@@ -35,12 +33,9 @@ type EncryptCommand struct {
 	*BaseCommand
 
 	outfile     string
-	passphrase  string
 	key         string
 	path        string
-	ciphertext  string
 	flagDecrypt bool
-	flagTransit bool
 }
 
 type argon2Params struct {
@@ -84,14 +79,6 @@ func (c *EncryptCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "pass",
-		Aliases: []string{"p"},
-		Target:  &c.passphrase,
-		Default: defaultPassphrase,
-		Usage:   "Specify a passphrase to encrypt/decrypt this file.",
-	})
-
-	f.StringVar(&StringVar{
 		Name:    "path",
 		Target:  &c.path,
 		Default: "transit",
@@ -106,28 +93,11 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Usage:   "Enables AES-256 decrypt mode.",
 	})
 
-	f.BoolVar(&BoolVar{
-		Name:    "transit",
-		Aliases: []string{"t"},
-		Target:  &c.flagTransit,
-		Default: false,
-		Usage:   "Enables data key generation for encryption using Vault Transit.",
-	})
-
 	f.StringVar(&StringVar{
 		Name:    "key",
 		Aliases: []string{"k"},
 		Target:  &c.key,
-		Default: "",
 		Usage:   "Name of the datakey in Vault Transit.",
-	})
-
-	f.StringVar(&StringVar{
-		Name:    "cipher",
-		Aliases: []string{"c"},
-		Target:  &c.ciphertext,
-		Default: "",
-		Usage:   "Encrypted transit ciphertext used for decryption. Can only be used if both decrypt and transit flags are set.",
 	})
 
 	return set
@@ -160,14 +130,34 @@ func (c *EncryptCommand) Run(args []string) int {
 	var processedData []byte
 	outfile := c.outfile
 
-	passphrase := c.passphrase
-	if passphrase == "" {
-		passphrase = defaultPassphrase
+	// Request either a passphrase or the encrypted datakey
+	var passphrase string
+	var ciphertext string
+
+	datakeyMode := c.key != ""
+
+	// No provided key name means passphrase mode
+	if !datakeyMode {
+		passphrase, err = c.UI.Ask("Passphrase (will be hidden):")
+
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error reading input: %s", err.Error()))
+			return 2
+		}
+	} else {
+		if c.flagDecrypt {
+			ciphertext, err = c.UI.Ask("Encrypted datakey (will be hidden):")
+
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error reading input: %s", err.Error()))
+				return 2
+			}
+		}
 	}
+
 	if !c.flagDecrypt {
 		// Encryption Mode
-
-		if c.flagTransit {
+		if datakeyMode {
 			// Fetch data key from Vault Transit
 			if c.key == "" {
 				c.UI.Error(fmt.Sprintf("key name not provided for Vault Transit"))
@@ -202,14 +192,8 @@ func (c *EncryptCommand) Run(args []string) int {
 	} else {
 		// Decryption Mode
 
-		if c.flagTransit {
-			// Fetch data key from Vault Transit
-			if c.key == "" {
-				c.UI.Error(fmt.Sprintf("key name not provided for Vault Transit"))
-				return 1
-			}
-
-			key, _, err := c.fetchDatakey(c.key, c.ciphertext)
+		if c.key != "" {
+			key, _, err := c.fetchDatakey(c.key, ciphertext)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error generating transit data key: %s", err.Error()))
 				return 1
@@ -233,7 +217,6 @@ func (c *EncryptCommand) Run(args []string) int {
 		if outfile == "" {
 			outfile = "decoded.txt"
 		}
-
 	}
 
 	// Write processed data to file
