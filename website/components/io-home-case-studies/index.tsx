@@ -33,6 +33,7 @@ export default function IoHomeCaseStudies({
               <a className={s.card} href={item.link}>
                 <h3 className={s.cardHeading}>{item.heading}</h3>
                 <Image
+                  className={s.cardThumbnail}
                   src={item.thumbnail.url}
                   layout="fill"
                   objectFit="cover"

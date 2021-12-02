@@ -77,6 +77,14 @@
   }
 }
 
+.cardThumbnail {
+  transition: transform 0.4s;
+
+  @nest .card:hover & {
+    transform: scale(1.04);
+  }
+}
+
 .cardHeading {
   margin: 0;
   composes: g-type-display-4 from global;
