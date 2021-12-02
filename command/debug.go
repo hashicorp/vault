@@ -93,6 +93,9 @@ type DebugCommand struct {
 
 	logger hclog.Logger
 
+	// ShutdownCh is used to capture interrupt signal and end polling capture
+	ShutdownCh chan struct{}
+
 	// skipTimingChecks bypasses timing-related checks, used primarily for tests
 	skipTimingChecks bool
 }
@@ -110,6 +113,9 @@ type collector struct {
 	debugIndex *debugIndex
 
 	logger hclog.Logger
+
+	// shutdownCh is used to capture interrupt signal and end polling capture
+	shutdownCh chan struct{}
 
 	// Collection slices to hold data
 	hostInfoCollection          []map[string]interface{}
@@ -317,6 +323,7 @@ func (c *DebugCommand) Run(args []string) int {
 			debugIndex:      &debugIndex,
 			logger:          c.logger.Named(shortAddr),
 			uiError:         func(s string) { c.UI.Error(s) },
+			shutdownCh:      c.ShutdownCh,
 		})
 	}
 
@@ -623,10 +630,16 @@ func (c *collector) capturePollingTargets() error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), c.duration+debugDurationGrace)
 	defer cancelFunc()
 
-	// This run group watches for duration
+	// This run group watches for interrupt or duration
 	g.Add(func() error {
-		<-ctx.Done()
-		return nil
+		for {
+			select {
+			case <-c.shutdownCh:
+				return nil
+			case <-ctx.Done():
+				return nil
+			}
+		}
 	}, func(error) {})
 
 	// Collect host-info if target is specified

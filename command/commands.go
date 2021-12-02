@@ -275,6 +275,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"debug": func() (cli.Command, error) {
 			return &DebugCommand{
 				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 		"delete": func() (cli.Command, error) {
