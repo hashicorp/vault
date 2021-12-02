@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +29,8 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
-// setupTestServer configures httptest server to intercept and respond to the ...
+// setupTestServer configures httptest server to intercept and respond to the
+// request to base_url
 func setupTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +50,8 @@ func setupTestServer(t *testing.T) *httptest.Server {
 	}))
 }
 
+// TestGitHub_WriteReadConfig tests that we can successfully read and write
+// the github auth config
 func TestGitHub_WriteReadConfig(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
@@ -78,12 +82,13 @@ func TestGitHub_WriteReadConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, resp.Error())
 
-	var expectedOrgID int64 = 12345
 	// the ID should be set, we grab it from the GET /orgs API
-	assert.Equal(t, expectedOrgID, resp.Data["organization_id"])
+	assert.Equal(t, int64(12345), resp.Data["organization_id"])
 	assert.Equal(t, "foo-org", resp.Data["organization"])
 }
 
+// TestGitHub_WriteConfig_ErrorNoOrg tests that an error is returned when the
+// required "organization" parameter is not provided
 func TestGitHub_WriteConfig_ErrorNoOrg(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
@@ -97,10 +102,11 @@ func TestGitHub_WriteConfig_ErrorNoOrg(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Error(t, resp.Error())
+	assert.Equal(t, errors.New("organization is a required parameter"), resp.Error())
 }
 
-// many of the fields have been omitted
 // https://docs.github.com/en/rest/reference/users#get-the-authenticated-user
+// Note: many of the fields have been omitted
 var getUserResponse = `
 {
 	"login": "user-foo",
@@ -112,8 +118,8 @@ var getUserResponse = `
 }
 `
 
-// many of the fields have been omitted, we only care about 'login' and 'id'
 // https://docs.github.com/en/rest/reference/orgs#get-an-organization
+// Note: many of the fields have been omitted, we only care about 'login' and 'id'
 var getOrgResponse = `
 {
 	"login": "foo-org",
@@ -129,6 +135,7 @@ var getOrgResponse = `
 var listOrgResponse = []byte(fmt.Sprintf(`[%v]`, getOrgResponse))
 
 // https://docs.github.com/en/rest/reference/teams#list-teams-for-the-authenticated-user
+// Note: many of the fields have been omitted
 var listUserTeamsResponse = []byte(fmt.Sprintf(`[
 {
     "id": 1,

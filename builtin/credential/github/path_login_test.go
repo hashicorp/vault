@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestGitHub_Login tests that we can successfully login with the given config
 func TestGitHub_Login(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
@@ -16,7 +17,7 @@ func TestGitHub_Login(t *testing.T) {
 	defer ts.Close()
 
 	// Write the config
-	b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "config",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -25,25 +26,30 @@ func TestGitHub_Login(t *testing.T) {
 		},
 		Storage: s,
 	})
+	assert.NoError(t, err)
+	assert.NoError(t, resp.Error())
 
 	// Read the config
-	b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "config",
 		Operation: logical.ReadOperation,
 		Storage:   s,
 	})
+	assert.NoError(t, err)
+	assert.NoError(t, resp.Error())
 
-	// Read the config
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	// attempt a login
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "login",
 		Operation: logical.UpdateOperation,
 		Storage:   s,
 	})
-	assert.NoError(t, err)
-	assert.NoError(t, resp.Error())
+
 	expectedMetaData := map[string]string{
 		"org":      "foo-org",
 		"username": "user-foo",
 	}
 	assert.Equal(t, expectedMetaData, resp.Auth.Metadata)
+	assert.NoError(t, err)
+	assert.NoError(t, resp.Error())
 }
