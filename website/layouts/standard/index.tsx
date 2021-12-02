@@ -1,6 +1,5 @@
 import query from './query.graphql'
 import ProductSubnav from 'components/subnav'
-import HashiStackMenu from '@hashicorp/react-hashi-stack-menu'
 import Footer from 'components/footer'
 import { open } from '@hashicorp/react-consent-manager'
 
@@ -9,7 +8,6 @@ export default function StandardLayout(props: Props): React.ReactElement {
 
   return (
     <>
-      <HashiStackMenu />
       <ProductSubnav
         menuItems={[
           { text: 'Overview', url: '/' },
