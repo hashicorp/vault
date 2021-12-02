@@ -50,11 +50,6 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/docs/commands/help',
-    destination: '/docs/commands/path-help',
-    permanent: true,
-  },
-  {
     source: '/docs/commands/read-write',
     destination: '/docs/commands#reading-and-writing-data',
     permanent: true,
