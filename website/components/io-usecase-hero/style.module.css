@@ -35,8 +35,21 @@
 
 .pattern {
   margin-left: 24px;
-  transform: translateY(48px);
+  transform: translateY(24px);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  @media (--small) {
+    display: none;
+  }
+
+  @media (--medium) {
+    & > * {
+      display: none !important;
+    }
+  }
 }
 
 .content {

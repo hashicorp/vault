@@ -22,9 +22,9 @@ export default function IoUsecaseHero({
           {pattern ? (
             <Image
               src={pattern}
-              layout="fill"
-              objectFit="cover"
-              objectPosition="bottom right"
+              layout="responsive"
+              width={420}
+              height={500}
               priority={true}
               alt=""
             />
