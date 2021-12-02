@@ -9,7 +9,7 @@ export default function ProductSubnav({ menuItems }) {
       className="g-product-subnav"
       hideGithubStars={true}
       titleLink={{
-        text: 'vault',
+        text: 'HashiCorp Vault',
         url: '/',
       }}
       ctaLinks={[
@@ -24,6 +24,9 @@ export default function ProductSubnav({ menuItems }) {
         {
           text: 'Download',
           url: '/downloads',
+          theme: {
+            brand: 'vault',
+          },
         },
       ]}
       currentPath={router.asPath}
