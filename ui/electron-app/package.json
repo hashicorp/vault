@@ -25,22 +25,17 @@
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel",
+          "platforms": ["win32"],
           "config": {
             "name": "vault"
           }
         },
         {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
+          "name": "@electron-forge/maker-zip"
         },
         {
           "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
+          "platforms": ["linux"],
           "config": {}
         }
       ]
