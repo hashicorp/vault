@@ -1,10 +1,13 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -18,8 +21,10 @@ var (
 type KVPutCommand struct {
 	*BaseCommand
 
-	flagCAS   int
-	testStdin io.Reader // for tests
+	flagCAS       int
+	flagValidFrom time.Time
+	flagValidTo   time.Time
+	testStdin     io.Reader // for tests
 }
 
 func (c *KVPutCommand) Synopsis() string {
@@ -71,6 +76,22 @@ func (c *KVPutCommand) Flags() *FlagSets {
 		doesn’t exist. If the index is non-zero the write will only be allowed
 		if the key’s current version matches the version specified in the cas
 		parameter.`,
+	})
+
+	f.TimeVar(&TimeVar{
+		Name:   "valid_from",
+		Target: &c.flagValidFrom,
+		Usage: `Specifies the point in time at which the given secret value can be
+		read.`,
+		Formats: TimeVar_EpochSecond | TimeVar_RFC3339Nano | TimeVar_RFC3339Second,
+	})
+
+	f.TimeVar(&TimeVar{
+		Name:   "valid_to",
+		Target: &c.flagValidTo,
+		Usage: `Specifies the point in time at which the given secret value can no
+		longer be read.`,
+		Formats: TimeVar_EpochSecond | TimeVar_RFC3339Nano | TimeVar_RFC3339Second,
 	})
 
 	return set
@@ -139,6 +160,18 @@ func (c *KVPutCommand) Run(args []string) int {
 		if c.flagCAS > -1 {
 			data["options"].(map[string]interface{})["cas"] = c.flagCAS
 		}
+
+		if !c.flagValidFrom.IsZero() {
+			data["valid_from"] = c.flagValidFrom.Format(time.RFC3339)
+		}
+
+		if !c.flagValidTo.IsZero() {
+			log.Printf("valid_to: %s", c.flagValidTo)
+			data["valid_to"] = c.flagValidTo.Format(time.RFC3339)
+		}
+
+		bs, _ := json.MarshalIndent(data, " ", " ")
+		log.Printf("data: %s", string(bs))
 	}
 
 	secret, err := client.Logical().Write(path, data)
