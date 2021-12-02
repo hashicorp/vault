@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* eslint-env node */
-const { app, Menu, shell } = require('electron');
+const { app, Menu, shell, ipcMain } = require('electron');
 
 const isMac = process.platform === 'darwin';
 const template = [
@@ -21,6 +21,12 @@ const template = [
   {
     label: 'File',
     submenu: [
+      {
+        label: 'Servers',
+        click: () => {
+          ipcMain.emit('show-servers');
+        }
+      },
       isMac ? { role: 'close' } : { role: 'quit' }
     ]
   },
