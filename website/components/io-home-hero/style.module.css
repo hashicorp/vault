@@ -47,8 +47,8 @@
     grid-column: 1 / 6;
   }
 
-  @media (--large) {
-    grid-column: 1 / 5;
+  & > * {
+    max-width: 415px;
   }
 }
 
