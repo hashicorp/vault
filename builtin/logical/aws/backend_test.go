@@ -1067,7 +1067,7 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 
 func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
-	roleName := generateUniqueRoleName(t.Name())[:64]
+	roleName := generateUniqueRoleName(t.Name())
 	// This looks a bit curious. The policy document and the role document act
 	// as a logical intersection of policies. The role allows ec2:Describe*
 	// (among other permissions). This policy allows everything BUT
