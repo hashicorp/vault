@@ -2,8 +2,8 @@ import * as React from 'react'
 import Link from 'next/link'
 import InlineSvg from '@hashicorp/react-inline-svg'
 import classNames from 'classnames'
-import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
-import { IconExternalLink16 } from '@hashicorp/flight-icons/svg-react/external-link-16'
+import { IconArrowRight24 } from '@hashicorp/flight-icons/svg-react/arrow-right-24'
+import { IconExternalLink24 } from '@hashicorp/flight-icons/svg-react/external-link-24'
 import { productLogos } from './product-logos'
 import s from './style.module.css'
 
@@ -81,9 +81,9 @@ function IoCard({
           )}
           <span className={s.linkType}>
             {link.type === 'inbound' ? (
-              <IconArrowRight16 />
+              <IconArrowRight24 />
             ) : (
-              <IconExternalLink16 />
+              <IconExternalLink24 />
             )}
           </span>
         </footer>
