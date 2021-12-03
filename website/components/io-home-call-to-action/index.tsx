@@ -9,7 +9,6 @@ interface IoHomeCallToActionProps {
   links: Array<{
     text: string
     url: string
-    type?: 'inbound'
   }>
 }
 
