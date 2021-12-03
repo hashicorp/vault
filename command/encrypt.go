@@ -54,11 +54,26 @@ func (c *EncryptCommand) Help() string {
 	helpText := `
 Usage: vault encrypt [options] [filename]
 
-  Encrypts a file using AES encryption.
+  Encrypts a file using AES encryption. File can be encrypted using a derived key 
+  using a passphrase or a datakey generated using Vault Transit.
 
-  Encrypt a single file:
+  Encrypt a single file using a passphrase:
 
-      $ vault encrypt -o foo.enc foo.txt
+      $ vault encrypt foo.txt
+	  $ vault encrypt -o secrets.enc foo.txt
+	
+  Decrypt a single file using a passphrase:
+      $ vault encrypt -d secrets.enc
+	  $ vault encrypt -o decoded.txt secrets.enc
+
+  Encrypt a single file using Transit datakey:
+
+      $ vault encrypt -k my-key foo.txt
+	  $ vault encrypt -k my-key -o secrets.enc foo.txt
+
+  Decrypt a single file using a passphrase:
+      $ vault encrypt -d -k my-key secrets.enc
+	  $ vault encrypt -k my-key -o decoded.txt secrets.enc
 
   Additional flags and more advanced use cases are detailed below.
 
