@@ -63,8 +63,8 @@ export default function Homepage({ data }): React.ReactElement {
         <div className={s.container}>
           <IoCardContainer
             theme="dark"
-            heading="Vault in practice"
-            description="The best way to understand what Vault can enable for your projects is to see it in action"
+            heading={inPractice.heading}
+            description={inPractice.description}
             cardsPerRow={3}
             cards={inPractice.cards.map((card) => {
               return {
@@ -86,6 +86,7 @@ export default function Homepage({ data }): React.ReactElement {
         <div className={s.container}>
           <IoCardContainer
             heading={useCases.heading}
+            description={useCases.description}
             cardsPerRow={4}
             cards={useCases.cards.map((card) => {
               return {
