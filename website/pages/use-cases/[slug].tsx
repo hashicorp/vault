@@ -180,7 +180,7 @@ export default function UseCasePage({ data }) {
             heading={_videoCallout.heading}
             description={_videoCallout.description}
             person={{
-              avatar: _videoCallout.personAvatar.url,
+              avatar: _videoCallout.personAvatar?.url,
               name: _videoCallout.personName,
               description: _videoCallout.personDescription,
             }}

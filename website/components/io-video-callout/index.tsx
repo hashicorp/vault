@@ -41,14 +41,16 @@ export default function IoVideoCallout({
           <p className={s.description}>{description}</p>
           {person && (
             <div className={s.person}>
-              <div className={s.personThumbnail}>
-                <Image
-                  src={person.avatar}
-                  width={52}
-                  height={52}
-                  alt={`${person.name} avatar`}
-                />
-              </div>
+              {person.avatar ? (
+                <div className={s.personThumbnail}>
+                  <Image
+                    src={person.avatar}
+                    width={52}
+                    height={52}
+                    alt={`${person.name} avatar`}
+                  />
+                </div>
+              ) : null}
               <div>
                 <p className={s.personName}>{person.name}</p>
                 <p className={s.personDescription}>{person.description}</p>
