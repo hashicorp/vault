@@ -173,7 +173,7 @@ func (c *EncryptCommand) Run(args []string) int {
 		}
 	} else {
 		if c.flagDecrypt {
-			ciphertext, err = c.UI.AskSecret("Encrypted datakey (will be hidden):")
+			ciphertext, err = c.UI.AskSecret("Encrypted data key (will be hidden):")
 
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error reading input: %s", err.Error()))
