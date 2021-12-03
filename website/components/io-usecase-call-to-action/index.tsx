@@ -1,11 +1,12 @@
 import Image from 'next/image'
 import * as React from 'react'
+import { Products } from '@hashicorp/platform-product-meta'
 import classNames from 'classnames'
 import Button from '@hashicorp/react-button'
 import s from './style.module.css'
 
 interface IoUsecaseCallToActionProps {
-  brand: string
+  brand: Products
   theme?: 'light' | 'dark'
   heading: string
   description: string
