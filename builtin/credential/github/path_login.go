@@ -159,8 +159,21 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	}
 
 	if config.OrganizationID == 0 {
-		return nil, logical.ErrorResponse(
-			"organization_id not found in configuration"), nil
+		// Previously we did not verify using the Org ID. So if the Org ID is
+		// not set, we will trust-on-first-use and set it now.
+		err = config.setOrganizationID(ctx, b)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		entry, err := logical.StorageEntryJSON("config", config)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	client, err := b.Client(token)
