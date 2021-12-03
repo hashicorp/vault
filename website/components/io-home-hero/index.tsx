@@ -6,7 +6,7 @@ import s from './style.module.css'
 
 interface IoHomeHeroProps {
   pattern: string
-  brand: Products
+  brand: Products | 'neutral'
   heading: string
   description: string
   ctas: Array<{
@@ -98,7 +98,7 @@ interface IoHomeHeroCardProps {
   cta: {
     title: string
     link: string
-    brand?: 'neutral' | 'vault' | 'consul'
+    brand?: 'neutral' | Products
   }
   subText: string
 }
