@@ -51,17 +51,19 @@ export default function IoUsecaseCustomer({
             </div>
             <h2 className={s.heading}>{heading}</h2>
             <p className={s.description}>{description}</p>
-            <div className={s.cta}>
-              <Button
-                title="Read more"
-                url={link}
-                theme={{
-                  brand: 'neutral',
-                  variant: 'secondary',
-                  background: 'dark',
-                }}
-              />
-            </div>
+            {link ? (
+              <div className={s.cta}>
+                <Button
+                  title="Read more"
+                  url={link}
+                  theme={{
+                    brand: 'neutral',
+                    variant: 'secondary',
+                    background: 'dark',
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
         <ul className={s.stats}>
