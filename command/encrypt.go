@@ -274,8 +274,6 @@ func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string, key []
 	// Encrypt and write to file
 	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, aad.encode())
 
-	// TODO ensure output is not written to stdout
-
 	if _, err := out.Write(ciphertext); err != nil {
 		return nil, fmt.Errorf("error writing encrypted data to file: %w", err)
 	}

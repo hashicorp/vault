@@ -11,11 +11,10 @@ func Test_Encrypt(t *testing.T) {
 	data := []byte("my secret data")
 
 	e := EncryptCommand{}
-	encrypted, err := e.encrypt(data, passphrase)
+	encrypted, err := e.encrypt(data, passphrase, nil)
 	assert.NoError(t, err)
 
-	d := DecryptCommand{}
-	decrypted, err := d.decrypt(encrypted, passphrase)
+	decrypted, err := e.decrypt(encrypted, passphrase, nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, data, decrypted)
