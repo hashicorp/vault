@@ -28,7 +28,11 @@ export default function Homepage({ data }): React.ReactElement {
     <>
       <Head>{renderMetaTags(seo)}</Head>
 
-      <IoHomeHero brand="vault" {...hero} />
+      <IoHomeHero
+        pattern="/img/home-hero-pattern.svg"
+        brand="vault"
+        {...hero}
+      />
 
       <section className={s.intro}>
         <header className={s.introHeader}>
@@ -54,9 +58,21 @@ export default function Homepage({ data }): React.ReactElement {
           })}
         </ul>
 
-        <div className={s.container}>
-          <IoVideoCallout {...intro.video} />
-        </div>
+        {intro.video ? (
+          <div className={s.container}>
+            <IoVideoCallout
+              youtubeId={intro.video.youtubeId}
+              thumbnail={intro.video.thumbnail.url}
+              heading={intro.video.heading}
+              description={intro.video.description}
+              person={{
+                name: intro.video.personName,
+                description: intro.video.personDescription,
+                avatar: intro.video.personAvatar?.url,
+              }}
+            />
+          </div>
+        ) : null}
       </section>
 
       <section className={s.inPractice}>
@@ -157,6 +173,7 @@ export async function getStaticProps() {
     introHeading,
     introDescription,
     introFeatures,
+    introVideo,
     inPracticeHeading,
     inPracticeDescription,
     inPracticeCards,
@@ -194,17 +211,7 @@ export async function getStaticProps() {
           heading: introHeading,
           description: introDescription,
           features: introFeatures,
-          video: {
-            youtubeId: vaultHomepage.introVideo[0].youtubeId,
-            heading: vaultHomepage.introVideo[0].heading,
-            description: vaultHomepage.introVideo[0].description,
-            thumbnail: vaultHomepage.introVideo[0].thumbnail.url,
-            person: {
-              name: vaultHomepage.introVideo[0].personName,
-              description: vaultHomepage.introVideo[0].personDescription,
-              avatar: vaultHomepage.introVideo[0].personAvatar.url,
-            },
-          },
+          video: introVideo[0],
         },
         inPractice: {
           heading: inPracticeHeading,

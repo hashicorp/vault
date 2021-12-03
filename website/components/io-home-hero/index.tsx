@@ -4,6 +4,7 @@ import classNames from 'classnames'
 import s from './style.module.css'
 
 interface IoHomeHeroProps {
+  pattern: string
   brand: 'vault' | 'consul'
   heading: string
   description: string
@@ -15,6 +16,7 @@ interface IoHomeHeroProps {
 }
 
 export default function IoHomeHero({
+  pattern,
   brand,
   heading,
   description,
@@ -30,7 +32,14 @@ export default function IoHomeHero({
   }, [])
 
   return (
-    <header className={classNames(s.hero, loaded && s.loaded)}>
+    <header
+      className={classNames(s.hero, loaded && s.loaded)}
+      style={
+        {
+          '--pattern': `url(${pattern})`,
+        } as React.CSSProperties
+      }
+    >
       <span className={s.pattern} />
       <div className={s.container}>
         <div className={s.content}>

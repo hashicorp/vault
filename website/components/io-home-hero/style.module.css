@@ -21,7 +21,7 @@
   margin: auto;
 
   @media (--medium-up) {
-    background-image: url('/img/home-hero-pattern.svg');
+    background-image: var(--pattern);
     background-repeat: no-repeat;
     background-position: top right;
   }

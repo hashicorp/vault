@@ -1,4 +1,5 @@
 import * as React from 'react'
+import classNames from 'classnames'
 import { IconArrowRight16 } from '@hashicorp/flight-icons/svg-react/arrow-right-16'
 import s from './style.module.css'
 
@@ -16,7 +17,7 @@ export default function IoHomePreFooter({
   ctas,
 }: IoHomePreFooterProps) {
   return (
-    <div className={s.preFooter}>
+    <div className={classNames(s.preFooter, s[brand])}>
       <div className={s.container}>
         <div className={s.content}>
           <h2 className={s.heading}>{heading}</h2>

@@ -45,7 +45,7 @@ export default function IoUsecaseSection({
                 }}
               />
             ) : null}
-            {cta ? (
+            {cta?.link && cta?.text ? (
               <div className={s.cta}>
                 <Button
                   title={cta.text}
