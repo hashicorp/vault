@@ -132,7 +132,7 @@
           </div>
         </div>
         {{#if this.showGraphs}}
-          <div class="columns has-bottom-margin-m" {{did-update this.resetData}} {{did-insert this.resetData}}>
+          {{!-- <div class="columns has-bottom-margin-m" {{did-update this.resetData}} {{did-insert this.resetData}}>
             <div class="column is-two-thirds" data-test-client-count-graph>
               <BarChart
                 @title="Top 10 Namespaces"
@@ -147,8 +147,11 @@
               >
                 <DownloadCsv @label={{'Export all namespace data'}} @csvData={{this.getCsvData}} @fileName={{this.getCsvFileName}} />
               </BarChart>
-            </div>
-            <div class="column">
+            </div> --}}
+{{!-- ARG TODO playing here with new chart --}}
+  <TotalMonthlyClients />
+
+            {{!-- <div class="column">
               <div class="card">
                   <div class="card-content">
                     {{#if (and this.barChartSelection this.selectedNamespace)}}
@@ -197,8 +200,8 @@
                     {{/if}}
                   </div>
               </div>
-            </div>
-          </div>
+            </div> --}}
+          {{!-- </div> --}}
         {{/if}}
       {{/unless}}
     {{/if}}
