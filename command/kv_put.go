@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -166,12 +165,10 @@ func (c *KVPutCommand) Run(args []string) int {
 		}
 
 		if !c.flagValidTo.IsZero() {
-			log.Printf("valid_to: %s", c.flagValidTo)
 			data["valid_to"] = c.flagValidTo.Format(time.RFC3339)
 		}
 
 		bs, _ := json.MarshalIndent(data, " ", " ")
-		log.Printf("data: %s", string(bs))
 	}
 
 	secret, err := client.Logical().Write(path, data)
