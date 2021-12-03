@@ -52,7 +52,7 @@ func (aad argon2Params) encode() string {
 }
 
 func (c *EncryptCommand) Synopsis() string {
-	return "Encrypts a file using AES-256 encryption."
+	return "Encrypt files locally"
 }
 
 func (c *EncryptCommand) Help() string {
