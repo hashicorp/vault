@@ -3,6 +3,7 @@ package command
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -20,8 +21,8 @@ import (
 var _ cli.Command = (*EncryptCommand)(nil)
 
 const (
-	vaultEncryptVersion = 1
-	encryptedFileSuffix = ".enc"
+	vaultEncryptionHeader = "vault-v1"
+	encryptedFileSuffix   = ".enc"
 
 	// See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-argon2-04#section-4 for details on parameter selection
 	argon2SaltLen     = 16
@@ -44,6 +45,10 @@ type argon2Params struct {
 	Memory      uint32
 	Time        uint32
 	Parallelism uint8
+}
+
+func (aad argon2Params) encode() string {
+	return fmt.Sprintf("%x:t=%d:m=%d:p=%d", aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
 }
 
 func (c *EncryptCommand) Synopsis() string {
@@ -197,7 +202,7 @@ func (c *EncryptCommand) Run(args []string) int {
 				return 1
 			}
 
-			processedData, err = c.encrypt(rawData, passphrase, key)
+			processedData, err = c.encrypt(rawData, key, false)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 				return 1
@@ -205,7 +210,7 @@ func (c *EncryptCommand) Run(args []string) int {
 			c.UI.Output("Encrypted data key:\n\n    " + encryptedKey)
 		} else {
 			// Create key using passphrase
-			processedData, err = c.encrypt(rawData, passphrase, nil)
+			processedData, err = c.encrypt(rawData, []byte(passphrase), true)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 				return 1
@@ -214,14 +219,14 @@ func (c *EncryptCommand) Run(args []string) int {
 	} else {
 		// Decryption Mode
 
-		if c.key != "" {
+		if datakeyMode {
 			key, _, err := c.fetchDatakey(c.key, ciphertext)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error generating transit data key: %s", err.Error()))
 				return 1
 			}
 
-			processedData, err = c.decrypt(rawData, passphrase, key)
+			processedData, err = c.decrypt(rawData, key, false)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 				return 1
@@ -229,7 +234,7 @@ func (c *EncryptCommand) Run(args []string) int {
 
 		} else {
 			// Create key using passphrase
-			processedData, err = c.decrypt(rawData, passphrase, nil)
+			processedData, err = c.decrypt(rawData, []byte(passphrase), true)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("error decrypting file: %s", err.Error()))
 				return 1
@@ -248,19 +253,25 @@ func (c *EncryptCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string, key []byte) ([]byte, error) {
-	aad := argon2Params{
-		Salt:        make([]byte, argon2SaltLen),
-		Memory:      argon2Memory,
-		Time:        argon2Time,
-		Parallelism: argon2Parallelism,
-	}
-	if _, err := rand.Read(aad.Salt); err != nil {
-		return nil, err
-	}
+func (c *EncryptCommand) encrypt(dataToEncrypt []byte, key []byte, passphrase bool) ([]byte, error) {
+	var aad string
+	var out bytes.Buffer
 
-	if key == nil {
-		key = argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
+	out.WriteString(vaultEncryptionHeader + "$")
+
+	if passphrase {
+		params := argon2Params{
+			Salt:        make([]byte, argon2SaltLen),
+			Memory:      argon2Memory,
+			Time:        argon2Time,
+			Parallelism: argon2Parallelism,
+		}
+		if _, err := rand.Read(params.Salt); err != nil {
+			return nil, err
+		}
+		key = argon2.IDKey(key, params.Salt, params.Time, params.Memory, params.Parallelism, 32)
+		aad = params.encode()
+		out.WriteString(aad + "$")
 	}
 
 	// Create a new Cipher Block using key
@@ -281,26 +292,10 @@ func (c *EncryptCommand) encrypt(dataToEncrypt []byte, passphrase string, key []
 		return nil, fmt.Errorf("error creating nonce: %s", err.Error())
 	}
 
-	var out bytes.Buffer
-	if _, err := out.Write(aad.encode()); err != nil {
-		return nil, err
-	}
-
-	// Encrypt and write to file
-	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, aad.encode())
-
-	if _, err := out.Write(ciphertext); err != nil {
-		return nil, fmt.Errorf("error writing encrypted data to file: %w", err)
-	}
+	ciphertext := aesGCM.Seal(nonce, nonce, dataToEncrypt, []byte(aad))
+	out.Write(ciphertext)
 
 	return out.Bytes(), nil
-}
-
-func (aad argon2Params) encode() []byte {
-	// TODO split out version
-	e := fmt.Sprintf("vault:v=%d:%x:t=%d:m=%d:p=%d$", vaultEncryptVersion, aad.Salt, aad.Time, aad.Memory, aad.Parallelism)
-
-	return []byte(e)
 }
 
 func (c *EncryptCommand) parseAAD(input []byte) (argon2Params, []byte, error) {
@@ -311,29 +306,31 @@ func (c *EncryptCommand) parseAAD(input []byte) (argon2Params, []byte, error) {
 		return aad, nil, fmt.Errorf("unexpected number of parts")
 	}
 
-	var version int
-	if _, err := fmt.Sscanf(string(parts[0]), "vault:v=%d:%x:t=%d:m=%d:p=%d", &version, &aad.Salt, &aad.Time, &aad.Memory, &aad.Parallelism); err != nil {
+	if _, err := fmt.Sscanf(string(parts[0]), "%x:t=%d:m=%d:p=%d", &aad.Salt, &aad.Time, &aad.Memory, &aad.Parallelism); err != nil {
 		return aad, nil, err
-	}
-
-	if version != vaultEncryptVersion {
-		return aad, nil, fmt.Errorf("unknown version: %d", version)
 	}
 
 	return aad, parts[1], nil
 }
 
-func (c *EncryptCommand) decrypt(rawDataToDecrypt []byte, passphrase string, key []byte) ([]byte, error) {
-	aad, dataToDecrypt, err := c.parseAAD(rawDataToDecrypt)
-	if err != nil {
-		return nil, err
+func (c *EncryptCommand) decrypt(rawDataToDecrypt []byte, key []byte, passphrase bool) ([]byte, error) {
+	if !bytes.HasPrefix(rawDataToDecrypt, []byte(vaultEncryptionHeader+"$")) {
+		return nil, errors.New("unrecognized file header")
 	}
 
-	if key == nil {
-		key = argon2.IDKey([]byte(passphrase), aad.Salt, aad.Time, aad.Memory, aad.Parallelism, 32)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("error creating key: %w", err)
+	rawDataToDecrypt = bytes.TrimPrefix(rawDataToDecrypt, []byte(vaultEncryptionHeader+"$"))
+
+	var dataToDecrypt = rawDataToDecrypt
+	var aad string
+
+	if passphrase {
+		aad2, data, err := c.parseAAD(rawDataToDecrypt)
+		if err != nil {
+			return nil, fmt.Errorf("error creating key: %w", err)
+		}
+		dataToDecrypt = data
+		aad = aad2.encode()
+		key = argon2.IDKey(key, aad2.Salt, aad2.Time, aad2.Memory, aad2.Parallelism, 32)
 	}
 
 	// Create a new Cipher Block using key
@@ -354,7 +351,7 @@ func (c *EncryptCommand) decrypt(rawDataToDecrypt []byte, passphrase string, key
 	nonce, ciphertext := dataToDecrypt[:nonceSize], dataToDecrypt[nonceSize:]
 
 	// Decrypt and write to file
-	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, aad.encode())
+	plaintext, err := aesGCM.Open(nil, nonce, ciphertext, []byte(aad))
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting cipher text: %w", err)
 
