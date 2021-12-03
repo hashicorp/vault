@@ -21,6 +21,7 @@ var _ cli.Command = (*EncryptCommand)(nil)
 
 const (
 	vaultEncryptVersion = 1
+	encryptedFileSuffix = ".enc"
 
 	// See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-argon2-04#section-4 for details on parameter selection
 	argon2SaltLen     = 16
@@ -74,7 +75,6 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Name:    "out",
 		Aliases: []string{"o"},
 		Target:  &c.outfile,
-		Default: "",
 		Usage:   "Specify the name of the output file.",
 	})
 
@@ -120,15 +120,29 @@ func (c *EncryptCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	}
-
 	filename := strings.TrimSpace(args[0])
+
+	// Try to intelligently determine output file if not provided
+	outfile := c.outfile
+	if outfile == "" {
+		if c.flagDecrypt {
+			if strings.HasSuffix(filename, encryptedFileSuffix) {
+				outfile = strings.TrimSuffix(filename, encryptedFileSuffix)
+			} else {
+				c.UI.Error(fmt.Sprintf("Unknown suffix. Provide the output filename with -out."))
+				return 1
+			}
+		} else {
+			outfile = filename + encryptedFileSuffix
+		}
+	}
+
 	rawData, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	var processedData []byte
-	outfile := c.outfile
 
 	// Request either a passphrase or the encrypted datakey
 	var passphrase string
@@ -138,7 +152,7 @@ func (c *EncryptCommand) Run(args []string) int {
 
 	// No provided key name means passphrase mode
 	if !datakeyMode {
-		passphrase, err = c.UI.Ask("Passphrase (will be hidden):")
+		passphrase, err = c.UI.AskSecret("Passphrase (will be hidden):")
 
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error reading input: %s", err.Error()))
@@ -146,7 +160,7 @@ func (c *EncryptCommand) Run(args []string) int {
 		}
 	} else {
 		if c.flagDecrypt {
-			ciphertext, err = c.UI.Ask("Encrypted datakey (will be hidden):")
+			ciphertext, err = c.UI.AskSecret("Encrypted datakey (will be hidden):")
 
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error reading input: %s", err.Error()))
@@ -184,11 +198,6 @@ func (c *EncryptCommand) Run(args []string) int {
 				return 1
 			}
 		}
-
-		if outfile == "" {
-			outfile = "output.enc"
-		}
-
 	} else {
 		// Decryption Mode
 
@@ -212,10 +221,6 @@ func (c *EncryptCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("error decrypting file: %s", err.Error()))
 				return 1
 			}
-		}
-
-		if outfile == "" {
-			outfile = "decoded.txt"
 		}
 	}
 
