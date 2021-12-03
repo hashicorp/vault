@@ -1,8 +1,9 @@
 import ReactCallToAction from '@hashicorp/react-call-to-action'
+import { Products } from '@hashicorp/platform-product-meta'
 import s from './style.module.css'
 
 interface IoHomeCallToActionProps {
-  brand: string
+  brand: Products
   heading: string
   content: string
   links: Array<{

@@ -1,11 +1,12 @@
 import * as React from 'react'
+import { Products } from '@hashicorp/platform-product-meta'
 import Button from '@hashicorp/react-button'
 import classNames from 'classnames'
 import s from './style.module.css'
 
 interface IoHomeHeroProps {
   pattern: string
-  brand: 'vault' | 'consul'
+  brand: Products
   heading: string
   description: string
   ctas: Array<{
