@@ -59,21 +59,19 @@ Usage: vault encrypt [options] [filename]
 
   Encrypt a single file using a passphrase:
 
-      $ vault encrypt foo.txt
 	  $ vault encrypt -o secrets.enc foo.txt
 	
   Decrypt a single file using a passphrase:
-      $ vault encrypt -d secrets.enc
-	  $ vault encrypt -o decoded.txt secrets.enc
+
+	  $ vault encrypt -d -o decoded.txt secrets.enc
 
   Encrypt a single file using Transit datakey:
 
-      $ vault encrypt -k my-key foo.txt
 	  $ vault encrypt -k my-key -o secrets.enc foo.txt
 
   Decrypt a single file using a passphrase:
-      $ vault encrypt -d -k my-key secrets.enc
-	  $ vault encrypt -k my-key -o decoded.txt secrets.enc
+
+	  $ vault encrypt -d -k my-key -o decoded.txt secrets.enc
 
   Additional flags and more advanced use cases are detailed below.
 
