@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit, fillIn } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, fillIn, typeIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
@@ -408,15 +408,15 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
     const CONNECTION_VIEW_ONLY = `
-path "${backend}/*" {
-  capabilities = ["deny"]
-}
-path "${backend}/config" {
-  capabilities = ["list"]
-}
-path "${backend}/config/*" {
-  capabilities = ["read"]
-}
+      path "${backend}/*" {
+        capabilities = ["deny"]
+      }
+      path "${backend}/config" {
+        capabilities = ["list"]
+      }
+      path "${backend}/config/*" {
+        capabilities = ["read"]
+      }
     `;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=database`,
@@ -442,6 +442,9 @@ path "${backend}/config/*" {
       .dom('[data-test-selectable-card="Roles"]')
       .doesNotExist('Roles card does not exist on overview w/ policy');
     assert.dom('.title-number').hasText('1', 'Lists the correct number of connections');
+    // confirm get credentials card is an option to select. Regression bug.
+    await typeIn('.ember-text-field', 'blah');
+    assert.dom('[data-test-get-credentials]').isEnabled();
   });
 
   test('Role create form', async function(assert) {
