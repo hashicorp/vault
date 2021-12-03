@@ -4,6 +4,7 @@ import rivetQuery from '@hashicorp/nextjs-scripts/dato/client'
 import homepageQuery from './query.graphql'
 import { renderMetaTags } from 'react-datocms'
 import IoHomeHero from 'components/io-home-hero'
+import IoHomeInPractice from 'components/io-home-in-practice'
 import IoVideoCallout from 'components/io-video-callout'
 import IoCardContainer from 'components/io-card-container'
 import IoHomeFeature from 'components/io-home-feature'
@@ -75,28 +76,30 @@ export default function Homepage({ data }): React.ReactElement {
         ) : null}
       </section>
 
-      <section className={s.inPractice}>
-        <div className={s.container}>
-          <IoCardContainer
-            theme="dark"
-            heading={inPractice.heading}
-            description={inPractice.description}
-            cardsPerRow={3}
-            cards={inPractice.cards.map((card) => {
-              return {
-                eyebrow: card.eyebrow,
-                link: {
-                  url: card.link,
-                  type: 'inbound',
-                },
-                heading: card.heading,
-                description: card.description,
-                products: card.products,
-              }
-            })}
-          />
-        </div>
-      </section>
+      <IoHomeInPractice
+        brand="vault"
+        pattern="/img/practice-pattern.svg"
+        heading={inPractice.heading}
+        description={inPractice.description}
+        cards={inPractice.cards.map((card) => {
+          return {
+            eyebrow: card.eyebrow,
+            link: {
+              url: card.link,
+              type: 'inbound',
+            },
+            heading: card.heading,
+            description: card.description,
+            products: card.products,
+          }
+        })}
+        cta={{
+          heading: inPractice.cta.heading,
+          description: inPractice.cta.description,
+          link: inPractice.cta.link,
+          image: inPractice.cta.image,
+        }}
+      />
 
       <section className={s.useCases}>
         <div className={s.container}>
@@ -177,6 +180,10 @@ export async function getStaticProps() {
     inPracticeHeading,
     inPracticeDescription,
     inPracticeCards,
+    inPracticeCtaHeading,
+    inPracticeCtaDescription,
+    inPracticeCtaLink,
+    inPracticeCtaImage,
     useCasesHeading,
     useCasesDescription,
     useCasesCards,
@@ -217,6 +224,12 @@ export async function getStaticProps() {
           heading: inPracticeHeading,
           description: inPracticeDescription,
           cards: inPracticeCards,
+          cta: {
+            heading: inPracticeCtaHeading,
+            description: inPracticeCtaDescription,
+            link: inPracticeCtaLink,
+            image: inPracticeCtaImage,
+          },
         },
         useCases: {
           heading: useCasesHeading,
