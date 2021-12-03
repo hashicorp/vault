@@ -27,7 +27,13 @@ export default function IoHomeCallToAction({
         content={content}
         product={brand}
         theme="dark"
-        links={links}
+        links={links.map(({ text, url }, index) => {
+          return {
+            text,
+            url,
+            type: index === 1 ? 'inbound' : null,
+          }
+        })}
       />
     </div>
   )
