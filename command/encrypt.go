@@ -97,7 +97,7 @@ func (c *EncryptCommand) Flags() *FlagSets {
 		Name:    "key",
 		Aliases: []string{"k"},
 		Target:  &c.key,
-		Usage:   "Name of the datakey in Vault Transit.",
+		Usage:   "Name of the data key in Vault Transit.",
 	})
 
 	return set
@@ -189,7 +189,7 @@ func (c *EncryptCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("error encrypting file: %s", err.Error()))
 				return 1
 			}
-			fmt.Println(encryptedKey)
+			c.UI.Output("Encrypted data key:\n\n    " + encryptedKey)
 		} else {
 			// Create key using passphrase
 			processedData, err = c.encrypt(rawData, passphrase, nil)
@@ -229,6 +229,8 @@ func (c *EncryptCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("error writing processed data to file: %s", err.Error()))
 		return 1
 	}
+
+	c.UI.Output("\nOutput written to: " + outfile)
 
 	return 0
 }
