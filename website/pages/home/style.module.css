@@ -25,7 +25,7 @@
   margin: auto;
 
   @media (--medium-up) {
-    max-width: calc(100% * 5 / 12);
+    max-width: calc(100% * 7 / 12);
   }
 }
 
