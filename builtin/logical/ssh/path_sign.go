@@ -228,8 +228,6 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 					if err == nil {
 						// Template returned a principal
 						allowedPrincipals = append(allowedPrincipals, templatePrincipal)
-					} else {
-						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
 					}
 				}
 			} else {
