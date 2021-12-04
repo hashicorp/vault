@@ -1,0 +1,3 @@
+```release-note:improvement
+builtin/logical/ssh: Add multi-accessor support to ssh allowed_users_template feature
+```
