@@ -1,0 +1,3 @@
+```release-note:bug
+core/token: Fix null token type panic resulting from 'v1/auth/token' endpoints
+```
