@@ -12,6 +12,11 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
+// temp workaround because the layeh.com/radius vanity url is currently broken:
+// * https://github.com/hashicorp/vault/issues/13342
+// * https://github.com/layeh/radius/issues/98
+replace layeh.com/radius v0.0.0-20190322222518-890bc1058917 => github.com/layeh/radius v0.0.0-20190322222518-890bc1058917
+
 require (
 	cloud.google.com/go v0.65.0
 	cloud.google.com/go/spanner v1.5.1
