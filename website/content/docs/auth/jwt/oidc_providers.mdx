@@ -295,7 +295,8 @@ Configuration steps:
 1. Find the issuer URL of the cluster.
 
    ```bash
-   timeout 30s kubectl proxy &
+   # When you're done, kill this background process, e.g. using: kill %1
+   kubectl proxy &
    ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
    ```
 
@@ -348,7 +349,8 @@ Configuration steps:
 
    ```bash
    # 1. Find the issuer URL of the cluster.
-   timeout 30s kubectl proxy &
+   # When you're done, kill this background process, e.g. using: kill %1
+   kubectl proxy &
    ISSUER="$(curl --fail --silent --show-error 127.0.0.1:8001/.well-known/openid-configuration | jq -r '.issuer')"
 
    # 2. Query the jwks_uri specified in /.well-known/openid-configuration

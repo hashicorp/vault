@@ -234,7 +234,8 @@ unable to check this value directly, you can run the following and look for the
 `"iss"` field to find the required value:
 
 ```bash
-timeout 30s kubectl proxy &
+# When you're done, kill this background process, e.g. using: kill %1
+kubectl proxy &
 curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token \
   -H "Content-Type: application/json" \
   -X POST \
@@ -248,7 +249,8 @@ Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
 ```bash
-timeout 30s kubectl proxy &
+# When you're done, kill this background process, e.g. using: kill %1
+kubectl proxy &
 curl --silent http://127.0.0.1:8001/.well-known/openid-configuration | jq -r .issuer
 ```
 
